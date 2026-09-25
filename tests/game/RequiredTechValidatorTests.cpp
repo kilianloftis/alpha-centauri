@@ -8,6 +8,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
@@ -38,6 +39,7 @@ void FillRequiredTechSources(GameDataContext& rData)
 {
     rData.buildingRegistry = std::make_unique<BuildingRegistry>();
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
+    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
     rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     rData.unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
     rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();

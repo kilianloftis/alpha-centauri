@@ -13,19 +13,6 @@ namespace ac
 
 class Tile;
 
-// What happens when a Former finishes a terraform order for this config.
-// place (default): AddImprovementWithEffects of placesImprovementId, or of this config when
-// that is empty. Other values mutate the tile and never add this config as a tile feature.
-enum class TerraformResult_t
-{
-    Place,
-    LevelTerrain,
-    RaiseLand,
-    LowerLand,
-    RemoveFungus,
-    Aquifer,
-};
-
 // Which tile surface a placed improvement may occupy. Omitted means either surface.
 // Land and Sea match the enumerator names aside from case; parse with magic_enum.
 enum class ImprovementDomain_t
@@ -34,21 +21,38 @@ enum class ImprovementDomain_t
     Sea,
 };
 
-// A single tile feature definition: a terrain classification (Flat/Rolling/Rocky,
-// Arid/Moist/Wet), a natural feature (River, Fungus), or an improvement (Farm, Mine, Bunker,
-// Base, and what were formerly "bonus"/"landmark" specials - all just improvements now).
-// Terrain and improvements share this type and resolve effects/exclusivity identically; they
-// differ only in how they live on a Tile: terrain enums/bools are mirrored as config pointers
-// via Tile::GetTerrainFeatures(), while improvements are held directly in
-// Tile::GetImprovements().
+// Where an occupant comes from. Improvements are placed by a former or a founded base and
+// live in Tile::GetImprovements(); terrain occupants come from world generation or a terrain
+// operation and live in the tile's terrain list. Stamped by the parser from the file the
+// entry was read out of, so one id can never be both.
+enum class OccupantPlacement_t
+{
+    Terrain,
+    Improvement,
+};
+
+// A tile occupant that grants effects: an improvement (Farm, Mine, Base) or a terrain
+// feature (Rocky, Fungus, a landmark). Both live in ImprovementRegistry, told apart by
+// `placement`, so effect collection and coexistence walk one pointer type and one lookup.
+// The construction half of an improvement: present only when a former can build it.
+struct FormerProject_t
+{
+    int turnsRequired = 0;
+    int energyCost = 0;
+    std::string requiredTech;
+};
+
 struct ImprovementConfig_t
 {
     std::string id;
     std::string name;
-    std::string description;           // optional flavour text (used for tile bonuses)
-    int turnsRequired = 0;             // 0 = not a Former project
-    int energyCost = 0;                // flat energy at order start; raise/lower may override
-    std::string requiredTech;          // empty if not tech-gated
+    std::string description;
+    OccupantPlacement_t placement = OccupantPlacement_t::Improvement;
+    // What a former needs to build this improvement. Absent means none can: Base is placed by
+    // founding, and terrain occupants come from world gen or a project's effects. A terrain
+    // entry never has one, which is what makes "terrain with a build cost" unrepresentable
+    // rather than three fields every terrain consumer has to know to ignore.
+    std::optional<FormerProject_t> project;
     // Optional classification labels (e.g. "landmark", "landform"). Stored for later use and
     // available as "@tag" references in excludes / suppress_yield_sources (expanded at parse).
     std::vector<std::string> tags;
@@ -66,10 +70,6 @@ struct ImprovementConfig_t
     // Optional world-map sprite. Empty or a missing file → TileRenderer paints a procedural
     // fallback (landform rings/centers today; tile bonuses simply omit the overlay).
     std::string spritePath;
-    TerraformResult_t terraformResult = TerraformResult_t::Place;
-    // Place adds this improvement instead of this config. Empty means this config is the
-    // improvement (Farm, Road). Plant Fungus sets it to Fungus.
-    std::string placesImprovementId;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
@@ -91,39 +91,38 @@ struct ImprovementConfig_t
     int visionRadius = 0;
 };
 
-// Coexistence, checked in both directions: rCandidate must not exclude anything already on the
-// tile, and nothing already on the tile may exclude rCandidate. Modders declare the relationship
-// once, on whichever side reads better, and every placement path honours it.
-//
-// clearedFeatureId names a feature the caller removes as part of the same placement (forest
-// spread wipes fungus), so it is treated as absent for both directions rather than the caller
-// mutating the tile to probe.
-//
-// Does not check requiredTech/turnsRequired/energyCost - those are construction-flow concerns.
-bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
-                         std::string_view clearedFeatureId = {});
+// True when a former can build this occupant.
+bool IsBuildable(const ImprovementConfig_t& rConfig);
 
-// Improvements already on the tile that cannot share it with rIncoming. Either side's
-// excludes is enough. Terrain features are not listed.
-std::vector<std::string> ImprovementsDisplacedBy(const Tile& rTile,
-                                                 const ImprovementConfig_t& rIncoming);
+// Expand @tag references in excludes and suppress_yield_sources. A tag no entry declares
+// throws. Self-references are skipped. Call on the full occupant list, so an improvement
+// may name a tag that only terrain entries carry.
+void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);
 
-// Domain, or an excludes relationship with a feature that is not in displacedIds.
-// Improvements named there are about to be removed, so they do not block.
-bool RemainingFeaturesBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
-                                     const std::vector<std::string>& displacedIds);
+// One occupant object. A terrain entry rejects construction fields; those belong on a
+// terrain operation.
+ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
+                                         OccupantPlacement_t placement);
+
+// Parse improvements and terrain occupants into one list, tags expanded across both.
+std::vector<ImprovementConfig_t> LoadTileOccupants(const std::string& rImprovementsPath,
+                                                   const std::string& rTerrainPath);
+
+// The same, for a caller that already parsed the terrain half (see ParseTerrainFile) and
+// should not open that file a second time.
+std::vector<ImprovementConfig_t> LoadTileOccupants(
+    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures);
+
+// improvements.json with its @tags left unexpanded, for a caller that will expand them over
+// a wider list. LoadTileOccupants does that across improvements and terrain together, so an
+// improvement may name a tag only terrain entries carry.
+std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& rConfigPath);
 
 class ImprovementConfigParser
 {
 public:
-    ImprovementConfigParser() = default;
-    ~ImprovementConfigParser() = default;
-
+    // Registry<> adapter: this file alone, tags expanded against this file alone.
     std::vector<ImprovementConfig_t> ParseConfig(const std::string& configPath);
-
-private:
-    ImprovementConfig_t ParseImprovementConfig(const nlohmann::json& improvementJson);
-    void ExpandTagReferences(std::vector<ImprovementConfig_t>& rConfigs) const;
 };
 
 } // namespace ac

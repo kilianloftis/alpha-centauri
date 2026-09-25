@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
@@ -19,6 +20,7 @@
 #include "game/effects/InteractionGridsConfig.h"
 #include <algorithm>
 #include <cmath>
+#include <span>
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
@@ -236,11 +238,9 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     , m_rInteractionGrids(rInteractionGrids)
     , m_maxRadius(0)
 {
-    // Mirror terrain enums/bools as ImprovementConfig_t pointers so hot-path collectors
-    // (effects, move costs) never re-resolve string ids against the registry.
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
     {
-        pTile->BindImprovements(rImprovements);
+        pTile->BindOccupants(rImprovements);
         pTile->BindTileChangeListener(this);
     }
 
@@ -437,10 +437,10 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile)
     rTile.SetMoisture(static_cast<Moisture_t>(clamped));
 }
 
-void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId)
+void TileEffectsContext::AddOccupantWithEffects(Tile& rTile, const std::string& occupantId)
 {
-    const ImprovementConfig_t& rConfig = m_rImprovements.Get(improvementId);
-    rTile.AddImprovement(rConfig);
+    const ImprovementConfig_t& rConfig = m_rImprovements.Get(occupantId);
+    rTile.AddOccupant(rConfig);
     RecomputeMoistureInRadius_(rTile, MaxEffectReach_(rConfig), *this, m_rWorldMap);
     if (rConfig.terminatesRiver)
     {
@@ -457,6 +457,10 @@ void TileEffectsContext::OnTileChanged(Tile& rTile, std::string_view keepId)
     }
 
     m_bSweepingOccupancy = true;
+    // Two passes: the first clears what the new occupant displaces while holding it exempt,
+    // the second re-judges it against what is left. Nothing is permanently exempt — an
+    // improvement built past a stock exclude survives on the waiver the tile recorded for
+    // it, not on being the most recent arrival.
     RemoveImprovementsThatCannotRemain_(rTile, keepId);
     if (!keepId.empty())
     {
@@ -488,7 +492,7 @@ void TileEffectsContext::RemoveImprovementsThatCannotRemain_(Tile& rTile, std::s
             }
             // The copy already on the tile is not a reason to remove itself
             // (Monolith excludes Monolith so a second one cannot be placed).
-            if (!CanBuildImprovement(rTile, *pConfig, pConfig->id))
+            if (!CanBuildImprovement(rTile, *pConfig, std::span(&pConfig->id, 1)))
             {
                 removeIds.push_back(pConfig->id);
             }
@@ -499,18 +503,22 @@ void TileEffectsContext::RemoveImprovementsThatCannotRemain_(Tile& rTile, std::s
         }
         for (const std::string& rId : removeIds)
         {
-            RemoveImprovementWithEffects(rTile, rId);
+            RemoveOccupantWithEffects(rTile, rId);
         }
     }
 }
 
-void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId)
+void TileEffectsContext::RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId)
 {
-    const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
-    const int radius = pConfig ? MaxEffectReach_(*pConfig) : 0;
-    const bool bTerminatesRiver = pConfig && pConfig->terminatesRiver;
+    const ImprovementConfig_t* pConfig = m_rImprovements.Find(occupantId);
+    if (!pConfig)
+    {
+        return;
+    }
+    const int radius = MaxEffectReach_(*pConfig);
+    const bool bTerminatesRiver = pConfig->terminatesRiver;
 
-    rTile.RemoveImprovement(improvementId);
+    rTile.RemoveOccupant(*pConfig);
     RecomputeMoistureInRadius_(rTile, radius, *this, m_rWorldMap);
     if (bTerminatesRiver)
     {

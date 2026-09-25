@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/LandmarkConfig.h"
@@ -163,7 +164,7 @@ TEST_CASE("The generated map is a function of the resolved seed, not the config 
 TEST_CASE("World generation places against bound tiles", "[worldgen][improvements]")
 {
     // CanBuildImprovement reads a tile's terrain-feature configs to enforce the incumbent side
-    // of `excludes`, and those are empty until BindImprovements. Unbound, world gen answered
+    // of `excludes`, and those are empty until BindOccupants. Unbound, world gen answered
     // coexistence questions differently from the same tile once it was in play - so a generated
     // map could contain a placement the rules forbid.
     actest::WorldFixture world;

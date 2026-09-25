@@ -5,8 +5,12 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/FactionRegistry.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainConfig.h"
 #include "game/map/TerrainFeatureValidation.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/map/LandmarkConfig.h"
 #include "game/map/LandmarkConfigParser.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
@@ -77,6 +81,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.commerceConfig.get(), "commerceConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
+        {rData.terrainOperationRegistry.get(), "terrainOperationRegistry"},
         {rData.worldGenPresetRegistry.get(), "worldGenPresetRegistry"},
         {rData.worldGenDecorationConfig.get(), "worldGenDecorationConfig"},
         {rData.moraleConfig.get(), "moraleConfig"},
@@ -113,8 +118,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.techRegistry = std::make_unique<TechRegistry>();
     rData.techRegistry->Load(rPaths.techs);
 
+    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
-    rData.improvementRegistry->Load(rPaths.improvements);
+    LoadMapOccupants(rPaths.improvements, rPaths.terrain, *rData.improvementRegistry,
+                     *rData.terrainOperationRegistry);
 
     // HasComponent conditions and component required_tech need this present before
     // ValidateEffectReferences / ValidateRequiredTechReferences below.
@@ -164,14 +171,14 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         decorationParser.ParseConfig(rPaths.worldGenDecoration));
 
     {
-        std::vector<std::string> improvementIds;
+        std::vector<std::string> occupantIds;
         for (const ImprovementConfig_t& rConfig : rData.improvementRegistry->GetAll())
         {
-            improvementIds.push_back(rConfig.id);
+            occupantIds.push_back(rConfig.id);
         }
         LandmarkConfigParser landmarkParser;
         rData.worldGenLandmarks =
-            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, improvementIds);
+            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, occupantIds);
         for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
         {
             for (const LandmarkConfig_t& rLandmark : rData.worldGenLandmarks)

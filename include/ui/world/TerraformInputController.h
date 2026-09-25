@@ -9,6 +9,7 @@ namespace ac
 {
 
 class ImprovementRegistry;
+class TerrainOperationRegistry;
 class Unit;
 
 // Former-only hotkeys that request a terraform project by improvement id.
@@ -16,11 +17,12 @@ class Unit;
 class TerraformInputController
 {
 public:
-    // Bindings come from config/ui/terraform_bindings.json and every improvement id in it is
-    // checked against rImprovements here, so a renamed or misspelled id fails at startup
-    // naming the key rather than doing nothing when the player presses it.
+    // Bindings come from config/ui/terraform_bindings.json. Each `project` must be a
+    // buildable improvement or a terrain operation, so a renamed or misspelled id fails at
+    // startup naming the key rather than doing nothing when the player presses it.
     TerraformInputController(const std::string& rConfigPath,
-                             const ImprovementRegistry& rImprovements);
+                             const ImprovementRegistry& rImprovements,
+                             const TerrainOperationRegistry& rOperations);
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
 

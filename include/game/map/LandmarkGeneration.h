@@ -20,7 +20,7 @@ std::vector<std::pair<int, int>> ExpandLandmarkShape(const LandmarkShape_t& rSha
 // domain and CanBuildImprovement. Returns number of landmarks successfully placed.
 int PlaceLandmarks(WorldMap& rWorld,
                    const std::vector<LandmarkConfig_t>& rLandmarks,
-                   const ImprovementRegistry& rImprovements,
+                   const ImprovementRegistry& rOccupants,
                    std::mt19937& rRng);
 
 } // namespace ac

@@ -686,6 +686,65 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
     rEffect.effect = transport;
 }
 
+void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+{
+    if (rEffect.scope != EffectScope_t::ThisUnit
+        && rEffect.scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "CoexistenceOverride scope must be ThisUnit or FactionUnits");
+    }
+
+    CoexistenceOverrideEffect_t overrideFx;
+    const std::string cellStr = parameters.value("cell", "");
+    if (cellStr.empty())
+    {
+        throw std::runtime_error("CoexistenceOverride missing required 'cell'");
+    }
+    if (cellStr == "allow")
+    {
+        overrideFx.cell = InteractionCell_t::Allow;
+    }
+    else if (cellStr == "deny")
+    {
+        overrideFx.cell = InteractionCell_t::Deny;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown CoexistenceOverride cell: '" + cellStr + "'");
+    }
+
+    // One or two occupant ids. Two names the exact pair; one wild-cards the other side.
+    // Zero would wild-card both and switch coexistence off wholesale, so it is rejected.
+    if (!parameters.contains("occupants") || !parameters.at("occupants").is_array())
+    {
+        throw std::runtime_error("CoexistenceOverride needs an 'occupants' array of one or "
+                                 "two occupant ids");
+    }
+    const nlohmann::json& rOccupants = parameters.at("occupants");
+    if (rOccupants.empty() || rOccupants.size() > 2)
+    {
+        throw std::runtime_error("CoexistenceOverride 'occupants' must name one or two ids, not "
+                                 + std::to_string(rOccupants.size()));
+    }
+    std::vector<std::string> ids;
+    for (const nlohmann::json& rEntry : rOccupants)
+    {
+        if (!rEntry.is_string() || rEntry.get<std::string>().empty())
+        {
+            throw std::runtime_error("CoexistenceOverride 'occupants' entries must be "
+                                     "non-empty occupant ids");
+        }
+        ids.push_back(rEntry.get<std::string>());
+    }
+    overrideFx.firstId = ids.front();
+    if (ids.size() == 2)
+    {
+        overrideFx.secondId = ids.back();
+    }
+    rEffect.effect = overrideFx;
+}
+
 using ParseEffectFn_ = void (*)(const nlohmann::json& parameters, EffectConfig_t& rEffect);
 
 const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
@@ -696,6 +755,7 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"StatModifier", ParseStatModifier_},
         {"RuleFlag", ParseRuleFlag_},
         {"InteractionOverride", ParseInteractionOverride_},
+        {"CoexistenceOverride", ParseCoexistenceOverride_},
         {"SocialEngineeringOverride", ParseSocialEngineeringOverride_},
         {"DiplomaticModifier", ParseDiplomaticModifier_},
         {"SocialRatingModifier", ParseSocialRatingModifier_},
@@ -925,7 +985,7 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
         }
         return BaseHasBuilding_t{buildingId};
     }
-    if (kindStr == "AllOf")
+    if (kindStr == "AllOf" || kindStr == "AnyOf")
     {
         const bool bHasValues = conditionJson.contains("values")
             && conditionJson.at("values").is_array()
@@ -936,29 +996,34 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
         if (!bHasValues && !bHasConditions)
         {
             throw std::runtime_error(
-                "AllOf condition requires a non-empty 'values' and/or 'conditions' array");
+                kindStr + " condition requires a non-empty 'values' and/or 'conditions' array");
         }
 
-        AllOf_t allOf;
+        std::vector<Condition_t> nested;
         if (bHasValues)
         {
             for (const auto& rValue : conditionJson.at("values"))
             {
                 if (!rValue.is_string() || rValue.get<std::string>().empty())
                 {
-                    throw std::runtime_error("AllOf condition values must be non-empty strings");
+                    throw std::runtime_error(kindStr
+                                             + " condition values must be non-empty strings");
                 }
-                allOf.conditions.push_back(TargetTileHas_t{rValue.get<std::string>()});
+                nested.push_back(TargetTileHas_t{rValue.get<std::string>()});
             }
         }
         if (bHasConditions)
         {
             for (const auto& rNested : conditionJson.at("conditions"))
             {
-                allOf.conditions.push_back(ParseCondition(rNested));
+                nested.push_back(ParseCondition(rNested));
             }
         }
-        return allOf;
+        if (kindStr == "AllOf")
+        {
+            return AllOf_t{std::move(nested)};
+        }
+        return AnyOf_t{std::move(nested)};
     }
     if (kindStr == "TargetTileHas")
     {
@@ -967,7 +1032,11 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
         {
             throw std::runtime_error("Condition requires a non-empty 'value'");
         }
-        return TargetTileHas_t{featureId};
+        if (conditionJson.contains("present") && !conditionJson.at("present").is_boolean())
+        {
+            throw std::runtime_error("TargetTileHas 'present' must be a boolean");
+        }
+        return TargetTileHas_t{featureId, conditionJson.value("present", true)};
     }
 
     throw std::runtime_error("Unknown condition kind: '" + kindStr + "'");

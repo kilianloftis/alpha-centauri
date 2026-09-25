@@ -36,7 +36,7 @@ int SamplePatchSize_(int min, int max, float skew, std::mt19937& rRng)
 
 bool IsEligible_(const Tile& rTile, bool bWantLand)
 {
-    if (rTile.HasImprovement(ImprovementIds::k_Fungus))
+    if (rTile.HasTerrainFeature(ImprovementIds::k_Fungus))
     {
         return false;
     }
@@ -50,7 +50,7 @@ bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
     bool touches = false;
     ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
     {
-        if (pNeighbor && pNeighbor->HasImprovement(ImprovementIds::k_Fungus)
+        if (pNeighbor && pNeighbor->HasTerrainFeature(ImprovementIds::k_Fungus)
             && rPatch.count(pNeighbor) == 0)
         {
             touches = true;
@@ -69,7 +69,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand,
     }
 
     std::unordered_set<const Tile*> patch;
-    rSeed.AddImprovement(rFungus);
+    rSeed.AddTerrainFeature(rFungus);
     patch.insert(&rSeed);
     int placed = 1;
     if (placed >= targetSize)
@@ -105,7 +105,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand,
             continue;
         }
 
-        pNext->AddImprovement(rFungus);
+        pNext->AddTerrainFeature(rFungus);
         patch.insert(pNext);
         ++placed;
 

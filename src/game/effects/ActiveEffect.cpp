@@ -523,7 +523,12 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             using T = std::decay_t<decltype(rAlt)>;
             if constexpr (std::is_same_v<T, TargetTileHas_t>)
             {
-                return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(rAlt.featureId);
+                // Fails closed without a tile, whichever polarity was authored.
+                if (ctx.targetTile == nullptr)
+                {
+                    return false;
+                }
+                return ctx.targetTile->HasFeature(rAlt.featureId) == rAlt.bPresent;
             }
             else if constexpr (std::is_same_v<T, IsDefending_t>)
             {
@@ -638,6 +643,17 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 return true;
             }
+            else if constexpr (std::is_same_v<T, AnyOf_t>)
+            {
+                for (const Condition_t& rNested : rAlt.conditions)
+                {
+                    if (ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
             else
             {
                 static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
@@ -677,7 +693,7 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             {
                 return false;
             }
-            else if constexpr (std::is_same_v<T, AllOf_t>)
+            else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
             {
                 for (const Condition_t& rNested : rAlt.conditions)
                 {
@@ -805,18 +821,10 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
 
     // Terrain features and improvements are both held as config pointers on the tile.
     // Own-tile collection is the distance-0 case of the shared tile-reach filter.
-    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
-    {
-        if (pFeature)
-        {
-            AppendTileEffects(pFeature->effects, pFeature->id, 0, result);
-        }
-    }
-
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
-    {
-        AppendTileEffects(pImprovement->effects, pImprovement->id, 0, result);
-    }
+    rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
+        AppendTileEffects(rOccupant.effects, rOccupant.id, 0, result);
+        return false;
+    });
 
     return result;
 }
@@ -1239,21 +1247,9 @@ bool AnyDeclaresTileHarbors_(const std::vector<EffectConfig_t>& rEffects, UnitDo
 
 bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId)
 {
-    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
-    {
-        if (pConfig && AnyDeclaresTileFlag_(pConfig->effects, flagId))
-        {
-            return true;
-        }
-    }
-    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
-    {
-        if (pConfig && AnyDeclaresTileFlag_(pConfig->effects, flagId))
-        {
-            return true;
-        }
-    }
-    return false;
+    return rTile.ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
+        return AnyDeclaresTileFlag_(rConfig.effects, flagId);
+    });
 }
 
 bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
@@ -1289,21 +1285,9 @@ bool TileHarbors(const Tile& rTile, UnitDomain_t domain, FactionId_t factionId,
     {
         return false;
     }
-    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
-    {
-        if (pConfig && AnyDeclaresTileHarbors_(pConfig->effects, domain))
-        {
-            return true;
-        }
-    }
-    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
-    {
-        if (pConfig && AnyDeclaresTileHarbors_(pConfig->effects, domain))
-        {
-            return true;
-        }
-    }
-    return false;
+    return rTile.ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
+        return AnyDeclaresTileHarbors_(rConfig.effects, domain);
+    });
 }
 
 } // namespace ac

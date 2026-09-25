@@ -1,7 +1,10 @@
 #include "GameFixtures.h"
 
 #include "game/faction/base/BaseManager.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
+
+#include <span>
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
@@ -60,7 +63,7 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
     CHECK(CanBuildImprovement(rTile, rMonolith));
     CHECK(CanBuildImprovement(rTile, rNutrients));
 
-    rTile.AddImprovement(rMonolith);
+    rTile.AddTerrainFeature(rMonolith);
 
     // Forward direction: Monolith excludes itself.
     CHECK_FALSE(CanBuildImprovement(rTile, rMonolith));
@@ -91,14 +94,15 @@ TEST_CASE("A feature the caller is clearing does not block the placement", "[map
     actest::WorldFixture world(5, 5);
     Tile& rTile = *world.map.GetTile(2, 2);
     rTile.SetElevation(500);
-    rTile.AddImprovement(world.improvements.Get("Fungus"));
+    rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
 
     const ImprovementConfig_t& rForest = world.improvements.Get("Forest");
     CHECK_FALSE(CanBuildImprovement(rTile, rForest));
 
-    // Forest spread wipes fungus, so it names it - and the tile is not mutated to say so.
-    CHECK(CanBuildImprovement(rTile, rForest, ImprovementIds::k_Fungus));
-    CHECK(rTile.HasImprovement("Fungus"));
+    // Naming an occupant as ignored does not remove it. Forest spread does not use this.
+    const std::string fungusLeaving(ImprovementIds::k_Fungus);
+    CHECK(CanBuildImprovement(rTile, rForest, std::span(&fungusLeaving, 1)));
+    CHECK(rTile.HasFeature("Fungus"));
 }
 
 TEST_CASE("WorldMap rejects non-positive dimensions", "[map]")

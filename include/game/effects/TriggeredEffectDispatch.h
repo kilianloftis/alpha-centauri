@@ -96,6 +96,22 @@ struct FungalBloomApplied_t
     int lifeforms = 0;
 };
 
+struct TerrainFeatureChanged_t
+{
+    std::string featureId;
+    bool bPresent = true;
+};
+
+struct RockinessChanged_t
+{
+    int steps = 0;
+};
+
+struct ElevationChanged_t
+{
+    int deltaMeters = 0;
+};
+
 using TriggeredEffectResult_t = std::variant<
     FacilitiesDestroyed_t,
     PopulationChanged_t,
@@ -109,7 +125,10 @@ using TriggeredEffectResult_t = std::variant<
     InfiltrationSet_t,
     UnitDestroyed_t,
     EarthquakeApplied_t,
-    FungalBloomApplied_t
+    FungalBloomApplied_t,
+    TerrainFeatureChanged_t,
+    RockinessChanged_t,
+    ElevationChanged_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources

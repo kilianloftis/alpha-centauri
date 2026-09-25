@@ -43,7 +43,7 @@ std::vector<int> ComputeCharges_(const BaseManager& rBase)
             continue;
         }
         int cost = pUnit->GetMineralUpkeep();
-        if (pUnit->GetDesign().IsNativeLife() && pUnit->GetTile().HasImprovement(ImprovementIds::k_Fungus))
+        if (pUnit->GetDesign().IsNativeLife() && pUnit->GetTile().HasFeature(ImprovementIds::k_Fungus))
         {
             cost = 0;
         }

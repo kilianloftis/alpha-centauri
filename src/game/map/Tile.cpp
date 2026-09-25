@@ -117,7 +117,7 @@ Rockiness_t Tile::GetRockiness() const
 void Tile::BindMapRules(const ElevationRulesConfig_t& rRules)
 {
     m_pMapRules = &rRules;
-    if (m_pImprovements)
+    if (m_pOccupants)
     {
         RefreshTerrainFeatures_();
     }
@@ -198,9 +198,9 @@ bool Tile::GetHasAquifer() const
     return m_bHasAquifer;
 }
 
-void Tile::BindImprovements(const ImprovementRegistry& rImprovements)
+void Tile::BindOccupants(const ImprovementRegistry& rOccupants)
 {
-    m_pImprovements = &rImprovements;
+    m_pOccupants = &rOccupants;
     RefreshTerrainFeatures_();
 }
 
@@ -278,6 +278,9 @@ void Tile::RemoveImprovement(std::string_view improvementId)
         return;
     }
     m_improvements.erase(it, m_improvements.end());
+    std::erase_if(m_coexistenceWaivers, [&](const std::pair<std::string, std::string>& rWaiver) {
+        return rWaiver.first == improvementId;
+    });
     NotifyAppearanceChanged_();
 }
 
@@ -293,6 +296,94 @@ bool Tile::HasImprovement(std::string_view improvementId) const
 const std::vector<const ImprovementConfig_t*>& Tile::GetImprovements() const
 {
     return m_improvements;
+}
+
+void Tile::AddTerrainFeature(const ImprovementConfig_t& rConfig)
+{
+    if (HasTerrainFeature(rConfig.id))
+    {
+        return;
+    }
+    m_optionalTerrain.push_back(&rConfig);
+    RefreshTerrainFeatures_();
+    NotifyAppearanceChanged_();
+    NotifyTileChanged_(rConfig.id);
+}
+
+void Tile::RemoveTerrainFeature(std::string_view featureId)
+{
+    const auto it = std::remove_if(m_optionalTerrain.begin(), m_optionalTerrain.end(),
+                                   [&](const ImprovementConfig_t* pConfig) {
+                                       return pConfig->id == featureId;
+                                   });
+    if (it == m_optionalTerrain.end())
+    {
+        return;
+    }
+    m_optionalTerrain.erase(it, m_optionalTerrain.end());
+    RefreshTerrainFeatures_();
+    NotifyAppearanceChanged_();
+    NotifyTileChanged_({});
+}
+
+bool Tile::HasTerrainFeature(std::string_view featureId) const
+{
+    return std::any_of(m_optionalTerrain.begin(), m_optionalTerrain.end(),
+                       [&](const ImprovementConfig_t* pConfig)
+                       {
+                           return pConfig->id == featureId;
+                       });
+}
+
+void Tile::AddOccupant(const ImprovementConfig_t& rConfig)
+{
+    if (rConfig.placement == OccupantPlacement_t::Terrain)
+    {
+        AddTerrainFeature(rConfig);
+    }
+    else
+    {
+        AddImprovement(rConfig);
+    }
+}
+
+void Tile::RemoveOccupant(const ImprovementConfig_t& rConfig)
+{
+    if (rConfig.placement == OccupantPlacement_t::Terrain)
+    {
+        RemoveTerrainFeature(rConfig.id);
+    }
+    else
+    {
+        RemoveImprovement(rConfig.id);
+    }
+}
+
+void Tile::AddCoexistenceWaiver(const std::string& rImprovementId, const std::string& rFeatureId)
+{
+    const std::pair<std::string, std::string> waiver(rImprovementId, rFeatureId);
+    if (std::find(m_coexistenceWaivers.begin(), m_coexistenceWaivers.end(), waiver)
+        == m_coexistenceWaivers.end())
+    {
+        m_coexistenceWaivers.push_back(waiver);
+    }
+}
+
+const std::vector<std::pair<std::string, std::string>>& Tile::GetCoexistenceWaivers() const
+{
+    return m_coexistenceWaivers;
+}
+
+// A waiver licenses one improvement to share the tile with one occupant. Once that occupant
+// is gone the licence is spent: keeping it would silently re-apply if the occupant ever came
+// back (remove fungus, replant it) to an improvement no former re-earned it for. The
+// improvement side is dropped by RemoveImprovement; this covers the occupant side, and runs
+// from RefreshTerrainFeatures_ so every terrain setter is covered by one call.
+void Tile::DropWaiversForAbsentOccupants_()
+{
+    std::erase_if(m_coexistenceWaivers, [&](const std::pair<std::string, std::string>& rWaiver) {
+        return !HasFeature(rWaiver.second);
+    });
 }
 
 const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
@@ -323,22 +414,24 @@ bool Tile::HasFeature(std::string_view featureId) const
     }
     if (magic_enum::enum_name(m_rockiness) == featureId) return true;
     if (magic_enum::enum_name(m_moisture)  == featureId) return true;
+    if (HasTerrainFeature(featureId)) return true;
     return HasImprovement(featureId);
 }
 
 void Tile::RefreshTerrainFeatures_()
 {
     m_terrainFeatures.clear();
-    if (!m_pImprovements)
+    if (!m_pOccupants)
     {
         return;
     }
+    DropWaiversForAbsentOccupants_();
 
     // Get() rather than Find(): ValidateTerrainFeatures has already proven every id below
     // exists in the registry, so a miss here is a broken invariant, not a skippable feature.
     auto pushFeature = [&](std::string_view id)
     {
-        m_terrainFeatures.push_back(&m_pImprovements->Get(std::string(id)));
+        m_terrainFeatures.push_back(&m_pOccupants->Get(std::string(id)));
     };
 
     pushFeature(magic_enum::enum_name(m_rockiness));
@@ -359,6 +452,13 @@ void Tile::RefreshTerrainFeatures_()
     if (m_bHasAquifer)
     {
         pushFeature(magic_enum::enum_name(TerrainFeature_t::Aquifer));
+    }
+    for (const ImprovementConfig_t* pFeature : m_optionalTerrain)
+    {
+        if (pFeature)
+        {
+            m_terrainFeatures.push_back(pFeature);
+        }
     }
 }
 

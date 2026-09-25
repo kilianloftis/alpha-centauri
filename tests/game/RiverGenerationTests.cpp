@@ -250,7 +250,7 @@ TEST_CASE("terminates_river stops flow; terminus keeps HasRiver", "[worldgen][ri
     SetLandElev_(world.At(1, 4), 500);
 
     world.At(1, 0).SetHasAquifer(true);
-    world.ctx->AddImprovementWithEffects(world.At(1, 2), "ThermalBorehole");
+    world.ctx->AddOccupantWithEffects(world.At(1, 2), "ThermalBorehole");
 
     CHECK(world.At(1, 0).GetHasRiver());
     CHECK(world.At(1, 1).GetHasRiver());
@@ -275,10 +275,10 @@ TEST_CASE("Removing terminates_river improvement lets river continue", "[worldge
     SetLandElev_(world.At(1, 3), 1000);
 
     world.At(1, 0).SetHasAquifer(true);
-    world.ctx->AddImprovementWithEffects(world.At(1, 1), "ThermalBorehole");
+    world.ctx->AddOccupantWithEffects(world.At(1, 1), "ThermalBorehole");
     REQUIRE_FALSE(world.At(1, 2).GetHasRiver());
 
-    world.ctx->RemoveImprovementWithEffects(world.At(1, 1), "ThermalBorehole");
+    world.ctx->RemoveOccupantWithEffects(world.At(1, 1), "ThermalBorehole");
     CHECK(world.At(1, 0).GetHasRiver());
     CHECK(world.At(1, 1).GetHasRiver());
     CHECK(world.At(1, 2).GetHasRiver());
@@ -293,7 +293,7 @@ TEST_CASE("River +1 energy still applies on ThermalBorehole tile",
     SetLandElev_(tile, 1000);
     tile.SetHasAquifer(true);
     tile.SetHasRiver(true);
-    world.ctx->AddImprovementWithEffects(tile, "ThermalBorehole");
+    world.ctx->AddOccupantWithEffects(tile, "ThermalBorehole");
 
     // Borehole +6 energy, River +1; River is not in suppress_yield_sources.
     CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 7);

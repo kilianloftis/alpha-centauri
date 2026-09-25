@@ -145,7 +145,7 @@ std::vector<Tile*> SelectBloomTiles_(Tile& rOrigin, WorldMap& rWorldMap, int til
                 return;
             }
             if (pTile->HasImprovement(ImprovementIds::k_Base)
-                || pTile->HasImprovement(ImprovementIds::k_Fungus))
+                || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
             {
                 return;
             }
@@ -168,11 +168,11 @@ std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
     std::vector<Tile*> newly;
     for (Tile* pTile : rSelected)
     {
-        if (!pTile || pTile->HasImprovement(ImprovementIds::k_Fungus))
+        if (!pTile || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
         {
             continue;
         }
-        pTile->AddImprovement(rFungus);
+        pTile->AddTerrainFeature(rFungus);
         newly.push_back(pTile);
     }
     return newly;

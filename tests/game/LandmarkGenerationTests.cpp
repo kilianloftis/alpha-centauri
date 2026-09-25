@@ -46,6 +46,10 @@ TEST_CASE("LandmarkConfigParser loads landmarks.json and validates improvement i
     {
         ids.push_back(rConfig.id);
     }
+    for (const ImprovementConfig_t& rConfig : world.improvements.GetAll())
+    {
+        ids.push_back(rConfig.id);
+    }
 
     // Production landmarks.json references production improvements; use a tiny fixture file.
     const std::filesystem::path path = TempPath_("ac_landmarks_ok.json");
@@ -79,10 +83,10 @@ TEST_CASE("LandmarkConfigParser loads production landmarks.json against producti
 {
     const std::string configRoot =
         std::string(AC_TEST_FIXTURES_DIR) + "/../../config";
-    ImprovementRegistry improvements;
-    improvements.Load(configRoot + "/improvements.json");
+    const std::vector<ImprovementConfig_t> occupantConfigs =
+        LoadTileOccupants(configRoot + "/improvements.json", configRoot + "/terrain.json");
     std::vector<std::string> ids;
-    for (const ImprovementConfig_t& rConfig : improvements.GetAll())
+    for (const ImprovementConfig_t& rConfig : occupantConfigs)
     {
         ids.push_back(rConfig.id);
     }
@@ -147,7 +151,7 @@ TEST_CASE("PlaceLandmarks respects water domain for FossilFieldRidge-style stamp
     int stamped = 0;
     for (const auto& pTile : world.map.GetTiles())
     {
-        if (pTile->HasImprovement("Nutrients"))
+        if (pTile->HasFeature("Nutrients"))
         {
             ++stamped;
             CHECK(pTile->IsWater());
@@ -194,7 +198,7 @@ TEST_CASE("PlaceLandmarks stamps land landmark yield improvement", "[worldgen][l
     int stamped = 0;
     for (const auto& pTile : world.map.GetTiles())
     {
-        if (pTile->HasImprovement("Nutrients"))
+        if (pTile->HasFeature("Nutrients"))
         {
             ++stamped;
         }

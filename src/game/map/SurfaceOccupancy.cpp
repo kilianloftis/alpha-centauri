@@ -77,7 +77,7 @@ void RemoveImprovements_(TileEffectsContext& rTileEffects, Tile& rTile,
 {
     for (const std::string& rId : rIds)
     {
-        rTileEffects.RemoveImprovementWithEffects(rTile, rId);
+        rTileEffects.RemoveOccupantWithEffects(rTile, rId);
     }
 }
 

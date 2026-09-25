@@ -158,6 +158,9 @@ add_library(ac-core STATIC
     game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
+    game/map/OccupantCoexistence.cpp
+    game/map/TerrainConfigParser.cpp
+    game/effects/CoexistenceResolve.cpp
     game/map/ElevationRulesConfigParser.cpp
     game/map/ElevationChange.cpp
     game/map/SurfaceOccupancy.cpp

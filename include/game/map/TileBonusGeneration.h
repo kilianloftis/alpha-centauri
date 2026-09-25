@@ -15,7 +15,7 @@ class WorldMap;
 // as selection weights among candidates that can coexist on a given tile.
 int PlaceTileBonuses(WorldMap& rWorld,
                      const TileBonusDecorationConfig_t& rConfig,
-                     const ImprovementRegistry& rImprovements,
+                     const ImprovementRegistry& rOccupants,
                      std::mt19937& rRng);
 
 } // namespace ac

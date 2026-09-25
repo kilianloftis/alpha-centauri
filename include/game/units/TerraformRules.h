@@ -3,8 +3,11 @@
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/TerrainConfig.h"
 
+#include <optional>
 #include <random>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -13,43 +16,49 @@ namespace ac
 
 class IUnitOrderWorld;
 class ImprovementRegistry;
+class TerrainOperationRegistry;
 class Tile;
 class WorldMap;
 class TileEffectsContext;
 class Unit;
 class GameState;
+struct TriggeredEffectConfig_t;
 
-// Improvements this order removes when it completes. Place names the improvement the order
-// adds (its own config, or placesImprovementId). Other results introduce no feature, so the
-// list is empty.
-std::vector<std::string> ImprovementsDestroyedByTerraform(const Tile& rTile,
-                                                         const ImprovementConfig_t& rOrder,
-                                                         const ImprovementRegistry& rImprovements);
+// A Former project resolved from either a buildable improvement or a terrain operation.
+// Exactly one of the two halves is filled: pPlaces is the improvement a buildable improvement
+// adds, and onCompleteEffects are the effects an operation runs against the Former's tile.
+struct TerraformProject_t
+{
+    std::string id;
+    std::string name;
+    FormerProject_t project;
+    EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
+    FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
+    const ImprovementConfig_t* pPlaces = nullptr;
+    // Into registry-owned storage; valid while the registries that produced it are alive.
+    std::span<const TriggeredEffectConfig_t> onCompleteEffects;
+};
 
-// Energy spent when starting Raise/Lower Land. Uses reference_level_meters + distance to the
-// nearest owned base (Chebyshev). Config energy_cost is unused for these results.
+// Resolves a project id against buildable improvements first, then terrain operations.
+// LoadGameData rejects an id that is both, so the order is not a tie-break.
+std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
+                                                      const ImprovementRegistry& rImprovements,
+                                                      const TerrainOperationRegistry& rOperations);
+
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
                               const ElevationRulesConfig_t& rRules);
 
-// True if the unit may start this Former project on its current tile (flag, tech, domain,
-// mutation preconditions, energy). A Place order is not refused because of a feature it will
-// clear when it finishes. Does not spend or mutate.
-bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
+bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
                        const GameState& rGameState, const ElevationRulesConfig_t& rRules);
 
-// Energy that would be charged if the order starts now (raise/lower quote, else config).
-int TerraformEnergyCost(const Unit& rUnit, const ImprovementConfig_t& rConfig,
+int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
                         const GameState& rGameState, const ElevationRulesConfig_t& rRules);
 
-// Apply a completed terraform: place improvement or mutate tile. Place removes features that
-// cannot share the tile with the improvement it adds, then adds it. Returns false when the
-// tile's surface will not take the result.
-// Raise and lower roll one level from rRules and relax adjacent slopes. pWorld is forwarded
-// to ApplyElevationDelta so a surface flip reconciles occupancy there.
-bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
-                          TileEffectsContext& rTileEffects, WorldMap& rWorldMap,
-                          const Unit& rFormer, std::mt19937& rRng,
-                          const ElevationRulesConfig_t& rRules,
-                          IUnitOrderWorld* pWorld = nullptr);
+// Place the project's improvement and fire its on_complete_effects against the Former's tile.
+// An improvement refuses before it removes anything when terrain would still conflict, and
+// records on the tile any pair the Former's coexistence override waived. Returns whether
+// anything actually changed.
+bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
+                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng);
 
 } // namespace ac

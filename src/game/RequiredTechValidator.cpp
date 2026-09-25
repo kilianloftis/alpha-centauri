@@ -5,6 +5,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -52,6 +53,19 @@ void ValidateRequiredTech(const std::vector<TConfig>& rConfigs, const TechRegist
     }
 }
 
+// required_tech on the former-project half of an entry. An improvement carries one only when
+// a former can build it; every terrain operation carries one. Both shapes are the same struct,
+// so one check covers them.
+void ValidateProjectTech_(const std::string& rId, const FormerProject_t& rProject,
+                          const TechRegistry& rTechs, const char* what)
+{
+    if (!rProject.requiredTech.empty() && !rTechs.Find(rProject.requiredTech))
+    {
+        throw std::runtime_error(std::string(what) + " '" + rId + "' has required_tech '"
+                                 + rProject.requiredTech + "' which is not a known tech");
+    }
+}
+
 } // namespace
 
 void ValidateRequiredTechReferences(const GameDataContext& rData)
@@ -62,6 +76,8 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
         RequireRegistry(rData.buildingRegistry, "buildingRegistry");
     const ImprovementRegistry& rImprovements =
         RequireRegistry(rData.improvementRegistry, "improvementRegistry");
+    const TerrainOperationRegistry& rOperations =
+        RequireRegistry(rData.terrainOperationRegistry, "terrainOperationRegistry");
     const UnitComponentRegistry& rUnitComponents =
         RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry");
     const UnitSlotRegistry& rUnitSlots =
@@ -76,7 +92,17 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
 
     ValidateRequiredTech(rBuildings.GetAll(), rTechs, "Building");
-    ValidateRequiredTech(rImprovements.GetAll(), rTechs, "Improvement");
+    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    {
+        if (rConfig.project)
+        {
+            ValidateProjectTech_(rConfig.id, *rConfig.project, rTechs, "Improvement");
+        }
+    }
+    for (const TerrainOperationConfig_t& rConfig : rOperations.GetAll())
+    {
+        ValidateProjectTech_(rConfig.id, rConfig.project, rTechs, "Terrain operation");
+    }
     ValidateRequiredTech(rUnitComponents.GetAll(), rTechs, "Unit component");
     ValidateRequiredTech(rUnitSlots.GetAll(), rTechs, "Unit slot");
     ValidateRequiredTech(rSocialPolicies.GetAll(), rTechs, "Social policy");

@@ -501,8 +501,8 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
     Tile& tile = At_(game.pState->GetWorldMap(), 4, 4);
     tile.SetElevation(-100);
     REQUIRE(tile.IsWater());
-    game.pState->GetTileEffects().AddImprovementWithEffects(tile, "KelpFarm");
-    game.pState->GetTileEffects().AddImprovementWithEffects(tile, "Road");
+    game.pState->GetTileEffects().AddOccupantWithEffects(tile, "KelpFarm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(tile, "Road");
 
     Unit& warhead = game.MakeWarhead(4, 4, /*reactorLevels=*/1);
     REQUIRE(ApplyDetonation(*game.pState, warhead));

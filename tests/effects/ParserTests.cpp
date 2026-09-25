@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
+#include <vector>
 
 using namespace ac;
 using Catch::Approx;
@@ -1360,7 +1361,8 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
 {
     for (const char* pType : {"StatModifier", "RuleFlag", "GrantBuilding", "Infiltration",
                               "Conceal", "Detect", "Intercept", "Scramble", "TransportParams",
-                              "InteractionOverride", "SocialEngineeringOverride",
+                              "InteractionOverride", "CoexistenceOverride",
+                              "SocialEngineeringOverride",
                               "DiplomaticModifier", "SocialRatingModifier", "OrbitalAttack"})
     {
         INFO(pType);
@@ -2141,4 +2143,70 @@ TEST_CASE("ParseEffects: absent effects array yields empty vector; entries parse
     REQUIRE(effects.size() == 2);
     CHECK(std::holds_alternative<StatModifierEffect_t>(effects[0].effect));
     CHECK(std::holds_alternative<RuleFlagEffect_t>(effects[1].effect));
+}
+
+TEST_CASE("A tile-feature condition can be negated, and AnyOf is an OR", "[effects][parser]")
+{
+    const auto parseCondition = [](const char* pCondition) {
+        json host;
+        host["effects"] = json::array({json::parse(
+            std::string(R"({"type":"StatModifier","scope":"ThisTile",)")
+            + R"("parameters":{"stat":"minerals","amount":1,"op":"Add"},"condition":)"
+            + pCondition + "}")});
+        return EffectConfigParser::ParseEffects(host, EffectSourceKind_t::Improvement, "src");
+    };
+
+    const std::vector<EffectConfig_t> negated =
+        parseCondition(R"({"kind":"TargetTileHas","value":"Fungus","present":false})");
+    REQUIRE(negated.size() == 1);
+    REQUIRE(negated[0].condition);
+    const auto* pHas = std::get_if<TargetTileHas_t>(&negated[0].condition->AsVariant());
+    REQUIRE(pHas);
+    CHECK(pHas->featureId == "Fungus");
+    CHECK_FALSE(pHas->bPresent);
+
+    // Omitted `present` still means "has it", so existing configs keep their meaning.
+    const std::vector<EffectConfig_t> plain =
+        parseCondition(R"({"kind":"TargetTileHas","value":"Fungus"})");
+    CHECK(std::get_if<TargetTileHas_t>(&plain[0].condition->AsVariant())->bPresent);
+
+    const std::vector<EffectConfig_t> anyOf =
+        parseCondition(R"({"kind":"AnyOf","values":["Rocky","Rolling"]})");
+    REQUIRE(anyOf[0].condition);
+    const auto* pAny = std::get_if<AnyOf_t>(&anyOf[0].condition->AsVariant());
+    REQUIRE(pAny);
+    REQUIRE(pAny->conditions.size() == 2);
+    CHECK(std::get_if<TargetTileHas_t>(&pAny->conditions[0].AsVariant())->featureId == "Rocky");
+
+    CHECK_THROWS_WITH(parseCondition(R"({"kind":"AnyOf"})"),
+                      ContainsSubstring("AnyOf") && ContainsSubstring("non-empty"));
+}
+
+TEST_CASE("CoexistenceOverride needs one or two occupant ids", "[effects][parser]")
+{
+    const auto parse = [](const char* pOccupants) {
+        json host;
+        host["effects"] = json::array({json::parse(
+            std::string(R"({"type":"CoexistenceOverride","scope":"ThisUnit",)")
+            + R"("parameters":{"cell":"allow","occupants":)" + pOccupants + "}}")});
+        return EffectConfigParser::ParseEffects(host, EffectSourceKind_t::UnitComponent, "src");
+    };
+
+    // Naming neither side would wild-card both and switch coexistence off wholesale.
+    CHECK_THROWS_WITH(parse("[]"), ContainsSubstring("one or two"));
+    CHECK_THROWS_WITH(parse(R"(["Farm","Rocky","Fungus"])"), ContainsSubstring("one or two"));
+    CHECK_THROWS_WITH(parse(R"([""])"), ContainsSubstring("non-empty"));
+
+    const std::vector<EffectConfig_t> one = parse(R"(["Farm"])");
+    REQUIRE(one.size() == 1);
+    const auto* pOne = std::get_if<CoexistenceOverrideEffect_t>(&one[0].effect);
+    REQUIRE(pOne);
+    CHECK(pOne->firstId == "Farm");
+    CHECK(pOne->secondId.empty());
+
+    const std::vector<EffectConfig_t> two = parse(R"(["Farm","Rocky"])");
+    const auto* pTwo = std::get_if<CoexistenceOverrideEffect_t>(&two[0].effect);
+    REQUIRE(pTwo);
+    CHECK(pTwo->firstId == "Farm");
+    CHECK(pTwo->secondId == "Rocky");
 }

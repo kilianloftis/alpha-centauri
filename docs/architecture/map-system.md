@@ -22,18 +22,24 @@ graph TB
         LandSea[IsWater / IsLand<br/>below ocean_level_meters]
     end
 
-    subgraph "Tile Features"
+    subgraph "Tile Occupants"
         River[River<br/>bool]
-        Fungus[Fungus<br/>bool]
-        TerrainFeature_t[TerrainFeature_t<br/>enum: Water/Ocean/OceanShelf/<br/>River/Aquifer/Fungus<br/>names are improvement ids]
+        TerrainFeature_t[TerrainFeature_t<br/>enum: Water/Ocean/OceanShelf/<br/>River/Aquifer<br/>names are terrain ids]
+        OptionalTerrain[Optional terrain<br/>fungus, landmarks, bonuses, Monolith<br/>vector const ImprovementConfig_t*]
         Improvements[Improvements<br/>vector const ImprovementConfig_t*]
+        Waivers[Coexistence waivers<br/>improvement id, occupant id]
     end
 
-    subgraph "Effects (config/improvements.json)"
-        ImprovementRegistry[ImprovementRegistry]
+    subgraph "Effects (improvements.json and terrain.json)"
+        ImprovementRegistry[ImprovementRegistry<br/>every occupant, split by placement]
+        TerrainOperationRegistry[TerrainOperationRegistry<br/>projects that place nothing<br/>on_complete_effects]
         CollectTileEffects[CollectTileEffects]
         ResolveTileYield[ResolveTileYield]
         ResolveTileDefenseMultiplier[ResolveTileDefenseMultiplier]
+    end
+
+    subgraph "Former Projects"
+        TerraformProject[TerraformProject_t<br/>optional improvement<br/>+ on_complete_effects]
     end
 
     subgraph "Game Integration"
@@ -52,9 +58,12 @@ graph TB
     ElevationChange --> Elevation
     Elevation --> LandSea
     Tile --> River
-    Tile --> Fungus
+    Tile --> OptionalTerrain
     Tile --> Improvements
+    Tile --> Waivers
     Tile --> CollectTileEffects
+    TerraformProject --> ImprovementRegistry
+    TerraformProject --> TerrainOperationRegistry
     CollectTileEffects --> ImprovementRegistry
     CollectTileEffects --> ResolveTileYield
     CollectTileEffects --> ResolveTileDefenseMultiplier
@@ -96,15 +105,15 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
   - Expose `IsWater()` / `IsLand()` — water is elevation below `ocean_level_meters` (same rule as landform rendering)
   - Track tile features (Rivers, Fungus, Improvements)
   - Expose `GetTerrainFeatures()` (terrain config pointers) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
-  - Resolve intrinsic feature ids via `TerrainFeature_t`, whose enumerator names *are* the `improvements.json` ids (`magic_enum` maps between them, so there is no second list to keep in sync). `HasFeature` switches over it exhaustively — `-Werror=switch` on `ac-core` means adding an enumerator breaks the build until every site decides about it — and `ValidateTerrainFeatures` throws at load if any enumerator lacks an improvement entry. Features stack: a sea tile carries `Water` *and* one of `Ocean`/`OceanShelf`
+  - Resolve intrinsic feature ids via `TerrainFeature_t`, whose enumerator names are the terrain-config ids (`magic_enum` maps between them). `HasFeature` switches over it exhaustively — `-Werror=switch` on `ac-core` means adding an enumerator breaks the build until every site decides about it — and `ValidateTerrainFeatures` throws at load if any enumerator lacks an entry whose `placement` is Terrain. Features stack: a sea tile carries `Water` *and* one of `Ocean`/`OceanShelf`
 - **Composition**:
   - `Position`: x,y coordinates on the map grid
-  - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
-  - `Rockiness_t`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its entry in `config/improvements.json`
+  - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `features` entry in `config/terrain.json`
+  - `Rockiness_t`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its `features` entry in `config/terrain.json`
   - `Elevation`: Integer in meters. The storage range is the world-gen preset's `min_elevation` and `max_elevation` (`config/worldGen/presets.json`), copied onto the world's elevation rules when the map is created. Ocean level and ocean shelf stay in `config/map_rules.json` (`ocean_level_meters`, `ocean_shelf_meters`). `Tile` stores the meters and reads that bound config — the elevation-to-energy rule belongs to the effects layer (`amount_source: ElevationEnergy`, band width from `tile_yield_rules.json`), same as every other terrain-to-yield rule. Play-time edits (Former raise/lower and earthquakes) go through `ApplyElevationDelta` (`include/game/map/ElevationChange.h`). One level is a uniform draw in `[level_min_meters, level_max_meters]` from the same file. After the origin moves, Chebyshev neighbors of every tile that edit changed are pulled up or down until the gap is at most `max_adjacent_difference_meters`. A Former applies one level, clamped at both ends (raise stops at the preset's `max_elevation`; lower stops at `ocean_level_meters` on land or the preset's `min_elevation` at sea — a roll deeper than the floor lands on the floor rather than failing an order that has already been paid for). `ApplyEarthquake` sums `levelCount` rolls and clamps to that same range; the `Earthquake` triggered effect is what fires it in play (a Tectonic Payload's `on_detonate_effects`, sized by the reactor's `earthquake_levels`). Former eligibility and the raise/lower energy band use `reference_level_meters`, not the rolled size, and forest/fungus spread onto high ground uses `spread_altitude_limit_meters` — three separate knobs that ship the same number. A play-time edit that crosses ocean level reconciles occupancy inside `ApplyElevationDelta` when the caller passes tile effects: that call removes every improvement whose `domain` (`land` or `sea` on `ImprovementConfig_t`; omitted survives either surface) is not the surface the tile landed on. `Base` is `land`. It stays on water when a sea colony pod founded it, or when the base has the Pressure Dome building at the crossing; otherwise the base is razed. A tile that does not flip is left alone.
-  - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
-  - `Fungus`: An improvement (`ImprovementIds::k_Fungus`), not a tile flag. Its `improvements.json` entry carries the move cost, nutrient, defense, and conceal effect. World generation, a fungal bloom (`ApplyFungalBloom`), a landmark `set_fungus` footprint, and a Former `PlantFungus` order add it. That order is a `Place` whose `terraform.improvement` is `Fungus`, so it adds the fungus improvement rather than itself. `RemoveFungus` and forest spread remove it. The bloom's tile count comes from the reactor stat `fungal_bloom_tiles` (3, 5, 7, 9). The origin is included when it is not a base; the rest are a random sample of Chebyshev-1 neighbors that are not bases and do not already have fungus. Adding it notifies the tile's listener, which drops improvements that `CanBuildImprovement` now rejects. `Base` is left to surface-flip reconciliation. How many native lifeforms appear on the new tiles is a uniform draw of `fungal_bloom_native_lifeforms_min` / `fungal_bloom_native_lifeforms_max` in `config/native_units.json`. Turn-over-turn fungus spread is a separate future enhancement.
-  - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry` (like `BuildingManager`'s `BuildingConfig_t*`). Covers player-built improvements (e.g. "Farm", "Mine", "Bunker"), the `"Base"` marker added automatically when a `BaseManager` is founded on the tile, and tile specials that were formerly separate "bonus"/"landmark" slots (e.g. "Monsoon Jungle", "nutrient_rich_soil") — for the map all three are just improvements, with coexistence governed by `ImprovementConfig_t::excludes`
+  - `River`: Boolean flag for river presence (grants an energy bonus via its `terrain.json` entry)
+  - `Fungus`: Optional terrain (`ImprovementIds::k_Fungus`) stored beside landmarks, resource bonuses, and Monolith, mirrored into `GetTerrainFeatures()`. Its `terrain.json` entry carries the move cost, nutrient, defense, and conceal effect. World generation, a fungal bloom (`ApplyFungalBloom`), a landmark `set_fungus` footprint, and the `PlantFungus` terrain operation add it. `RemoveFungus` removes it. Forest spread does not. The bloom's tile count comes from the reactor stat `fungal_bloom_tiles` (3, 5, 7, 9). The origin is included when it is not a base; the rest are a random sample of Chebyshev-1 neighbors that are not bases and do not already have fungus. Adding it notifies the tile's listener, which drops improvements that `CanBuildImprovement` now rejects. `Base` is left to surface-flip reconciliation. How many native lifeforms appear on the new tiles is a uniform draw of `fungal_bloom_native_lifeforms_min` / `fungal_bloom_native_lifeforms_max` in `config/native_units.json`. Turn-over-turn fungus spread is a separate future enhancement.
+  - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry`. Covers player-built improvements (Farm, Forest, Mine, roads, kelp, Base). Forest is an improvement. A finished improvement project displaces other improvements it cannot share the tile with and leaves terrain in place. Optional terrain (fungus, landmarks, bonuses, Monolith) is a separate list of pointers into the same registry, distinguished by `placement`.
   - Note: `Tile` holds **no** worked/worker-assignment state — that lives in `WorkedTileIndex` (below), so `Tile` needs no `mutable` members and a `const Tile&` really is immutable. Likewise `Tile` holds **no** political ownership — that lives in `TerritoryMap`.
 
 ### WorkedTileIndex (worked-tile occupancy)
@@ -213,10 +222,10 @@ graph TB
 ### Tile Improvement Effects
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
-  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, mineral cost, required tech, `excludes` (incompatible feature ids), per-effect `radius`, optional `owned_by_territory`, and an `effects` array.
+  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, `placement`, `excludes` (incompatible occupant ids), per-effect `radius`, optional `owned_by_territory`, an `effects` array, and an optional `project` (`FormerProject_t`: turns, energy, required tech) present only when a former can build it — so "terrain with a build cost" is unrepresentable rather than three fields every terrain consumer knows to ignore, and `IsBuildable` is just `project.has_value()`. Coexistence is **not** in this header: `OccupantCoexistence.h` owns the predicate, leaving the parser to parse.
   - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).
-  - `CanBuildImprovement(tile, candidate)` (`include/game/map/ImprovementConfigParser.h`) — exclusivity check (e.g. Farm excludes Rocky). Not wired into any UI yet; there's no improvement-construction flow to call it from.
-- **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`, `Sensor`, …).
+  - `OccupantsBlockPlacement(tile, candidate, leavingIds, overrides)` (`include/game/map/ImprovementConfigParser.h`) — the one coexistence predicate. `CanBuildImprovement` is the same question asked the other way round for call sites that want permission rather than a blocker.
+- **Configuration**: `config/improvements.json` holds improvements, each carrying its own `turns_required` / `energy_cost` / `required_tech` when a former can build it. `config/terrain.json` holds terrain occupants (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith) under `features`, and former projects that place no improvement (`LevelTerrain`, `PlantFungus`, `RemoveFungus`, `RaiseLand`, `LowerLand`, `Aquifer`) under `operations`. An operation is `turns_required` / `energy_cost` / `required_tech` plus an `on_complete_effects` list of triggered effects — the same machinery a Tectonic Payload's `on_detonate_effects` uses — so the set is open and nothing in code enumerates it. Each entry's `condition` is also what decides whether the project may start: `CanStartTerraform` refuses when no effect would fire, so a project is never paid for when it would do nothing. Two fields cover the rules that are not expressible as effects: `energy_cost_source: RaiseLowerQuote` swaps the flat `energy_cost` for the elevation-band-plus-distance quote, and `former_domain: Any` lets either Former run it on whatever tile it is standing on. Both files load into **one** `ImprovementRegistry`; `ImprovementConfig_t::placement` says which file an entry came from, so an id cannot be both and `ValidateNoDuplicates_` catches an attempt. `LoadMapOccupants` (`include/game/map/MapOccupantLoad.h`) is the single loading path — production and every test fixture call it, so neither can drift from the other or skip the check that refuses an operation id a buildable improvement would shadow. It reads `terrain.json` once and hands each half to its owner. Callers with no use for former projects use `ImprovementRegistry::LoadOccupants`. `Base` declares no `turns_required`, which is exactly what makes it unbuildable.
 - **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier`
   effect on `StatId_t::TileDefense` with `op: AddPercent, amount: 25` (+25%, stacking
   additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger
@@ -227,14 +236,14 @@ graph TB
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
-- **Modeling**: These are **not a separate system** — a tile bonus is just an `ImprovementConfig_t` entry in `config/improvements.json` like any other improvement. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description` for rendering and lore. It lives in the tile's single improvements collection (`Tile::GetImprovements()`), with coexistence governed by `excludes`.
+- **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
 - **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.land_fraction`.
 
 ### Improvement coexistence (`CanBuildImprovement`)
-- **One predicate, both directions**: a candidate may be placed unless the candidate's own `excludes` name a feature already on the tile, **or** a feature already on the tile names the candidate. Modders declare the relationship once, on whichever side reads better — `MountPlanet` excluding `@resource_bonus` is enough to keep `Nutrients` off it, without `Nutrients` naming every landmark.
-- **A change drops what can no longer stay**: `Tile` notifies its `TileChangeListener` when an improvement is added or elevation, rockiness, moisture, fungus, or rivers change. `TileEffectsContext::OnTileChanged` removes improvements `CanBuildImprovement` now rejects. The improvement just added is kept for that pass, then dropped too if a terrain feature still rejects it. `Base` is left to surface-flip reconciliation. A Place order is not refused at the start because of a feature it can clear. When it finishes, `ApplyTerraformResult` removes improvements that cannot share the tile and steps rockiness, moisture, river, and aquifer off any classification the new improvement excludes, then adds the improvement. A depth band (`Ocean`, `OceanShelf`, `Water`) still refuses the start, because a place order does not change elevation. Fungus is an improvement, so an order that cannot share the tile with it removes the fungus. World-gen runs before the listener is bound and still refuses via `CanBuildImprovement` rather than replacing an incumbent. Forest spread does the same.
-- Every placement path shares the predicate: world-gen bonuses, landmark stamping, terraform orders, and fungus/forest spread. The incumbent side reads a tile's terrain-feature configs, which exist only after `Tile::BindImprovements` — so `WorldGenerator` binds the whole grid before its first stage, and an unbound tile never answers a coexistence question.
-- `clearedFeatureId` is the one escape hatch: a caller that removes a feature as part of the same placement (forest spread wipes fungus) names it, instead of mutating the tile to probe.
+- **One predicate, both directions**: a candidate may be placed unless the candidate's own `excludes` name a feature already on the tile, **or** a feature already on the tile names the candidate. Modders declare the relationship once, on whichever side reads better — `MountPlanet` excluding `@resource_bonus` is enough to keep `Nutrients` off it, without `Nutrients` naming every landmark. `Fungus` states its side the same way with `excludes: ["@buildable"]`: `@buildable` is an **implicit** tag every entry that declares `turns_required` carries, derived rather than authored (declaring it by hand is rejected), so a new former-built improvement is fungus-blocked the moment it exists instead of when someone remembers to type `"Fungus"`. `Base` declares no `turns_required`, so founding on fungus is untouched.
+- **A change drops improvements that can no longer stay**: `Tile` notifies its listener when an improvement or optional terrain occupant is added, or elevation, rockiness, moisture, or rivers change. `OnTileChanged` sweeps twice: once holding the new arrival exempt so it can clear what it displaces, then again with nothing exempt so the arrival is judged against what is left. `Base` is left to surface-flip reconciliation. An improvement project cannot start while remaining terrain still excludes it. When it finishes, it removes conflicting improvements and adds the improvement. It does not change rockiness, moisture, river, aquifer, or fungus — a project's `on_complete_effects` do that work, and an improvement may declare them too. Adding fungus drops improvements that then fail the predicate and leaves a nutrient bonus. A depth band still refuses an improvement project. World gen passes no unit, so it uses the stock excludes and refuses rather than replacing terrain.
+- **Waivers are tile state, not unit state**: a `ThisUnit` or `FactionUnits` `CoexistenceOverride` names one or two occupant ids (unordered; one id wild-cards the other side) and can allow a pair the stock `excludes` deny. When such a project completes, `ApplyTerraformResult` records the pairs it actually needed on the tile via `Tile::AddCoexistenceWaiver`, and `OccupantsBlockPlacement` folds the tile's waivers in alongside any overrides the caller passed. That is what makes the permission durable: later sweeps carry no overrides, so without the record the improvement would be evicted by the very feature it was licensed to share. A waiver is dropped with the improvement it belongs to (`RemoveImprovement`) **and** with the occupant it names (any terrain change, via `RefreshTerrainFeatures_`), so a licence never outlives the pair it was granted for — level a waived Farm's Rocky away and the waiver goes too, so Rocky returning evicts the Farm. Losing the component or tech that earned it changes nothing.
+- Every placement path shares the predicate: world-gen bonuses, landmark stamping, improvement projects, and forest spread. The incumbent side reads a tile's terrain configs, which exist only after `Tile::BindOccupants` — so `WorldGenerator` binds the whole grid before its first stage. Forest spread does not treat a fungus neighbour as a legal target.
 
 ### WorldMap
 - **Purpose**: Container owning the tile grid plus world-scoped indexes (`WorkedTileIndex`, `UnitPositionIndex`, `TerritoryMap`).
@@ -275,13 +284,13 @@ graph TB
 
 ### Extensibility
 - Improvements system allows extending tile functionality without modifying Tile class
-- A single improvements collection covers player-built improvements, tile specials, landmarks, and the Base marker — new kinds are added as `config/improvements.json` entries, not new C++ types
-- Resource and defense calculation are entirely effects-driven via `config/improvements.json` — adding a new improvement, or changing what Rocky/Fungus grant, never touches `Tile` or its consumers' C++
+- Improvements are an open set in `config/improvements.json`; one declares `turns_required` to become buildable. Terrain occupants are an open set in `config/terrain.json`. Terrain mutations are an open set too: an operation is defined by the triggered effects it runs (`SetTerrainFeature`, `StepRockiness`, `ElevationChange`), so a new one is a config entry, not a new C++ enumerator and a new arm in every switch that read it.
+- Resource and defense calculation are entirely effects-driven via `config/improvements.json` and `config/terrain.json`. Adding a new improvement, or changing what Rocky or Fungus grant, never touches `Tile` or its consumers' C++
 
 ### Moddability
 - Terrain characteristics use semantically meaningful types (enums for moisture/rockiness, actual meters for elevation) for world-gen and rendering, but resolve through the same string-id effects lookup as improvements for yield/defense purposes
 - Improvements are referenced by string ID in config for easy content addition; on a tile they're held as resolved `ImprovementConfig_t` pointers
-- Resource and defense formulas live in `config/improvements.json`, not in code
+- Resource and defense formulas live in `config/improvements.json` and `config/terrain.json`, not in code
 
 ## Future Enhancements
 

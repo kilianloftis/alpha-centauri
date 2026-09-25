@@ -83,18 +83,19 @@ public:
     // multiple overlapping Condensers and add/remove order never cause drift.
     void RecomputeMoisture(Tile& rTile);
 
-    // Adds improvementId to rTile. The tile notifies this context, which drops improvements
-    // that can no longer be built there, then re-runs RecomputeMoisture for every tile within
-    // that improvement's radius so any terrain-mutating effect (e.g. Condenser) takes effect
-    // immediately. Always use this instead of Tile::AddImprovement directly when the add can
-    // change moisture or rivers.
-    void AddImprovementWithEffects(Tile& rTile, const std::string& improvementId);
+    // Adds occupantId to rTile, on whichever list its config's placement names. The tile
+    // notifies this context, which drops improvements that can no longer be built there, then
+    // re-runs RecomputeMoisture for every tile within that occupant's radius so any
+    // terrain-mutating effect (e.g. Condenser) takes effect immediately. Always use this
+    // instead of Tile::AddOccupant directly when the add can change moisture or rivers.
+    void AddOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
     void OnTileChanged(Tile& rTile, std::string_view keepId) override;
 
-    // Removes improvementId from rTile, then re-runs RecomputeMoisture over the same radius
-    // so the bonus reverts cleanly even when other Condensers still cover some of those tiles.
-    void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId);
+    // Removes occupantId from rTile, then re-runs RecomputeMoisture over the same radius so
+    // the bonus reverts cleanly even when other Condensers still cover some of those tiles.
+    // An id no longer in the registry removes nothing.
+    void RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
 private:
     // Resolves one resource lane from an already-partitioned pointer list (no ActiveEffect_t

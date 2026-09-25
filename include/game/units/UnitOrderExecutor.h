@@ -106,9 +106,10 @@ public:
     BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState,
                               const GameDataContext& rDataContext);
 
-    // Begin a Former terraform project for improvementId. Spends energy up front and
+    // Begin a Former terraform project for projectId (a buildable improvement or a terrain
+    // operation). Spends energy up front and
     // assigns TerraformOrder_t. Returns false if ineligible.
-    bool TryStartTerraform(Unit& rUnit, const std::string& improvementId, GameState& rGameState);
+    bool TryStartTerraform(Unit& rUnit, const std::string& projectId, GameState& rGameState);
 
     // Forwards to AttackRules::FindVisibleHostileOnTile (visibility + embark-in-base
     // targeting). Input/AI use this; declare-attack legality is FindAttackableHostileOnTile.

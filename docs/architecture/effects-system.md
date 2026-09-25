@@ -166,6 +166,24 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `SocialEngineeringOverrideEffect_t`
   - `SocialRatingModifierEffect_t`
   - `DiplomaticModifierEffect_t`
+  - `InteractionOverrideEffect_t`
+  - `CoexistenceOverrideEffect_t`
+
+### CoexistenceOverrideEffect_t
+- **Purpose**: Licenses one former to build past a stock `excludes` deny (or to be denied a
+  pair the stock rules allow). Scope must be `ThisUnit` (a component) or `FactionUnits` (a
+  tech); the parser rejects anything else.
+- **Config**: `cell` is `allow` or `deny`, and `occupants` names **one or two** occupant ids.
+  Two names the exact pair; one wild-cards the other side. Zero is rejected — it would
+  wild-card both sides and switch coexistence off wholesale. The pair is unordered, so a
+  modder declares the relationship once without knowing which side a given placement treats
+  as incoming. An override that restates the stock answer is skipped.
+- **Durability**: overrides are resolved from the acting unit at placement time, but the
+  permission is recorded on the **tile** (`Tile::AddCoexistenceWaiver`) for the pairs the
+  placement actually needed. `OccupantsBlockPlacement` folds a tile's waivers in on every
+  later query, so the occupancy sweep that runs on any subsequent tile change does not evict
+  what was legitimately built. A waiver is dropped with the improvement it belongs to, and
+  losing the component or tech that earned it changes nothing.
 
 ### StatModifierEffect_t
 - **Purpose**: Modifies any stat identified by `StatId_t` — both base resources and unit stats. Also expresses **per-tile yield modifiers** via its optional `selector` (see below); there is no separate tile-yield effect type.
@@ -294,8 +312,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 ### Condition_t
 - **Purpose**: An optional runtime predicate on `EffectConfig_t` (`std::optional<Condition_t> condition`). When present, the effect only applies in a context that satisfies the condition, and is excluded from context-free resolution (base economy, intrinsic unit stats). This is how situational modifiers — e.g. "+25% attack vs a Base", "+25% attack into Forest" — are expressed, replacing the former `UnitBonusTableEffect_t`.
 - **Shape**: inherits `std::variant` (so `AllOf_t` can recurse). Alternatives:
-  - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile.
+  - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile. JSON `"present": false` inverts the test ("this tile does **not** have Fungus"), the same way `IsNativeLife_t`'s `value` does; an absent tile fails closed whichever polarity was authored, so a negated test is not a way to match "no tile". There is no `Not_t`: a whole alternative would have to hold a nested `Condition_t`, and every negation the rules need is of a tile-feature test.
   - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
+  - `AnyOf_t` — at least one nested `Condition_t` is satisfied (OR). Same JSON shape and the same `values` desugaring as `AllOf_t`. Level Terrain's precondition is `AnyOf` over `Rocky` / `Rolling`.
   - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `OriginBaseIsHomeBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — parameterless situational predicates. `OriginBaseIsTargetBase_t` keys on the combat tile; `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base, which is how a base-sourced `FactionUnits` effect (a riot tier's morale penalty) narrows to that base's own garrison.
   - `SubjectDesign_t` — identity predicate. True when `EffectContext_t::pUnit`'s design id equals `designId`. Absent unit fails closed. Load validation checks the id against `NativeUnitRegistry`.
   - `IsNativeLife_t` — identity predicate. True when the design's `native_life` RuleFlag equals `bMatches` (JSON `value`, default true). A composed design carries the flag on a component. Absent unit fails closed.
@@ -460,7 +479,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -528,12 +547,27 @@ tile's own bound `ElevationRulesConfig_t`, so the effect needs no `GameDataConte
 `FungalBloom` (`include/game/map/FungalBloom.h`) sets fungus on the origin when it is not a
 base, then on a random sample of Chebyshev-1 neighbors that are not bases and do not already
 have fungus, up to the resolved tile count (the full count when the origin is a base). Setting
-fungus removes improvements that cannot coexist with it, the same displacement adding an
-improvement performs. Former projects list `Fungus` in their own `excludes`. A uniform draw of
+fungus removes improvements that cannot coexist with it. A nutrient bonus stays. A uniform draw of
 `[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
 `config/native_units.json` spawns that many native-life designs on the new tiles, owned by the
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
+
+`SetTerrainFeature`, `StepRockiness` and `ElevationChange` are the terrain edits a Former
+project composes itself from (`config/terrain.json`'s `operations`), which is why the set of
+operations is open rather than an enum in code. `SetTerrainFeature` adds or clears one terrain
+occupant on the context tile (`present: false` clears); the id decides where it is stored —
+`Aquifer` and `River` are tile bools, everything else is optional terrain — and terrain a tile
+*derives* rather than stores (the two axes, and the `Water`/`Ocean`/`OceanShelf` depth bands)
+is rejected at load, because writing it would be undone by the state it comes from.
+`StepRockiness` moves the tile along `Flat < Rolling < Rocky` by a signed `steps`, clamped at
+both ends. `ElevationChange` applies one signed level roll as a Former edit; unlike
+`Earthquake` it has a floor that depends on the subject unit's domain, so a land Former cannot
+dig its own tile below ocean level while a sea Former may reach Planet's floor. None of the
+three checks whether the project *should* run — that is the entry's `condition` (plus
+`FormerElevationChangeAllowed` for the elevation bound), asked by `CanStartTerraform` before
+the order is paid for. By the time they fire the energy is spent, so they clamp rather than
+refuse.
 
 `on_discover_effects` fire whenever a tech joins a faction's discovered set (research
 breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain
@@ -800,10 +834,9 @@ grants fewer units and reports the real count rather than throwing.
   `ValidateEffectReferences(*m_gameDataContext)`.
 - **Checks** (throws naming the source config and the bad id): `GrantBuilding` targets
   against `BuildingRegistry`, `GrantTech` targets against `TechRegistry`, `HasImprovement`
-  selector ids against `ImprovementRegistry`, and `TargetTileHas` condition values against
-  improvement ids. Every `HasFeature` id is an improvement entry — terrain classifications
-  (Flat / Arid) and intrinsic features alike (`Water` / `Ocean` / `River` / …) — so this
-  check has no special cases. Payload dispatch is an exhaustive `std::visit` over
+  selector ids, `TargetTileHas` condition values and `CoexistenceOverride` occupant ids
+  against `ImprovementRegistry` — one lookup, since terrain lives there too. Payload
+  dispatch is an exhaustive `std::visit` over
   `EffectVariant_t` (compile break when a new alternative is added without an arm).
   `GrantUnit` is intentionally an empty arm — unit designs are runtime data with no config
   registry.
@@ -812,9 +845,10 @@ grants fewer units and reports the real count rather than throwing.
   (null = skip that family's checks). The `GameDataContext` overload throws if any target
   registry or walked effect-source unique_ptr that `LoadGameData` always installs is null —
   never silently no-ops the whole check.
-- **`ValidateTerrainFeatures(improvements)`** (`game/map/TerrainFeatureValidation.h`) runs
-  alongside it: every `Rockiness_t`, `Moisture_t` and `TerrainFeature_t` enumerator must have
-  an improvement entry whose id matches the enumerator name. `Tile` mirrors those enums into
+- **`ValidateTerrainFeatures(occupants)`** (`game/map/TerrainFeatureValidation.h`) runs
+  alongside it: every `Rockiness_t`, `Moisture_t` and `TerrainFeature_t` enumerator, plus
+  Fungus, must be present with `placement` Terrain; Forest and KelpFarm must be present with
+  `placement` Improvement. `Tile` mirrors those enums into
   `GetTerrainFeatures()` by name, so a missing entry would otherwise cost a tile its terrain
   effects silently.
 - **Coverage**: every effect-declaring config — buildings, improvements, pop types, unit
@@ -871,9 +905,9 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 
 ### Tile Improvement Effects
 
-- **Purpose**: Unifies every "thing on a tile" — terrain classification (Rockiness_t, Moisture_t), natural features (River, Fungus), player-built improvements (Farm, Mine, Bunker), tile specials that were formerly separate "bonus"/"landmark" slots, and a founded Base — behind one config type, since they all answer the same two questions: what effects do they grant, and what do they exclude. Defined in `include/game/map/ImprovementConfigParser.h` / `config/improvements.json`.
-- **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
-- **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as resolved config pointers via `Tile::GetTerrainFeatures()` (Rockiness_t, Moisture_t, and each active `TerrainFeature_t`), cached by `RefreshTerrainFeatures_` whenever a terrain setter runs. `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain names + improvement ids) for conditions/selectors/`CanBuildImprovement`.
+- **Purpose**: Improvements and terrain occupants share `ImprovementConfig_t` **and one `ImprovementRegistry`**, so effect collection walks one pointer type through one lookup. `ImprovementConfig_t::placement` says which of the two an entry is, stamped by the parser from the file it came from: improvements (Farm, Forest, Mine, Base) from `config/improvements.json`, terrain occupants from `config/terrain.json`. An improvement that declares `turns_required` is a former project. `config/terrain.json`'s `operations` half holds former projects that place nothing: they carry an `on_complete_effects` list instead, and live in `TerrainOperationRegistry` rather than in the occupant registry, because they never sit on a tile.
+- **`ImprovementConfig_t`**: `id`, `name`, `description`, `placement`, `turnsRequired` / `energyCost` / `requiredTech` (a former project when `turnsRequired` > 0; rejected outright on a terrain entry), `excludes` (other occupant ids that can't coexist with this one on a tile), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
+- **How a tile holds features**: improvements are `const ImprovementConfig_t*` in `Tile::GetImprovements()`. Axes and flags (rockiness, moisture, water band, river, aquifer) stay on the tile and are mirrored into `GetTerrainFeatures()`. Optional terrain (fungus, landmarks, bonuses, Monolith) is stored separately and appended to that same cache. Both lists point into the same registry. `Tile::HasFeature(id)` answers either. A finished improvement project does not flatten rockiness or remove fungus.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope filter as own-tile collection.
 - **`min_radius` (ring auras)**: the nearest distance an aura reaches (`EffectConfig_t::minRadius`, default `0` = includes the host tile). `TileEffectReaches` is `minRadius <= distance <= radius`. The Echelon Mirror uses `min_radius: 1, radius: 1`: it counts as a solar collector for its own elevation energy and for *other* mirrors' bonuses, but must not hand its `+1` to itself. Rejected when it exceeds `radius` (the effect would reach no tile at all) or on a non-`ThisTile` scope, both at parse time.
@@ -898,8 +932,8 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`Tile::m_baseMoisture`/`GetBaseMoisture()`/`SetBaseMoisture()`**: the natural, un-condensed terrain truth set once by `WorldGenerator`. `m_moisture`/`GetMoisture()`/`SetMoisture()` is the current/effective value (what rendering and `GetTerrainFeatures()` see), mutated by `RecomputeMoisture` from the base + nearby Condensers. World-gen sets both to the same initial random value; `RecomputeMoisture` derives `m_moisture` from `m_baseMoisture` fresh each time — never increments/decrements in place — so overlapping Condensers and add/remove order can never cause drift.
 - **`RecomputeMoisture(tile, worldMap, registry)`**: re-derives `tile`'s effective moisture from `tile.GetBaseMoisture()` + any `moisture_tier` `Add` effects from `CollectAreaEffects`, clamps to `[Arid, Wet]`, calls `tile.SetMoisture()`. Single function, always called from the current live world state — idempotent, consistent with any number of overlapping Condensers.
 - **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the entry point that also recomputes moisture (and rivers, when the config terminates one) for every tile within the improvement's maximum effect reach (`MaxEffectReach_` — the largest per-effect radius, including the host tile). A Condenser addition updates moisture on itself and its neighbors; removal reverts them. Adding the improvement, and any moisture or river change that follows, notifies the tile's `TileChangeListener`. `TileEffectsContext` is that listener for the session and drops improvements that can no longer stay. `BaseManager` uses this for `"Base"`. When a future improvement-construction UI is added, it must go through these functions so moisture and rivers update.
-- **`CanBuildImprovement(tile, candidateConfig)`**: returns false if any id in `candidateConfig.excludes` is present on the tile per `tile.HasFeature(id)` (e.g. Farm excludes Rocky). Exposed as a resolver only — no improvement-construction UI/flow exists yet to enforce it.
-- **"Base" as an improvement**: `BaseManager`'s constructor calls `AddImprovementWithEffects(m_tile, "Base", worldMap, registry)`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the exact same mechanism as Bunker/Rocky/Fungus. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`), `Faction::CreateBase` takes a non-const `Tile*`, and `Faction::CreateBase` takes a non-const `WorldMap&`.
+- **`OccupantsBlockPlacement(tile, candidate, leavingIds, overrides)`**: the single coexistence predicate — blocked by domain, or by an occupant still on the tile that either side's `excludes` names (Farm excludes Rocky; Monolith excludes itself). `CanBuildImprovement` is the same question phrased as permission. World gen and forest spread pass no overrides and get the stock answer. An improvement project passes the acting former's `CoexistenceOverride` effects, and the predicate also folds in whatever waivers the tile already recorded — see the waiver rules in `map-system.md`.
+- **"Base" as an improvement**: `BaseManager`'s constructor calls `AddImprovementWithEffects(m_tile, "Base", worldMap, registry)`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the same effect path as Bunker and the Rocky and Fungus terrain occupants. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`), `Faction::CreateBase` takes a non-const `Tile*`, and `Faction::CreateBase` takes a non-const `WorldMap&`.
 - **Building bonuses to worked improvements**: a building can boost worked tiles that have a given improvement by attaching a `HasImprovement` `selector` to a `StatModifier` (e.g. Nutrient Bank's "+1 nutrients to worked Farms"). The selector's `improvement` is the plain `ImprovementConfig_t::id` string and is matched against `Tile::HasImprovement()` during the per-tile yield resolve — the same string-id lookup used everywhere else, with no separate improvement-type enum.
 
 ## How to add a new producer or consumer

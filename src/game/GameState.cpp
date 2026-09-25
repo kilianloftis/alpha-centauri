@@ -153,9 +153,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
-    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements,
-                                                          pUnitComponents, rYieldRules,
-                                                          rInteractionGrids);
+    m_pTileEffects = std::make_unique<TileEffectsContext>(
+        *m_worldMap, rImprovements, pUnitComponents, rYieldRules, rInteractionGrids);
     m_pTileEffects->BindWorldEffects(*this);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);

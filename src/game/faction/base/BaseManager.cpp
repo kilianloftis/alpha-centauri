@@ -149,7 +149,7 @@ BaseManager::BaseManager(
     });
 
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
-    m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+    m_rTileEffects.AddOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 
     // What a pop is worth right now, so shrinking a base takes the least productive one.
     // Only BaseManager can resolve a worked tile's yield, which is why the rule is injected
@@ -262,7 +262,7 @@ BaseManager::~BaseManager()
     // pop-on-destroy) can drop its reference before the object actually goes away — mirrors
     // UnitManager::OnUnitDestroyed's "signal before erase" contract.
     OnDestroyed.Emit();
-    m_rTileEffects.RemoveImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+    m_rTileEffects.RemoveOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 }
 
 bool BaseManager::IsRazed() const
@@ -280,7 +280,7 @@ void BaseManager::MarkRazed_()
     m_bRazed = true;
     // The square must be free the instant the base dies — another unit may move onto it, or a
     // colony pod may found here, long before ReapRazedBases destroys this object.
-    m_rTileEffects.RemoveImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+    m_rTileEffects.RemoveOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
     OnDestroyed.Emit();
 }
 

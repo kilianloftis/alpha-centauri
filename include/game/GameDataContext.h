@@ -34,6 +34,7 @@ struct TechCostConfig_t;
 class TechCostCalculator;
 class PopTypeAvailabilityCalculator;
 class ImprovementRegistry;
+class TerrainOperationRegistry;
 class WorldGenPresetRegistry;
 struct WorldGenDecorationConfig_t;
 struct LandmarkConfig_t;
@@ -82,6 +83,7 @@ struct GameDataContext
     std::unique_ptr<CommerceConfig_t> commerceConfig;
     std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
+    std::unique_ptr<TerrainOperationRegistry> terrainOperationRegistry;
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
     std::vector<LandmarkConfig_t> worldGenLandmarks;

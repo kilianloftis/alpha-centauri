@@ -1,6 +1,10 @@
 #include "TempConfigFile.h"
 
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainConfig.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include <magic_enum.hpp>
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -396,18 +400,46 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
 
 TEST_CASE("A negative improvement energy cost is rejected, by name", "[config][improvement]")
 {
-    // A terraform order spends this through EconomyManager::CanAfford, which treats a negative
-    // cost as a caller bug and throws. Before the treasury owned that rule, a negative cost was
-    // an improvement that paid the player to build it. Either way the config is wrong, and it
-    // should fail at load naming the improvement rather than mid-order.
+    // A former project spends this through EconomyManager::CanAfford, which treats a negative
+    // cost as a caller bug and throws. It should fail at load naming the improvement rather
+    // than mid-order.
     TempConfigFile config("ac_improvement_negative_cost.json", R"([
         { "id": "cheap_farm", "name": "Cheap Farm", "turns_required": 2, "energy_cost": -5 }
     ])");
 
-    ImprovementRegistry registry;
-    CHECK_THROWS_WITH(registry.Load(config.Path()),
+    ImprovementConfigParser parser;
+    CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                       Catch::Matchers::ContainsSubstring("cheap_farm")
                           && Catch::Matchers::ContainsSubstring("energy_cost"));
+}
+
+TEST_CASE("ParseTerrainFile requires both halves of the file", "[config][terrain]")
+{
+    // Each half feeds a different registry, so a file carrying only one is a partial config
+    // rather than a smaller one, and should fail naming the section that is missing.
+    TempConfigFile featuresOnly("ac_terrain_features_only.json",
+                                R"({ "features": [ { "id": "Flat", "name": "Flat" } ] })");
+    CHECK_THROWS_WITH(ParseTerrainFile(featuresOnly.Path()),
+                      Catch::Matchers::ContainsSubstring("operations"));
+
+    TempConfigFile opsOnly("ac_terrain_ops_only.json", R"({ "operations": [] })");
+    CHECK_THROWS_WITH(ParseTerrainFile(opsOnly.Path()),
+                      Catch::Matchers::ContainsSubstring("features"));
+}
+
+TEST_CASE("Construction fields on a terrain feature are rejected, by name",
+          "[config][improvement]")
+{
+    // Terrain is not built by a former: its cost and duration belong to the terrain operation
+    // that produces it, so naming them here is a config mistake rather than a silent no-op.
+    TempConfigFile config("ac_terrain_with_turns.json",
+                          R"({ "features": [
+        { "id": "Swamp", "name": "Swamp", "turns_required": 3 }
+    ], "operations": [] })");
+
+    CHECK_THROWS_WITH(ParseTerrainFile(config.Path()),
+                      Catch::Matchers::ContainsSubstring("Swamp")
+                          && Catch::Matchers::ContainsSubstring("turns_required"));
 }
 
 TEST_CASE("An improvement's vision radius comes from its own Vision modifiers",
@@ -430,8 +462,9 @@ TEST_CASE("An improvement's vision radius comes from its own Vision modifiers",
         ]}
     ])");
 
+    ImprovementConfigParser parser;
     ImprovementRegistry registry;
-    registry.Load(config.Path());
+    registry.Assign(parser.ParseConfig(config.Path()));
 
     CHECK(registry.Get("watchtower").visionRadius == 3);
     CHECK(registry.Get("plain_farm").visionRadius == 0);
@@ -507,10 +540,14 @@ TEST_CASE("The shipped style file loads", "[config][ui]")
 // "default": true social policy per category) all live at load time, and every test for them
 // used a synthetic fixture — so a bad edit to a real config file crashed at faction
 // construction with the whole suite green.
-TEST_CASE("The shipped improvement config loads", "[config][shipped]")
+TEST_CASE("The shipped improvement and terrain configs load", "[config][shipped]")
 {
-    ImprovementRegistry registry;
-    CHECK_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/improvements.json"));
+    // The production path, which is also the one the fixtures use.
+    const std::string root = std::string(AC_CONFIG_DIR) + "/";
+    ImprovementRegistry occupants;
+    TerrainOperationRegistry operations;
+    CHECK_NOTHROW(LoadMapOccupants(root + "improvements.json", root + "terrain.json", occupants,
+                                   operations));
 }
 
 TEST_CASE("The shipped unit-slot config loads", "[config][shipped]")

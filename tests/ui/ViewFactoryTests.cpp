@@ -303,7 +303,7 @@ TEST_CASE("The social-engineering panel reports turns remaining, not full durati
     ac::BaseManager& rBase = fixture.MakeBase(4, 4);
     for (const ac::Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
     {
-        fixture.pState->GetTileEffects().AddImprovementWithEffects(
+        fixture.pState->GetTileEffects().AddOccupantWithEffects(
             *fixture.pState->GetWorldMap().GetTile(pTile->GetX(), pTile->GetY()),
             "ThermalBorehole");
     }

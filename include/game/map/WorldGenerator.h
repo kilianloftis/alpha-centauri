@@ -32,7 +32,7 @@ public:
                                        const WorldGenPresetConfig_t& rPreset,
                                        const WorldGenDecorationConfig_t& rDecoration,
                                        const std::vector<LandmarkConfig_t>& rLandmarks,
-                                       const ImprovementRegistry& rImprovements,
+                                       const ImprovementRegistry& rOccupants,
                                        const ElevationRulesConfig_t& rMapRules,
                                        unsigned int seed);
 
@@ -50,13 +50,13 @@ private:
                             const RockinessDecorationConfig_t& rRockiness);
     void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers);
     void GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
-                         const ImprovementRegistry& rImprovements);
+                         const ImprovementRegistry& rOccupants);
     void GenerateLandmarks_(WorldMap& rWorld,
                             const std::vector<LandmarkConfig_t>& rLandmarks,
-                            const ImprovementRegistry& rImprovements);
+                            const ImprovementRegistry& rOccupants);
     void GenerateTileBonuses_(WorldMap& rWorld,
                               const TileBonusDecorationConfig_t& rBonuses,
-                              const ImprovementRegistry& rImprovements);
+                              const ImprovementRegistry& rOccupants);
 
     float ApplyLandmassMask_(float noiseValue,
                              float nx,

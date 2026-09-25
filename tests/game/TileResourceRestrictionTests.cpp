@@ -31,7 +31,7 @@ TEST_CASE("ResolveTileYield: absent MaxClamp leaves yield uncapped",
     Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(tile, "Farm"); // Wet+2 Farm+1 = 3
+    fixture.ctx->AddOccupantWithEffects(tile, "Farm"); // Wet+2 Farm+1 = 3
 
     const BaseEffects_t noCaps{base};
     const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, noCaps);
@@ -47,7 +47,7 @@ TEST_CASE("ResolveTileYield: MaxClamp clamps the pre-bypass lane",
     Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(tile, "Farm");
+    fixture.ctx->AddOccupantWithEffects(tile, "Farm");
 
     actest::EffectPool pool;
     BaseEffects_t caps{base, {ClampEffect_(pool, StatId_t::Nutrients, 2)}};
@@ -64,8 +64,8 @@ TEST_CASE("ResolveTileYield: bypass_clamp bonuses bypass MaxClamp",
     Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(tile, "Farm");
-    fixture.ctx->AddImprovementWithEffects(tile, "Nutrients"); // +2 after clamp
+    fixture.ctx->AddOccupantWithEffects(tile, "Farm");
+    fixture.ctx->AddOccupantWithEffects(tile, "Nutrients"); // +2 after clamp
 
     actest::EffectPool pool;
     BaseEffects_t caps{base, {ClampEffect_(pool, StatId_t::Nutrients, 2)}};
@@ -85,7 +85,7 @@ TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat
     Tile& farmTile = fixture.At(5, 4);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
+    fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
 
     base.GetBuildingManager().AddBuilding("flat_nutrient"); // +2 flat, uncapped
     base.GetBuildingManager().AddBuilding("farm_booster");  // +1 on Farms (part of tile)
@@ -124,7 +124,7 @@ TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
     Tile& farmTile = fixture.At(5, 4);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
+    fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
 
     base.GetBuildingManager().AddBuilding("farm_booster"); // +1 on Farms
     faction.GetResearch().AddDiscoveredTech("gene_splicing"); // lift the nutrient MaxClamp
@@ -149,8 +149,8 @@ TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after M
     Tile& rich = fixture.At(5, 4);
     rich.SetBaseMoisture(Moisture_t::Wet);
     rich.SetMoisture(Moisture_t::Wet); // +2 nutrients
-    fixture.ctx->AddImprovementWithEffects(rich, "Farm"); // +1
-    fixture.ctx->AddImprovementWithEffects(rich, "Nutrients"); // +2 after clamp
+    fixture.ctx->AddOccupantWithEffects(rich, "Farm"); // +1
+    fixture.ctx->AddOccupantWithEffects(rich, "Nutrients"); // +2 after clamp
 
     base.UserAssignBestAvailableWorker(&rich);
 

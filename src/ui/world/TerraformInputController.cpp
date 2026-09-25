@@ -2,6 +2,8 @@
 
 #include "game/effects/EffectEnums.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainOperationRegistry.h"
+#include "game/units/TerraformRules.h"
 #include "game/units/Unit.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -13,11 +15,12 @@ namespace ac
 {
 
 TerraformInputController::TerraformInputController(const std::string& rConfigPath,
-                                                   const ImprovementRegistry& rImprovements)
+                                                   const ImprovementRegistry& rImprovements,
+                                                   const TerrainOperationRegistry& rOperations)
 {
     m_bindings = JsonConfigLoader::LoadObjectFile<std::unordered_map<Key_t, std::string>>(
         rConfigPath, "terraform binding",
-        [&rConfigPath, &rImprovements](const nlohmann::json& rJson) {
+        [&rConfigPath, &rImprovements, &rOperations](const nlohmann::json& rJson) {
             const auto fail = [&rConfigPath](const std::string& rMessage) {
                 throw std::runtime_error("Terraform bindings '" + rConfigPath + "': " + rMessage);
             };
@@ -31,15 +34,15 @@ TerraformInputController::TerraformInputController(const std::string& rConfigPat
             for (const nlohmann::json& rEntry : rJson.at("bindings"))
             {
                 const std::string keyName = rEntry.at("key").get<std::string>();
-                const std::string improvementId = rEntry.at("improvement").get<std::string>();
+                const std::string projectId = rEntry.at("project").get<std::string>();
 
                 const Key_t key = EnumFromName<Key_t>(keyName, "terraform binding key");
-                if (!rImprovements.Find(improvementId))
+                if (!FindTerraformProject(projectId, rImprovements, rOperations))
                 {
-                    fail("key '" + keyName + "' is bound to '" + improvementId
-                         + "', which is not a known improvement");
+                    fail("key '" + keyName + "' is bound to '" + projectId
+                         + "', which is not a buildable improvement or a terrain operation");
                 }
-                if (!bindings.emplace(key, improvementId).second)
+                if (!bindings.emplace(key, projectId).second)
                 {
                     fail("key '" + keyName + "' is bound more than once");
                 }

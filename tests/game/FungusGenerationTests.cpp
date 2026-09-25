@@ -31,7 +31,8 @@ const ImprovementConfig_t& TestFungus_()
     static bool bLoaded = false;
     if (!bLoaded)
     {
-        registry.Load(actest::FixturePath("improvements.json"));
+        registry.LoadOccupants(actest::FixturePath("improvements.json"),
+                               actest::FixturePath("terrain.json"));
         bLoaded = true;
     }
     return registry.Get("Fungus");
@@ -50,7 +51,7 @@ int CountFungus_(const WorldMap& rWorld)
     int count = 0;
     for (const auto& pTile : rWorld.GetTiles())
     {
-        if (pTile->HasImprovement("Fungus"))
+        if (pTile->HasFeature("Fungus"))
         {
             ++count;
         }
@@ -63,7 +64,7 @@ bool HasOrthogonalFungusNeighbor_(const Tile& rTile, const WorldMap& rWorld)
     bool found = false;
     ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
     {
-        if (pNeighbor->HasImprovement("Fungus"))
+        if (pNeighbor->HasFeature("Fungus"))
         {
             found = true;
         }
@@ -86,7 +87,7 @@ std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
         for (int x = 0; x < w; ++x)
         {
             Tile* pStart = rWorld.GetTile(x, y);
-            if (!pStart || !pStart->HasImprovement("Fungus") || visited[static_cast<size_t>(idx(x, y))])
+            if (!pStart || !pStart->HasFeature("Fungus") || visited[static_cast<size_t>(idx(x, y))])
             {
                 continue;
             }
@@ -102,7 +103,7 @@ std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
                 ++size;
                 ForEachOrthogonalNeighbor(*pTile, rWorld, [&](Tile* pNeighbor)
                 {
-                    if (!pNeighbor || !pNeighbor->HasImprovement("Fungus"))
+                    if (!pNeighbor || !pNeighbor->HasFeature("Fungus"))
                     {
                         return;
                     }
@@ -185,7 +186,7 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
     REQUIRE(CountFungus_(world) > 0);
     for (const auto& pTile : world.GetTiles())
     {
-        if (pTile->HasImprovement("Fungus"))
+        if (pTile->HasFeature("Fungus"))
         {
             CHECK_FALSE(HasOrthogonalFungusNeighbor_(*pTile, world));
         }
@@ -210,7 +211,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
     int fungusTiles = 0;
     for (const auto& pTile : world.GetTiles())
     {
-        if (!pTile->HasImprovement("Fungus"))
+        if (!pTile->HasFeature("Fungus"))
         {
             continue;
         }
@@ -282,7 +283,7 @@ TEST_CASE("PlaceFungus water_fraction only stamps water tiles", "[worldgen][fung
 
     for (const auto& pTile : world.GetTiles())
     {
-        if (pTile->HasImprovement("Fungus"))
+        if (pTile->HasFeature("Fungus"))
         {
             CHECK(pTile->IsWater());
         }

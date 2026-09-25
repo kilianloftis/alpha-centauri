@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/map/ElevationRulesConfig.h"
+#include "game/units/UnitDomain.h"
 
 #include <random>
 
@@ -33,6 +34,17 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
                          const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
                          TileEffectsContext* pTileEffects = nullptr,
                          IUnitOrderWorld* pWorld = nullptr);
+
+// Whether a Former of this domain can still move rTile in this direction. Raising stops at
+// Planet's ceiling, and a sea Former may only raise ground still at least a reference level
+// deep; lowering stops a level short of Planet's floor, and a land Former stops at the
+// reference level so it cannot dig its own tile out from under itself.
+bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
+                                  const ElevationRulesConfig_t& rRules);
+
+// The floor a Former of this domain lowers toward: ocean level on land (the tile stops at the
+// waterline), Planet's floor at sea.
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules);
 
 // Raise rOrigin by levelCount independent level rolls, clamped to Planet's elevation range.
 // levelCount <= 0 changes nothing. Not invoked from combat. Occupancy matches ApplyElevationDelta.

@@ -149,6 +149,32 @@ struct FungalBloomEffect_t
     std::optional<StatId_t> tilesStat;
 };
 
+// Adds or clears one terrain occupant on the context tile. The id decides which tile field
+// it routes to: aquifer and river are bools, everything else is optional terrain. Terrain
+// that is derived from other state (rockiness, moisture, the depth bands) is rejected at
+// load, because writing it here would be overwritten by the state it is derived from.
+struct SetTerrainFeatureEffect_t
+{
+    std::string featureId;
+    bool bPresent = true;
+};
+
+// Moves the context tile along the rockiness axis (Flat < Rolling < Rocky), clamped at both
+// ends. Negative smooths — Level Terrain is one step down.
+struct StepRockinessEffect_t
+{
+    int steps = -1;
+};
+
+// One level roll applied to the context tile as a Former edit, signed by bRaise. Distinct
+// from EarthquakeEffect_t, which sums several rolls and has no floor of its own: a Former's
+// floor depends on the subject unit's domain, so a land Former cannot dig its tile below
+// ocean level while a sea Former can go to Planet's floor.
+struct ElevationChangeEffect_t
+{
+    bool bRaise = true;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -163,7 +189,10 @@ using TriggeredEffectVariant_t = std::variant<
     RebelEffect_t,
     DestroyUnitEffect_t,
     EarthquakeEffect_t,
-    FungalBloomEffect_t
+    FungalBloomEffect_t,
+    SetTerrainFeatureEffect_t,
+    StepRockinessEffect_t,
+    ElevationChangeEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

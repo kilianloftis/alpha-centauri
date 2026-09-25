@@ -275,14 +275,15 @@ void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitIntera
     m_rWorldView.CenterOnTile(rTile.GetX(), rTile.GetY());
 
     std::string hostName = "site";
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    rTile.ForEachOccupant([&](const ImprovementConfig_t& rHost)
     {
-        if (pImprovement && !pImprovement->onVisitEffects.empty())
+        if (rHost.onVisitEffects.empty())
         {
-            hostName = pImprovement->name.empty() ? pImprovement->id : pImprovement->name;
-            break;
+            return false;
         }
-    }
+        hostName = rHost.name.empty() ? rHost.id : rHost.name;
+        return true;
+    });
 
     const UnitId_t unitId = rVisit.unitId;
     std::vector<PopupChoice_t> choices;

@@ -12,6 +12,8 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/CommerceConfig.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/TerrainConfig.h"
 #include "game/map/TerrainFeatureValidation.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -263,7 +265,7 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
 TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[effects][validation]")
 {
     ImprovementRegistry improvements;
-    improvements.Load(actest::FixturePath("improvements.json"));
+    improvements.Assign(ParseImprovementsUnexpanded(actest::FixturePath("improvements.json")));
 
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
@@ -282,11 +284,11 @@ TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and i
           "[effects][validation]")
 {
     ImprovementRegistry improvements;
-    improvements.Load(actest::FixturePath("improvements.json"));
+    improvements.LoadOccupants(actest::FixturePath("improvements.json"),
+                               actest::FixturePath("terrain.json"));
 
     actest::EffectPool pool;
-    // "Rocky" / "Base" / "Water" are all improvement ids — condition features have no
-    // non-registry special cases.
+    // "Rocky" / "Water" are terrain ids and "Base" is an improvement id.
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Rocky")),
@@ -303,16 +305,17 @@ TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and i
                       Catch::Matchers::ContainsSubstring("Swamp"));
 }
 
-TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have an improvement entry",
+TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have a terrain entry",
           "[effects][validation][terrain]")
 {
-    ImprovementRegistry complete;
-    complete.Load(actest::FixturePath("improvements.json"));
-    CHECK_NOTHROW(ValidateTerrainFeatures(complete));
+    ImprovementRegistry occupants;
+    occupants.LoadOccupants(actest::FixturePath("improvements.json"),
+                            actest::FixturePath("terrain.json"));
+    CHECK_NOTHROW(ValidateTerrainFeatures(occupants));
 
-    // Same file minus "Aquifer" — without this check Tile would silently drop the feature.
     ImprovementRegistry incomplete;
-    incomplete.Load(actest::FixturePath("improvements_missing_terrain.json"));
+    incomplete.LoadOccupants(actest::FixturePath("improvements.json"),
+                             actest::FixturePath("improvements_missing_terrain.json"));
     CHECK_THROWS_WITH(ValidateTerrainFeatures(incomplete),
                       Catch::Matchers::ContainsSubstring("Aquifer"));
 }

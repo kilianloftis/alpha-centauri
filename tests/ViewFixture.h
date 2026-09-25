@@ -76,8 +76,9 @@ struct ViewFixture : WorldFixture
         }
 
         pState = std::make_unique<ac::GameState>(
-            std::move(pMap), improvements, &unitComponents, settings,
-            morale(), dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed);
+            std::move(pMap), improvements,
+            &unitComponents, settings, morale(), dataContext.tileYieldRules,
+            dataContext.interactionGrids, k_TestRngSeed);
 
         if (bWithPlayerFaction)
         {
@@ -87,12 +88,16 @@ struct ViewFixture : WorldFixture
         }
 
         // WorldView loads terraform hotkeys from this path at construction; relative defaults
-        // break under ctest's build-dir cwd. It also dereferences improvementRegistry to
-        // validate those binding ids — GameState uses WorldFixture::improvements separately.
+        // break under ctest's build-dir cwd. It resolves each binding against the shipping
+        // improvements and terrain operations. GameState uses the fixture registries separately.
         dataContext.paths.terraformBindings =
             std::string(AC_CONFIG_DIR) + "/ui/terraform_bindings.json";
         dataContext.improvementRegistry = std::make_unique<ac::ImprovementRegistry>();
-        dataContext.improvementRegistry->Load(std::string(AC_CONFIG_DIR) + "/improvements.json");
+        dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
+        ac::LoadMapOccupants(std::string(AC_CONFIG_DIR) + "/improvements.json",
+                             std::string(AC_CONFIG_DIR) + "/terrain.json",
+                             *dataContext.improvementRegistry,
+                             *dataContext.terrainOperationRegistry);
 
         pFactory = std::make_unique<ac::ViewFactory>(*pState, dataContext, graphics, settings);
     }

@@ -69,7 +69,7 @@ EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
             break;
         }
     }
-    if (rTile.HasImprovement(ImprovementIds::k_Fungus) && !bClamp)
+    if (rTile.HasFeature(ImprovementIds::k_Fungus) && !bClamp)
     {
         terms.bEndsTurn = true;
         terms.bRequiresFullCost = !HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap);
@@ -136,23 +136,14 @@ std::optional<int> MoveCostCalculator::MaxFeatureCost_(
 {
     const int defaultFragments = m_constants.DefaultMoveCostFragments();
     std::optional<int> maxCost;
-    const auto accumulate = [&](const ImprovementConfig_t* pConfig)
-    {
-        if (!pConfig || !pConfig->moveCostFragments.has_value())
+    rTile.ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
+        if (rConfig.moveCostFragments.has_value())
         {
-            return;
+            const int cost = FeatureMoveCostFragments_(rConfig, rProfile, defaultFragments);
+            maxCost = maxCost.has_value() ? std::max(*maxCost, cost) : cost;
         }
-        const int cost = FeatureMoveCostFragments_(*pConfig, rProfile, defaultFragments);
-        maxCost = maxCost.has_value() ? std::max(*maxCost, cost) : cost;
-    };
-    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
-    {
-        accumulate(pConfig);
-    }
-    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
-    {
-        accumulate(pConfig);
-    }
+        return false;
+    });
     return maxCost;
 }
 

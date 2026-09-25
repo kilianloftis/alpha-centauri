@@ -382,10 +382,10 @@ TEST_CASE("A surface flip removes improvements whose domain no longer matches",
     Tile& origin = *game.pState->GetWorldMap().GetTile(4, 4);
     Tile& neighbor = *game.pState->GetWorldMap().GetTile(4, 5);
     REQUIRE(origin.IsLand());
-    game.pState->GetTileEffects().AddImprovementWithEffects(origin, "Farm");
-    game.pState->GetTileEffects().AddImprovementWithEffects(origin, "Road");
-    game.pState->GetTileEffects().AddImprovementWithEffects(neighbor, "Farm");
-    game.pState->GetTileEffects().AddImprovementWithEffects(neighbor, "Road");
+    game.pState->GetTileEffects().AddOccupantWithEffects(origin, "Farm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(origin, "Road");
+    game.pState->GetTileEffects().AddOccupantWithEffects(neighbor, "Farm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(neighbor, "Road");
 
     // 100 - 2000 = -1900. The neighbor is pulled down to stay within 1500m, onto water.
     CrossElevation_(*game.pState, origin, -2000);
@@ -398,8 +398,8 @@ TEST_CASE("A surface flip removes improvements whose domain no longer matches",
 
     Tile& sea = *game.pState->GetWorldMap().GetTile(1, 1);
     sea.SetElevation(-100);
-    game.pState->GetTileEffects().AddImprovementWithEffects(sea, "KelpFarm");
-    game.pState->GetTileEffects().AddImprovementWithEffects(sea, "Road");
+    game.pState->GetTileEffects().AddOccupantWithEffects(sea, "KelpFarm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(sea, "Road");
     CrossElevation_(*game.pState, sea, 500);
     CHECK(sea.IsLand());
     CHECK_FALSE(sea.HasImprovement("KelpFarm"));
@@ -411,7 +411,7 @@ TEST_CASE("A land base is razed when its tile becomes water unless it may occupy
 {
     FoundBaseGame_ game;
     BaseManager& land = game.MakeBase(*game.pPlayer, 4, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(land.GetTile(), "Farm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(land.GetTile(), "Farm");
     CrossElevation_(*game.pState, land.GetTile(), -500);
     CHECK(land.GetTile().IsWater());
     CHECK(land.IsRazed());
@@ -421,7 +421,7 @@ TEST_CASE("A land base is razed when its tile becomes water unless it may occupy
 
     BaseManager& domed = game.MakeBase(*game.pPlayer, 4, 7);
     domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
-    game.pState->GetTileEffects().AddImprovementWithEffects(domed.GetTile(), "Farm");
+    game.pState->GetTileEffects().AddOccupantWithEffects(domed.GetTile(), "Farm");
     CrossElevation_(*game.pState, domed.GetTile(), -500);
     CHECK(domed.GetTile().IsWater());
     CHECK_FALSE(domed.IsRazed());

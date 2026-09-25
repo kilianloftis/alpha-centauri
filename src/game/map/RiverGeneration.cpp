@@ -43,21 +43,9 @@ RiverConnection_t GetRiverConnections(const Tile& rTile, const WorldMap& rWorld)
 
 bool TileTerminatesRiver(const Tile& rTile)
 {
-    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
-    {
-        if (pFeature && pFeature->terminatesRiver)
-        {
-            return true;
-        }
-    }
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
-    {
-        if (pImprovement && pImprovement->terminatesRiver)
-        {
-            return true;
-        }
-    }
-    return false;
+    return rTile.ForEachOccupant([](const ImprovementConfig_t& rConfig) {
+        return rConfig.terminatesRiver;
+    });
 }
 
 void TraceRiverFrom(Tile& rOrigin, WorldMap& rWorld)

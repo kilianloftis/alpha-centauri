@@ -6,6 +6,8 @@
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainFeatureValidation.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -116,6 +118,21 @@ struct EffectPayloadValidator
     void operator()(const ScrambleEffect_t&) const {}
     void operator()(const TransportParamsEffect_t&) const {}
     void operator()(const InteractionOverrideEffect_t&) const {}
+
+    void operator()(const CoexistenceOverrideEffect_t& rOverride) const
+    {
+        if (!pImprovements)
+        {
+            return;
+        }
+        for (const std::string& rId : {rOverride.firstId, rOverride.secondId})
+        {
+            if (!rId.empty() && !pImprovements->Find(rId))
+            {
+                ThrowBadReference(rSourceId, "coexistence occupant", rId);
+            }
+        }
+    }
 };
 
 // The same for TriggeredEffectVariant_t. A separate visitor rather than a shared one: the two
@@ -127,6 +144,7 @@ struct TriggeredPayloadValidator
     const BuildingRegistry* pBuildings;
     const TechRegistry* pTechs;
     const UnitComponentRegistry* pUnitComponents;
+    const ImprovementRegistry* pImprovements;
 
     void operator()(const AddBuildingEffect_t& rAdd) const
     {
@@ -176,6 +194,29 @@ struct TriggeredPayloadValidator
     void operator()(const DestroyUnitEffect_t&) const {}
     void operator()(const EarthquakeEffect_t&) const {}
     void operator()(const FungalBloomEffect_t&) const {}
+    void operator()(const StepRockinessEffect_t&) const {}
+    void operator()(const ElevationChangeEffect_t&) const {}
+
+    // Only terrain a tile stores in its own right can be set: the depth bands come from
+    // elevation and the two axes are always present, so writing either here would be undone
+    // by the state it is derived from.
+    void operator()(const SetTerrainFeatureEffect_t& rSet) const
+    {
+        if (!pImprovements)
+        {
+            return;
+        }
+        const ImprovementConfig_t* pConfig = pImprovements->Find(rSet.featureId);
+        if (!pConfig || pConfig->placement != OccupantPlacement_t::Terrain)
+        {
+            ThrowBadReference(rSourceId, "terrain feature", rSet.featureId);
+        }
+        if (IsDerivedTerrainId(rSet.featureId))
+        {
+            throw std::runtime_error("'" + rSourceId + "' cannot set terrain '" + rSet.featureId
+                                     + "': it is derived from elevation or a terrain axis");
+        }
+    }
 };
 
 void ValidateConditionReferences_(const Condition_t& rCondition,
@@ -202,7 +243,7 @@ void ValidateConditionReferences_(const Condition_t& rCondition,
                 {
                     checkFeature(rAlt.featureId);
                 }
-                else if constexpr (std::is_same_v<T, AllOf_t>)
+                else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
                 {
                     for (const Condition_t& rNested : rAlt.conditions)
                     {
@@ -306,8 +347,10 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
 {
     for (const TriggeredEffectConfig_t& rEffect : rEffects)
     {
-        std::visit(TriggeredPayloadValidator{rSourceId, pBuildings, pTechs, pUnitComponents},
-                   rEffect.effect);
+        std::visit(
+            TriggeredPayloadValidator{rSourceId, pBuildings, pTechs, pUnitComponents,
+                                      pImprovements},
+            rEffect.effect);
         if (rEffect.condition)
         {
             ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
@@ -383,6 +426,15 @@ void ValidateEffectReferences(const GameDataContext& rData)
     {
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onVisitEffects, rConfig.id);
+    }
+    // A terrain operation is nothing but its effects, so a typo in one is the whole project
+    // silently doing nothing. Optional: movement-only harnesses install no operations.
+    if (rData.terrainOperationRegistry)
+    {
+        for (const TerrainOperationConfig_t& rConfig : rData.terrainOperationRegistry->GetAll())
+        {
+            validateTriggered(rConfig.onCompleteEffects, rConfig.id);
+        }
     }
     for (const PopTypeConfig_t& rConfig : rPopTypes.GetAll())
     {

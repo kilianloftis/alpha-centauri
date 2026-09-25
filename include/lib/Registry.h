@@ -31,28 +31,7 @@ public:
     void Load(const std::string& rConfigPath)
     {
         TParser parser;
-        auto configs = parser.ParseConfig(rConfigPath);
-
-        std::vector<TConfig> previousConfigs = std::move(m_configs);
-        std::unordered_map<std::string, size_t> previousIndex = std::move(m_indexById);
-
-        m_configs = std::move(configs);
-        m_indexById.clear();
-        for (size_t i = 0; i < m_configs.size(); i++)
-        {
-            m_indexById[m_configs[i].id] = i;
-        }
-
-        try
-        {
-            Validate_();
-        }
-        catch (...)
-        {
-            m_configs = std::move(previousConfigs);
-            m_indexById = std::move(previousIndex);
-            throw;
-        }
+        Assign(parser.ParseConfig(rConfigPath));
     }
 
     // Optional lookup: nullptr when the id is absent. Prefer Get() when the id must exist.
@@ -80,6 +59,33 @@ public:
     const std::vector<TConfig>& GetAll() const
     {
         return m_configs;
+    }
+
+    // Install an already-parsed list, with the same all-or-nothing guarantee as Load.
+    // Used when entries come from more than one file and must be resolved against each
+    // other before any of them is published.
+    void Assign(std::vector<TConfig> configs)
+    {
+        std::vector<TConfig> previousConfigs = std::move(m_configs);
+        std::unordered_map<std::string, size_t> previousIndex = std::move(m_indexById);
+
+        m_configs = std::move(configs);
+        m_indexById.clear();
+        for (size_t i = 0; i < m_configs.size(); i++)
+        {
+            m_indexById[m_configs[i].id] = i;
+        }
+
+        try
+        {
+            Validate_();
+        }
+        catch (...)
+        {
+            m_configs = std::move(previousConfigs);
+            m_indexById = std::move(previousIndex);
+            throw;
+        }
     }
 
     // Create an owned TInstance for the given id.

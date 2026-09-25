@@ -1,213 +1,8 @@
 [
   {
-    "id": "Flat",
-    "name": "Flat",
-    "tags": [
-      "landform"
-    ],
-    "effects": []
-  },
-  {
-    "id": "Rolling",
-    "name": "Rolling",
-    "tags": [
-      "landform"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "minerals",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
-    "id": "Rocky",
-    "name": "Rocky",
-    "tags": [
-      "landform"
-    ],
-    "move_cost": 2,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "minerals",
-          "amount": 2,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "tile_defense",
-          "amount": 25,
-          "op": "AddPercent"
-        }
-      }
-    ]
-  },
-  {
-    "id": "Arid",
-    "name": "Arid",
-    "tags": [
-      "landform"
-    ],
-    "effects": []
-  },
-  {
-    "id": "Moist",
-    "name": "Moist",
-    "tags": [
-      "landform"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
-    "id": "Wet",
-    "name": "Wet",
-    "tags": [
-      "landform"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 2,
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
-    "id": "River",
-    "name": "River",
-    "excludes": [
-      "Mine"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "energy",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
-    "id": "Water",
-    "name": "Water",
-    "tags": [
-      "landform"
-    ],
-    "suppress_yield_sources": [
-      "Flat",
-      "Rolling",
-      "Rocky",
-      "Arid",
-      "Moist",
-      "Wet",
-      "River",
-      "@resource_bonus"
-    ],
-    "effects": []
-  },
-  {
-    "id": "Ocean",
-    "name": "Ocean",
-    "tags": [
-      "landform"
-    ],
-    "effects": []
-  },
-  {
-    "id": "OceanShelf",
-    "name": "Ocean Shelf",
-    "tags": [
-      "landform"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
-    "id": "Fungus",
-    "name": "Fungus",
-    "move_cost": 3,
-    "suppress_yield_sources": [
-      "@landform",
-      "River",
-      "@land_terraform",
-      "SoilEnricher",
-      "KelpFarm",
-      "MiningPlatform",
-      "TidalHarness",
-      "@resource_bonus",
-      "Minerals",
-      "Energy"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "tile_defense",
-          "amount": 25,
-          "op": "AddPercent"
-        }
-      },
-      {
-        "type": "Conceal",
-        "scope": "ThisTile",
-        "parameters": {
-          "channel": "terrain"
-        }
-      }
-    ]
-  },
-  {
     "id": "Road",
     "name": "Road",
     "turns_required": 1,
-    "energy_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -224,7 +19,7 @@
     "id": "MagTube",
     "name": "Mag Tube",
     "turns_required": 3,
-    "energy_cost": 0,
+    "required_tech": "monopole_magnets",
     "effects": [
       {
         "type": "StatModifier",
@@ -240,12 +35,11 @@
   {
     "id": "Farm",
     "name": "Farm",
+    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 4,
-    "energy_cost": 0,
     "excludes": [
       "Rocky"
     ],
@@ -264,12 +58,11 @@
   {
     "id": "Forest",
     "name": "Forest",
+    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 4,
-    "energy_cost": 0,
     "excludes": [
       "Fungus"
     ],
@@ -309,12 +102,11 @@
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
+    "turns_required": 4,
     "tags": [
       "sea_terraform"
     ],
     "domain": "sea",
-    "turns_required": 4,
-    "energy_cost": 0,
     "excludes": [
       "Ocean"
     ],
@@ -331,93 +123,13 @@
     ]
   },
   {
-    "id": "Nutrients",
-    "name": "Nutrients",
-    "tags": [
-      "resource_bonus"
-    ],
-    "frequency": 10,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 2,
-          "op": "Add",
-          "bypass_clamp": true
-        }
-      }
-    ]
-  },
-  {
-    "id": "Monolith",
-    "name": "Monolith",
-    "tags": [
-      "resource_bonus"
-    ],
-    "frequency": 3,
-    "excludes": [
-      "@resource_bonus",
-      "Monolith"
-    ],
-    "suppress_yield_sources": [
-      "@landform",
-      "River",
-      "@land_terraform",
-      "SoilEnricher",
-      "@resource_bonus"
-    ],
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 2,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "minerals",
-          "amount": 2,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "parameters": {
-          "stat": "energy",
-          "amount": 2,
-          "op": "Add"
-        }
-      }
-    ],
-    "on_visit_effects": [
-      {
-        "type": "RestoreHitPoints",
-        "parameters": { "amount": 100, "op": "SetPercent" }
-      },
-      {
-        "type": "GrantXp",
-        "parameters": { "amount": 1, "op": "Add", "remove_host_chance": "1/32" },
-        "once_per": { "scope": "unit", "key": "monolith_xp" }
-      }
-    ]
-  },
-  {
     "id": "Mine",
     "name": "Mine",
+    "turns_required": 8,
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 8,
-    "energy_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -433,12 +145,11 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
+    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 4,
-    "energy_cost": 0,
     "excludes": [
       "Mine",
       "Forest",
@@ -462,7 +173,7 @@
     "id": "Bunker",
     "name": "Bunker",
     "turns_required": 5,
-    "energy_cost": 0,
+    "required_tech": "advanced_military_algorithms",
     "effects": [
       {
         "type": "StatModifier",
@@ -566,7 +277,7 @@
     "id": "Airbase",
     "name": "Airbase",
     "turns_required": 10,
-    "energy_cost": 0,
+    "required_tech": "doctrine_air_power",
     "effects": [
       {
         "type": "RuleFlag",
@@ -597,7 +308,6 @@
     "id": "Sensor",
     "name": "Sensor",
     "turns_required": 4,
-    "energy_cost": 0,
     "owned_by_territory": true,
     "effects": [
       {
@@ -630,47 +340,14 @@
     ]
   },
   {
-    "id": "conditional_cloak_detector",
-    "name": "Detects cloak only on River tiles",
-    "owned_by_territory": true,
-    "effects": [
-      {
-        "type": "Detect",
-        "scope": "ThisTile",
-        "radius": 2,
-        "condition": {
-          "kind": "TargetTileHas",
-          "value": "River"
-        },
-        "parameters": {
-          "channel": "cloak"
-        }
-      }
-    ]
-  },
-  {
-    "id": "unowned_cloak_detector",
-    "name": "Detect without territory ownership (never stamps ownerFaction)",
-    "effects": [
-      {
-        "type": "Detect",
-        "scope": "ThisTile",
-        "radius": 2,
-        "parameters": {
-          "channel": "cloak"
-        }
-      }
-    ]
-  },
-  {
     "id": "Mirror",
     "name": "Mirror",
+    "turns_required": 12,
+    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 12,
-    "energy_cost": 0,
     "excludes": [
       "SolarCollector",
       "ThermalBorehole"
@@ -721,12 +398,12 @@
   {
     "id": "Condenser",
     "name": "Condenser",
+    "turns_required": 12,
+    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 12,
-    "energy_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -743,12 +420,12 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
+    "turns_required": 24,
+    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
     "domain": "land",
-    "turns_required": 24,
-    "energy_cost": 0,
     "terminates_river": true,
     "suppress_yield_sources": [
       "@landform",
@@ -777,65 +454,37 @@
     ]
   },
   {
-    "id": "RaiseLand",
-    "name": "Raise Land",
-    "turns_required": 12,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "raise_land"
-    },
-    "effects": []
+    "id": "conditional_cloak_detector",
+    "name": "Detects cloak only on River tiles",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "River"
+        },
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
   },
   {
-    "id": "LevelTerrain",
-    "name": "Level Terrain",
-    "turns_required": 8,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "level_terrain"
-    },
-    "effects": []
-  },
-  {
-    "id": "PlantFungus",
-    "name": "Plant Fungus",
-    "turns_required": 6,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "place",
-      "improvement": "Fungus"
-    },
-    "effects": []
-  },
-  {
-    "id": "RemoveFungus",
-    "name": "Remove Fungus",
-    "turns_required": 6,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "remove_fungus"
-    },
-    "effects": []
-  },
-  {
-    "id": "Aquifer",
-    "name": "Aquifer",
-    "turns_required": 18,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "aquifer"
-    },
-    "effects": []
-  },
-  {
-    "id": "LowerLand",
-    "name": "Lower Land",
-    "turns_required": 12,
-    "energy_cost": 0,
-    "terraform": {
-      "result": "lower_land"
-    },
-    "effects": []
+    "id": "unowned_cloak_detector",
+    "name": "Detect without territory ownership (never stamps ownerFaction)",
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
   },
   {
     "id": "EffectRadiusBeacon",

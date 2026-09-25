@@ -63,11 +63,12 @@ struct SupplyCrawlOrder_t
     std::string ToString() const;
 };
 
-// Multi-turn Former project. improvementId names an ImprovementConfig_t entry
-// (placeable or terraform action). turnsRemaining counts down each PlayerActions pass.
+// Multi-turn Former project. projectId names either a buildable ImprovementConfig_t or a
+// TerrainOperationConfig_t; FindTerraformProject resolves which. turnsRemaining counts down
+// each PlayerActions pass.
 struct TerraformOrder_t
 {
-    std::string improvementId;
+    std::string projectId;
     int turnsRemaining = 0;
 
     std::string ToString() const;

@@ -163,7 +163,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     rIncumbent.CreateBase(state.AllocateBaseId(), "Incumbent", state.GetWorldMap().GetTile(2, 4),
                           fixture.dataContext, state.GetTileEffects(),
                           state.GetSecretProjectAvailability());
-    state.GetTileEffects().AddImprovementWithEffects(*state.GetWorldMap().GetTile(4, 4), "Sensor");
+    state.GetTileEffects().AddOccupantWithEffects(*state.GetWorldMap().GetTile(4, 4), "Sensor");
     rIncumbent.RebuildVisibility();
 
     FactionConfig_t arrivalDef;

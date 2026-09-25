@@ -239,6 +239,48 @@ void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t&
     rEffect.effect = quake;
 }
 
+void ParseSetTerrainFeature_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    if (!parameters.contains("feature") || !parameters.at("feature").is_string()
+        || parameters.at("feature").get<std::string>().empty())
+    {
+        throw std::runtime_error(
+            "SetTerrainFeature requires a non-empty 'feature' terrain occupant id");
+    }
+    if (parameters.contains("present") && !parameters.at("present").is_boolean())
+    {
+        throw std::runtime_error("SetTerrainFeature 'present' must be a boolean");
+    }
+    rEffect.effect = SetTerrainFeatureEffect_t{parameters.at("feature").get<std::string>(),
+                                              parameters.value("present", true)};
+}
+
+void ParseStepRockiness_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    const int steps = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "steps"));
+    if (steps == 0)
+    {
+        throw std::runtime_error("StepRockiness 'steps' must be non-zero: negative smooths "
+                                 "toward Flat, positive roughens toward Rocky");
+    }
+    rEffect.effect = StepRockinessEffect_t{steps};
+}
+
+void ParseElevationChange_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    if (!parameters.contains("direction") || !parameters.at("direction").is_string())
+    {
+        throw std::runtime_error("ElevationChange requires a 'direction' of 'raise' or 'lower'");
+    }
+    const std::string direction = parameters.at("direction").get<std::string>();
+    if (direction != "raise" && direction != "lower")
+    {
+        throw std::runtime_error("ElevationChange 'direction' must be 'raise' or 'lower', not '"
+                                 + direction + "'");
+    }
+    rEffect.effect = ElevationChangeEffect_t{direction == "raise"};
+}
+
 void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
     const bool bHasTiles = parameters.contains("tiles");
@@ -294,6 +336,9 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"DestroyUnit", ParseDestroyUnit_},
         {"Earthquake", ParseEarthquake_},
         {"FungalBloom", ParseFungalBloom_},
+        {"SetTerrainFeature", ParseSetTerrainFeature_},
+        {"StepRockiness", ParseStepRockiness_},
+        {"ElevationChange", ParseElevationChange_},
     };
     return k_Parsers;
 }

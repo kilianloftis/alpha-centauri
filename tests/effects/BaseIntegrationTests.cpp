@@ -283,7 +283,7 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     Tile& farmTile = fixture.At(5, 4);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
+    fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
 
     // Buildings: +2 flat nutrients, +1 nutrients on each worked Farm.
     base.GetBuildingManager().AddBuilding("flat_nutrient");

@@ -20,7 +20,11 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainConfig.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
@@ -163,7 +167,11 @@ struct WorldFixture
     explicit WorldFixture(int width = 9, int height = 9)
         : map(width, height, LoadMapRules(dataContext))
     {
-        improvements.Load(FixturePath("improvements.json"));
+        // The same call production uses, so the fixture cannot drift from it or skip the
+        // improvement-shadows-operation check that only this path performs.
+        dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
+        ac::LoadMapOccupants(FixturePath("improvements.json"), FixturePath("terrain.json"),
+                             improvements, *dataContext.terrainOperationRegistry);
         unitComponents.Load(FixturePath("unit_components.json"));
         // Before the TileEffectsContext: it holds the yield rules by reference and stamps
         // them into every per-tile resolve (ElevationEnergy reads the step from here).

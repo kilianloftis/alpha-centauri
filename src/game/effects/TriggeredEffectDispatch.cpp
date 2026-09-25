@@ -20,6 +20,7 @@
 #include "game/map/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
+#include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -34,6 +35,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <magic_enum.hpp>
 #include <random>
 #include <set>
 #include <stdexcept>
@@ -339,6 +341,112 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     return true;
 }
 
+// Aquifer and river are tile bools; every other terrain occupant is a config pointer in the
+// tile's optional-terrain list. Terrain derived from other state has no branch here and is
+// rejected at load.
+bool SetTerrainFeature_(TriggeredEffectContext_t& rCtx, const SetTerrainFeatureEffect_t& rConfig,
+                        std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    Tile& rTile = *rCtx.pTile;
+    TileEffectsContext& rTileEffects = rCtx.rGameState.GetTileEffects();
+    const std::string_view aquifer = magic_enum::enum_name(TerrainFeature_t::Aquifer);
+    const std::string_view river = magic_enum::enum_name(TerrainFeature_t::River);
+
+    bool bChanged = false;
+    if (rConfig.featureId == aquifer)
+    {
+        bChanged = rTile.GetHasAquifer() != rConfig.bPresent;
+        if (bChanged)
+        {
+            rTile.SetHasAquifer(rConfig.bPresent);
+            RecomputeRivers(rCtx.rGameState.GetWorldMap());
+        }
+    }
+    else if (rConfig.featureId == river)
+    {
+        bChanged = rTile.GetHasRiver() != rConfig.bPresent;
+        if (bChanged)
+        {
+            rTile.SetHasRiver(rConfig.bPresent);
+        }
+    }
+    else
+    {
+        bChanged = rTile.HasTerrainFeature(rConfig.featureId) != rConfig.bPresent;
+        if (bChanged)
+        {
+            if (rConfig.bPresent)
+            {
+                rTileEffects.AddOccupantWithEffects(rTile, rConfig.featureId);
+            }
+            else
+            {
+                rTileEffects.RemoveOccupantWithEffects(rTile, rConfig.featureId);
+            }
+        }
+
+    }
+
+    if (!bChanged)
+    {
+        return false;
+    }
+    rOut.push_back(TerrainFeatureChanged_t{rConfig.featureId, rConfig.bPresent});
+    return true;
+}
+
+bool StepRockiness_(TriggeredEffectContext_t& rCtx, const StepRockinessEffect_t& rConfig,
+                    std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile || rConfig.steps == 0)
+    {
+        return false;
+    }
+    // Ordered axis: the clamp rides magic_enum's index range rather than assumed values.
+    const auto& rValues = magic_enum::enum_values<Rockiness_t>();
+    const int current = static_cast<int>(*magic_enum::enum_index(rCtx.pTile->GetRockiness()));
+    const int stepped =
+        std::clamp(current + rConfig.steps, 0, static_cast<int>(rValues.size()) - 1);
+    if (stepped == current)
+    {
+        return false;
+    }
+    rCtx.pTile->SetRockiness(rValues[static_cast<size_t>(stepped)]);
+    rOut.push_back(RockinessChanged_t{stepped - current});
+    return true;
+}
+
+bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffect_t& rConfig,
+                      std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile || !rCtx.pUnit)
+    {
+        return false;
+    }
+    const ElevationRulesConfig_t& rRules = rCtx.pTile->MapRules();
+    const UnitDomain_t domain = rCtx.pUnit->GetDomain();
+    // No room check here: whether a Former may start is FormerElevationChangeAllowed's job at
+    // order time. By the time this fires the energy is spent and the turns are gone, so a roll
+    // past the floor lands on the floor rather than failing, and only a delta that changes
+    // nothing at all reports false.
+    const int roll = RollLevelMeters(rCtx.Rng(), rRules);
+    const int delta = rConfig.bRaise ? roll : -roll;
+    const int floor =
+        rConfig.bRaise ? rRules.minElevationMeters : FormerLowerFloorMeters(domain, rRules);
+    if (!ApplyElevationDelta(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), delta, rRules, floor,
+                             rRules.maxElevationMeters, &rCtx.rGameState.GetTileEffects(),
+                             &rCtx.rGameState))
+    {
+        return false;
+    }
+    rOut.push_back(ElevationChanged_t{delta});
+    return true;
+}
+
 bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rConfig,
                   std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -409,6 +517,9 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, DestroyUnitEffect_t>
                                || std::is_same_v<T, EarthquakeEffect_t>
                                || std::is_same_v<T, FungalBloomEffect_t>
+                               || std::is_same_v<T, SetTerrainFeatureEffect_t>
+                               || std::is_same_v<T, StepRockinessEffect_t>
+                               || std::is_same_v<T, ElevationChangeEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
             {
                 return false;
@@ -489,7 +600,7 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 {
                     if (RollRational(*rConcrete.removeHostChance, rCtx.Rng()))
                     {
-                        rCtx.rGameState.GetTileEffects().RemoveImprovementWithEffects(
+                        rCtx.rGameState.GetTileEffects().RemoveOccupantWithEffects(
                             *rCtx.pTile, *rCtx.hostImprovementId);
                     }
                 }
@@ -552,6 +663,18 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, FungalBloomEffect_t>)
             {
                 return FungalBloom_(rCtx, rConcrete, rOut);
+            }
+            else if constexpr (std::is_same_v<T, SetTerrainFeatureEffect_t>)
+            {
+                return SetTerrainFeature_(rCtx, rConcrete, rOut);
+            }
+            else if constexpr (std::is_same_v<T, StepRockinessEffect_t>)
+            {
+                return StepRockiness_(rCtx, rConcrete, rOut);
+            }
+            else if constexpr (std::is_same_v<T, ElevationChangeEffect_t>)
+            {
+                return ElevationChange_(rCtx, rConcrete, rOut);
             }
             else if constexpr (std::is_same_v<T, DestroyUnitEffect_t>)
             {
@@ -662,16 +785,14 @@ void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& 
     }
 }
 
+bool HostHasVisit_(const ImprovementConfig_t& rHost)
+{
+    return !rHost.onVisitEffects.empty();
+}
+
 bool TileHasVisitEffects(const Tile& rTile)
 {
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
-    {
-        if (pImprovement && !pImprovement->onVisitEffects.empty())
-        {
-            return true;
-        }
-    }
-    return false;
+    return rTile.ForEachOccupant(HostHasVisit_);
 }
 
 void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
@@ -685,13 +806,13 @@ void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
     // Snapshot hosts first: GrantXp remove_host_chance can erase an improvement mid-loop.
     // Config pointers stay valid (registry-owned) even after the tile loses the improvement.
     std::vector<const ImprovementConfig_t*> hosts;
-    for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
-    {
-        if (pImprovement && !pImprovement->onVisitEffects.empty())
+    pTile->ForEachOccupant([&](const ImprovementConfig_t& rHost) {
+        if (HostHasVisit_(rHost))
         {
-            hosts.push_back(pImprovement);
+            hosts.push_back(&rHost);
         }
-    }
+        return false;
+    });
 
     TriggeredEffectContext_t context(rGameState, rMover.GetFaction());
     context.pUnit = &rMover;
@@ -700,7 +821,7 @@ void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
 
     for (const ImprovementConfig_t* pConfig : hosts)
     {
-        if (!pTile->HasImprovement(pConfig->id))
+        if (!pTile->HasFeature(pConfig->id))
         {
             continue;
         }
@@ -766,7 +887,7 @@ void CollectBaseHasBuilding_(const Condition_t& rCondition, std::vector<std::str
             {
                 rIds.push_back(rAlt.buildingId);
             }
-            else if constexpr (std::is_same_v<T, AllOf_t>)
+            else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
             {
                 for (const Condition_t& rNested : rAlt.conditions)
                 {

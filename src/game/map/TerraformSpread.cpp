@@ -2,6 +2,7 @@
 
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
@@ -70,14 +71,16 @@ bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool wantSea,
     return true;
 }
 
+// TODO: forest spread used to wipe fungus off the tile it spread onto, citing SMAC. Fungus
+// is terrain now and improvements no longer displace terrain, so a fungus neighbour is simply
+// not a legal target. Nobody has confirmed which of the two SMAC actually does — if spread is
+// meant to clear fungus, that belongs here as an explicit removal, not as a silent exception
+// to "improvements never remove terrain".
 Tile* PickBestSpreadNeighbor_(Tile& rOrigin, WorldMap& rWorldMap,
                               const ImprovementConfig_t& rConfig, bool wantSea)
 {
     Tile* pBest = nullptr;
     int bestScore = 0;
-
-    // Forest spread wipes fungus (SMAC), so Fungus must not block eligibility.
-    const std::string_view clearedFeature = wantSea ? std::string_view{} : ImprovementIds::k_Fungus;
 
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, 1, false,
         [&](Tile* pNeighbor, int /*distance*/)
@@ -86,7 +89,7 @@ Tile* PickBestSpreadNeighbor_(Tile& rOrigin, WorldMap& rWorldMap,
             {
                 return;
             }
-            if (!CanBuildImprovement(*pNeighbor, rConfig, clearedFeature))
+            if (!CanBuildImprovement(*pNeighbor, rConfig))
             {
                 return;
             }
@@ -135,11 +138,7 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
         return false;
     }
 
-    if (!wantSea && pTarget->HasImprovement(ImprovementIds::k_Fungus))
-    {
-        rTileEffects.RemoveImprovementWithEffects(*pTarget, std::string(ImprovementIds::k_Fungus));
-    }
-    rTileEffects.AddImprovementWithEffects(*pTarget, std::string(improvementId));
+    rTileEffects.AddOccupantWithEffects(*pTarget, std::string(improvementId));
     return true;
 }
 

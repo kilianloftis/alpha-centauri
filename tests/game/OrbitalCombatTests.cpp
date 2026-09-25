@@ -480,7 +480,7 @@ TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]"
 {
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(
+    game.pState->GetTileEffects().AddOccupantWithEffects(
         *game.pState->GetWorldMap().GetTile(4, 4), "test_sam_battery");
 
     Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});

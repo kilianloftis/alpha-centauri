@@ -79,7 +79,8 @@ WorldView::WorldView(
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 , m_pTerraformInputController(std::make_unique<TerraformInputController>(
-      rGameDataContext.paths.terraformBindings, *rGameDataContext.improvementRegistry))
+      rGameDataContext.paths.terraformBindings, *rGameDataContext.improvementRegistry,
+      *rGameDataContext.terrainOperationRegistry))
 {
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pSelectedUnitPanel = pSelectedUnit.get();

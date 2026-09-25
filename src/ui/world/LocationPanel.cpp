@@ -109,14 +109,11 @@ void LocationPanel::DrawContents_(Graphics& rGraphics, float textX, float textY,
         y += lineStep;
     };
 
-    for (const ImprovementConfig_t* pFeature : m_pSelectedTile->GetTerrainFeatures())
-    {
-        drawName(pFeature);
-    }
-    for (const ImprovementConfig_t* pImprovement : m_pSelectedTile->GetImprovements())
-    {
-        drawName(pImprovement);
-    }
+    m_pSelectedTile->ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
+        drawName(&rConfig);
+        return false;
+    });
+
 }
 
 } // namespace ac

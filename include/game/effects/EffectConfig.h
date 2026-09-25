@@ -222,6 +222,19 @@ struct TransportParamsEffect_t
     bool requiresHarbor = false;
 };
 
+// Flips one stock coexistence answer for the acting former. Stock is deny when either
+// occupant excludes the other. The pair is unordered — matching tries both assignments —
+// and naming a single occupant wild-cards the other side. Scope is ThisUnit (a component)
+// or FactionUnits (a tech). Applied only when `cell` differs from stock. An improvement
+// built under an Allow records the waived pair on the tile (Tile::AddCoexistenceWaiver),
+// so it survives losing the component that earned it.
+struct CoexistenceOverrideEffect_t
+{
+    InteractionCell_t cell = InteractionCell_t::Allow;
+    std::string firstId;
+    std::string secondId;
+};
+
 // Overrides one cell (or a wild-card slice) of an interaction grid to a non-default value.
 // `cell` is required and may be allow or deny; at resolve, an override that restates the
 // stock cell is skipped, so for any concrete query only one polarity can fire and first-match
@@ -254,7 +267,8 @@ using EffectVariant_t = std::variant<
     InterceptEffect_t,
     ScrambleEffect_t,
     TransportParamsEffect_t,
-    InteractionOverrideEffect_t
+    InteractionOverrideEffect_t,
+    CoexistenceOverrideEffect_t
 >;
 
 // Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are
@@ -265,9 +279,13 @@ struct Condition_t;
 // The tile targeted by this effect has the named feature id. Evaluated via Tile::HasFeature,
 // so one alternative covers terrain classification (e.g. "Rocky"), river/fungus, and any
 // improvement id — including "Base". In combat the target is the defender's tile.
+// bPresent false inverts the test ("this tile does not have Fungus"), the same way
+// IsNativeLife_t::bMatches does — a whole Not_t alternative would have to hold a nested
+// Condition_t, and every negation the rules need is of a tile-feature test.
 struct TargetTileHas_t
 {
     std::string featureId;
+    bool bPresent = true;
 };
 
 // Every nested condition is satisfied (AND). Parser desugars AllOf JSON `"values": ["A","B"]`
@@ -275,6 +293,13 @@ struct TargetTileHas_t
 // conditions list is the one invalid state the variant cannot rule out: the parser rejects it,
 // and ConditionBodySatisfied_ evaluates it as false for hand-built structs.
 struct AllOf_t
+{
+    std::vector<Condition_t> conditions;
+};
+
+// At least one nested condition is satisfied (OR). Mirrors AllOf_t, including the parser's
+// `values` desugaring to TargetTileHas alternatives and its rejection of an empty list.
+struct AnyOf_t
 {
     std::vector<Condition_t> conditions;
 };
@@ -380,7 +405,7 @@ struct BaseHasBuilding_t
     std::string buildingId;
 };
 
-using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
+using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
                                         OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,

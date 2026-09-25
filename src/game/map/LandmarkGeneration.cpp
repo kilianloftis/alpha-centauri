@@ -1,6 +1,7 @@
 #include "game/map/LandmarkGeneration.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
@@ -153,7 +154,7 @@ bool TryStamp_(WorldMap& rWorld,
                int anchorY,
                const LandmarkConfig_t& rLandmark,
                const std::vector<std::pair<int, int>>& rOffsets,
-               const ImprovementConfig_t& rImprovement,
+               const ImprovementConfig_t& rOccupant,
                const ImprovementConfig_t* pFungus)
 {
     std::vector<Tile*> footprint;
@@ -166,7 +167,7 @@ bool TryStamp_(WorldMap& rWorld,
         {
             return false;
         }
-        if (!CanBuildImprovement(*pTile, rImprovement))
+        if (!CanBuildImprovement(*pTile, rOccupant))
         {
             return false;
         }
@@ -187,10 +188,10 @@ bool TryStamp_(WorldMap& rWorld,
 
     for (Tile* pTile : footprint)
     {
-        pTile->AddImprovement(rImprovement);
+        pTile->AddOccupant(rOccupant);
         if (rLandmark.setFungus && pFungus)
         {
-            pTile->AddImprovement(*pFungus);
+            pTile->AddTerrainFeature(*pFungus);
         }
     }
     return true;
@@ -220,7 +221,7 @@ std::vector<std::pair<int, int>> ExpandLandmarkShape(const LandmarkShape_t& rSha
 
 int PlaceLandmarks(WorldMap& rWorld,
                    const std::vector<LandmarkConfig_t>& rLandmarks,
-                   const ImprovementRegistry& rImprovements,
+                   const ImprovementRegistry& rOccupants,
                    std::mt19937& rRng)
 {
     std::vector<std::pair<int, int>> placedAnchors;
@@ -233,17 +234,18 @@ int PlaceLandmarks(WorldMap& rWorld,
             continue;
         }
 
-        const ImprovementConfig_t* pFungus = rImprovements.Find(std::string(ImprovementIds::k_Fungus));
+        const ImprovementConfig_t* pFungus =
+            rOccupants.Find(std::string(ImprovementIds::k_Fungus));
         if (rLandmark.setFungus && !pFungus)
         {
             throw std::runtime_error("Landmark '" + rLandmark.id
-                                     + "' sets fungus but improvements.json has no Fungus entry");
+                                     + "' sets fungus but there is no Fungus entry");
         }
-        const ImprovementConfig_t* pImprovement = rImprovements.Find(rLandmark.improvementId);
-        if (!pImprovement)
+        const ImprovementConfig_t* pOccupant = rOccupants.Find(rLandmark.improvementId);
+        if (!pOccupant)
         {
             throw std::runtime_error(
-                "Landmark '" + rLandmark.id + "' unknown improvement '"
+                "Landmark '" + rLandmark.id + "' unknown occupant '"
                 + rLandmark.improvementId + "'");
         }
 
@@ -277,7 +279,7 @@ int PlaceLandmarks(WorldMap& rWorld,
                 continue;
             }
             if (TryStamp_(rWorld, pAnchor->GetX(), pAnchor->GetY(), rLandmark, offsets,
-                          *pImprovement, pFungus))
+                          *pOccupant, pFungus))
             {
                 placedAnchors.emplace_back(pAnchor->GetX(), pAnchor->GetY());
                 ++placedThis;

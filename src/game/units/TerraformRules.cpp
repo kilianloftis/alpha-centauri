@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/EconomyManager.h"
@@ -10,9 +11,11 @@
 #include "game/map/ElevationChange.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/map/MapUtils.h"
-#include "game/map/RiverGeneration.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/map/TerritoryMap.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -20,8 +23,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <span>
 #include <limits>
-#include <magic_enum.hpp>
 #include <stdexcept>
 
 namespace ac
@@ -30,42 +33,19 @@ namespace ac
 namespace
 {
 
-bool HasRequiredTech_(const Faction& rFaction, const ImprovementConfig_t& rConfig)
+bool HasRequiredTech_(const Faction& rFaction, const std::string& rRequiredTech)
 {
-    if (rConfig.requiredTech.empty())
+    if (rRequiredTech.empty())
     {
         return true;
     }
-    return rFaction.GetResearch().HasDiscoveredTech(rConfig.requiredTech);
+    return rFaction.GetResearch().HasDiscoveredTech(rRequiredTech);
 }
 
-bool IsSeaTile_(const Tile& rTile)
-{
-    return rTile.GetElevation() < 0;
-}
-
-bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const Tile& rTile)
+bool FormerMatchesTile_(const Unit& rUnit, const Tile& rTile)
 {
     const bool bSea = rTile.IsWater();
     const UnitDomain_t domain = rUnit.GetDomain();
-
-    if (rConfig.domain == ImprovementDomain_t::Sea)
-    {
-        return bSea && domain == UnitDomain_t::Sea;
-    }
-    if (rConfig.domain == ImprovementDomain_t::Land)
-    {
-        return !bSea && domain == UnitDomain_t::Land;
-    }
-
-    // Order-only projects have no occupancy domain. Raise and lower are either former;
-    // anything else still has to match the tile the former is standing on.
-    if (rConfig.terraformResult == TerraformResult_t::RaiseLand
-        || rConfig.terraformResult == TerraformResult_t::LowerLand)
-    {
-        return domain == UnitDomain_t::Sea || domain == UnitDomain_t::Land;
-    }
-
     if (bSea)
     {
         return domain == UnitDomain_t::Sea;
@@ -73,169 +53,116 @@ bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const 
     return domain == UnitDomain_t::Land;
 }
 
-bool ExcludesId_(const ImprovementConfig_t& rConfig, std::string_view id)
+bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& rEffect,
+                             const ElevationRulesConfig_t& rRules)
 {
-    return std::any_of(rConfig.excludes.begin(), rConfig.excludes.end(),
-                       [&](const std::string& rExcluded) { return rExcluded == id; });
-}
-
-const ImprovementConfig_t* FindFeatureConfig_(const Tile& rTile, std::string_view featureId)
-{
-    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
-    {
-        if (pFeature && pFeature->id == featureId)
-        {
-            return pFeature;
-        }
-    }
-    for (const ImprovementConfig_t* pFeature : rTile.GetImprovements())
-    {
-        if (pFeature && pFeature->id == featureId)
-        {
-            return pFeature;
-        }
-    }
-    return nullptr;
-}
-
-bool FeatureBlocksPlacement_(const Tile& rTile, const ImprovementConfig_t& rCandidate,
-                             std::string_view featureId)
-{
-    if (featureId == rCandidate.id || !rTile.HasFeature(featureId))
-    {
-        return false;
-    }
-    if (ExcludesId_(rCandidate, featureId))
+    const auto* pChange = std::get_if<ElevationChangeEffect_t>(&rEffect.effect);
+    if (!pChange)
     {
         return true;
     }
-    const ImprovementConfig_t* pFeature = FindFeatureConfig_(rTile, featureId);
-    return pFeature && ExcludesId_(*pFeature, rCandidate.id);
+    return FormerElevationChangeAllowed(rUnit.GetTile(), rUnit.GetDomain(), pChange->bRaise,
+                                        rRules);
 }
 
-// Depth bands come from elevation. A place order does not raise or lower, so these still
-// refuse the start. Rockiness, moisture, rivers, aquifers, and improvements are cleared
-// when the order finishes.
-bool SurfaceBlocksPlacement_(const Tile& rTile, const ImprovementConfig_t& rCandidate)
+// A project is refused before it is paid for when nothing it declares would happen. Each
+// effect's own `condition` answers that for terrain writes; an elevation change also has a
+// bound that depends on the Former's domain, so it is asked directly.
+bool AnyEffectWouldFire_(const Unit& rUnit, const TerraformProject_t& rProject,
+                         const Tile& rTile, const ElevationRulesConfig_t& rRules)
 {
-    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
+    EffectContext_t context;
+    context.targetTile = &rTile;
+    context.pUnit = &rUnit;
+    context.pFaction = &rUnit.GetFaction();
+    for (const TriggeredEffectConfig_t& rEffect : rProject.onCompleteEffects)
     {
-        return true;
-    }
-    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
-    {
-        return true;
-    }
-    return FeatureBlocksPlacement_(rTile, rCandidate, magic_enum::enum_name(TerrainFeature_t::Water))
-        || FeatureBlocksPlacement_(rTile, rCandidate,
-                                   magic_enum::enum_name(TerrainFeature_t::Ocean))
-        || FeatureBlocksPlacement_(rTile, rCandidate,
-                                   magic_enum::enum_name(TerrainFeature_t::OceanShelf));
-}
-
-void ClearBlockersForPlacement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
-                                TileEffectsContext& rTileEffects, WorldMap& rWorldMap)
-{
-    const std::vector<std::string> displaced = ImprovementsDisplacedBy(rTile, rPlaced);
-    for (const std::string& rId : displaced)
-    {
-        rTileEffects.RemoveImprovementWithEffects(rTile, rId);
-    }
-
-    while (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(rTile.GetRockiness())))
-    {
-        if (rTile.GetRockiness() == Rockiness_t::Flat)
+        if (rEffect.condition && !ConditionSatisfied(*rEffect.condition, context))
         {
-            break;
+            continue;
         }
-        rTile.SetRockiness(rTile.GetRockiness() == Rockiness_t::Rocky ? Rockiness_t::Rolling
-                                                                       : Rockiness_t::Flat);
-    }
-
-    while (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(rTile.GetMoisture())))
-    {
-        if (rTile.GetMoisture() == Moisture_t::Arid)
+        if (ElevationEffectAllowed_(rUnit, rEffect, rRules))
         {
-            break;
+            return true;
         }
-        const Moisture_t next =
-            rTile.GetMoisture() == Moisture_t::Wet ? Moisture_t::Moist : Moisture_t::Arid;
-        rTile.SetBaseMoisture(next);
-        rTile.SetMoisture(next);
-    }
-
-    if (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(TerrainFeature_t::Aquifer)))
-    {
-        rTile.SetHasAquifer(false);
-        RecomputeRivers(rWorldMap);
-    }
-    if (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(TerrainFeature_t::River)))
-    {
-        rTile.SetHasRiver(false);
-    }
-}
-
-const ImprovementConfig_t* FeatureIntroducedBy_(const ImprovementConfig_t& rOrder,
-                                                const ImprovementRegistry& rImprovements)
-{
-    if (rOrder.terraformResult != TerraformResult_t::Place)
-    {
-        return nullptr;
-    }
-    if (rOrder.placesImprovementId.empty())
-    {
-        return &rOrder;
-    }
-    return &rImprovements.Get(rOrder.placesImprovementId);
-}
-
-bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig,
-                       const ImprovementConfig_t* pPlaced, UnitDomain_t domain,
-                       const ElevationRulesConfig_t& rRules)
-{
-    switch (rConfig.terraformResult)
-    {
-        case TerraformResult_t::Place:
-            return pPlaced != nullptr
-                && !rTile.HasImprovement(pPlaced->id)
-                && !SurfaceBlocksPlacement_(rTile, *pPlaced);
-        case TerraformResult_t::LevelTerrain:
-            return rTile.GetRockiness() == Rockiness_t::Rocky
-                || rTile.GetRockiness() == Rockiness_t::Rolling;
-        case TerraformResult_t::RemoveFungus:
-            return rTile.HasImprovement(ImprovementIds::k_Fungus);
-        case TerraformResult_t::Aquifer:
-            return !rTile.GetHasAquifer() && !IsSeaTile_(rTile);
-        case TerraformResult_t::RaiseLand:
-            if (domain == UnitDomain_t::Sea)
-            {
-                return rTile.GetElevation() <= -rRules.referenceLevelMeters;
-            }
-            return rTile.GetElevation() < rRules.maxElevationMeters;
-        case TerraformResult_t::LowerLand:
-            if (domain == UnitDomain_t::Land)
-            {
-                return rTile.GetElevation() >= rRules.referenceLevelMeters;
-            }
-            // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the
-            // only limit we can state.
-            return rTile.GetElevation() - rRules.referenceLevelMeters >= rRules.minElevationMeters;
     }
     return false;
 }
 
+bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile)
+{
+    if (rProject.formerDomain == FormerDomainRule_t::Any)
+    {
+        const UnitDomain_t domain = rUnit.GetDomain();
+        return domain == UnitDomain_t::Sea || domain == UnitDomain_t::Land;
+    }
+    if (rProject.pPlaces)
+    {
+        if (rProject.pPlaces->domain == ImprovementDomain_t::Sea)
+        {
+            return rTile.IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
+        }
+        if (rProject.pPlaces->domain == ImprovementDomain_t::Land)
+        {
+            return rTile.IsLand() && rUnit.GetDomain() == UnitDomain_t::Land;
+        }
+    }
+    return FormerMatchesTile_(rUnit, rTile);
+}
+
+// The improvement can be placed once the improvements it displaces are gone. Terrain is
+// never displaced, so anything left after that displacement is a hard refusal.
+bool ImprovementApplies_(const Tile& rTile, const ImprovementConfig_t& rPlaced,
+                         std::span<const CoexistenceOverrideEffect_t> overrides)
+{
+    if (rTile.HasImprovement(rPlaced.id))
+    {
+        return false;
+    }
+    const std::vector<std::string> displaced =
+        ImprovementsDisplacedBy(rTile, rPlaced, overrides);
+    return !OccupantsBlockPlacement(rTile, rPlaced, displaced, overrides);
+}
+
+bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
+                      std::span<const CoexistenceOverrideEffect_t> overrides,
+                      const ElevationRulesConfig_t& rRules)
+{
+    if (rProject.pPlaces && ImprovementApplies_(rTile, *rProject.pPlaces, overrides))
+    {
+        return true;
+    }
+    return AnyEffectWouldFire_(rUnit, rProject, rTile, rRules);
+}
+
 } // namespace
 
-std::vector<std::string> ImprovementsDestroyedByTerraform(const Tile& rTile,
-                                                         const ImprovementConfig_t& rOrder,
-                                                         const ImprovementRegistry& rImprovements)
+std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
+                                                      const ImprovementRegistry& rImprovements,
+                                                      const TerrainOperationRegistry& rOperations)
 {
-    const ImprovementConfig_t* pIntroduced = FeatureIntroducedBy_(rOrder, rImprovements);
-    if (!pIntroduced)
+    const ImprovementConfig_t* pImprovement = rImprovements.Find(rId);
+    if (pImprovement && IsBuildable(*pImprovement))
     {
-        return {};
+        TerraformProject_t project;
+        project.id = pImprovement->id;
+        project.name = pImprovement->name;
+        project.project = *pImprovement->project;
+        project.pPlaces = pImprovement;
+        return project;
     }
-    return ImprovementsDisplacedBy(rTile, *pIntroduced);
+    if (const TerrainOperationConfig_t* pOperation = rOperations.Find(rId))
+    {
+        TerraformProject_t project;
+        project.id = pOperation->id;
+        project.name = pOperation->name;
+        project.project = pOperation->project;
+        project.energyCostSource = pOperation->energyCostSource;
+        project.formerDomain = pOperation->formerDomain;
+        project.onCompleteEffects = pOperation->onCompleteEffects;
+        return project;
+    }
+    return std::nullopt;
 }
 
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
@@ -267,134 +194,114 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
     return elevBand * 8 + nearest * 2;
 }
 
-int TerraformEnergyCost(const Unit& rUnit, const ImprovementConfig_t& rConfig,
+int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
                         const GameState& rGameState, const ElevationRulesConfig_t& rRules)
 {
-    if (rConfig.terraformResult == TerraformResult_t::RaiseLand
-        || rConfig.terraformResult == TerraformResult_t::LowerLand)
+    if (rProject.energyCostSource == EnergyCostSource_t::RaiseLowerQuote)
     {
         return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId(),
                                          rGameState.GetWorldMap(), rRules);
     }
-    return rConfig.energyCost;
+    return rProject.project.energyCost;
 }
 
-bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
+bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
                        const GameState& rGameState, const ElevationRulesConfig_t& rRules)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::Terraform))
     {
         return false;
     }
-    if (rConfig.turnsRequired <= 0)
+    if (rProject.project.turnsRequired <= 0)
     {
         return false;
     }
-    if (!HasRequiredTech_(rUnit.GetFaction(), rConfig))
+    if (!HasRequiredTech_(rUnit.GetFaction(), rProject.project.requiredTech))
     {
         return false;
     }
-
-    const Tile& rTile = rUnit.GetTile();
-    if (!DomainAllows_(rUnit, rConfig, rTile))
-    {
-        return false;
-    }
-    const ImprovementConfig_t* pPlaced =
-        FeatureIntroducedBy_(rConfig, rGameState.GetTileEffects().GetImprovements());
-    if (!CanApplyMutation_(rTile, rConfig, pPlaced, rUnit.GetDomain(), rRules))
+    if (!DomainAllows_(rUnit, rProject, rUnit.GetTile()))
     {
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, rConfig, rGameState, rRules);
+    const std::vector<CoexistenceOverrideEffect_t> overrides = ActiveCoexistenceOverrides(rUnit);
+    if (!CanApplyProject_(rUnit, rProject, rUnit.GetTile(), overrides, rRules))
+    {
+        return false;
+    }
+
+    const int cost = TerraformEnergyCost(rUnit, rProject, rGameState, rRules);
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 
-bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
-                          TileEffectsContext& rTileEffects, WorldMap& rWorldMap,
-                          const Unit& rFormer, std::mt19937& rRng,
-                          const ElevationRulesConfig_t& rRules, IUnitOrderWorld* pWorld)
+namespace
 {
-    switch (rConfig.terraformResult)
+
+// Nothing is removed until the placement is known to succeed: a project that has already
+// been paid for must not leave the tile stripped and empty when terrain shifted mid-order.
+bool PlaceImprovement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
+                       TileEffectsContext& rTileEffects,
+                       std::span<const CoexistenceOverrideEffect_t> overrides)
+{
+    if (rTile.HasImprovement(rPlaced.id))
     {
-        case TerraformResult_t::Place:
-        {
-            const ImprovementConfig_t* pPlaced =
-                FeatureIntroducedBy_(rConfig, rTileEffects.GetImprovements());
-            if (!pPlaced || SurfaceBlocksPlacement_(rTile, *pPlaced))
-            {
-                return false;
-            }
-            if (rTile.HasImprovement(pPlaced->id))
-            {
-                return true;
-            }
-            ClearBlockersForPlacement_(rTile, *pPlaced, rTileEffects, rWorldMap);
-            if (SurfaceBlocksPlacement_(rTile, *pPlaced)
-                || RemainingFeaturesBlockPlacement(rTile, *pPlaced, {}))
-            {
-                return false;
-            }
-            rTileEffects.AddImprovementWithEffects(rTile, pPlaced->id);
-            return rTile.HasImprovement(pPlaced->id);
-        }
-
-        case TerraformResult_t::LevelTerrain:
-            if (rTile.GetRockiness() == Rockiness_t::Rocky)
-            {
-                rTile.SetRockiness(Rockiness_t::Rolling);
-            }
-            else if (rTile.GetRockiness() == Rockiness_t::Rolling)
-            {
-                rTile.SetRockiness(Rockiness_t::Flat);
-            }
-            else
-            {
-                return false;
-            }
-            return true;
-
-        case TerraformResult_t::RemoveFungus:
-            if (!rTile.HasImprovement(ImprovementIds::k_Fungus))
-            {
-                return false;
-            }
-            rTileEffects.RemoveImprovementWithEffects(rTile, std::string(ImprovementIds::k_Fungus));
-            return true;
-
-        case TerraformResult_t::Aquifer:
-            if (rTile.GetHasAquifer() || IsSeaTile_(rTile))
-            {
-                return false;
-            }
-            rTile.SetHasAquifer(true);
-            RecomputeRivers(rWorldMap);
-            return true;
-
-        case TerraformResult_t::RaiseLand:
-        {
-            const int roll = RollLevelMeters(rRng, rRules);
-            return ApplyElevationDelta(rTile, rWorldMap, roll, rRules, rRules.minElevationMeters,
-                                       rRules.maxElevationMeters, pWorld ? &rTileEffects : nullptr,
-                                       pWorld);
-        }
-
-        case TerraformResult_t::LowerLand:
-        {
-            // A roll deeper than the floor lowers to the floor rather than failing. Refusing
-            // here would keep the energy CanStartTerraform already charged and the turns the
-            // order already spent, and whether it happens is a die roll the player never saw.
-            const int roll = RollLevelMeters(rRng, rRules);
-            const int floor = rFormer.GetDomain() == UnitDomain_t::Land
-                                  ? rRules.oceanLevelMeters
-                                  : rRules.minElevationMeters;
-            return ApplyElevationDelta(rTile, rWorldMap, -roll, rRules, floor,
-                                       rRules.maxElevationMeters, pWorld ? &rTileEffects : nullptr,
-                                       pWorld);
-        }
+        return true;
     }
-    return false;
+    if (!ImprovementApplies_(rTile, rPlaced, overrides))
+    {
+        return false;
+    }
+
+    for (const auto& [rImprovementId, rFeatureId] : WaivedPairsFor(rTile, rPlaced, overrides))
+    {
+        rTile.AddCoexistenceWaiver(rImprovementId, rFeatureId);
+    }
+    for (const std::string& rId : ImprovementsDisplacedBy(rTile, rPlaced, overrides))
+    {
+        rTileEffects.RemoveOccupantWithEffects(rTile, rId);
+    }
+    rTileEffects.AddOccupantWithEffects(rTile, rPlaced.id);
+    return rTile.HasImprovement(rPlaced.id);
+}
+
+// The project's own effects, fired against the Former's tile. A project that declares any
+// needs a session: the effects mutate world state through GameState, which a movement-only
+// harness does not have.
+bool RunCompleteEffects_(Tile& rTile, const TerraformProject_t& rProject, Unit& rFormer,
+                         std::mt19937& rRng)
+{
+    GameState* pGameState = rFormer.GetFaction().GetGameState();
+    if (!pGameState)
+    {
+        throw std::runtime_error("Terraform project '" + rProject.id
+                                 + "' declares on_complete_effects but the former's faction is "
+                                   "not attached to a session");
+    }
+    TriggeredEffectContext_t context(*pGameState, rFormer.GetFaction());
+    context.pUnit = &rFormer;
+    context.pTile = &rTile;
+    context.pRng = &rRng;
+    return !ApplyTriggeredEffects(rProject.onCompleteEffects, context).empty();
+}
+
+} // namespace
+
+bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
+                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng)
+{
+    bool bDidAnything = false;
+    if (rProject.pPlaces)
+    {
+        const std::vector<CoexistenceOverrideEffect_t> overrides =
+            ActiveCoexistenceOverrides(rFormer);
+        bDidAnything = PlaceImprovement_(rTile, *rProject.pPlaces, rTileEffects, overrides);
+    }
+    if (!rProject.onCompleteEffects.empty())
+    {
+        bDidAnything = RunCompleteEffects_(rTile, rProject, rFormer, rRng) || bDidAnything;
+    }
+    return bDidAnything;
 }
 
 } // namespace ac

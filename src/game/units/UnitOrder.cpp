@@ -54,7 +54,7 @@ std::string SupplyCrawlOrder_t::ToString() const
 
 std::string TerraformOrder_t::ToString() const
 {
-    return "Terraform " + improvementId
+    return "Terraform " + projectId
         + " (" + std::to_string(turnsRemaining)
         + (turnsRemaining == 1 ? " turn)" : " turns)");
 }

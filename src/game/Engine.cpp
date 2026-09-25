@@ -517,7 +517,7 @@ void Engine::StartNewGame_()
                 {
                     throw std::runtime_error("Engine setup: Sensor tile out of bounds");
                 }
-                rTileEffects.AddImprovementWithEffects(*pSensorTile, "Sensor");
+                rTileEffects.AddOccupantWithEffects(*pSensorTile, "Sensor");
                 std::cout << "Placed Sensor for faction " << rFaction.GetFactionId()
                           << " at (" << pSensorTile->GetX() << ", " << pSensorTile->GetY()
                           << "), territory owner "
@@ -549,9 +549,9 @@ void Engine::StartNewGame_()
                     }
                     else if (distance == 1
                              && (pTile->GetX() + pTile->GetY()) % 2 == 0
-                             && !pTile->HasImprovement(ImprovementIds::k_Fungus))
+                             && !pTile->HasFeature(ImprovementIds::k_Fungus))
                     {
-                        rTileEffects.AddImprovementWithEffects(
+                        rTileEffects.AddOccupantWithEffects(
                             *pTile, std::string(ImprovementIds::k_Forest));
                     }
                 });

@@ -1,6 +1,7 @@
 #include "game/map/TileBonusGeneration.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -17,7 +18,7 @@ namespace
 
 bool CanPlaceBonus_(const Tile& rTile, const ImprovementConfig_t& rBonus)
 {
-    return rTile.IsLand() && !rTile.HasImprovement(rBonus.id)
+    return rTile.IsLand() && !rTile.HasTerrainFeature(rBonus.id)
            && CanBuildImprovement(rTile, rBonus);
 }
 
@@ -60,7 +61,7 @@ const ImprovementConfig_t* PickWeightedBonus_(
 
 int PlaceTileBonuses(WorldMap& rWorld,
                      const TileBonusDecorationConfig_t& rConfig,
-                     const ImprovementRegistry& rImprovements,
+                     const ImprovementRegistry& rOccupants,
                      std::mt19937& rRng)
 {
     if (rConfig.landFraction <= 0.0f)
@@ -69,9 +70,9 @@ int PlaceTileBonuses(WorldMap& rWorld,
     }
 
     std::vector<const ImprovementConfig_t*> bonuses;
-    for (const ImprovementConfig_t& rConfigEntry : rImprovements.GetAll())
+    for (const ImprovementConfig_t& rConfigEntry : rOccupants.GetAll())
     {
-        if (rConfigEntry.frequency > 0)
+        if (rConfigEntry.placement == OccupantPlacement_t::Terrain && rConfigEntry.frequency > 0)
         {
             bonuses.push_back(&rConfigEntry);
         }
@@ -121,7 +122,7 @@ int PlaceTileBonuses(WorldMap& rWorld,
             continue;
         }
 
-        pTile->AddImprovement(*pBonus);
+        pTile->AddTerrainFeature(*pBonus);
         ++placed;
     }
 

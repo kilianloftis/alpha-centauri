@@ -1,4 +1,5 @@
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/TerrainConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -21,24 +22,21 @@ std::filesystem::path WriteTempJson(const std::string& name, const std::string& 
 
 } // namespace
 
-TEST_CASE("ImprovementConfigParser: turns_required and energy_cost", "[improvements][parser]")
+TEST_CASE("ImprovementConfigParser rejects a legacy terraform block", "[improvements][parser]")
 {
+    // Construction now lives in turns_required / energy_cost on the improvement itself.
     const auto path = WriteTempJson("ac_improvement_parser.json", R"([
         {
             "id": "Road",
             "name": "Road",
-            "turns_required": 1,
-            "energy_cost": 0,
+            "terraform": { "improvement": "Road" },
             "effects": []
         }
     ])");
 
     ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
-    REQUIRE(configs.size() == 1);
-    CHECK(configs[0].turnsRequired == 1);
-    CHECK(configs[0].energyCost == 0);
-    CHECK(configs[0].terraformResult == TerraformResult_t::Place);
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("turns_required"));
     std::filesystem::remove(path);
 }
 
@@ -53,96 +51,115 @@ TEST_CASE("ImprovementConfigParser: rejects mineral_cost", "[improvements][parse
     std::filesystem::remove(path);
 }
 
-TEST_CASE("ImprovementConfigParser: terraform.result", "[improvements][parser]")
+TEST_CASE("An improvement is buildable exactly when it declares turns_required",
+          "[improvements][parser][orders]")
 {
-    SECTION("raise_land")
-    {
-        const auto path = WriteTempJson("ac_improvement_raise.json", R"([
-            {
-                "id": "RaiseLand",
-                "name": "Raise Land",
-                "turns_required": 12,
-                "terraform": { "result": "raise_land" },
-                "effects": []
-            }
-        ])");
-        ImprovementConfigParser parser;
-        const auto configs = parser.ParseConfig(path.string());
-        REQUIRE(configs.size() == 1);
-        CHECK(configs[0].terraformResult == TerraformResult_t::RaiseLand);
-        std::filesystem::remove(path);
-    }
+    const auto path = WriteTempJson("ac_buildable.json", R"([
+        { "id": "Farm", "name": "Farm", "turns_required": 4, "energy_cost": 0 },
+        { "id": "Base", "name": "Base" }
+    ])");
+    ImprovementConfigParser parser;
+    const auto configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 2);
+    CHECK(configs[0].placement == OccupantPlacement_t::Improvement);
+    REQUIRE(configs[0].project);
+    CHECK(configs[0].project->turnsRequired == 4);
+    CHECK(IsBuildable(configs[0]));
+    CHECK_FALSE(IsBuildable(configs[1]));
+    std::filesystem::remove(path);
+}
 
-    SECTION("place names another improvement")
-    {
-        const auto path = WriteTempJson("ac_improvement_place_other.json", R"([
-            {
-                "id": "Fungus",
-                "name": "Fungus",
-                "effects": []
-            },
-            {
-                "id": "PlantFungus",
-                "name": "Plant Fungus",
-                "turns_required": 6,
-                "terraform": { "result": "place", "improvement": "Fungus" },
-                "effects": []
-            }
-        ])");
-        ImprovementConfigParser parser;
-        const auto configs = parser.ParseConfig(path.string());
-        REQUIRE(configs.size() == 2);
-        CHECK(configs[1].terraformResult == TerraformResult_t::Place);
-        CHECK(configs[1].placesImprovementId == "Fungus");
-        std::filesystem::remove(path);
-    }
+TEST_CASE("An energy cost with no build time is rejected", "[improvements][parser][orders]")
+{
+    // Nothing can ever pay it, so it is a config mistake rather than an unbuildable entry.
+    const auto path = WriteTempJson("ac_cost_no_time.json", R"([
+        { "id": "Farm", "name": "Farm", "energy_cost": 5 }
+    ])");
+    ImprovementConfigParser parser;
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("turns_required"));
+    std::filesystem::remove(path);
+}
 
-    SECTION("place improvement must exist")
-    {
-        const auto path = WriteTempJson("ac_improvement_place_missing.json", R"([
-            {
-                "id": "PlantFungus",
-                "name": "Plant Fungus",
-                "terraform": { "result": "place", "improvement": "Fungus" },
-                "effects": []
-            }
-        ])");
-        ImprovementConfigParser parser;
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
-                          Catch::Matchers::ContainsSubstring("terraform.improvement"));
-        std::filesystem::remove(path);
-    }
+TEST_CASE("A terrain operation must declare what it does", "[improvements][parser][terrain]")
+{
+    // The operation set is open, so nothing checks an id against a list in code. What keeps a
+    // typo from becoming a project that silently does nothing is the effects list itself.
+    const auto path = WriteTempJson("ac_terrain_ops_empty.json", R"({
+        "operations": [
+            { "id": "Dance", "name": "Dance", "turns_required": 1, "energy_cost": 0 }
+        ]
+    })");
+    TerrainOperationConfigParser parser;
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("Dance")
+                          && Catch::Matchers::ContainsSubstring("on_complete_effects"));
+    std::filesystem::remove(path);
+}
 
-    SECTION("improvement is only valid for place")
-    {
-        const auto path = WriteTempJson("ac_improvement_place_wrong_result.json", R"([
+TEST_CASE("A terrain operation composed of existing effects parses",
+          "[improvements][parser][terrain]")
+{
+    // An id no C++ enum names: the point of the open set is that this is ordinary config.
+    const auto path = WriteTempJson("ac_terrain_ops_custom.json", R"({
+        "operations": [
             {
-                "id": "RemoveFungus",
-                "name": "Remove Fungus",
-                "terraform": { "result": "remove_fungus", "improvement": "Fungus" },
-                "effects": []
+                "id": "Rockify",
+                "name": "Rockify",
+                "turns_required": 4,
+                "energy_cost": 0,
+                "on_complete_effects": [
+                    { "type": "StepRockiness", "parameters": { "steps": 1 } }
+                ]
             }
-        ])");
-        ImprovementConfigParser parser;
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
-                          Catch::Matchers::ContainsSubstring("only valid when result is place"));
-        std::filesystem::remove(path);
-    }
+        ]
+    })");
+    TerrainOperationConfigParser parser;
+    const std::vector<TerrainOperationConfig_t> ops = parser.ParseConfig(path.string());
+    REQUIRE(ops.size() == 1);
+    CHECK(ops[0].id == "Rockify");
+    REQUIRE(ops[0].onCompleteEffects.size() == 1);
+    const auto* pStep = std::get_if<StepRockinessEffect_t>(&ops[0].onCompleteEffects[0].effect);
+    REQUIRE(pStep);
+    CHECK(pStep->steps == 1);
+    std::filesystem::remove(path);
+}
 
-    SECTION("unknown result throws")
-    {
-        const auto path = WriteTempJson("ac_improvement_bad_tf.json", R"([
-            {
-                "id": "Bad",
-                "name": "Bad",
-                "terraform": { "result": "dance" },
-                "effects": []
-            }
-        ])");
-        ImprovementConfigParser parser;
-        CHECK_THROWS(parser.ParseConfig(path.string()));
-        std::filesystem::remove(path);
-    }
+TEST_CASE("@buildable stands for every former-built improvement", "[improvements][parser]")
+{
+    // One entry states "clear me before building anything here", instead of every buildable
+    // improvement restating the relationship and a new one silently forgetting to.
+    std::vector<ImprovementConfig_t> occupants;
+    ImprovementConfig_t farm;
+    farm.id = "Farm";
+    farm.project = FormerProject_t{4, 0, ""};
+    ImprovementConfig_t base;
+    base.id = "Base";
+    ImprovementConfig_t fungus;
+    fungus.id = "Fungus";
+    fungus.placement = OccupantPlacement_t::Terrain;
+    fungus.excludes = {"@buildable"};
+    occupants.push_back(farm);
+    occupants.push_back(base);
+    occupants.push_back(fungus);
+
+    ExpandFeatureTagReferences(occupants);
+
+    // Farm is buildable; Base declares no project, so founding a base on fungus is untouched.
+    CHECK(occupants[2].excludes == std::vector<std::string>{"Farm"});
+}
+
+TEST_CASE("@buildable cannot be authored by hand", "[improvements][parser]")
+{
+    std::vector<ImprovementConfig_t> occupants;
+    ImprovementConfig_t odd;
+    odd.id = "Odd";
+    odd.tags = {"buildable"};
+    occupants.push_back(odd);
+
+    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+                      Catch::Matchers::ContainsSubstring("reserved")
+                          && Catch::Matchers::ContainsSubstring("turns_required"));
 }
 
 TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][parser]")
@@ -151,7 +168,6 @@ TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][par
         {
             "id": "Forest",
             "name": "Forest",
-            "turns_required": 4,
             "suppress_yield_sources": ["Rocky", "Wet"],
             "effects": []
         }
@@ -300,25 +316,24 @@ TEST_CASE("ImprovementConfigParser: unknown @tag throws", "[improvements][parser
 
 TEST_CASE("ImprovementConfigParser loads fixture improvements.json", "[improvements][parser]")
 {
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json");
+    // Unexpanded: the fixture's improvements name tags that only terrain entries carry, so
+    // expanding against improvements.json alone would not resolve them.
+    const auto configs =
+        ParseImprovementsUnexpanded(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json");
     REQUIRE(configs.size() > 10);
 
     const ImprovementConfig_t* pFarm = nullptr;
-    const ImprovementConfig_t* pRaise = nullptr;
     for (const auto& c : configs)
     {
         if (c.id == "Farm")
         {
             pFarm = &c;
         }
-        if (c.id == "RaiseLand")
-        {
-            pRaise = &c;
-        }
     }
     REQUIRE(pFarm);
-    CHECK(pFarm->turnsRequired == 4);
-    REQUIRE(pRaise);
-    CHECK(pRaise->terraformResult == TerraformResult_t::RaiseLand);
+    CHECK(pFarm->excludes == std::vector<std::string>({"Rocky"}));
+
+    REQUIRE(pFarm->project);
+    CHECK(pFarm->project->turnsRequired == 4);
+    CHECK(IsBuildable(*pFarm));
 }

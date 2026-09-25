@@ -162,7 +162,7 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
     {
         // Territory comes from a nearby base; the Airbase on this tile supplies harbors(air).
         fixture.MakeFactionBase(faction, 1, 4);
-        fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Airbase");
+        fixture.ctx->AddOccupantWithEffects(fixture.At(4, 4), "Airbase");
         Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet, fixture.map);

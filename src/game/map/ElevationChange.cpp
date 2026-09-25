@@ -202,6 +202,27 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
     return true;
 }
 
+bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
+                                  const ElevationRulesConfig_t& rRules)
+{
+    const bool bSeaFormer = formerDomain == UnitDomain_t::Sea;
+    const int elevation = rTile.GetElevation();
+    if (bRaise)
+    {
+        return bSeaFormer ? elevation <= -rRules.referenceLevelMeters
+                          : elevation < rRules.maxElevationMeters;
+    }
+    // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the only
+    // limit we can state.
+    return bSeaFormer ? elevation - rRules.referenceLevelMeters >= rRules.minElevationMeters
+                      : elevation >= rRules.referenceLevelMeters;
+}
+
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules)
+{
+    return formerDomain == UnitDomain_t::Land ? rRules.oceanLevelMeters : rRules.minElevationMeters;
+}
+
 bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt19937& rRng,
                      const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
                      IUnitOrderWorld* pWorld)

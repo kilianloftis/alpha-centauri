@@ -30,8 +30,10 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include <algorithm>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <variant>
 
@@ -443,23 +445,24 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
     return pBase;
 }
 
-bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& improvementId,
+bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& projectId,
                                           GameState& rGameState)
 {
-    const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(improvementId);
-    if (!pConfig)
+    RequireGameData_("terraform");
+    const std::optional<TerraformProject_t> resolved = FindTerraformProject(
+        projectId, m_rTileEffects.GetImprovements(), *m_pGameData->terrainOperationRegistry);
+    if (!resolved)
     {
         return false;
     }
-    RequireGameData_("terraform");
-    if (!CanStartTerraform(rUnit, *pConfig, rGameState, m_pGameData->elevationRules))
+    if (!CanStartTerraform(rUnit, *resolved, rGameState, m_pGameData->elevationRules))
     {
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState, m_pGameData->elevationRules);
+    const int cost = TerraformEnergyCost(rUnit, *resolved, rGameState, m_pGameData->elevationRules);
     rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
-    rUnit.SetOrder(TerraformOrder_t{improvementId, pConfig->turnsRequired});
+    rUnit.SetOrder(TerraformOrder_t{projectId, resolved->project.turnsRequired});
     rUnit.SpendRemainingMoveFragments();
     return true;
 }
@@ -622,10 +625,13 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     // tile left the improvement's domain).
 
     // Order remains until Execute clears on Complete — safe to read rOrder here.
-    const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(rOrder.improvementId);
-    if (!pConfig)
+    RequireGameData_("terraform");
+    const std::optional<TerraformProject_t> project = FindTerraformProject(
+        rOrder.projectId, m_rTileEffects.GetImprovements(),
+        *m_pGameData->terrainOperationRegistry);
+    if (!project)
     {
-        std::cerr << "Terraform completed with no effect: improvement '" << rOrder.improvementId
+        std::cerr << "Terraform completed with no effect: project '" << rOrder.projectId
                   << "' is not in the registry\n";
         return OrderProgress_t::Complete;
     }
@@ -637,11 +643,9 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Complete;
     }
 
-    RequireGameData_("terraform");
-    if (!ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit, m_rRng,
-                              m_pGameData->elevationRules, m_pWorld))
+    if (!ApplyTerraformResult(*pTile, *project, m_rTileEffects, rUnit, m_rRng))
     {
-        std::cerr << "Terraform completed with no effect: '" << rOrder.improvementId
+        std::cerr << "Terraform completed with no effect: '" << rOrder.projectId
                   << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()
                   << ") — the tile's surface will not take it\n";
     }

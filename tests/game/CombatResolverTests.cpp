@@ -656,7 +656,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender on a tile with a prevents_disengage feature (Bunker)")
     {
         DisengageSetup_ setup;
-        setup.fixture.ctx->AddImprovementWithEffects(setup.fixture.At(4, 4), "Bunker");
+        setup.fixture.ctx->AddOccupantWithEffects(setup.fixture.At(4, 4), "Bunker");
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -735,7 +735,7 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
         setup.fixture.At(4, 4).SetElevation(100);
         setup.fixture.At(5, 4).SetElevation(100);
         setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Fungus"));
+        setup.fixture.At(3, 4).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
@@ -750,7 +750,7 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
         setup.fixture.At(4, 4).SetElevation(100);
         setup.fixture.At(5, 4).SetElevation(100);
         setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Fungus"));
+        setup.fixture.At(3, 4).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
         setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Road"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
@@ -837,7 +837,7 @@ TEST_CASE("Base and bunker clamp collateral susceptibility to zero; an airbase d
         FillLand_(fixture);
         Faction& player = fixture.MakeFaction();
         Faction& enemy = fixture.MakeFaction();
-        fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), improvementId);
+        fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), improvementId);
 
         Unit& attacker =
             fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_2"});
@@ -932,7 +932,7 @@ TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][co
     wildDefinition.id = "wild_life";
     wildDefinition.identity.species = FactionSpecies_t::NativeLife;
     Faction& wild = fixture.MakeFaction(wildDefinition);
-    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
 
     Unit& attacker =
         fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
@@ -1084,7 +1084,7 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
-    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
 
     Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     Unit& defender =
@@ -1252,7 +1252,7 @@ TEST_CASE("A non-combatant in a base survives the defender's death", "[combat][c
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
 
     Unit& attacker =
         fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});

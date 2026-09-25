@@ -445,8 +445,8 @@ TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
     }
     Tile& rMonoA = *game.pState->GetWorldMap().GetTile(4, 4);
     Tile& rMonoB = *game.pState->GetWorldMap().GetTile(5, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(rMonoA, "Monolith");
-    game.pState->GetTileEffects().AddImprovementWithEffects(rMonoB, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rMonoA, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rMonoB, "Monolith");
 
     Unit& unit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
     const int maxHp = unit.GetStat(StatId_t::HitPoints);
@@ -475,7 +475,7 @@ TEST_CASE("GrantXp remove_host_chance removes the visit host when the roll succe
         pTile->SetElevation(100);
     }
     Tile& rTile = *game.pState->GetWorldMap().GetTile(4, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(rTile, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Monolith");
     Unit& unit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
 
     TriggeredEffectConfig_t grant;
@@ -487,9 +487,9 @@ TEST_CASE("GrantXp remove_host_chance removes the visit host when the roll succe
     context.hostImprovementId = "Monolith";
     context.pRng = &game.pState->GetRng();
 
-    REQUIRE(rTile.HasImprovement("Monolith"));
+    REQUIRE(rTile.HasFeature("Monolith"));
     ApplyTriggeredEffects(std::span{&grant, 1}, context);
-    CHECK_FALSE(rTile.HasImprovement("Monolith"));
+    CHECK_FALSE(rTile.HasFeature("Monolith"));
 }
 
 TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applies",
@@ -503,7 +503,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     game.pState->GetUnitOrderExecutor().SetGameDataContext(game.fixtures.dataContext);
 
     Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(rMono, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
 
     Unit& playerUnit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
     playerUnit.SetCurrentHp(1);
@@ -528,7 +528,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
         game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed));
 
     Tile& rMono2 = *game.pState->GetWorldMap().GetTile(3, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(rMono2, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rMono2, "Monolith");
     Unit& aiMover = MakeUnitOn_(game, *pAi, 2, 4, {"test_chassis", "test_weapon"});
     aiMover.SetCurrentHp(1);
     const int aiXp = aiMover.GetXp();
@@ -552,7 +552,7 @@ TEST_CASE("Unset visit handler skips Investigate enqueue and auto-apply",
     game.pState->GetUnitOrderExecutor().SetImprovementVisitHandler({});
 
     Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
-    game.pState->GetTileEffects().AddImprovementWithEffects(rMono, "Monolith");
+    game.pState->GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
 
     Unit& playerUnit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
     playerUnit.SetCurrentHp(1);

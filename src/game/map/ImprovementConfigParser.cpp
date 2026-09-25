@@ -1,5 +1,5 @@
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/Tile.h"
+#include "game/map/TerrainConfig.h"
 #include "game/units/MovementConstants.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -10,12 +10,15 @@
 #include "game/effects/EffectEnums.h"
 
 #include <algorithm>
+#include <iterator>
 #include <magic_enum.hpp>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -24,6 +27,10 @@ namespace ac
 
 namespace
 {
+
+// Implicit tag every former-buildable improvement carries. Lets one `excludes` entry stand
+// for "anything a former builds" without each improvement restating the relationship.
+constexpr std::string_view k_BuildableTag = "buildable";
 
 // Ensures the rational is non-negative and lands on a whole number of move fragments.
 // Done at parse so hot-path move-cost code never converts rationals.
@@ -50,235 +57,80 @@ int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std
     }
 }
 
-void ParseTerraform_(const nlohmann::json& improvementJson, ImprovementConfig_t& rConfig)
-{
-    if (!improvementJson.contains("terraform"))
-    {
-        return;
-    }
-
-    const nlohmann::json& terraform = improvementJson.at("terraform");
-    if (!terraform.is_object())
-    {
-        throw std::runtime_error(
-            "Improvement '" + rConfig.id + "': 'terraform' must be an object");
-    }
-
-    const std::string result = terraform.value("result", "place");
-    const bool bNamesImprovement = terraform.contains("improvement");
-    if (result == "place")
-    {
-        rConfig.terraformResult = TerraformResult_t::Place;
-        if (!bNamesImprovement)
-        {
-            return;
-        }
-        if (!terraform.at("improvement").is_string())
-        {
-            throw std::runtime_error(
-                "Improvement '" + rConfig.id + "': terraform.improvement must be a string");
-        }
-        rConfig.placesImprovementId = terraform.at("improvement").get<std::string>();
-        if (rConfig.placesImprovementId.empty())
-        {
-            throw std::runtime_error(
-                "Improvement '" + rConfig.id + "': terraform.improvement must be non-empty");
-        }
-        return;
-    }
-    if (bNamesImprovement)
-    {
-        throw std::runtime_error(
-            "Improvement '" + rConfig.id
-            + "': terraform.improvement is only valid when result is place");
-    }
-    if (result == "level_terrain")
-    {
-        rConfig.terraformResult = TerraformResult_t::LevelTerrain;
-        return;
-    }
-    if (result == "raise_land")
-    {
-        rConfig.terraformResult = TerraformResult_t::RaiseLand;
-        return;
-    }
-    if (result == "lower_land")
-    {
-        rConfig.terraformResult = TerraformResult_t::LowerLand;
-        return;
-    }
-    if (result == "remove_fungus")
-    {
-        rConfig.terraformResult = TerraformResult_t::RemoveFungus;
-        return;
-    }
-    if (result == "aquifer")
-    {
-        rConfig.terraformResult = TerraformResult_t::Aquifer;
-        return;
-    }
-
-    throw std::runtime_error(
-        "Improvement '" + rConfig.id + "': unknown terraform.result '" + result + "'");
-}
-
 } // namespace
 
-namespace
+bool IsBuildable(const ImprovementConfig_t& rConfig)
 {
-
-bool ExcludesId_(const ImprovementConfig_t& rFeature, const std::string& rId)
-{
-    return std::find(rFeature.excludes.begin(), rFeature.excludes.end(), rId)
-           != rFeature.excludes.end();
+    return rConfig.project.has_value();
 }
 
-bool AnyExcludesCandidate_(const std::vector<const ImprovementConfig_t*>& rFeatures,
-                           const ImprovementConfig_t& rCandidate,
-                           std::string_view clearedFeatureId)
+std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& rConfigPath)
 {
-    for (const ImprovementConfig_t* pFeature : rFeatures)
-    {
-        if (!pFeature || pFeature->id == clearedFeatureId)
-        {
-            continue;
-        }
-        if (ExcludesId_(*pFeature, rCandidate.id))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-} // namespace
-
-bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
-                         std::string_view clearedFeatureId)
-{
-    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
-    {
-        return false;
-    }
-    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
-    {
-        return false;
-    }
-
-    for (const std::string& excludedId : rCandidate.excludes)
-    {
-        if (excludedId != clearedFeatureId && rTile.HasFeature(excludedId))
-        {
-            return false;
-        }
-    }
-
-    return !AnyExcludesCandidate_(rTile.GetImprovements(), rCandidate, clearedFeatureId)
-           && !AnyExcludesCandidate_(rTile.GetTerrainFeatures(), rCandidate, clearedFeatureId);
-}
-
-std::vector<std::string> ImprovementsDisplacedBy(const Tile& rTile,
-                                                 const ImprovementConfig_t& rIncoming)
-{
-    std::vector<std::string> displaced;
-    for (const ImprovementConfig_t* pExisting : rTile.GetImprovements())
-    {
-        if (!pExisting || pExisting->id == rIncoming.id)
-        {
-            continue;
-        }
-        if (ExcludesId_(*pExisting, rIncoming.id) || ExcludesId_(rIncoming, pExisting->id))
-        {
-            displaced.push_back(pExisting->id);
-        }
-    }
-    return displaced;
-}
-
-bool RemainingFeaturesBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
-                                     const std::vector<std::string>& displacedIds)
-{
-    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
-    {
-        return true;
-    }
-    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
-    {
-        return true;
-    }
-
-    const auto remains = [&](const std::string& rId)
-    {
-        return std::find(displacedIds.begin(), displacedIds.end(), rId) == displacedIds.end();
-    };
-
-    for (const std::string& rExcludedId : rCandidate.excludes)
-    {
-        if (rTile.HasFeature(rExcludedId) && remains(rExcludedId))
-        {
-            return true;
-        }
-    }
-
-    const auto blockedBy = [&](const std::vector<const ImprovementConfig_t*>& rFeatures)
-    {
-        for (const ImprovementConfig_t* pFeature : rFeatures)
-        {
-            if (!pFeature || pFeature->id == rCandidate.id)
-            {
-                continue;
-            }
-            if (ExcludesId_(*pFeature, rCandidate.id) && remains(pFeature->id))
-            {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    return blockedBy(rTile.GetImprovements()) || blockedBy(rTile.GetTerrainFeatures());
+    return JsonConfigLoader::LoadPath<ImprovementConfig_t>(
+        rConfigPath, "improvement",
+        [](const nlohmann::json& rJson) {
+            return ParseImprovementBody(rJson, OccupantPlacement_t::Improvement);
+        });
 }
 
 std::vector<ImprovementConfig_t> ImprovementConfigParser::ParseConfig(const std::string& configPath)
 {
-    auto configs = JsonConfigLoader::LoadPath<ImprovementConfig_t>(
-        configPath, "improvement",
-        [this](const nlohmann::json& rJson) { return ParseImprovementConfig(rJson); });
-    ExpandTagReferences(configs);
-    std::unordered_set<std::string> ids;
-    for (const ImprovementConfig_t& rConfig : configs)
-    {
-        ids.insert(rConfig.id);
-    }
-    for (const ImprovementConfig_t& rConfig : configs)
-    {
-        if (rConfig.placesImprovementId.empty())
-        {
-            continue;
-        }
-        if (ids.count(rConfig.placesImprovementId) == 0)
-        {
-            throw std::runtime_error(
-                "Improvement '" + rConfig.id + "': terraform.improvement '"
-                + rConfig.placesImprovementId + "' is not an improvement id");
-        }
-    }
+    std::vector<ImprovementConfig_t> configs = ParseImprovementsUnexpanded(configPath);
+    ExpandFeatureTagReferences(configs);
     return configs;
 }
 
-void ImprovementConfigParser::ExpandTagReferences(std::vector<ImprovementConfig_t>& rConfigs) const
+std::vector<ImprovementConfig_t> LoadTileOccupants(
+    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures)
 {
-    std::unordered_map<std::string, std::vector<std::string>> tagToIds;
-    for (const ImprovementConfig_t& rConfig : rConfigs)
+    std::vector<ImprovementConfig_t> occupants =
+        ParseImprovementsUnexpanded(rImprovementsPath);
+    occupants.insert(occupants.end(), std::make_move_iterator(terrainFeatures.begin()),
+                     std::make_move_iterator(terrainFeatures.end()));
+    ExpandFeatureTagReferences(occupants);
+    return occupants;
+}
+
+std::vector<ImprovementConfig_t> LoadTileOccupants(const std::string& rImprovementsPath,
+                                                   const std::string& rTerrainPath)
+{
+    return LoadTileOccupants(rImprovementsPath, ParseTerrainFile(rTerrainPath).features);
+}
+
+void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
+{
+    std::vector<ImprovementConfig_t*> configs;
+    configs.reserve(rConfigs.size());
+    for (ImprovementConfig_t& rConfig : rConfigs)
     {
-        for (const std::string& rTag : rConfig.tags)
+        configs.push_back(&rConfig);
+    }
+
+    std::unordered_map<std::string, std::vector<std::string>> tagToIds;
+    for (const ImprovementConfig_t* pConfig : configs)
+    {
+        // Derived from the entry rather than authored, so a rule about "anything a former
+        // builds" stays true for improvements that do not exist yet. Reserved: declaring it
+        // by hand would mean two sources for one tag.
+        if (IsBuildable(*pConfig))
+        {
+            tagToIds[std::string(k_BuildableTag)].push_back(pConfig->id);
+        }
+        for (const std::string& rTag : pConfig->tags)
         {
             if (rTag.empty())
             {
                 throw std::runtime_error(
-                    "Improvement '" + rConfig.id + "': tags entries must be non-empty");
+                    "Improvement '" + pConfig->id + "': tags entries must be non-empty");
             }
-            tagToIds[rTag].push_back(rConfig.id);
+            if (rTag == k_BuildableTag)
+            {
+                throw std::runtime_error("Improvement '" + pConfig->id + "': '"
+                                         + std::string(k_BuildableTag)
+                                         + "' is a reserved tag, set by declaring "
+                                           "'turns_required' rather than by hand");
+            }
+            tagToIds[rTag].push_back(pConfig->id);
         }
     }
 
@@ -326,11 +178,11 @@ void ImprovementConfigParser::ExpandTagReferences(std::vector<ImprovementConfig_
         return expanded;
     };
 
-    for (ImprovementConfig_t& rConfig : rConfigs)
+    for (ImprovementConfig_t* pConfig : configs)
     {
-        rConfig.excludes = expand(rConfig.excludes, "excludes", rConfig.id);
-        rConfig.suppressYieldSources =
-            expand(rConfig.suppressYieldSources, "suppress_yield_sources", rConfig.id);
+        pConfig->excludes = expand(pConfig->excludes, "excludes", pConfig->id);
+        pConfig->suppressYieldSources =
+            expand(pConfig->suppressYieldSources, "suppress_yield_sources", pConfig->id);
     }
 }
 
@@ -360,37 +212,71 @@ int ResolveVisionRadius_(const ImprovementConfig_t& rConfig)
     return sight;
 }
 
-ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohmann::json& improvementJson)
+ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
+                                         OccupantPlacement_t placement)
 {
     ImprovementConfig_t config;
-    config.id = ConfigFields::ParseId(improvementJson);
-    config.name = ConfigFields::ParseName(improvementJson, config.id);
-    config.description = improvementJson.value("description", "");
-    if (improvementJson.contains("mineral_cost"))
+    config.id = ConfigFields::ParseId(rImprovementJson);
+    config.name = ConfigFields::ParseName(rImprovementJson, config.id);
+    config.description = rImprovementJson.value("description", "");
+    config.placement = placement;
+    if (rImprovementJson.contains("mineral_cost") || rImprovementJson.contains("terraform"))
     {
-        throw std::runtime_error(
-            "Improvement '" + config.id
-            + "': 'mineral_cost' is no longer supported; use 'turns_required' and 'energy_cost'");
+        throw std::runtime_error("Improvement '" + config.id + "': unknown field; a former "
+                                 "project is 'turns_required' / 'energy_cost' on the "
+                                 "improvement itself");
     }
-    config.turnsRequired = improvementJson.value("turns_required", 0);
-    config.energyCost = improvementJson.value("energy_cost", 0);
-    if (config.energyCost < 0)
+    if (placement == OccupantPlacement_t::Terrain)
     {
-        throw std::runtime_error("Improvement '" + config.id
-                                 + "': 'energy_cost' must be >= 0");
+        for (const char* pField : {"turns_required", "energy_cost", "required_tech"})
+        {
+            if (rImprovementJson.contains(pField))
+            {
+                throw std::runtime_error(
+                    "Terrain feature '" + config.id + "': '" + pField
+                    + "' belongs on a terrain operation, not on a terrain feature");
+            }
+        }
     }
-    config.requiredTech = ConfigFields::ParseRequiredTech(improvementJson);
-    config.ownedByTerritory = improvementJson.value("owned_by_territory", false);
-    config.frequency = improvementJson.value("frequency", 0);
-    config.spritePath = improvementJson.value("sprite_path", "");
-    config.tags = ConfigFields::ParseStringArray(improvementJson, "tags");
-    if (improvementJson.contains("domain") && !improvementJson.at("domain").is_null())
+    else
     {
-        if (!improvementJson.at("domain").is_string())
+        FormerProject_t project;
+        project.turnsRequired = rImprovementJson.value("turns_required", 0);
+        if (project.turnsRequired < 0)
+        {
+            throw std::runtime_error("Improvement '" + config.id
+                                     + "': 'turns_required' must be >= 0");
+        }
+        project.energyCost = rImprovementJson.value("energy_cost", 0);
+        if (project.energyCost < 0)
+        {
+            throw std::runtime_error("Improvement '" + config.id
+                                     + "': 'energy_cost' must be >= 0");
+        }
+        project.requiredTech = ConfigFields::ParseRequiredTech(rImprovementJson);
+        if (project.turnsRequired == 0 && (project.energyCost != 0 || !project.requiredTech.empty()))
+        {
+            throw std::runtime_error(
+                "Improvement '" + config.id
+                + "': 'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
+                  "can ever build it");
+        }
+        if (project.turnsRequired > 0)
+        {
+            config.project = std::move(project);
+        }
+    }
+    config.ownedByTerritory = rImprovementJson.value("owned_by_territory", false);
+    config.frequency = rImprovementJson.value("frequency", 0);
+    config.spritePath = rImprovementJson.value("sprite_path", "");
+    config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
+    if (rImprovementJson.contains("domain") && !rImprovementJson.at("domain").is_null())
+    {
+        if (!rImprovementJson.at("domain").is_string())
         {
             throw std::runtime_error("Improvement '" + config.id + "': 'domain' must be a string");
         }
-        const std::string domain = improvementJson.at("domain").get<std::string>();
+        const std::string domain = rImprovementJson.at("domain").get<std::string>();
         const auto parsed =
             magic_enum::enum_cast<ImprovementDomain_t>(domain, magic_enum::case_insensitive);
         if (!parsed)
@@ -400,25 +286,24 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
         }
         config.domain = *parsed;
     }
-    config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
+    config.excludes = ConfigFields::ParseStringArray(rImprovementJson, "excludes");
     config.suppressYieldSources =
-        ConfigFields::ParseStringArray(improvementJson, "suppress_yield_sources");
-    config.terminatesRiver = improvementJson.value("terminates_river", false);
-    ParseTerraform_(improvementJson, config);
-    if (improvementJson.contains("move_cost"))
+        ConfigFields::ParseStringArray(rImprovementJson, "suppress_yield_sources");
+    config.terminatesRiver = rImprovementJson.value("terminates_river", false);
+    if (rImprovementJson.contains("move_cost"))
     {
-        const Rational_t cost = Rational_t::ParseJson(improvementJson.at("move_cost"));
+        const Rational_t cost = Rational_t::ParseJson(rImprovementJson.at("move_cost"));
         config.moveCostFragments = ParseMoveCostFragments_(cost, "move_cost", config.id);
     }
-    if (improvementJson.contains("move_cost_override"))
+    if (rImprovementJson.contains("move_cost_override"))
     {
         throw std::runtime_error(
             "Improvement '" + config.id
             + "': 'move_cost_override' is a StatModifier on move_cost with op MaxClamp");
     }
-    config.effects = EffectConfigParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
+    config.effects = EffectConfigParser::ParseEffects(rImprovementJson, EffectSourceKind_t::Improvement, config.id);
     config.onVisitEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        improvementJson, "on_visit_effects", config.id);
+        rImprovementJson, "on_visit_effects", config.id);
     config.visionRadius = ResolveVisionRadius_(config);
 
     return config;

@@ -25,8 +25,9 @@ void FillLand_(WorldMap& rWorld)
 TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
           "[worldgen][tile-bonus]")
 {
-    ImprovementRegistry improvements;
-    improvements.Load(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json");
+    ImprovementRegistry terrain;
+    terrain.LoadOccupants(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json",
+                          std::string(AC_TEST_FIXTURES_DIR) + "/terrain.json");
 
     WorldMap world(24, 24, actest::TestMapRules());
     FillLand_(world);
@@ -35,7 +36,11 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
     cfg.landFraction = 0.2f;
 
     std::mt19937 rng(21);
-    const int placed = PlaceTileBonuses(world, cfg, improvements, rng);
+    for (auto& pTile : world.GetTiles())
+    {
+        pTile->BindOccupants(terrain);
+    }
+    const int placed = PlaceTileBonuses(world, cfg, terrain, rng);
     REQUIRE(placed > 0);
 
     int bonusTiles = 0;
@@ -47,13 +52,13 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
             continue;
         }
         const bool hasBonus =
-            pTile->HasImprovement("Nutrients") || pTile->HasImprovement("Minerals")
-            || pTile->HasImprovement("Energy") || pTile->HasImprovement("Monolith");
+            pTile->HasFeature("Nutrients") || pTile->HasFeature("Minerals")
+            || pTile->HasImprovement("Energy") || pTile->HasFeature("Monolith");
         if (hasBonus)
         {
             ++bonusTiles;
         }
-        if (pTile->HasImprovement("Monolith"))
+        if (pTile->HasFeature("Monolith"))
         {
             ++monoliths;
         }

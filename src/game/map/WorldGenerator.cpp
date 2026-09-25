@@ -42,7 +42,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
                                                    const WorldGenPresetConfig_t& rPreset,
                                                    const WorldGenDecorationConfig_t& rDecoration,
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
-                                                   const ImprovementRegistry& rImprovements,
+                                                   const ImprovementRegistry& rOccupants,
                                                    const ElevationRulesConfig_t& rMapRules,
                                                    unsigned int seed)
 {
@@ -57,7 +57,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     // unbound tile answers a coexistence question differently from the same tile in play.
     for (const auto& pTile : pWorld->GetTiles())
     {
-        pTile->BindImprovements(rImprovements);
+        pTile->BindOccupants(rOccupants);
     }
 
     // Landmarks run before aquifers because they are the last stage that changes elevation
@@ -70,10 +70,10 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateMoisture_(*pWorld, rDecoration.moisture, rules.maxElevationMeters);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
-    GenerateFungus_(*pWorld, rDecoration.fungus, rImprovements);
-    GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
+    GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);
+    GenerateLandmarks_(*pWorld, rLandmarks, rOccupants);
     GenerateAquifers_(*pWorld, rDecoration.aquifers);
-    GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rImprovements);
+    GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rOccupants);
 
     return pWorld;
 }
@@ -299,23 +299,23 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
 }
 
 void WorldGenerator::GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
-                                     const ImprovementRegistry& rImprovements)
+                                     const ImprovementRegistry& rOccupants)
 {
-    PlaceFungus(rWorld, rFungus, rImprovements.Get(std::string(ImprovementIds::k_Fungus)), m_rng);
+    PlaceFungus(rWorld, rFungus, rOccupants.Get(std::string(ImprovementIds::k_Fungus)), m_rng);
 }
 
 void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,
                                         const std::vector<LandmarkConfig_t>& rLandmarks,
-                                        const ImprovementRegistry& rImprovements)
+                                        const ImprovementRegistry& rOccupants)
 {
-    PlaceLandmarks(rWorld, rLandmarks, rImprovements, m_rng);
+    PlaceLandmarks(rWorld, rLandmarks, rOccupants, m_rng);
 }
 
 void WorldGenerator::GenerateTileBonuses_(WorldMap& rWorld,
                                           const TileBonusDecorationConfig_t& rBonuses,
-                                          const ImprovementRegistry& rImprovements)
+                                          const ImprovementRegistry& rOccupants)
 {
-    PlaceTileBonuses(rWorld, rBonuses, rImprovements, m_rng);
+    PlaceTileBonuses(rWorld, rBonuses, rOccupants, m_rng);
 }
 
 float WorldGenerator::RandomFloat_()
