@@ -49,6 +49,9 @@ enum class StatId_t
     // Levels an earthquake raises. Reactors set this to their tier; the Earthquake triggered
     // effect reads it off the detonating unit via `levels_stat`.
     EarthquakeLevels,
+    // Tiles a fungal bloom converts. Reactors set 3, 5, 7, 9; the FungalBloom triggered
+    // effect reads it off the detonating unit via `tiles_stat`.
+    FungalBloomTiles,
     // Pure multiplier on incoming collateral. Seed 1. A tile MaxClamp that leaves 0 skips
     // that occupant. An air unit's own geometric 0 does not.
     CollateralSusceptibility,
@@ -254,6 +257,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
+        case StatId_t::FungalBloomTiles:
         case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
@@ -394,6 +398,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
+        case StatId_t::FungalBloomTiles:
         case StatId_t::CollateralSusceptibility:
         case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
@@ -442,6 +447,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
     if (rStat == "collateral_damage")       return StatId_t::CollateralDamage;
     if (rStat == "earthquake_levels")       return StatId_t::EarthquakeLevels;
+    if (rStat == "fungal_bloom_tiles")      return StatId_t::FungalBloomTiles;
     if (rStat == "collateral_susceptibility") return StatId_t::CollateralSusceptibility;
     if (rStat == "planet_pearls")           return StatId_t::PlanetPearls;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;

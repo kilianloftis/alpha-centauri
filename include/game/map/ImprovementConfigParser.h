@@ -14,15 +14,14 @@ namespace ac
 class Tile;
 
 // What happens when a Former finishes a terraform order for this config.
-// place (default): AddImprovementWithEffects. Other values mutate the tile and never
-// add this config id as a tile feature.
+// place (default): AddImprovementWithEffects of placesImprovementId, or of this config when
+// that is empty. Other values mutate the tile and never add this config as a tile feature.
 enum class TerraformResult_t
 {
     Place,
     LevelTerrain,
     RaiseLand,
     LowerLand,
-    PlantFungus,
     RemoveFungus,
     Aquifer,
 };
@@ -68,6 +67,9 @@ struct ImprovementConfig_t
     // fallback (landform rings/centers today; tile bonuses simply omit the overlay).
     std::string spritePath;
     TerraformResult_t terraformResult = TerraformResult_t::Place;
+    // Place adds this improvement instead of this config. Empty means this config is the
+    // improvement (Farm, Road). Plant Fungus sets it to Fungus.
+    std::string placesImprovementId;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
@@ -100,6 +102,16 @@ struct ImprovementConfig_t
 // Does not check requiredTech/turnsRequired/energyCost - those are construction-flow concerns.
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                          std::string_view clearedFeatureId = {});
+
+// Improvements already on the tile that cannot share it with rIncoming. Either side's
+// excludes is enough. Terrain features are not listed.
+std::vector<std::string> ImprovementsDisplacedBy(const Tile& rTile,
+                                                 const ImprovementConfig_t& rIncoming);
+
+// Domain, or an excludes relationship with a feature that is not in displacedIds.
+// Improvements named there are about to be removed, so they do not block.
+bool RemainingFeaturesBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
+                                     const std::vector<std::string>& displacedIds);
 
 class ImprovementConfigParser
 {

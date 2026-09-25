@@ -5,13 +5,13 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 
-#include <magic_enum.hpp>
 #include <algorithm>
 #include <string_view>
 #include <vector>
@@ -22,7 +22,7 @@ namespace ac
 namespace
 {
 
-constexpr std::string_view k_FungusId = magic_enum::enum_name(TerrainFeature_t::Fungus);
+constexpr std::string_view k_FungusId = ImprovementIds::k_Fungus;
 
 } // namespace
 
@@ -69,7 +69,7 @@ EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
             break;
         }
     }
-    if (rTile.GetHasFungus() && !bClamp)
+    if (rTile.HasImprovement(ImprovementIds::k_Fungus) && !bClamp)
     {
         terms.bEndsTurn = true;
         terms.bRequiresFullCost = !HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap);

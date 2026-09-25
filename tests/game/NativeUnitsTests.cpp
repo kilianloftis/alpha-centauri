@@ -90,11 +90,11 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
 
     Tile& rFungus = fixture.At(5, 4);
     rFungus.SetElevation(100);
-    rFungus.SetHasFungus(true);
+    rFungus.AddImprovement(fixture.improvements.Get("Fungus"));
     Tile& rRockyFungus = fixture.At(6, 4);
     rRockyFungus.SetElevation(100);
     rRockyFungus.SetRockiness(Rockiness_t::Rocky);
-    rRockyFungus.SetHasFungus(true);
+    rRockyFungus.AddImprovement(fixture.improvements.Get("Fungus"));
 
     Tile& rRoad = fixture.At(7, 4);
     rRoad.SetElevation(100);
@@ -145,7 +145,7 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
     rOpenSea.SetElevation(-100);
     Tile& rSeaFungus = fixture.At(7, 4);
     rSeaFungus.SetElevation(-100);
-    rSeaFungus.SetHasFungus(true);
+    rSeaFungus.AddImprovement(fixture.improvements.Get("Fungus"));
 
     fixture.At(5, 4).SetElevation(-100);
     fixture.At(5, 5).SetElevation(-100);

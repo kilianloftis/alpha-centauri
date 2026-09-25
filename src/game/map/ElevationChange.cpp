@@ -1,5 +1,6 @@
 #include "game/map/ElevationChange.h"
 
+#include "game/effects/TileEffectsContext.h"
 #include "game/map/MapUtils.h"
 #include "game/map/SurfaceOccupancy.h"
 #include "game/map/RiverGeneration.h"
@@ -105,6 +106,18 @@ public:
         }
     }
 
+    std::vector<Tile*> NotedTiles() const
+    {
+        std::vector<Tile*> tiles;
+        tiles.reserve(m_wasWater.size());
+        for (const auto& [pTile, bWasWater] : m_wasWater)
+        {
+            (void)bWasWater;
+            tiles.push_back(pTile);
+        }
+        return tiles;
+    }
+
 private:
     bool m_bRecord = false;
     std::unordered_map<Tile*, bool> m_wasWater;
@@ -172,6 +185,7 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
         return false;
     }
 
+    TileChangeDeferral defer;
     PriorSurface prior(pTileEffects != nullptr);
     prior.Note(rOrigin);
     rOrigin.SetElevation(next);

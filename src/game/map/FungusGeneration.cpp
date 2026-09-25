@@ -1,5 +1,7 @@
 #include "game/map/FungusGeneration.h"
 
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -34,7 +36,7 @@ int SamplePatchSize_(int min, int max, float skew, std::mt19937& rRng)
 
 bool IsEligible_(const Tile& rTile, bool bWantLand)
 {
-    if (rTile.GetHasFungus())
+    if (rTile.HasImprovement(ImprovementIds::k_Fungus))
     {
         return false;
     }
@@ -48,7 +50,8 @@ bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
     bool touches = false;
     ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
     {
-        if (pNeighbor && pNeighbor->GetHasFungus() && rPatch.count(pNeighbor) == 0)
+        if (pNeighbor && pNeighbor->HasImprovement(ImprovementIds::k_Fungus)
+            && rPatch.count(pNeighbor) == 0)
         {
             touches = true;
         }
@@ -56,7 +59,8 @@ bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
     return touches;
 }
 
-int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, std::mt19937& rRng)
+int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand,
+               const ImprovementConfig_t& rFungus, std::mt19937& rRng)
 {
     if (targetSize <= 0 || !IsEligible_(rSeed, bWantLand)
         || TouchesForeignFungus_(rSeed, rWorld, /*empty patch=*/{}))
@@ -65,7 +69,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
     }
 
     std::unordered_set<const Tile*> patch;
-    rSeed.SetHasFungus(true);
+    rSeed.AddImprovement(rFungus);
     patch.insert(&rSeed);
     int placed = 1;
     if (placed >= targetSize)
@@ -101,7 +105,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
             continue;
         }
 
-        pNext->SetHasFungus(true);
+        pNext->AddImprovement(rFungus);
         patch.insert(pNext);
         ++placed;
 
@@ -117,6 +121,7 @@ void PlaceOnDomain_(WorldMap& rWorld,
                     int maxPatch,
                     float sizeSkew,
                     bool bWantLand,
+                    const ImprovementConfig_t& rFungus,
                     std::mt19937& rRng)
 {
     if (fraction <= 0.0f || maxPatch < 1)
@@ -162,22 +167,23 @@ void PlaceOnDomain_(WorldMap& rWorld,
 
         const int desired = std::min(
             remaining, SamplePatchSize_(patchMin, patchMax, sizeSkew, rRng));
-        const int grown = GrowPatch_(rWorld, *pSeed, desired, bWantLand, rRng);
+        const int grown = GrowPatch_(rWorld, *pSeed, desired, bWantLand, rFungus, rRng);
         remaining -= grown;
     }
 }
 
 } // namespace
 
-void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig, std::mt19937& rRng)
+void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig,
+                 const ImprovementConfig_t& rFungus, std::mt19937& rRng)
 {
     const int minPatch = std::max(1, rConfig.minPatchTiles);
     const int maxPatch = std::max(minPatch, rConfig.maxPatchTiles);
 
     PlaceOnDomain_(rWorld, rConfig.landFraction, minPatch, maxPatch, rConfig.patchSizeSkew,
-                   /*bWantLand=*/true, rRng);
+                   /*bWantLand=*/true, rFungus, rRng);
     PlaceOnDomain_(rWorld, rConfig.waterFraction, minPatch, maxPatch, rConfig.patchSizeSkew,
-                   /*bWantLand=*/false, rRng);
+                   /*bWantLand=*/false, rFungus, rRng);
 }
 
 } // namespace ac

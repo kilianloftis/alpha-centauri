@@ -3,6 +3,7 @@
 #include "game/map/FbmNoise.h"
 #include "game/map/FungusGeneration.h"
 #include "game/map/TileBonusGeneration.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/LandmarkGeneration.h"
 #include "game/map/MoistureGeneration.h"
@@ -10,6 +11,7 @@
 #include "game/map/RockinessGeneration.h"
 
 #include <algorithm>
+#include <string>
 #include <chrono>
 #include <cmath>
 #include <vector>
@@ -68,7 +70,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateMoisture_(*pWorld, rDecoration.moisture, rules.maxElevationMeters);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
-    GenerateFungus_(*pWorld, rDecoration.fungus);
+    GenerateFungus_(*pWorld, rDecoration.fungus, rImprovements);
     GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
     GenerateAquifers_(*pWorld, rDecoration.aquifers);
     GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rImprovements);
@@ -296,9 +298,10 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     RecomputeRivers(rWorld);
 }
 
-void WorldGenerator::GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus)
+void WorldGenerator::GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
+                                     const ImprovementRegistry& rImprovements)
 {
-    PlaceFungus(rWorld, rFungus, m_rng);
+    PlaceFungus(rWorld, rFungus, rImprovements.Get(std::string(ImprovementIds::k_Fungus)), m_rng);
 }
 
 void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,

@@ -1,6 +1,7 @@
 #include "game/map/LandmarkGeneration.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -152,7 +153,8 @@ bool TryStamp_(WorldMap& rWorld,
                int anchorY,
                const LandmarkConfig_t& rLandmark,
                const std::vector<std::pair<int, int>>& rOffsets,
-               const ImprovementConfig_t& rImprovement)
+               const ImprovementConfig_t& rImprovement,
+               const ImprovementConfig_t* pFungus)
 {
     std::vector<Tile*> footprint;
     footprint.reserve(rOffsets.size());
@@ -186,9 +188,9 @@ bool TryStamp_(WorldMap& rWorld,
     for (Tile* pTile : footprint)
     {
         pTile->AddImprovement(rImprovement);
-        if (rLandmark.setFungus)
+        if (rLandmark.setFungus && pFungus)
         {
-            pTile->SetHasFungus(true);
+            pTile->AddImprovement(*pFungus);
         }
     }
     return true;
@@ -231,6 +233,12 @@ int PlaceLandmarks(WorldMap& rWorld,
             continue;
         }
 
+        const ImprovementConfig_t* pFungus = rImprovements.Find(std::string(ImprovementIds::k_Fungus));
+        if (rLandmark.setFungus && !pFungus)
+        {
+            throw std::runtime_error("Landmark '" + rLandmark.id
+                                     + "' sets fungus but improvements.json has no Fungus entry");
+        }
         const ImprovementConfig_t* pImprovement = rImprovements.Find(rLandmark.improvementId);
         if (!pImprovement)
         {
@@ -269,7 +277,7 @@ int PlaceLandmarks(WorldMap& rWorld,
                 continue;
             }
             if (TryStamp_(rWorld, pAnchor->GetX(), pAnchor->GetY(), rLandmark, offsets,
-                          *pImprovement))
+                          *pImprovement, pFungus))
             {
                 placedAnchors.emplace_back(pAnchor->GetX(), pAnchor->GetY());
                 ++placedThis;

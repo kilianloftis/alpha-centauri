@@ -34,7 +34,7 @@ classDiagram
 
 ## Config
 
-[`config/native_units.json`](../../config/native_units.json) — each entry: `id`, `name`,
+[`config/native_units.json`](../../config/native_units.json) — `fungal_bloom_native_lifeforms_min` / `fungal_bloom_native_lifeforms_max` are the inclusive count a fungal bloom spawns, and `units` lists each design: `id`, `name`,
 `domain`, `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
 `EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`. Combat natives declare the `native_life` RuleFlag. Alien Artifact does not.
 `IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
@@ -57,7 +57,9 @@ it, and concealment still applies. Destroying the tower removes the marker.
 
 `EnsureNativeDesign(Faction&, GameDataContext&, nativeId)` registers (or returns) the
 faction’s `NativeDesign` by stable config id — same role as `EnsureAdHocDesign` for
-component lists. Eco-damage / fungal-pop spawning should call this when those systems land.
+component lists. A fungal bloom calls it on the session's native-life faction (Planet,
+`config/factions/planet/`) for each lifeform it spawns. Eco-damage fungal-pop spawning
+should call it the same way.
 
 ## Lifecycle starting XP
 

@@ -2,8 +2,10 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/map/TileChangeListener.h"
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ac
@@ -12,6 +14,7 @@ namespace ac
 class ImprovementRegistry;
 class IWorldEffectsSource;
 class Tile;
+struct ImprovementConfig_t;
 class UnitComponentRegistry;
 class WorldMap;
 struct TileYieldRulesConfig_t;
@@ -21,7 +24,7 @@ struct InteractionGridsConfig_t;
 // tile-level effects - yield, defense multipliers, and terrain mutations like Condenser moisture.
 // Passed into sub-systems (WorkerAssignmentManager, ResourceManager) as a single reference so
 // they don't need to know about WorldMap or ImprovementRegistry individually.
-class TileEffectsContext
+class TileEffectsContext : public TileChangeListener
 {
 public:
     // pUnitComponents is only used to size the aura scan radius: unit components can carry
@@ -34,6 +37,7 @@ public:
                        const UnitComponentRegistry* pUnitComponents,
                        const TileYieldRulesConfig_t& rYieldRules,
                        const InteractionGridsConfig_t& rInteractionGrids);
+    ~TileEffectsContext() override;
 
     // Session WorldGlobal source. Unbound contexts resolve tile-local effects only.
     void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
@@ -79,10 +83,14 @@ public:
     // multiple overlapping Condensers and add/remove order never cause drift.
     void RecomputeMoisture(Tile& rTile);
 
-    // Adds improvementId to rTile, then re-runs RecomputeMoisture for every tile within
+    // Adds improvementId to rTile. The tile notifies this context, which drops improvements
+    // that can no longer be built there, then re-runs RecomputeMoisture for every tile within
     // that improvement's radius so any terrain-mutating effect (e.g. Condenser) takes effect
-    // immediately. Always use this instead of Tile::AddImprovement directly.
+    // immediately. Always use this instead of Tile::AddImprovement directly when the add can
+    // change moisture or rivers.
     void AddImprovementWithEffects(Tile& rTile, const std::string& improvementId);
+
+    void OnTileChanged(Tile& rTile, std::string_view keepId) override;
 
     // Removes improvementId from rTile, then re-runs RecomputeMoisture over the same radius
     // so the bonus reverts cleanly even when other Condensers still cover some of those tiles.
@@ -105,6 +113,8 @@ private:
     YieldLanes_t ResolveYieldLanes_(const Tile& rTile,
                                     const std::vector<ActiveEffect_t>& effects) const;
 
+    void RemoveImprovementsThatCannotRemain_(Tile& rTile, std::string_view keepId);
+
     TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
                                              const std::vector<ActiveEffect_t>& effects) const;
 
@@ -116,6 +126,8 @@ private:
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;
     IWorldEffectsSource* m_pWorldEffects = nullptr;
+    bool m_bSweepingOccupancy = false;
+    std::vector<Tile*> m_pendingOccupancy;
 };
 
 } // namespace ac

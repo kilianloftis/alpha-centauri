@@ -239,6 +239,44 @@ void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t&
     rEffect.effect = quake;
 }
 
+void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    const bool bHasTiles = parameters.contains("tiles");
+    const bool bHasStat = parameters.contains("tiles_stat");
+    if (bHasTiles == bHasStat)
+    {
+        throw std::runtime_error(
+            "FungalBloom requires exactly one of 'tiles' (a fixed count) or 'tiles_stat' "
+            "(resolved off the subject unit)");
+    }
+
+    FungalBloomEffect_t bloom;
+    if (bHasTiles)
+    {
+        bloom.tiles = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "tiles"));
+        if (bloom.tiles < 1)
+        {
+            throw std::runtime_error("FungalBloom 'tiles' must be >= 1");
+        }
+    }
+    else
+    {
+        if (!parameters.at("tiles_stat").is_string())
+        {
+            throw std::runtime_error("FungalBloom 'tiles_stat' must be a string");
+        }
+        const StatId_t stat = ParseStatId(parameters.at("tiles_stat").get<std::string>());
+        if (DomainFor(stat) != ResolveDomain_t::Unit)
+        {
+            throw std::runtime_error(
+                "FungalBloom 'tiles_stat' must be a unit stat: the size is resolved off "
+                "the unit the trigger stamped");
+        }
+        bloom.tilesStat = stat;
+    }
+    rEffect.effect = bloom;
+}
+
 const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
 {
     static const std::unordered_map<std::string, ParseFn_> k_Parsers = {
@@ -255,6 +293,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"Rebel", ParseRebel_},
         {"DestroyUnit", ParseDestroyUnit_},
         {"Earthquake", ParseEarthquake_},
+        {"FungalBloom", ParseFungalBloom_},
     };
     return k_Parsers;
 }

@@ -17,6 +17,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/map/ElevationChange.h"
+#include "game/map/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -24,6 +25,7 @@
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/units/AdHocDesign.h"
+#include "game/units/NativeUnitRegistry.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -337,6 +339,50 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     return true;
 }
 
+bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rConfig,
+                  std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    int tiles = rConfig.tiles;
+    if (rConfig.tilesStat)
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        tiles = rCtx.pUnit->GetStat(*rConfig.tilesStat);
+    }
+    const GameDataContext* pData = nullptr;
+    if (rCtx.pUnit)
+    {
+        pData = &rCtx.pUnit->GetFaction().GetDataContext();
+    }
+    else
+    {
+        for (const Faction& rFaction : rCtx.rGameState.Factions())
+        {
+            pData = &rFaction.GetDataContext();
+            break;
+        }
+    }
+    if (!pData || !pData->nativeUnitRegistry)
+    {
+        throw std::logic_error("FungalBloom: no native unit registry is available");
+    }
+    const FungalBloomResult_t result = ApplyFungalBloom(
+        *rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(), rCtx.rGameState,
+        *pData->nativeUnitRegistry);
+    if (result.tilesFungused == 0)
+    {
+        return false;
+    }
+    rOut.push_back(FungalBloomApplied_t{result.tilesFungused, result.lifeforms});
+    return true;
+}
+
 // Which subject an entry acts on. A faction-subject effect applies once per faction in the
 // context — that is what makes a council GrantEnergy credit every member. A base-, unit- or
 // world-subject effect has exactly one subject and applies once, however many factions the
@@ -362,6 +408,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, RebelEffect_t>
                                || std::is_same_v<T, DestroyUnitEffect_t>
                                || std::is_same_v<T, EarthquakeEffect_t>
+                               || std::is_same_v<T, FungalBloomEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
             {
                 return false;
@@ -501,6 +548,10 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, EarthquakeEffect_t>)
             {
                 return Earthquake_(rCtx, rConcrete, rOut);
+            }
+            else if constexpr (std::is_same_v<T, FungalBloomEffect_t>)
+            {
+                return FungalBloom_(rCtx, rConcrete, rOut);
             }
             else if constexpr (std::is_same_v<T, DestroyUnitEffect_t>)
             {

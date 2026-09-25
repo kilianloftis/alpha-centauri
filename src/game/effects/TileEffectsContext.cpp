@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/RiverGeneration.h"
@@ -240,6 +241,7 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
     {
         pTile->BindImprovements(rImprovements);
+        pTile->BindTileChangeListener(this);
     }
 
     // Scan bound: only ThisTile-scoped radii (same rule for improvements and unit components).
@@ -265,6 +267,17 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
                     m_maxRadius = std::max(m_maxRadius, rEffect.radius);
                 }
             }
+        }
+    }
+}
+
+TileEffectsContext::~TileEffectsContext()
+{
+    for (const std::unique_ptr<Tile>& pTile : m_rWorldMap.GetTiles())
+    {
+        if (pTile)
+        {
+            pTile->UnbindTileChangeListener(*this);
         }
     }
 }
@@ -432,6 +445,62 @@ void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::strin
     if (rConfig.terminatesRiver)
     {
         RecomputeRivers(m_rWorldMap);
+    }
+}
+
+void TileEffectsContext::OnTileChanged(Tile& rTile, std::string_view keepId)
+{
+    if (m_bSweepingOccupancy)
+    {
+        m_pendingOccupancy.push_back(&rTile);
+        return;
+    }
+
+    m_bSweepingOccupancy = true;
+    RemoveImprovementsThatCannotRemain_(rTile, keepId);
+    if (!keepId.empty())
+    {
+        RemoveImprovementsThatCannotRemain_(rTile, {});
+    }
+    m_bSweepingOccupancy = false;
+
+    while (!m_pendingOccupancy.empty())
+    {
+        Tile* pTile = m_pendingOccupancy.back();
+        m_pendingOccupancy.pop_back();
+        if (pTile)
+        {
+            OnTileChanged(*pTile, {});
+        }
+    }
+}
+
+void TileEffectsContext::RemoveImprovementsThatCannotRemain_(Tile& rTile, std::string_view keepId)
+{
+    for (;;)
+    {
+        std::vector<std::string> removeIds;
+        for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
+        {
+            if (!pConfig || pConfig->id == keepId || pConfig->id == ImprovementIds::k_Base)
+            {
+                continue;
+            }
+            // The copy already on the tile is not a reason to remove itself
+            // (Monolith excludes Monolith so a second one cannot be placed).
+            if (!CanBuildImprovement(rTile, *pConfig, pConfig->id))
+            {
+                removeIds.push_back(pConfig->id);
+            }
+        }
+        if (removeIds.empty())
+        {
+            break;
+        }
+        for (const std::string& rId : removeIds)
+        {
+            RemoveImprovementWithEffects(rTile, rId);
+        }
     }
 }
 

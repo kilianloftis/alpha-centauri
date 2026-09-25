@@ -165,16 +165,17 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
 
-    tile.SetElevation(1000);   // one elevation band
-    tile.SetHasRiver(true);    // +1 energy
+    tile.SetElevation(1000); // one elevation band
+    // River excludes Mine, so a river here would remove the mine.
     world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
     world.ctx->AddImprovementWithEffects(tile, "Mine"); // +2 minerals
-    world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
+    // SolarCollector excludes Mine, so adding it would remove the mine.
+    world.ctx->AddImprovementWithEffects(tile, "Mirror");
 
     const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 2); // solar ceil(1000/1000) = 1, river 1
+    CHECK(yield.energy == 1); // mirror ceil(1000/1000) = 1
 }
 
 TEST_CASE("ResolveTileYield: terrain classification contributes through the same registry ids",
@@ -635,7 +636,7 @@ TEST_CASE("Fungus overrides tile yield to 1 nutrient",
     tile.SetHasRiver(true);
     world.ctx->AddImprovementWithEffects(tile, "Farm");
     world.ctx->AddImprovementWithEffects(tile, "Nutrients");
-    tile.SetHasFungus(true);
+    world.ctx->AddImprovementWithEffects(tile, "Fungus");
 
     const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
@@ -651,7 +652,7 @@ TEST_CASE("Fungus yield can be boosted by base-effect selectors",
     Tile& tile = fixture.At(4, 4);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
-    tile.SetHasFungus(true);
+    fixture.ctx->AddImprovementWithEffects(tile, "Fungus");
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
@@ -711,7 +712,7 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest, prefers arid, clears fungu
     arid.SetElevation(100);
     arid.SetRockiness(Rockiness_t::Flat);
     arid.SetMoisture(Moisture_t::Arid);
-    arid.SetHasFungus(true);
+    world.ctx->AddImprovementWithEffects(arid, "Fungus");
 
     Tile& wet = world.At(3, 4);
     wet.SetElevation(100);
@@ -720,7 +721,7 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest, prefers arid, clears fungu
 
     REQUIRE(TrySpreadTerraformFromTile(origin, world.map, *world.ctx));
     CHECK(arid.HasImprovement("Forest"));
-    CHECK_FALSE(arid.GetHasFungus());
+    CHECK_FALSE(arid.HasImprovement("Fungus"));
     CHECK_FALSE(wet.HasImprovement("Forest"));
 }
 

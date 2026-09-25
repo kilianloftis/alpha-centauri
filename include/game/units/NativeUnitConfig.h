@@ -10,6 +10,14 @@
 namespace ac
 {
 
+// Session-wide native-life rules from config/native_units.json, beside the unit list.
+struct NativeLifeConfig_t
+{
+    // Inclusive uniform range for how many native lifeforms a fungal bloom spawns.
+    int fungalBloomNativeLifeformsMin = 0;
+    int fungalBloomNativeLifeformsMax = 0;
+};
+
 struct NativeUnitConfig_t
 {
     std::string id;

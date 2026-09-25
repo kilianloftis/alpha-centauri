@@ -1,0 +1,8 @@
+{
+  "name": "Planet",
+  "descriptive_name": "Planet",
+  "noun": "Planet",
+  "adjective": "Planet",
+  "participates_in_council": false,
+  "species": "native_life"
+}

@@ -19,8 +19,6 @@ namespace ImprovementIds
     inline constexpr std::string_view k_Sensor = "Sensor";
     inline constexpr std::string_view k_Monolith = "Monolith";
 
-    // A TerrainFeature_t, not a placeable improvement: HasFeature resolves it, HasImprovement
-    // never will.
     inline constexpr std::string_view k_Fungus = "Fungus";
 } // namespace ImprovementIds
 

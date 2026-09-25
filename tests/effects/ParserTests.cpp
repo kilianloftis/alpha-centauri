@@ -41,6 +41,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
     CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
     CHECK(ParseStatId("earthquake_levels") == StatId_t::EarthquakeLevels);
+    CHECK(ParseStatId("fungal_bloom_tiles") == StatId_t::FungalBloomTiles);
     CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
@@ -1234,6 +1235,33 @@ TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered
         ContainsSubstring("exactly one"));
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "Earthquake", "parameters": { "levels": 0 } })"),
+        "on_detonate_effects"), ContainsSubstring("must be >= 1"));
+
+    const TriggeredEffectConfig_t bloom = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom", "parameters": { "tiles": 3 } })"),
+        "on_detonate_effects");
+    const auto* pBloom = std::get_if<FungalBloomEffect_t>(&bloom.effect);
+    REQUIRE(pBloom);
+    CHECK(pBloom->tiles == 3);
+    CHECK_FALSE(pBloom->tilesStat.has_value());
+
+    const TriggeredEffectConfig_t bloomStat = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles_stat": "fungal_bloom_tiles" } })"),
+        "on_detonate_effects");
+    const auto* pBloomStat = std::get_if<FungalBloomEffect_t>(&bloomStat.effect);
+    REQUIRE(pBloomStat);
+    CHECK(pBloomStat->tilesStat == StatId_t::FungalBloomTiles);
+
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles": 1, "tiles_stat": "fungal_bloom_tiles" } })"),
+        "on_detonate_effects"), ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom", "parameters": {} })"), "on_detonate_effects"),
+        ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom", "parameters": { "tiles": 0 } })"),
         "on_detonate_effects"), ContainsSubstring("must be >= 1"));
     // A base stat cannot be resolved off the unit the trigger stamped.
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(

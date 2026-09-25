@@ -5,6 +5,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/map/ElevationRulesConfig.h"
@@ -16,8 +17,10 @@
 #include "game/units/UnitSlotConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <memory>
 #include <random>
+#include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -31,12 +34,20 @@ namespace
 struct TerraformGame_
 {
     FactionFixture fixtures;
+    ImprovementRegistry shippingImprovements;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
     Faction* pPlayer = nullptr;
 
-    TerraformGame_()
+    explicit TerraformGame_(bool bShippingImprovements = false)
     {
+        const ImprovementRegistry* pRegistry = &fixtures.improvements;
+        if (bShippingImprovements)
+        {
+            shippingImprovements.Load(std::string(AC_CONFIG_DIR) + "/improvements.json");
+            pRegistry = &shippingImprovements;
+        }
+
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
@@ -44,7 +55,7 @@ struct TerraformGame_
             pTile->SetRockiness(Rockiness_t::Flat);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+            std::move(pMap), *pRegistry, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
         pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 
@@ -152,7 +163,10 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
     Unit& former = game.MakeFormer(7, 4, &home);
     Tile& rocky = *game.pState->GetWorldMap().GetTile(7, 4);
     rocky.SetRockiness(Rockiness_t::Rocky);
-    CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
+    game.FinishTerraform(former);
+    CHECK(rocky.HasImprovement("Farm"));
+    CHECK(rocky.GetRockiness() == Rockiness_t::Rolling);
 }
 
 TEST_CASE("Terraform mutations: level, fungus, aquifer", "[unit][terraform][mutate]")
@@ -171,12 +185,12 @@ TEST_CASE("Terraform mutations: level, fungus, aquifer", "[unit][terraform][muta
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
         former, "PlantFungus", *game.pState));
     game.FinishTerraform(former);
-    CHECK(tile.GetHasFungus());
+    CHECK(tile.HasImprovement("Fungus"));
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
         former, "RemoveFungus", *game.pState));
     game.FinishTerraform(former);
-    CHECK_FALSE(tile.GetHasFungus());
+    CHECK_FALSE(tile.HasImprovement("Fungus"));
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
         former, "Aquifer", *game.pState));
@@ -288,4 +302,77 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
     REQUIRE(ApplyTerraformResult(tile, *pFarm, *fixture.ctx, fixture.map, former, rng,
                                  fixture.dataContext.elevationRules));
     CHECK(tile.HasImprovement("Farm"));
+}
+
+TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][terraform]")
+{
+    TerraformGame_ game(/*bShippingImprovements=*/true);
+    BaseManager& home = game.MakeBase(4, 4);
+    const ImprovementRegistry& rImprovements = game.shippingImprovements;
+
+    Tile& rDirect = *game.pState->GetWorldMap().GetTile(5, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rDirect, "Forest");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rDirect, "Road");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rDirect, "Mine");
+    CHECK_FALSE(rDirect.HasImprovement("Forest"));
+    CHECK(rDirect.HasImprovement("Road"));
+    CHECK(rDirect.HasImprovement("Mine"));
+
+    Tile& rFarmTile = *game.pState->GetWorldMap().GetTile(6, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFarmTile, "Forest");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFarmTile, "Road");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFarmTile, "Nutrients");
+
+    const ImprovementConfig_t& rFarm = rImprovements.Get("Farm");
+    const std::vector<std::string> farmRemoves =
+        ImprovementsDestroyedByTerraform(rFarmTile, rFarm, rImprovements);
+    CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Forest") != farmRemoves.end());
+    CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Road") == farmRemoves.end());
+    CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Nutrients") == farmRemoves.end());
+
+    Unit& former = game.MakeFormer(6, 4, &home);
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
+    game.FinishTerraform(former);
+    CHECK(rFarmTile.HasImprovement("Farm"));
+    CHECK_FALSE(rFarmTile.HasImprovement("Forest"));
+    CHECK(rFarmTile.HasImprovement("Road"));
+    CHECK(rFarmTile.HasImprovement("Nutrients"));
+
+    Unit& rockyFormer = game.MakeFormer(7, 4, &home);
+    Tile& rRocky = *game.pState->GetWorldMap().GetTile(7, 4);
+    rRocky.SetRockiness(Rockiness_t::Rocky);
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(rockyFormer, "Farm",
+                                                                  *game.pState));
+    game.FinishTerraform(rockyFormer);
+    CHECK(rRocky.HasImprovement("Farm"));
+    CHECK(rRocky.GetRockiness() == Rockiness_t::Rolling);
+
+    Unit& fungusFormer = game.MakeFormer(8, 4, &home);
+    game.pState->GetTileEffects().AddImprovementWithEffects(
+        *game.pState->GetWorldMap().GetTile(8, 4), "Fungus");
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(fungusFormer, "Farm",
+                                                                  *game.pState));
+    game.FinishTerraform(fungusFormer);
+    CHECK(game.pState->GetWorldMap().GetTile(8, 4)->HasImprovement("Farm"));
+    CHECK_FALSE(game.pState->GetWorldMap().GetTile(8, 4)->HasImprovement("Fungus"));
+
+    Tile& rFungusTile = *game.pState->GetWorldMap().GetTile(3, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFungusTile, "Farm");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFungusTile, "Road");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rFungusTile, "Nutrients");
+    const ImprovementConfig_t& rPlant = rImprovements.Get("PlantFungus");
+    const std::vector<std::string> fungusRemoves =
+        ImprovementsDestroyedByTerraform(rFungusTile, rPlant, rImprovements);
+    CHECK(std::find(fungusRemoves.begin(), fungusRemoves.end(), "Farm") != fungusRemoves.end());
+    CHECK(std::find(fungusRemoves.begin(), fungusRemoves.end(), "Road") != fungusRemoves.end());
+    CHECK(std::find(fungusRemoves.begin(), fungusRemoves.end(), "Nutrients") == fungusRemoves.end());
+
+    std::mt19937 rng(1);
+    REQUIRE(ApplyTerraformResult(rFungusTile, rPlant, game.pState->GetTileEffects(),
+                                 game.pState->GetWorldMap(), former, rng,
+                                 game.fixtures.dataContext.elevationRules));
+    CHECK(rFungusTile.HasImprovement("Fungus"));
+    CHECK_FALSE(rFungusTile.HasImprovement("Farm"));
+    CHECK_FALSE(rFungusTile.HasImprovement("Road"));
+    CHECK(rFungusTile.HasImprovement("Nutrients"));
 }

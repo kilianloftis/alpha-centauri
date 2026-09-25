@@ -80,8 +80,9 @@ graph TB
    not exist. A component with `requires_chassis` is listed only when the selected chassis id is
    in that list. Selecting a chassis clears a drafted component the new chassis cannot carry.
    `UnitDesign` throws if a saved design still violates the list. A weapon that delivers its
-   payload by detonating rather than attacking (Tectonic Payload) carries no gameplay `effects`
-   at all — its behaviour is the `on_detonate_effects` list, run by `ApplyDetonation`
+   payload by detonating rather than attacking (Tectonic Payload, Fungal Payload) carries no
+   gameplay `effects` at all — its behaviour is the `on_detonate_effects` list, run by
+   `ApplyDetonation`
 3. A `ListSelectorPopup` is pushed onto `m_elements`, titled from the slot's `display_name` and
    styled from `Style().componentSelectorPopup` — its own instance of the shared style type
 4. Player picks an entry → popup calls the lambda that sets the matching field in `UnitDesignerState_t`

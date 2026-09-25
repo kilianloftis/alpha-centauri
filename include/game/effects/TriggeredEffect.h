@@ -140,6 +140,15 @@ struct EarthquakeEffect_t
     std::optional<StatId_t> levelsStat;
 };
 
+// Turns the context tile, and a random sample of its Chebyshev-1 neighbors, into fungus.
+// Exactly one magnitude source is authored — `tiles` is a literal, `tilesStat` reads that
+// stat off the subject unit (a fungal payload takes its size from the reactor).
+struct FungalBloomEffect_t
+{
+    int tiles = 0;
+    std::optional<StatId_t> tilesStat;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -153,7 +162,8 @@ using TriggeredEffectVariant_t = std::variant<
     DestroyFacilityEffect_t,
     RebelEffect_t,
     DestroyUnitEffect_t,
-    EarthquakeEffect_t
+    EarthquakeEffect_t,
+    FungalBloomEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

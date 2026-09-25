@@ -90,6 +90,12 @@ struct EarthquakeApplied_t
     int levels = 0;
 };
 
+struct FungalBloomApplied_t
+{
+    int tiles = 0;
+    int lifeforms = 0;
+};
+
 using TriggeredEffectResult_t = std::variant<
     FacilitiesDestroyed_t,
     PopulationChanged_t,
@@ -102,7 +108,8 @@ using TriggeredEffectResult_t = std::variant<
     BaseRebelled_t,
     InfiltrationSet_t,
     UnitDestroyed_t,
-    EarthquakeApplied_t
+    EarthquakeApplied_t,
+    FungalBloomApplied_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources

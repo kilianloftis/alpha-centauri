@@ -39,15 +39,16 @@ void ValidateTerrainFeatures(const ImprovementRegistry& rImprovements)
     RequireImprovementEntries_<Moisture_t>(rImprovements, "moisture");
     RequireImprovementEntries_<TerrainFeature_t>(rImprovements, "terrain feature");
 
-    // Named in C++ by TerraformSpread, which has no way to report their absence at runtime:
-    // no tile can hold an improvement the registry does not define, so a missing entry reads
-    // as "nothing spread this turn", every turn, for the whole game.
-    for (const std::string_view id : {ImprovementIds::k_Forest, ImprovementIds::k_KelpFarm})
+    // Named in C++ rather than by a terrain enum. A missing entry cannot be placed, and the
+    // caller has no later diagnostic: spread would no-op, and fungus placement would throw
+    // at the first patch.
+    for (const std::string_view id :
+         {ImprovementIds::k_Forest, ImprovementIds::k_KelpFarm, ImprovementIds::k_Fungus})
     {
         if (!rImprovements.Find(std::string(id)))
         {
             throw std::runtime_error("improvements.json is missing the entry '" + std::string(id)
-                                     + "' required by terraform spread");
+                                     + "' required by terraform spread or fungus placement");
         }
     }
 }

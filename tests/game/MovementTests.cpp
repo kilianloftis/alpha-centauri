@@ -630,7 +630,7 @@ TEST_CASE("Fungus entry charges across turns until cost is paid", "[movement][fu
     REQUIRE(unit.GetMovementPoints() == 1);
 
     Tile& fungus = fixture.At(5, 4);
-    fungus.SetHasFungus(true);
+    fungus.AddImprovement(fixture.improvements.Get("Fungus"));
     unit.SetOrder(MoveOrder_t{&fungus});
 
     // 1-move chassis: three turns to pay fungus cost 3.
@@ -663,7 +663,7 @@ TEST_CASE("Friendly on fungus allows immediate entry and ends the turn", "[movem
     REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     Tile& fungus = fixture.At(5, 4);
-    fungus.SetHasFungus(true);
+    fungus.AddImprovement(fixture.improvements.Get("Fungus"));
     fixture.MakeUnit(faction, 5, 4, {"test_chassis"}); // friendly already there
 
     MoveOrder_t stepOrder{&fungus};
@@ -689,7 +689,7 @@ TEST_CASE("Entering fungus ends the turn even with leftover moves", "[movement][
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
 
     Tile& fungus = fixture.At(5, 4);
-    fungus.SetHasFungus(true);
+    fungus.AddImprovement(fixture.improvements.Get("Fungus"));
     unit.SetOrder(MoveOrder_t{&fungus});
 
     // Pay 2 of 4 on turn 1 (M=2 charge opportunity for terrain cost 3).
@@ -714,7 +714,7 @@ TEST_CASE("Road built on fungus negates the entry rules", "[movement][fungus]")
     REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     Tile& roadFungus = fixture.At(5, 4);
-    roadFungus.SetHasFungus(true);
+    roadFungus.AddImprovement(fixture.improvements.Get("Fungus"));
     roadFungus.AddImprovement(fixture.improvements.Get("Road"));
 
     MoveOrder_t stepOrder{&roadFungus};
@@ -733,7 +733,7 @@ TEST_CASE("TreatFungusAsRoad uses road cost without forced end-turn", "[movement
     REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     Tile& fungus = fixture.At(5, 4);
-    fungus.SetHasFungus(true);
+    fungus.AddImprovement(fixture.improvements.Get("Fungus"));
     MoveOrder_t stepOrder{&fungus};
     REQUIRE(move.orders.TryStep(unit, fungus, stepOrder).bEntered);
     CHECK(&unit.GetTile() == &fungus);

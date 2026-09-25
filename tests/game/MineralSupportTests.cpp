@@ -359,7 +359,7 @@ TEST_CASE("Native life on fungus pays no mineral support", "[unit][support]")
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
-    fixture.At(5, 4).SetHasFungus(true);
+    fixture.At(5, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& lifeform = fixture.MakeUnit(
         faction, 5, 4, {"native_life_chassis", "test_chassis"}, &base);
     // Support -4 adds 1. Standing on fungus does not change the stat.
@@ -401,7 +401,7 @@ TEST_CASE("A non-lifeform on fungus still pays mineral support", "[unit][support
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
-    fixture.At(5, 4).SetHasFungus(true);
+    fixture.At(5, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
     const UnitId_t unitId = unit.GetUnitId();
 

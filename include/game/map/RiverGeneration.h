@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 namespace ac
 {
@@ -51,6 +52,7 @@ bool TileTerminatesRiver(const Tile& rTile);
 void TraceRiverFrom(Tile& rOrigin, WorldMap& rWorld);
 
 // Clear all HasRiver flags, then reflow from every HasAquifer tile.
-void RecomputeRivers(WorldMap& rWorld);
+// Returns tiles whose HasRiver flag changed.
+std::vector<Tile*> RecomputeRivers(WorldMap& rWorld);
 
 } // namespace ac

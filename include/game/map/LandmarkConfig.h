@@ -54,7 +54,7 @@ struct LandmarkConfig_t
     int maxCount = 1;
     int minSpacing = 16; // Chebyshev distance between anchors of any landmarks
     LandmarkShape_t shape;
-    bool setFungus = false; // also SetHasFungus on footprint tiles (The Ruins)
+    bool setFungus = false; // also add the Fungus improvement on footprint tiles (The Ruins)
 };
 
 } // namespace ac

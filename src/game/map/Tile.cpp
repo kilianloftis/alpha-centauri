@@ -2,6 +2,7 @@
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TileChangeListener.h"
 #include "lib/Revision.h"
 #include <magic_enum.hpp>
 #include <algorithm>
@@ -12,6 +13,20 @@
 
 namespace ac
 {
+
+namespace
+{
+
+struct DeferredTileChange_t
+{
+    Tile* pTile = nullptr;
+    std::string keepId;
+};
+
+int g_tileChangeDeferDepth = 0;
+std::vector<DeferredTileChange_t> g_deferredTileChanges;
+
+} // namespace
 
 std::string ToString(Rockiness_t rockiness)
 {
@@ -32,7 +47,6 @@ Tile::Tile()
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasAquifer(false)
-    , m_bHasFungus(false)
 {
 }
 
@@ -45,7 +59,6 @@ Tile::Tile(int x, int y)
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasAquifer(false)
-    , m_bHasFungus(false)
 {
 }
 
@@ -61,8 +74,13 @@ int Tile::GetY() const
 
 void Tile::SetMoisture(Moisture_t moisture)
 {
+    if (m_moisture == moisture)
+    {
+        return;
+    }
     m_moisture = moisture;
     RefreshTerrainFeatures_();
+    NotifyTileChanged_({});
 }
 
 Moisture_t Tile::GetMoisture() const
@@ -82,8 +100,13 @@ Moisture_t Tile::GetBaseMoisture() const
 
 void Tile::SetRockiness(Rockiness_t rockiness)
 {
+    if (m_rockiness == rockiness)
+    {
+        return;
+    }
     m_rockiness = rockiness;
     RefreshTerrainFeatures_();
+    NotifyTileChanged_({});
 }
 
 Rockiness_t Tile::GetRockiness() const
@@ -125,6 +148,7 @@ void Tile::SetElevation(int elevation)
     m_elevation = elevation;
     RefreshTerrainFeatures_();
     NotifyAppearanceChanged_();
+    NotifyTileChanged_({});
 }
 
 int Tile::GetElevation() const
@@ -144,8 +168,13 @@ bool Tile::IsLand() const
 
 void Tile::SetHasRiver(bool bHasRiver)
 {
+    if (m_bHasRiver == bHasRiver)
+    {
+        return;
+    }
     m_bHasRiver = bHasRiver;
     RefreshTerrainFeatures_();
+    NotifyTileChanged_({});
 }
 
 bool Tile::GetHasRiver() const
@@ -155,29 +184,18 @@ bool Tile::GetHasRiver() const
 
 void Tile::SetHasAquifer(bool bHasAquifer)
 {
+    if (m_bHasAquifer == bHasAquifer)
+    {
+        return;
+    }
     m_bHasAquifer = bHasAquifer;
     RefreshTerrainFeatures_();
+    NotifyTileChanged_({});
 }
 
 bool Tile::GetHasAquifer() const
 {
     return m_bHasAquifer;
-}
-
-void Tile::SetHasFungus(bool bHasFungus)
-{
-    if (m_bHasFungus == bHasFungus)
-    {
-        return;
-    }
-    m_bHasFungus = bHasFungus;
-    RefreshTerrainFeatures_();
-    NotifyAppearanceChanged_();
-}
-
-bool Tile::GetHasFungus() const
-{
-    return m_bHasFungus;
 }
 
 void Tile::BindImprovements(const ImprovementRegistry& rImprovements)
@@ -189,6 +207,45 @@ void Tile::BindImprovements(const ImprovementRegistry& rImprovements)
 void Tile::BindAppearanceRevision(Revision& rRevision)
 {
     m_pAppearanceRevision = &rRevision;
+}
+
+void Tile::BindTileChangeListener(TileChangeListener* pListener)
+{
+    m_pTileChangeListener = pListener;
+}
+
+void Tile::UnbindTileChangeListener(TileChangeListener& rListener)
+{
+    if (m_pTileChangeListener == &rListener)
+    {
+        m_pTileChangeListener = nullptr;
+    }
+}
+
+void Tile::NotifyTileChanged_(std::string_view keepId)
+{
+    if (!m_pTileChangeListener)
+    {
+        return;
+    }
+    if (g_tileChangeDeferDepth > 0)
+    {
+        for (DeferredTileChange_t& rPending : g_deferredTileChanges)
+        {
+            if (rPending.pTile != this)
+            {
+                continue;
+            }
+            if (!keepId.empty())
+            {
+                rPending.keepId = std::string(keepId);
+            }
+            return;
+        }
+        g_deferredTileChanges.push_back(DeferredTileChange_t{this, std::string(keepId)});
+        return;
+    }
+    m_pTileChangeListener->OnTileChanged(*this, keepId);
 }
 
 void Tile::NotifyAppearanceChanged_()
@@ -207,6 +264,7 @@ void Tile::AddImprovement(const ImprovementConfig_t& rConfig)
     }
     m_improvements.push_back(&rConfig);
     NotifyAppearanceChanged_();
+    NotifyTileChanged_(rConfig.id);
 }
 
 void Tile::RemoveImprovement(std::string_view improvementId)
@@ -245,7 +303,7 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
 bool Tile::HasFeature(std::string_view featureId) const
 {
     // Intrinsic features answer from tile state, never from the improvement list - a tile
-    // cannot carry "River"/"Fungus"/a depth band as a built improvement. The switch is
+    // cannot carry "River" or a depth band as a built improvement. The switch is
     // exhaustive so adding a TerrainFeature_t enumerator fails to compile until handled here.
     if (const auto feature = magic_enum::enum_cast<TerrainFeature_t>(featureId))
     {
@@ -261,8 +319,6 @@ bool Tile::HasFeature(std::string_view featureId) const
                 return m_bHasRiver;
             case TerrainFeature_t::Aquifer:
                 return m_bHasAquifer;
-            case TerrainFeature_t::Fungus:
-                return m_bHasFungus;
         }
     }
     if (magic_enum::enum_name(m_rockiness) == featureId) return true;
@@ -304,9 +360,29 @@ void Tile::RefreshTerrainFeatures_()
     {
         pushFeature(magic_enum::enum_name(TerrainFeature_t::Aquifer));
     }
-    if (m_bHasFungus)
+}
+
+TileChangeDeferral::TileChangeDeferral()
+{
+    ++g_tileChangeDeferDepth;
+}
+
+TileChangeDeferral::~TileChangeDeferral()
+{
+    if (--g_tileChangeDeferDepth > 0)
     {
-        pushFeature(magic_enum::enum_name(TerrainFeature_t::Fungus));
+        return;
+    }
+
+    std::vector<DeferredTileChange_t> pending;
+    pending.swap(g_deferredTileChanges);
+    for (const DeferredTileChange_t& rChange : pending)
+    {
+        if (!rChange.pTile || !rChange.pTile->m_pTileChangeListener)
+        {
+            continue;
+        }
+        rChange.pTile->m_pTileChangeListener->OnTileChanged(*rChange.pTile, rChange.keepId);
     }
 }
 

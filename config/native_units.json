@@ -1,4 +1,7 @@
-[
+{
+  "fungal_bloom_native_lifeforms_min": 1,
+  "fungal_bloom_native_lifeforms_max": 1,
+  "units": [
   {
     "id": "Mind_Worm",
     "name": "Mind Worm",
@@ -381,4 +384,5 @@
       }
     ]
   }
-]
+  ]
+}

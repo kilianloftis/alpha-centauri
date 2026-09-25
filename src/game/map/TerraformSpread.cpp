@@ -135,9 +135,9 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
         return false;
     }
 
-    if (!wantSea && pTarget->GetHasFungus())
+    if (!wantSea && pTarget->HasImprovement(ImprovementIds::k_Fungus))
     {
-        pTarget->SetHasFungus(false);
+        rTileEffects.RemoveImprovementWithEffects(*pTarget, std::string(ImprovementIds::k_Fungus));
     }
     rTileEffects.AddImprovementWithEffects(*pTarget, std::string(improvementId));
     return true;

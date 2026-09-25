@@ -735,7 +735,7 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
         setup.fixture.At(4, 4).SetElevation(100);
         setup.fixture.At(5, 4).SetElevation(100);
         setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).SetHasFungus(true);
+        setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Fungus"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
@@ -750,7 +750,7 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
         setup.fixture.At(4, 4).SetElevation(100);
         setup.fixture.At(5, 4).SetElevation(100);
         setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).SetHasFungus(true);
+        setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Fungus"));
         setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Road"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);

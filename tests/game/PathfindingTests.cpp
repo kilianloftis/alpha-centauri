@@ -267,10 +267,10 @@ TEST_CASE("FindPath prefers friendly fungus over empty fungus", "[movement][path
             MakeWater_(fixture.At(4, y));
         }
     }
-    fixture.At(3, 4).SetHasFungus(true);
-    fixture.At(4, 4).SetHasFungus(true);
-    fixture.At(3, 3).SetHasFungus(true);
-    fixture.At(4, 3).SetHasFungus(true);
+    fixture.At(3, 4).AddImprovement(fixture.improvements.Get("Fungus"));
+    fixture.At(4, 4).AddImprovement(fixture.improvements.Get("Fungus"));
+    fixture.At(3, 3).AddImprovement(fixture.improvements.Get("Fungus"));
+    fixture.At(4, 3).AddImprovement(fixture.improvements.Get("Fungus"));
     fixture.MakeUnit(faction, 3, 3, {"test_chassis"});
     fixture.MakeUnit(faction, 4, 3, {"test_chassis"});
 
@@ -298,7 +298,7 @@ TEST_CASE("FindPath prefers clear detour over cheaper-looking fungus",
     const Tile& rDest = fixture.At(4, 4);
 
     // Direct: (3,4) fungus then dest. Planned = 4+1 = 5 (M=2 whole-turn valuation).
-    fixture.At(3, 4).SetHasFungus(true);
+    fixture.At(3, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     // Block short clear diagonals around the fungus; leave (3,2) as a land bridge so the
     // clear route is exactly four steps: (2,4)->(2,3)->(3,2)->(4,3)->(4,4).
     MakeWater_(fixture.At(3, 3));

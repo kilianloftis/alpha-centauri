@@ -1,5 +1,7 @@
 #include "TestHelpers.h"
 #include "game/map/FungusGeneration.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
@@ -23,6 +25,18 @@ std::filesystem::path TempPath_(const char* name)
     return std::filesystem::temp_directory_path() / name;
 }
 
+const ImprovementConfig_t& TestFungus_()
+{
+    static ImprovementRegistry registry;
+    static bool bLoaded = false;
+    if (!bLoaded)
+    {
+        registry.Load(actest::FixturePath("improvements.json"));
+        bLoaded = true;
+    }
+    return registry.Get("Fungus");
+}
+
 void FillLand_(WorldMap& rWorld)
 {
     for (auto& pTile : rWorld.GetTiles())
@@ -36,7 +50,7 @@ int CountFungus_(const WorldMap& rWorld)
     int count = 0;
     for (const auto& pTile : rWorld.GetTiles())
     {
-        if (pTile->GetHasFungus())
+        if (pTile->HasImprovement("Fungus"))
         {
             ++count;
         }
@@ -49,7 +63,7 @@ bool HasOrthogonalFungusNeighbor_(const Tile& rTile, const WorldMap& rWorld)
     bool found = false;
     ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
     {
-        if (pNeighbor->GetHasFungus())
+        if (pNeighbor->HasImprovement("Fungus"))
         {
             found = true;
         }
@@ -72,7 +86,7 @@ std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
         for (int x = 0; x < w; ++x)
         {
             Tile* pStart = rWorld.GetTile(x, y);
-            if (!pStart || !pStart->GetHasFungus() || visited[static_cast<size_t>(idx(x, y))])
+            if (!pStart || !pStart->HasImprovement("Fungus") || visited[static_cast<size_t>(idx(x, y))])
             {
                 continue;
             }
@@ -88,7 +102,7 @@ std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
                 ++size;
                 ForEachOrthogonalNeighbor(*pTile, rWorld, [&](Tile* pNeighbor)
                 {
-                    if (!pNeighbor || !pNeighbor->GetHasFungus())
+                    if (!pNeighbor || !pNeighbor->HasImprovement("Fungus"))
                     {
                         return;
                     }
@@ -143,7 +157,7 @@ TEST_CASE("PlaceFungus covers roughly the configured land fraction", "[worldgen]
     cfg.maxPatchTiles = 20;
 
     std::mt19937 rng(7);
-    PlaceFungus(world, cfg, rng);
+    PlaceFungus(world, cfg, TestFungus_(), rng);
 
     const int fungus = CountFungus_(world);
     const int land = world.GetWidth() * world.GetHeight();
@@ -165,13 +179,13 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
     cfg.patchSizeSkew = 1.0f;
 
     std::mt19937 rng(99);
-    PlaceFungus(world, cfg, rng);
+    PlaceFungus(world, cfg, TestFungus_(), rng);
 
     // Isolation keeps 1-tile patches from touching; growth never expands past 1.
     REQUIRE(CountFungus_(world) > 0);
     for (const auto& pTile : world.GetTiles())
     {
-        if (pTile->GetHasFungus())
+        if (pTile->HasImprovement("Fungus"))
         {
             CHECK_FALSE(HasOrthogonalFungusNeighbor_(*pTile, world));
         }
@@ -190,13 +204,13 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
     cfg.patchSizeSkew = 1.0f;
 
     std::mt19937 rng(3);
-    PlaceFungus(world, cfg, rng);
+    PlaceFungus(world, cfg, TestFungus_(), rng);
 
     int fungusWithNeighbor = 0;
     int fungusTiles = 0;
     for (const auto& pTile : world.GetTiles())
     {
-        if (!pTile->GetHasFungus())
+        if (!pTile->HasImprovement("Fungus"))
         {
             continue;
         }
@@ -225,7 +239,7 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
     cfg.patchSizeSkew = 4.0f;
 
     std::mt19937 rng(42);
-    PlaceFungus(world, cfg, rng);
+    PlaceFungus(world, cfg, TestFungus_(), rng);
 
     const std::vector<int> sizes = FungusPatchSizes_(world);
     REQUIRE(sizes.size() >= 10);
@@ -264,11 +278,11 @@ TEST_CASE("PlaceFungus water_fraction only stamps water tiles", "[worldgen][fung
     cfg.maxPatchTiles = 10;
 
     std::mt19937 rng(11);
-    PlaceFungus(world, cfg, rng);
+    PlaceFungus(world, cfg, TestFungus_(), rng);
 
     for (const auto& pTile : world.GetTiles())
     {
-        if (pTile->GetHasFungus())
+        if (pTile->HasImprovement("Fungus"))
         {
             CHECK(pTile->IsWater());
         }

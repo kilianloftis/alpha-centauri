@@ -148,7 +148,7 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     Color_t fill{};
 
     // Feature overlays win over the elevation gradient (Forest excludes Fungus in config).
-    if (rTile.GetHasFungus())
+    if (rTile.HasImprovement(ImprovementIds::k_Fungus))
     {
         fill = s.fungusColor;
     }
@@ -193,7 +193,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
     // Moisture/rockiness landform cues only on bare land. Water already reads as sea from the
     // blue fill; fungus/forest stand in for vegetation sprites until those assets exist.
     const bool bLandformOverlay = rTile.IsLand()
-                                  && !rTile.GetHasFungus()
+                                  && !rTile.HasImprovement(ImprovementIds::k_Fungus)
                                   && !rTile.HasImprovement(ImprovementIds::k_Forest);
     if (bLandformOverlay)
     {

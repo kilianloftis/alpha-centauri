@@ -91,14 +91,14 @@ TEST_CASE("A feature the caller is clearing does not block the placement", "[map
     actest::WorldFixture world(5, 5);
     Tile& rTile = *world.map.GetTile(2, 2);
     rTile.SetElevation(500);
-    rTile.SetHasFungus(true);
+    rTile.AddImprovement(world.improvements.Get("Fungus"));
 
     const ImprovementConfig_t& rForest = world.improvements.Get("Forest");
     CHECK_FALSE(CanBuildImprovement(rTile, rForest));
 
     // Forest spread wipes fungus, so it names it - and the tile is not mutated to say so.
     CHECK(CanBuildImprovement(rTile, rForest, ImprovementIds::k_Fungus));
-    CHECK(rTile.GetHasFungus());
+    CHECK(rTile.HasImprovement("Fungus"));
 }
 
 TEST_CASE("WorldMap rejects non-positive dimensions", "[map]")

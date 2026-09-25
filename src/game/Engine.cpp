@@ -25,6 +25,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/units/BaseConquestRules.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/faction/FactionRegistry.h"
@@ -227,7 +228,7 @@ void Engine::StartNewGame_()
     WorldGenerator worldGen;
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
-    WorldGenPresetConfigParser::0(m_gameDataContext->elevationRules, rPreset);
+    WorldGenPresetConfigParser::ApplyElevationRange(m_gameDataContext->elevationRules, rPreset);
     m_pGameState = std::make_unique<GameState>(
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
@@ -280,7 +281,8 @@ void Engine::StartNewGame_()
         // Single-player for now: the first faction created is the human player, the rest are
         // AI-controlled. IsPlayerControlled() (rather than an index-0 convention) is what
         // GameState::GetPlayerFaction() searches for.
-        const bool bIsPlayerControlled = (positionIndex == 0);
+        const bool bNativeLife = IsNativeLifeFaction(rFactionConfig.identity.species);
+        const bool bIsPlayerControlled = (positionIndex == 0) && !bNativeLife;
         auto pFaction = std::make_unique<Faction>(
             m_pGameState->AllocateFactionId(),
             bIsPlayerControlled,
@@ -296,6 +298,14 @@ void Engine::StartNewGame_()
         // future load, and capture/trade adopt alike — via the single Faction::OnBaseAdded
         // hook, rather than a per-call-site WireBase chore (see EventBridge::WireBase).
         pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
+
+        if (bNativeLife)
+        {
+            Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
+            m_eventBridge->WireFaction(rFaction);
+            ++positionIndex;
+            continue;
+        }
 
         Tile* pStartTile = PickStartingBaseTile_(
             m_pGameState->GetWorldMap(), placedBases, preferredStartPositions);
@@ -463,7 +473,8 @@ void Engine::StartNewGame_()
         int aiIndex = 0;
         for (Faction& rFaction : m_pGameState->Factions())
         {
-            if (rFaction.GetFactionId() == playerId)
+            if (rFaction.GetFactionId() == playerId
+                || IsNativeLifeFaction(rFaction.GetDefinition().identity.species))
             {
                 continue;
             }
@@ -538,7 +549,7 @@ void Engine::StartNewGame_()
                     }
                     else if (distance == 1
                              && (pTile->GetX() + pTile->GetY()) % 2 == 0
-                             && !pTile->GetHasFungus())
+                             && !pTile->HasImprovement(ImprovementIds::k_Fungus))
                     {
                         rTileEffects.AddImprovementWithEffects(
                             *pTile, std::string(ImprovementIds::k_Forest));

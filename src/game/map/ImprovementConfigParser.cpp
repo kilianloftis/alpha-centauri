@@ -50,52 +50,76 @@ int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std
     }
 }
 
-TerraformResult_t ParseTerraformResult_(const nlohmann::json& improvementJson, std::string_view id)
+void ParseTerraform_(const nlohmann::json& improvementJson, ImprovementConfig_t& rConfig)
 {
     if (!improvementJson.contains("terraform"))
     {
-        return TerraformResult_t::Place;
+        return;
     }
 
     const nlohmann::json& terraform = improvementJson.at("terraform");
     if (!terraform.is_object())
     {
         throw std::runtime_error(
-            "Improvement '" + std::string(id) + "': 'terraform' must be an object");
+            "Improvement '" + rConfig.id + "': 'terraform' must be an object");
     }
 
     const std::string result = terraform.value("result", "place");
+    const bool bNamesImprovement = terraform.contains("improvement");
     if (result == "place")
     {
-        return TerraformResult_t::Place;
+        rConfig.terraformResult = TerraformResult_t::Place;
+        if (!bNamesImprovement)
+        {
+            return;
+        }
+        if (!terraform.at("improvement").is_string())
+        {
+            throw std::runtime_error(
+                "Improvement '" + rConfig.id + "': terraform.improvement must be a string");
+        }
+        rConfig.placesImprovementId = terraform.at("improvement").get<std::string>();
+        if (rConfig.placesImprovementId.empty())
+        {
+            throw std::runtime_error(
+                "Improvement '" + rConfig.id + "': terraform.improvement must be non-empty");
+        }
+        return;
+    }
+    if (bNamesImprovement)
+    {
+        throw std::runtime_error(
+            "Improvement '" + rConfig.id
+            + "': terraform.improvement is only valid when result is place");
     }
     if (result == "level_terrain")
     {
-        return TerraformResult_t::LevelTerrain;
+        rConfig.terraformResult = TerraformResult_t::LevelTerrain;
+        return;
     }
     if (result == "raise_land")
     {
-        return TerraformResult_t::RaiseLand;
+        rConfig.terraformResult = TerraformResult_t::RaiseLand;
+        return;
     }
     if (result == "lower_land")
     {
-        return TerraformResult_t::LowerLand;
-    }
-    if (result == "plant_fungus")
-    {
-        return TerraformResult_t::PlantFungus;
+        rConfig.terraformResult = TerraformResult_t::LowerLand;
+        return;
     }
     if (result == "remove_fungus")
     {
-        return TerraformResult_t::RemoveFungus;
+        rConfig.terraformResult = TerraformResult_t::RemoveFungus;
+        return;
     }
     if (result == "aquifer")
     {
-        return TerraformResult_t::Aquifer;
+        rConfig.terraformResult = TerraformResult_t::Aquifer;
+        return;
     }
 
     throw std::runtime_error(
-        "Improvement '" + std::string(id) + "': unknown terraform.result '" + result + "'");
+        "Improvement '" + rConfig.id + "': unknown terraform.result '" + result + "'");
 }
 
 } // namespace
@@ -153,12 +177,92 @@ bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidat
            && !AnyExcludesCandidate_(rTile.GetTerrainFeatures(), rCandidate, clearedFeatureId);
 }
 
+std::vector<std::string> ImprovementsDisplacedBy(const Tile& rTile,
+                                                 const ImprovementConfig_t& rIncoming)
+{
+    std::vector<std::string> displaced;
+    for (const ImprovementConfig_t* pExisting : rTile.GetImprovements())
+    {
+        if (!pExisting || pExisting->id == rIncoming.id)
+        {
+            continue;
+        }
+        if (ExcludesId_(*pExisting, rIncoming.id) || ExcludesId_(rIncoming, pExisting->id))
+        {
+            displaced.push_back(pExisting->id);
+        }
+    }
+    return displaced;
+}
+
+bool RemainingFeaturesBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
+                                     const std::vector<std::string>& displacedIds)
+{
+    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
+    {
+        return true;
+    }
+    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
+    {
+        return true;
+    }
+
+    const auto remains = [&](const std::string& rId)
+    {
+        return std::find(displacedIds.begin(), displacedIds.end(), rId) == displacedIds.end();
+    };
+
+    for (const std::string& rExcludedId : rCandidate.excludes)
+    {
+        if (rTile.HasFeature(rExcludedId) && remains(rExcludedId))
+        {
+            return true;
+        }
+    }
+
+    const auto blockedBy = [&](const std::vector<const ImprovementConfig_t*>& rFeatures)
+    {
+        for (const ImprovementConfig_t* pFeature : rFeatures)
+        {
+            if (!pFeature || pFeature->id == rCandidate.id)
+            {
+                continue;
+            }
+            if (ExcludesId_(*pFeature, rCandidate.id) && remains(pFeature->id))
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    return blockedBy(rTile.GetImprovements()) || blockedBy(rTile.GetTerrainFeatures());
+}
+
 std::vector<ImprovementConfig_t> ImprovementConfigParser::ParseConfig(const std::string& configPath)
 {
     auto configs = JsonConfigLoader::LoadPath<ImprovementConfig_t>(
         configPath, "improvement",
         [this](const nlohmann::json& rJson) { return ParseImprovementConfig(rJson); });
     ExpandTagReferences(configs);
+    std::unordered_set<std::string> ids;
+    for (const ImprovementConfig_t& rConfig : configs)
+    {
+        ids.insert(rConfig.id);
+    }
+    for (const ImprovementConfig_t& rConfig : configs)
+    {
+        if (rConfig.placesImprovementId.empty())
+        {
+            continue;
+        }
+        if (ids.count(rConfig.placesImprovementId) == 0)
+        {
+            throw std::runtime_error(
+                "Improvement '" + rConfig.id + "': terraform.improvement '"
+                + rConfig.placesImprovementId + "' is not an improvement id");
+        }
+    }
     return configs;
 }
 
@@ -300,7 +404,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(improvementJson, "suppress_yield_sources");
     config.terminatesRiver = improvementJson.value("terminates_river", false);
-    config.terraformResult = ParseTerraformResult_(improvementJson, config.id);
+    ParseTerraform_(improvementJson, config);
     if (improvementJson.contains("move_cost"))
     {
         const Rational_t cost = Rational_t::ParseJson(improvementJson.at("move_cost"));

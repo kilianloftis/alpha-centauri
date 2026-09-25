@@ -9,6 +9,7 @@
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/ElevationChange.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/TerritoryMap.h"
@@ -20,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <magic_enum.hpp>
 #include <stdexcept>
 
 namespace ac
@@ -71,20 +73,137 @@ bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const 
     return domain == UnitDomain_t::Land;
 }
 
-bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, UnitDomain_t domain,
+bool ExcludesId_(const ImprovementConfig_t& rConfig, std::string_view id)
+{
+    return std::any_of(rConfig.excludes.begin(), rConfig.excludes.end(),
+                       [&](const std::string& rExcluded) { return rExcluded == id; });
+}
+
+const ImprovementConfig_t* FindFeatureConfig_(const Tile& rTile, std::string_view featureId)
+{
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
+    {
+        if (pFeature && pFeature->id == featureId)
+        {
+            return pFeature;
+        }
+    }
+    for (const ImprovementConfig_t* pFeature : rTile.GetImprovements())
+    {
+        if (pFeature && pFeature->id == featureId)
+        {
+            return pFeature;
+        }
+    }
+    return nullptr;
+}
+
+bool FeatureBlocksPlacement_(const Tile& rTile, const ImprovementConfig_t& rCandidate,
+                             std::string_view featureId)
+{
+    if (featureId == rCandidate.id || !rTile.HasFeature(featureId))
+    {
+        return false;
+    }
+    if (ExcludesId_(rCandidate, featureId))
+    {
+        return true;
+    }
+    const ImprovementConfig_t* pFeature = FindFeatureConfig_(rTile, featureId);
+    return pFeature && ExcludesId_(*pFeature, rCandidate.id);
+}
+
+// Depth bands come from elevation. A place order does not raise or lower, so these still
+// refuse the start. Rockiness, moisture, rivers, aquifers, and improvements are cleared
+// when the order finishes.
+bool SurfaceBlocksPlacement_(const Tile& rTile, const ImprovementConfig_t& rCandidate)
+{
+    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
+    {
+        return true;
+    }
+    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
+    {
+        return true;
+    }
+    return FeatureBlocksPlacement_(rTile, rCandidate, magic_enum::enum_name(TerrainFeature_t::Water))
+        || FeatureBlocksPlacement_(rTile, rCandidate,
+                                   magic_enum::enum_name(TerrainFeature_t::Ocean))
+        || FeatureBlocksPlacement_(rTile, rCandidate,
+                                   magic_enum::enum_name(TerrainFeature_t::OceanShelf));
+}
+
+void ClearBlockersForPlacement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
+                                TileEffectsContext& rTileEffects, WorldMap& rWorldMap)
+{
+    const std::vector<std::string> displaced = ImprovementsDisplacedBy(rTile, rPlaced);
+    for (const std::string& rId : displaced)
+    {
+        rTileEffects.RemoveImprovementWithEffects(rTile, rId);
+    }
+
+    while (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(rTile.GetRockiness())))
+    {
+        if (rTile.GetRockiness() == Rockiness_t::Flat)
+        {
+            break;
+        }
+        rTile.SetRockiness(rTile.GetRockiness() == Rockiness_t::Rocky ? Rockiness_t::Rolling
+                                                                       : Rockiness_t::Flat);
+    }
+
+    while (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(rTile.GetMoisture())))
+    {
+        if (rTile.GetMoisture() == Moisture_t::Arid)
+        {
+            break;
+        }
+        const Moisture_t next =
+            rTile.GetMoisture() == Moisture_t::Wet ? Moisture_t::Moist : Moisture_t::Arid;
+        rTile.SetBaseMoisture(next);
+        rTile.SetMoisture(next);
+    }
+
+    if (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(TerrainFeature_t::Aquifer)))
+    {
+        rTile.SetHasAquifer(false);
+        RecomputeRivers(rWorldMap);
+    }
+    if (FeatureBlocksPlacement_(rTile, rPlaced, magic_enum::enum_name(TerrainFeature_t::River)))
+    {
+        rTile.SetHasRiver(false);
+    }
+}
+
+const ImprovementConfig_t* FeatureIntroducedBy_(const ImprovementConfig_t& rOrder,
+                                                const ImprovementRegistry& rImprovements)
+{
+    if (rOrder.terraformResult != TerraformResult_t::Place)
+    {
+        return nullptr;
+    }
+    if (rOrder.placesImprovementId.empty())
+    {
+        return &rOrder;
+    }
+    return &rImprovements.Get(rOrder.placesImprovementId);
+}
+
+bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig,
+                       const ImprovementConfig_t* pPlaced, UnitDomain_t domain,
                        const ElevationRulesConfig_t& rRules)
 {
     switch (rConfig.terraformResult)
     {
         case TerraformResult_t::Place:
-            return CanBuildImprovement(rTile, rConfig) && !rTile.HasImprovement(rConfig.id);
+            return pPlaced != nullptr
+                && !rTile.HasImprovement(pPlaced->id)
+                && !SurfaceBlocksPlacement_(rTile, *pPlaced);
         case TerraformResult_t::LevelTerrain:
             return rTile.GetRockiness() == Rockiness_t::Rocky
                 || rTile.GetRockiness() == Rockiness_t::Rolling;
-        case TerraformResult_t::PlantFungus:
-            return !rTile.GetHasFungus();
         case TerraformResult_t::RemoveFungus:
-            return rTile.GetHasFungus();
+            return rTile.HasImprovement(ImprovementIds::k_Fungus);
         case TerraformResult_t::Aquifer:
             return !rTile.GetHasAquifer() && !IsSeaTile_(rTile);
         case TerraformResult_t::RaiseLand:
@@ -106,6 +225,18 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
 }
 
 } // namespace
+
+std::vector<std::string> ImprovementsDestroyedByTerraform(const Tile& rTile,
+                                                         const ImprovementConfig_t& rOrder,
+                                                         const ImprovementRegistry& rImprovements)
+{
+    const ImprovementConfig_t* pIntroduced = FeatureIntroducedBy_(rOrder, rImprovements);
+    if (!pIntroduced)
+    {
+        return {};
+    }
+    return ImprovementsDisplacedBy(rTile, *pIntroduced);
+}
 
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
                               const ElevationRulesConfig_t& rRules)
@@ -169,7 +300,9 @@ bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
     {
         return false;
     }
-    if (!CanApplyMutation_(rTile, rConfig, rUnit.GetDomain(), rRules))
+    const ImprovementConfig_t* pPlaced =
+        FeatureIntroducedBy_(rConfig, rGameState.GetTileEffects().GetImprovements());
+    if (!CanApplyMutation_(rTile, rConfig, pPlaced, rUnit.GetDomain(), rRules))
     {
         return false;
     }
@@ -186,40 +319,48 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
     switch (rConfig.terraformResult)
     {
         case TerraformResult_t::Place:
-            if (!CanBuildImprovement(rTile, rConfig) || rTile.HasImprovement(rConfig.id))
+        {
+            const ImprovementConfig_t* pPlaced =
+                FeatureIntroducedBy_(rConfig, rTileEffects.GetImprovements());
+            if (!pPlaced || SurfaceBlocksPlacement_(rTile, *pPlaced))
             {
                 return false;
             }
-            rTileEffects.AddImprovementWithEffects(rTile, rConfig.id);
-            return true;
+            if (rTile.HasImprovement(pPlaced->id))
+            {
+                return true;
+            }
+            ClearBlockersForPlacement_(rTile, *pPlaced, rTileEffects, rWorldMap);
+            if (SurfaceBlocksPlacement_(rTile, *pPlaced)
+                || RemainingFeaturesBlockPlacement(rTile, *pPlaced, {}))
+            {
+                return false;
+            }
+            rTileEffects.AddImprovementWithEffects(rTile, pPlaced->id);
+            return rTile.HasImprovement(pPlaced->id);
+        }
 
         case TerraformResult_t::LevelTerrain:
             if (rTile.GetRockiness() == Rockiness_t::Rocky)
             {
                 rTile.SetRockiness(Rockiness_t::Rolling);
-                return true;
             }
-            if (rTile.GetRockiness() == Rockiness_t::Rolling)
+            else if (rTile.GetRockiness() == Rockiness_t::Rolling)
             {
                 rTile.SetRockiness(Rockiness_t::Flat);
-                return true;
             }
-            return false;
-
-        case TerraformResult_t::PlantFungus:
-            if (rTile.GetHasFungus())
+            else
             {
                 return false;
             }
-            rTile.SetHasFungus(true);
             return true;
 
         case TerraformResult_t::RemoveFungus:
-            if (!rTile.GetHasFungus())
+            if (!rTile.HasImprovement(ImprovementIds::k_Fungus))
             {
                 return false;
             }
-            rTile.SetHasFungus(false);
+            rTileEffects.RemoveImprovementWithEffects(rTile, std::string(ImprovementIds::k_Fungus));
             return true;
 
         case TerraformResult_t::Aquifer:

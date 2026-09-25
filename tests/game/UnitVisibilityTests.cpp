@@ -43,7 +43,7 @@ TEST_CASE("Fungus grants terrain concealment; Sensor Detect pierces it within ra
     fixture.ctx->AddImprovementWithEffects(fixture.At(6, 4), "Sensor");
     owner.RebuildVisibility();
 
-    fixture.At(8, 4).SetHasFungus(true);
+    fixture.At(8, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& hidden = fixture.MakeUnit(observer, 8, 4, {"test_chassis"});
 
     // Owner sees the tile via Sensor vision and Detects terrain within Chebyshev 2.
@@ -72,7 +72,7 @@ TEST_CASE("Sensor terrain Detect does not reach Chebyshev distance 3",
     fixture.MakeUnit(owner, 6, 4, {"test_chassis"});
     owner.RebuildVisibility();
 
-    fixture.At(7, 4).SetHasFungus(true);
+    fixture.At(7, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& far = fixture.MakeUnit(other, 7, 4, {"test_chassis"});
 
     REQUIRE(owner.GetVisibleMap().IsVisible(7, 4)); // scout vision
@@ -88,7 +88,7 @@ TEST_CASE("Sensor Detect requires territory ownership",
 
     // No base → Sensor tile unowned → Detect applies to nobody.
     fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Sensor");
-    fixture.At(4, 4).SetHasFungus(true);
+    fixture.At(4, 4).AddImprovement(fixture.improvements.Get("Fungus"));
 
     fixture.MakeUnit(other, 3, 4, {"test_chassis"});
     Unit& hidden = fixture.MakeUnit(owner, 4, 4, {"test_chassis"});
@@ -114,7 +114,7 @@ TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change"
     a.RebuildVisibility();
     b.RebuildVisibility();
 
-    fixture.At(5, 6).SetHasFungus(true);
+    fixture.At(5, 6).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& hidden = fixture.MakeUnit(third, 5, 6, {"test_chassis"});
 
     REQUIRE(fixture.map.GetTerritory().GetOwner(5, 4) == a.GetFactionId());
@@ -277,9 +277,9 @@ TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
     fixture.ctx->AddImprovementWithEffects(fixture.At(0, 4), "Sensor");
     owner.RebuildVisibility();
 
-    fixture.At(width - 1, 4).SetHasFungus(true);
+    fixture.At(width - 1, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& hiddenNear = fixture.MakeUnit(other, width - 1, 4, {"test_chassis"});
-    fixture.At(width - 3, 4).SetHasFungus(true);
+    fixture.At(width - 3, 4).AddImprovement(fixture.improvements.Get("Fungus"));
     Unit& hiddenFar = fixture.MakeUnit(other, width - 3, 4, {"test_chassis"});
 
     REQUIRE(owner.GetVisibleMap().IsVisible(width - 1, 4));

@@ -616,13 +616,10 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Continue;
     }
 
-    // Energy was already debited in TryStartTerraform, and the turns are already spent. Every
-    // exit below therefore reports whether the work actually landed instead of completing
-    // silently: the player otherwise pays for a project that mutated nothing — reachable when
-    // another former changes the tile mid-project, or a mod removes the improvement id.
-    //
-    // TODO: report/refund is a rule decision (SMAC: does a pre-empted former get its energy
-    // back?). Until that is settled, the failure is at least visible rather than invisible.
+    // Energy was already debited and the turns are spent. Place clears features that cannot
+    // share the tile, then adds its improvement, so an incompatible feature is not a failed
+    // completion. A false return is a surface the order does not change (a depth band, or the
+    // tile left the improvement's domain).
 
     // Order remains until Execute clears on Complete — safe to read rOrder here.
     const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(rOrder.improvementId);
@@ -646,7 +643,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.improvementId
                   << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()
-                  << ") — the tile likely changed during the project\n";
+                  << ") — the tile's surface will not take it\n";
     }
     return OrderProgress_t::Complete;
 }

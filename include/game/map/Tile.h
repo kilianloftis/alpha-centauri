@@ -12,6 +12,7 @@ namespace ac
 struct ImprovementConfig_t;
 class ImprovementRegistry;
 class Revision;
+class TileChangeListener;
 
 enum class Rockiness_t
 {
@@ -39,8 +40,7 @@ enum class TerrainFeature_t
     Ocean,
     OceanShelf,
     River,
-    Aquifer,
-    Fungus
+    Aquifer
 };
 
 // String ids matching ImprovementConfig_t::id entries in config/improvements.json,
@@ -94,10 +94,6 @@ public:
     void SetHasAquifer(bool bHasAquifer);
     bool GetHasAquifer() const;
 
-    // Fungus (alien vegetation; presence-only for now, spreading is a future enhancement)
-    void SetHasFungus(bool bHasFungus);
-    bool GetHasFungus() const;
-
     // Binds this tile to the improvement registry so terrain enums/bools can be mirrored as
     // non-owning ImprovementConfig_t pointers (see GetTerrainFeatures). Call once after the
     // registry is loaded — TileEffectsContext does this for every map tile. Terrain setters
@@ -107,6 +103,10 @@ public:
     // WorldMap appearance cache (minimap fill colours). Optional — unbound tiles used in unit
     // tests do not notify.
     void BindAppearanceRevision(Revision& rRevision);
+
+    // Optional. Characteristic changes and AddImprovement notify it. Unbound tiles do not.
+    void BindTileChangeListener(TileChangeListener* pListener);
+    void UnbindTileChangeListener(TileChangeListener& rListener);
 
     // Improvements: every non-terrain feature on this tile, held as non-owning pointers into
     // ImprovementRegistry (the same way BuildingManager holds BuildingConfig_t*). This one
@@ -132,8 +132,11 @@ public:
     bool HasFeature(std::string_view featureId) const;
 
 private:
+    friend class TileChangeDeferral;
+
     void RefreshTerrainFeatures_();
     void NotifyAppearanceChanged_();
+    void NotifyTileChanged_(std::string_view keepId);
 
     int m_x;
     int m_y;
@@ -145,13 +148,26 @@ private:
 
     bool m_bHasRiver;
     bool m_bHasAquifer;
-    bool m_bHasFungus;
 
     const ElevationRulesConfig_t* m_pMapRules = nullptr;
     const ImprovementRegistry* m_pImprovements = nullptr;
     Revision* m_pAppearanceRevision = nullptr;
+    TileChangeListener* m_pTileChangeListener = nullptr;
     std::vector<const ImprovementConfig_t*> m_terrainFeatures;
     std::vector<const ImprovementConfig_t*> m_improvements;
+};
+
+// Holds tile-change notifications until the batch finishes, then delivers one per tile.
+// RecomputeRivers and ApplyElevationDelta use it so a half-updated river or slope is not
+// reassessed. Nested deferrals deliver when the outermost one ends.
+class TileChangeDeferral
+{
+public:
+    TileChangeDeferral();
+    ~TileChangeDeferral();
+
+    TileChangeDeferral(const TileChangeDeferral&) = delete;
+    TileChangeDeferral& operator=(const TileChangeDeferral&) = delete;
 };
 
 } // namespace ac

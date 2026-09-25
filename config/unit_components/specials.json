@@ -280,5 +280,26 @@
         "type": "DestroyUnit"
       }
     ]
+  },
+  {
+    "id": "Fungal_Payload",
+    "name": "Fungal Payload",
+    "unit_name": "Fungal",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "FungalBloom",
+        "parameters": {
+          "tiles_stat": "fungal_bloom_tiles"
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
   }
 ]

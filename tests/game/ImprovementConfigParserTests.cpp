@@ -1,6 +1,7 @@
 #include "game/map/ImprovementConfigParser.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -69,6 +70,62 @@ TEST_CASE("ImprovementConfigParser: terraform.result", "[improvements][parser]")
         const auto configs = parser.ParseConfig(path.string());
         REQUIRE(configs.size() == 1);
         CHECK(configs[0].terraformResult == TerraformResult_t::RaiseLand);
+        std::filesystem::remove(path);
+    }
+
+    SECTION("place names another improvement")
+    {
+        const auto path = WriteTempJson("ac_improvement_place_other.json", R"([
+            {
+                "id": "Fungus",
+                "name": "Fungus",
+                "effects": []
+            },
+            {
+                "id": "PlantFungus",
+                "name": "Plant Fungus",
+                "turns_required": 6,
+                "terraform": { "result": "place", "improvement": "Fungus" },
+                "effects": []
+            }
+        ])");
+        ImprovementConfigParser parser;
+        const auto configs = parser.ParseConfig(path.string());
+        REQUIRE(configs.size() == 2);
+        CHECK(configs[1].terraformResult == TerraformResult_t::Place);
+        CHECK(configs[1].placesImprovementId == "Fungus");
+        std::filesystem::remove(path);
+    }
+
+    SECTION("place improvement must exist")
+    {
+        const auto path = WriteTempJson("ac_improvement_place_missing.json", R"([
+            {
+                "id": "PlantFungus",
+                "name": "Plant Fungus",
+                "terraform": { "result": "place", "improvement": "Fungus" },
+                "effects": []
+            }
+        ])");
+        ImprovementConfigParser parser;
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("terraform.improvement"));
+        std::filesystem::remove(path);
+    }
+
+    SECTION("improvement is only valid for place")
+    {
+        const auto path = WriteTempJson("ac_improvement_place_wrong_result.json", R"([
+            {
+                "id": "RemoveFungus",
+                "name": "Remove Fungus",
+                "terraform": { "result": "remove_fungus", "improvement": "Fungus" },
+                "effects": []
+            }
+        ])");
+        ImprovementConfigParser parser;
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("only valid when result is place"));
         std::filesystem::remove(path);
     }
 

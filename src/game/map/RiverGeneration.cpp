@@ -100,26 +100,43 @@ void TraceRiverFrom(Tile& rOrigin, WorldMap& rWorld)
     }
 }
 
-void RecomputeRivers(WorldMap& rWorld)
+std::vector<Tile*> RecomputeRivers(WorldMap& rWorld)
 {
-    std::vector<Tile*> aquifers;
+    TileChangeDeferral defer;
+
+    std::vector<Tile*> tiles;
+    std::vector<char> hadRiver;
+    tiles.reserve(rWorld.GetTiles().size());
+    hadRiver.reserve(rWorld.GetTiles().size());
     for (auto& pTile : rWorld.GetTiles())
     {
         if (!pTile)
         {
             continue;
         }
+        tiles.push_back(pTile.get());
+        hadRiver.push_back(pTile->GetHasRiver() ? 1 : 0);
         pTile->SetHasRiver(false);
+    }
+
+    for (Tile* pTile : tiles)
+    {
         if (pTile->GetHasAquifer())
         {
-            aquifers.push_back(pTile.get());
+            TraceRiverFrom(*pTile, rWorld);
         }
     }
 
-    for (Tile* pAquifer : aquifers)
+    std::vector<Tile*> changed;
+    for (size_t i = 0; i < tiles.size(); ++i)
     {
-        TraceRiverFrom(*pAquifer, rWorld);
+        const bool bHasRiver = tiles[i]->GetHasRiver();
+        if (bHasRiver != (hadRiver[i] != 0))
+        {
+            changed.push_back(tiles[i]);
+        }
     }
+    return changed;
 }
 
 } // namespace ac

@@ -802,7 +802,8 @@
     "turns_required": 6,
     "energy_cost": 0,
     "terraform": {
-      "result": "plant_fungus"
+      "result": "place",
+      "improvement": "Fungus"
     },
     "effects": []
   },
