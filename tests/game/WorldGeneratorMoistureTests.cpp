@@ -36,7 +36,6 @@ TEST_CASE("WorldGenDecorationConfigParser loads moisture knobs from decoration.j
     CHECK(m.tropicalHalfWidth == Catch::Approx(0.35f));
     CHECK(m.orographicStrength == Catch::Approx(0.45f));
     CHECK(m.orographicElevScale == Catch::Approx(1000.0f));
-    CHECK(m.orographicMaxElev == Catch::Approx(4000.0f));
     CHECK(m.aridThreshold == Catch::Approx(0.4f));
     CHECK(m.moistThreshold == Catch::Approx(0.7f));
 }
@@ -101,17 +100,36 @@ TEST_CASE("OrographicMoistureBias: western face wetter than eastern face of a ri
     constexpr int peak = 3000;
     constexpr int mid = 2000;
     constexpr int low = 500;
+    constexpr int maxElev = 3500;
 
-    const float westFace = OrographicMoistureBias(mid, low, peak, cfg);
-    const float eastFace = OrographicMoistureBias(mid, peak, low, cfg);
-    const float flatLow = OrographicMoistureBias(100, 100, 100, cfg);
-    const float water = OrographicMoistureBias(-50, 0, 1000, cfg);
+    const float westFace = OrographicMoistureBias(mid, low, peak, cfg, maxElev);
+    const float eastFace = OrographicMoistureBias(mid, peak, low, cfg, maxElev);
+    const float flatLow = OrographicMoistureBias(100, 100, 100, cfg, maxElev);
+    const float water = OrographicMoistureBias(-50, 0, 1000, cfg, maxElev);
 
     CHECK(westFace > 0.0f);
     CHECK(eastFace < 0.0f);
     CHECK(westFace > eastFace);
     CHECK(flatLow == Catch::Approx(0.0f));
     CHECK(water == Catch::Approx(0.0f));
+}
+
+TEST_CASE("OrographicMoistureBias reaches full strength at the preset elevation ceiling",
+          "[worldgen][moisture]")
+{
+    const MoistureDecorationConfig_t cfg = DefaultMoisture_();
+    constexpr int maxElev = 3500;
+    const int saturatedEast = static_cast<int>(cfg.orographicElevScale);
+
+    const float atCeiling = OrographicMoistureBias(maxElev, 0, saturatedEast, cfg, maxElev);
+    const float aboveCeiling =
+        OrographicMoistureBias(maxElev + 500, 0, saturatedEast, cfg, maxElev);
+    const float halfHeight = OrographicMoistureBias(maxElev / 2, 0, saturatedEast, cfg, maxElev);
+
+    CHECK(atCeiling == Catch::Approx(cfg.orographicStrength));
+    CHECK(aboveCeiling == Catch::Approx(cfg.orographicStrength));
+    CHECK(halfHeight == Catch::Approx(cfg.orographicStrength * 0.5f));
+    CHECK_THROWS_AS(OrographicMoistureBias(100, 0, saturatedEast, cfg, 0), std::invalid_argument);
 }
 
 TEST_CASE("QuantizeMoistureScore maps bands to Arid/Moist/Wet",

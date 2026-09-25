@@ -17,7 +17,6 @@ struct MoistureDecorationConfig_t
 
     float orographicStrength = 0.45f;
     float orographicElevScale = 1000.0f;
-    float orographicMaxElev = 4000.0f;
 
     float aridThreshold = 0.40f;
     float moistThreshold = 0.70f;

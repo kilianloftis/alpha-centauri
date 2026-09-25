@@ -38,8 +38,6 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
     const nlohmann::json json = nlohmann::json::parse(file);
 
     ElevationRulesConfig_t config;
-    config.minElevationMeters = RequireWholeMeters_(json, "min_elevation_meters");
-    config.maxElevationMeters = RequireWholeMeters_(json, "max_elevation_meters");
     config.oceanLevelMeters = RequireWholeMeters_(json, "ocean_level_meters");
     config.oceanShelfMeters = RequireWholeMeters_(json, "ocean_shelf_meters");
     config.levelMinMeters = RequireWholeMeters_(json, "level_min_meters");
@@ -49,30 +47,12 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
     config.spreadAltitudeLimitMeters =
         RequireWholeMeters_(json, "spread_altitude_limit_meters");
 
-    if (config.minElevationMeters >= config.maxElevationMeters)
+    if (config.oceanShelfMeters >= config.oceanLevelMeters)
     {
         throw std::runtime_error(
-            "map_rules 'min_elevation_meters' must be < 'max_elevation_meters', got "
-            + std::to_string(config.minElevationMeters) + " >= "
-            + std::to_string(config.maxElevationMeters));
-    }
-    if (config.oceanLevelMeters <= config.minElevationMeters
-        || config.oceanLevelMeters > config.maxElevationMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'ocean_level_meters' must be inside ("
-            + std::to_string(config.minElevationMeters) + ", "
-            + std::to_string(config.maxElevationMeters) + "], got "
+            "map_rules 'ocean_shelf_meters' must be < 'ocean_level_meters', got "
+            + std::to_string(config.oceanShelfMeters) + " >= "
             + std::to_string(config.oceanLevelMeters));
-    }
-    if (config.oceanShelfMeters < config.minElevationMeters
-        || config.oceanShelfMeters >= config.oceanLevelMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'ocean_shelf_meters' must be inside ["
-            + std::to_string(config.minElevationMeters) + ", "
-            + std::to_string(config.oceanLevelMeters) + "), got "
-            + std::to_string(config.oceanShelfMeters));
     }
     if (config.levelMinMeters <= 0)
     {
@@ -97,14 +77,12 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
         throw std::runtime_error("map_rules 'reference_level_meters' must be > 0, got "
                                  + std::to_string(config.referenceLevelMeters));
     }
-    if (config.spreadAltitudeLimitMeters < config.oceanLevelMeters
-        || config.spreadAltitudeLimitMeters > config.maxElevationMeters)
+    if (config.spreadAltitudeLimitMeters < config.oceanLevelMeters)
     {
         throw std::runtime_error(
-            "map_rules 'spread_altitude_limit_meters' must be inside ["
-            + std::to_string(config.oceanLevelMeters) + ", "
-            + std::to_string(config.maxElevationMeters) + "], got "
-            + std::to_string(config.spreadAltitudeLimitMeters));
+            "map_rules 'spread_altitude_limit_meters' must be >= 'ocean_level_meters', got "
+            + std::to_string(config.spreadAltitudeLimitMeters) + " < "
+            + std::to_string(config.oceanLevelMeters));
     }
     return config;
 }

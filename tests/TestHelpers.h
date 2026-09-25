@@ -2,8 +2,12 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapGenerationConfig.h"
+#include "game/map/WorldGenPresetConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
+
+#include <stdexcept>
 
 #include <deque>
 #include <optional>
@@ -26,11 +30,29 @@ inline std::string FixturePath(const std::string& rName)
     return std::string(AC_TEST_FIXTURES_DIR) + "/" + rName;
 }
 
-// Shipping map domain from tests/fixtures/map_rules.json. Address is stable for Tile::BindMapRules.
+// Map-rules ocean line plus the session-default preset's elevation range.
+// Address is stable for Tile::BindMapRules.
+inline ac::ElevationRulesConfig_t LoadTestMapRules()
+{
+    ac::ElevationRulesConfig_t rules =
+        ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    const std::string presetId = ac::MapGenerationConfig_t{}.presetId;
+    const std::vector<ac::WorldGenPresetConfig_t> presets =
+        ac::WorldGenPresetConfigParser{}.ParseConfig(std::string(AC_CONFIG_DIR)
+                                                     + "/worldGen/presets.json");
+    const auto it = std::ranges::find_if(
+        presets, [&](const ac::WorldGenPresetConfig_t& rPreset) { return rPreset.id == presetId; });
+    if (it == presets.end())
+    {
+        throw std::runtime_error("config/worldGen/presets.json has no '" + presetId + "' preset");
+    }
+    ac::WorldGenPresetConfigParser::ApplyElevationRange(rules, *it);
+    return rules;
+}
+
 inline const ac::ElevationRulesConfig_t& TestMapRules()
 {
-    static const ac::ElevationRulesConfig_t rules =
-        ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    static const ac::ElevationRulesConfig_t rules = LoadTestMapRules();
     return rules;
 }
 

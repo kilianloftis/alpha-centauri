@@ -1,6 +1,4 @@
 {
-  "min_elevation_meters": -4000,
-  "max_elevation_meters": 3500,
   "ocean_level_meters": 0,
   "ocean_shelf_meters": -2000,
   "level_min_meters": 500,

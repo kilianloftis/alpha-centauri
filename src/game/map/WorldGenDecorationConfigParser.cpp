@@ -25,7 +25,6 @@ MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
     config.tropicalHalfWidth = rJson.value("tropical_half_width", config.tropicalHalfWidth);
     config.orographicStrength = rJson.value("orographic_strength", config.orographicStrength);
     config.orographicElevScale = rJson.value("orographic_elev_scale", config.orographicElevScale);
-    config.orographicMaxElev = rJson.value("orographic_max_elev", config.orographicMaxElev);
     config.aridThreshold = rJson.value("arid_threshold", config.aridThreshold);
     config.moistThreshold = rJson.value("moist_threshold", config.moistThreshold);
 
@@ -42,10 +41,10 @@ MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
         throw std::runtime_error(
             "world gen decoration moisture.tropical_half_width must be in (0, 1]");
     }
-    if (config.orographicElevScale <= 0.0f || config.orographicMaxElev <= 0.0f)
+    if (config.orographicElevScale <= 0.0f)
     {
         throw std::runtime_error(
-            "world gen decoration moisture orographic elevation scales must be > 0");
+            "world gen decoration moisture.orographic_elev_scale must be > 0");
     }
     if (config.aridThreshold >= config.moistThreshold)
     {

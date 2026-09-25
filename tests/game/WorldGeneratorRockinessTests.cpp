@@ -72,7 +72,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when rockiness object is missin
             "coastal_peak_bonus": 0.12, "coastal_radius": 2,
             "tropical_peak_bonus": 0.1, "tropical_half_width": 0.35,
             "orographic_strength": 0.45, "orographic_elev_scale": 1000.0,
-            "orographic_max_elev": 4000.0, "arid_threshold": 0.4,
+            "arid_threshold": 0.4,
             "moist_threshold": 0.7 } })" << '\n';
     }
 

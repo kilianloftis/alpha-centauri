@@ -9,6 +9,21 @@
 namespace ac
 {
 
+namespace
+{
+
+int RequirePresetMeters_(const nlohmann::json& rJson, const char* pKey, const std::string& rPresetId)
+{
+    if (!rJson.contains(pKey) || !rJson.at(pKey).is_number_integer())
+    {
+        throw std::runtime_error("World gen preset '" + rPresetId + "' requires integer '"
+                                 + pKey + "'");
+    }
+    return rJson.at(pKey).get<int>();
+}
+
+} // namespace
+
 std::vector<WorldGenPresetConfig_t> WorldGenPresetConfigParser::ParseConfig(
     const std::string& configPath)
 {
@@ -34,8 +49,15 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
     config.centerBias = presetJson.value("center_bias", config.centerBias);
     config.edgeFalloff = presetJson.value("edge_falloff", config.edgeFalloff);
 
-    config.minElevation = presetJson.value("min_elevation", config.minElevation);
-    config.maxElevation = presetJson.value("max_elevation", config.maxElevation);
+    config.minElevation = RequirePresetMeters_(presetJson, "min_elevation", config.id);
+    config.maxElevation = RequirePresetMeters_(presetJson, "max_elevation", config.id);
+    if (config.minElevation >= config.maxElevation)
+    {
+        throw std::runtime_error("World gen preset '" + config.id
+                                 + "' min_elevation must be < max_elevation, got "
+                                 + std::to_string(config.minElevation) + " >= "
+                                 + std::to_string(config.maxElevation));
+    }
 
     if (config.octaves < 1)
     {
@@ -48,6 +70,13 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
 void WorldGenPresetConfigParser::ValidateAgainstMapRules(
     const WorldGenPresetConfig_t& rPreset, const ElevationRulesConfig_t& rMapRules)
 {
+    if (rPreset.minElevation >= rPreset.maxElevation)
+    {
+        throw std::runtime_error("World gen preset '" + rPreset.id
+                                 + "' min_elevation must be < max_elevation, got "
+                                 + std::to_string(rPreset.minElevation) + " >= "
+                                 + std::to_string(rPreset.maxElevation));
+    }
     if (rPreset.minElevation >= rMapRules.oceanLevelMeters)
     {
         throw std::runtime_error("World gen preset '" + rPreset.id
@@ -60,16 +89,27 @@ void WorldGenPresetConfigParser::ValidateAgainstMapRules(
                                  + "' max_elevation must be >= map ocean_level_meters ("
                                  + std::to_string(rMapRules.oceanLevelMeters) + ")");
     }
-    if (rPreset.minElevation < rMapRules.minElevationMeters
-        || rPreset.maxElevation > rMapRules.maxElevationMeters)
+    if (rMapRules.oceanShelfMeters < rPreset.minElevation)
+    {
+        throw std::runtime_error("World gen preset '" + rPreset.id
+                                 + "' min_elevation must be <= map ocean_shelf_meters ("
+                                 + std::to_string(rMapRules.oceanShelfMeters) + ")");
+    }
+    if (rPreset.maxElevation < rMapRules.spreadAltitudeLimitMeters)
     {
         throw std::runtime_error(
-            "World gen preset '" + rPreset.id + "' elevation range ["
-            + std::to_string(rPreset.minElevation) + ", "
-            + std::to_string(rPreset.maxElevation) + "] is outside map_rules ["
-            + std::to_string(rMapRules.minElevationMeters) + ", "
-            + std::to_string(rMapRules.maxElevationMeters) + "]");
+            "World gen preset '" + rPreset.id
+            + "' max_elevation must be >= map spread_altitude_limit_meters ("
+            + std::to_string(rMapRules.spreadAltitudeLimitMeters) + ")");
     }
+}
+
+void WorldGenPresetConfigParser::ApplyElevationRange(ElevationRulesConfig_t& rRules,
+                                                     const WorldGenPresetConfig_t& rPreset)
+{
+    ValidateAgainstMapRules(rPreset, rRules);
+    rRules.minElevationMeters = rPreset.minElevation;
+    rRules.maxElevationMeters = rPreset.maxElevation;
 }
 
 WorldGenPreset_t WorldGenPresetConfigParser::ParseType_(const std::string& typeStr) const

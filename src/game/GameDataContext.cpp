@@ -171,8 +171,14 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         }
         LandmarkConfigParser landmarkParser;
         rData.worldGenLandmarks =
-            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, rData.elevationRules,
-                                       improvementIds);
+            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, improvementIds);
+        for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
+        {
+            for (const LandmarkConfig_t& rLandmark : rData.worldGenLandmarks)
+            {
+                LandmarkConfigParser::ValidateSculptAgainstPreset(rLandmark, rPreset);
+            }
+        }
     }
 
     TileYieldRulesConfigParser tileYieldRulesParser;

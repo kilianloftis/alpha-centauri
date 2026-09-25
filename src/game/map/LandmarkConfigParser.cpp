@@ -14,8 +14,7 @@ namespace ac
 namespace
 {
 
-LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId,
-                               const ElevationRulesConfig_t& rMapRules)
+LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId)
 {
     LandmarkSculpt_t sculpt;
     if (!rShapeJson.contains("sculpt"))
@@ -43,21 +42,10 @@ LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::strin
         throw std::runtime_error("Landmark '" + landmarkId
                                  + "' sculpt rocky_core_radius must be >= 0");
     }
-    if (sculpt.baseElevation < rMapRules.minElevationMeters
-        || sculpt.peakElevation > rMapRules.maxElevationMeters)
-    {
-        throw std::runtime_error(
-            "Landmark '" + landmarkId + "' sculpt elevations ["
-            + std::to_string(sculpt.baseElevation) + ", "
-            + std::to_string(sculpt.peakElevation) + "] are outside map_rules ["
-            + std::to_string(rMapRules.minElevationMeters) + ", "
-            + std::to_string(rMapRules.maxElevationMeters) + "]");
-    }
     return sculpt;
 }
 
-LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId,
-                             const ElevationRulesConfig_t& rMapRules)
+LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId)
 {
     if (!rJson.is_object() || !rJson.contains("kind"))
     {
@@ -124,7 +112,7 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
             throw std::runtime_error(
                 "Landmark '" + landmarkId + "' sculptor radius must be >= 1");
         }
-        shape.sculpt = ParseSculpt_(rJson, landmarkId, rMapRules);
+        shape.sculpt = ParseSculpt_(rJson, landmarkId);
     }
     else
     {
@@ -133,8 +121,7 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
     return shape;
 }
 
-LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson,
-                                const ElevationRulesConfig_t& rMapRules)
+LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
 {
     LandmarkConfig_t config;
     config.id = ConfigFields::ParseId(rJson);
@@ -160,7 +147,7 @@ LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson,
     {
         throw std::runtime_error("Landmark '" + config.id + "' missing required 'shape'");
     }
-    config.shape = ParseShape_(rJson.at("shape"), config.id, rMapRules);
+    config.shape = ParseShape_(rJson.at("shape"), config.id);
     return config;
 }
 
@@ -168,12 +155,11 @@ LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson,
 
 std::vector<LandmarkConfig_t> LandmarkConfigParser::ParseConfig(
     const std::string& configPath,
-    const ElevationRulesConfig_t& rMapRules,
     const std::vector<std::string>& rKnownImprovementIds)
 {
     auto landmarks = JsonConfigLoader::LoadFile<LandmarkConfig_t>(
         configPath, "landmark",
-        [&rMapRules](const nlohmann::json& rJson) { return ParseLandmark_(rJson, rMapRules); });
+        [](const nlohmann::json& rJson) { return ParseLandmark_(rJson); });
 
     if (!rKnownImprovementIds.empty())
     {
@@ -191,6 +177,26 @@ std::vector<LandmarkConfig_t> LandmarkConfigParser::ParseConfig(
     }
 
     return landmarks;
+}
+
+void LandmarkConfigParser::ValidateSculptAgainstPreset(const LandmarkConfig_t& rLandmark,
+                                                       const WorldGenPresetConfig_t& rPreset)
+{
+    if (rLandmark.shape.kind != LandmarkShapeKind_t::Sculptor)
+    {
+        return;
+    }
+
+    const LandmarkSculpt_t& rSculpt = rLandmark.shape.sculpt;
+    if (rSculpt.baseElevation < rPreset.minElevation || rSculpt.peakElevation > rPreset.maxElevation)
+    {
+        throw std::runtime_error(
+            "Landmark '" + rLandmark.id + "' sculpt elevations ["
+            + std::to_string(rSculpt.baseElevation) + ", "
+            + std::to_string(rSculpt.peakElevation) + "] are outside preset '"
+            + rPreset.id + "' [" + std::to_string(rPreset.minElevation) + ", "
+            + std::to_string(rPreset.maxElevation) + "]");
+    }
 }
 
 } // namespace ac

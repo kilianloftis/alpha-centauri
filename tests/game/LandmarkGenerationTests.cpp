@@ -64,7 +64,7 @@ TEST_CASE("LandmarkConfigParser loads landmarks.json and validates improvement i
     }
 
     LandmarkConfigParser parser;
-    const auto landmarks = parser.ParseConfig(path.string(), actest::TestMapRules(), ids);
+    const auto landmarks = parser.ParseConfig(path.string(), ids);
     REQUIRE(landmarks.size() == 1);
     CHECK(landmarks[0].improvementId == "Nutrients");
     CHECK(landmarks[0].domain == LandmarkDomain_t::Land);
@@ -89,7 +89,7 @@ TEST_CASE("LandmarkConfigParser loads production landmarks.json against producti
 
     LandmarkConfigParser parser;
     const auto landmarks =
-        parser.ParseConfig(configRoot + "/worldGen/landmarks.json", actest::TestMapRules(), ids);
+        parser.ParseConfig(configRoot + "/worldGen/landmarks.json", ids);
     CHECK_FALSE(landmarks.empty());
     bool foundFossil = false;
     for (const LandmarkConfig_t& rLandmark : landmarks)
@@ -114,7 +114,7 @@ TEST_CASE("LandmarkConfigParser throws on unknown improvement_id", "[worldgen][l
     }
 
     LandmarkConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), actest::TestMapRules(), {"Nutrients"}),
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), {"Nutrients"}),
                       Catch::Matchers::ContainsSubstring("NoSuchThing"));
     std::filesystem::remove(path);
 }

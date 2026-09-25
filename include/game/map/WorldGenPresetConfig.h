@@ -34,8 +34,9 @@ struct WorldGenPresetConfig_t
     float centerBias = 0.0f;
     float edgeFalloff = 0.0f;
 
-    // Elevation remap of final noise to meters. Must lie inside map_rules min/max,
-    // with min below ocean level and max at or above it.
+    // Inclusive storage range for a world generated from this preset, in meters.
+    // Min is below ocean level; max is at or above it, and the range covers the
+    // ocean shelf and the spread-altitude limit from map_rules.json.
     int minElevation = -4000;
     int maxElevation = 4000;
 };

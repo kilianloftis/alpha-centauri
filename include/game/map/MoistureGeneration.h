@@ -6,6 +6,7 @@
 #include "game/map/WorldMap.h"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace ac
 {
@@ -62,12 +63,18 @@ inline float TropicalMoistureBonus(int y, int height, const MoistureDecorationCo
 }
 
 // Western slopes (rising toward the east) are wetter; eastern slopes more arid.
-// Scaled by local elevation so mountain faces matter more than flat plains. Water → 0.
+// Elevation weight is local meters / the preset max, so a legal peak reaches full strength.
+// Water → 0.
 inline float OrographicMoistureBias(int localElev,
                                     int elevWest,
                                     int elevEast,
-                                    const MoistureDecorationConfig_t& rConfig)
+                                    const MoistureDecorationConfig_t& rConfig,
+                                    int maxElevationMeters)
 {
+    if (maxElevationMeters <= 0)
+    {
+        throw std::invalid_argument("orographic moisture requires a preset max_elevation > 0");
+    }
     if (localElev < 0)
     {
         return 0.0f;
@@ -76,8 +83,8 @@ inline float OrographicMoistureBias(int localElev,
     const float grad = static_cast<float>(elevEast - elevWest);
     const float clampedGrad =
         std::clamp(grad / rConfig.orographicElevScale, -1.0f, 1.0f);
-    const float elevWeight =
-        std::clamp(static_cast<float>(localElev) / rConfig.orographicMaxElev, 0.0f, 1.0f);
+    const float elevWeight = std::clamp(
+        static_cast<float>(localElev) / static_cast<float>(maxElevationMeters), 0.0f, 1.0f);
     return rConfig.orographicStrength * clampedGrad * elevWeight;
 }
 

@@ -3,6 +3,7 @@
 
 #include "game/map/ElevationChange.h"
 #include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/WorldGenPresetConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/CombatResolver.h"
@@ -115,8 +116,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         std::filesystem::temp_directory_path() / "ac_bad_elevation_rules.json";
 
     WriteTempRules_(path, R"({
-        "min_elevation_meters": -4000,
-        "max_elevation_meters": 4000,
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
@@ -128,8 +127,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
-        "min_elevation_meters": -4000,
-        "max_elevation_meters": 4000,
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 1500,
@@ -142,8 +139,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
                       ContainsSubstring("level_max_meters"));
 
     WriteTempRules_(path, R"({
-        "min_elevation_meters": -4000,
-        "max_elevation_meters": 4000,
         "ocean_level_meters": 0,
         "ocean_shelf_meters": 0,
         "level_min_meters": 500,
@@ -156,8 +151,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
                       ContainsSubstring("ocean_shelf_meters"));
 
     WriteTempRules_(path, R"({
-        "min_elevation_meters": -4000,
-        "max_elevation_meters": 4000,
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
@@ -170,8 +163,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
-        "min_elevation_meters": -4000,
-        "max_elevation_meters": 4000,
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
@@ -187,8 +178,8 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
 
     const ElevationRulesConfig_t rules =
         ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
-    CHECK(rules.minElevationMeters == -4000);
-    CHECK(rules.maxElevationMeters == 4000);
+    CHECK(rules.minElevationMeters == 0);
+    CHECK(rules.maxElevationMeters == 0);
     CHECK(rules.oceanLevelMeters == 0);
     CHECK(rules.oceanShelfMeters == -2000);
     CHECK(rules.levelMinMeters == 500);
@@ -196,6 +187,29 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
     CHECK(rules.maxAdjacentDifferenceMeters == 1500);
     CHECK(rules.referenceLevelMeters == 1000);
     CHECK(rules.spreadAltitudeLimitMeters == 1000);
+}
+
+TEST_CASE("A preset's elevation range is the world storage range", "[map][elevation][worldgen]")
+{
+    ElevationRulesConfig_t rules =
+        ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    WorldGenPresetConfig_t preset;
+    preset.id = "highlands";
+    preset.minElevation = -3000;
+    preset.maxElevation = 2500;
+
+    WorldGenPresetConfigParser::ApplyElevationRange(rules, preset);
+    CHECK(rules.minElevationMeters == -3000);
+    CHECK(rules.maxElevationMeters == 2500);
+
+    preset.maxElevation = 500;
+    CHECK_THROWS_WITH(WorldGenPresetConfigParser::ApplyElevationRange(rules, preset),
+                      ContainsSubstring("spread_altitude_limit_meters"));
+
+    preset.maxElevation = 2500;
+    preset.minElevation = -1000;
+    CHECK_THROWS_WITH(WorldGenPresetConfigParser::ApplyElevationRange(rules, preset),
+                      ContainsSubstring("ocean_shelf_meters"));
 }
 
 TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][elevation]")

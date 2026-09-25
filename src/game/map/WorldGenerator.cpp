@@ -1,4 +1,5 @@
 #include "game/map/WorldGenerator.h"
+#include "game/map/WorldGenPresetConfigParser.h"
 #include "game/map/FbmNoise.h"
 #include "game/map/FungusGeneration.h"
 #include "game/map/TileBonusGeneration.h"
@@ -45,7 +46,9 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 {
     m_rng.seed(seed);
 
-    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rMapRules);
+    ElevationRulesConfig_t rules = rMapRules;
+    WorldGenPresetConfigParser::ApplyElevationRange(rules, rPreset);
+    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules);
 
     // Bound before any stage runs: CanBuildImprovement reads a tile's terrain-feature configs
     // to enforce the incumbent side of `excludes`, and those are empty until binding. An
@@ -63,7 +66,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     // against - moisture ids are themselves CanBuildImprovement features - so the resolution
     // needs a rule, not a reorder.
     GenerateElevation_(*pWorld, rConfig, rPreset);
-    GenerateMoisture_(*pWorld, rDecoration.moisture);
+    GenerateMoisture_(*pWorld, rDecoration.moisture, rules.maxElevationMeters);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     GenerateFungus_(*pWorld, rDecoration.fungus);
     GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
@@ -206,7 +209,8 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
 }
 
 void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
-                                       const MoistureDecorationConfig_t& rMoisture)
+                                       const MoistureDecorationConfig_t& rMoisture,
+                                       int maxElevationMeters)
 {
     const int width = rWorld.GetWidth();
     const int height = rWorld.GetHeight();
@@ -234,7 +238,7 @@ void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
                 const int elevWest = pWest ? pWest->GetElevation() : pTile->GetElevation();
                 const int elevEast = pEast ? pEast->GetElevation() : pTile->GetElevation();
                 score += moisture_gen::OrographicMoistureBias(
-                    pTile->GetElevation(), elevWest, elevEast, rMoisture);
+                    pTile->GetElevation(), elevWest, elevEast, rMoisture, maxElevationMeters);
             }
 
             const Moisture_t moisture = moisture_gen::QuantizeMoistureScore(score, rMoisture);

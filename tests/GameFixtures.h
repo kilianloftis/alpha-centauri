@@ -156,8 +156,7 @@ struct WorldFixture
     // diagnostic. A fixture that diverges from Engine is not a fixture.
     static const ac::ElevationRulesConfig_t& LoadMapRules(ac::GameDataContext& rContext)
     {
-        rContext.elevationRules = ac::ElevationRulesConfigParser{}.ParseConfig(
-            FixturePath("map_rules.json"));
+        rContext.elevationRules = LoadTestMapRules();
         return rContext.elevationRules;
     }
 

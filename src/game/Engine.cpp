@@ -43,6 +43,7 @@
 #include "game/map/MapGenerationConfig.h"
 #include "game/map/WorldGenPresetRegistry.h"
 #include "game/map/WorldGenerator.h"
+#include "game/map/WorldGenPresetConfigParser.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/InteractionPresenter.h"
@@ -226,6 +227,7 @@ void Engine::StartNewGame_()
     WorldGenerator worldGen;
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
+    WorldGenPresetConfigParser::ApplyElevationRange(m_gameDataContext->elevationRules, rPreset);
     m_pGameState = std::make_unique<GameState>(
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
