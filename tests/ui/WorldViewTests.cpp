@@ -5,6 +5,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/map/Tile.h"
@@ -16,8 +17,10 @@
 #include "ui/IGameView.h"
 #include "ui/UIElement.h"
 #include "ui/style/UiStyle.h"
-#include "ui/world/WorldView.h"
 #include "ui/world/AirdropFailMessages.h"
+#include "ui/world/MapViewport.h"
+#include "ui/world/UnitMarkerRenderer.h"
+#include "ui/world/WorldView.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -25,6 +28,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 using namespace ac;
@@ -34,7 +38,7 @@ using actest::ViewFixture;
 namespace
 {
 
-Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,
+Unit& MakeUnit_(ViewFixture& rFixture, Faction& rOwner, int x, int y, BaseManager* pHome,
                 const std::vector<std::string>& rComponentIds,
                 std::deque<UnitDesign>& rDesigns)
 {
@@ -56,9 +60,16 @@ Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,
 
     Tile* pTile = rFixture.pState->GetWorldMap().GetTile(x, y);
     REQUIRE(pTile);
-    return rFixture.pPlayer->GetUnitManager().CreateUnit(
+    return rOwner.GetUnitManager().CreateUnit(
         rFixture.pState->AllocateUnitId(), rDesigns.back(),
         rFixture.pState->GetWorldMap().GetUnitPositions(), *pTile, pHome);
+}
+
+Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,
+                const std::vector<std::string>& rComponentIds,
+                std::deque<UnitDesign>& rDesigns)
+{
+    return MakeUnit_(rFixture, *rFixture.pPlayer, x, y, pHome, rComponentIds, rDesigns);
 }
 
 Unit& MakeGarrison_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,
@@ -322,6 +333,41 @@ TEST_CASE("Self Destruct explains that it is not implemented and leaves the unit
     CHECK(fixture.graphics.AnyTextContaining("Self Destruct is not implemented."));
     CHECK(UnitStillLive_(*fixture.pPlayer, unitId));
     CHECK(rBase.GetProduction().GetMineralStockpile() == 0);
+}
+
+TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui][world]")
+{
+    // Declared first so ~Faction runs while this config is still alive.
+    FactionConfig_t enemyDefinition;
+    ViewFixture fixture;
+    std::deque<UnitDesign> designs;
+    MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis"}, designs);
+
+    enemyDefinition = fixture.factionDefinition;
+    enemyDefinition.id = "enemy_faction";
+    enemyDefinition.identity.name = "Enemy";
+    Faction& enemy = fixture.pState->AddFaction(std::make_unique<Faction>(
+        fixture.pState->AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
+        fixture.pState->GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
+    Unit& shrouded = MakeUnit_(fixture, enemy, 2, 0, nullptr, {"test_chassis"}, designs);
+    fixture.pPlayer->RebuildVisibility();
+    CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.pState->GetTileEffects()));
+
+    const WindowLayout_t layout = ViewFixture::FullScreen();
+    MapViewport viewport(fixture.pState->GetWorldMap(), layout, 40.0f);
+    UnitMarkerRenderer markers;
+    markers.Render(fixture.graphics, *fixture.pState, viewport);
+    CHECK_FALSE(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+
+    const std::unordered_set<UnitId_t> playback{shrouded.GetUnitId()};
+    markers.SetPlaybackVisibleUnits(&playback);
+    markers.Render(fixture.graphics, *fixture.pState, viewport);
+    CHECK(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+
+    markers.SetPlaybackVisibleUnits(nullptr);
+    markers.Render(fixture.graphics, *fixture.pState, viewport);
+    CHECK_FALSE(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+    CHECK_FALSE(fixture.pPlayer->GetRevealedUnits().IsRevealed(shrouded));
 }
 
 TEST_CASE("AirdropFailReasonMessage covers interdiction and occupation denies",

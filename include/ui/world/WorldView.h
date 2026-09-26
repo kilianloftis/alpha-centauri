@@ -11,6 +11,8 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -97,6 +99,17 @@ private:
     bool PlayerUnitsNeedOrders_() const;
     static bool UnitRequiresOrders_(const Unit& rUnit);
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
+    void TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
+    struct BombardPlayback_t
+    {
+        std::vector<CombatResult_t> combats;
+        std::unordered_map<UnitId_t, std::string> names;
+        std::unordered_set<UnitId_t> playbackUnitIds;
+        const Tile* pAttackerTile = nullptr;
+        const Tile* pTargetTile = nullptr;
+        std::string attackerName;
+    };
+    void ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback, size_t index);
     void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
     void OpenDisbandMenu_(Unit& rUnit);

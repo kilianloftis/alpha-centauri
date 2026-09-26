@@ -72,6 +72,8 @@ enum class StatId_t
     // Percent of max HP applied as flat landing damage after an airdrop (skipped on
     // airdrop_launch pads). Drop Pods baseline; reactors may Add further.
     AirdropLandingDamage,
+    // Chebyshev bombard range from the firing tile. 0 = cannot fire.
+    BombardRange,
     CargoCapacity,
     DifficultTerrainCost,
     // Ceiling on tile entry price. JSON amount is a move-point rational ("1/3", 1, 0);
@@ -197,6 +199,12 @@ enum class StatId_t
     // mean what a modder expects; use Add). Clamped against the eligible count.
     CaptureFacilitiesDestroyedMaxPercent,
 
+    // Floor for an artillery strike, as percent points of the defender's integer hit_points
+    // (Additive — the value is already a percent, so AddPercent is rejected). Tile domain:
+    // world_rules MinClamp is the open-terrain floor; Base and Bunker MinClamp higher.
+    // The strike site ceils hit_points * this / 100. Highest MinClamp wins.
+    BombardMinHpPercent,
+
     // Population removed when a base is captured by a same-species faction (Additive).
     // base_conquest.json supplies the baseline Add. Independent of LastDefenderPopLoss —
     // nothing in the shipping config modifies it. Floored at 0 at the resolve site.
@@ -268,6 +276,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
+        case StatId_t::BombardRange:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -286,6 +295,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ConqueredDroneCap:
         case StatId_t::CaptureFacilitiesDestroyedMin:
         case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
+        case StatId_t::BombardMinHpPercent:
         case StatId_t::TechCostDiff:
         case StatId_t::SizeFreeDrones:
         case StatId_t::CouncilVotes:
@@ -411,6 +421,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
+        case StatId_t::BombardRange:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -423,7 +434,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
 
         case StatId_t::MoistureTier:
         case StatId_t::TileDefense:
-        case StatId_t::MoveCost: return ResolveDomain_t::Tile;
+        case StatId_t::MoveCost:
+        case StatId_t::BombardMinHpPercent: return ResolveDomain_t::Tile;
     }
     return ResolveDomain_t::Base; // unreachable; all enumerators handled above
 }
@@ -461,6 +473,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "airdrop_range")           return StatId_t::AirdropRange;
     if (rStat == "airdrop_landing_damage")  return StatId_t::AirdropLandingDamage;
+    if (rStat == "bombard_range")           return StatId_t::BombardRange;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "move_cost")               return StatId_t::MoveCost;
@@ -501,6 +514,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
         return StatId_t::CaptureFacilitiesDestroyedMin;
     if (rStat == "capture_facilities_destroyed_max_percent")
         return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
+    if (rStat == "bombard_min_hp_percent")   return StatId_t::BombardMinHpPercent;
     if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
     if (rStat == "rebel_join_weight")         return StatId_t::RebelJoinWeight;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
@@ -560,6 +574,8 @@ enum class RuleFlagId_t
     NonCombatant,
     // Unit may attempt an airdrop when it began the turn on an airdrop_launch pad.
     Airdrop,
+    // Long-range fire inside bombard_range. No separate melee attack.
+    Bombard,
 
     // Sole capture veto: chassis (Needlejet / Missile) or noncombat weapon modules.
     CannotCaptureBases,
@@ -641,6 +657,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "non_combatant")               return RuleFlagId_t::NonCombatant;
     if (rFlag == "airdrop")                     return RuleFlagId_t::Airdrop;
+    if (rFlag == "bombard")                     return RuleFlagId_t::Bombard;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;

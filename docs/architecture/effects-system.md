@@ -298,6 +298,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `AmountSourceValue` is the backstop for a resolve path that admitted one anyway. The two must
   agree — **filter and resolve with the same `EffectContext_t`.** `UnitSubjectContext` stamps
   the faction subject from a live unit so unit call sites cannot forget it.
+- **`LevelsAboveOpponent`** is evaluated in the context dispatch, not a subject overload: it
+  needs both combatants. Contribution is `amount * levelsAbove` where
+  `levelsAbove = max(0, ownMeters - otherMeters) / reference_level_meters` and own is `pUnit`.
+  `StatModifierMatchesInContext` drops it when the opposing combatant is absent, so a
+  context-free Attack preview does not gain the bonus. Legal as `AddPercent` on `attack` or
+  `defense`, scope `ThisUnit` or `WorldGlobal`. Bombard ships it on attack.
 - **Known gap**: `ScrapRefund` is `DomainFor → Base` but `ScrapRefundCalculator::Quote` takes a
   bare `std::vector<ActiveEffect_t>` (live-unit effects for unit scrap), so it has no base
   subject and drops `BaseSize` silently. Threading a subject through the scrap API is the fix
@@ -823,7 +829,11 @@ grants fewer units and reports the real count rather than throwing.
       stamps `pFaction` via `UnitSubjectContext`; design-only preview leaves it unset and the
       modifier filters out). `IntrinsicXp` needs a Unit subject (`pUnit`) and allows Unit-domain
       stats with scope `ThisUnit` + op `Add` (contribution = `GetXp() * amount`; used by Isle of
-      the Deep cargo). A `selector` may not be combined with **any** `amount_source`:
+      the Deep cargo). `LevelsAboveOpponent` needs both combatants (`pUnit` and the other of
+      `pAttacker` / `pDefender`), allows `AddPercent` on `attack` or `defense`, and scopes
+      `ThisUnit` or `WorldGlobal`. `bombard_min_hp_percent` is a Tile-domain percent of integer
+      `hit_points`; `AddPercent` on it is rejected. `bombard_range` is a Unit-domain Chebyshev
+      radius. A `selector` may not be combined with **any** `amount_source`:
       selectors route through tile-yield resolution, which supplies only a tile subject. Each
       amount_source contribution for `BaseSize` is **floored** before entering the modifier
       stack (vanilla University `floor(size×0.25)` does not share fractional residue with

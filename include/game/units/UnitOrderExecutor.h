@@ -99,6 +99,18 @@ public:
     // bound — ownership transfer still requires a later enter-tile order while moves remain.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
+    // One bombard shot. nullopt when the attacker lacks the flag, has no movement
+    // fragments, or the tile is outside bombard_range. Otherwise contact-reveals every
+    // unit on the tile, resolves a duel, one strike per legal hostile, or one random
+    // non-base improvement, then spends every remaining movement fragment.
+    struct BombardResult_t
+    {
+        std::vector<CombatResult_t> combats;
+        std::optional<std::string> destroyedImprovementId;
+        bool bAttackerDestroyed = false;
+    };
+    std::optional<BombardResult_t> TryBombard(Unit& rAttacker, const Tile& rTargetTile);
+
     // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
     // territory). Observers hang off Faction::OnBaseAdded, which CreateBase fires — callers do
     // not wire anything (see EventBridge::WireBase). SingleUse colony pods are DestroyUnit'd
@@ -151,6 +163,15 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
+    void PromoteOnKill_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);
+    // Marks the attack, spends movement, clears the order, and destroys a SingleUse unit.
+    // Returns true when that expend destroyed rAttacker. bSpendRemaining spends every
+    // fragment left; otherwise the cost is one movement point.
+    bool SpendAttackAction_(Unit& rAttacker, bool bSpendRemaining);
+    // Last-defender casualties on a base tile. Returns true when the raid destroyed rAttacker.
+    bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
+    CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
+                                           CombatEngagement_t engagement);
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).

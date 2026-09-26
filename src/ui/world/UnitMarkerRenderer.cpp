@@ -49,7 +49,10 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
             {
                 continue;
             }
-            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, rGameState.GetTileEffects()))
+            const bool bPlaybackVisible = m_pPlaybackVisibleUnits
+                && m_pPlaybackVisibleUnits->contains(pUnit->GetUnitId());
+            if (!bPlaybackVisible && pPlayer
+                && !IsUnitVisibleTo(*pPlayer, *pUnit, rGameState.GetTileEffects()))
             {
                 continue;
             }

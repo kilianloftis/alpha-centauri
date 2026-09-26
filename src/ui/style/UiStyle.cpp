@@ -273,6 +273,15 @@ CombatPresentationStyle_t ParseCombatPresentationStyle_(const nlohmann::json& j)
     return s;
 }
 
+BombardPresentationStyle_t ParseBombardPresentationStyle_(const nlohmann::json& j)
+{
+    BombardPresentationStyle_t s{};
+    s.overlayFill = ParseColor_(j, "overlay_fill");
+    s.overlayBorder = ParseColor_(j, "overlay_border");
+    s.overlayBorderWidth = j.at("overlay_border_width").get<float>();
+    return s;
+}
+
 CameraInputStyle_t ParseCameraInputStyle_(const nlohmann::json& j)
 {
     CameraInputStyle_t s{};
@@ -737,7 +746,9 @@ void UiStyle::Load(const std::string& filePath)
     style.commlinksButton = ParseCommlinksButtonStyle_(root.at("commlinks_button"));
     style.worldView = ParseWorldViewStyle_(root.at("world_view"));
     style.combatView = ParseCombatViewStyle_(root.at("combat_view"));
-    style.combatPresentation = ParseCombatPresentationStyle_(root.at("combat_presentation"));
+    const nlohmann::json& combatPresentation = root.at("combat_presentation");
+    style.combatPresentation = ParseCombatPresentationStyle_(combatPresentation);
+    style.bombardPresentation = ParseBombardPresentationStyle_(combatPresentation.at("bombard"));
     style.cameraInput = ParseCameraInputStyle_(root.at("camera_input"));
     style.unitOrderInput = ParseUnitOrderInputStyle_(root.at("unit_order_input"));
     style.commlinksPanel = ParseCommlinksPanelStyle_(root.at("commlinks_panel"));

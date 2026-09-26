@@ -339,5 +339,36 @@
         }
       }
     ]
+  },
+  {
+    "id": "Bombard",
+    "name": "Bombard",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "bombard" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "bombard_range",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 25,
+          "op": "AddPercent",
+          "amount_source": "LevelsAboveOpponent"
+        }
+      }
+    ]
   }
 ]

@@ -402,6 +402,25 @@ inline auto FilterByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statI
 // The single in-context matching rule: a StatModifier on statId whose condition ctx satisfies.
 // Shared by FilterByStatIdInContext and by callers filtering something other than a
 // vector<ActiveEffect_t> (e.g. the tile-yield pointer lanes) so the rule cannot drift.
+// The other unit in a combat pair. Null when either combatant is missing, or pUnit is
+// not one of them. LevelsAboveOpponent filters out in that case.
+inline const Unit* OpposingCombatant_(const EffectContext_t& ctx)
+{
+    if (ctx.pUnit == nullptr || ctx.pAttacker == nullptr || ctx.pDefender == nullptr)
+    {
+        return nullptr;
+    }
+    if (ctx.pUnit == ctx.pAttacker)
+    {
+        return ctx.pDefender;
+    }
+    if (ctx.pUnit == ctx.pDefender)
+    {
+        return ctx.pAttacker;
+    }
+    return nullptr;
+}
+
 inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
                                          const EffectContext_t& ctx)
 {
@@ -435,6 +454,11 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     }
     if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy
         && (ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr))
+    {
+        return false;
+    }
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent
+        && OpposingCombatant_(ctx) == nullptr)
     {
         return false;
     }

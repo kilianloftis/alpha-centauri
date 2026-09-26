@@ -306,7 +306,16 @@
   },
   "combat_presentation": {
     "default_damage_flash_ms": 500,
-    "default_inter_round_delay_ms": 250
+    "default_inter_round_delay_ms": 250,
+    "bombard": {
+      "overlay_fill": [
+        255, 160, 0, 160
+      ],
+      "overlay_border": [
+        255, 200, 40, 255
+      ],
+      "overlay_border_width": 3.0
+    }
   },
   "camera_input": {
     "edge_zone": 0.05,

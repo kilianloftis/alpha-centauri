@@ -142,6 +142,10 @@ explored/visible maps from the world map and takes a first visibility reading.
     per-event cost compound.
   - Still O(width × height) per rebuild for the improvement sweep: a world-level index of
     vision tiles needs a mutation choke point that `Tile` does not currently have.
+  - `FactionRevealedUnits` is contact memory, separate from the rebuilt visible map. A blocked
+    step reveals the attributed occupants. Bombard does not. Fog and Conceal stay in force
+    after the shot, and `IsUnitVisibleTo` still treats only contact reveal as seen through
+    them. The map draws the bombarded units while playback is up, then stops.
 
 - The **seed** drives every per-faction random choice (base names, the starting research
   target). It is injected rather than drawn from `std::random_device` inside `FactionFlavor` /

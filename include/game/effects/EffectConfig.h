@@ -91,6 +91,10 @@ struct StatModifierEffect_t
         BasesOwned,
         IntrinsicXp,
         BuildingUpkeep,
+        // AddPercent scale: amount * whole elevation levels this unit's tile is above the
+        // opposing combatant. Levels are meters / reference_level_meters. A gap under one
+        // level, or being lower, contributes 0. Needs both combatants on EffectContext_t.
+        LevelsAboveOpponent,
     };
     std::optional<AmountSource_t> amountSource;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile

@@ -127,6 +127,7 @@ void UnitOrderInputController::ClearRequestFlags_()
 {
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
+    m_bBombardRequested = false;
     m_bSupplyCrawlRequested = false;
     m_bFoundBaseRequested = false;
     m_bAttachTransportRequested = false;
@@ -208,6 +209,15 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
                                                       const GameDataContext* pDataContext)
 {
     const WorldMap& rMap = rPathfinder.GetWorldMap();
+    if (rMover.GetFlag(RuleFlagId_t::Bombard) && pGameState
+        && IsWithinBombardRange(rMover, rDest, rMap))
+    {
+        m_bBombardRequested = true;
+        m_pInteractTarget = &rDest;
+        CancelPreview();
+        return true;
+    }
+
     const bool bAdjacent = AreChebyshevAdjacent(rMover.GetTile(), rDest, rMap.GetWidth());
     // Act-on questions are the game layer's: CanOpenProbeActions for probes;
     // FindAttackableHostileOnTile matches TryAttack's declare gate. A visible but
@@ -216,9 +226,9 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
         pGameState ? pGameState->GetUnitOrderExecutor().FindVisibleHostileOnTile(rMover, rDest)
                    : nullptr;
     const Unit* pAttackableHostile =
-        pGameState ? FindAttackableHostileOnTile(rMover, rDest, rMap,
-                                                 pGameState->GetTileEffects())
-                   : nullptr;
+        (pGameState && !rMover.GetFlag(RuleFlagId_t::Bombard))
+            ? FindAttackableHostileOnTile(rMover, rDest, rMap, pGameState->GetTileEffects())
+            : nullptr;
 
     if (bAdjacent
         && TryAdjacentInteract_(rMover, rDest, pGameState, pDataContext, pAttackableHostile))

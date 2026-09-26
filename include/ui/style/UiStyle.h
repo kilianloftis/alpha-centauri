@@ -205,6 +205,13 @@ struct CombatPresentationStyle_t
     int defaultInterRoundDelayMs{};
 };
 
+struct BombardPresentationStyle_t
+{
+    Color_t overlayFill{};
+    Color_t overlayBorder{};
+    float overlayBorderWidth{};
+};
+
 struct CameraInputStyle_t
 {
     float edgeZone{};
@@ -619,6 +626,7 @@ public:
     WorldViewStyle_t worldView;
     CombatViewStyle_t combatView;
     CombatPresentationStyle_t combatPresentation;
+    BombardPresentationStyle_t bombardPresentation;
     CameraInputStyle_t cameraInput;
     UnitOrderInputStyle_t unitOrderInput;
     CommlinksPanelStyle_t commlinksPanel;

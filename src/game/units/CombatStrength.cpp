@@ -15,7 +15,8 @@ namespace ac
 
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const TileEffectsContext& rTileEffects,
-                                       const MoraleCalculator& rMorale)
+                                       const MoraleCalculator& rMorale,
+                                       StatId_t defenderStat)
 {
     // TODO(difficulty): apply combat handicap from rules.combat_handicap /
     // combat_handicap_natives_only once magnitude is known (do not invent percents).
@@ -39,7 +40,7 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
             rAttacker, StatId_t::Attack, 1.0, attackCtx,
             rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
         const double defenseRating = ResolveCombatUnitMultiplicativeStat(
-            rDefender, StatId_t::Defense, 1.0, defenseCtx,
+            rDefender, defenderStat, 1.0, defenseCtx,
             rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
         strength.attackStrength = static_cast<int>(
             std::lround(attackRating * k_CombatStrengthScale));
@@ -52,7 +53,7 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
             rAttacker, StatId_t::Attack, attackCtx,
             rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
         const int defenseRating = ResolveCombatUnitStat(
-            rDefender, StatId_t::Defense, defenseCtx,
+            rDefender, defenderStat, defenseCtx,
             rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
         attackRating = static_cast<double>(conventionalAttack);
         strength.attackStrength = conventionalAttack * k_CombatStrengthScale;

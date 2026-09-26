@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 namespace ac
 {
 
@@ -36,5 +39,33 @@ inline bool CanDeclareAttack(const Unit& rAttacker, const Tile& rTargetTile,
     return FindAttackableHostileOnTile(rAttacker, rTargetTile, rWorldMap, rTileEffects)
         != nullptr;
 }
+
+// Bombard flag, any movement fragments left, and Chebyshev distance in 1..bombard_range.
+// Own tile and tiles past the range are illegal. Visibility and enterability are not required.
+bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
+                          const WorldMap& rWorldMap);
+
+// Hostiles on the tile (surface, then embarked cargo when the tile has a base), ignoring
+// visibility. If any hostile has Bombard, pDuelTarget is the first that passes attack_unit
+// and strikeTargets stays empty. bBombardPresentButIllegal is set when a bombard hostile
+// is present and none of them pass attack_unit. Otherwise strikeTargets is every hostile
+// that passes attack_unit.
+struct BombardTargeting_t
+{
+    Unit* pDuelTarget = nullptr;
+    bool bBombardPresentButIllegal = false;
+    std::vector<Unit*> strikeTargets;
+};
+
+BombardTargeting_t CollectBombardTargets(const Unit& rAttacker, const Tile& rTargetTile,
+                                         const WorldMap& rWorldMap,
+                                         const TileEffectsContext& rTileEffects);
+
+// Surface occupants or embarked cargo, including friendlies. An occupied tile is not
+// wrecked by bombard.
+bool TileHasUnits(const Tile& rTile, const WorldMap& rWorldMap);
+
+// Improvement ids on the tile other than Base. Terrain features are not included.
+std::vector<std::string> NonBaseImprovementIds(const Tile& rTile);
 
 } // namespace ac

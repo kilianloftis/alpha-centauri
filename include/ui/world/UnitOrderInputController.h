@@ -37,6 +37,10 @@ public:
     bool WasAttackRequested() const { return m_bAttackRequested; }
     const Tile* GetAttackTarget() const { return m_pInteractTarget; }
 
+    // True after a long-press release inside bombard range. WorldView calls TryBeginBombard_.
+    bool WasBombardRequested() const { return m_bBombardRequested; }
+    const Tile* GetBombardTarget() const { return m_pInteractTarget; }
+
     // True after a long-press release when ProbeActionExecutor reports a legal probe menu
     // against that tile. Target is that tile.
     bool WasProbeActionRequested() const { return m_bProbeActionRequested; }
@@ -105,6 +109,7 @@ private:
 
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;
+    bool m_bBombardRequested = false;
     bool m_bProbeActionRequested = false;
     bool m_bSupplyCrawlRequested = false;
     bool m_bFoundBaseRequested = false;

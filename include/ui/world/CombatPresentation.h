@@ -25,7 +25,8 @@ public:
         int interRoundDelayMs = Style().combatPresentation.defaultInterRoundDelayMs);
 
     // Copies rResult and records the combatants' tiles for ghost hit overlays when a unit
-    // was destroyed during Resolve. No-op (clears) when rounds is empty.
+    // was destroyed during Resolve. No-op (clears) when rounds is empty, unless
+    // bBombardPlayback is set — that still flashes once on the defender tile.
     void Begin(const CombatResult_t& rResult,
                const Tile& rAttackerTile,
                const Tile& rDefenderTile);
@@ -61,6 +62,7 @@ private:
 
     void StartRound_(size_t roundIndex);
     void AdvanceAfterFlash_();
+    void DrawBombardOverlay_(Graphics& rGraphics, const WorldDisplay& rDisplay) const;
     UnitId_t DamagedUnitId_(const CombatRound_t& rRound) const;
     const Tile* TileForUnitId_(UnitId_t unitId) const;
     bool WasDestroyed_(UnitId_t unitId) const;
@@ -71,6 +73,7 @@ private:
     CombatResult_t m_result;
     const Tile* m_pAttackerTile = nullptr;
     const Tile* m_pDefenderTile = nullptr;
+    bool m_bBombardPlayback = false;
 
     Phase_t m_phase = Phase_t::Idle;
     size_t m_roundIndex = 0;

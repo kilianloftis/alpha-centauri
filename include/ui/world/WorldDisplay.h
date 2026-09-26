@@ -7,6 +7,7 @@
 #include "ui/world/UnitMarkerRenderer.h"
 
 #include <optional>
+#include <unordered_set>
 
 namespace ac
 {
@@ -28,6 +29,9 @@ public:
     // Set the unit currently selected by the player (highlighted on the map). Also used as
     // the path-preview line origin when a path is active.
     void SetSelectedUnit(const Unit* pUnit);
+
+    // Forwarded to the unit markers. Null restores ordinary visibility.
+    void SetPlaybackVisibleUnits(const std::unordered_set<UnitId_t>* pUnitIds);
 
     // Set the path preview to render (nullptr to clear). Pointer must remain valid until
     // the next Render call.

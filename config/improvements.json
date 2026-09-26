@@ -253,6 +253,15 @@
         "parameters": {
           "flag": "prevents_disengage"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "bombard_min_hp_percent",
+          "amount": 50,
+          "op": "MinClamp"
+        }
       }
     ]
   },
@@ -557,6 +566,15 @@
           "stat": "tile_defense",
           "amount": 100,
           "op": "AddPercent"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "bombard_min_hp_percent",
+          "amount": 50,
+          "op": "MinClamp"
         }
       },
       {

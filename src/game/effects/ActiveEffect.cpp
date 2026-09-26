@@ -22,8 +22,8 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/GameDataContext.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
-#include "game/units/UnitComponentConfig.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitComponentConfig.h"
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
@@ -213,6 +213,25 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
                     "AmountSourceValue: IntrinsicXp requires pUnit");
             }
             return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pUnit);
+        case StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent:
+        {
+            const Unit* pOther = pCtx ? OpposingCombatant_(*pCtx) : nullptr;
+            if (!pCtx || !pCtx->pUnit || !pOther)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: LevelsAboveOpponent requires both combatants");
+            }
+            const int referenceMeters = pCtx->pUnit->GetTile().MapRules().referenceLevelMeters;
+            if (referenceMeters <= 0)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: reference_level_meters must be > 0");
+            }
+            const int levelsAbove = std::max(
+                0, pCtx->pUnit->GetTile().GetElevation() - pOther->GetTile().GetElevation())
+                / referenceMeters;
+            return rMod.amount * static_cast<double>(levelsAbove);
+        }
     }
     throw std::runtime_error("AmountSourceValue: unknown amount_source");
 }

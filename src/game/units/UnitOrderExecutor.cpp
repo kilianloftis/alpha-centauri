@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <iostream>
 #include <optional>
+#include <random>
 #include <stdexcept>
 #include <variant>
 
@@ -64,6 +65,67 @@ OrderProgress_t UnitOrderExecutor::ExpendIfSingleUse_(const Unit& rUnit) const
 {
     return rUnit.GetFlag(RuleFlagId_t::SingleUse) ? OrderProgress_t::Expended
                                                   : OrderProgress_t::Complete;
+}
+
+void UnitOrderExecutor::PromoteOnKill_(Unit& rAttacker, Unit& rDefender,
+                                       const CombatResult_t& rResult)
+{
+    if (rResult.bDefenderDestroyed && !rResult.bAttackerDestroyed)
+    {
+        m_rMorale.TryPromote(rAttacker, rResult.attackStrength, rResult.defenseStrength, m_rRng);
+    }
+    if (rResult.bAttackerDestroyed && !rResult.bDefenderDestroyed)
+    {
+        m_rMorale.TryPromote(rDefender, rResult.attackStrength, rResult.defenseStrength, m_rRng);
+    }
+}
+
+bool UnitOrderExecutor::SpendAttackAction_(Unit& rAttacker, bool bSpendRemaining)
+{
+    rAttacker.MarkAttacked();
+    if (bSpendRemaining)
+    {
+        rAttacker.SpendRemainingMoveFragments();
+    }
+    else
+    {
+        rAttacker.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
+    }
+    rAttacker.ClearOrder();
+    if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
+    {
+        rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
+        return true;
+    }
+    return false;
+}
+
+bool UnitOrderExecutor::ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile)
+{
+    if (!m_pWorld || m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) == nullptr)
+    {
+        return false;
+    }
+    RequireGameData_("post-combat base conquest");
+    return m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *m_pGameData, m_rRng)
+        .bActorDestroyed;
+}
+
+CombatResult_t UnitOrderExecutor::ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
+                                                         CombatEngagement_t engagement)
+{
+    CombatResolveOptions_t options;
+    options.engagement = engagement;
+    CombatResult_t combat = m_combat.Resolve(rAttacker, rDefender, options);
+    combat.bBombardPlayback = true;
+    PromoteOnKill_(rAttacker, rDefender, combat);
+    if (!combat.bDefenderDestroyed)
+    {
+        // TODO: per-turn healing is not implemented. When it is, a unit subjected to
+        // bombard must not heal this turn. ClearOrder does not do that by itself.
+        rDefender.ClearOrder();
+    }
+    return combat;
 }
 
 void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval)
@@ -349,51 +411,95 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 
     CombatResult_t result = m_combat.Resolve(rAttacker, rCombatDefender);
     result.scramblePath = std::move(scrambleHops);
-
-    // Promotion on kill (not mere disengage).
-    if (result.bDefenderDestroyed && !result.bAttackerDestroyed)
-    {
-        m_rMorale.TryPromote(rAttacker, result.attackStrength, result.defenseStrength, m_rRng);
-    }
-    if (result.bAttackerDestroyed && !result.bDefenderDestroyed)
-    {
-        m_rMorale.TryPromote(rCombatDefender, result.attackStrength, result.defenseStrength,
-                             m_rRng);
-    }
+    PromoteOnKill_(rAttacker, rCombatDefender, result);
 
     if (!result.bAttackerDestroyed)
     {
-        rAttacker.MarkAttacked();
         // Combat never moves either side. Default cost is one movement point (and one fuel
         // point when the design tracks fuel). AttackingEndsTurn (Needlejet) spends the rest
         // of the turn's moves instead. Capture of an emptied base is a later step onto the
         // tile while moves remain.
-        if (rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn))
+        const bool bSpendRemaining = rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn);
+        if (SpendAttackAction_(rAttacker, bSpendRemaining))
         {
-            rAttacker.SpendRemainingMoveFragments();
-        }
-        else
-        {
-            rAttacker.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
-        }
-        rAttacker.ClearOrder();
-        if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
-        {
-            rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
             result.bAttackerDestroyed = true;
         }
     }
 
     // Last-defender casualties / adjacent native raid — not ownership transfer. Capture
-    // requires a separate enter-tile order after combat.
-    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld)
+    // requires a separate enter-tile order after combat. A native raider spends itself on
+    // the raid; report that so UI playback does not show a survivor that no longer exists.
+    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase
+        && ApplyLastDefenderConquest_(rAttacker, rDefenderTile))
     {
-        RequireGameData_("post-combat base conquest");
-        // A native raider spends itself on the raid; report that so UI playback does not
-        // show a survivor that no longer exists.
-        result.bAttackerDestroyed =
-            m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *m_pGameData, m_rRng)
-                .bActorDestroyed;
+        result.bAttackerDestroyed = true;
+    }
+    return result;
+}
+
+std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
+    Unit& rAttacker, const Tile& rTargetTile)
+{
+    if (!IsWithinBombardRange(rAttacker, rTargetTile, m_rWorldMap))
+    {
+        return std::nullopt;
+    }
+
+    const bool bOccupied = TileHasUnits(rTargetTile, m_rWorldMap);
+    BombardResult_t result;
+    const BombardTargeting_t targeting =
+        CollectBombardTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+
+    if (targeting.pDuelTarget)
+    {
+        result.combats.push_back(ResolveBombardExchange_(
+            rAttacker, *targeting.pDuelTarget, CombatEngagement_t::ArtilleryDuel));
+        result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
+    }
+    else if (!targeting.bBombardPresentButIllegal)
+    {
+        for (Unit* pTarget : targeting.strikeTargets)
+        {
+            if (!pTarget || result.bAttackerDestroyed)
+            {
+                break;
+            }
+            result.combats.push_back(ResolveBombardExchange_(
+                rAttacker, *pTarget, CombatEngagement_t::ArtilleryStrike));
+            result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
+        }
+    }
+
+    if (!bOccupied)
+    {
+        const std::vector<std::string> candidates = NonBaseImprovementIds(rTargetTile);
+        if (!candidates.empty())
+        {
+            std::uniform_int_distribution<size_t> pick(0, candidates.size() - 1);
+            const std::string id = candidates[pick(m_rRng)];
+            if (Tile* pTile = m_rWorldMap.GetTile(rTargetTile.GetX(), rTargetTile.GetY()))
+            {
+                m_rTileEffects.RemoveOccupantWithEffects(*pTile, id);
+                result.destroyedImprovementId = id;
+            }
+        }
+    }
+
+    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, true))
+    {
+        result.bAttackerDestroyed = true;
+    }
+
+    bool bAnyDefenderDestroyed = false;
+    for (const CombatResult_t& rCombat : result.combats)
+    {
+        bAnyDefenderDestroyed = bAnyDefenderDestroyed || rCombat.bDefenderDestroyed;
+    }
+    if (bAnyDefenderDestroyed && !result.bAttackerDestroyed
+        && ApplyLastDefenderConquest_(rAttacker, rTargetTile))
+    {
+        result.bAttackerDestroyed = true;
+        result.combats.back().bAttackerDestroyed = true;
     }
     return result;
 }

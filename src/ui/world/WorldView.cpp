@@ -42,6 +42,7 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <stdexcept>
 #include <vector>
 
@@ -690,10 +691,11 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     {
         const bool bDidOrderAction =
             m_pUnitOrderInputController->WasAttackRequested()
+            || m_pUnitOrderInputController->WasBombardRequested()
             || m_pUnitOrderInputController->WasProbeActionRequested()
             || m_pUnitOrderInputController->WasOrderAssigned();
 
-        // Move / attack / probe still focus the location panel on the target tile.
+        // Move / attack / bombard / probe still focus the location panel on the target tile.
         // An aborted long-press (held past threshold, no order) must not change selection.
         if (bDidOrderAction && rEvent.button == MouseButton_t::Left && !rEvent.bPressed
             && pClickedTile)
@@ -708,6 +710,12 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             }
         }
 
+        if (m_pUnitOrderInputController->WasBombardRequested() && pControllable
+            && m_pUnitOrderInputController->GetBombardTarget())
+        {
+            TryBeginBombard_(*pControllable, *m_pUnitOrderInputController->GetBombardTarget());
+            return;
+        }
         if (m_pUnitOrderInputController->WasAttackRequested() && pControllable
             && m_pUnitOrderInputController->GetAttackTarget())
         {
@@ -787,6 +795,85 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
             SetSuppressDashboard(false);
             SelectNextAvailableUnit_();
         });
+}
+
+void WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
+{
+    auto pPlayback = std::make_shared<BombardPlayback_t>();
+    pPlayback->pAttackerTile = &rAttacker.GetTile();
+    pPlayback->pTargetTile = &rTargetTile;
+    pPlayback->attackerName = rAttacker.GetDesign().GetName();
+
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    auto remember = [&](const std::vector<Unit*>& rUnits)
+    {
+        for (Unit* pUnit : rUnits)
+        {
+            if (!pUnit)
+            {
+                continue;
+            }
+            pPlayback->names[pUnit->GetUnitId()] = pUnit->GetDesign().GetName();
+            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+            {
+                pPlayback->playbackUnitIds.insert(pUnit->GetUnitId());
+            }
+        }
+    };
+    remember(m_rGameState.GetWorldMap().GetUnitsOnTile(rTargetTile));
+    remember(m_rGameState.GetWorldMap().GetCargoOnTile(rTargetTile));
+
+    auto result = m_rGameState.GetUnitOrderExecutor().TryBombard(rAttacker, rTargetTile);
+    if (!result)
+    {
+        return;
+    }
+
+    pPlayback->combats = std::move(result->combats);
+    if (pPlayback->combats.empty())
+    {
+        CombatResult_t shot;
+        shot.bBombardPlayback = true;
+        pPlayback->combats.push_back(std::move(shot));
+    }
+    for (CombatResult_t& rCombat : pPlayback->combats)
+    {
+        rCombat.bBombardPlayback = true;
+    }
+    m_pWorldDisplay->SetPlaybackVisibleUnits(&pPlayback->playbackUnitIds);
+    m_bPresentationDirty = true;
+    ContinueBombardPlayback_(std::move(pPlayback), 0);
+}
+
+void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback,
+                                         size_t index)
+{
+    if (!pPlayback || index >= pPlayback->combats.size())
+    {
+        m_pWorldDisplay->SetPlaybackVisibleUnits(nullptr);
+        m_bPresentationDirty = true;
+        SetSuppressDashboard(false);
+        SelectNextAvailableUnit_();
+        return;
+    }
+
+    const CombatResult_t& rCombat = pPlayback->combats[index];
+    std::string defenderName = "Defender";
+    if (const auto it = pPlayback->names.find(rCombat.defenderId); it != pPlayback->names.end())
+    {
+        defenderName = it->second;
+    }
+
+    SetSuppressDashboard(true);
+    m_onOpenCombat(
+        rCombat,
+        *pPlayback->pAttackerTile,
+        *pPlayback->pTargetTile,
+        pPlayback->attackerName,
+        defenderName,
+        *m_pWorldDisplay,
+        m_mapLayout,
+        [this, pPlayback, index]() { ContinueBombardPlayback_(pPlayback, index + 1); });
 }
 
 void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)

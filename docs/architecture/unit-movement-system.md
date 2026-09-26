@@ -199,6 +199,21 @@ multiplies the resolved attack rating by that leftover fraction of a point; a fu
 or more leaves attack strength unchanged. The post-combat spend is still one point, or
 the rest of the turn when `AttackingEndsTurn`.
 
+**Bombard.** A unit with the `bombard` rule flag has no melee attack. `IsWithinBombardRange`
+is the declare gate: the flag, any remaining movement fragments, and Chebyshev distance in
+`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `CollectBombardTargets`
+chooses the duel or the strike list from the same hostile census melee uses (surface units,
+then embarked cargo on a base) and the same `attack_unit` gate. `TryBombard` resolves that
+choice, and when `TileHasUnits` is false removes one random id from `NonBaseImprovementIds`.
+Fog and Conceal are unchanged: a unit `IsUnitVisibleTo` rejected stays hidden after the shot.
+While bombard playback is up, the map draws those units; it stops when playback ends.
+A strike records one round and does not apply that round's damage to the attacker. Defender
+HP stops at `ceil(hit_points * bombard_min_hp_percent / 100)` from the defender tile (world
+rule and Base / Bunker clamps together). A duel is a full fight with no disengage, and the
+defender is rated with Attack. The attacker's roll pool still comes from
+`ResolveCombatStrength` before the shot spends every remaining fragment. Each unit that was
+rolled against has its order cleared.
+
 **Stack collateral.** When `CombatResolver` kills the defender, `ApplyStackCollateral` splashes the attacker's `collateral_damage` alone. Each other occupant resolves `collateral_susceptibility` (PureMultiplier, seed 1) from its live effects plus `CollectTileEffects` on the defender tile, and loses `lround(splash * susceptibility)` HP. A result of 0 HP is `DestroyUnit`. Embarked cargo is not in the stack. A wild native — `IsNativeLife` owned by a `NativeLife` faction — is destroyed outright unless the tile clamp skipped it. `GrantPlanetPearls` pays the killer for that native and for the defender. A `MaxClamp` that leaves susceptibility at 0 (Base, Bunker) skips that occupant: no HP loss, no wild wipe, no non-combatant removal. `world_rules.json` multiplies air susceptibility by 0; that geometric zero still counts the unit as present, so a wild locust in the open is wiped and a wild worm in a base is not. Reactors Add their collateral tier. Native life designs Add 1. While `non_combatants_destroyed_without_combatant` is in force, a `non_combatant` (Probe Team) is not a combatant: after the splash, if every remaining eligible occupant is a non-combatant, those occupants are destroyed. Removing the world flag leaves the tag and the splash.
 
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:

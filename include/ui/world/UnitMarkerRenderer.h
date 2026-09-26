@@ -6,6 +6,7 @@
 
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace ac
 {
@@ -20,6 +21,13 @@ class UnitMarkerRenderer
 {
 public:
     void SetSelectedUnit(const Unit* pUnit) { m_pSelectedUnit = pUnit; }
+
+    // Units drawn this frame even when IsUnitVisibleTo is false. Bombard playback points
+    // this at the shrouded or concealed units on the target tile, then clears it.
+    void SetPlaybackVisibleUnits(const std::unordered_set<UnitId_t>* pUnitIds)
+    {
+        m_pPlaybackVisibleUnits = pUnitIds;
+    }
 
     // Clears the previous frame's cache, draws visible units via rViewport, and records
     // each marker rect keyed by unit id.
@@ -40,6 +48,7 @@ public:
 
 private:
     const Unit* m_pSelectedUnit = nullptr;
+    const std::unordered_set<UnitId_t>* m_pPlaybackVisibleUnits = nullptr;
     std::unordered_map<UnitId_t, Rectangle_t> m_markerRects;
 };
 

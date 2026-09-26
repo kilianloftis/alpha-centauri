@@ -12,9 +12,11 @@
 #include "game/units/PlanetPearls.h"
 #include "game/units/StackCollateral.h"
 #include "game/units/StepEvaluator.h"
+#include "game/effects/TileEffectsContext.h"
 #include "lib/RandomRoll.h"
 
 #include <algorithm>
+#include <cmath>
 #include <random>
 
 namespace ac
@@ -99,25 +101,53 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
     return true;
 }
 
-CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
+int CombatResolver::BombardHpFloor_(const Unit& rDefender) const
+{
+    const int hitPoints = ResolveStat(rDefender, StatId_t::HitPoints);
+    const std::vector<ActiveEffect_t> effects =
+        m_rTileEffects.CollectAreaEffects(rDefender.GetTile());
+    const int percent = FinalizeResolvedStat(ResolveStatModifiers(
+        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0).total);
+    return static_cast<int>(std::ceil(static_cast<double>(hitPoints)
+                                      * static_cast<double>(percent) / 100.0));
+}
+
+CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,
+                                       const CombatResolveOptions_t& rOptions)
 {
     CombatResult_t result;
     result.attackerId = rAttacker.GetUnitId();
     result.defenderId = rDefender.GetUnitId();
 
-    const CombatStrength_t strength =
-        ResolveCombatStrength(rAttacker, rDefender, m_rTileEffects, m_rMorale);
+    const bool bStrike = rOptions.engagement == CombatEngagement_t::ArtilleryStrike;
+    const bool bArtillery = bStrike
+                            || rOptions.engagement == CombatEngagement_t::ArtilleryDuel;
+
+    const StatId_t defenderStat = rOptions.engagement == CombatEngagement_t::ArtilleryDuel
+                                      ? StatId_t::Attack
+                                      : StatId_t::Defense;
+    const CombatStrength_t strength = ResolveCombatStrength(
+        rAttacker, rDefender, m_rTileEffects, m_rMorale, defenderStat);
     result.attackStrength = strength.attackStrength;
     result.defenseStrength = strength.defenseStrength;
     result.bPsiCombat = strength.bPsiCombat;
 
     const int attackerStartHp = rAttacker.GetCurrentHp();
     const int defenderStartHp = rDefender.GetCurrentHp();
-    const bool bAttackerMayDisengage = m_disengage.CanDisengage(rAttacker, rDefender);
-    const bool bDefenderMayDisengage = m_disengage.CanDisengage(rDefender, rAttacker);
+    const bool bAttackerMayDisengage =
+        !bArtillery && m_disengage.CanDisengage(rAttacker, rDefender);
+    const bool bDefenderMayDisengage =
+        !bArtillery && m_disengage.CanDisengage(rDefender, rAttacker);
+    const int hpFloor = bStrike ? BombardHpFloor_(rDefender) : 0;
 
+    int roundsPlayed = 0;
     while (rAttacker.GetCurrentHp() > 0 && rDefender.GetCurrentHp() > 0)
     {
+        if (bStrike && roundsPlayed >= 1)
+        {
+            break;
+        }
+
         CombatRound_t round;
         round.attackRoll = Roll_(result.attackStrength);
         round.defenseRoll = Roll_(result.defenseStrength);
@@ -130,7 +160,11 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
             round.damage = result.bPsiCombat
                                ? std::max(1, ResolveStat(rDefender, StatId_t::PsiDamage))
                                : k_roundDamage;
-            rDefender.SetCurrentHp(rDefender.GetCurrentHp() - round.damage);
+            const int current = rDefender.GetCurrentHp();
+            const int next = bStrike
+                                 ? std::max(current - round.damage, std::min(current, hpFloor))
+                                 : current - round.damage;
+            rDefender.SetCurrentHp(next);
         }
         else
         {
@@ -138,12 +172,21 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
             round.damage = result.bPsiCombat
                                ? std::max(1, ResolveStat(rAttacker, StatId_t::PsiDamage))
                                : k_roundDamage;
-            rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - round.damage);
+            if (!bStrike)
+            {
+                rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - round.damage);
+            }
         }
 
         round.attackerHpAfter = rAttacker.GetCurrentHp();
         round.defenderHpAfter = rDefender.GetCurrentHp();
         result.rounds.push_back(round);
+        ++roundsPlayed;
+
+        if (bArtillery)
+        {
+            continue;
+        }
 
         // The side that just took damage is checked first (it may have newly crossed the
         // half-HP threshold); then the other, in case both already qualify.

@@ -195,6 +195,32 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                     "(upkeep scale)");
             }
             break;
+        case StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent:
+            if (rMod.op != ModifierOp_t::AddPercent)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' LevelsAboveOpponent requires op AddPercent");
+            }
+            if (stat != StatId_t::Attack && stat != StatId_t::Defense)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' LevelsAboveOpponent is only valid on attack "
+                    "or defense, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::WorldGlobal)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' LevelsAboveOpponent requires scope ThisUnit "
+                    "or WorldGlobal");
+            }
+            if (!std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' LevelsAboveOpponent requires a finite amount "
+                    "(percent per elevation level)");
+            }
+            break;
     }
 }
 
@@ -326,6 +352,13 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     if (statModifier.bypassClamp && statModifier.op != ModifierOp_t::Add)
     {
         throw std::runtime_error("StatModifier 'bypass_clamp' requires op Add");
+    }
+    if (statModifier.stat == StatId_t::BombardMinHpPercent
+        && statModifier.op == ModifierOp_t::AddPercent)
+    {
+        throw std::runtime_error(
+            "StatModifier bombard_min_hp_percent is already a percent of hit points; "
+            "AddPercent would be a percent of a percent. Use Add or MinClamp");
     }
     rEffect.effect = statModifier;
 }

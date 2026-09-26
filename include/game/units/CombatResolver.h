@@ -62,6 +62,9 @@ struct CombatResult_t
     bool bAttackerDisengaged = false;
     bool bDefenderDisengaged = false;
     const Tile* pRetreatTile = nullptr;
+    // Playback draws the bombard placeholder on the target tile, including a shot with
+    // no rounds. Melee hit flash stays off while this is set.
+    bool bBombardPlayback = false;
     // Hops the scrambled defender walked before combat (origin excluded). Empty when no
     // scramble fired. UI can play these tile-by-tile before combat rounds.
     std::vector<const Tile*> scramblePath;
@@ -76,6 +79,22 @@ struct CombatResult_t
 // is ApplyStackCollateral. GrantPlanetPearls pays for that defender, and for wild natives
 // the splash destroys, before DestroyUnit.
 //
+enum class CombatEngagement_t
+{
+    Standard,
+    // One round. An attacker loss records the roll and nominal damage and does not
+    // change attacker HP. Defender HP cannot fall below the bombard floor, and a unit
+    // already under that floor is not healed.
+    ArtilleryStrike,
+    // Full fight, no disengage. The defender is rated with Attack. Either side can reach 0.
+    ArtilleryDuel,
+};
+
+struct CombatResolveOptions_t
+{
+    CombatEngagement_t engagement = CombatEngagement_t::Standard;
+};
+
 // RNG is injected (typically GameState's shared stream) so combat, promotion, and probe
 // rolls can share one deterministic sequence.
 class CombatResolver
@@ -94,10 +113,16 @@ public:
 
     // Applies HP each round, moves a unit on disengage, and DestroyUnit when a side
     // reaches 0. A killed defender also runs ApplyStackCollateral and GrantPlanetPearls.
-    CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
+    CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender)
+    {
+        return Resolve(rAttacker, rDefender, {});
+    }
+    CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender,
+                           const CombatResolveOptions_t& rOptions);
 
 private:
     int Roll_(int strength) const;
+    int BombardHpFloor_(const Unit& rDefender) const;
     // If eligible and at the HP threshold with a retreat tile, moves rCandidate and records
     // the disengage on rResult. Returns true when combat should end.
     bool TryDisengage_(Unit& rCandidate, CombatSide_t side, int startHp,

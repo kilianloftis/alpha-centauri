@@ -19,14 +19,22 @@ void CombatPresentation::Begin(const CombatResult_t& rResult,
                                const Tile& rDefenderTile)
 {
     Clear();
-    if (rResult.rounds.empty())
+    if (rResult.rounds.empty() && !rResult.bBombardPlayback)
     {
         return;
     }
 
     m_result = rResult;
+    m_bBombardPlayback = rResult.bBombardPlayback;
     m_pAttackerTile = &rAttackerTile;
     m_pDefenderTile = &rDefenderTile;
+    if (rResult.rounds.empty())
+    {
+        m_roundIndex = 0;
+        m_phase = Phase_t::Flashing;
+        m_phaseStart = std::chrono::steady_clock::now();
+        return;
+    }
     StartRound_(0);
 }
 
@@ -35,6 +43,7 @@ void CombatPresentation::Clear()
     m_result = {};
     m_pAttackerTile = nullptr;
     m_pDefenderTile = nullptr;
+    m_bBombardPlayback = false;
     m_phase = Phase_t::Idle;
     m_roundIndex = 0;
 }
@@ -65,7 +74,8 @@ void CombatPresentation::Update()
 
 std::optional<UnitId_t> CombatPresentation::GetFlashingUnitId() const
 {
-    if (m_phase != Phase_t::Flashing || m_roundIndex >= m_result.rounds.size())
+    if (m_bBombardPlayback || m_phase != Phase_t::Flashing
+        || m_roundIndex >= m_result.rounds.size())
     {
         return std::nullopt;
     }
@@ -94,6 +104,12 @@ const CombatRound_t* CombatPresentation::GetDisplayedRound() const
 void CombatPresentation::Render(Graphics& rGraphics,
                                 const WorldDisplay& rDisplay) const
 {
+    if (m_bBombardPlayback && m_phase == Phase_t::Flashing)
+    {
+        DrawBombardOverlay_(rGraphics, rDisplay);
+        return;
+    }
+
     const std::optional<UnitId_t> flashingId = GetFlashingUnitId();
     if (!flashingId)
     {
@@ -130,6 +146,27 @@ void CombatPresentation::Render(Graphics& rGraphics,
         rGraphics,
         UnitMarkerRenderer::MarkerRectOnTile(origin->first, origin->second,
                                              rDisplay.GetEffectiveTileSize()));
+}
+
+void CombatPresentation::DrawBombardOverlay_(Graphics& rGraphics,
+                                               const WorldDisplay& rDisplay) const
+{
+    if (!m_pDefenderTile)
+    {
+        return;
+    }
+    const auto origin = rDisplay.GetViewport().PixelOriginOf(
+        m_pDefenderTile->GetX(), m_pDefenderTile->GetY());
+    if (!origin)
+    {
+        return;
+    }
+    const Rectangle_t rect = UnitMarkerRenderer::MarkerRectOnTile(
+        origin->first, origin->second, rDisplay.GetEffectiveTileSize());
+    const auto& s = Style().bombardPresentation;
+    rGraphics.DrawFilledRect(rect.x, rect.y, rect.width, rect.height, s.overlayFill);
+    rGraphics.DrawRect(rect.x, rect.y, rect.width, rect.height, s.overlayBorder,
+                       s.overlayBorderWidth);
 }
 
 void CombatPresentation::StartRound_(size_t roundIndex)

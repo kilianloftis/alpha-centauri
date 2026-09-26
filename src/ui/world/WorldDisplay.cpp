@@ -61,6 +61,11 @@ void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
     m_unitMarkers.SetSelectedUnit(pUnit);
 }
 
+void WorldDisplay::SetPlaybackVisibleUnits(const std::unordered_set<UnitId_t>* pUnitIds)
+{
+    m_unitMarkers.SetPlaybackVisibleUnits(pUnitIds);
+}
+
 float WorldDisplay::GetEffectiveTileSize() const
 {
     return m_viewport.TileSize();
