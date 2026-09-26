@@ -96,6 +96,12 @@ struct FungalBloomApplied_t
     int lifeforms = 0;
 };
 
+struct ExplosionApplied_t
+{
+    int radius = 0;
+    int tiles = 0;
+};
+
 struct TerrainFeatureChanged_t
 {
     std::string featureId;
@@ -126,6 +132,7 @@ using TriggeredEffectResult_t = std::variant<
     UnitDestroyed_t,
     EarthquakeApplied_t,
     FungalBloomApplied_t,
+    ExplosionApplied_t,
     TerrainFeatureChanged_t,
     RockinessChanged_t,
     ElevationChanged_t

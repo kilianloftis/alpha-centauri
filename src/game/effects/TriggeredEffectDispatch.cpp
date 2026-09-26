@@ -17,6 +17,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/map/ElevationChange.h"
+#include "game/map/Explosion.h"
 #include "game/map/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
@@ -490,6 +491,33 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
     return true;
 }
 
+bool Explosion_(TriggeredEffectContext_t& rCtx, const ExplosionEffect_t& rConfig,
+                std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    int radius = rConfig.radius;
+    if (rConfig.radiusStat)
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        radius = rCtx.pUnit->GetStat(*rConfig.radiusStat);
+    }
+    const ExplosionResult_t result =
+        ApplyExplosion(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), radius, rCtx.Rng(),
+                       rCtx.rGameState, rCtx.pUnit);
+    if (!result.bChanged)
+    {
+        return false;
+    }
+    rOut.push_back(ExplosionApplied_t{result.radius, result.tiles});
+    return true;
+}
+
 // Which subject an entry acts on. A faction-subject effect applies once per faction in the
 // context — that is what makes a council GrantEnergy credit every member. A base-, unit- or
 // world-subject effect has exactly one subject and applies once, however many factions the
@@ -516,6 +544,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, DestroyUnitEffect_t>
                                || std::is_same_v<T, EarthquakeEffect_t>
                                || std::is_same_v<T, FungalBloomEffect_t>
+                               || std::is_same_v<T, ExplosionEffect_t>
                                || std::is_same_v<T, SetTerrainFeatureEffect_t>
                                || std::is_same_v<T, StepRockinessEffect_t>
                                || std::is_same_v<T, ElevationChangeEffect_t>
@@ -662,6 +691,10 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, FungalBloomEffect_t>)
             {
                 return FungalBloom_(rCtx, rConcrete, rOut);
+            }
+            else if constexpr (std::is_same_v<T, ExplosionEffect_t>)
+            {
+                return Explosion_(rCtx, rConcrete, rOut);
             }
             else if constexpr (std::is_same_v<T, SetTerrainFeatureEffect_t>)
             {

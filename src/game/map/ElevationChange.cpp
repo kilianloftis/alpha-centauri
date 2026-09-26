@@ -10,9 +10,11 @@
 #include <algorithm>
 #include <deque>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace ac
 {
@@ -123,13 +125,18 @@ private:
     std::unordered_map<Tile*, bool> m_wasWater;
 };
 
-void RelaxAdjacentSlopes_(Tile& rOrigin, WorldMap& rWorldMap, int maxDiff, int floorMeters,
-                          int ceilingMeters, PriorSurface& rPrior)
+void RelaxAdjacentSlopes_(std::span<Tile*> seeds, WorldMap& rWorldMap, int maxDiff,
+                          int floorMeters, int ceilingMeters, PriorSurface& rPrior)
 {
     std::deque<Tile*> pending;
     std::unordered_set<Tile*> queued;
-    pending.push_back(&rOrigin);
-    queued.insert(&rOrigin);
+    for (Tile* pSeed : seeds)
+    {
+        if (pSeed && queued.insert(pSeed).second)
+        {
+            pending.push_back(pSeed);
+        }
+    }
 
     while (!pending.empty())
     {
@@ -189,8 +196,10 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
     PriorSurface prior(pTileEffects != nullptr);
     prior.Note(rOrigin);
     rOrigin.SetElevation(next);
-    RelaxAdjacentSlopes_(rOrigin, rWorldMap, rRules.maxAdjacentDifferenceMeters,
-                         rRules.minElevationMeters, rRules.maxElevationMeters, prior);
+    Tile* pOrigin = &rOrigin;
+    RelaxAdjacentSlopes_(std::span<Tile*>(&pOrigin, 1), rWorldMap,
+                         rRules.maxAdjacentDifferenceMeters, rRules.minElevationMeters,
+                         rRules.maxElevationMeters, prior);
     if (pTileEffects)
     {
         std::vector<SurfaceFlip_t> flips;
@@ -244,6 +253,59 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
 
     return ApplyElevationDelta(rOrigin, rWorldMap, delta, rRules, rRules.minElevationMeters,
                                rRules.maxElevationMeters, pTileEffects, pWorld);
+}
+
+bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt19937& rRng,
+                        const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
+                        IUnitOrderWorld* pWorld)
+{
+    if (tiles.empty())
+    {
+        return false;
+    }
+
+    const OriginBand_t band =
+        RequireLegalEdit_(rRules.minElevationMeters, rRules.maxElevationMeters, rRules);
+
+    TileChangeDeferral defer;
+    PriorSurface prior(pTileEffects != nullptr);
+    std::vector<Tile*> changed;
+    changed.reserve(tiles.size());
+
+    for (Tile* pTile : tiles)
+    {
+        if (!pTile)
+        {
+            continue;
+        }
+        // Roll even when the tile is already on the floor, so the stream advances once per tile.
+        const int roll = RollLevelMeters(rRng, rRules);
+        const int next = Clamp_(pTile->GetElevation() - roll, band.floor, band.ceiling);
+        if (next == pTile->GetElevation())
+        {
+            continue;
+        }
+        prior.Note(*pTile);
+        pTile->SetElevation(next);
+        changed.push_back(pTile);
+    }
+
+    if (changed.empty())
+    {
+        return false;
+    }
+
+    RelaxAdjacentSlopes_(changed, rWorldMap, rRules.maxAdjacentDifferenceMeters,
+                         rRules.minElevationMeters, rRules.maxElevationMeters, prior);
+    if (pTileEffects)
+    {
+        std::vector<SurfaceFlip_t> flips;
+        prior.AppendFlips(flips);
+        ReconcileSurfaceFlips(*pTileEffects, pWorld, flips);
+    }
+
+    RecomputeRivers(rWorldMap);
+    return true;
 }
 
 } // namespace ac

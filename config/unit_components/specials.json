@@ -301,5 +301,26 @@
         "type": "DestroyUnit"
       }
     ]
+  },
+  {
+    "id": "Planet_Buster",
+    "name": "Planet Buster",
+    "unit_name": "Planet Buster",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "Explosion",
+        "parameters": {
+          "radius_stat": "explosion_radius"
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
   }
 ]

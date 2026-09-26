@@ -4,6 +4,7 @@
 #include "game/units/UnitDomain.h"
 
 #include <random>
+#include <span>
 
 namespace ac
 {
@@ -52,5 +53,14 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
                      const ElevationRulesConfig_t& rRules,
                      TileEffectsContext* pTileEffects = nullptr,
                      IUnitOrderWorld* pWorld = nullptr);
+
+// Each tile drops by one RollLevelMeters, clamped to Planet's range. Every drop is applied
+// before one slope relaxation seeded with the tiles that moved, so a neighbor is not pulled
+// before its own roll. Returns false when no elevation changes. Null entries are skipped.
+// Occupancy and rivers match ApplyElevationDelta.
+bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt19937& rRng,
+                        const ElevationRulesConfig_t& rRules,
+                        TileEffectsContext* pTileEffects = nullptr,
+                        IUnitOrderWorld* pWorld = nullptr);
 
 } // namespace ac

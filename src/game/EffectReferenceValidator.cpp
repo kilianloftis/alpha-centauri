@@ -194,6 +194,7 @@ struct TriggeredPayloadValidator
     void operator()(const DestroyUnitEffect_t&) const {}
     void operator()(const EarthquakeEffect_t&) const {}
     void operator()(const FungalBloomEffect_t&) const {}
+    void operator()(const ExplosionEffect_t&) const {}
     void operator()(const StepRockinessEffect_t&) const {}
     void operator()(const ElevationChangeEffect_t&) const {}
 

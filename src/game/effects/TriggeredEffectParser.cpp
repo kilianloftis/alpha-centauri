@@ -319,6 +319,45 @@ void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t
     rEffect.effect = bloom;
 }
 
+void ParseExplosion_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    const bool bHasRadius = parameters.contains("radius");
+    const bool bHasStat = parameters.contains("radius_stat");
+    if (bHasRadius == bHasStat)
+    {
+        throw std::runtime_error(
+            "Explosion requires exactly one of 'radius' (a fixed count) or 'radius_stat' "
+            "(resolved off the subject unit)");
+    }
+
+    ExplosionEffect_t explosion;
+    if (bHasRadius)
+    {
+        explosion.radius =
+            static_cast<int>(EffectConfigParser::RequireNumber(parameters, "radius"));
+        if (explosion.radius < 1)
+        {
+            throw std::runtime_error("Explosion 'radius' must be >= 1");
+        }
+    }
+    else
+    {
+        if (!parameters.at("radius_stat").is_string())
+        {
+            throw std::runtime_error("Explosion 'radius_stat' must be a string");
+        }
+        const StatId_t stat = ParseStatId(parameters.at("radius_stat").get<std::string>());
+        if (DomainFor(stat) != ResolveDomain_t::Unit)
+        {
+            throw std::runtime_error(
+                "Explosion 'radius_stat' must be a unit stat: the size is resolved off "
+                "the unit the trigger stamped");
+        }
+        explosion.radiusStat = stat;
+    }
+    rEffect.effect = explosion;
+}
+
 const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
 {
     static const std::unordered_map<std::string, ParseFn_> k_Parsers = {
@@ -336,6 +375,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"DestroyUnit", ParseDestroyUnit_},
         {"Earthquake", ParseEarthquake_},
         {"FungalBloom", ParseFungalBloom_},
+        {"Explosion", ParseExplosion_},
         {"SetTerrainFeature", ParseSetTerrainFeature_},
         {"StepRockiness", ParseStepRockiness_},
         {"ElevationChange", ParseElevationChange_},

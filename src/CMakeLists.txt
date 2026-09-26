@@ -172,6 +172,7 @@ add_library(ac-core STATIC
     game/map/LandmarkGeneration.cpp
     game/map/FungusGeneration.cpp
     game/map/FungalBloom.cpp
+    game/map/Explosion.cpp
     game/map/TileBonusGeneration.cpp
     game/map/MapGenerationConfig.cpp
     game/map/RiverGeneration.cpp

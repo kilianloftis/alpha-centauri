@@ -149,6 +149,17 @@ struct FungalBloomEffect_t
     std::optional<StatId_t> tilesStat;
 };
 
+// Destroys units other than the subject, razes bases, and removes built improvements in a
+// Chebyshev disk, then lowers every tile in that disk by one level. Exactly one magnitude
+// source is authored — `radius` is a literal, `radiusStat` reads that stat off the subject
+// unit (a planet buster takes its size from the reactor's ExplosionRadius). Radius 1 is
+// the 3×3 of 9 tiles. The subject unit is spared so a following DestroyUnit can spend it.
+struct ExplosionEffect_t
+{
+    int radius = 0;
+    std::optional<StatId_t> radiusStat;
+};
+
 // Adds or clears one terrain occupant on the context tile. The id decides which tile field
 // it routes to: aquifer and river are bools, everything else is optional terrain. Terrain
 // that is derived from other state (rockiness, moisture, the depth bands) is rejected at
@@ -190,6 +201,7 @@ using TriggeredEffectVariant_t = std::variant<
     DestroyUnitEffect_t,
     EarthquakeEffect_t,
     FungalBloomEffect_t,
+    ExplosionEffect_t,
     SetTerrainFeatureEffect_t,
     StepRockinessEffect_t,
     ElevationChangeEffect_t

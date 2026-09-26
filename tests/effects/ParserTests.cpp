@@ -43,6 +43,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
     CHECK(ParseStatId("earthquake_levels") == StatId_t::EarthquakeLevels);
     CHECK(ParseStatId("fungal_bloom_tiles") == StatId_t::FungalBloomTiles);
+    CHECK(ParseStatId("explosion_radius") == StatId_t::ExplosionRadius);
     CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
@@ -1267,6 +1268,36 @@ TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered
     // A base stat cannot be resolved off the unit the trigger stamped.
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "Earthquake", "parameters": { "levels_stat": "minerals" } })"),
+        "on_detonate_effects"), ContainsSubstring("must be a unit stat"));
+
+    const TriggeredEffectConfig_t explosion = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion", "parameters": { "radius": 2 } })"),
+        "on_detonate_effects");
+    const auto* pExplosion = std::get_if<ExplosionEffect_t>(&explosion.effect);
+    REQUIRE(pExplosion);
+    CHECK(pExplosion->radius == 2);
+    CHECK_FALSE(pExplosion->radiusStat.has_value());
+
+    const TriggeredEffectConfig_t explosionStat = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion",
+                         "parameters": { "radius_stat": "explosion_radius" } })"),
+        "on_detonate_effects");
+    const auto* pExplosionStat = std::get_if<ExplosionEffect_t>(&explosionStat.effect);
+    REQUIRE(pExplosionStat);
+    CHECK(pExplosionStat->radiusStat == StatId_t::ExplosionRadius);
+
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion",
+                         "parameters": { "radius": 1, "radius_stat": "explosion_radius" } })"),
+        "on_detonate_effects"), ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion", "parameters": {} })"), "on_detonate_effects"),
+        ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion", "parameters": { "radius": 0 } })"),
+        "on_detonate_effects"), ContainsSubstring("must be >= 1"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Explosion", "parameters": { "radius_stat": "minerals" } })"),
         "on_detonate_effects"), ContainsSubstring("must be a unit stat"));
 }
 
