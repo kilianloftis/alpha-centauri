@@ -388,7 +388,6 @@ bool SetTerrainFeature_(TriggeredEffectContext_t& rCtx, const SetTerrainFeatureE
                 rTileEffects.RemoveOccupantWithEffects(rTile, rConfig.featureId);
             }
         }
-
     }
 
     if (!bChanged)

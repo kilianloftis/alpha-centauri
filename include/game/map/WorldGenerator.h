@@ -48,7 +48,8 @@ private:
     void GenerateRockiness_(WorldMap& rWorld,
                             ErosiveForces_t erosiveForces,
                             const RockinessDecorationConfig_t& rRockiness);
-    void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers);
+    void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers,
+                           const ImprovementRegistry& rOccupants);
     void GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
                          const ImprovementRegistry& rOccupants);
     void GenerateLandmarks_(WorldMap& rWorld,

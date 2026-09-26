@@ -6,6 +6,7 @@
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/LandmarkGeneration.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/MoistureGeneration.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/RockinessGeneration.h"
@@ -72,7 +73,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);
     GenerateLandmarks_(*pWorld, rLandmarks, rOccupants);
-    GenerateAquifers_(*pWorld, rDecoration.aquifers);
+    GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
     GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rOccupants);
 
     return pWorld;
@@ -272,26 +273,28 @@ void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
 }
 
 void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
-                                       const AquiferDecorationConfig_t& rAquifers)
+                                       const AquiferDecorationConfig_t& rAquifers,
+                                       const ImprovementRegistry& rOccupants)
 {
-    std::vector<Tile*> landTiles;
+    const ImprovementConfig_t& rAquifer = rOccupants.Get("Aquifer");
+    std::vector<Tile*> candidates;
     for (auto& pTile : rWorld.GetTiles())
     {
-        if (pTile && pTile->IsLand())
+        if (pTile && !pTile->GetHasAquifer() && CanBuildImprovement(*pTile, rAquifer))
         {
-            landTiles.push_back(pTile.get());
+            candidates.push_back(pTile.get());
         }
     }
 
-    if (!landTiles.empty() && rAquifers.landFraction > 0.0f)
+    if (!candidates.empty() && rAquifers.fraction > 0.0f)
     {
-        std::shuffle(landTiles.begin(), landTiles.end(), m_rng);
+        std::shuffle(candidates.begin(), candidates.end(), m_rng);
         const size_t target = static_cast<size_t>(
-            std::lround(rAquifers.landFraction * static_cast<float>(landTiles.size())));
-        const size_t count = std::min(target, landTiles.size());
+            std::lround(rAquifers.fraction * static_cast<float>(candidates.size())));
+        const size_t count = std::min(target, candidates.size());
         for (size_t i = 0; i < count; ++i)
         {
-            landTiles[i]->SetHasAquifer(true);
+            candidates[i]->SetHasAquifer(true);
         }
     }
 

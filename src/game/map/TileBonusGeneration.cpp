@@ -18,8 +18,19 @@ namespace
 
 bool CanPlaceBonus_(const Tile& rTile, const ImprovementConfig_t& rBonus)
 {
-    return rTile.IsLand() && !rTile.HasTerrainFeature(rBonus.id)
-           && CanBuildImprovement(rTile, rBonus);
+    return !rTile.HasTerrainFeature(rBonus.id) && CanBuildImprovement(rTile, rBonus);
+}
+
+bool TileAcceptsBonus_(const Tile& rTile, const std::vector<const ImprovementConfig_t*>& rBonuses)
+{
+    for (const ImprovementConfig_t* pBonus : rBonuses)
+    {
+        if (pBonus && CanPlaceBonus_(rTile, *pBonus))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 const ImprovementConfig_t* PickWeightedBonus_(
@@ -64,7 +75,7 @@ int PlaceTileBonuses(WorldMap& rWorld,
                      const ImprovementRegistry& rOccupants,
                      std::mt19937& rRng)
 {
-    if (rConfig.landFraction <= 0.0f)
+    if (rConfig.fraction <= 0.0f)
     {
         return 0;
     }
@@ -82,30 +93,30 @@ int PlaceTileBonuses(WorldMap& rWorld,
         return 0;
     }
 
-    std::vector<Tile*> landTiles;
+    std::vector<Tile*> candidates;
     for (auto& pTile : rWorld.GetTiles())
     {
-        if (pTile && pTile->IsLand())
+        if (pTile && TileAcceptsBonus_(*pTile, bonuses))
         {
-            landTiles.push_back(pTile.get());
+            candidates.push_back(pTile.get());
         }
     }
-    if (landTiles.empty())
+    if (candidates.empty())
     {
         return 0;
     }
 
     const int target = static_cast<int>(std::lround(
-        rConfig.landFraction * static_cast<float>(landTiles.size())));
+        rConfig.fraction * static_cast<float>(candidates.size())));
     if (target <= 0)
     {
         return 0;
     }
 
-    std::shuffle(landTiles.begin(), landTiles.end(), rRng);
+    std::shuffle(candidates.begin(), candidates.end(), rRng);
 
     int placed = 0;
-    for (Tile* pTile : landTiles)
+    for (Tile* pTile : candidates)
     {
         if (placed >= target)
         {

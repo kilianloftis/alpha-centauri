@@ -43,9 +43,9 @@ MapGenerationConfig_t SmallMapConfig_()
 WorldGenDecorationConfig_t DecorationWithRivers_()
 {
     WorldGenDecorationConfig_t decoration;
-    decoration.aquifers.landFraction = 0.05f;
-    decoration.fungus.landFraction = 0.0f;
-    decoration.tileBonuses.landFraction = 0.0f;
+    decoration.aquifers.fraction = 0.05f;
+    decoration.fungus.fraction = 0.0f;
+    decoration.tileBonuses.fraction = 0.0f;
     return decoration;
 }
 
@@ -190,6 +190,49 @@ TEST_CASE("World generation places against bound tiles", "[worldgen][improvement
         }
     }
     REQUIRE(riverTiles > 0);
+}
+
+TEST_CASE("Aquifers cover the fraction of tiles the Aquifer entry can occupy",
+          "[worldgen][aquifers]")
+{
+    actest::WorldFixture world;
+    WorldGenDecorationConfig_t decoration;
+    decoration.aquifers.fraction = 1.0f;
+    decoration.fungus.fraction = 0.0f;
+    decoration.tileBonuses.fraction = 0.0f;
+
+    WorldGenerator generator;
+    const std::unique_ptr<WorldMap> pWorld =
+        generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, decoration, {},
+                           world.improvements, world.dataContext.elevationRules, 11u);
+
+    int land = 0;
+    int water = 0;
+    int aquifers = 0;
+    int waterAquifers = 0;
+    for (const auto& pTile : pWorld->GetTiles())
+    {
+        if (pTile->IsLand())
+        {
+            ++land;
+        }
+        if (pTile->IsWater())
+        {
+            ++water;
+            if (pTile->GetHasAquifer())
+            {
+                ++waterAquifers;
+            }
+        }
+        if (pTile->GetHasAquifer())
+        {
+            ++aquifers;
+        }
+    }
+    REQUIRE(land > 0);
+    REQUIRE(water > 0);
+    CHECK(waterAquifers == 0);
+    CHECK(aquifers == land);
 }
 
 TEST_CASE("Sculpt knobs come from landmark config", "[worldgen][landmarks][config]")

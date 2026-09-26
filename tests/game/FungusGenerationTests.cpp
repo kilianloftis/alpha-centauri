@@ -136,7 +136,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
     "average": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },
     "high": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 }
   },
-  "aquifers": { "land_fraction": 0.01 }
+  "aquifers": { "fraction": 0.01 }
 })" << '\n';
     }
 
@@ -146,14 +146,14 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
     std::filesystem::remove(path);
 }
 
-TEST_CASE("PlaceFungus covers roughly the configured land fraction", "[worldgen][fungus]")
+TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
+          "[worldgen][fungus]")
 {
     WorldMap world(40, 40, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
-    cfg.landFraction = 0.1f;
-    cfg.waterFraction = 0.0f;
+    cfg.fraction = 0.1f;
     cfg.minPatchTiles = 1;
     cfg.maxPatchTiles = 20;
 
@@ -174,7 +174,7 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
-    cfg.landFraction = 1.0f; // try to cover everything, but only via 1-tile patches
+    cfg.fraction = 1.0f; // try to cover everything, but only via 1-tile patches
     cfg.minPatchTiles = 1;
     cfg.maxPatchTiles = 1;
     cfg.patchSizeSkew = 1.0f;
@@ -199,7 +199,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
-    cfg.landFraction = 0.2f;
+    cfg.fraction = 0.2f;
     cfg.minPatchTiles = 8;
     cfg.maxPatchTiles = 8;
     cfg.patchSizeSkew = 1.0f;
@@ -233,8 +233,7 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
-    cfg.landFraction = 0.12f;
-    cfg.waterFraction = 0.0f;
+    cfg.fraction = 0.12f;
     cfg.minPatchTiles = 1;
     cfg.maxPatchTiles = 16;
     cfg.patchSizeSkew = 4.0f;
@@ -264,29 +263,85 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
     CHECK(large * 5 <= static_cast<int>(sizes.size()));
 }
 
-TEST_CASE("PlaceFungus water_fraction only stamps water tiles", "[worldgen][fungus]")
+TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
+          "[worldgen][fungus]")
 {
     WorldMap world(16, 16, actest::TestMapRules());
     for (auto& pTile : world.GetTiles())
     {
-        pTile->SetElevation(-500);
+        pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);
     }
 
     FungusDecorationConfig_t cfg;
-    cfg.landFraction = 0.0f;
-    cfg.waterFraction = 0.15f;
-    cfg.minPatchTiles = 2;
-    cfg.maxPatchTiles = 10;
+    cfg.fraction = 0.25f;
+    cfg.minPatchTiles = 1;
+    cfg.maxPatchTiles = 8;
 
     std::mt19937 rng(11);
     PlaceFungus(world, cfg, TestFungus_(), rng);
 
+    int landFungus = 0;
+    int waterFungus = 0;
     for (const auto& pTile : world.GetTiles())
     {
-        if (pTile->HasFeature("Fungus"))
+        if (!pTile->HasFeature("Fungus"))
         {
-            CHECK(pTile->IsWater());
+            continue;
+        }
+        if (pTile->IsLand())
+        {
+            ++landFungus;
+        }
+        if (pTile->IsWater())
+        {
+            ++waterFungus;
         }
     }
-    CHECK(CountFungus_(world) > 0);
+    CHECK(landFungus > 0);
+    CHECK(waterFungus > 0);
+
+    const int tiles = world.GetWidth() * world.GetHeight();
+    const int fungus = landFungus + waterFungus;
+    CHECK(fungus >= static_cast<int>(0.1f * static_cast<float>(tiles)));
+    CHECK(fungus <= static_cast<int>(0.4f * static_cast<float>(tiles)));
+}
+
+TEST_CASE("PlaceFungus counts only tiles the fungus entry can occupy", "[worldgen][fungus]")
+{
+    WorldMap world(20, 20, actest::TestMapRules());
+    int land = 0;
+    for (auto& pTile : world.GetTiles())
+    {
+        const bool bLand = pTile->GetY() < 10;
+        pTile->SetElevation(bLand ? 1000 : -500);
+        if (bLand)
+        {
+            ++land;
+        }
+    }
+
+    ImprovementConfig_t landFungus = TestFungus_();
+    landFungus.domain = ImprovementDomain_t::Land;
+
+    FungusDecorationConfig_t cfg;
+    cfg.fraction = 0.2f;
+    cfg.minPatchTiles = 1;
+    cfg.maxPatchTiles = 8;
+    cfg.patchSizeSkew = 1.0f;
+
+    std::mt19937 rng(5);
+    PlaceFungus(world, cfg, landFungus, rng);
+
+    int fungus = 0;
+    for (const auto& pTile : world.GetTiles())
+    {
+        if (!pTile->HasFeature("Fungus"))
+        {
+            continue;
+        }
+        CHECK(pTile->IsLand());
+        ++fungus;
+    }
+    CHECK(fungus >= static_cast<int>(0.1f * static_cast<float>(land)));
+    CHECK(fungus <= static_cast<int>(0.3f * static_cast<float>(land)));
 }

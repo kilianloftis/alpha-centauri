@@ -99,21 +99,15 @@ void LocationPanel::DrawContents_(Graphics& rGraphics, float textX, float textY,
     float y = textY;
     const float bottom = m_layout.y + m_layout.height - m_layout.width * s.paddingRatio;
 
-    auto drawName = [&](const ImprovementConfig_t* pConfig)
-    {
-        if (!pConfig || y + static_cast<float>(fontSize) > bottom)
-        {
-            return;
-        }
-        rGraphics.DrawText(pConfig->name, textX, y, fontSize, s.bodyTextColor);
-        y += lineStep;
-    };
-
     m_pSelectedTile->ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
-        drawName(&rConfig);
+        if (y + static_cast<float>(fontSize) > bottom)
+        {
+            return true;
+        }
+        rGraphics.DrawText(rConfig.name, textX, y, fontSize, s.bodyTextColor);
+        y += lineStep;
         return false;
     });
-
 }
 
 } // namespace ac

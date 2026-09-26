@@ -165,7 +165,8 @@ graph LR
 - **Landmarks before rivers**: landmark placement is the last stage that changes elevation (the Mount Planet sculpt raises peaks and roughens slopes) or stamps a `terminates_river` feature (BoreholeCluster). River tracing walks strictly downhill and stops at terminators, so it has to see the finished terrain. Run the other way round, rivers flowed down pre-sculpt slopes and straight through boreholes.
 - **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks.
 - **Orographic moisture**: elevation weight is local meters divided by the preset's `max_elevation`, clamped to [0, 1], so a tile at that ceiling takes the full `orographic_strength`. Slope saturation stays `orographic_elev_scale` in `decoration.json`.
-- **Fungus before landmarks**: `PlaceFungus` reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
+- **Fungus before landmarks**: `PlaceFungus` covers `decoration.json`'s `fungus.fraction` of the tiles the fungus entry can occupy, land and water in one pool. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
+- **Aquifers**: `GenerateAquifers_` covers `aquifers.fraction` of the tiles the Aquifer entry can occupy. The shipping entry's `domain` is land, so water tiles stay out of that pool.
 - **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
 - **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
 
@@ -237,7 +238,7 @@ graph TB
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
 - **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
-- **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.land_fraction`.
+- **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.fraction` of the tiles a bonus entry can occupy.
 
 ### Improvement coexistence (`CanBuildImprovement`)
 - **One predicate, both directions**: a candidate may be placed unless the candidate's own `excludes` name a feature already on the tile, **or** a feature already on the tile names the candidate. Modders declare the relationship once, on whichever side reads better — `MountPlanet` excluding `@resource_bonus` is enough to keep `Nutrients` off it, without `Nutrients` naming every landmark. `Fungus` states its side the same way with `excludes: ["@buildable"]`: `@buildable` is an **implicit** tag every entry that declares `turns_required` carries, derived rather than authored (declaring it by hand is rejected), so a new former-built improvement is fungus-blocked the moment it exists instead of when someone remembers to type `"Fungus"`. `Base` declares no `turns_required`, so founding on fungus is untouched.

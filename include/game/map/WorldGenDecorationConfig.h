@@ -41,10 +41,10 @@ struct RockinessDecorationConfig_t
     RockinessWeights_t high{0.70f, 0.25f, 0.05f};
 };
 
-// Aquifer decoration: target fraction of land tiles that become river sources.
+// Aquifer decoration: target fraction of tiles the Aquifer entry can occupy.
 struct AquiferDecorationConfig_t
 {
-    float landFraction = 0.02f;
+    float fraction = 0.02f;
 };
 
 // Fungus decoration: orthogonal patch growth from single tiles to large swaths.
@@ -52,8 +52,8 @@ struct AquiferDecorationConfig_t
 // size = min + floor((max-min+1) * u^patchSizeSkew). skew 1 = uniform; higher → smaller.
 struct FungusDecorationConfig_t
 {
-    float landFraction = 0.08f;   // target fraction of land tiles with fungus
-    float waterFraction = 0.0f;   // target fraction of water tiles (sea fungus)
+    // Target fraction of tiles the fungus entry can occupy (CanBuildImprovement).
+    float fraction = 0.08f;
     int minPatchTiles = 1;
     int maxPatchTiles = 16;
     float patchSizeSkew = 4.0f;   // >= 1; higher weights the small end of the range
@@ -62,7 +62,8 @@ struct FungusDecorationConfig_t
 // Frequency-weighted tile bonuses (Nutrients/Minerals/Energy/Monolith, …).
 struct TileBonusDecorationConfig_t
 {
-    float landFraction = 0.04f; // target fraction of land tiles that receive a bonus
+    // Target fraction of tiles a bonus entry can occupy (CanBuildImprovement).
+    float fraction = 0.04f;
 };
 
 // Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, …).

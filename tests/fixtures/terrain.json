@@ -296,6 +296,7 @@
     {
       "id": "Aquifer",
       "name": "Aquifer",
+      "domain": "land",
       "effects": []
     }
   ],

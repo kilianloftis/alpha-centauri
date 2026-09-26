@@ -22,7 +22,7 @@ void FillLand_(WorldMap& rWorld)
 
 } // namespace
 
-TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
+TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable tiles",
           "[worldgen][tile-bonus]")
 {
     ImprovementRegistry terrain;
@@ -33,7 +33,7 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
     FillLand_(world);
 
     TileBonusDecorationConfig_t cfg;
-    cfg.landFraction = 0.2f;
+    cfg.fraction = 0.2f;
 
     std::mt19937 rng(21);
     for (auto& pTile : world.GetTiles())
@@ -68,4 +68,48 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
     CHECK(monoliths > 0);
     CHECK(bonusTiles >= static_cast<int>(0.1f * 24 * 24));
     CHECK(bonusTiles <= static_cast<int>(0.3f * 24 * 24));
+}
+
+TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",
+          "[worldgen][tile-bonus]")
+{
+    ImprovementRegistry terrain;
+    terrain.LoadOccupants(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json",
+                          std::string(AC_TEST_FIXTURES_DIR) + "/terrain.json");
+
+    WorldMap world(16, 16, actest::TestMapRules());
+    for (auto& pTile : world.GetTiles())
+    {
+        pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);
+        pTile->BindOccupants(terrain);
+    }
+
+    TileBonusDecorationConfig_t cfg;
+    cfg.fraction = 0.5f;
+
+    std::mt19937 rng(4);
+    const int placed = PlaceTileBonuses(world, cfg, terrain, rng);
+    REQUIRE(placed > 0);
+
+    int landBonuses = 0;
+    int waterBonuses = 0;
+    for (const auto& pTile : world.GetTiles())
+    {
+        const bool hasBonus = pTile->HasFeature("Nutrients") || pTile->HasFeature("Monolith");
+        if (!hasBonus)
+        {
+            continue;
+        }
+        if (pTile->IsLand())
+        {
+            ++landBonuses;
+        }
+        if (pTile->IsWater())
+        {
+            ++waterBonuses;
+        }
+    }
+    CHECK(landBonuses > 0);
+    CHECK(waterBonuses > 0);
+    CHECK(landBonuses + waterBonuses == placed);
 }

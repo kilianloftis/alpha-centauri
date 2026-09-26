@@ -117,16 +117,16 @@ RockinessDecorationConfig_t ParseRockiness_(const nlohmann::json& rJson)
 AquiferDecorationConfig_t ParseAquifers_(const nlohmann::json& rJson)
 {
     AquiferDecorationConfig_t config;
-    if (!rJson.contains("land_fraction"))
+    if (!rJson.contains("fraction"))
     {
         throw std::runtime_error(
-            "world gen decoration aquifers missing required field 'land_fraction'");
+            "world gen decoration aquifers missing required field 'fraction'");
     }
-    config.landFraction = rJson.at("land_fraction").get<float>();
-    if (config.landFraction < 0.0f || config.landFraction > 1.0f)
+    config.fraction = rJson.at("fraction").get<float>();
+    if (config.fraction < 0.0f || config.fraction > 1.0f)
     {
         throw std::runtime_error(
-            "world gen decoration aquifers.land_fraction must be in [0, 1]");
+            "world gen decoration aquifers.fraction must be in [0, 1]");
     }
     return config;
 }
@@ -134,26 +134,20 @@ AquiferDecorationConfig_t ParseAquifers_(const nlohmann::json& rJson)
 FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
 {
     FungusDecorationConfig_t config;
-    if (!rJson.contains("land_fraction"))
+    if (!rJson.contains("fraction"))
     {
         throw std::runtime_error(
-            "world gen decoration fungus missing required field 'land_fraction'");
+            "world gen decoration fungus missing required field 'fraction'");
     }
-    config.landFraction = rJson.at("land_fraction").get<float>();
-    config.waterFraction = rJson.value("water_fraction", config.waterFraction);
+    config.fraction = rJson.at("fraction").get<float>();
     config.minPatchTiles = rJson.value("min_patch_tiles", config.minPatchTiles);
     config.maxPatchTiles = rJson.value("max_patch_tiles", config.maxPatchTiles);
     config.patchSizeSkew = rJson.value("patch_size_skew", config.patchSizeSkew);
 
-    if (config.landFraction < 0.0f || config.landFraction > 1.0f)
+    if (config.fraction < 0.0f || config.fraction > 1.0f)
     {
         throw std::runtime_error(
-            "world gen decoration fungus.land_fraction must be in [0, 1]");
-    }
-    if (config.waterFraction < 0.0f || config.waterFraction > 1.0f)
-    {
-        throw std::runtime_error(
-            "world gen decoration fungus.water_fraction must be in [0, 1]");
+            "world gen decoration fungus.fraction must be in [0, 1]");
     }
     if (config.minPatchTiles < 1)
     {
@@ -176,16 +170,16 @@ FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
 TileBonusDecorationConfig_t ParseTileBonuses_(const nlohmann::json& rJson)
 {
     TileBonusDecorationConfig_t config;
-    if (!rJson.contains("land_fraction"))
+    if (!rJson.contains("fraction"))
     {
         throw std::runtime_error(
-            "world gen decoration tile_bonuses missing required field 'land_fraction'");
+            "world gen decoration tile_bonuses missing required field 'fraction'");
     }
-    config.landFraction = rJson.at("land_fraction").get<float>();
-    if (config.landFraction < 0.0f || config.landFraction > 1.0f)
+    config.fraction = rJson.at("fraction").get<float>();
+    if (config.fraction < 0.0f || config.fraction > 1.0f)
     {
         throw std::runtime_error(
-            "world gen decoration tile_bonuses.land_fraction must be in [0, 1]");
+            "world gen decoration tile_bonuses.fraction must be in [0, 1]");
     }
     return config;
 }
