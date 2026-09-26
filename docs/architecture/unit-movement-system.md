@@ -32,6 +32,19 @@ graph TD
         BaseConquestEffects --> BaseConquestConfig
     end
 
+    subgraph Combat
+        CombatStrength[CombatStrength<br/>attack and defense roll pools]
+        StackCollateral[StackCollateral<br/>splash and wild wipe]
+        PlanetPearls[PlanetPearls<br/>wild-native energy payout]
+        DisengageRules[DisengageRules<br/>eligibility and retreat tiles]
+        CombatResolver[CombatResolver<br/>rounds, retreat move, DestroyUnit]
+        CombatResolver --> CombatStrength
+        CombatResolver --> StackCollateral
+        CombatResolver --> PlanetPearls
+        StackCollateral --> PlanetPearls
+        CombatResolver --> DisengageRules
+    end
+
     StepEvaluator[StepEvaluator<br/>edge legality: adjacency, terrain,<br/>occupants, ZOC — objective or<br/>faction-known knowledge]
     Pathfinder[Pathfinder<br/>Dijkstra over PlannedCostFragments<br/>+ CanPlanStep]
     UnitOrderExecutor[UnitOrderExecutor<br/>TryStep / TryAttack / order loop,<br/>spends fragments, banks charges]
@@ -51,6 +64,7 @@ graph TD
     UnitOrderExecutor --> Pathfinder
     UnitOrderExecutor --> TransportRules
     UnitOrderExecutor --> BaseConquestRules
+    UnitOrderExecutor --> CombatResolver
     UnitOrderExecutor -->|optional, ctor-injected| IUnitOrderWorld
     GameState -.->|implements| IUnitOrderWorld
     IUnitOrderWorld --> BaseConquestEffects
@@ -180,8 +194,12 @@ allow with the `footing` axis omitted ("assault from anywhere"). Declare-attack 
 `CanAttackTile`, then `Resolve(attack_unit)`); a resting aircraft — on a tile that harbors its
 domain, or embarked on a same-faction carrier that carries it — is attackable by any domain.
 Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+When the attacker has fewer than one movement point of fragments left, `ResolveCombatStrength`
+multiplies the resolved attack rating by that leftover fraction of a point; a full point
+or more leaves attack strength unchanged. The post-combat spend is still one point, or
+the rest of the turn when `AttackingEndsTurn`.
 
-**Stack collateral.** When `CombatResolver` kills the defender, splash is the attacker's `collateral_damage` alone. Each other occupant resolves `collateral_susceptibility` (PureMultiplier, seed 1) from its live effects plus `CollectTileEffects` on the defender tile, and loses `lround(splash * susceptibility)` HP. A result of 0 HP is `DestroyUnit`. Embarked cargo is not in the stack. A wild native — `IsNativeLife` owned by a `NativeLife` faction — is destroyed outright unless the tile clamp skipped it. A `MaxClamp` that leaves susceptibility at 0 (Base, Bunker) skips that occupant: no HP loss, no wild wipe, no non-combatant removal. `world_rules.json` multiplies air susceptibility by 0; that geometric zero still counts the unit as present, so a wild locust in the open is wiped and a wild worm in a base is not. Reactors Add their collateral tier. Native life designs Add 1. While `non_combatants_destroyed_without_combatant` is in force, a `non_combatant` (Probe Team) is not a combatant: after the splash, if every remaining eligible occupant is a non-combatant, those occupants are destroyed. Removing the world flag leaves the tag and the splash.
+**Stack collateral.** When `CombatResolver` kills the defender, `ApplyStackCollateral` splashes the attacker's `collateral_damage` alone. Each other occupant resolves `collateral_susceptibility` (PureMultiplier, seed 1) from its live effects plus `CollectTileEffects` on the defender tile, and loses `lround(splash * susceptibility)` HP. A result of 0 HP is `DestroyUnit`. Embarked cargo is not in the stack. A wild native — `IsNativeLife` owned by a `NativeLife` faction — is destroyed outright unless the tile clamp skipped it. `GrantPlanetPearls` pays the killer for that native and for the defender. A `MaxClamp` that leaves susceptibility at 0 (Base, Bunker) skips that occupant: no HP loss, no wild wipe, no non-combatant removal. `world_rules.json` multiplies air susceptibility by 0; that geometric zero still counts the unit as present, so a wild locust in the open is wiped and a wild worm in a base is not. Reactors Add their collateral tier. Native life designs Add 1. While `non_combatants_destroyed_without_combatant` is in force, a `non_combatant` (Probe Team) is not a combatant: after the splash, if every remaining eligible occupant is a non-combatant, those occupants are destroyed. Removing the world flag leaves the tag and the splash.
 
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 

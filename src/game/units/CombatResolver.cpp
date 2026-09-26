@@ -2,187 +2,23 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/effects/TileEffectsContext.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/UnitManager.h"
 #include "game/Faction.h"
+#include "game/faction/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
-#include "game/units/BaseConquestRules.h"
+#include "game/units/CombatStrength.h"
 #include "game/units/MoveCostCalculator.h"
+#include "game/units/PlanetPearls.h"
+#include "game/units/StackCollateral.h"
 #include "game/units/StepEvaluator.h"
 #include "lib/RandomRoll.h"
 
 #include <algorithm>
-#include <cmath>
 #include <random>
 
 namespace ac
 {
-
-namespace
-{
-
-int ResolveSplash_(const Unit& rAttacker)
-{
-    EffectContext_t ctx;
-    ctx.pUnit = &rAttacker;
-    ctx.pAttacker = &rAttacker;
-    return std::max(0, ResolveCombatUnitStat(
-                           rAttacker, StatId_t::CollateralDamage, ctx, {}));
-}
-
-// Tile effects and the occupant's live list, same combined stack move cost uses.
-// A MaxClamp that leaves 0 (Base, Bunker) skips the occupant. A geometric 0 does not.
-struct Susceptibility_t
-{
-    double scale = 1.0;
-    bool bTileImmune = false;
-};
-
-Susceptibility_t ResolveSusceptibility_(const Unit& rOccupant, const Tile& rTile)
-{
-    std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile);
-    const UnitEffects_t live = CollectLiveUnitEffects(rOccupant);
-    effects.insert(effects.end(), live.effects.begin(), live.effects.end());
-
-    EffectContext_t ctx;
-    ctx.targetTile = &rTile;
-    ctx.pUnit = &rOccupant;
-
-    const StatBreakdown_t breakdown = ResolveStatModifiers(
-        FilterByStatIdInContext(effects, StatId_t::CollateralSusceptibility, ctx),
-        SeedFor(StatId_t::CollateralSusceptibility),
-        &ctx);
-
-    Susceptibility_t susceptibility;
-    susceptibility.scale = std::max(0.0, breakdown.total);
-    bool bClamped = false;
-    for (const StatBreakdown_t::Contribution_t& rContribution : breakdown.contributions)
-    {
-        if (rContribution.op == ModifierOp_t::MaxClamp)
-        {
-            bClamped = true;
-            break;
-        }
-    }
-    susceptibility.bTileImmune = bClamped && susceptibility.scale == 0.0;
-    return susceptibility;
-}
-
-bool IsWildNative_(const Unit& rUnit)
-{
-    return rUnit.GetDesign().IsNativeLife()
-        && IsNativeLifeFaction(rUnit.GetFaction().GetDefinition().identity.species);
-}
-
-// Base Add on the design, times the intrinsic lifecycle level's MultiplyGeometric.
-// Stage 0 pays the base; each later stage pays one more multiple of it.
-void GrantPlanetPearls_(const MoraleCalculator& rMorale, Faction& rKiller, const Unit& rVictim)
-{
-    if (!IsWildNative_(rVictim))
-    {
-        return;
-    }
-
-    const MoraleConfig_t& rConfig = rMorale.GetConfig();
-    const int level = std::clamp(rVictim.GetXp(), rConfig.MinLevel(), rConfig.MaxLevel());
-    const MoraleLevel_t* pLevel = rConfig.FindLevel(level);
-    const std::span<const EffectConfig_t> levelEffects =
-        pLevel != nullptr ? std::span<const EffectConfig_t>(pLevel->effects)
-                          : std::span<const EffectConfig_t>{};
-
-    EffectContext_t ctx;
-    ctx.pUnit = &rVictim;
-    const int pearls = std::max(
-        0, ResolveCombatUnitStat(rVictim, StatId_t::PlanetPearls, ctx, levelEffects));
-    if (pearls > 0)
-    {
-        rKiller.GetEconomy().AddEnergy(pearls);
-    }
-}
-
-void ApplyStackCollateral_(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
-                           Unit& rAttacker, Unit& rDefender)
-{
-    const Tile& rTile = rDefender.GetTile();
-    const int splash = ResolveSplash_(rAttacker);
-
-    std::vector<Unit*> others;
-    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pOccupant != nullptr && pOccupant != &rDefender)
-        {
-            others.push_back(pOccupant);
-        }
-    }
-
-    std::vector<Unit*> tileImmune;
-    for (Unit* pOther : others)
-    {
-        const Susceptibility_t susceptibility = ResolveSusceptibility_(*pOther, rTile);
-        if (susceptibility.bTileImmune)
-        {
-            tileImmune.push_back(pOther);
-            continue;
-        }
-        if (IsWildNative_(*pOther))
-        {
-            GrantPlanetPearls_(rMorale, rAttacker.GetFaction(), *pOther);
-            pOther->GetFaction().GetUnitManager().DestroyUnit(*pOther);
-            continue;
-        }
-        const int hit = static_cast<int>(std::lround(splash * susceptibility.scale));
-        if (hit == 0)
-        {
-            continue;
-        }
-        pOther->SetCurrentHp(pOther->GetCurrentHp() - hit);
-        if (pOther->GetCurrentHp() <= 0)
-        {
-            pOther->GetFaction().GetUnitManager().DestroyUnit(*pOther);
-        }
-    }
-
-    if (!ResolveFlag(rAttacker.GetFaction(),
-                     RuleFlagId_t::NonCombatantsDestroyedWithoutCombatant))
-    {
-        return;
-    }
-
-    bool bCombatantRemains = false;
-    std::vector<Unit*> nonCombatants;
-    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pOccupant == nullptr || pOccupant == &rDefender)
-        {
-            continue;
-        }
-        if (std::find(tileImmune.begin(), tileImmune.end(), pOccupant) != tileImmune.end())
-        {
-            continue;
-        }
-        if (ResolveFlag(*pOccupant, RuleFlagId_t::NonCombatant))
-        {
-            nonCombatants.push_back(pOccupant);
-        }
-        else
-        {
-            bCombatantRemains = true;
-        }
-    }
-    if (bCombatantRemains)
-    {
-        return;
-    }
-    for (Unit* pNonCombatant : nonCombatants)
-    {
-        pNonCombatant->GetFaction().GetUnitManager().DestroyUnit(*pNonCombatant);
-    }
-}
-
-} // namespace
 
 CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
                                const StepEvaluator& rSteps,
@@ -265,48 +101,15 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 {
-    // TODO(difficulty): apply combat handicap from rules.combat_handicap /
-    // combat_handicap_natives_only once magnitude is known (do not invent percents).
     CombatResult_t result;
     result.attackerId = rAttacker.GetUnitId();
     result.defenderId = rDefender.GetUnitId();
 
-    EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
-    EffectContext_t defenseCtx{&rDefender.GetTile(), CombatRole_t::Defender};
-    attackCtx.pAttacker = &rAttacker;
-    defenseCtx.pAttacker = &rAttacker;
-    attackCtx.pDefender = &rDefender;
-    defenseCtx.pDefender = &rDefender;
-    const double tileDefenseMult = m_rTileEffects.ResolveTileDefenseMultiplier(
-        rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
-
-    result.bPsiCombat = ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
-                        || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
-    if (result.bPsiCombat)
-    {
-        const double attackRating = ResolveCombatUnitMultiplicativeStat(
-            rAttacker, StatId_t::Attack, 1.0, attackCtx,
-            m_rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
-        const double defenseRating = ResolveCombatUnitMultiplicativeStat(
-            rDefender, StatId_t::Defense, 1.0, defenseCtx,
-            m_rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
-        result.attackStrength =
-            static_cast<int>(std::lround(attackRating * k_combatStrengthScale));
-        result.defenseStrength = static_cast<int>(
-            std::lround(defenseRating * tileDefenseMult * k_combatStrengthScale));
-    }
-    else
-    {
-        const int attackRating = ResolveCombatUnitStat(
-            rAttacker, StatId_t::Attack, attackCtx,
-            m_rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
-        const int defenseRating = ResolveCombatUnitStat(
-            rDefender, StatId_t::Defense, defenseCtx,
-            m_rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
-        result.attackStrength = attackRating * k_combatStrengthScale;
-        result.defenseStrength = static_cast<int>(
-            std::lround(defenseRating * tileDefenseMult * k_combatStrengthScale));
-    }
+    const CombatStrength_t strength =
+        ResolveCombatStrength(rAttacker, rDefender, m_rTileEffects, m_rMorale);
+    result.attackStrength = strength.attackStrength;
+    result.defenseStrength = strength.defenseStrength;
+    result.bPsiCombat = strength.bPsiCombat;
 
     const int attackerStartHp = rAttacker.GetCurrentHp();
     const int defenderStartHp = rDefender.GetCurrentHp();
@@ -378,8 +181,8 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 
     if (result.bDefenderDestroyed)
     {
-        ApplyStackCollateral_(m_rWorldMap, m_rMorale, rAttacker, rDefender);
-        GrantPlanetPearls_(m_rMorale, rAttacker.GetFaction(), rDefender);
+        ApplyStackCollateral(m_rWorldMap, m_rMorale, rAttacker, rDefender);
+        GrantPlanetPearls(m_rMorale, rAttacker.GetFaction(), rDefender);
         rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
     }
     if (result.bAttackerDestroyed)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/units/CombatStrength.h"
 #include "game/units/DisengageRules.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
@@ -68,21 +69,19 @@ struct CombatResult_t
 
 // Resolves SMAC-style firefight rounds: each side rolls [0, strength), higher roll wins the
 // round (ties → defender), winner deals damage until one unit is destroyed — or either side
-// disengages. Strength is the fully resolved attack or defense rating multiplied by
-// k_combatStrengthScale. Defense also folds in ResolveTileDefenseMultiplier on the
-// defender's tile.
-//
-// Withdrawal eligibility and retreat destinations are queried from DisengageRules. This
-// class owns the half-HP threshold, round ordering, random tile pick, MoveUnit, and
-// DestroyUnit. After a round, the side that just took damage is checked first, then the
-// other.
+// disengages. Roll pools come from ResolveCombatStrength. Withdrawal eligibility and retreat
+// destinations come from DisengageRules. This class owns the half-HP threshold, the chance
+// roll, round ordering, random tile pick, MoveUnit, and DestroyUnit. After a round, the side
+// that just took damage is checked first, then the other. A killed defender's stack splash
+// is ApplyStackCollateral. GrantPlanetPearls pays for that defender, and for wild natives
+// the splash destroys, before DestroyUnit.
 //
 // RNG is injected (typically GameState's shared stream) so combat, promotion, and probe
 // rolls can share one deterministic sequence.
 class CombatResolver
 {
 public:
-    static constexpr int k_combatStrengthScale = 0x100;
+    static constexpr int k_combatStrengthScale = k_CombatStrengthScale;
     // Placeholder until weapon / reactor damage tables exist.
     static constexpr int k_roundDamage = 1;
 
@@ -94,11 +93,7 @@ public:
                    std::mt19937& rRng);
 
     // Applies HP each round, moves a unit on disengage, and DestroyUnit when a side
-    // reaches 0. A killed defender also splashes collateral_damage onto other occupants
-    // (attacker effects plus the defender tile; a MaxClamp that leaves 0 suppresses it)
-    // and destroys wild native stackmates. Each destroyed wild native pays planet pearls
-    // to the attacker's treasury. Attack uses EffectContext_t{defender tile,
-    // Attacker}; defense uses {defender tile, Defender} so IsDefending / Base conditions apply.
+    // reaches 0. A killed defender also runs ApplyStackCollateral and GrantPlanetPearls.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
 
 private:

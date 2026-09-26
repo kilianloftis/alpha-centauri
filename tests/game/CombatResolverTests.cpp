@@ -2,6 +2,7 @@
 
 #include "game/units/CombatResolver.h"
 #include "game/units/MoraleCalculator.h"
+#include "game/units/MovementConstants.h"
 #include "game/units/MoraleConfig.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
@@ -108,6 +109,58 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
     CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
     CHECK_FALSE(result.rounds.empty());
+}
+
+TEST_CASE("Partial movement scales attack strength by the leftover fraction of a point",
+          "[combat]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    attacker.SetXp(2);
+    defender.SetXp(2);
+
+    const MoraleCalculator& morale = fixture.morale();
+    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
+    const int attackRating = ResolveCombatUnitStat(
+        attacker, StatId_t::Attack, attackCtx, morale.EffectiveLevelEffects(attacker, attackCtx));
+    const int defenseRating = ResolveCombatUnitStat(
+        defender, StatId_t::Defense, defenseCtx,
+        morale.EffectiveLevelEffects(defender, defenseCtx));
+    const int point = MovementConstants_t::k_moveFragmentsPerPoint;
+
+    CombatHarness_ harness(fixture, /*seed*/ 1);
+
+    SECTION("two thirds of a point")
+    {
+        attacker.SetMoveFragmentsRemaining(point * 2 / 3);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        CHECK(result.attackStrength
+              == static_cast<int>(std::lround(attackRating * (2.0 / 3.0)
+                                              * CombatResolver::k_combatStrengthScale)));
+        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+    }
+
+    SECTION("exactly one point")
+    {
+        attacker.SetMoveFragmentsRemaining(point);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
+        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+    }
+
+    SECTION("more than one point")
+    {
+        attacker.SetMoveFragmentsRemaining(point + point * 2 / 3);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
+        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+    }
 }
 
 TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat][aaa]")
@@ -373,6 +426,45 @@ TEST_CASE("Psi combat ignores additive ratings and applies multipliers to one", 
     CHECK(result.bPsiCombat);
     CHECK(result.attackStrength == 384); // 1.5 * 0x100
     CHECK(result.defenseStrength == 512); // 2.0 * 0x100
+}
+
+TEST_CASE("Partial movement scales psi attack strength by the leftover fraction",
+          "[combat][psi]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(
+        player, 4, 4,
+        {"test_chassis", "test_weapon", "test_psi", "test_psi_attack_modifiers"});
+    Unit& defender = fixture.MakeUnit(
+        enemy, 5, 4,
+        {"test_chassis", "test_armor", "test_psi_defense_modifiers"});
+    attacker.SetXp(2);
+    defender.SetXp(2);
+    attacker.SetMoveFragmentsRemaining(MovementConstants_t::k_moveFragmentsPerPoint * 2 / 3);
+
+    const MoraleCalculator& morale = fixture.morale();
+    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
+    const double attackRating = ResolveCombatUnitMultiplicativeStat(
+        attacker, StatId_t::Attack, 1.0, attackCtx,
+        morale.EffectiveLevelEffects(attacker, attackCtx));
+    const double defenseRating = ResolveCombatUnitMultiplicativeStat(
+        defender, StatId_t::Defense, 1.0, defenseCtx,
+        morale.EffectiveLevelEffects(defender, defenseCtx));
+
+    CombatHarness_ harness(fixture, /*seed*/ 23);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    CHECK(result.bPsiCombat);
+    CHECK(result.attackStrength
+          == static_cast<int>(std::lround(attackRating * (2.0 / 3.0)
+                                          * CombatResolver::k_combatStrengthScale)));
+    CHECK(result.defenseStrength
+          == static_cast<int>(std::lround(defenseRating * CombatResolver::k_combatStrengthScale)));
 }
 
 TEST_CASE("Either combatant can force psi combat", "[combat][psi]")

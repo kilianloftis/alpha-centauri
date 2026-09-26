@@ -114,6 +114,9 @@ add_library(ac-core STATIC
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/CombatResolver.cpp
+    game/units/CombatStrength.cpp
+    game/units/StackCollateral.cpp
+    game/units/PlanetPearls.cpp
     game/units/MoraleConfig.cpp
     game/units/MoraleConfigParser.cpp
     game/units/MoraleCalculator.cpp
