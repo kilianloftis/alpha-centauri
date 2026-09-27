@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "lib/Rational.h"
+#include "lib/config/EnumNames.h"
 
 #include <magic_enum.hpp>
 
@@ -281,6 +282,23 @@ void ParseElevationChange_(const nlohmann::json& parameters, TriggeredEffectConf
     rEffect.effect = ElevationChangeEffect_t{direction == "raise"};
 }
 
+// Severities are a closed enum, so an unknown name fails here rather than at a later lookup.
+void ParseCommitAtrocity_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    if (!parameters.contains("severity") || !parameters.at("severity").is_string())
+    {
+        throw std::runtime_error("CommitAtrocity requires a string 'severity'");
+    }
+    const std::string severity = parameters.at("severity").get<std::string>();
+    if (severity.empty())
+    {
+        throw std::runtime_error("CommitAtrocity 'severity' must not be empty");
+    }
+    CommitAtrocityEffect_t committed;
+    committed.severity = EnumFromName<AtrocitySeverityId_t>(severity, "atrocity severity");
+    rEffect.effect = committed;
+}
+
 void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
     const bool bHasTiles = parameters.contains("tiles");
@@ -379,6 +397,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"SetTerrainFeature", ParseSetTerrainFeature_},
         {"StepRockiness", ParseStepRockiness_},
         {"ElevationChange", ParseElevationChange_},
+        {"CommitAtrocity", ParseCommitAtrocity_},
     };
     return k_Parsers;
 }

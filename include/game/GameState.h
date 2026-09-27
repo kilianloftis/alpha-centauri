@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/effects/EffectConfig.h"
 #include "game/IWorldEffectsSource.h"
+#include "game/atrocities/AtrocityLedger.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
@@ -126,6 +127,10 @@ public:
     DiplomacyLedger& GetDiplomacyLedger();
     const DiplomacyLedger& GetDiplomacyLedger() const;
 
+    // Committed atrocities and the commerce sanctions they carry.
+    AtrocityLedger& GetAtrocityLedger();
+    const AtrocityLedger& GetAtrocityLedger() const;
+
     DiplomaticActionExecutor& GetDiplomaticActionExecutor();
 
     // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
@@ -244,6 +249,7 @@ private:
     std::unique_ptr<StepEvaluator> m_pSteps;
     std::unique_ptr<Pathfinder> m_pPathfinder;
     std::unique_ptr<DiplomacyLedger> m_pDiplomacy;
+    std::unique_ptr<AtrocityLedger> m_pAtrocities;
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;

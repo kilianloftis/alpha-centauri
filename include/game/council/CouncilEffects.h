@@ -43,6 +43,11 @@ public:
     void SetGovernorEffects(const std::vector<EffectConfig_t>& rGovernorEffects);
     void SetGovernorEffects(std::vector<EffectConfig_t>&& rGovernorEffects) = delete;
 
+    // Drop the governor lane when the office falls vacant (a governor expelled for a major
+    // atrocity). Separate from SetGovernorEffects because that borrows from a caller-owned
+    // vector and so cannot be handed an empty temporary.
+    void ClearGovernorEffects();
+
     const std::vector<ActiveEffect_t>& WorldEffects() const { return m_worldEffects; }
     const std::vector<ActiveEffect_t>& GovernorEffects() const { return m_governorEffects; }
 

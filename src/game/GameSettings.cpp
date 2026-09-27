@@ -165,6 +165,8 @@ void LoadPauseOnEvents_(const nlohmann::json& rJson, PauseOnEventsConfig_t& rCon
             pSection->value("population_limit_reached", rConfig.populationLimitReached);
         rConfig.delayInTranscendence =
             pSection->value("delay_in_transcendence", rConfig.delayInTranscendence);
+        rConfig.atrocityCommitted =
+            pSection->value("atrocity_committed", rConfig.atrocityCommitted);
     }
 }
 
@@ -297,6 +299,7 @@ void GameSettings::Save(const std::string& path) const
         {"build_orders_out_of_date", m_pauseOnEvents.buildOrdersOutOfDate},
         {"population_limit_reached", m_pauseOnEvents.populationLimitReached},
         {"delay_in_transcendence", m_pauseOnEvents.delayInTranscendence},
+        {"atrocity_committed", m_pauseOnEvents.atrocityCommitted},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
     json["graphics"] = {

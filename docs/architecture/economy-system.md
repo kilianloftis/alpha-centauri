@@ -84,11 +84,18 @@ graph TB
   land here. Validated like `FactionEffectsPool`: an element-wise compare of the revisions
   it was built from, never a hash. The key is the world's worked-tile revision and map
   appearance revision (worker placement and improvements move base energy without touching
-  any effect pool), the `DiplomacyLedger` status revision, and every faction's
-  `GetEffectsVersion()` (which already folds in base list, buildings, pops, research and SE).
+  any effect pool), the `DiplomacyLedger` status revision, the `AtrocityLedger` revision (a
+  sanction zeroes a pair without touching any treaty or effect pool, so without this an atrocity
+  keeps paying commerce for the rest of the turn), and every faction's `GetEffectsVersion()`
+  (which already folds in base list, buildings, pops, research and SE).
 
 ### CommerceCalculator
 - **Purpose**: Pure per-turn commerce income math for Friendship / Pact partners.
+- **Atrocity sanctions**: Datalinks commerce step (10) reduces a pair to zero when sanctions are
+  in effect against *either* faction. Applied where the pair is formed rather than after the Lua
+  formula — a sanctioned owner returns no lines at all and a sanctioned partner is skipped — so the
+  base screen shows the partner gone rather than a zero row. An innocent partner loses the pair
+  too. See `atrocity-system.md`.
 - **Entry point**: `ComputeAllLines(owner, state)` — one planet-wide pass that ranks each
   faction's bases once and reuses the ranking for every pair. `ComputeForFaction` (energy per
   base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base

@@ -6,6 +6,7 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileRegistry.h"
+#include "game/atrocities/AtrocityConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/faction/FactionRegistry.h"
@@ -67,6 +68,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
     rData.commerceConfig = std::make_unique<CommerceConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
+    rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
 }

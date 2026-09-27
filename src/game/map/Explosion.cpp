@@ -12,6 +12,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,16 @@ namespace ac
 namespace
 {
 
-bool DestroyOtherUnits_(WorldMap& rWorldMap, Tile& rTile, const Unit* pSpareUnit)
+void NoteOwner_(std::vector<FactionId_t>& rOwners, FactionId_t owner)
+{
+    if (std::find(rOwners.begin(), rOwners.end(), owner) == rOwners.end())
+    {
+        rOwners.push_back(owner);
+    }
+}
+
+bool DestroyOtherUnits_(WorldMap& rWorldMap, Tile& rTile, const Unit* pSpareUnit,
+                        ExplosionResult_t& rResult)
 {
     bool bDestroyed = false;
     for (;;)
@@ -38,18 +48,20 @@ bool DestroyOtherUnits_(WorldMap& rWorldMap, Tile& rTile, const Unit* pSpareUnit
         {
             return bDestroyed;
         }
+        NoteOwner_(rResult.unitOwnersDestroyed, pVictim->GetFaction().GetFactionId());
         pVictim->GetFaction().GetUnitManager().DestroyUnit(*pVictim);
         bDestroyed = true;
     }
 }
 
-bool RazeBaseOnTile_(GameState& rGameState, Tile& rTile)
+bool RazeBaseOnTile_(GameState& rGameState, Tile& rTile, ExplosionResult_t& rResult)
 {
     BaseManager* pBase = rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
     if (!pBase || pBase->IsRazed())
     {
         return false;
     }
+    NoteOwner_(rResult.baseOwnersDestroyed, pBase->GetFaction().GetFactionId());
     pBase->GetFaction().RazeBase(*pBase);
     return true;
 }
@@ -93,11 +105,11 @@ ExplosionResult_t ApplyExplosion(Tile& rOrigin, WorldMap& rWorldMap, int radius,
                 return;
             }
             disk.push_back(pTile);
-            if (DestroyOtherUnits_(rWorldMap, *pTile, pSpareUnit))
+            if (DestroyOtherUnits_(rWorldMap, *pTile, pSpareUnit, result))
             {
                 result.bChanged = true;
             }
-            if (RazeBaseOnTile_(rGameState, *pTile))
+            if (RazeBaseOnTile_(rGameState, *pTile, result))
             {
                 result.bChanged = true;
             }

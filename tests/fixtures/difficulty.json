@@ -4,7 +4,7 @@
     {
       "id": "citizen",
       "name": "Citizen",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 9, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",
@@ -20,7 +20,7 @@
     {
       "id": "specialist",
       "name": "Specialist",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 8, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",
@@ -36,7 +36,7 @@
     {
       "id": "talent",
       "name": "Talent",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 6, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",
@@ -52,7 +52,7 @@
     {
       "id": "librarian",
       "name": "Librarian",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 5, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",
@@ -68,7 +68,7 @@
     {
       "id": "thinker",
       "name": "Thinker",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 4, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",
@@ -84,7 +84,7 @@
     {
       "id": "transcend",
       "name": "Transcend",
-      "rules": {},
+      "rules": { "player_atrocity_threshold": 3, "ai_atrocity_threshold": 7 },
       "effects": [
         {
           "type": "StatModifier",

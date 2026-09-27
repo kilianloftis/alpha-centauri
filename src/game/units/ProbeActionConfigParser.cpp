@@ -50,7 +50,6 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     action.requiredTech = rActionJson.value("required_tech", "");
     action.bHqOnly = rActionJson.value("hq_only", false);
     action.bNotHq = rActionJson.value("not_hq", false);
-    action.bIsAtrocity = rActionJson.value("atrocity", false);
     // Only the riot action has a riot duration; accepting the key elsewhere would silently
     // ignore it.
     if (action.id == ProbeActionId_t::InciteDroneRiots)

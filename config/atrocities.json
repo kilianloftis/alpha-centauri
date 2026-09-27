@@ -1,0 +1,15 @@
+{
+  "severities": {
+    "Simple": {
+      "eco_virtual_minerals": 0,
+      "universal_vendetta": false,
+      "expel_from_council": false
+    },
+    "Major": {
+      "eco_virtual_minerals": 5,
+      "universal_vendetta": true,
+      "expel_from_council": true
+    }
+  },
+  "sanction_years_per_atrocity": 10
+}

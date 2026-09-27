@@ -35,8 +35,9 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const SocialRatingRegistry* pSocialRatings = nullptr,
                               const NativeUnitRegistry* pNativeUnits = nullptr);
 
-// The same for one triggered list: AddBuilding / GrantTech / GrantUnit targets, plus the
-// same condition feature / HasComponent / SubjectDesign checks continuous lists get.
+// The same for one triggered list: AddBuilding / GrantTech / GrantUnit targets, plus the same
+// condition feature / HasComponent / SubjectDesign checks continuous lists get. CommitAtrocity
+// names a closed severity enum, so the parser rejects an unknown name before this walk.
 void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t>& rEffects,
                                        const std::string& rSourceId,
                                        const BuildingRegistry* pBuildings,

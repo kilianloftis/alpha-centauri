@@ -1,6 +1,9 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
+
 #include <random>
+#include <vector>
 
 namespace ac
 {
@@ -15,6 +18,11 @@ struct ExplosionResult_t
     int radius = 0;
     int tiles = 0;
     bool bChanged = false;
+    // Who the blast cost something, in the order the disk reached them, with no faction named
+    // twice. Includes the detonator's own losses: which of these answers for the blast is
+    // AtrocityRules::BlastVictim's decision, not this one's.
+    std::vector<FactionId_t> baseOwnersDestroyed;
+    std::vector<FactionId_t> unitOwnersDestroyed;
 };
 
 // Chebyshev disk of `radius` around rOrigin, including the origin. Radius <= 0 changes

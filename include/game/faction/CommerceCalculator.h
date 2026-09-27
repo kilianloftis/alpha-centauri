@@ -27,8 +27,8 @@ struct CommercePartnerLine_t
 // Pure commerce income math: pairs Friendship/Pact bases by pre-commerce energy and returns
 // per-base commerce energy for the owning faction. Does not mutate ResourceManager or treasury.
 // Pair income is one Lua formula from commerce.json; CommerceRate then CommerceEnergyBonus
-// are applied in C++ after.
-// TODO: zero commerce when sanctions are in effect against either faction.
+// are applied in C++ after. A faction under atrocity sanctions earns nothing and pays nothing:
+// it is dropped as an owner and skipped as a partner.
 class CommerceCalculator
 {
 public:

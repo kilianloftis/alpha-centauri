@@ -41,8 +41,8 @@ public:
 private:
     // Everything the pairing pass reads that can move without the others moving: worker
     // placement and tile improvements change base energy without touching any effect pool,
-    // treaties gate the pairs, and each faction's effects version already folds in its base
-    // list, buildings, pops, research and social engineering.
+    // treaties and atrocity sanctions gate the pairs, and each faction's effects version already
+    // folds in its base list, buildings, pops, research and social engineering.
     void CollectRevisions_(std::vector<uint64_t>& rOut) const;
     void Validate_() const;
 

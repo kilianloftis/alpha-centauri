@@ -41,6 +41,7 @@ struct GameDataPaths
     std::string difficulty = "config/difficulty.json";
     std::string policeRules = "config/police_rules.json";
     std::string worldRules = "config/world_rules.json";
+    std::string atrocities = "config/atrocities.json";
 };
 
 } // namespace ac

@@ -96,7 +96,6 @@
       "name": "Introduce Genetic Plague",
       "target": "base",
       "risk": 0,
-      "atrocity": true,
       "required_tech": "gene_splicing",
       "on_success_effects": [
         {
@@ -105,6 +104,12 @@
             "amount": -50,
             "op": "AddPercent",
             "min_size": 1
+          }
+        },
+        {
+          "type": "CommitAtrocity",
+          "parameters": {
+            "severity": "Simple"
           }
         }
       ]

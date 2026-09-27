@@ -5,6 +5,8 @@
       "id": "citizen",
       "name": "Citizen",
       "rules": {
+        "player_atrocity_threshold": 32,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 75,
         "research_disabled_turns": 5,
         "ai_secret_projects_require_human_prereq": true,
@@ -133,6 +135,8 @@
       "id": "specialist",
       "name": "Specialist",
       "rules": {
+        "player_atrocity_threshold": 28,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 65,
         "research_disabled_turns": 5,
         "ai_secret_projects_require_human_prereq": true,
@@ -251,6 +255,8 @@
       "id": "talent",
       "name": "Talent",
       "rules": {
+        "player_atrocity_threshold": 24,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 55,
         "ai_secret_projects_require_human_prereq": true,
         "combat_handicap": true,
@@ -347,6 +353,8 @@
       "id": "librarian",
       "name": "Librarian",
       "rules": {
+        "player_atrocity_threshold": 20,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 45
       },
       "effects": [
@@ -414,6 +422,8 @@
       "id": "thinker",
       "name": "Thinker",
       "rules": {
+        "player_atrocity_threshold": 16,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 35
       },
       "effects": [
@@ -494,6 +504,8 @@
       "id": "transcend",
       "name": "Transcend",
       "rules": {
+        "player_atrocity_threshold": 12,
+        "ai_atrocity_threshold": 20,
         "random_events_after_turn": 25
       },
       "effects": [

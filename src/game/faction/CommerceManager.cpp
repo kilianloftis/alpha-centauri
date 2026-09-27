@@ -41,6 +41,9 @@ void CommerceManager::CollectRevisions_(std::vector<uint64_t>& rOut) const
     rOut.push_back(rMap.GetWorkedTiles().GetRevision());
     rOut.push_back(rMap.GetAppearanceRevision());
     rOut.push_back(pState->GetDiplomacyLedger().GetRevision());
+    // Sanctions zero a pair without touching any treaty or effect pool, so the memo has to key
+    // on them too — otherwise an atrocity keeps paying commerce for the rest of the turn.
+    rOut.push_back(pState->GetAtrocityLedger().GetRevision());
     // Every faction, not just the owner: a partner's bases are priced into our pairs.
     for (const Faction& rFaction : pState->Factions())
     {

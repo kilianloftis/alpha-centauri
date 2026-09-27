@@ -44,7 +44,8 @@ enum class ResolveProposalResult_t
 // Runtime Planetary Council: proposals, voting, governor, and active effects.
 // Calling Propose starts a single vote sequence (cooldown + commlink share + pending
 // ballots); there is no separate convene/session stage.
-// Member factions are fixed at construction (non-owning); they must outlive the council.
+// Member factions are seated at construction (non-owning) and they must outlive the council;
+// Expel is the one way out, for a faction that commits a major atrocity.
 class PlanetaryCouncil
 {
 public:
@@ -54,9 +55,15 @@ public:
 
     const CouncilProposalRegistry& GetRegistry() const { return m_rRegistry; }
 
-    // --- Membership (fixed at construction) ---
+    // --- Membership ---
+    // Seated at construction; only Expel ever removes a member.
     const std::vector<Faction*>& Members() const { return m_members; }
     bool IsCouncilMember(const Faction& rFaction) const;
+
+    // Remove a member for good (major atrocity). Discards any ballot or election vote they hold
+    // on the pending proposal, vacates the governorship and its standing effects if they held
+    // it, and bumps the revision. Expelling a faction that is not a member does nothing.
+    void Expel(const Faction& rFaction);
 
     bool HasCommlinksToAllMembers(const GameState& rGameState, const Faction& rFaction) const;
     int ProposeCooldownYears(const Faction& rFaction) const;

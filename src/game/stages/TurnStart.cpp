@@ -24,6 +24,9 @@ StageResult_t TurnStart::ExecuteImpl(GameState& rGameState)
     rGameState.IncrementMissionYear();
     rGameState.GetEventBus().Publish(EvTurnStarted{ rGameState.GetMissionYear() });
 
+    // World-scoped, so it belongs in this stage rather than per-faction Upkeep.
+    rGameState.GetAtrocityLedger().ExpireSanctions(rGameState.GetMissionYear());
+
     std::cout << "\n--- Mission Year " << rGameState.GetMissionYear() << " ---\n";
 
     UnitOrderExecutor& rOrders = rGameState.GetUnitOrderExecutor();

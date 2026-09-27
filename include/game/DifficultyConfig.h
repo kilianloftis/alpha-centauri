@@ -9,12 +9,12 @@ namespace ac
 {
 
 // Non-effect difficulty knobs: settings with no stat to attach to, so they cannot ride the
-// effects system. Parsed and validated here; the systems that read them do not exist yet and
-// are stubbed with TODO(difficulty) at their call sites.
+// effects system. Both atrocity thresholds are read by CommitAtrocity. The other fields are
+// stubbed
+// with TODO(difficulty) at their call sites.
 //
-// The first real consumer should snapshot what it needs at Faction construction (see
-// RequireSessionDifficulty_ in Faction.cpp) rather than re-resolving from GameSettings, which
-// would drift from the difficulty effects the faction's pool was built from.
+// Difficulty is changeable mid-campaign, so readers re-resolve the session level from
+// GameSettings rather than snapshotting these fields at Faction construction.
 struct DifficultyRules_t
 {
     int randomEventsAfterTurn = 0;
@@ -28,6 +28,17 @@ struct DifficultyRules_t
     // Magnitude unknown — mode stub only.
     bool combatHandicap = false;
     bool combatHandicapNativesOnly = false;
+    // Counted Simple acts a perpetrator may reach and still be answered for as Simple. The
+    // next counted Simple act, which would pass this number, is Major. Zero disables
+    // escalation. Both are required in config/difficulty.json and read from the session level
+    // at commit time, so a mid-campaign difficulty change moves them for the next act.
+    //
+    // Shipping player values are 4 * (8 - difficulty) with Citizen = 0: Citizen 32,
+    // Specialist 28, Talent 24, Librarian 20, Thinker 16, Transcend 12. The AI answers at one
+    // number the session difficulty does not move, so every shipping level states the same 20
+    // — a mod is free to vary it.
+    int playerAtrocityThreshold = 0;
+    int aiAtrocityThreshold = 0;
 };
 
 struct DifficultyLevel_t

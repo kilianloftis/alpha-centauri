@@ -1057,3 +1057,76 @@ TEST_CASE("The governor cannot veto an election", "[council][veto]")
     CHECK_FALSE(rCouncil.VetoPending(rGovernor));
     CHECK_FALSE(rCouncil.GetPending()->vetoed);
 }
+
+// --- Expulsion (major atrocity) ------------------------------------------------------------
+
+TEST_CASE("Expel removes the seat and discards the ballot it held", "[council][expel]")
+{
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
+    REQUIRE_FALSE(rCouncil.AllMembersVoted());
+
+    // pC is the only member yet to vote, so removing it completes the ballot rather than
+    // leaving the vote waiting on a seat that no longer exists.
+    rCouncil.Expel(*game.pC);
+    CHECK_FALSE(rCouncil.IsCouncilMember(*game.pC));
+    CHECK(rCouncil.Members().size() == 2);
+    CHECK(rCouncil.AllMembersVoted());
+    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+}
+
+TEST_CASE("Expelling the governor vacates the office and its standing effects", "[council][expel]")
+{
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    game.GiveAllCommlinksTo(*game.pA);
+
+    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rCouncil.CastElectionVote(*game.pA, game.pA);
+    rCouncil.CastElectionVote(*game.pB, game.pA);
+    rCouncil.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    REQUIRE(rCouncil.GetPlanetaryGovernor() == game.pA);
+    REQUIRE_FALSE(rCouncil.CollectFactionEffects(*game.pA).empty());
+
+    rCouncil.Expel(*game.pA);
+
+    CHECK(rCouncil.GetPlanetaryGovernor() == nullptr);
+    CHECK(rCouncil.CollectFactionEffects(*game.pA).empty());
+    CHECK_FALSE(rCouncil.IsCouncilMember(*game.pA));
+}
+
+TEST_CASE("An expelled faction cannot propose", "[council][expel]")
+{
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+
+    rCouncil.Expel(*game.pA);
+
+    CHECK_THROWS_AS(rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact"),
+                    std::invalid_argument);
+}
+
+TEST_CASE("Expelling a faction that holds no seat changes nothing", "[council][expel]")
+{
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    const size_t before = rCouncil.Members().size();
+
+    rCouncil.Expel(*game.pA);
+    CHECK(rCouncil.Members().size() == before - 1);
+
+    // Idempotent: a second major atrocity by the same faction must not disturb the council.
+    CHECK_NOTHROW(rCouncil.Expel(*game.pA));
+    CHECK(rCouncil.Members().size() == before - 1);
+}

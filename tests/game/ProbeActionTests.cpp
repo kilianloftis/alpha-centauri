@@ -1,5 +1,7 @@
 #include "GameFixtures.h"
 
+#include "game/atrocities/AtrocityLedger.h"
+
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -439,6 +441,14 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
     const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
     REQUIRE(pKilled);
     CHECK(pKilled->count == 2);
+
+    // Genetic warfare is a Simple atrocity, recorded against the target base's owner.
+    const AtrocityLedger& rLedger = game.pState->GetAtrocityLedger();
+    REQUIRE(rLedger.Records().size() == 1);
+    CHECK(rLedger.Records().front().perpetrator == game.pPlayer->GetFactionId());
+    CHECK(rLedger.Records().front().victim == game.pAi->GetFactionId());
+    CHECK(rLedger.Records().front().severity == AtrocitySeverityId_t::Simple);
+    CHECK(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.pState->GetMissionYear()));
 }
 
 TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][plague]")

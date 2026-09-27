@@ -158,6 +158,8 @@ TEST_CASE("Third-party vendetta trade sets status", "[diplomacy][executor]")
           == DiplomaticProposeResult_t::Accepted);
     CHECK(game.pState->GetDiplomacyLedger().HasVendetta(
         game.pAi->GetFactionId(), game.pThird->GetFactionId()));
+    CHECK(game.pState->GetDiplomacyLedger().AreKnown(
+        game.pAi->GetFactionId(), game.pThird->GetFactionId()));
 }
 
 TEST_CASE("World map trade merges explored tiles", "[diplomacy][executor]")

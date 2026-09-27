@@ -22,6 +22,7 @@ enum class PauseOnEventId_t
     BuildOrdersOutOfDate,
     PopulationLimitReached,
     DelayInTranscendence,
+    AtrocityCommitted,
 };
 
 struct PauseOnEventsConfig_t
@@ -38,6 +39,7 @@ struct PauseOnEventsConfig_t
     bool buildOrdersOutOfDate = true;
     bool populationLimitReached = true;
     bool delayInTranscendence = true;
+    bool atrocityCommitted = true;
 
     bool operator==(const PauseOnEventsConfig_t&) const = default;
 
@@ -69,6 +71,8 @@ struct PauseOnEventsConfig_t
             return populationLimitReached;
         case PauseOnEventId_t::DelayInTranscendence:
             return delayInTranscendence;
+        case PauseOnEventId_t::AtrocityCommitted:
+            return atrocityCommitted;
         }
         return true;
     }

@@ -533,7 +533,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Planetary Council System
 - **Purpose**: Runtime Planetary Council — proposals, voting, the Planetary Governor, and the continuous world law the council keeps in force.
 - **Components**:
-  - `PlanetaryCouncil`: The vote lifecycle (propose → vote/veto → resolve), fixed membership, governorship, and active-proposal set. Owned by `GameState` (`std::unique_ptr`); exposes `OnProposalOpened` / `OnResolved` signals for the UI.
+  - `PlanetaryCouncil`: The vote lifecycle (propose → vote/veto → resolve), membership (seated at construction, `Expel` the one way out), governorship, and active-proposal set. Owned by `GameState` (`std::unique_ptr`); exposes `OnProposalOpened` / `OnResolved` signals for the UI.
   - `CouncilEffects`: Store for the continuous `ActiveEffect_t`s the council projects — world-global effects from proposals in force, plus the governor's faction-global effects.
   - `CouncilOutcomeApplier`: Applies a passed proposal's `on_passed_effects` (energy grants) and a new governor's `on_elected_effects` (infiltration); world-parameter outcomes are deferred to `WorldEvents`.
   - `CouncilProposalRegistry`: Proposal definitions loaded/validated from `config/council/`.
@@ -541,6 +541,20 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `GameState` owns the council and folds `CouncilEffects` output into the faction effect pool
   - Reads `Faction` population/effects, `DiplomacyLedger` (commlinks/infiltration), and `ResearchManager` (tech gating)
 - **Details**: See `docs/architecture/council-system.md` for detailed architecture
+
+### Atrocity System
+- **Purpose**: The penalty layer behind the U.N. Charter — what a forbidden act costs its perpetrator, and the record of who has committed what.
+- **Components**:
+  - `AtrocityLedger`: Append-only record of committed atrocities plus the standing commerce-sanction expiry per faction. World-scoped, owned by `GameState` (`std::unique_ptr`), sibling of `DiplomacyLedger`.
+  - `AtrocityRules`: Pure decisions — effective severity after Simple-count escalation, whether penalties apply, sanction expiry year, and which faction a blast is answered to.
+  - `AtrocityEffects` (`CommitAtrocity`): Records the commission, then charges a counted act — sanctions, universal Vendetta (living AI only, via `ApplyVendetta`), council expulsion, player notice. Victim memory is the record.
+  - `AtrocitiesConfig_t`: `config/atrocities.json`. Severities are the closed enum `Simple` and `Major`, each with its own consequences. A counted Simple act that would pass the session level's atrocity threshold is answered for as Major. Landing exactly on the threshold stays Simple. A Major act does not add to that counter and carries no commerce sanction. The Charter gates both tiers. Either party being a Progenitor excuses the act. The threshold itself lives in `difficulty.json`, which states `player_atrocity_threshold` and `ai_atrocity_threshold` per level.
+- **Dependencies**:
+  - `CommitAtrocity` is authored in trigger lists (`genetic_plague`'s `on_success_effects`; the Planet Buster `on_detonate_effects`). Planet Buster victim comes from `AtrocityRules::BlastVictim` over what `Explosion` destroyed (first foreign base, else first foreign unit), handed over in `derivedVictim` rather than territory
+  - Writes Vendetta (through `ApplyVendetta`) and `PlanetaryCouncil::Expel`
+  - Read by `CommerceCalculator` (sanctions zero a pair) and, once built, the eco-damage term
+  - Unknown severity names fail when the effect list or `atrocities.json` is loaded
+- **Details**: See `docs/architecture/atrocity-system.md` for detailed architecture
 
 ### UI Components
 - **Purpose**: Display components that render game information using the Graphics interface

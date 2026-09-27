@@ -4,6 +4,7 @@
 #include "game/GameState.h"
 #include "game/faction/DiplomacyActions.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomacyStatusEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -324,8 +325,15 @@ void DiplomaticActionExecutor::Apply_(GameState& rState, const DiplomaticProposa
 {
     if (rProposal.requestedStatus.has_value())
     {
-        rState.GetDiplomacyLedger().SetStatus(
-            rProposal.proposer, rProposal.recipient, *rProposal.requestedStatus);
+        if (*rProposal.requestedStatus == DiplomaticStatus_t::Vendetta)
+        {
+            ApplyVendetta(rState, rProposal.proposer, rProposal.recipient);
+        }
+        else
+        {
+            rState.GetDiplomacyLedger().SetStatus(
+                rProposal.proposer, rProposal.recipient, *rProposal.requestedStatus);
+        }
     }
     ApplyItems_(rState, rProposal.proposer, rProposal.recipient, rProposal.give);
     ApplyItems_(rState, rProposal.recipient, rProposal.proposer, rProposal.demand);
@@ -381,8 +389,8 @@ void DiplomaticActionExecutor::ApplyItem_(GameState& rState,
             }
             else if constexpr (std::is_same_v<T, TradeDeclareVendetta_t>)
             {
-                rState.GetDiplomacyLedger().SetStatus(
-                    receiverId, rConcrete.againstFactionId, DiplomaticStatus_t::Vendetta);
+                // Vendetta trade item against a third faction
+                ApplyVendetta(rState, receiverId, rConcrete.againstFactionId);
             }
         },
         rItem);

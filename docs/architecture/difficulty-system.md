@@ -58,13 +58,14 @@ modifier source at the resolve site — which is the whole point.
 
 **`rules`** — knobs with no stat to attach to (`random_events_after_turn`,
 `colony_pod_preserves_size_1_base`, `combat_handicap`, …). `DifficultyRules_t` is a flat POD.
-**Nothing reads it yet**: all six consumers carry `TODO(difficulty)` markers at the site that
-will read them, and no accessor exists until one of them is written — a getter with no caller
-is what the coding guidelines forbid. The first consumer should snapshot what it needs at
-`Faction` construction, next to the effects, rather than re-resolving from `GameSettings`.
+`player_atrocity_threshold` and `ai_atrocity_threshold` are read by `CommitAtrocity` from the
+session level at commit time.
+The other knobs are not read yet; their call sites carry `TODO(difficulty)`. A getter with no
+caller is what the coding guidelines forbid, so those fields have none.
 
-Prefer the effects channel. A knob only belongs in `rules` when there is genuinely no stat to
-modify — a rule that gates whether a *system runs at all*, rather than scaling a number.
+Prefer the effects channel. A knob belongs in `rules` when there is no stat to modify.
+The atrocity thresholds are ones: each is a single session integer, not a modifier that stacks
+with tech or facilities.
 
 ## Resolving the session level
 
@@ -72,6 +73,19 @@ modify — a rule that gates whether a *system runs at all*, rather than scaling
 `default`"**, so the shipping default lives in exactly one place; the settings struct does not
 duplicate it. `DifficultyConfig_t::RequireForSession` applies that rule and throws on an
 unknown id.
+
+Each level's `rules` require **both** `player_atrocity_threshold` and `ai_atrocity_threshold`:
+the counted Simple acts a perpetrator may reach and still be answered for as Simple
+(`atrocity-system.md`). `CommitAtrocity` picks the field by who is acting and re-resolves the
+session id at commit time, so a mid-campaign difficulty change moves the threshold for the
+next act.
+
+Shipping player values are 4 × (8 − difficulty) with Citizen = 0 — Citizen 32 through
+Transcend 12 — written on the level rather than computed from an index. Every shipping level
+states the same `ai_atrocity_threshold` of 20, because handicapping the player is what
+difficulty is for and the AI answers at one number regardless. It is still a per-level key: a
+mod that wants the AI held to a different standard on Transcend writes that, with no C++
+change and no second file to keep in step.
 
 `Engine::InitializeApp_` calls it once immediately after `LoadGameData`, so a bad id in
 `user_settings.json` fails at startup with a message pointing at the settings, rather than
@@ -158,7 +172,8 @@ as RawScaled makes its consumer throw at runtime.
 ## Adding a level or a knob
 
 1. Add the level to `config/difficulty.json`. Unknown keys are rejected, ids must be unique,
-   and `default` must name a real level.
+   `default` must name a real level, and both `rules.player_atrocity_threshold` and
+   `rules.ai_atrocity_threshold` are required.
 2. Prefer an `effects` entry. If the stat does not exist yet, add it to `StatId_t`, give
    `KindFor` a kind using the table above, add the wire name to `ParseStatId`, and pin the kind
    with a `static_assert` in `tests/effects/ValidationTests.cpp`.

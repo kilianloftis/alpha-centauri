@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/atrocities/AtrocityConfig.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "lib/Rational.h"
@@ -186,6 +187,18 @@ struct ElevationChangeEffect_t
     bool bRaise = true;
 };
 
+// Records an atrocity by the subject faction and applies the severity's consequences: commerce
+// sanctions, universal Vendetta, Planetary Council expulsion. The victim is
+// TriggeredEffectContext_t::derivedVictim when an earlier arm worked one out (Explosion), else
+// the trigger site's actionTarget. Numbers and gates live in config/atrocities.json, so the
+// severity is what an author picks. The subject is the perpetrator, which is why this is a
+// per-faction-subject entry like SetInfiltration.
+struct CommitAtrocityEffect_t
+{
+    // One of AtrocitySeverityId_t. The parser rejects any other name.
+    AtrocitySeverityId_t severity = AtrocitySeverityId_t::Simple;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -204,7 +217,8 @@ using TriggeredEffectVariant_t = std::variant<
     ExplosionEffect_t,
     SetTerrainFeatureEffect_t,
     StepRockinessEffect_t,
-    ElevationChangeEffect_t
+    ElevationChangeEffect_t,
+    CommitAtrocityEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

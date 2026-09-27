@@ -55,6 +55,7 @@
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
+#include "game/atrocities/AtrocityConfigParser.h"
 
 #include <deque>
 #include <memory>
@@ -229,6 +230,8 @@ struct WorldFixture
             *dataContext.popCompositionConfig, *dataContext.popTypeRegistry);
         dataContext.difficultyConfig = std::make_unique<ac::DifficultyConfig_t>(
             ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
+        dataContext.atrocitiesConfig = std::make_unique<ac::AtrocitiesConfig_t>(
+            ac::AtrocityConfigParser{}.ParseConfig(FixturePath("atrocities.json")));
         // Built here, before any Faction exists: FactionEffectsPool holds a reference into
         // `effects`, so a test replacing this config later would dangle it.
         dataContext.baseConquestConfig = std::make_unique<ac::BaseConquestConfig_t>();

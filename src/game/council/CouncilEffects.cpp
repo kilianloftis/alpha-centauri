@@ -60,6 +60,11 @@ void CouncilEffects::SetGovernorEffects(const std::vector<EffectConfig_t>& rGove
     }
 }
 
+void CouncilEffects::ClearGovernorEffects()
+{
+    m_governorEffects.clear();
+}
+
 bool CouncilEffects::HasActiveRuleFlag(RuleFlagId_t flag) const
 {
     for (const ActiveEffect_t& rEffect : m_worldEffects)

@@ -485,7 +485,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -541,8 +541,27 @@ tile, and the base there if any, then runs the list in order. Tectonic Payload a
 `Earthquake` with `levels_stat: earthquake_levels` and then `DestroyUnit`, so the quake takes
 its size from whichever reactor the design carries and the missile is spent either way.
 Fungal Payload authors `FungalBloom` with `tiles_stat: fungal_bloom_tiles` and then
-`DestroyUnit`. Planet Buster authors `Explosion` with `radius_stat: explosion_radius` and
-then `DestroyUnit`.
+`DestroyUnit`. Planet Buster authors `Explosion` with `radius_stat: explosion_radius`, then
+`CommitAtrocity`, then `DestroyUnit`.
+
+`ApplyExplosion` reports the owners its blast cost something — `baseOwnersDestroyed` and
+`unitOwnersDestroyed`, each in blast order with no faction listed twice — and the arm hands
+those to `AtrocityRules::BlastVictim`, which picks who answers for it (a razed base outranks a
+killed unit; the detonator is never their own victim). Territory is never consulted. The
+result lands in `TriggeredEffectContext_t::derivedVictim`, **not** `actionTarget`:
+`actionTarget` stays what the trigger site supplied, so an `Explosion` cannot silently
+redirect the `ActionTarget` faction filter for everything authored after it. `CommitAtrocity`
+prefers `derivedVictim` and falls back to `actionTarget`, and runs while the subject unit
+still exists. A blast with no unit behind it sets no victim. Tectonic and Fungal payloads
+author no atrocity.
+
+`CommitAtrocity` records an atrocity by the subject faction against `derivedVictim` if an arm
+set one, else `actionTarget`, and applies the tier's consequences when the act is counted. It is a **per-faction-subject** arm, beside
+`SetInfiltration`: the subject is the perpetrator, which is why a probe mission
+(`factions = {&actor}`) and a detonation (`TriggeredEffectContext_t(state, unit.GetFaction())`)
+both name the right faction with no extra plumbing. `severity` is `AtrocitySeverityId_t`
+(`Simple` or `Major`); the parser rejects any other name. Consequence numbers live in
+`config/atrocities.json`. See `atrocity-system.md`.
 
 `Earthquake` raises the context tile through `ApplyEarthquake`
 (`include/game/map/ElevationChange.h`): `levels` rolls of `[level_min_meters,

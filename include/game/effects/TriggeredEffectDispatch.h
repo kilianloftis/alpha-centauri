@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/atrocities/AtrocityEffects.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffect.h"
@@ -135,7 +136,8 @@ using TriggeredEffectResult_t = std::variant<
     ExplosionApplied_t,
     TerrainFeatureChanged_t,
     RockinessChanged_t,
-    ElevationChanged_t
+    ElevationChanged_t,
+    AtrocityCommitted_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
@@ -159,7 +161,12 @@ struct TriggeredEffectContext_t
     Tile* pTile = nullptr;
     // Visit-list host: GrantXp remove_host_chance removes this improvement from pTile.
     std::optional<std::string> hostImprovementId;
+    // Set by the trigger site and read-only to the arms: the probed base's owner, and so on.
     std::optional<FactionId_t> actionTarget;
+    // Written by an arm that works out who it wronged (Explosion), read by CommitAtrocity.
+    // Separate from actionTarget so an arm cannot silently redirect the ActionTarget faction
+    // filter for everything authored after it.
+    std::optional<FactionId_t> derivedVictim;
     std::mt19937* pRng = nullptr;
 
     std::mt19937& Rng() const;

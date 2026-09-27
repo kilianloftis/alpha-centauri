@@ -90,6 +90,34 @@ bool PlanetaryCouncil::IsCouncilMember(const Faction& rFaction) const
     return std::find(m_members.begin(), m_members.end(), &rFaction) != m_members.end();
 }
 
+void PlanetaryCouncil::Expel(const Faction& rFaction)
+{
+    const auto it = std::find(m_members.begin(), m_members.end(), &rFaction);
+    if (it == m_members.end())
+    {
+        return;
+    }
+    m_members.erase(it);
+
+    if (m_pending)
+    {
+        // A vote already under way is tallied against the remaining members, so the expelled
+        // faction's ballot must go with it — otherwise AllMembersVoted counts a voter who is
+        // no longer there and the tally weights a seat that no longer exists.
+        m_pending->ballots.erase(rFaction.GetFactionId());
+        m_pending->electionVotes.erase(rFaction.GetFactionId());
+        std::erase(m_pending->eligibleCandidateIds, rFaction.GetFactionId());
+    }
+
+    if (m_pGovernor == &rFaction)
+    {
+        m_pGovernor = nullptr;
+        m_effects.ClearGovernorEffects();
+    }
+
+    m_revision.Bump();
+}
+
 bool PlanetaryCouncil::HasCommlinksToAllMembers(const GameState& rGameState,
                                                 const Faction& rFaction) const
 {

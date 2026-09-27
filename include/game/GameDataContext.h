@@ -45,6 +45,7 @@ struct BaseConquestConfig_t;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 struct DifficultyConfig_t;
+struct AtrocitiesConfig_t;
 struct CommerceConfig_t;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
@@ -104,6 +105,7 @@ struct GameDataContext
     std::unique_ptr<CouncilProposalRegistry> councilProposalRegistry;
     std::unique_ptr<CouncilRulesConfig_t> councilRules;
     std::unique_ptr<DifficultyConfig_t> difficultyConfig;
+    std::unique_ptr<AtrocitiesConfig_t> atrocitiesConfig;
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;

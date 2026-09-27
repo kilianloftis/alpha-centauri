@@ -323,6 +323,7 @@ TEST_CASE("GameSettings Save and Load round-trip pause_on_events", "[GameSetting
         config.newFacilityBuilt = false;
         config.droneRiots = false;
         config.buildOrdersOutOfDate = false;
+        config.atrocityCommitted = false;
         settings.SetPauseOnEvents(config);
         settings.Save(path.string());
     }
@@ -333,6 +334,7 @@ TEST_CASE("GameSettings Save and Load round-trip pause_on_events", "[GameSetting
     CHECK(loaded.GetPauseOnEvents().combatUnitBuilt);
     CHECK_FALSE(loaded.GetPauseOnEvents().droneRiots);
     CHECK_FALSE(loaded.GetPauseOnEvents().buildOrdersOutOfDate);
+    CHECK_FALSE(loaded.GetPauseOnEvents().atrocityCommitted);
 
     std::filesystem::remove(path);
 }

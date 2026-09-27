@@ -106,6 +106,7 @@ add_executable(effects-tests
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
     game/PlanetaryCouncilTests.cpp
+    game/AtrocityTests.cpp
     ui/ModalContractTests.cpp
     ui/ListSelectorPopupTests.cpp
     ui/HurryProductionPopupTests.cpp

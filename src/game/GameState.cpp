@@ -144,6 +144,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
+    , m_pAtrocities(std::make_unique<AtrocityLedger>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
     , m_secretProjectAvailability(*this)
@@ -524,6 +525,16 @@ DiplomacyLedger& GameState::GetDiplomacyLedger()
 const DiplomacyLedger& GameState::GetDiplomacyLedger() const
 {
     return *m_pDiplomacy;
+}
+
+AtrocityLedger& GameState::GetAtrocityLedger()
+{
+    return *m_pAtrocities;
+}
+
+const AtrocityLedger& GameState::GetAtrocityLedger() const
+{
+    return *m_pAtrocities;
 }
 
 DiplomaticActionExecutor& GameState::GetDiplomaticActionExecutor()

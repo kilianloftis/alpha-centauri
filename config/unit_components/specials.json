@@ -319,6 +319,12 @@
         }
       },
       {
+        "type": "CommitAtrocity",
+        "parameters": {
+          "severity": "Major"
+        }
+      },
+      {
         "type": "DestroyUnit"
       }
     ]

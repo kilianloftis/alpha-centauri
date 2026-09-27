@@ -73,7 +73,7 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
 
     {
         std::ofstream out(path);
-        out << R"({"default":"missing","levels":[{"id":"citizen"}]})";
+        out << R"({"default":"missing","levels":[{"id":"citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}}]})";
     }
     CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("default"));
@@ -83,13 +83,30 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
         out << R"({
           "default":"citizen",
           "levels":[
-            {"id":"citizen"},
-            {"id":"citizen"}
+            {"id":"citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}},
+            {"id":"citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}}
           ]
         })";
     }
     CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("duplicate level id"));
+
+    {
+        std::ofstream out(path);
+        out << R"({"default":"citizen","levels":[{"id":"citizen","rules":{}}]})";
+    }
+    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("player_atrocity_threshold"));
+
+    // The AI number is required on every level too, not defaulted to the player's.
+    {
+        std::ofstream out(path);
+        out << R"({"default":"citizen","levels":[
+            {"id":"citizen","rules":{"player_atrocity_threshold":28}}
+        ]})";
+    }
+    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("ai_atrocity_threshold"));
 
     std::filesystem::remove(path);
 }

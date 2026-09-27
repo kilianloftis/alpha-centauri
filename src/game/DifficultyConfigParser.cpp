@@ -29,6 +29,20 @@ void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::stri
     }
 }
 
+int ReadRequiredThreshold_(const nlohmann::json& rJson, const char* key)
+{
+    if (!rJson.contains(key) || !rJson.at(key).is_number_integer())
+    {
+        throw std::runtime_error("'" + std::string(key) + "' must be an integer");
+    }
+    const int value = rJson.at(key).get<int>();
+    if (value < 0)
+    {
+        throw std::runtime_error("'" + std::string(key) + "' must be >= 0");
+    }
+    return value;
+}
+
 bool ReadBool_(const nlohmann::json& rJson, const char* key, bool defaultValue)
 {
     const auto it = rJson.find(key);
@@ -79,6 +93,8 @@ DifficultyRules_t ParseRules_(const nlohmann::json& rJson, const std::string& rL
         "ai_auto_personality",
         "combat_handicap",
         "combat_handicap_natives_only",
+        "player_atrocity_threshold",
+        "ai_atrocity_threshold",
     };
     RejectUnknownKeys_(rJson, known, ctx);
 
@@ -104,6 +120,8 @@ DifficultyRules_t ParseRules_(const nlohmann::json& rJson, const std::string& rL
         rules.combatHandicap = ReadBool_(rJson, "combat_handicap", rules.combatHandicap);
         rules.combatHandicapNativesOnly =
             ReadBool_(rJson, "combat_handicap_natives_only", rules.combatHandicapNativesOnly);
+        rules.playerAtrocityThreshold = ReadRequiredThreshold_(rJson, "player_atrocity_threshold");
+        rules.aiAtrocityThreshold = ReadRequiredThreshold_(rJson, "ai_atrocity_threshold");
     }
     catch (const std::runtime_error& rErr)
     {
@@ -149,10 +167,12 @@ DifficultyLevel_t ParseLevel_(const nlohmann::json& rJson)
     level.id = rJson.at("id").get<std::string>();
     level.name = rJson.value("name", level.id);
 
-    if (rJson.contains("rules"))
+    if (!rJson.contains("rules"))
     {
-        level.rules = ParseRules_(rJson.at("rules"), level.id);
+        throw std::runtime_error("difficulty level '" + level.id
+                                 + "' requires 'player_atrocity_threshold'");
     }
+    level.rules = ParseRules_(rJson.at("rules"), level.id);
 
     level.effects = ParseEffects_(rJson, level.id);
     return level;

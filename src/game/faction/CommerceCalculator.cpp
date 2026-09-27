@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/atrocities/AtrocityLedger.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
@@ -165,7 +166,14 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
     }
     const CommerceConfig_t& rConfig = *m_pConfig;
 
-    // TODO: zero commerce when sanctions are in effect against either faction.
+    const AtrocityLedger& rAtrocities = rGameState.GetAtrocityLedger();
+    // Commerce step (10): sanctions against either side reduce the pair to zero. Applied before
+    // the pair is formed rather than after the formula, so a sanctioned partner drops off the
+    // base screen instead of showing a zero row.
+    if (rAtrocities.IsSanctioned(rOwner.GetFactionId(), rGameState.GetMissionYear()))
+    {
+        return {};
+    }
 
     const int techDenominator = TechDenominator_(rGameState);
     // Ranking a faction prices every one of its bases (ComputeWorked_ per base), so each
@@ -185,6 +193,10 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
 
         const DiplomaticStatus_t status = rDiplomacy.GetStatus(ownerId, rPartner.GetFactionId());
         if (status != DiplomaticStatus_t::Friendship && status != DiplomaticStatus_t::Pact)
+        {
+            continue;
+        }
+        if (rAtrocities.IsSanctioned(rPartner.GetFactionId(), rGameState.GetMissionYear()))
         {
             continue;
         }

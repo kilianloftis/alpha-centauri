@@ -44,6 +44,7 @@
 #include "game/units/ProbeActionConfigParser.h"
 #include "game/units/BaseConquestConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
+#include "game/atrocities/AtrocityConfigParser.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
 #include "lib/LuaRuntime.h"
@@ -90,6 +91,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
         {rData.councilRules.get(), "councilRules"},
         {rData.difficultyConfig.get(), "difficultyConfig"},
+        {rData.atrocitiesConfig.get(), "atrocitiesConfig"},
         {rData.luaRuntime.get(), "luaRuntime"},
         {rData.droneCalculator.get(), "droneCalculator"},
         {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
@@ -230,6 +232,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     CouncilRulesConfigParser councilRulesParser;
     rData.councilRules =
         std::make_unique<CouncilRulesConfig_t>(councilRulesParser.ParseConfig(rPaths.councilRules));
+
+    AtrocityConfigParser atrocitiesParser;
+    rData.atrocitiesConfig =
+        std::make_unique<AtrocitiesConfig_t>(atrocitiesParser.ParseConfig(rPaths.atrocities));
 
     // Effect-declaring, not a Lua formula: prototype starting-XP (and any other universal
     // production rules) live here, so ValidateEffectReferences must see this before it runs.

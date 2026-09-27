@@ -70,13 +70,19 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
 
     REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
-    REQUIRE(config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects.size() == 1);
-    const auto* pPlague = std::get_if<ModifyPopulationEffect_t>(
-        &config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects.front().effect);
+    const auto& rPlagueEffects = config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects;
+    REQUIRE(rPlagueEffects.size() == 2);
+    const auto* pPlague = std::get_if<ModifyPopulationEffect_t>(&rPlagueEffects.front().effect);
     REQUIRE(pPlague);
     CHECK(pPlague->amount == -50);
     CHECK(pPlague->op == ModifierOp_t::AddPercent);
     CHECK(pPlague->minSize == 1);
+
+    // Genetic warfare is a Simple atrocity; the mission answers for it through the effects list
+    // rather than a flag of its own.
+    const auto* pAtrocity = std::get_if<CommitAtrocityEffect_t>(&rPlagueEffects.back().effect);
+    REQUIRE(pAtrocity);
+    CHECK(pAtrocity->severity == AtrocitySeverityId_t::Simple);
 }
 
 TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[probe][config][se]")

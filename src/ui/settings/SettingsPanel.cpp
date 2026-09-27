@@ -83,6 +83,7 @@ PAUSE_BOOL(NutrientLow, nutrientLow)
 PAUSE_BOOL(BuildOrdersOutOfDate, buildOrdersOutOfDate)
 PAUSE_BOOL(PopulationLimitReached, populationLimitReached)
 PAUSE_BOOL(DelayInTranscendence, delayInTranscendence)
+PAUSE_BOOL(AtrocityCommitted, atrocityCommitted)
 
 #undef PAUSE_BOOL
 
@@ -160,6 +161,8 @@ const SettingDescriptor_t k_SettingDescriptors[] = {
      GetPopulationLimitReached_, SetPopulationLimitReached_},
     {"Delay in Transcendence", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetDelayInTranscendence_, SetDelayInTranscendence_},
+    {"Atrocity Committed", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetAtrocityCommitted_, SetAtrocityCommitted_},
     {"Map Generation", SettingRowKind_t::Header, SettingScope_t::NewGameOnly},
     {"Width", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,
      nullptr, nullptr, GetMapWidthText_},

@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/atrocities/AtrocityRules.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InfiltrationRules.h"
@@ -135,6 +136,20 @@ bool AddBuilding_(TriggeredEffectContext_t& rCtx, const AddBuildingEffect_t& rAd
     }
     rCtx.pBase->GetBuildingManager().AddBuilding(rAdd.buildingId);
     rOut.push_back(BuildingAdded_t{rAdd.buildingId});
+    return true;
+}
+
+// The subject faction is the perpetrator; the victim is whoever actionTarget names (the probed
+// base's owner, or the territory a warhead went off in). A victimless act is legal — an atrocity
+// is answered for on the strength of the act, not on finding someone to have wronged.
+bool CommitAtrocity_(TriggeredEffectContext_t& rCtx, const CommitAtrocityEffect_t& rConfig,
+                     Faction& rPerpetrator, std::vector<TriggeredEffectResult_t>& rOut)
+{
+    // An arm that worked out its own victim (Explosion) outranks the trigger site's target.
+    const std::optional<FactionId_t> victimId =
+        rCtx.derivedVictim ? rCtx.derivedVictim : rCtx.actionTarget;
+    Faction* pVictim = victimId ? rCtx.rGameState.FindFaction(*victimId) : nullptr;
+    rOut.push_back(CommitAtrocity(rCtx.rGameState, rPerpetrator, pVictim, rConfig.severity));
     return true;
 }
 
@@ -510,6 +525,13 @@ bool Explosion_(TriggeredEffectContext_t& rCtx, const ExplosionEffect_t& rConfig
     const ExplosionResult_t result =
         ApplyExplosion(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), radius, rCtx.Rng(),
                        rCtx.rGameState, rCtx.pUnit);
+    // Only a unit-borne blast has someone to answer for it. Without one there is no detonator
+    // to exclude, so CommitAtrocity falls back to whatever the trigger site targeted.
+    if (rCtx.pUnit)
+    {
+        rCtx.derivedVictim = BlastVictim(result.baseOwnersDestroyed, result.unitOwnersDestroyed,
+                                         rCtx.pUnit->GetFaction().GetFactionId());
+    }
     if (!result.bChanged)
     {
         return false;
@@ -531,7 +553,8 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
             if constexpr (std::is_same_v<T, GrantTechEffect_t>
                           || std::is_same_v<T, GrantEnergyEffect_t>
                           || std::is_same_v<T, GrantUnitEffect_t>
-                          || std::is_same_v<T, SetInfiltrationEffect_t>)
+                          || std::is_same_v<T, SetInfiltrationEffect_t>
+                          || std::is_same_v<T, CommitAtrocityEffect_t>)
             {
                 return true;
             }
@@ -599,6 +622,10 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, SetInfiltrationEffect_t>)
             {
                 return SetInfiltration_(rCtx, rConfig, rFaction, rOut);
+            }
+            else if constexpr (std::is_same_v<T, CommitAtrocityEffect_t>)
+            {
+                return CommitAtrocity_(rCtx, rConcrete, rFaction, rOut);
             }
             else if constexpr (std::is_same_v<T, ModifyPopulationEffect_t>)
             {

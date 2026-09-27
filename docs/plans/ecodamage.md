@@ -1,6 +1,6 @@
 ---
 name: Ecological damage
-overview: "Per-base eco-damage score assembled from tile/base/faction effect contributions and a Lua formula in `config/eco_damage.lua`, a faction-wide clean-minerals cap raised by fungal blooms and eco facilities, and a per-faction `EcoDamage` turn stage that rolls the score as a fungal-pop percentage. The pop outcome is stubbed behind a config trigger slot."
+overview: "Per-base eco-damage score assembled from tile/base/faction effect contributions and a Lua formula in `config/eco_damage.lua`, a faction-wide clean-minerals cap raised by fungal blooms and eco facilities, and a per-faction `EcoDamage` turn stage that rolls the score as a fungal-pop percentage and applies the `FungalBloom` effect on a hit."
 todos:
   - id: stats
     content: Add EcoDamageContribution / EcoDamageWorkedContribution / EcoTerraformScale / EcoCleanMinerals / EcoDamageReduction to StatId_t, ParseStatId, KindFor, DomainFor
@@ -18,10 +18,10 @@ todos:
     content: Faction fungal-bloom counter + clean-mineral grant counter; GrantCleanMinerals triggered effect
     status: pending
   - id: stage
-    content: EcoDamage per-faction turn stage between Population and WorldEvents; roll + EvFungalBloom + player notice; on_pop_effects trigger slot (stub)
+    content: EcoDamage per-faction turn stage after WorldEvents; roll + pop-tile pick + EvFungalBloom + player notice; on_pop_effects applies FungalBloom with the tile stamped
     status: pending
   - id: eco-scale
-    content: "Eco multiplier emitters: planet levels in social_rating_effects.json, config/native_life.json + GameRulesConfig.nativeLifeId + FactionEffectsPool"
+    content: "Eco multiplier emitters: planet levels in social_rating_effects.json, config/native_life_levels.json + GameRulesConfig.nativeLifeLevelId + FactionEffectsPool"
     status: pending
   - id: world-events
     content: config/world_events.json registry with a Cycle trigger, active-event state on GameState, WorldEvents starts/expires events, CollectWorldExtras serves active effects; Perihelion is the first entry
@@ -62,7 +62,7 @@ Cleanmins     = 16 + fungal blooms + eco facilities built since the first bloom
 Cleanmins1    = Terraform < 0 ? 0 : min(Cleanmins, Terraform)
 Cleanmins2    = Cleanmins - Cleanmins1
 DamageFactor  = floor( (Terraform - Cleanmins1)
-                       + (Minerals - Cleanmins2 + 5 * Atrocities) / (1 + Goodfacs) )   -- floored at 0
+                       + (Minerals - Cleanmins2 + AtrocityMinerals) / (1 + Goodfacs) )  -- floored at 0
 EcoDamage%    = DamageFactor * Perihelion * Techs * Life * Difficulty * max(1, 3 - PLANET) / 300
 ```
 
@@ -75,7 +75,7 @@ floors at zero, so a base under its cap rolls 0%.
 | tile contribution | per-improvement weight, doubled on tiles this base works |
 | Tree Farm / Hybrid Forest | halve / zero the terraform term |
 | Minerals | this base's mineral production after multipliers, less minerals received from orbit |
-| Atrocities | major atrocities by this faction (planet busters, tectonic payloads) |
+| AtrocityMinerals | virtual minerals from this faction's atrocities. `AtrocityLedger::EcoVirtualMinerals` returns the whole term already weighted — SMAC's `5 ×` is `Major.eco_virtual_minerals` in `config/atrocities.json` (Simple is 0) |
 | Goodfacs | Centauri Preserve + Temple of Planet + Nanoreplicator in this base, + Pholus Mutagen + Singularity Inductor owned |
 | Techs | techs discovered by this faction |
 | Life | 1 / 2 / 3 for Rare / Normal / Abundant native life |
@@ -162,7 +162,7 @@ struct EcoDamageInputs_t
     double terraformScale = 1.0;   // resolved EcoTerraformScale
     int minerals = 0;              // GetMineralProduction, less orbital deliveries
     int cleanMinerals = 0;         // resolved EcoCleanMinerals + blooms + grants
-    int atrocities = 0;
+    int atrocityMinerals = 0;   // AtrocityLedger::EcoVirtualMinerals — already weighted
     int damageReduction = 0;       // resolved EcoDamageReduction
     int techs = 0;
     double ecoScale = 1.0;         // ResolveBaseStat(EcologicalDamage, 1.0)
@@ -209,21 +209,34 @@ the stack.
 with a description recording both constraints: after `Population` so the turn's composition is
 settled, and after `WorldEvents` so active world events are current.
 
-### 3. Outcome (stubbed)
+### 3. Outcome
 
-On a successful roll the stage:
+No longer a stub: the `FungalBloom` triggered effect exists, so `on_pop_effects` ships with a
+real entry. On a successful roll the stage:
 
-1. calls `Faction::RecordFungalBloom()`, which increments the faction's bloom counter (this is
+1. picks the **pop tile** from the base's radius and stamps it as `pTile`,
+2. calls `Faction::RecordFungalBloom()`, which increments the faction's bloom counter (this is
    the `+1` to `Cleanmins` and the gate that starts crediting eco-facility grants),
-2. emits `EvFungalBloom { factionId, baseId }` on the `EventBus`,
-3. enqueues a `PlayerInteractionQueue` notice,
-4. applies `eco_damage.json`'s `on_pop_effects` triggered list through `ApplyTriggeredEffects`
-   with the base and faction stamped as subjects. **Ships empty.**
+3. emits `EvFungalBloom { factionId, baseId }` on the `EventBus`,
+4. enqueues a `PlayerInteractionQueue` notice,
+5. applies `eco_damage.json`'s `on_pop_effects` through `ApplyTriggeredEffects` with base,
+   faction **and tile** stamped.
 
-Everything a real pop does — choosing a tile in the radius, planting fungus, destroying the
-improvements that do not survive, spawning natives, sea-level rise — is deliberately not written
-here. `on_pop_effects` is the slot they land in once the systems they need exist; the entries
-this repo cannot yet express are listed under [Missing systems](#missing-systems).
+`FungalBloom` does the rest of the work already, and more than this plan originally scoped for
+it: `ApplyFungalBloom` converts the origin plus a random sample of its Chebyshev-1 neighbours
+(skipping bases and tiles that already have fungus), setting fungus **notifies the tile, which
+drops the improvements that cannot coexist with it**, and then spawns a uniform draw of native
+lifeforms onto the new tiles, owned by the session's native-life faction. Planting fungus,
+destroying improvements and releasing mind worms are therefore all covered by one authored
+entry — none of them needs code here.
+
+> **Trap:** `FungalBloom_` returns false when the context has no `pTile`, so an `on_pop_effects`
+> list applied with only base and faction stamped would silently do nothing. Stamping the tile
+> is what makes the entry fire, and it is the one thing the eco stage must get right.
+
+Two magnitude sources are authored on `FungalBloom`, and the eco pop must use the literal one:
+`tiles_stat` resolves off a **subject unit** (that is how a fungal payload takes its size from
+the reactor) and there is no unit in an eco pop, so `tiles` carries the count.
 
 ### The multiplier is one stack
 
@@ -236,7 +249,7 @@ it once with seed `1.0` and the formula multiplies by it once.
 |---|---|---|
 | Difficulty | `config/difficulty.json` *(already shipping)* | `FactionGlobal MultiplyGeometric` 3 on citizen…librarian, 5 on thinker / transcend |
 | PLANET | `config/social_rating_effects.json`, the `planet` level table | one `MultiplyGeometric` per level: −3 → 6, −2 → 5, −1 → 4, **0 → 3**, +1 → 2, +2 → 1, +3 → 1 |
-| Native life | `config/native_life.json` | `FactionGlobal MultiplyGeometric` 1 / 2 / 3 for rare / normal / abundant |
+| Native life | `config/native_life_levels.json` | `FactionGlobal MultiplyGeometric` 1 / 2 / 3 for rare / normal / abundant |
 | Perihelion | `config/world_events.json` | `WorldGlobal MultiplyGeometric 2`, collected only while the event is active |
 
 **`max(1, 3 − PLANET)` disappears into the data.** The `planet` table is configured over
@@ -254,10 +267,15 @@ The floor is the authored value, not arithmetic in the formula.
 
 **Native life follows Difficulty exactly**, because it is the same kind of thing: a campaign
 property, not a player preference, and one a save must carry. `GameRulesConfig_t` gains
-`nativeLifeId` beside `difficultyId`; `config/native_life.json` holds `default` plus a `levels`
-array of `{ id, name, effects }`, parsed by a `NativeLifeConfig_t` with the same
+`nativeLifeLevelId` beside `difficultyId`; `config/native_life_levels.json` holds `default` plus a
+`levels` array of `{ id, name, effects }`, parsed by a `NativeLifeLevelConfig_t` with the same
 `FindById` / `RequireForSession` pair; and `FactionEffectsPool::CollectNativeLifeEffects_()`
-mirrors `CollectDifficultyEffects_()`, appending with `sourceId` `"native_life"`. The existing
+mirrors `CollectDifficultyEffects_()`, appending with `sourceId` `"native_life_level"`.
+
+> **Name collision:** `NativeLifeConfig_t` is **taken** — `game/units/NativeUnitConfig.h` uses it
+> for the bloom's lifeform-spawn range in `config/native_units.json`. That is a different
+> quantity (how many worms a bloom releases, not how abundant life is planet-wide), so this one
+> is `NativeLifeLevelConfig_t` in `config/native_life_levels.json`. The existing
 game-rules revision already invalidates every faction pool when the rules change, so switching
 it mid-campaign re-resolves with no extra plumbing. World generation can later read the same id
 for fungus and worm density without a second setting.
@@ -331,7 +349,9 @@ being produced credits nothing.
   },
   "fungal_pop": {
     "max_chance_percent": 100,
-    "on_pop_effects": []
+    "on_pop_effects": [
+      { "type": "FungalBloom", "parameters": { "tiles": 1 } }
+    ]
   }
 }
 ```
@@ -389,8 +409,11 @@ the formula.
 
 ```lua
 -- Variables set by the engine before evaluating damage_formula:
---   terraform_raw, terraform_scale, minerals, clean_minerals, atrocities,
+--   terraform_raw, terraform_scale, minerals, clean_minerals, atrocity_minerals,
 --   damage_reduction, techs, eco_scale
+--
+-- atrocity_minerals arrives pre-weighted from AtrocityLedger::EcoVirtualMinerals. Do not
+-- multiply by 5 here: that factor is Major.eco_virtual_minerals in config/atrocities.json.
 --
 -- eco_scale is the resolved EcologicalDamage stat: difficulty x Planet rating x native
 -- life x perihelion, already multiplied together by the effect stack.
@@ -402,7 +425,7 @@ function eco_damage_formula()
     if terraform > 0 then clean1 = math.min(clean_minerals, terraform) end
     local clean2 = clean_minerals - clean1
 
-    local mineral_term = (minerals - clean2 + 5 * atrocities) / (1 + damage_reduction)
+    local mineral_term = (minerals - clean2 + atrocity_minerals) / (1 + damage_reduction)
     local factor = math.max(0, math.floor((terraform - clean1) + mineral_term))
 
     return math.floor(factor * techs * eco_scale / 300)
@@ -448,8 +471,8 @@ and the sea-base term rides the existing `Base` improvement:
 | `include/game/stages/EcoDamage.h` + `src/game/stages/EcoDamage.cpp` | the per-faction stage, `TurnStageRegistrar<EcoDamage>` |
 | `config/turn_stages.json` | the `EcoDamage` entry between `Population` and `WorldEvents` |
 | `config/social_rating_effects.json` | fill the `planet` level table, **including a new `"0"` row** |
-| `config/native_life.json` + `include/game/NativeLifeConfig.h` + parser | `default` and a `levels` array of `{ id, name, effects }`; `FindById` / `RequireForSession` mirroring `DifficultyConfig_t` |
-| `include/game/GameRulesConfig.h` | `nativeLifeId` beside `difficultyId` |
+| `config/native_life_levels.json` + `include/game/NativeLifeLevelConfig.h` + parser | `default` and a `levels` array of `{ id, name, effects }`; `FindById` / `RequireForSession` mirroring `DifficultyConfig_t`. **Not** `NativeLifeConfig_t`, which is taken |
+| `include/game/GameRulesConfig.h` | `nativeLifeLevelId` beside `difficultyId` |
 | `src/game/faction/FactionEffectsPool.cpp` | `CollectNativeLifeEffects_()` mirroring `CollectDifficultyEffects_()`, appended in `Rebuild_` |
 | `config/world_events.json` + `include/game/WorldEventConfig.h` + parser | the event registry; `EffectSourceKind_t::WorldEvent`; `GameDataPaths::worldEvents` |
 | `include/game/GameState.h` + `.cpp` | active-event id set + its `Revision`; `CollectWorldExtras` appends every active event's `effects`; `GetWorldCompositionStamp` folds in the active-event revision |
@@ -474,7 +497,12 @@ Still open:
 4. **Which year the Perihelion cycle counts from.** The sources give the shape — 20 years in
    every 80 — but never the phase. `world_events.json` carries `start_year_offset`, assumed 0
    (the first playable year); a different epoch is a one-key change.
-5. **Whether sea terraforming counts.** *Ecology (Advanced)*'s list is land-only, and neither it
+5. **Which tile in the base radius the pop lands on.** The sources only say a pop happens
+   "within the base radius". The stage picks uniformly among the base's workable tiles that are
+   not bases and do not already have fungus; weighting toward the tile that contributed most
+   eco-damage (the borehole that caused it) would read better but is not sourced. `FungalBloom`
+   itself then handles spread from that origin.
+6. **Whether sea terraforming counts.** *Ecology (Advanced)*'s list is land-only, and neither it
    nor the others say what Mining Platforms or Tidal Harnesses contribute. They are authored at
    0 until ruled on; Kelp Farms are the one sea improvement the sources do place (counted, but
    never doubled for being worked).
@@ -488,11 +516,11 @@ with a named input, not a silent zero.
 |---|---|
 | Tree Farm, Hybrid Forest, Centauri Preserve, Temple of Planet, Nanoreplicator are not in `config/buildings/buildings.json` | `EcoTerraformScale` and `EcoDamageReduction` have no emitters until they are authored; the stats resolve to their identity seeds meanwhile |
 | Pholus Mutagen and Singularity Inductor are not in `projects.json` | same, for the faction-wide half of `Goodfacs` |
-| No atrocity ledger (planet busters, tectonic payloads do not exist) | `atrocities` input is 0 with a TODO at the assembly site |
+| ~~No atrocity ledger~~ — **built**. `AtrocityLedger::EcoVirtualMinerals(factionId, config)` returns the counted-atrocity half, already weighted; see `docs/architecture/atrocity-system.md` | assemble `atrocityMinerals` from that call instead of hard-zeroing it, and drop the `5 *` from the formula — the factor is `Major.eco_virtual_minerals` in `config/atrocities.json`. Counted atrocity records (Major only; Simple weighs 0) contribute only while the Charter was in force at commission. Tectonic detonations are not atrocities and are not counted yet; when eco damage lands they will need their own ungated term at the same Major weight |
 | Orbital minerals are **live** (`Nessus_Mining_Station` emits `AllOwnerBases minerals +1`) but not subtracted | not a deferred gap — a day-one correctness bug. SMAC excludes orbital minerals from the eco term, so shipping without the subtraction charges eco damage for minerals nobody terraformed for. Needs a way to attribute part of a resolved `Minerals` stat to orbital sources |
-| No native life session setting | added here as `GameRulesConfig_t::nativeLifeId` + `config/native_life.json`, the Difficulty shape; needs a new-game menu row |
+| No native life **abundance** setting | added here as `GameRulesConfig_t::nativeLifeLevelId` + `config/native_life_levels.json`, the Difficulty shape; needs a new-game menu row |
 | No world-event system | `config/world_events.json` and the active-event set are built here, minimally: `WorldEvents` currently only spreads terraform improvements. Perihelion is the only shipping entry, and `Cycle` the only trigger kind |
-| No mind worm or native unit spawning | the pop cannot release natives. Planting the fungus itself is **not** a gap — `Tile::SetHasFungus` exists and `TerraformSpread` already flips it, and `Tile::RemoveImprovement` can destroy what the pop ruins |
+| ~~No mind worm or native unit spawning~~ — **built**. `ApplyFungalBloom` plants the fungus, lets the tile drop incompatible improvements, and spawns native lifeforms from `NativeUnitRegistry` onto the new tiles | nothing left to do: the whole outcome is one authored `FungalBloom` entry in `on_pop_effects`. Requires a native-life faction in the session — `ApplyFungalBloom` throws without one when a lifeform would spawn |
 | No sea level / global warming | the consequence of sustained global eco-damage. The config hook exists — the `melt_polar_caps` council proposal already emits `WorldParameter sea_level +1` — but `WorldParameter` is an unimplemented arm in `TriggeredEffectDispatch`, so nothing happens yet |
 | No base-screen eco row | the number is computed and reachable but nothing renders it; `BaseView` follow-up |
 
@@ -526,6 +554,14 @@ with a named input, not a silent zero.
   credits nothing while still counting toward `EcoDamageReduction`.
 - Turn-stage test — a base with a 100% score blooms, the faction's counter increments, and
   `EvFungalBloom` fires; a 0% score does neither.
+- Outcome wiring, against the real `FungalBloom` effect rather than a stub:
+  - the pop tile is inside the base radius, is never the base tile, and is never a tile that
+    already had fungus;
+  - after a pop the tile carries fungus, its incompatible improvements are gone, and the
+    session's native-life faction owns at least `fungal_bloom_native_lifeforms_min` new units;
+  - **a context missing `pTile` fires nothing** — the regression guard on the trap above, since
+    `FungalBloom_` returns false rather than throwing;
+  - the second bloom raises `Cleanmins` by 2 in total, so blooms compound the cap.
 - New `tests/game/WorldEventTests.cpp` — Perihelion is active for mission years 0–19, inactive
   for 20–79, active again at 80; `on_start_effects` / `on_end_effects` fire once on each edge and
   not on the turns between; and its `effects` reach every faction's pool while active and no

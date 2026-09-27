@@ -3,16 +3,19 @@
 
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/atrocities/AtrocityLedger.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/TriggeredEffectParser.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Explosion.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -92,7 +95,19 @@ struct BlastGame_
         return *pBase;
     }
 
+    Faction& AddFaction_()
+    {
+        return pState->AddFaction(std::make_unique<Faction>(
+            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    }
+
     Unit& MakeChassisUnit_(int x, int y)
+    {
+        return MakeChassisUnitFor_(*pPlayer, x, y);
+    }
+
+    Unit& MakeChassisUnitFor_(Faction& rFaction, int x, int y)
     {
         const UnitComponentConfig_t* pChassis = fixtures.unitComponents.Find("test_chassis");
         REQUIRE(pChassis);
@@ -103,9 +118,43 @@ struct BlastGame_
             {"chassis", pChassis},
         };
         designs.emplace_back(slots, assigned);
-        return pPlayer->GetUnitManager().CreateUnit(
+        return rFaction.GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), designs.back(), pState->GetWorldMap().GetUnitPositions(),
             At_(x, y), /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+    }
+
+    Unit& MakePlanetBuster_(int x, int y)
+    {
+        warhead.id = "planet_buster_test";
+        warhead.type = "weapon";
+        warhead.onDetonateEffects.clear();
+        TriggeredEffectConfig_t explosion;
+        ExplosionEffect_t blast;
+        blast.radius = 1;
+        explosion.effect = blast;
+        warhead.onDetonateEffects.push_back(std::move(explosion));
+        TriggeredEffectConfig_t atrocity;
+        atrocity.effect = CommitAtrocityEffect_t{AtrocitySeverityId_t::Major};
+        warhead.onDetonateEffects.push_back(std::move(atrocity));
+        TriggeredEffectConfig_t spend;
+        spend.effect = DestroyUnitEffect_t{};
+        warhead.onDetonateEffects.push_back(std::move(spend));
+
+        const UnitComponentConfig_t* pChassis = fixtures.unitComponents.Find("test_chassis");
+        REQUIRE(pChassis);
+        const std::vector<UnitSlotConfig_t> slots = {
+            {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+            {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+        };
+        const std::unordered_map<std::string, const UnitComponentConfig_t*> assigned = {
+            {"weapon", &warhead},
+            {"chassis", pChassis},
+        };
+        designs.emplace_back(slots, assigned);
+        return pPlayer->GetUnitManager().CreateUnit(
+            pState->AllocateUnitId(), designs.back(),
+            pState->GetWorldMap().GetUnitPositions(), At_(x, y),
+            /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
     }
 };
 
@@ -241,6 +290,109 @@ TEST_CASE("Detonating a planet buster spends the missile after the blast",
     CHECK(drop <= game.At_(4, 4).MapRules().levelMaxMeters);
 }
 
+TEST_CASE("Detonating a Planet Buster names the first foreign base destroyed",
+          "[map][explosion][detonate][atrocity]")
+{
+    BlastGame_ game;
+    Faction& rVictim = game.AddFaction_();
+    Faction& rBystander = game.AddFaction_();
+
+    BaseManager* pVictimBase = rVictim.CreateBase(
+        game.pState->AllocateBaseId(), "VictimBase", &game.At_(4, 4), game.fixtures.dataContext,
+        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+    REQUIRE(pVictimBase);
+
+    Unit& rMissile = game.MakePlanetBuster_(4, 4);
+    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+
+    const AtrocityLedger& rLedger = game.pState->GetAtrocityLedger();
+    REQUIRE(rLedger.Records().size() == 1);
+    CHECK(rLedger.Records().front().perpetrator == game.pPlayer->GetFactionId());
+    CHECK(rLedger.Records().front().victim == rVictim.GetFactionId());
+    CHECK(rLedger.Records().front().severity == AtrocitySeverityId_t::Major);
+    CHECK_FALSE(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.pState->GetMissionYear()));
+    // Victim is excluded from universal Vendetta; a living AI bystander declares it.
+    CHECK(game.pState->GetDiplomacyLedger().GetStatus(rVictim.GetFactionId(),
+                                                      game.pPlayer->GetFactionId())
+          != DiplomaticStatus_t::Vendetta);
+    CHECK(game.pState->GetDiplomacyLedger().GetStatus(rBystander.GetFactionId(),
+                                                      game.pPlayer->GetFactionId())
+          == DiplomaticStatus_t::Vendetta);
+}
+
+TEST_CASE("A Planet Buster next to a foreign base names that owner even off the base tile",
+          "[map][explosion][detonate][atrocity]")
+{
+    BlastGame_ game;
+    Faction& rVictim = game.AddFaction_();
+    BaseManager* pVictimBase = rVictim.CreateBase(
+        game.pState->AllocateBaseId(), "VictimBase", &game.At_(5, 4), game.fixtures.dataContext,
+        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+    REQUIRE(pVictimBase);
+    game.pState->RebuildTerritory();
+    // Detonation is on a neighboring tile, not the base tile itself. Territory may claim it;
+    // the victim still comes from the razed base.
+    REQUIRE(game.pState->GetWorldMap().GetTerritory().HasOwner(game.At_(5, 4)));
+
+    Unit& rMissile = game.MakePlanetBuster_(4, 4);
+    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+
+    REQUIRE(game.pState->GetAtrocityLedger().Records().size() == 1);
+    CHECK(game.pState->GetAtrocityLedger().Records().front().victim == rVictim.GetFactionId());
+}
+
+TEST_CASE("A Planet Buster on own land that kills foreign units names the enemy",
+          "[map][explosion][detonate][atrocity]")
+{
+    BlastGame_ game;
+    Faction& rEnemy = game.AddFaction_();
+    game.pPlayer->CreateBase(
+        game.pState->AllocateBaseId(), "Home", &game.At_(4, 4), game.fixtures.dataContext,
+        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+    game.pState->RebuildTerritory();
+    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(game.At_(4, 4))
+            == game.pPlayer->GetFactionId());
+
+    game.MakeChassisUnitFor_(rEnemy, 5, 4);
+
+    Unit& rMissile = game.MakePlanetBuster_(4, 4);
+    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+
+    REQUIRE(game.pState->GetAtrocityLedger().Records().size() == 1);
+    CHECK(game.pState->GetAtrocityLedger().Records().front().victim == rEnemy.GetFactionId());
+    CHECK_FALSE(game.pState->GetAtrocityLedger().HasVictimized(
+        game.pPlayer->GetFactionId(), game.pPlayer->GetFactionId()));
+}
+
+TEST_CASE("A warhead that authors no atrocity records none", "[map][explosion][detonate][atrocity]")
+{
+    BlastGame_ game;
+    game.warhead.id = "clean_payload_test";
+    game.warhead.type = "weapon";
+    TriggeredEffectConfig_t spend;
+    spend.effect = DestroyUnitEffect_t{};
+    game.warhead.onDetonateEffects.push_back(std::move(spend));
+
+    const UnitComponentConfig_t* pChassis = game.fixtures.unitComponents.Find("test_chassis");
+    REQUIRE(pChassis);
+    const std::vector<UnitSlotConfig_t> slots = {
+        {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+        {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+    };
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> assigned = {
+        {"weapon", &game.warhead},
+        {"chassis", pChassis},
+    };
+    game.designs.emplace_back(slots, assigned);
+    Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), game.designs.back(),
+        game.pState->GetWorldMap().GetUnitPositions(), game.At_(4, 4),
+        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+
+    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    CHECK(game.pState->GetAtrocityLedger().Records().empty());
+}
+
 TEST_CASE("Shipping reactors set explosion radius 1, 2, 3, and 4", "[unit][explosion]")
 {
     UnitComponentRegistry components;
@@ -267,9 +419,39 @@ TEST_CASE("Shipping reactors set explosion radius 1, 2, 3, and 4", "[unit][explo
 
     const UnitComponentConfig_t* pPayload = components.Find("Planet_Buster");
     REQUIRE(pPayload);
-    REQUIRE(pPayload->onDetonateEffects.size() == 2);
+    REQUIRE(pPayload->onDetonateEffects.size() == 3);
     const auto* pExplosion = std::get_if<ExplosionEffect_t>(&pPayload->onDetonateEffects[0].effect);
     REQUIRE(pExplosion);
     CHECK(pExplosion->radiusStat == StatId_t::ExplosionRadius);
-    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pPayload->onDetonateEffects[1].effect));
+    // Answered for before the missile is spent: CommitAtrocity reads the subject unit's faction.
+    const auto* pAtrocity =
+        std::get_if<CommitAtrocityEffect_t>(&pPayload->onDetonateEffects[1].effect);
+    REQUIRE(pAtrocity);
+    CHECK(pAtrocity->severity == AtrocitySeverityId_t::Major);
+    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pPayload->onDetonateEffects[2].effect));
+
+    const auto hasAtrocity = [](const UnitComponentConfig_t& rComponent)
+    {
+        for (const TriggeredEffectConfig_t& rEntry : rComponent.onDetonateEffects)
+        {
+            if (std::holds_alternative<CommitAtrocityEffect_t>(rEntry.effect))
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+    CHECK(hasAtrocity(*pPayload));
+
+    // Tectonic and Fungal payloads author no atrocity.
+    const UnitComponentConfig_t* pTectonic = components.Find("Tectonic_Payload");
+    REQUIRE(pTectonic);
+    REQUIRE(pTectonic->onDetonateEffects.size() == 2);
+    CHECK(std::holds_alternative<EarthquakeEffect_t>(pTectonic->onDetonateEffects[0].effect));
+    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pTectonic->onDetonateEffects[1].effect));
+    CHECK_FALSE(hasAtrocity(*pTectonic));
+
+    const UnitComponentConfig_t* pFungal = components.Find("Fungal_Payload");
+    REQUIRE(pFungal);
+    CHECK_FALSE(hasAtrocity(*pFungal));
 }

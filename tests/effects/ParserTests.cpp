@@ -6,6 +6,7 @@
 #include "game/effects/EffectConfigParser.h"
 #include "game/units/MovementConstants.h"
 #include "game/effects/TriggeredEffect.h"
+#include "game/EffectReferenceValidator.h"
 #include "game/effects/TriggeredEffectParser.h"
 
 #include <catch2/catch_approx.hpp>
@@ -1847,6 +1848,45 @@ TEST_CASE("ParseTriggeredEffectConfig: SetInfiltration takes a bare factionFilte
     const TriggeredEffectConfig_t all = TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "SetInfiltration" })"), "on_elected_effects");
     CHECK_FALSE(all.factionFilter.has_value());
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: CommitAtrocity carries a severity id",
+          "[effects][parser][triggered][atrocity]")
+{
+    const TriggeredEffectConfig_t simple = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "CommitAtrocity",
+            "parameters": { "severity": "Simple" }
+        })"), "on_success_effects");
+    const auto* pSimple = std::get_if<CommitAtrocityEffect_t>(&simple.effect);
+    REQUIRE(pSimple);
+    CHECK(pSimple->severity == AtrocitySeverityId_t::Simple);
+
+    const TriggeredEffectConfig_t major = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "CommitAtrocity",
+            "parameters": { "severity": "Major" }
+        })"), "on_detonate_effects");
+    const auto* pMajor = std::get_if<CommitAtrocityEffect_t>(&major.effect);
+    REQUIRE(pMajor);
+    CHECK(pMajor->severity == AtrocitySeverityId_t::Major);
+
+    CHECK_THROWS_AS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+                        json::parse(R"({
+                            "type": "CommitAtrocity",
+                            "parameters": { "severity": "Moderate" }
+                        })"), "on_detonate_effects"),
+                    std::runtime_error);
+
+    CHECK_THROWS_AS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+                        json::parse(R"({ "type": "CommitAtrocity" })"), "on_detonate_effects"),
+                    std::runtime_error);
+    CHECK_THROWS_AS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+                        json::parse(R"({
+                            "type": "CommitAtrocity",
+                            "parameters": { "severity": "" }
+                        })"), "on_detonate_effects"),
+                    std::runtime_error);
 }
 
 TEST_CASE("ParseEffectConfig: Conceal and Detect require a channel", "[effects][parser][detection]")

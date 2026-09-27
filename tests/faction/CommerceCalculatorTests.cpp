@@ -5,6 +5,7 @@
 #include "game/GameState.h"
 #include "game/faction/CommerceCalculator.h"
 #include "game/faction/CommerceManager.h"
+#include "game/atrocities/AtrocityLedger.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -453,4 +454,51 @@ TEST_CASE("A partner-side change reaches the composition input key", "[commerce]
     const CompositionInputKey_t after = ReadCompositionInputKey(a1);
     CHECK(after.psychAvailable > before.psychAvailable);
     CHECK_FALSE(before == after);
+}
+
+TEST_CASE("Atrocity sanctions zero commerce for both sides of the pair", "[commerce][atrocity]")
+{
+    CommerceGame_ game;
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
+
+    REQUIRE(game.calculator.ComputeForBase(a1, *game.pState).size() == 1);
+    REQUIRE(game.calculator.ComputeForBase(b1, *game.pState).size() == 1);
+
+    // Sanctioning the owner strips the line entirely rather than pricing it at zero, so the
+    // base screen shows the partner gone.
+    const int start = game.pState->GetMissionYear();
+    const int until =
+        game.pState->GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
+    CHECK(game.calculator.ComputeForBase(a1, *game.pState).empty());
+    // And it costs the innocent partner the pair too: "sanctions in effect against either
+    // faction".
+    CHECK(game.calculator.ComputeForBase(b1, *game.pState).empty());
+
+    // Time passing is what lifts it, whether or not the expiry sweep has run.
+    game.pState->SetMissionYear(until);
+    CHECK(game.calculator.ComputeForBase(a1, *game.pState).size() == 1);
+    CHECK(game.calculator.ComputeForBase(b1, *game.pState).size() == 1);
+}
+
+TEST_CASE("CommerceManager recomputes when a sanction lands", "[commerce][atrocity]")
+{
+    // The memo keys on treaties and effect pools, neither of which a sanction touches. Without
+    // the atrocity revision in that key, an atrocity kept paying commerce for the rest of the
+    // turn.
+    CommerceGame_ game;
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
+    game.MakeHqBase(*game.pB, 6, 2);
+    const CommerceManager& rCommerce = game.pA->GetCommerce();
+
+    game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
+    REQUIRE(rCommerce.GetCommerceEnergy(a1) > 0);
+
+    const int start = game.pState->GetMissionYear();
+    game.pState->GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
+    CHECK(rCommerce.GetCommerceEnergy(a1) == 0);
+
+    game.pState->GetAtrocityLedger().ExpireSanctions(start + 10);
+    CHECK(rCommerce.GetCommerceEnergy(a1) > 0);
 }

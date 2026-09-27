@@ -65,7 +65,7 @@ graph TB
 
 ### PlanetaryCouncil
 - **Purpose**: The council's voting state machine — the one runtime object that runs a
-  proposal from agenda to outcome. It holds the fixed membership, the single pending vote,
+  proposal from agenda to outcome. It holds the membership, the single pending vote,
   the governorship, and the set of proposals currently in force.
 - **In force vs enacted** — two different questions, and conflating them was a shipped bug:
   - `IsActive(id)` — *in force*: this proposal contributes continuous world effects right now.
@@ -76,8 +76,8 @@ graph TB
   consume `repeal_un_charter` permanently, so a reinstated charter could never be repealed
   again.
 - **Responsibilities**:
-  - Membership (fixed at construction; every member must have
-    `identity.participatesInCouncil`) and eligibility — `CanPropose` owns proposal
+  - Membership (seated at construction, every member having
+    `identity.participatesInCouncil`; `Expel` is the one way out) and eligibility — `CanPropose` owns proposal
     availability: member, proposable, tech, required/forbidden rule flags, `required_proposals`
     (satisfied by *enacted*, so a one-shot prerequisite like `launch_solar_shade` still counts),
     the repeal gate (a proposal with `repeals` is available only while one of its targets is in
@@ -188,6 +188,21 @@ graph TB
 `PlanetaryCouncil` is the vote lifecycle only. The continuous-effect store (`CouncilEffects`)
 and outward game mutation (`CouncilOutcomeApplier`) are separate objects it owns, so each has
 one reason to change.
+
+### Membership is seated once and only ever shrinks
+Members are non-owning pointers fixed at construction, with `Expel` as the single exception: a
+faction that commits a major atrocity loses its seat for good (`atrocity-system.md`). Expulsion has
+to do three things beyond dropping the pointer, because a vote may be open at the time:
+
+- discard any ballot or election vote the expelled faction holds, so `AllMembersVoted` and the
+  tally do not wait on, or weight, a seat that no longer exists
+- vacate the governorship and clear its standing effects (`CouncilEffects::ClearGovernorEffects`)
+  if the expelled faction held it — otherwise a removed member keeps its commerce bonus and its
+  `CouncilMembers` infiltration
+- bump the revision, so `Faction` composed-pool caches recompose
+
+`Expel` on a faction that holds no seat is a no-op, so a second major atrocity cannot disturb the
+council.
 
 ### The council never mutates the world map
 World-parameter outcomes (sea level, climate) are triggers, not direct edits — gradual map

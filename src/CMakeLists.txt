@@ -26,6 +26,7 @@ add_library(ac-core STATIC
     game/GameCategory.cpp
     game/faction/DiplomacyLedger.cpp
     game/faction/DiplomacyActions.cpp
+    game/faction/DiplomacyStatusEffects.cpp
     game/faction/TradeItem.cpp
     game/faction/DiplomaticActionExecutor.cpp
     game/faction/FirstContactResolver.cpp
@@ -35,6 +36,11 @@ add_library(ac-core STATIC
     game/council/CouncilProposalConfigParser.cpp
     game/council/CouncilRulesConfigParser.cpp
     game/council/PlanetaryCouncil.cpp
+    game/atrocities/AtrocityConfig.cpp
+    game/atrocities/AtrocityConfigParser.cpp
+    game/atrocities/AtrocityEffects.cpp
+    game/atrocities/AtrocityLedger.cpp
+    game/atrocities/AtrocityRules.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/HomeBaseIndex.cpp

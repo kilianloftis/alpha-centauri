@@ -21,6 +21,11 @@ graph TB
         TradeKind[TradeKind_t<br/>+ TradeKindOf trait]
     end
 
+    subgraph "Status mutation"
+        DiplomacyStatusEffects[ApplyVendetta<br/>DiplomacyStatusEffects<br/>status + commlink + eviction]
+        EvacuateTerritory[EvacuateUnitsFromTerritory]
+    end
+
     subgraph "Legality rules (DiplomacyActions)"
         CanPropose[CanProposeTruce / Friendship / Pact<br/>CanDeclareVendetta / CanCancelTreaty]
         CanTrade[CanTrade<br/>relationship gate per item type]
@@ -62,11 +67,17 @@ graph TB
     DiplomaticActionExecutor -->|Apply_| FactionExploredMap
     DiplomaticActionExecutor -->|Apply_| Bases
     DiplomaticActionExecutor -->|SetStatus| DiplomacyLedger
+    DiplomaticActionExecutor -->|requestedStatus Vendetta<br/>TradeDeclareVendetta_t| DiplomacyStatusEffects
+    AtrocityEffects[AtrocityEffects<br/>universal Vendetta] -->|living AI only| DiplomacyStatusEffects
+    DiplomacyStatusEffects -->|SetStatus / SetKnown| DiplomacyLedger
+    DiplomacyStatusEffects -->|only when a Pact ended| EvacuateTerritory
 
     style DiplomacyLedger fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomaticActionExecutor fill:#f9f,stroke:#333,stroke-width:4px
     style TradeItem fill:#bbf,stroke:#333,stroke-width:3px
     style CanTrade fill:#bfb,stroke:#333,stroke-width:2px
+    style DiplomacyStatusEffects fill:#fbf,stroke:#333,stroke-width:3px
+    style AtrocityEffects fill:#eee,stroke:#999,stroke-width:1px
 ```
 
 ## Why diplomacy is world-scoped
@@ -96,6 +107,14 @@ separate maps rather than fields of one relationship record:
   `TradeCommFrequency_t` as a trade item (introducing a third party).
 - **Status legality** lives in `DiplomacyActions` (`CanProposeTruce` and friends), not in the
   ledger — the ledger stores, the rules decide.
+- **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
+  maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
+  `ApplyVendetta` (`game/faction/DiplomacyStatusEffects.h`) for living AI factions only. See
+  `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
+  `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
+- **Vendetta and Pact endings.** `ApplyVendetta` sets Vendetta, grants mutual known-contact, and
+  when the pair held a Pact relocates guest units off each other's territory. Atrocity universal
+  Vendetta, `TradeDeclareVendetta_t`, and a proposal whose `requestedStatus` is Vendetta all use it.
 
 ## TradeItem_t and TradeKind_t
 
@@ -157,7 +176,7 @@ save-game serialisation work to exist first. Recorded in
 | Does the giver actually have it? | `DiplomaticActionExecutor::ValidateItem_` |
 | Can the giver afford all of it at once? | `DiplomaticActionExecutor::ValidateGiverTotals_` |
 | What does accepting change? | `DiplomaticActionExecutor::ApplyItem_` |
-| How are guest units cleared off host territory? | `EvacuateUnitsFromTerritory` (Rules + Effects; not wired into Apply_ yet) |
+| How are guest units cleared off host territory? | `EvacuateUnitsFromTerritory` via `ApplyVendetta` when a Pact ends into Vendetta |
 
 ## Not yet built
 
@@ -167,5 +186,7 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn, ceasefire timers). `DiplomaticProposal_t`
   carries only immediate transfers and a status change.
-- **Wiring evacuate into status changes.** `EvacuateUnitsFromTerritory` exists for cancel /
-  vendetta side effects; `DiplomaticActionExecutor::Apply_` does not call it yet.
+- **Wiring evacuate into non-Vendetta treaty cancels.** `ApplyVendetta` covers Pact→Vendetta.
+  Canceling a Pact into Truce / None still needs the same eviction call.
+- **Integrity, grievances, and blemishes.** The Datalinks name six integrity levels
+  (Noble → Treacherous) and directed grievances. None of that is wired yet.
