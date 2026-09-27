@@ -125,6 +125,14 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     }
     s.airdropCursorHotspotX = hotspot.at(0).get<unsigned int>();
     s.airdropCursorHotspotY = hotspot.at(1).get<unsigned int>();
+    s.bombardCursorPath = j.at("bombard_cursor_path").get<std::string>();
+    const auto& bombardHotspot = j.at("bombard_cursor_hotspot");
+    if (!bombardHotspot.is_array() || bombardHotspot.size() != 2)
+    {
+        throw std::runtime_error("world_display.bombard_cursor_hotspot must be [x, y]");
+    }
+    s.bombardCursorHotspotX = bombardHotspot.at(0).get<unsigned int>();
+    s.bombardCursorHotspotY = bombardHotspot.at(1).get<unsigned int>();
     return s;
 }
 

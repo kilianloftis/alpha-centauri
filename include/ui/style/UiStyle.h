@@ -80,6 +80,10 @@ struct WorldDisplayStyle_t
     std::string airdropCursorPath{};
     unsigned int airdropCursorHotspotX = 0;
     unsigned int airdropCursorHotspotY = 0;
+    // Empty path: bombard targeting does not change the mouse cursor.
+    std::string bombardCursorPath{};
+    unsigned int bombardCursorHotspotX = 0;
+    unsigned int bombardCursorHotspotY = 0;
 };
 
 struct MinimapDisplayStyle_t

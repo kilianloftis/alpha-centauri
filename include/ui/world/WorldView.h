@@ -4,7 +4,6 @@
 #include "ui/IWorldView.h"
 #include "ui/world/CameraInputController.h"
 #include "ui/world/UnitOrderInputController.h"
-#include "ui/world/TerraformInputController.h"
 #include "ui/world/WorldDisplay.h"
 #include "input/Input.h"
 #include <cstdint>
@@ -21,6 +20,7 @@ namespace ac
 
 class GameState;
 class GameDataContext;
+class HotkeyConfig;
 class BaseManager;
 class Graphics;
 class Unit;
@@ -51,6 +51,7 @@ public:
     WorldView(
         GameState& rGameState,
         GameDataContext& rGameDataContext,
+        const HotkeyConfig& rHotkeys,
         const WorldMap& rWorldMap,
         WindowLayout_t layout,
         std::function<void()> onProcessTurn,
@@ -99,7 +100,12 @@ private:
     bool PlayerUnitsNeedOrders_() const;
     static bool UnitRequiresOrders_(const Unit& rUnit);
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
-    void TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
+    // False when the shot is illegal. True after playback has been opened.
+    bool TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
+    // Bombard and former projects bound to this chord. Runs the one that is valid and
+    // throws when more than one is.
+    bool TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit);
+    void ToggleBombardTargeting_();
     struct BombardPlayback_t
     {
         std::vector<CombatResult_t> combats;
@@ -117,12 +123,14 @@ private:
     void HandleDisbandConfirmed_(Unit& rUnit);
     void ShowSelfDestructStub_();
     void ClearAirdropTargeting_();
-    void SyncAirdropCursor_(Graphics& rGraphics);
+    void ClearBombardTargeting_();
+    void SyncTargetingCursor_(Graphics& rGraphics);
     void TryCommitAirdrop_(Unit& rUnit, const Tile& rDest);
     void ShowAirdropNotice_(std::string message);
 
     GameState& m_rGameState;
     GameDataContext& m_rGameDataContext;
+    const HotkeyConfig& m_rHotkeys;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;
@@ -142,8 +150,15 @@ private:
     bool m_bPendingAutoEndTurn = false;
     bool m_bPresentationDirty = true;
     bool m_bAirdropTargeting = false;
-    // True after a successful SetMouseCursor for airdrop targeting (so we Reset on clear).
-    bool m_bAirdropCursorApplied = false;
+    bool m_bBombardTargeting = false;
+    // Which targeting cursor is installed, so a mode switch replaces it.
+    enum class TargetingCursor_t
+    {
+        None,
+        Airdrop,
+        Bombard
+    };
+    TargetingCursor_t m_appliedTargetingCursor = TargetingCursor_t::None;
 
     // Snapshots used by UpdatePresentation to detect paint-relevant changes without input.
     Unit* m_pLastPresentedUnit = nullptr;
@@ -164,7 +179,6 @@ private:
 
     std::unique_ptr<CameraInputController> m_pCameraInputController;
     std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;
-    std::unique_ptr<TerraformInputController> m_pTerraformInputController;
     SelectedUnitPanel* m_pSelectedUnitPanel = nullptr;
     LocationPanel* m_pLocationPanel = nullptr;
     InfoPanelElement* m_pInfoPanel = nullptr;

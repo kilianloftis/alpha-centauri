@@ -10,11 +10,13 @@ namespace ac
 
 class WorldDisplay;
 class WorldMap;
+class HotkeyConfig;
 
 class CameraInputController
 {
 public:
-    CameraInputController(WorldDisplay& rWorldDisplay, const WorldMap& rWorldMap, const WindowLayout_t& mapLayout);
+    CameraInputController(WorldDisplay& rWorldDisplay, const WorldMap& rWorldMap,
+                          const WindowLayout_t& mapLayout, const HotkeyConfig& rHotkeys);
 
     bool HandleKey(const KeyEvent_t& rEvent);
 
@@ -30,6 +32,7 @@ private:
 
     WorldDisplay& m_rWorldDisplay;
     const WorldMap& m_rWorldMap;
+    const HotkeyConfig& m_rHotkeys;
     const WindowLayout_t m_mapLayout;
     float m_edgeScrollAccumulatorX = 0.0f;
     float m_edgeScrollAccumulatorY = 0.0f;

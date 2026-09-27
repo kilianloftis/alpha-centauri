@@ -16,6 +16,7 @@ class TurnProcessor;
 class GameState;
 class EventBridge;
 class GameDataContext;
+class HotkeyConfig;
 class ViewFactory;
 class UIManager;
 class InteractionPresenter;
@@ -62,6 +63,8 @@ private:
     std::unique_ptr<TurnProcessor> m_turnProcessor;
     std::unique_ptr<GameState> m_pGameState;
     std::unique_ptr<EventBridge> m_eventBridge;
+    // Before the views: WorldView and ViewFactory borrow this for the session.
+    std::unique_ptr<HotkeyConfig> m_pHotkeys;
     std::unique_ptr<ViewFactory> m_viewFactory;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<InteractionPresenter> m_interactionPresenter;

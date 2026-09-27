@@ -39,6 +39,9 @@
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MoraleConfig.h"
 #include "game/units/FoundBaseRules.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainOperationRegistry.h"
+#include "ui/HotkeyConfig.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
 #include "game/map/MapGenerationConfig.h"
@@ -576,9 +579,15 @@ void Engine::InitializeUi_()
     m_turnProcessor = std::make_unique<TurnProcessor>(
         std::move(registries.global), std::move(registries.perFaction), std::move(stageOrder));
 
+    m_pHotkeys = std::make_unique<HotkeyConfig>(HotkeyConfig::Load(
+        m_gameDataContext->paths.hotkeys,
+        *m_gameDataContext->improvementRegistry,
+        *m_gameDataContext->terrainOperationRegistry));
+
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_pGameState,
         *m_gameDataContext,
+        *m_pHotkeys,
         *m_pGraphics,
         *m_pSettings);
 
@@ -618,19 +627,26 @@ void Engine::InitializeUi_()
         }
     );
     WorldView& rWorldView = *pWorldView;
-    m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+    const auto bindView = [&](HotkeyAction_t action, auto createView)
+    {
+        if (const std::optional<HotkeyChord_t> chord = m_pHotkeys->Find(action))
+        {
+            m_uiManager->RegisterViewShortcut(*chord, createView);
+        }
+    };
+    bindView(HotkeyAction_t::Research, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);
     });
-    m_uiManager->RegisterViewShortcut(Key_t::E, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+    bindView(HotkeyAction_t::SocialEngineering, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateSocialEngineeringView(fullscreen);
     });
-    m_uiManager->RegisterViewShortcut(Key_t::U, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+    bindView(HotkeyAction_t::UnitDesigner, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateUnitDesignerView(fullscreen);
     });
-    m_uiManager->RegisterViewShortcut(Key_t::O, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+    bindView(HotkeyAction_t::Settings, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateSettingsView(fullscreen);
     });
-    m_uiManager->RegisterViewShortcut(Key_t::F6, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+    bindView(HotkeyAction_t::Satellites, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateSatelliteView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));

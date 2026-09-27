@@ -10,6 +10,7 @@
 #include "game/units/UnitDesignAvailability.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "graphics/Graphics.h"
+#include "ui/HotkeyConfig.h"
 #include "ui/style/UiStyle.h"
 
 #include <stdexcept>
@@ -30,11 +31,13 @@ Faction* ViewFactory::RequirePlayerFaction_() const
 ViewFactory::ViewFactory(
     GameState& rGameState,
     GameDataContext& rGameDataContext,
+    const HotkeyConfig& rHotkeys,
     Graphics& rGraphics,
     GameSettings& rSettings
 )
     : m_rGameState(rGameState)
     , m_rGameDataContext(rGameDataContext)
+    , m_rHotkeys(rHotkeys)
     , m_rGraphics(rGraphics)
     , m_rSettings(rSettings)
 {
@@ -52,6 +55,7 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
     return std::make_unique<WorldView>(
         m_rGameState,
         m_rGameDataContext,
+        m_rHotkeys,
         m_rGameState.GetWorldMap(),
         layout,
         std::move(onProcessTurn),

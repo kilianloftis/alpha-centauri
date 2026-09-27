@@ -1,5 +1,6 @@
 #include "ui/world/UnitOrderInputController.h"
 
+#include "ui/HotkeyConfig.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
@@ -11,8 +12,17 @@
 #include "game/units/AirdropRules.h"
 #include "ui/style/UiStyle.h"
 
+#include <magic_enum.hpp>
+#include <stdexcept>
+#include <vector>
+
 namespace ac
 {
+
+UnitOrderInputController::UnitOrderInputController(const HotkeyConfig& rHotkeys)
+    : m_rHotkeys(rHotkeys)
+{
+}
 
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
@@ -23,81 +33,92 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         return false;
     }
 
-    // Shift+U: WorldView runs TryUnloadTransport.
-    if (rEvent.key == Key_t::U && rEvent.modifier.bShift)
+    std::vector<HotkeyAction_t> valid;
+    const auto consider = [&](HotkeyAction_t action, bool bValid)
     {
+        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
+        if (!chord || !chord->Matches(rEvent) || !bValid)
+        {
+            return;
+        }
+        valid.push_back(action);
+    };
+
+    // Unload, disband, and attach are available for any selected unit. WorldView runs the
+    // order, and attach falls through when boarding fails. The rest wait for a unit that
+    // can actually do them, so a shared chord can mean a different order.
+    consider(HotkeyAction_t::UnloadTransport, true);
+    consider(HotkeyAction_t::Disband, true);
+    consider(HotkeyAction_t::AttachTransport, true);
+    consider(HotkeyAction_t::SupplyCrawl,
+             pSelectedUnit->GetFlag(RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase());
+    consider(HotkeyAction_t::FoundBase, pSelectedUnit->GetFlag(RuleFlagId_t::FoundBase));
+    consider(HotkeyAction_t::Detonate, UnitCanDetonate(*pSelectedUnit));
+    consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(*pSelectedUnit).Ok());
+    consider(HotkeyAction_t::Hold, true);
+    consider(HotkeyAction_t::SkipTurn, true);
+
+    if (valid.empty())
+    {
+        return false;
+    }
+    if (valid.size() > 1)
+    {
+        std::string message = "More than one order is valid:";
+        for (const HotkeyAction_t action : valid)
+        {
+            message += " ";
+            message += magic_enum::enum_name(action);
+        }
+        throw std::logic_error(message);
+    }
+
+    switch (valid.front())
+    {
+    case HotkeyAction_t::UnloadTransport:
         m_bUnloadTransportRequested = true;
-        return true;
-    }
-
-    // Shift+D: WorldView opens Disband Units (Disband / Self Destruct / Cancel).
-    if (rEvent.key == Key_t::D && rEvent.modifier.bShift)
-    {
+        break;
+    case HotkeyAction_t::Disband:
         m_bDisbandRequested = true;
-        return true;
-    }
-
-    // L: WorldView tries attach; on failure terraform may still handle L.
-    if (rEvent.key == Key_t::L)
-    {
+        break;
+    case HotkeyAction_t::AttachTransport:
         m_bAttachTransportRequested = true;
-        return true;
+        break;
+    case HotkeyAction_t::SupplyCrawl:
+        m_bSupplyCrawlRequested = true;
+        break;
+    case HotkeyAction_t::FoundBase:
+        m_bFoundBaseRequested = true;
+        break;
+    case HotkeyAction_t::Detonate:
+        m_bDetonateRequested = true;
+        break;
+    case HotkeyAction_t::Airdrop:
+        m_bAirdropModeToggleRequested = true;
+        break;
+    case HotkeyAction_t::Hold:
+        pSelectedUnit->SetOrder(HoldOrder_t{});
+        m_bOrderAssigned = true;
+        break;
+    case HotkeyAction_t::SkipTurn:
+        pSelectedUnit->SetOrder(SkipTurnOrder_t{});
+        m_bOrderAssigned = true;
+        break;
+    case HotkeyAction_t::Bombard:
+    case HotkeyAction_t::PanLeft:
+    case HotkeyAction_t::PanRight:
+    case HotkeyAction_t::PanUp:
+    case HotkeyAction_t::PanDown:
+    case HotkeyAction_t::Cancel:
+    case HotkeyAction_t::EndTurn:
+    case HotkeyAction_t::NextUnit:
+    case HotkeyAction_t::Research:
+    case HotkeyAction_t::SocialEngineering:
+    case HotkeyAction_t::UnitDesigner:
+    case HotkeyAction_t::Settings:
+    case HotkeyAction_t::Satellites:
+        break;
     }
-
-    // O opens the supply-crawl resource picker (WorldView reacts to WasSupplyCrawlRequested).
-    // Only consume the key when the unit can actually crawl, so global O (Settings) still works.
-    if (rEvent.key == Key_t::O)
-    {
-        if (pSelectedUnit->GetFlag(RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase())
-        {
-            m_bSupplyCrawlRequested = true;
-            return true;
-        }
-        return false;
-    }
-
-    // B requests founding a base (WorldView runs UnitOrderExecutor::TryFoundBase).
-    // Only consume when the unit has FoundBase so B stays free for other UI on ordinary units.
-    if (rEvent.key == Key_t::B)
-    {
-        if (pSelectedUnit->GetFlag(RuleFlagId_t::FoundBase))
-        {
-            m_bFoundBaseRequested = true;
-            return true;
-        }
-        return false;
-    }
-
-    // Shift+X detonates a warhead in place. Only consume the key when the design actually
-    // carries a detonation, so Shift+X stays free on ordinary units.
-    if (rEvent.key == Key_t::X && rEvent.modifier.bShift)
-    {
-        if (UnitCanDetonate(*pSelectedUnit))
-        {
-            m_bDetonateRequested = true;
-            return true;
-        }
-        return false;
-    }
-
-    // I toggles airdrop targeting when the unit can attempt an airdrop this turn.
-    if (rEvent.key == Key_t::I)
-    {
-        if (CanAttemptAirdrop(*pSelectedUnit).Ok())
-        {
-            m_bAirdropModeToggleRequested = true;
-            return true;
-        }
-        return false;
-    }
-
-    auto it = m_orderHandlers.find(rEvent.key);
-    if (it == m_orderHandlers.end())
-    {
-        return false;
-    }
-
-    it->second(*pSelectedUnit);
     return true;
 }
 

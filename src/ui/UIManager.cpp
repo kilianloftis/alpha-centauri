@@ -86,18 +86,20 @@ void UIManager::ProcessKeys_()
         {
             continue;
         }
-        HandleGlobalShortcut_(event->key);
+        HandleGlobalShortcut_(*event);
     }
 }
 
-void UIManager::RegisterViewShortcut(Key_t key, ViewFactory_t factory)
+void UIManager::RegisterViewShortcut(HotkeyChord_t chord, ViewFactory_t factory)
 {
-    m_shortcutMap[key] = std::move(factory);
+    m_shortcutMap[chord] = std::move(factory);
 }
 
-void UIManager::HandleGlobalShortcut_(Key_t key)
+void UIManager::HandleGlobalShortcut_(const KeyEvent_t& rEvent)
 {
-    auto it = m_shortcutMap.find(key);
+    const HotkeyChord_t chord{rEvent.key, rEvent.modifier.bCtrl, rEvent.modifier.bAlt,
+                              rEvent.modifier.bShift};
+    auto it = m_shortcutMap.find(chord);
     if (it == m_shortcutMap.end())
     {
         return;

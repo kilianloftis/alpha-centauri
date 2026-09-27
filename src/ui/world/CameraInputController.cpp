@@ -1,5 +1,6 @@
 #include "ui/world/CameraInputController.h"
 
+#include "ui/HotkeyConfig.h"
 #include "game/map/WorldMap.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapViewport.h"
@@ -20,9 +21,11 @@ constexpr float k_ScrollDirectionDown   = 1.0f;
 
 } // namespace
 
-CameraInputController::CameraInputController(WorldDisplay& rWorldDisplay, const WorldMap& rWorldMap, const WindowLayout_t& mapLayout)
+CameraInputController::CameraInputController(WorldDisplay& rWorldDisplay, const WorldMap& rWorldMap,
+                                             const WindowLayout_t& mapLayout, const HotkeyConfig& rHotkeys)
     : m_rWorldDisplay(rWorldDisplay)
     , m_rWorldMap(rWorldMap)
+    , m_rHotkeys(rHotkeys)
     , m_mapLayout(mapLayout)
     , m_edgeScrollSpeed(Style().cameraInput.edgeScrollSpeed)
 {
@@ -43,19 +46,23 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
     const int camX = rViewport.CameraX();
     const int camY = rViewport.CameraY();
 
-    if (rEvent.key == Key_t::ArrowLeft)
+    const auto pan = [&](HotkeyAction_t action) {
+        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
+        return chord && chord->Matches(rEvent);
+    };
+    if (pan(HotkeyAction_t::PanLeft))
     {
         return rViewport.ScrollBy(-s.cameraScrollStep, 0);
     }
-    if (rEvent.key == Key_t::ArrowRight)
+    if (pan(HotkeyAction_t::PanRight))
     {
         return rViewport.ScrollBy(s.cameraScrollStep, 0);
     }
-    if (rEvent.key == Key_t::ArrowUp)
+    if (pan(HotkeyAction_t::PanUp))
     {
         return rViewport.SetCamera(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
     }
-    if (rEvent.key == Key_t::ArrowDown)
+    if (pan(HotkeyAction_t::PanDown))
     {
         return rViewport.SetCamera(camX, std::min(maxCamY, camY + s.cameraScrollStep));
     }

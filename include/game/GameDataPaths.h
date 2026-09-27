@@ -37,7 +37,7 @@ struct GameDataPaths
     std::string baseConquest = "config/base_conquest.json";
     std::string councilProposals = "config/council/proposals.json";
     std::string councilRules = "config/council/rules.json";
-    std::string terraformBindings = "config/ui/terraform_bindings.json";
+    std::string hotkeys = "config/ui/hotkeys.json";
     std::string difficulty = "config/difficulty.json";
     std::string policeRules = "config/police_rules.json";
     std::string worldRules = "config/world_rules.json";

@@ -28,6 +28,7 @@ class BaseManager;
 class UnitSlotRegistry;
 class WorldDisplay;
 class Tile;
+class HotkeyConfig;
 
 class ViewFactory
 {
@@ -35,6 +36,7 @@ public:
     ViewFactory(
         GameState& rGameState,
         GameDataContext& rGameDataContext,
+        const HotkeyConfig& rHotkeys,
         Graphics& rGraphics,
         GameSettings& rSettings
     );
@@ -106,6 +108,7 @@ private:
 
     GameState& m_rGameState;
     GameDataContext& m_rGameDataContext;
+    const HotkeyConfig& m_rHotkeys;
     Graphics& m_rGraphics;
     GameSettings& m_rSettings;
 };

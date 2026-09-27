@@ -11,6 +11,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "ui/HotkeyConfig.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
 
@@ -32,6 +33,7 @@ struct ViewFixture : WorldFixture
     ac::FactionConfig_t factionDefinition;
     std::unique_ptr<ac::GameState> pState;
     ac::Faction* pPlayer = nullptr;
+    std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<ac::ViewFactory> pFactory;
 
     // The shipped style, not a hand-built one: views index into it constantly and a test copy
@@ -87,19 +89,22 @@ struct ViewFixture : WorldFixture
                 dataContext, pState->GetWorldMap(), settings, k_TestFactionSeed));
         }
 
-        // WorldView loads terraform hotkeys from this path at construction; relative defaults
-        // break under ctest's build-dir cwd. It resolves each binding against the shipping
-        // improvements and terrain operations. GameState uses the fixture registries separately.
-        dataContext.paths.terraformBindings =
-            std::string(AC_CONFIG_DIR) + "/ui/terraform_bindings.json";
+        // WorldView reads player hotkeys from this path; relative defaults break under ctest's
+        // build-dir cwd. Project actions resolve against the shipping improvements and terrain
+        // operations. GameState uses the fixture registries separately.
+        dataContext.paths.hotkeys = std::string(AC_CONFIG_DIR) + "/ui/hotkeys.json";
         dataContext.improvementRegistry = std::make_unique<ac::ImprovementRegistry>();
         dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
         ac::LoadMapOccupants(std::string(AC_CONFIG_DIR) + "/improvements.json",
                              std::string(AC_CONFIG_DIR) + "/terrain.json",
                              *dataContext.improvementRegistry,
                              *dataContext.terrainOperationRegistry);
+        pHotkeys = std::make_unique<ac::HotkeyConfig>(ac::HotkeyConfig::Load(
+            dataContext.paths.hotkeys, *dataContext.improvementRegistry,
+            *dataContext.terrainOperationRegistry));
 
-        pFactory = std::make_unique<ac::ViewFactory>(*pState, dataContext, graphics, settings);
+        pFactory = std::make_unique<ac::ViewFactory>(
+            *pState, dataContext, *pHotkeys, graphics, settings);
     }
 
     ac::BaseManager& MakeBase(int x, int y)

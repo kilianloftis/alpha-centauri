@@ -149,14 +149,16 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     return pDefender;
 }
 
+bool CanBombard(const Unit& rAttacker)
+{
+    return rAttacker.GetFlag(RuleFlagId_t::Bombard)
+           && rAttacker.GetMoveFragmentsRemaining() > 0;
+}
+
 bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
                           const WorldMap& rWorldMap)
 {
-    if (!rAttacker.GetFlag(RuleFlagId_t::Bombard))
-    {
-        return false;
-    }
-    if (rAttacker.GetMoveFragmentsRemaining() <= 0)
+    if (!CanBombard(rAttacker))
     {
         return false;
     }

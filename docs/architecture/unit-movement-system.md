@@ -201,7 +201,7 @@ the rest of the turn when `AttackingEndsTurn`.
 
 **Bombard.** A unit with the `bombard` rule flag has no melee attack. `IsWithinBombardRange`
 is the declare gate: the flag, any remaining movement fragments, and Chebyshev distance in
-`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `CollectBombardTargets`
+`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `F` is bombard targeting or the Farm terraform binding. The key walks those actions, runs the one that is valid, and throws when both are. The next click fires a targeting shot. `CollectBombardTargets`
 chooses the duel or the strike list from the same hostile census melee uses (surface units,
 then embarked cargo on a base) and the same `attack_unit` gate. `TryBombard` resolves that
 choice, and when `TileHasUnits` is false removes one random id from `NonBaseImprovementIds`.

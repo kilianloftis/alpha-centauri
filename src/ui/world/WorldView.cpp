@@ -28,6 +28,9 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/FuelRules.h"
 #include "game/units/AirdropRules.h"
+#include "game/units/AttackRules.h"
+#include "game/units/TerraformRules.h"
+#include "ui/HotkeyConfig.h"
 #include "ui/world/AirdropFailMessages.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
@@ -59,6 +62,7 @@ constexpr int    k_InvalidTileCoord  = -1;
 WorldView::WorldView(
     GameState& rGameState,
     GameDataContext& rGameDataContext,
+    const HotkeyConfig& rHotkeys,
     const WorldMap& rWorldMap,
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
@@ -70,6 +74,7 @@ WorldView::WorldView(
 : IWorldView(layout)
 , m_rGameState(rGameState)
 , m_rGameDataContext(rGameDataContext)
+, m_rHotkeys(rHotkeys)
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
@@ -77,11 +82,9 @@ WorldView::WorldView(
 , m_onOpenBase(std::move(onOpenBase))
 , m_onOpenCombat(std::move(onOpenCombat))
 , m_onOpenCommlinks(std::move(onOpenCommlinks))
-, m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
-, m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
-, m_pTerraformInputController(std::make_unique<TerraformInputController>(
-      rGameDataContext.paths.terraformBindings, *rGameDataContext.improvementRegistry,
-      *rGameDataContext.terrainOperationRegistry))
+, m_pCameraInputController(std::make_unique<CameraInputController>(
+      *m_pWorldDisplay, rWorldMap, m_mapLayout, rHotkeys))
+, m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys))
 {
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pSelectedUnitPanel = pSelectedUnit.get();
@@ -142,11 +145,12 @@ WorldView::WorldView(
             }
         });
     }
+
 }
 
 void WorldView::Render(Graphics& rGraphics)
 {
-    SyncAirdropCursor_(rGraphics);
+    SyncTargetingCursor_(rGraphics);
     m_pWorldDisplay->Render(rGraphics);
     if (!m_bSuppressDashboard)
     {
@@ -310,6 +314,7 @@ void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
     if (bSelectionChanged)
     {
         ClearAirdropTargeting_();
+        ClearBombardTargeting_();
     }
 
     // Keep location / stack panels on the selected unit's tile when cycling or picking.
@@ -558,6 +563,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             }
             else
             {
+                ClearBombardTargeting_();
                 m_bAirdropTargeting = true;
                 m_bPresentationDirty = true;
             }
@@ -584,17 +590,8 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         }
     }
 
-    if (m_pTerraformInputController->HandleKey(rEvent, pControllable))
+    if (pControllable && TrySharedChord_(rEvent, *pControllable))
     {
-        if (m_pTerraformInputController->WasTerraformRequested() && pControllable)
-        {
-            if (m_rGameState.GetUnitOrderExecutor().TryStartTerraform(
-                    *pControllable, m_pTerraformInputController->GetRequestedImprovementId(),
-                    m_rGameState))
-            {
-                SelectNextAvailableUnit_();
-            }
-        }
         return true;
     }
 
@@ -603,23 +600,28 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         return true;
     }
 
-    if (rEvent.key == Key_t::Escape)
+    const auto chrome = [&](HotkeyAction_t action) {
+        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
+        return chord && chord->Matches(rEvent);
+    };
+    if (chrome(HotkeyAction_t::Cancel))
     {
-        if (m_bAirdropTargeting)
+        if (m_bAirdropTargeting || m_bBombardTargeting)
         {
             ClearAirdropTargeting_();
+            ClearBombardTargeting_();
             m_bPresentationDirty = true;
             return true;
         }
         m_onRequestExit();
         return true;
     }
-    else if (rEvent.key == Key_t::Enter)
+    else if (chrome(HotkeyAction_t::EndTurn))
     {
         m_onProcessTurn();
         return true;
     }
-    else if (rEvent.key == Key_t::V)
+    else if (chrome(HotkeyAction_t::NextUnit))
     {
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
         SetSelectedUnit_(
@@ -680,6 +682,16 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         && rEvent.button == MouseButton_t::Left && rEvent.bPressed)
     {
         TryCommitAirdrop_(*pControllable, *pClickedTile);
+        return;
+    }
+    if (m_bBombardTargeting && pControllable && pClickedTile
+        && rEvent.button == MouseButton_t::Left && rEvent.bPressed)
+    {
+        if (TryBeginBombard_(*pControllable, *pClickedTile))
+        {
+            ClearBombardTargeting_();
+            m_bPresentationDirty = true;
+        }
         return;
     }
 
@@ -797,7 +809,85 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
         });
 }
 
-void WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
+bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
+{
+    bool bBombard = false;
+    if (const std::optional<HotkeyChord_t> bombard = m_rHotkeys.Find(HotkeyAction_t::Bombard))
+    {
+        bBombard = bombard->Matches(rEvent) && CanBombard(rUnit);
+    }
+
+    std::vector<std::string> projects;
+    if (rUnit.GetFlag(RuleFlagId_t::Terraform))
+    {
+        for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
+        {
+            if (!rBinding.chord.Matches(rEvent))
+            {
+                continue;
+            }
+            const std::optional<TerraformProject_t> resolved = FindTerraformProject(
+                rBinding.projectId, *m_rGameDataContext.improvementRegistry,
+                *m_rGameDataContext.terrainOperationRegistry);
+            if (!resolved
+                || !CanStartTerraform(rUnit, *resolved, m_rGameState, m_rGameDataContext.elevationRules))
+            {
+                continue;
+            }
+            projects.push_back(rBinding.projectId);
+        }
+    }
+
+    const std::size_t count = (bBombard ? 1 : 0) + projects.size();
+    if (count == 0)
+    {
+        return false;
+    }
+    if (count > 1)
+    {
+        const HotkeyChord_t chord{rEvent.key, rEvent.modifier.bCtrl, rEvent.modifier.bAlt,
+                                  rEvent.modifier.bShift};
+        std::string message = DescribeHotkeyChord(chord) + " has more than one valid action:";
+        if (bBombard)
+        {
+            message += " bombard";
+        }
+        for (const std::string& rProjectId : projects)
+        {
+            message += " ";
+            message += rProjectId;
+        }
+        throw std::logic_error(message);
+    }
+
+    if (bBombard)
+    {
+        ToggleBombardTargeting_();
+        return true;
+    }
+
+    if (m_rGameState.GetUnitOrderExecutor().TryStartTerraform(rUnit, projects.front(), m_rGameState))
+    {
+        SelectNextAvailableUnit_();
+    }
+    return true;
+}
+
+void WorldView::ToggleBombardTargeting_()
+{
+    if (m_bBombardTargeting)
+    {
+        ClearBombardTargeting_();
+    }
+    else
+    {
+        ClearAirdropTargeting_();
+        m_bBombardTargeting = true;
+    }
+    m_bPresentationDirty = true;
+}
+
+bool WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
 {
     auto pPlayback = std::make_shared<BombardPlayback_t>();
     pPlayback->pAttackerTile = &rAttacker.GetTile();
@@ -826,7 +916,7 @@ void WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
     auto result = m_rGameState.GetUnitOrderExecutor().TryBombard(rAttacker, rTargetTile);
     if (!result)
     {
-        return;
+        return false;
     }
 
     pPlayback->combats = std::move(result->combats);
@@ -843,6 +933,7 @@ void WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
     m_pWorldDisplay->SetPlaybackVisibleUnits(&pPlayback->playbackUnitIds);
     m_bPresentationDirty = true;
     ContinueBombardPlayback_(std::move(pPlayback), 0);
+    return true;
 }
 
 void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback,
@@ -1066,24 +1157,49 @@ void WorldView::ClearAirdropTargeting_()
     m_bAirdropTargeting = false;
 }
 
-void WorldView::SyncAirdropCursor_(Graphics& rGraphics)
+void WorldView::ClearBombardTargeting_()
+{
+    m_bBombardTargeting = false;
+}
+
+void WorldView::SyncTargetingCursor_(Graphics& rGraphics)
 {
     const WorldDisplayStyle_t& rStyle = Style().worldDisplay;
+    TargetingCursor_t want = TargetingCursor_t::None;
+    const std::string* pPath = nullptr;
+    unsigned int hotspotX = 0;
+    unsigned int hotspotY = 0;
     if (m_bAirdropTargeting && !rStyle.airdropCursorPath.empty())
     {
-        if (!m_bAirdropCursorApplied)
-        {
-            m_bAirdropCursorApplied = rGraphics.SetMouseCursor(
-                rStyle.airdropCursorPath, rStyle.airdropCursorHotspotX,
-                rStyle.airdropCursorHotspotY);
-        }
-        return;
+        want = TargetingCursor_t::Airdrop;
+        pPath = &rStyle.airdropCursorPath;
+        hotspotX = rStyle.airdropCursorHotspotX;
+        hotspotY = rStyle.airdropCursorHotspotY;
+    }
+    else if (m_bBombardTargeting && !rStyle.bombardCursorPath.empty())
+    {
+        want = TargetingCursor_t::Bombard;
+        pPath = &rStyle.bombardCursorPath;
+        hotspotX = rStyle.bombardCursorHotspotX;
+        hotspotY = rStyle.bombardCursorHotspotY;
     }
 
-    if (m_bAirdropCursorApplied)
+    if (want == m_appliedTargetingCursor)
+    {
+        return;
+    }
+    if (m_appliedTargetingCursor != TargetingCursor_t::None)
     {
         rGraphics.ResetMouseCursor();
-        m_bAirdropCursorApplied = false;
+        m_appliedTargetingCursor = TargetingCursor_t::None;
+    }
+    if (want == TargetingCursor_t::None || pPath == nullptr)
+    {
+        return;
+    }
+    if (rGraphics.SetMouseCursor(*pPath, hotspotX, hotspotY))
+    {
+        m_appliedTargetingCursor = want;
     }
 }
 

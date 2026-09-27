@@ -12,6 +12,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitOrder.h"
 #include "game/units/UnitSlotConfig.h"
 #include "input/Input.h"
 #include "ui/IGameView.h"
@@ -23,10 +24,12 @@
 #include "ui/world/WorldView.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <deque>
 #include <memory>
 #include <string>
+#include <variant>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -127,6 +130,16 @@ void PrimeWorldView_(WorldView& rView, RecordingGraphics& rGraphics)
 KeyEvent_t ShiftD_()
 {
     return KeyEvent_t{Key_t::D, ModifierState_t{false, false, true}};
+}
+
+KeyEvent_t PlainKey_(Key_t key)
+{
+    return KeyEvent_t{key, {}};
+}
+
+MouseEvent_t PressAt_(int x, int y)
+{
+    return MouseEvent_t{MouseButton_t::Left, x, y, {}, true};
 }
 
 MouseEvent_t ReleaseAt_(int x, int y)
@@ -368,6 +381,108 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     markers.Render(fixture.graphics, *fixture.pState, viewport);
     CHECK_FALSE(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
     CHECK_FALSE(fixture.pPlayer->GetRevealedUnits().IsRevealed(shrouded));
+}
+
+TEST_CASE("F builds a Farm for a former", "[ui][world][bombard]")
+{
+    ViewFixture fixture;
+    fixture.pState->GetUnitOrderExecutor().SetGameDataContext(fixture.dataContext);
+    fixture.pPlayer->GetEconomy().AddEnergy(100);
+    Tile* pTile = fixture.pState->GetWorldMap().GetTile(4, 4);
+    REQUIRE(pTile);
+    pTile->SetElevation(100);
+    pTile->SetRockiness(Rockiness_t::Flat);
+
+    std::deque<UnitDesign> designs;
+    Unit& former = MakeUnit_(fixture, 4, 4, nullptr, {"test_chassis", "test_terraformer"}, designs);
+    auto pView = MakeWorldView_(fixture);
+    PrimeWorldView_(*pView, fixture.graphics);
+
+    REQUIRE(pView->HandleKey(PlainKey_(Key_t::F)));
+    REQUIRE(former.GetOrder().has_value());
+    REQUIRE(std::holds_alternative<TerraformOrder_t>(*former.GetOrder()));
+    CHECK(std::get<TerraformOrder_t>(*former.GetOrder()).projectId == "Farm");
+}
+
+TEST_CASE("F arms bombard when the unit can fire, and the next click shoots", "[ui][world][bombard]")
+{
+    ViewFixture fixture;
+    const WindowLayout_t layout = ViewFixture::FullScreen();
+    std::deque<UnitDesign> designs;
+    Unit& artillery = MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis", "bombard"}, designs);
+    const int fragmentsBefore = artillery.GetMoveFragmentsRemaining();
+    REQUIRE(fragmentsBefore > 0);
+
+    bool bOpened = false;
+    auto pView = fixture.pFactory->CreateWorldView(
+        layout, [] {}, [] {}, [](BaseManager&) {},
+        [&](auto&&...) { bOpened = true; }, [] {});
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    pView->HandleMouse(ReleaseAt_(unitX, unitY));
+
+    REQUIRE(pView->HandleKey(PlainKey_(Key_t::F)));
+    CHECK_FALSE(artillery.GetOrder().has_value());
+
+    const auto [farX, farY] = MapTileClick_(layout, 4, 0);
+    pView->HandleMouse(PressAt_(farX, farY));
+    CHECK_FALSE(bOpened);
+    CHECK(artillery.GetMoveFragmentsRemaining() == fragmentsBefore);
+
+    const auto [nearX, nearY] = MapTileClick_(layout, 1, 0);
+    pView->HandleMouse(PressAt_(nearX, nearY));
+    CHECK(bOpened);
+    CHECK(artillery.GetMoveFragmentsRemaining() == 0);
+}
+
+TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]")
+{
+    ViewFixture fixture;
+    fixture.pState->GetUnitOrderExecutor().SetGameDataContext(fixture.dataContext);
+    fixture.pPlayer->GetEconomy().AddEnergy(100);
+    Tile* pTile = fixture.pState->GetWorldMap().GetTile(0, 0);
+    REQUIRE(pTile);
+    pTile->SetElevation(100);
+    pTile->SetRockiness(Rockiness_t::Flat);
+
+    const WindowLayout_t layout = ViewFixture::FullScreen();
+    std::deque<UnitDesign> designs;
+    Unit& unit = MakeUnit_(
+        fixture, 0, 0, nullptr, {"test_chassis", "test_terraformer", "bombard"}, designs);
+
+    auto pView = fixture.pFactory->CreateWorldView(
+        layout, [] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {});
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    pView->HandleMouse(ReleaseAt_(unitX, unitY));
+
+    CHECK_THROWS_WITH(pView->HandleKey(PlainKey_(Key_t::F)),
+                      Catch::Matchers::ContainsSubstring("bombard")
+                          && Catch::Matchers::ContainsSubstring("Farm"));
+    CHECK_FALSE(unit.GetOrder().has_value());
+}
+
+TEST_CASE("F with no moves left does not arm bombard", "[ui][world][bombard]")
+{
+    ViewFixture fixture;
+    const WindowLayout_t layout = ViewFixture::FullScreen();
+    std::deque<UnitDesign> designs;
+    Unit& artillery = MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis", "bombard"}, designs);
+    artillery.SetMoveFragmentsRemaining(0);
+
+    bool bOpened = false;
+    auto pView = fixture.pFactory->CreateWorldView(
+        layout, [] {}, [] {}, [](BaseManager&) {},
+        [&](auto&&...) { bOpened = true; }, [] {});
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    pView->HandleMouse(ReleaseAt_(unitX, unitY));
+
+    pView->HandleKey(PlainKey_(Key_t::F));
+    const auto [x, y] = MapTileClick_(layout, 1, 0);
+    pView->HandleMouse(PressAt_(x, y));
+    CHECK_FALSE(bOpened);
+    CHECK_FALSE(artillery.GetOrder().has_value());
 }
 
 TEST_CASE("AirdropFailReasonMessage covers interdiction and occupation denies",

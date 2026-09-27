@@ -40,8 +40,11 @@ inline bool CanDeclareAttack(const Unit& rAttacker, const Tile& rTargetTile,
         != nullptr;
 }
 
-// Bombard flag, any movement fragments left, and Chebyshev distance in 1..bombard_range.
-// Own tile and tiles past the range are illegal. Visibility and enterability are not required.
+// Bombard flag and any movement fragments left. The hotkey uses this before a tile is chosen.
+bool CanBombard(const Unit& rAttacker);
+
+// CanBombard, and Chebyshev distance in 1..bombard_range. Own tile and tiles past the range
+// are illegal. Visibility and enterability are not required.
 bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
                           const WorldMap& rWorldMap);
 

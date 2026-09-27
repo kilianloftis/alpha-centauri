@@ -114,6 +114,7 @@ add_executable(effects-tests
     ui/SatelliteViewTests.cpp
     ui/UIManagerTests.cpp
     ui/ViewFactoryTests.cpp
+    ui/HotkeyConfigTests.cpp
     ui/WorldViewTests.cpp
     ui/TileRendererTests.cpp
     ui/InteractionPresenterTests.cpp

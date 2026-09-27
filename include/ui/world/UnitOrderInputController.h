@@ -5,22 +5,19 @@
 #include "input/Input.h"
 
 #include <chrono>
-#include <functional>
-#include <unordered_map>
 
 namespace ac
 {
 
 class Tile;
 class GameState;
+class HotkeyConfig;
 struct GameDataContext;
 
 class UnitOrderInputController
 {
 public:
-    using OrderHandler_t = std::function<void(Unit&)>;
-
-    UnitOrderInputController() = default;
+    explicit UnitOrderInputController(const HotkeyConfig& rHotkeys);
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
     // pGameState / pDataContext are used so probe validity can be deferred to
@@ -96,16 +93,7 @@ private:
 
     void UpdatePreview_(Unit& rMover, const Tile& rDestination, const Pathfinder& rPathfinder);
 
-    const std::unordered_map<Key_t, OrderHandler_t> m_orderHandlers = {
-        { Key_t::H, [this](Unit& rUnit) {
-            rUnit.SetOrder(HoldOrder_t{});
-            m_bOrderAssigned = true;
-        } },
-        { Key_t::Space, [this](Unit& rUnit) {
-            rUnit.SetOrder(SkipTurnOrder_t{});
-            m_bOrderAssigned = true;
-        } },
-    };
+    const HotkeyConfig& m_rHotkeys;
 
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;

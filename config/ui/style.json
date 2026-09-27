@@ -121,6 +121,11 @@
     "airdrop_cursor_hotspot": [
       0,
       0
+    ],
+    "bombard_cursor_path": "",
+    "bombard_cursor_hotspot": [
+      0,
+      0
     ]
   },
   "minimap_display": {
