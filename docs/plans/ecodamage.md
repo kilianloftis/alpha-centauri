@@ -62,7 +62,7 @@ Cleanmins     = 16 + fungal blooms + eco facilities built since the first bloom
 Cleanmins1    = Terraform < 0 ? 0 : min(Cleanmins, Terraform)
 Cleanmins2    = Cleanmins - Cleanmins1
 DamageFactor  = floor( (Terraform - Cleanmins1)
-                       + (Minerals - Cleanmins2 + AtrocityMinerals) / (1 + Goodfacs) )  -- floored at 0
+                       + (Minerals - Cleanmins2 + VirtualMinerals) / (1 + Goodfacs) )  -- floored at 0
 EcoDamage%    = DamageFactor * Perihelion * Techs * Life * Difficulty * max(1, 3 - PLANET) / 300
 ```
 
@@ -74,8 +74,8 @@ floors at zero, so a base under its cap rolls 0%.
 |---|---|
 | tile contribution | per-improvement weight, doubled on tiles this base works |
 | Tree Farm / Hybrid Forest | halve / zero the terraform term |
-| Minerals | this base's mineral production after multipliers, less minerals received from orbit |
-| AtrocityMinerals | virtual minerals from this faction's atrocities. `AtrocityLedger::EcoVirtualMinerals` returns the whole term already weighted — SMAC's `5 ×` is `Major.eco_virtual_minerals` in `config/atrocities.json` (Simple is 0) |
+| Minerals | this base's mineral production after multipliers, less minerals received from orbit — the subtraction is `EcoMineralOffset`, authored on the orbital building rather than inferred in C++ |
+| VirtualMinerals | eco damage arriving from something other than production. Three contributors, summed — see [Virtual minerals](#virtual-minerals-damage-that-is-not-production). SMAC's `5 × Atrocities` is one of them |
 | Goodfacs | Centauri Preserve + Temple of Planet + Nanoreplicator in this base, + Pholus Mutagen + Singularity Inductor owned |
 | Techs | techs discovered by this faction |
 | Life | 1 / 2 / 3 for Rare / Normal / Abundant native life |
@@ -140,6 +140,7 @@ Five new stats, one existing. Each is a distinct quantity, so each is its own `S
 | `EcoTerraformScale` | `eco_terraform_scale` | PureMultiplier | Base | Tree Farm `MultiplyGeometric 0.5`, Hybrid Forest `MultiplyGeometric 0` |
 | `EcoCleanMinerals` | `eco_clean_minerals` | Additive | Faction | `eco_damage.json` `effects`: `FactionGlobal Add 16` |
 | `EcoDamageReduction` | `eco_damage_reduction` | Additive | Base | Centauri Preserve / Temple of Planet / Nanoreplicator `ThisBase Add 1`; Pholus Mutagen / Singularity Inductor `AllOwnerBases Add 1` |
+| `EcoMineralOffset` | `eco_mineral_offset` | Additive | Base | minerals that must not answer to ecology. `Nessus_Mining_Station` emits `AllOwnerBases Add -1` beside its existing `minerals +1` |
 | `EcologicalDamage` *(exists)* | `ecological_damage` | RawScaled | Base | the whole multiplier stack — difficulty, Planet rating, native life, perihelion (see [The multiplier is one stack](#the-multiplier-is-one-stack)) |
 
 Splitting contribution into an unconditional and a worked-only stat is what makes SMAC's
@@ -160,9 +161,10 @@ struct EcoDamageInputs_t
 {
     double terraformRaw = 0.0;     // Σ per-tile contributions over the base radius
     double terraformScale = 1.0;   // resolved EcoTerraformScale
-    int minerals = 0;              // GetMineralProduction, less orbital deliveries
+    int minerals = 0;              // GetMineralProduction outright
+    int mineralOffset = 0;         // resolved EcoMineralOffset (negative for orbital)
     int cleanMinerals = 0;         // resolved EcoCleanMinerals + blooms + grants
-    int atrocityMinerals = 0;   // AtrocityLedger::EcoVirtualMinerals — already weighted
+    int virtualMinerals = 0;    // atrocity ledger + faction accumulator (see Virtual minerals)
     int damageReduction = 0;       // resolved EcoDamageReduction
     int techs = 0;
     double ecoScale = 1.0;         // ResolveBaseStat(EcologicalDamage, 1.0)
@@ -184,9 +186,11 @@ crawled**) improvements" rule, and it holds without a crawler check in the eco c
 `IsTileAssigned` instead would silently double every crawled improvement — and also every tile a
 neighbouring or enemy base works — so the walk must not drift onto it.
 
-The result is memoized against the base effects revision plus the world's worked-tile and
-map-appearance revisions — the same validation shape `CommerceManager` uses — because the base
-screen reads it every frame. Crawl start and stop both go through `WorkedTileIndex`, so they bump
+The result is memoized against the base effects revision, the world's worked-tile and
+map-appearance revisions, and `AtrocityLedger::GetRevision()` — the same validation shape
+`CommerceManager` uses, and it folds in that last one for the same reason commerce does: **an
+atrocity moves the eco score without touching any effect pool**, so without it a fresh atrocity
+would keep serving the old score for the rest of the turn. Crawl start and stop both go through `WorkedTileIndex`, so they bump
 the worked-tile revision and invalidate the memo like any worker reassignment.
 
 ### 2. Threshold
@@ -238,6 +242,125 @@ Two magnitude sources are authored on `FungalBloom`, and the eco pop must use th
 `tiles_stat` resolves off a **subject unit** (that is how a fungal payload takes its size from
 the reactor) and there is no unit in an eco pop, so `tiles` carries the count.
 
+### Virtual minerals: damage that is not production
+
+SMAC's `+5 × Atrocities` is not really an atrocity rule. It is the one place the formula admits
+**eco damage that no mineral and no terraformer produced**, expressed as minerals the base is
+charged for but never received. Atrocities are its only shipping source, but nothing about the
+channel is atrocity-specific, and a tectonic strike is the obvious second customer.
+
+Expressing it as *virtual minerals* rather than as a bolt-on to the final score is load-bearing:
+it sits inside the mineral term, so it is divided by `(1 + Goodfacs)` and offset by
+`Cleanmins2` like real minerals. A Centauri Preserve therefore mitigates a tectonic scar exactly
+as it mitigates a foundry. Adding it to the score instead would make good facilities useless
+against precisely the damage they should answer for.
+
+Three contributors sum into the one `virtual_minerals` input, with different lifetimes:
+
+| Source | Channel | Lifetime |
+|---|---|---|
+| Atrocity records | `AtrocityLedger::EcoVirtualMinerals(perpetrator, rConfig)` | permanent, `bCounted`-gated at commission |
+| One-shot events (a tectonic detonation, nerve gas) | new triggered effect `AddVirtualMinerals`, crediting a permanent `Faction` accumulator | permanent, ungated |
+| Standing sources (a facility that is simply dirty) | the `EcoMineralOffset` stat, **positive** | continuous, vanishes with its emitter |
+
+`EcoMineralOffset` is signed and that is deliberate — it is the same quantity in both
+directions. Nessus Mining Station emits −1 because orbital minerals must not answer to ecology;
+a hypothetical dirty facility emits +2 through the identical stat. There is no second stat for
+the positive case.
+
+**Why this one is not a `StatId_t`.** Continuous effects are *queried* — pooled from live
+emitters and re-read on every resolve — so a contribution lasts exactly as long as the thing
+emitting it. A tectonic detonation has no emitter the instant it happens: `DestroyUnit` is the
+next entry in its own `on_detonate_effects`, so by the time anything resolves eco damage the
+missile is gone. There is nothing left to pool. The damage has to be **recorded**, not emitted,
+and recording is what the triggered family is for.
+
+That gives the plan a clean dividing line, and `GrantCleanMinerals` is already on the same side
+of it for the same structural reason — the cap grant must outlive the Tree Farm being scrapped:
+
+| The contribution… | Channel |
+|---|---|
+| should track its emitter, and vanish with it | a `StatId_t` — `EcoMineralOffset`, `EcoDamageReduction`, `EcoTerraformScale` |
+| must outlive whatever caused it | a triggered effect writing a permanent counter — `AddVirtualMinerals`, `GrantCleanMinerals` |
+
+A facility that is dirty *while it stands* is the first row, and `EcoMineralOffset` already
+serves it. A missile that wrecked something and then ceased to exist is the second.
+
+No triggered effect carries a `StatId_t`, and that is deliberate rather than an omission —
+`TriggeredEffect.h` says keeping the two families apart "is what makes *a StatModifier that
+fires once* and *a Rebel that applies continuously* unrepresentable instead of silently doing
+nothing". Every triggered effect names the specific quantity it mutates (energy, XP, population,
+hit points), and uses `ModifierOp_t` only for *how* to apply, never for *which stat*.
+
+The supported seam between the families is **`amount_source`**: a continuous effect whose
+amount is read from live subject state, the way `BasesOwned` and `BaseSize` already work. So a
+triggered effect reaches a stat by mutating state an `amount_source` reads. That would let the
+accumulator feed `EcoMineralOffset` directly and collapse `virtual_minerals` into it.
+
+**Not taken, for one concrete reason:** it only pays off if *both* contributors go that way, and
+the atrocity half cannot cheaply. Weighting records needs `AtrocitiesConfig_t` inside the
+amount-source evaluation, which means stamping another config pointer onto `EffectContext_t`
+(as `pTileYieldRules` is stamped for `ElevationEnergy`). Routing only the accumulator through a
+stat while atrocities stay a direct call leaves two inputs anyway, so it buys nothing. Both stay
+direct calls, summed into one `virtual_minerals` input.
+
+> **Trap:** author `AddVirtualMinerals` **before** `DestroyUnit` in the list, as above.
+> `DestroyUnit` is conventionally last for exactly this reason — `ExplosionEffect_t` spares the
+> subject unit so "a following `DestroyUnit` can spend it".
+
+**The triggered effect** is the only new machinery:
+
+```json
+{ "type": "AddVirtualMinerals", "parameters": { "amount": 5 } }
+```
+
+It credits `pFaction` through `Faction::AddVirtualMinerals(int)`, held like `m_cleanMineralGrants`
+— permanent, because the atrocity ledger sets that precedent ("a record is never removed, so the
+eco term stays stable for the rest of the game") and a half-decaying term would be a second rule
+nothing sources. It carries no Charter gate: this channel is for physical consequences, and the
+Charter is a legal instrument.
+
+That split is what finally lets the Tectonic Payload be modelled honestly. It is **not** an
+atrocity — it writes no record, takes no integrity hit, triggers no vendetta — but its
+detonation still wrecks the ecology, so it authors the physical half alone, in
+`config/unit_components/specials.json` beside the quake it already causes:
+
+```json
+"on_detonate_effects": [
+  { "type": "Earthquake",          "parameters": { "levels_stat": "earthquake_levels" } },
+  { "type": "AddVirtualMinerals",  "parameters": { "amount": 5 } },
+  { "type": "DestroyUnit" }
+]
+```
+
+The magnitude is **not sourced** — see [Rules decisions](#rules-decisions-needed). Authoring it
+explicitly is the point: it is one number in a config file, and setting it to 0 turns the rule
+off without touching code.
+
+### What stays out of the effects system
+
+Three things in the formula are deliberately **not** stats, because nothing in the game would
+ever emit them and a stat with no emitters is resolve cost plus config surface for nothing:
+
+| Constant | Why it stays in `eco_damage.lua` |
+|---|---|
+| `/ 8` terraform divisor | a shape constant of the sum, not a rate anything tunes |
+| `/ 300` | same — it is what converts the damage factor into a percentage |
+| the `1 +` in `1 + damage_reduction` | structural: it makes zero good facilities the identity, not a divide-by-zero |
+
+`calculator-config.mdc` already blesses the Lua file as a home for a calculator's coefficients,
+so these are compliant where they are. The bar for a new `StatId_t` is *something wants to
+modify this at runtime* — per effects-system.md, split a stat when the **quantity** differs, not
+merely to route a number through the system.
+
+`EcoMineralOffset` clears that bar and the three above do not, which is the whole distinction:
+it exists because the orbital-minerals rule was otherwise an unsolved attribution problem.
+`GetMineralProduction` returns one number and nothing in it says which minerals fell from orbit.
+The alternatives were a C++ scan for `orbital: true` buildings (eco learning what "orbital"
+means) or re-resolving minerals twice with a filtered pool. Instead the building that adds the
+minerals also declares that they do not answer to ecology, one line beside the other, and any
+future "these minerals are clean" source is the same one line.
+
 ### The multiplier is one stack
 
 `Difficulty × Perihelion × Life × max(1, 3 − PLANET)` is not four inputs. It is one number —
@@ -251,6 +374,22 @@ it once with seed `1.0` and the formula multiplies by it once.
 | PLANET | `config/social_rating_effects.json`, the `planet` level table | one `MultiplyGeometric` per level: −3 → 6, −2 → 5, −1 → 4, **0 → 3**, +1 → 2, +2 → 1, +3 → 1 |
 | Native life | `config/native_life_levels.json` | `FactionGlobal MultiplyGeometric` 1 / 2 / 3 for rare / normal / abundant |
 | Perihelion | `config/world_events.json` | `WorldGlobal MultiplyGeometric 2`, collected only while the event is active |
+
+**`EcologicalDamage` should be reclassified `PureMultiplier`.** It is declared `RawScaled`,
+whose contract is "the seed is the raw value the resolve site holds" — but every use here
+resolves it with seed `1.0` purely to harvest a product, which is `PureMultiplier` semantics
+wearing a `RawScaled` label. `PureMultiplier` seeds `1.0` on its own, which is exactly right,
+and the stat genuinely is a pure product of difficulty × planet × life × perihelion with no raw
+value underneath.
+
+The change is one arm in `KindFor`, one `static_assert` in `ValidationTests.cpp`, and the row in
+`difficulty-system.md`. `DifficultyTests`' `ResolveBaseStat(..., EcologicalDamage, 1.0) == 3.0`
+passes either way, because it passes the seed explicitly.
+
+> **Trap if it stays `RawScaled`:** a `MaxClamp` authored on `ecological_damage` — the obvious
+> way to express "cap eco damage at 100%" — clamps the **multiplier** at 100, not the score,
+> because the score is never what this stat resolves over. That is why `max_chance_percent`
+> is a plain key in `eco_damage.json` and not a clamp effect.
 
 **`max(1, 3 − PLANET)` disappears into the data.** The `planet` table is configured over
 −3…+3 and `ClampSocialRatingTotal` already applies the SMAC rule that totals outside the table
@@ -409,11 +548,12 @@ the formula.
 
 ```lua
 -- Variables set by the engine before evaluating damage_formula:
---   terraform_raw, terraform_scale, minerals, clean_minerals, atrocity_minerals,
---   damage_reduction, techs, eco_scale
+--   terraform_raw, terraform_scale, minerals, mineral_offset, clean_minerals,
+--   virtual_minerals, damage_reduction, techs, eco_scale
 --
--- atrocity_minerals arrives pre-weighted from AtrocityLedger::EcoVirtualMinerals. Do not
--- multiply by 5 here: that factor is Major.eco_virtual_minerals in config/atrocities.json.
+-- virtual_minerals arrives pre-weighted. Do not multiply by 5 here: that factor is
+-- Major.eco_virtual_minerals in config/atrocities.json, and every other contributor
+-- likewise authors its own amount.
 --
 -- eco_scale is the resolved EcologicalDamage stat: difficulty x Planet rating x native
 -- life x perihelion, already multiplied together by the effect stack.
@@ -425,7 +565,7 @@ function eco_damage_formula()
     if terraform > 0 then clean1 = math.min(clean_minerals, terraform) end
     local clean2 = clean_minerals - clean1
 
-    local mineral_term = (minerals - clean2 + atrocity_minerals) / (1 + damage_reduction)
+    local mineral_term = (minerals + mineral_offset - clean2 + virtual_minerals) / (1 + damage_reduction)
     local factor = math.max(0, math.floor((terraform - clean1) + mineral_term))
 
     return math.floor(factor * techs * eco_scale / 300)
@@ -464,12 +604,14 @@ and the sea-base term rides the existing `Base` improvement:
 | `src/game/GameDataContext.cpp` | own both; load after the improvement/building registries, before `ValidateEffectReferences`; build the calculator with the other formula calculators |
 | `src/game/EffectReferenceValidator.cpp` | walk the new config's `effects` and `fungal_pop.on_pop_effects` |
 | `include/game/faction/base/BaseManager.h` + `.cpp` | `GetEcologicalDamage()`, its memo, and the terraform walk over `GetWorkableTiles()` |
-| `include/game/Faction.h` + `.cpp` | `m_fungalBlooms`, `m_cleanMineralGrants`, `RecordFungalBloom()`, `AddCleanMineralGrant(int)`, and their getters |
-| `include/game/effects/TriggeredEffect.h` | `GrantCleanMineralsEffect_t` in `TriggeredEffectVariant_t` |
-| `src/game/effects/TriggeredEffectParser.cpp` | `ParseGrantCleanMinerals_` + dispatch-table entry |
-| `src/game/effects/TriggeredEffectDispatch.cpp` | `ApplyOne_` arm; skip when the context has no faction |
+| `include/game/Faction.h` + `.cpp` | `m_fungalBlooms`, `m_cleanMineralGrants`, `m_virtualMinerals`, `RecordFungalBloom()`, `AddCleanMineralGrant(int)`, `AddVirtualMinerals(int)`, and their getters |
+| `include/game/effects/TriggeredEffect.h` | `GrantCleanMineralsEffect_t` and `AddVirtualMineralsEffect_t` in `TriggeredEffectVariant_t` |
+| `config/unit_components/specials.json` | `Tectonic_Payload` gains `AddVirtualMinerals` to its `on_detonate_effects` |
+| `src/game/effects/TriggeredEffectParser.cpp` | `ParseGrantCleanMinerals_` / `ParseAddVirtualMinerals_` + dispatch-table entries |
+| `src/game/effects/TriggeredEffectDispatch.cpp` | an `ApplyOne_` arm for each; both skip when the context has no faction |
 | `include/game/stages/EcoDamage.h` + `src/game/stages/EcoDamage.cpp` | the per-faction stage, `TurnStageRegistrar<EcoDamage>` |
 | `config/turn_stages.json` | the `EcoDamage` entry between `Population` and `WorldEvents` |
+| `config/buildings/buildings.json` | `Nessus_Mining_Station` gains `AllOwnerBases eco_mineral_offset -1` beside its `minerals +1` |
 | `config/social_rating_effects.json` | fill the `planet` level table, **including a new `"0"` row** |
 | `config/native_life_levels.json` + `include/game/NativeLifeLevelConfig.h` + parser | `default` and a `levels` array of `{ id, name, effects }`; `FindById` / `RequireForSession` mirroring `DifficultyConfig_t`. **Not** `NativeLifeConfig_t`, which is taken |
 | `include/game/GameRulesConfig.h` | `nativeLifeLevelId` beside `difficultyId` |
@@ -497,12 +639,20 @@ Still open:
 4. **Which year the Perihelion cycle counts from.** The sources give the shape — 20 years in
    every 80 — but never the phase. `world_events.json` carries `start_year_offset`, assumed 0
    (the first playable year); a different epoch is a one-key change.
-5. **Which tile in the base radius the pop lands on.** The sources only say a pop happens
+5. **How much eco damage a tectonic detonation causes.** That it is **not an atrocity** is
+   settled: the Datalinks never call it one, and it may not target bases or units, so it cannot
+   commit one — it writes no record, takes no integrity hit, triggers no vendetta. What is *not*
+   settled is the ecological half. *Ecology (Revised)* puts `TectonicPayloadsUsed` in the
+   atrocity term but tags it `[confirm]`, and no other source mentions it. The plan authors
+   `AddVirtualMinerals 5` — the weight that source implies — as one tunable number; 0 turns it
+   off. Whether it should be ungated (as authored) or follow the Charter like an atrocity is the
+   same open question.
+6. **Which tile in the base radius the pop lands on.** The sources only say a pop happens
    "within the base radius". The stage picks uniformly among the base's workable tiles that are
    not bases and do not already have fungus; weighting toward the tile that contributed most
    eco-damage (the borehole that caused it) would read better but is not sourced. `FungalBloom`
    itself then handles spread from that origin.
-6. **Whether sea terraforming counts.** *Ecology (Advanced)*'s list is land-only, and neither it
+7. **Whether sea terraforming counts.** *Ecology (Advanced)*'s list is land-only, and neither it
    nor the others say what Mining Platforms or Tidal Harnesses contribute. They are authored at
    0 until ruled on; Kelp Farms are the one sea improvement the sources do place (counted, but
    never doubled for being worked).
@@ -516,7 +666,7 @@ with a named input, not a silent zero.
 |---|---|
 | Tree Farm, Hybrid Forest, Centauri Preserve, Temple of Planet, Nanoreplicator are not in `config/buildings/buildings.json` | `EcoTerraformScale` and `EcoDamageReduction` have no emitters until they are authored; the stats resolve to their identity seeds meanwhile |
 | Pholus Mutagen and Singularity Inductor are not in `projects.json` | same, for the faction-wide half of `Goodfacs` |
-| ~~No atrocity ledger~~ — **built**. `AtrocityLedger::EcoVirtualMinerals(factionId, config)` returns the counted-atrocity half, already weighted; see `docs/architecture/atrocity-system.md` | assemble `atrocityMinerals` from that call instead of hard-zeroing it, and drop the `5 *` from the formula — the factor is `Major.eco_virtual_minerals` in `config/atrocities.json`. Counted atrocity records (Major only; Simple weighs 0) contribute only while the Charter was in force at commission. Tectonic detonations are not atrocities and are not counted yet; when eco damage lands they will need their own ungated term at the same Major weight |
+| ~~No atrocity ledger~~ — **built**. `AtrocityLedger::EcoVirtualMinerals(perpetrator, rConfig)` sums `eco_virtual_minerals` over that faction's **counted** records; see `docs/architecture/atrocity-system.md` | assemble `atrocityMinerals` from that call instead of hard-zeroing it, and keep the `5 *` out of the formula — the factor is `Major.eco_virtual_minerals` in `config/atrocities.json`, `Simple` is 0. Gated by `bCounted`, so an act committed while the Charter was repealed never reaches the eco term. Takes `AtrocitiesConfig_t`, owned by `GameDataContext::atrocitiesConfig`. Tectonic payloads add **nothing** — see [Rules decisions](#rules-decisions-needed) |
 | Orbital minerals are **live** (`Nessus_Mining_Station` emits `AllOwnerBases minerals +1`) but not subtracted | not a deferred gap — a day-one correctness bug. SMAC excludes orbital minerals from the eco term, so shipping without the subtraction charges eco damage for minerals nobody terraformed for. Needs a way to attribute part of a resolved `Minerals` stat to orbital sources |
 | No native life **abundance** setting | added here as `GameRulesConfig_t::nativeLifeLevelId` + `config/native_life_levels.json`, the Difficulty shape; needs a new-game menu row |
 | No world-event system | `config/world_events.json` and the active-event set are built here, minimally: `WorldEvents` currently only spreads terraform improvements. Perihelion is the only shipping entry, and `Cycle` the only trigger kind |
@@ -541,6 +691,17 @@ with a named input, not a silent zero.
   - a faction-wide cap applies in full at each of two bases;
   - the documented worked example reproduces on Librarian and doubles-and-some on Transcend
     (difficulty 3 → 5).
+- `EcoMineralOffset` — a base with two Nessus Mining Stations scores as though it produced two
+  fewer minerals, while its actual mineral output is unchanged; a base with none is unaffected.
+- Virtual minerals, all three channels into one input:
+  - a counted Major atrocity adds 5, a Simple act adds 0, and an act committed with the Charter
+    repealed adds 0; committing one mid-turn invalidates the eco memo rather than serving a
+    stale score;
+  - a tectonic detonation adds its authored amount with the Charter in force **and** repealed —
+    this channel is ungated — and writes no atrocity record;
+  - the contribution is divided by `(1 + Goodfacs)`, so a Centauri Preserve halves a tectonic
+    scar exactly as it halves a foundry — the guard against it being bolted onto the score;
+  - a positive `EcoMineralOffset` raises the score by the same amount a negative one lowers it.
 - New `tests/ecology/EcoScaleTests.cpp` — the multiplier stack:
   - a faction at PLANET 0 resolves `EcologicalDamage` to `3 × difficulty`, which is the
     regression guard on the `"0"` row existing;

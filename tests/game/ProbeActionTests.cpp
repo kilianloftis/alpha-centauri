@@ -14,6 +14,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/mind-control/MindControlLedger.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
@@ -131,6 +132,31 @@ struct ProbeGame_
             pHomeBase);
     }
 };
+
+// Raising RISK far past any probe's strength zeroes the success rate, so the mission fails
+// after its cost is paid.
+void ForceMissionFailure_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    for (ProbeActionConfig_t& rAction : rGame.fixtures.dataContext.probeActionsConfig->actions)
+    {
+        if (rAction.id == actionId)
+        {
+            rAction.risk = 100;
+            return;
+        }
+    }
+    FAIL("fixture has no such probe action");
+}
+
+// A paid base mission needs a target that is not the owner's HQ, so the owner founds its HQ
+// first, away from the target.
+BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
+{
+    rGame.MakeBase(*rGame.pAi, 7, 7);
+    BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 4, 4);
+    REQUIRE_FALSE(IsHeadquarters(rTarget));
+    return rTarget;
+}
 
 } // namespace
 
@@ -526,4 +552,175 @@ TEST_CASE("Probe cannot target a base on a tile its faction has not explored",
     rExplored.Mark(rTargetTile);
     CHECK(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, *game.pState)
               .has_value());
+}
+
+TEST_CASE("Mind Control adds 4 to the actor's mind-control total, not the former owner's",
+          "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& target = MakeMindControlTarget_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    REQUIRE(&target.GetFaction() == game.pPlayer);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
+}
+
+TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
+          "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& target = MakeMindControlTarget_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+}
+
+// SMAC adds to the total when the cost is paid, before the success roll.
+TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total",
+          "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    ForceMissionFailure_(game, ProbeActionId_t::MindControlBase);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& target = MakeMindControlTarget_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+
+    REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+    CHECK(&target.GetFaction() == game.pAi);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+}
+
+TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    REQUIRE(&victim.GetFaction() == game.pPlayer);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 1);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
+}
+
+TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total",
+          "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    ForceMissionFailure_(game, ProbeActionId_t::SubvertUnit);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+
+    REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+    CHECK(&victim.GetFaction() == game.pAi);
+    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
+}
+
+TEST_CASE("The mind-control quote adds the actor's total over the divisor to its first factor",
+          "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pAction);
+    REQUIRE(pAction->cost->mindControlDivisor == 4);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+    const auto quote = [&]
+    {
+        return QuoteProbeActionCost(*pAction, *game.pPlayer, *target,
+                                    game.pState->GetWorldMap(),
+                                    game.pState->GetMindControlLedger());
+    };
+
+    // No garrison, so the first factor is the population alone.
+    const int population = targetBase.GetPopulation().GetSize();
+    const std::optional<int> historyFree = quote();
+    REQUIRE(historyFree.has_value());
+    REQUIRE(*historyFree % population == 0);
+    const int costPerFactorPoint = *historyFree / population;
+
+    MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    rLedger.Record(game.pPlayer->GetFactionId(), 7);
+    CHECK(quote() == (population + 1) * costPerFactorPoint);
+
+    rLedger.Record(game.pPlayer->GetFactionId(), 1);
+    CHECK(quote() == (population + 2) * costPerFactorPoint);
+}
+
+TEST_CASE("The mind-control quote ignores the target faction's total", "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+
+    const std::optional<int> before =
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
+                             game.pState->GetMindControlLedger());
+    game.pState->GetMindControlLedger().Record(game.pAi->GetFactionId(), 8);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
+                               game.pState->GetMindControlLedger())
+          == before);
+}
+
+TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
+    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SubvertUnit);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, victim.GetTile(), ProbeTargetKind_t::Unit, *game.pState);
+    REQUIRE(target.has_value());
+
+    const std::optional<int> before =
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
+                             game.pState->GetMindControlLedger());
+    REQUIRE(before.has_value());
+    game.pState->GetMindControlLedger().Record(game.pPlayer->GetFactionId(), 8);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
+                               game.pState->GetMindControlLedger())
+          == before);
 }

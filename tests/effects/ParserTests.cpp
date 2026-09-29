@@ -1889,6 +1889,43 @@ TEST_CASE("ParseTriggeredEffectConfig: CommitAtrocity carries a severity id",
                     std::runtime_error);
 }
 
+TEST_CASE("ParseTriggeredEffectConfig: RecordMindControl carries a weight",
+          "[effects][parser][triggered][mind-control]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "RecordMindControl", "parameters": { "weight": 4 } })"),
+        "on_paid_effects");
+    const auto* pRecord = std::get_if<RecordMindControlEffect_t>(&config.effect);
+    REQUIRE(pRecord);
+    CHECK(pRecord->weight == 4);
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: RecordMindControl rejects bad parameters",
+          "[effects][parser][triggered][mind-control]")
+{
+    const auto parse = [](const char* pParameters)
+    {
+        return TriggeredEffectParser::ParseTriggeredEffectConfig(
+            json::parse(std::string(R"({ "type": "RecordMindControl", "parameters": )")
+                        + pParameters + " }"),
+            "on_success_effects");
+    };
+    CHECK_THROWS_AS(parse("{}"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "weight": 0 })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "weight": -4 })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "weight": 1.5 })"), std::runtime_error);
+
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "RecordMindControl",
+        "parameters": { "weight": 4 },
+        "factionFilter": { "kind": "ActionTarget" }
+    })"), "on_success_effects"), ContainsSubstring("factionFilter"));
+
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "RecordMindControl", "scope": "FactionGlobal", "parameters": { "weight": 4 }
+    })")), ContainsSubstring("one-shot"));
+}
+
 TEST_CASE("ParseEffectConfig: Conceal and Detect require a channel", "[effects][parser][detection]")
 {
     const EffectConfig_t conceal = EffectConfigParser::ParseEffectConfig(json::parse(R"({

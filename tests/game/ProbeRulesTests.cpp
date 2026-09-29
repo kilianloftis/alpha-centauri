@@ -7,17 +7,21 @@
 #include "game/effects/EffectEnums.h"
 
 #include "GameFixtures.h"
+#include "TempConfigFile.h"
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cmath>
 #include <random>
+#include <string>
 #include <variant>
 
 using namespace ac;
 using namespace actest;
+using Catch::Matchers::ContainsSubstring;
 
 namespace
 {
@@ -63,11 +67,24 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase)->cost.has_value());
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->energyBias == 1200);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->distBias == 4);
+    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->mindControlDivisor == 4);
+    const auto& rMindControlPaid = config.Find(ProbeActionId_t::MindControlBase)->onPaidEffects;
+    REQUIRE(rMindControlPaid.size() == 1);
+    const auto* pMindControlRecord =
+        std::get_if<RecordMindControlEffect_t>(&rMindControlPaid.front().effect);
+    REQUIRE(pMindControlRecord);
+    CHECK(pMindControlRecord->weight == 4);
     CHECK_FALSE(config.Find(ProbeActionId_t::Infiltrate)->cost.has_value());
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit) != nullptr);
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit)->cost.has_value());
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->cost->energyBias == 800);
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
+    const auto& rSubvertSuccess = config.Find(ProbeActionId_t::SubvertUnit)->onSuccessEffects;
+    REQUIRE(rSubvertSuccess.size() == 1);
+    const auto* pSubvertRecord =
+        std::get_if<RecordMindControlEffect_t>(&rSubvertSuccess.front().effect);
+    REQUIRE(pSubvertRecord);
+    CHECK(pSubvertRecord->weight == 1);
 
     REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
     const auto& rPlagueEffects = config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects;
@@ -83,6 +100,38 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     const auto* pAtrocity = std::get_if<CommitAtrocityEffect_t>(&rPlagueEffects.back().effect);
     REQUIRE(pAtrocity);
     CHECK(pAtrocity->severity == AtrocitySeverityId_t::Simple);
+}
+
+TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules would ignore",
+          "[probe][config]")
+{
+    const auto parseAction = [](const std::string& rActionJson)
+    {
+        const TempConfigFile file("probe_actions.json",
+                                  R"({ "actions": [ )" + rActionJson + " ] }");
+        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+    };
+    const std::string recordEntry =
+        R"([{ "type": "RecordMindControl", "parameters": { "weight": 4 } }])";
+
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", "on_paid_effects": )"
+                                  + recordEntry + " }"),
+                      ContainsSubstring("on_paid_effects"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", "on_success_effects": )"
+                                  + recordEntry + " }"),
+                      ContainsSubstring("on_success_effects"));
+
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
+                                       "cost": { "energy_bias": 1200, "dist_bias": 4 } })"),
+                      ContainsSubstring("mind_control_divisor"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
+                                       "cost": { "energy_bias": 1200, "dist_bias": 4,
+                                                 "mind_control_divisor": 0 } })"),
+                      ContainsSubstring("mind_control_divisor"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit",
+                                       "cost": { "energy_bias": 800, "dist_bias": 2,
+                                                 "mind_control_divisor": 4 } })"),
+                      ContainsSubstring("mind_control_divisor"));
 }
 
 TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[probe][config][se]")

@@ -13,6 +13,8 @@
 namespace ac
 {
 
+class MindControlLedger;
+
 class Unit;
 class BaseManager;
 class WorldMap;
@@ -74,16 +76,19 @@ bool IsHeadquarters(const BaseManager& rBase);
 // Probe-mechanics eligibility only: ProbeTeam, required tech, target-kind match, HQ
 // constraints, BlocksProbeTeams / ProbeSubversionImmune, and — for paid actions — that a cost
 // can actually be quoted, so an action that payment would refuse is never offered. Does not
-// check moves or adjacency (those belong to ProbeActionExecutor). rMap is needed for the
-// distance-to-HQ term in the quote.
+// check moves or adjacency (those belong to ProbeActionExecutor). rMap and rMindControl feed
+// the distance-to-HQ and mind-control history terms in the quote.
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget, const WorldMap& rMap);
+                    const ProbeTarget_t& rTarget, const WorldMap& rMap,
+                    const MindControlLedger& rMindControl);
 
-// Energy cost for paid actions (0 when free). Empty when the formula cannot produce a
-// cost (e.g. zero distance to HQ). Affordability / payment live in ProbeActionExecutor.
+// Energy cost rActor is quoted for a paid action (0 when free). The base formula reads the
+// actor's total from rMindControl. Empty when the formula cannot produce a cost (e.g. zero
+// distance to HQ). Affordability / payment live in ProbeActionExecutor.
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
-                                        const ProbeTarget_t& rTarget,
-                                        const WorldMap& rMap);
+                                        const Faction& rActor, const ProbeTarget_t& rTarget,
+                                        const WorldMap& rMap,
+                                        const MindControlLedger& rMindControl);
 
 // Intrinsic XP bump after a fully successful probe mission (caps at max).
 bool TryPromoteProbeMission(Unit& rProbe, const MoraleCalculator& rMorale);

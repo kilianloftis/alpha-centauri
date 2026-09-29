@@ -485,7 +485,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -508,12 +508,19 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 | `production.json` | `effects` | `on_unit_produced_effects` |
 | `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects`, `on_detonate_effects` |
 | `native_units.json` | `effects` | `on_hold_effects` |
-| `probe_actions.json` | `effects` | `on_success_effects` |
+| `probe_actions.json` | `effects` | `on_paid_effects`, `on_success_effects` |
 | `council/proposals.json` | `effects` | `on_passed_effects` |
 | `council/rules.json` | `governor_effects` | `on_elected_effects` |
 | `pop_composition.json` riot tiers | `effects` | `on_enter_effects` |
 | `improvements.json` | `effects` | `on_visit_effects` — Investigate / AI auto via `ApplyVisitEffects` |
 | `techs.json` | `effects` | `on_discover_effects` — `ApplyTechDiscoverEffects` on `OnTechDiscovered` |
+
+`on_paid_effects` fire once a paid probe action's cost is paid, before the success roll, so a
+failed attempt still fires them; an action without `cost` rejects the list. `on_success_effects`
+fire from the mission handler, and only the handlers that run them (`infiltrate`,
+`sabotage_random`, `genetic_plague`, `subvert_unit`) accept the list. Both use the probe mission
+context: the actor is the subject faction, the target base or unit is the subject, and its
+owner is `actionTarget`.
 
 `on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
 unit arrives. `UnitOrderExecutor` receives an injected visit handler from `GameState` (player
@@ -635,7 +642,7 @@ then silently never fired.
   apply so a faction-identity condition sees the member being credited. An entry needing a
   subject the bag lacks is **skipped**, not guessed at.
 - **One application per subject**: a faction-subject entry (`GrantTech`, `GrantEnergy`,
-  `GrantUnit`, `SetInfiltration`) runs once per listed faction, which is how a council
+  `GrantUnit`, `SetInfiltration`, `CommitAtrocity`, `RecordMindControl`) runs once per listed faction, which is how a council
   `GrantEnergy` credits every member. A base-, unit- or world-subject entry runs once however
   long the faction list is, so a `DestroyFacility` cannot hit one base once per member.
 - **Results** are what let callers report. Probe missions map `FacilitiesDestroyed_t` /
@@ -667,6 +674,16 @@ partially and honestly — a spent one-shot grant does not suppress the repeatab
 A key is spent only by an entry that **actually changed something**: `ApplyOne_` returns
 whether it did, so a grant that found nothing to do (no eligible facility, no placeable tile,
 a tech the faction already knew) stays unspent and fires when the situation changes.
+
+### RecordMindControl
+`RecordMindControl` (positive integer `weight`) adds to the subject faction's total in
+`GameState`'s `MindControlLedger`, a sibling of `AtrocityLedger`. It is a per-faction-subject
+arm like `CommitAtrocity`, so in a probe mission it records the actor rather than the probed
+base's owner. The ledger is SMAC's `mind_control_total`: paying for Mind Control or Total
+Thought Control records 4 (`on_paid_effects`), a successful Subvert Unit records 1
+(`on_success_effects`), and the base mind-control quote adds the actor's total divided by the
+cost's `mind_control_divisor` to its first factor. The ledger is a stub holding per-actor
+totals; per-act records and a mind-control cost calculator come later.
 
 ### GrantUnit
 There is no registry of named designs (they are per-faction and player-authored, with ids

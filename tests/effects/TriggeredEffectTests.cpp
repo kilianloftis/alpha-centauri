@@ -19,6 +19,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/mind-control/MindControlLedger.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
@@ -620,4 +621,90 @@ TEST_CASE("on_discover_effects nest when GrantTech discovers another tech",
     TriggerGame_ game;
     game.pFaction->GetResearch().AddDiscoveredTech("discover_chain_parent");
     CHECK(game.pFaction->GetResearch().HasDiscoveredTech("discover_chain_child"));
+}
+
+TEST_CASE("RecordMindControl adds to the subject faction's total and reports it",
+          "[effects][triggered][mind-control]")
+{
+    TriggerGame_ game;
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        Effect_(RecordMindControlEffect_t{4}),
+    };
+    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    const FactionId_t factionId = game.pFaction->GetFactionId();
+
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
+
+    REQUIRE(results.size() == 1);
+    CHECK(std::get<MindControlRecorded_t>(results[0]).weight == 4);
+    CHECK(rLedger.Total(factionId) == 4);
+
+    ApplyTriggeredEffects(effects, context);
+    CHECK(rLedger.Total(factionId) == 8);
+}
+
+TEST_CASE("A multi-faction context records mind control for each faction once",
+          "[effects][triggered][mind-control]")
+{
+    TriggerGame_ game;
+    Faction& second = game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+        actest::k_TestFactionSeed));
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        Effect_(RecordMindControlEffect_t{3}),
+    };
+
+    TriggeredEffectContext_t context(*game.pState, {game.pFaction, &second});
+    CHECK(ApplyTriggeredEffects(effects, context).size() == 2);
+
+    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    CHECK(rLedger.Total(game.pFaction->GetFactionId()) == 3);
+    CHECK(rLedger.Total(second.GetFactionId()) == 3);
+}
+
+// A probe mission names the actor as the subject faction but stamps the probed base, and its
+// owner, as what the mission acts on. The ledger records what the actor did.
+TEST_CASE("In a probe mission context RecordMindControl credits the actor, not the base's owner",
+          "[effects][triggered][mind-control]")
+{
+    TriggerGame_ game;
+    Faction& victim = game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+        actest::k_TestFactionSeed));
+    Tile* pTile = game.pState->GetWorldMap().GetTile(4, 4);
+    REQUIRE(pTile);
+    BaseManager* pVictimBase = victim.CreateBase(
+        game.pState->AllocateBaseId(), "Target", pTile, game.fixtures.dataContext,
+        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+    REQUIRE(pVictimBase);
+
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        Effect_(RecordMindControlEffect_t{4}),
+    };
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    context.pBase = pVictimBase;
+    context.pTile = pTile;
+    context.pFaction = &victim;
+    context.actionTarget = victim.GetFactionId();
+    ApplyTriggeredEffects(effects, context);
+
+    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    CHECK(rLedger.Total(game.pFaction->GetFactionId()) == 4);
+    CHECK(rLedger.Total(victim.GetFactionId()) == 0);
+}
+
+TEST_CASE("A oncePer RecordMindControl fires once", "[effects][triggered][mind-control][once]")
+{
+    TriggerGame_ game;
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        OnceEffect_(RecordMindControlEffect_t{4}, OnceScope_t::Faction, "first_mind_control"),
+    };
+
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    CHECK(ApplyTriggeredEffects(effects, context).size() == 1);
+    CHECK(ApplyTriggeredEffects(effects, context).empty());
+    CHECK(game.pState->GetMindControlLedger().Total(game.pFaction->GetFactionId()) == 4);
 }

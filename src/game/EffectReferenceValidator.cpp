@@ -199,6 +199,7 @@ struct TriggeredPayloadValidator
     void operator()(const ElevationChangeEffect_t&) const {}
 
     void operator()(const CommitAtrocityEffect_t&) const {}
+    void operator()(const RecordMindControlEffect_t&) const {}
 
     // Only terrain a tile stores in its own right can be set: the depth bands come from
     // elevation and the two axes are always present, so writing either here would be undone

@@ -299,6 +299,21 @@ void ParseCommitAtrocity_(const nlohmann::json& parameters, TriggeredEffectConfi
     rEffect.effect = committed;
 }
 
+void ParseRecordMindControl_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    if (!parameters.contains("weight") || !parameters.at("weight").is_number_integer())
+    {
+        throw std::runtime_error("RecordMindControl 'weight' must be an integer");
+    }
+    RecordMindControlEffect_t record;
+    record.weight = parameters.at("weight").get<int>();
+    if (record.weight < 1)
+    {
+        throw std::runtime_error("RecordMindControl 'weight' must be >= 1");
+    }
+    rEffect.effect = record;
+}
+
 void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
     const bool bHasTiles = parameters.contains("tiles");
@@ -398,6 +413,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"StepRockiness", ParseStepRockiness_},
         {"ElevationChange", ParseElevationChange_},
         {"CommitAtrocity", ParseCommitAtrocity_},
+        {"RecordMindControl", ParseRecordMindControl_},
     };
     return k_Parsers;
 }

@@ -13,12 +13,14 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/map/WorldMap.h"
 #include "game/research/TechConfigParser.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -41,6 +43,26 @@ TriggeredEffectContext_t MissionContext_(Faction& rActor, BaseManager& rBase,
     context.pTile = &rBase.GetTile();
     context.pFaction = &rBase.GetFaction();
     context.actionTarget = rBase.GetFactionId();
+    context.pRng = &rRng;
+    return context;
+}
+
+// The unit-target counterpart of MissionContext_: the targeted unit is the unit subject and its
+// owner is the action target.
+TriggeredEffectContext_t UnitMissionContext_(Faction& rActor, Unit& rTargetUnit,
+                                             GameState& rGameState, std::mt19937& rRng)
+{
+    const Tile& rTile = rTargetUnit.GetTile();
+    Tile* const pTile = rGameState.GetWorldMap().GetTile(rTile.GetX(), rTile.GetY());
+    if (!pTile)
+    {
+        throw std::runtime_error("UnitMissionContext_: target unit tile is not on the world map");
+    }
+    TriggeredEffectContext_t context(rGameState, rActor);
+    context.pUnit = &rTargetUnit;
+    context.pTile = pTile;
+    context.pFaction = &rTargetUnit.GetFaction();
+    context.actionTarget = rTargetUnit.GetFaction().GetFactionId();
     context.pRng = &rRng;
     return context;
 }
@@ -205,8 +227,12 @@ bool ApplyGeneticPlague_(Faction& rActor, BaseManager& rBase, GameState& rGameSt
     return true;
 }
 
-bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, ProbeActionResult_t& rResult)
+bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, GameState& rGameState,
+                       const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
+                       std::mt19937& rRng)
 {
+    TriggeredEffectContext_t context = UnitMissionContext_(rActor, rTargetUnit, rGameState, rRng);
+    ApplyTriggeredEffects(rAction.onSuccessEffects, context);
     rTargetUnit.GetFaction().TransferUnitTo(rTargetUnit.GetUnitId(), rActor);
     rResult.detail = ProbeActionStatus_t::UnitSubverted;
     return true;
@@ -246,11 +272,12 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
 }
 
 bool ApplyUnitAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, Unit& rTargetUnit,
-                      ProbeActionResult_t& rResult)
+                      GameState& rGameState, ProbeActionResult_t& rResult, std::mt19937& rRng)
 {
     if (rAction.id == ProbeActionId_t::SubvertUnit)
     {
-        return ApplySubvertUnit_(rProbe.GetFaction(), rTargetUnit, rResult);
+        return ApplySubvertUnit_(rProbe.GetFaction(), rTargetUnit, rGameState, rAction, rResult,
+                                 rRng);
     }
     return false;
 }
@@ -274,10 +301,33 @@ bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
             }
             else
             {
-                return ApplyUnitAction_(rProbe, rAction, rConcrete.rUnit, rResult);
+                return ApplyUnitAction_(rProbe, rAction, rConcrete.rUnit, rGameState, rResult,
+                                        rRng);
             }
         },
         rTarget.ref);
+}
+
+void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
+                           const ProbeTarget_t& rTarget, GameState& rGameState,
+                           std::mt19937& rRng)
+{
+    Faction& rActor = rProbe.GetFaction();
+    TriggeredEffectContext_t context = std::visit(
+        [&](const auto& rConcrete) -> TriggeredEffectContext_t
+        {
+            using T = std::decay_t<decltype(rConcrete)>;
+            if constexpr (std::is_same_v<T, ProbeBaseTarget_t>)
+            {
+                return MissionContext_(rActor, rConcrete.rBase, rGameState, rRng);
+            }
+            else
+            {
+                return UnitMissionContext_(rActor, rConcrete.rUnit, rGameState, rRng);
+            }
+        },
+        rTarget.ref);
+    ApplyTriggeredEffects(rAction.onPaidEffects, context);
 }
 
 } // namespace ac

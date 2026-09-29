@@ -554,7 +554,8 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                           || std::is_same_v<T, GrantEnergyEffect_t>
                           || std::is_same_v<T, GrantUnitEffect_t>
                           || std::is_same_v<T, SetInfiltrationEffect_t>
-                          || std::is_same_v<T, CommitAtrocityEffect_t>)
+                          || std::is_same_v<T, CommitAtrocityEffect_t>
+                          || std::is_same_v<T, RecordMindControlEffect_t>)
             {
                 return true;
             }
@@ -626,6 +627,13 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, CommitAtrocityEffect_t>)
             {
                 return CommitAtrocity_(rCtx, rConcrete, rFaction, rOut);
+            }
+            else if constexpr (std::is_same_v<T, RecordMindControlEffect_t>)
+            {
+                rCtx.rGameState.GetMindControlLedger().Record(rFaction.GetFactionId(),
+                                                              rConcrete.weight);
+                rOut.push_back(MindControlRecorded_t{rConcrete.weight});
+                return true;
             }
             else if constexpr (std::is_same_v<T, ModifyPopulationEffect_t>)
             {

@@ -4,6 +4,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/atrocities/AtrocityLedger.h"
+#include "game/mind-control/MindControlLedger.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
@@ -131,6 +132,10 @@ public:
     AtrocityLedger& GetAtrocityLedger();
     const AtrocityLedger& GetAtrocityLedger() const;
 
+    // Mind control each faction has done; the base mind-control quote reads the actor's total.
+    MindControlLedger& GetMindControlLedger();
+    const MindControlLedger& GetMindControlLedger() const;
+
     DiplomaticActionExecutor& GetDiplomaticActionExecutor();
 
     // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
@@ -250,6 +255,7 @@ private:
     std::unique_ptr<Pathfinder> m_pPathfinder;
     std::unique_ptr<DiplomacyLedger> m_pDiplomacy;
     std::unique_ptr<AtrocityLedger> m_pAtrocities;
+    std::unique_ptr<MindControlLedger> m_pMindControl;
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;

@@ -145,6 +145,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_worldMap(std::move(pWorldMap))
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
     , m_pAtrocities(std::make_unique<AtrocityLedger>())
+    , m_pMindControl(std::make_unique<MindControlLedger>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
     , m_secretProjectAvailability(*this)
@@ -187,7 +188,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                 ApplyVisitEffects(*this, rMover, m_rng);
             }
         });
-    m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng);
+    m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng,
+                                                            *m_pMindControl);
 }
 
 GameState::~GameState()
@@ -535,6 +537,16 @@ AtrocityLedger& GameState::GetAtrocityLedger()
 const AtrocityLedger& GameState::GetAtrocityLedger() const
 {
     return *m_pAtrocities;
+}
+
+MindControlLedger& GameState::GetMindControlLedger()
+{
+    return *m_pMindControl;
+}
+
+const MindControlLedger& GameState::GetMindControlLedger() const
+{
+    return *m_pMindControl;
 }
 
 DiplomaticActionExecutor& GameState::GetDiplomaticActionExecutor()

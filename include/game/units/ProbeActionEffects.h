@@ -23,4 +23,11 @@ bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
                             const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                             std::mt19937& rRng);
 
+// Apply rAction's on_paid_effects once its cost is paid, before the success roll, so a failed
+// attempt still fires them. The actor is the subject faction and rTarget's owner the action
+// target.
+void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
+                           const ProbeTarget_t& rTarget, GameState& rGameState,
+                           std::mt19937& rRng);
+
 } // namespace ac

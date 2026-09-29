@@ -199,6 +199,14 @@ struct CommitAtrocityEffect_t
     AtrocitySeverityId_t severity = AtrocitySeverityId_t::Simple;
 };
 
+// Records mind control by the subject faction in the MindControlLedger. Per-faction subject, like
+// CommitAtrocity: in a probe mission that is the actor, never the probed base's owner. The
+// positive weight is what the act adds to the actor's total.
+struct RecordMindControlEffect_t
+{
+    int weight = 0;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -218,7 +226,8 @@ using TriggeredEffectVariant_t = std::variant<
     SetTerrainFeatureEffect_t,
     StepRockinessEffect_t,
     ElevationChangeEffect_t,
-    CommitAtrocityEffect_t
+    CommitAtrocityEffect_t,
+    RecordMindControlEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

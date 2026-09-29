@@ -8,6 +8,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
+#include "game/mind-control/MindControlLedger.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MoraleCalculator.h"
@@ -78,16 +79,17 @@ int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
     return std::max(1, static_cast<int>(std::lround(rawCost * multiplier)));
 }
 
-// (garrison + pop) * (energy + bias) / (dist + bias), then SE multiplier.
+// (garrison + actorMindControlTotal / divisor + pop) * (energy + bias) / (dist + bias), then SE
+// multiplier.
 std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int garrison,
-                                             int population, int energy, int distToHq,
-                                             double costMultiplier)
+                                             int actorMindControlTotal, int population,
+                                             int energy, int distToHq, double costMultiplier)
 {
     if (distToHq <= 0)
     {
         return std::nullopt;
     }
-    int cost = (garrison + population)
+    int cost = (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
                * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
     cost = ApplyProbeCostMultiplier_(cost, costMultiplier);
     return cost;
@@ -110,7 +112,7 @@ std::optional<int> QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int min
     return ApplyProbeCostMultiplier_(cost, costMultiplier);
 }
 
-std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost,
+std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int actorMindControlTotal,
                                         const BaseManager& rBase,
                                         const Faction& rTargetFaction, const WorldMap& rMap,
                                         double costMultiplier)
@@ -118,6 +120,7 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost,
     return QuoteMindControlBaseCost_(
         rCost,
         CountCombatUnitsOnTile_(rBase.GetTile(), rMap, rTargetFaction.GetFactionId()),
+        actorMindControlTotal,
         rBase.GetPopulation().GetSize(),
         rTargetFaction.GetEconomy().GetEnergy(),
         DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth()),
@@ -256,7 +259,8 @@ bool IsHeadquarters(const BaseManager& rBase)
 }
 
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget, const WorldMap& rMap)
+                    const ProbeTarget_t& rTarget, const WorldMap& rMap,
+                    const MindControlLedger& rMindControl)
 {
     if (!ActorMeetsActionPrereqs_(rProbe, rAction))
     {
@@ -311,7 +315,9 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
     // off the menu for a garrison standing on the HQ tile, where the quote is nullopt —
     // previously such a unit was priced as if the HQ were 12 tiles away, making the
     // best-defended tile on the map the cheapest to subvert.
-    if (rAction.cost.has_value() && !QuoteProbeActionCost(rAction, rTarget, rMap).has_value())
+    if (rAction.cost.has_value()
+        && !QuoteProbeActionCost(rAction, rProbe.GetFaction(), rTarget, rMap, rMindControl)
+                .has_value())
     {
         return false;
     }
@@ -319,8 +325,9 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
 }
 
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
-                                        const ProbeTarget_t& rTarget,
-                                        const WorldMap& rMap)
+                                        const Faction& rActor, const ProbeTarget_t& rTarget,
+                                        const WorldMap& rMap,
+                                        const MindControlLedger& rMindControl)
 {
     if (!rAction.cost.has_value())
     {
@@ -339,8 +346,10 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             using T = std::decay_t<decltype(rConcrete)>;
             if constexpr (std::is_same_v<T, ProbeBaseTarget_t>)
             {
-                return QuoteBaseActionCost_(*rAction.cost, rConcrete.rBase, rTarget.rFaction,
-                                            rMap, costMultiplier);
+                return QuoteBaseActionCost_(*rAction.cost,
+                                            rMindControl.Total(rActor.GetFactionId()),
+                                            rConcrete.rBase,
+                                            rTarget.rFaction, rMap, costMultiplier);
             }
             else
             {

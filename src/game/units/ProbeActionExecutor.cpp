@@ -10,6 +10,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/mind-control/MindControlLedger.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -35,10 +36,12 @@ bool AreOnOrAdjacent_(const Tile& rA, const Tile& rB, const WorldMap& rMap)
 } // namespace
 
 ProbeActionExecutor::ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
-                                         std::mt19937& rRng)
+                                         std::mt19937& rRng,
+                                         const MindControlLedger& rMindControl)
     : m_rWorldMap(rWorldMap)
     , m_rMorale(rMorale)
     , m_rRng(rRng)
+    , m_rMindControl(rMindControl)
 {
 }
 
@@ -54,7 +57,7 @@ bool ProbeActionExecutor::CanTryProbeAction_(const Unit& rUnit,
     {
         return false;
     }
-    return CanProbeAction(rUnit, rAction, rTarget, m_rWorldMap);
+    return CanProbeAction(rUnit, rAction, rTarget, m_rWorldMap, m_rMindControl);
 }
 
 bool ProbeActionExecutor::CanTryProbeAction(const Unit& rUnit,
@@ -112,6 +115,7 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     {
         return result;
     }
+    ApplyProbePaidEffects(rUnit, *pAction, *target, rGameState, m_rRng);
 
     // Decided here from session history rather than trusted from the caller. Recorded before
     // the roll so an attempt counts whether or not it succeeds — a failed probe still tips the
@@ -153,7 +157,8 @@ std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveEligibleTarget_(
 bool ProbeActionExecutor::TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_t& rAction,
                                            const ProbeTarget_t& rTarget)
 {
-    const std::optional<int> cost = QuoteProbeActionCost(rAction, rTarget, m_rWorldMap);
+    const std::optional<int> cost =
+        QuoteProbeActionCost(rAction, rUnit.GetFaction(), rTarget, m_rWorldMap, m_rMindControl);
     if (!cost.has_value())
     {
         return false;

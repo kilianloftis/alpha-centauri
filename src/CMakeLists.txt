@@ -41,6 +41,7 @@ add_library(ac-core STATIC
     game/atrocities/AtrocityEffects.cpp
     game/atrocities/AtrocityLedger.cpp
     game/atrocities/AtrocityRules.cpp
+    game/mind-control/MindControlLedger.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/HomeBaseIndex.cpp

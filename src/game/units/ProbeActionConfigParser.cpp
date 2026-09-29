@@ -28,12 +28,56 @@ ProbeTargetKind_t ParseTarget_(const std::string& rTarget)
     throw std::runtime_error("probe_actions.json: unknown target '" + rTarget + "'");
 }
 
-ProbeCostConfig_t ParseCost_(const json& rCostJson)
+ProbeCostConfig_t ParseCost_(const json& rCostJson, ProbeTargetKind_t target,
+                              const std::string& rActionName)
 {
     ProbeCostConfig_t cost;
     cost.energyBias = rCostJson.value("energy_bias", 0);
     cost.distBias = rCostJson.value("dist_bias", 0);
+    // Only the base formula reads the divisor, so a unit-target cost would ignore it silently.
+    if (target == ProbeTargetKind_t::Unit)
+    {
+        if (rCostJson.contains("mind_control_divisor"))
+        {
+            throw std::runtime_error("Probe action '" + rActionName
+                                     + "': mind_control_divisor applies only to base targets");
+        }
+        return cost;
+    }
+    if (!rCostJson.contains("mind_control_divisor")
+        || !rCostJson.at("mind_control_divisor").is_number_integer())
+    {
+        throw std::runtime_error("Probe action '" + rActionName
+                                 + "': cost requires an integer 'mind_control_divisor'");
+    }
+    cost.mindControlDivisor = rCostJson.at("mind_control_divisor").get<int>();
+    if (cost.mindControlDivisor < 1)
+    {
+        throw std::runtime_error("Probe action '" + rActionName
+                                 + "': mind_control_divisor must be >= 1");
+    }
     return cost;
+}
+
+bool RunsOnSuccessEffects_(ProbeActionId_t id)
+{
+    switch (id)
+    {
+        case ProbeActionId_t::Infiltrate:
+        case ProbeActionId_t::SabotageRandom:
+        case ProbeActionId_t::GeneticPlague:
+        case ProbeActionId_t::SubvertUnit:
+            return true;
+        case ProbeActionId_t::StealTech:
+        case ProbeActionId_t::DrainEnergy:
+        case ProbeActionId_t::SabotageFacility:
+        case ProbeActionId_t::InciteDroneRiots:
+        case ProbeActionId_t::Assassinate:
+        case ProbeActionId_t::MindControlBase:
+        case ProbeActionId_t::TotalThoughtControl:
+            return false;
+    }
+    throw std::logic_error("RunsOnSuccessEffects_: unhandled enumerator");
 }
 
 ProbeActionConfig_t ParseAction_(const json& rActionJson)
@@ -73,7 +117,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     }
     if (rActionJson.contains("cost") && !rActionJson.at("cost").is_null())
     {
-        action.cost = ParseCost_(rActionJson.at("cost"));
+        action.cost = ParseCost_(rActionJson.at("cost"), action.target, action.name);
     }
     if (rActionJson.contains("effects"))
     {
@@ -83,8 +127,20 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
             wrapper, EffectSourceKind_t::ProbeAction,
             ProbeActionIdToString(action.id));
     }
+    if (rActionJson.contains("on_success_effects") && !RunsOnSuccessEffects_(action.id))
+    {
+        throw std::runtime_error("Probe action '" + action.name
+                                 + "': its handler does not run on_success_effects");
+    }
     action.onSuccessEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rActionJson, "on_success_effects", ProbeActionIdToString(action.id));
+    if (rActionJson.contains("on_paid_effects") && !action.cost.has_value())
+    {
+        throw std::runtime_error("Probe action '" + action.name
+                                 + "': on_paid_effects requires a cost");
+    }
+    action.onPaidEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rActionJson, "on_paid_effects", ProbeActionIdToString(action.id));
     return action;
 }
 

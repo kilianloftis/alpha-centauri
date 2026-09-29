@@ -77,13 +77,16 @@ struct ProbeSuccessFormula_t
 };
 
 // Tunables for paid probe actions. Formula is selected by ProbeActionConfig_t::target:
-//   Base → (garrison + pop) * (energy + energyBias) / (dist + distBias)
+//   Base → (garrison + actorMindControlTotal / mindControlDivisor + pop)
+//          * (energy + energyBias) / (dist + distBias)
 //   Unit → mineralCost * (energy + energyBias) / (dist + distBias)
 // Absent cost (nullopt) means the action is free.
 struct ProbeCostConfig_t
 {
     int energyBias = 0;
     int distBias = 0;
+    // Base target only: the parser requires it positive there and rejects it on a unit target.
+    int mindControlDivisor = 0;
 };
 
 struct ProbeActionConfig_t
@@ -107,8 +110,13 @@ struct ProbeActionConfig_t
     // effectively unused today; the mission's real work is in onSuccessEffects.
     std::vector<EffectConfig_t> effects;
     // One-shot effects applied when the mission succeeds (SetInfiltration + ActionTarget, the
-    // sabotage DestroyFacility policy, the genetic-plague ModifyPopulation).
+    // sabotage DestroyFacility policy, the genetic-plague ModifyPopulation, the subversion
+    // RecordMindControl). Only the handlers that run them accept the list; the parser rejects it
+    // elsewhere.
     std::vector<TriggeredEffectConfig_t> onSuccessEffects;
+    // One-shot effects applied once the cost is paid, before the success roll, so a failed
+    // attempt still fires them (mind control's RecordMindControl). Paid actions only.
+    std::vector<TriggeredEffectConfig_t> onPaidEffects;
 };
 
 struct ProbeActionsConfig_t

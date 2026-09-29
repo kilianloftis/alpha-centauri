@@ -65,6 +65,11 @@ struct XpGranted_t
     int amount = 0;
 };
 
+struct MindControlRecorded_t
+{
+    int weight = 0;
+};
+
 struct HitPointsRestored_t
 {
     int amount = 0;
@@ -137,7 +142,8 @@ using TriggeredEffectResult_t = std::variant<
     TerrainFeatureChanged_t,
     RockinessChanged_t,
     ElevationChanged_t,
-    AtrocityCommitted_t
+    AtrocityCommitted_t,
+    MindControlRecorded_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
