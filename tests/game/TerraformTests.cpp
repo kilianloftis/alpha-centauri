@@ -7,7 +7,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/OccupantCoexistence.h"
-#include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainOperationRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -38,24 +37,13 @@ namespace
 struct TerraformGame_
 {
     FactionFixture fixtures;
-    ImprovementRegistry shippingImprovements;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
     Faction* pPlayer = nullptr;
 
-    explicit TerraformGame_(bool bShippingImprovements = false,
-                            const ElevationRulesConfig_t* pRules = nullptr)
+    explicit TerraformGame_(bool bExcludes = false, const ElevationRulesConfig_t* pRules = nullptr)
+        : fixtures(9, 9, {}, bExcludes ? k_ExcludesOccupantFiles : OccupantFiles_t{})
     {
-        const ImprovementRegistry* pImprovements = &fixtures.improvements;
-        if (bShippingImprovements)
-        {
-            const std::string root = std::string(AC_CONFIG_DIR) + "/";
-            LoadMapOccupants(root + "improvements.json", root + "terrain.json",
-                             shippingImprovements,
-                             *fixtures.dataContext.terrainOperationRegistry);
-            pImprovements = &shippingImprovements;
-        }
-
         auto pMap = std::make_unique<WorldMap>(9, 9, pRules ? *pRules : actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
@@ -63,7 +51,7 @@ struct TerraformGame_
             pTile->SetRockiness(Rockiness_t::Flat);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), *pImprovements, &fixtures.unitComponents, settings,
+            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
         pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 
@@ -304,7 +292,7 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     ElevationRulesConfig_t rules = actest::TestMapRules();
     rules.levelMinMeters = 1000;
     rules.levelMaxMeters = 1000;
-    TerraformGame_ game(/*bShippingImprovements=*/false, &rules);
+    TerraformGame_ game(/*bExcludes=*/false, &rules);
     BaseManager& home = game.MakeBase(4, 4);
     Unit& seaFormer = game.MakeFormer(6, 4, &home, nullptr, "test_sea_chassis");
     Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
@@ -337,7 +325,7 @@ TEST_CASE("A land Former's lower stops at ocean level instead of failing the ord
     ElevationRulesConfig_t rules = actest::TestMapRules();
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
-    TerraformGame_ game(/*bShippingImprovements=*/false, &rules);
+    TerraformGame_ game(/*bExcludes=*/false, &rules);
     BaseManager& home = game.MakeBase(4, 4);
     Unit& former = game.MakeFormer(6, 4, &home);
     Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
@@ -371,9 +359,9 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
 
 TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][terraform]")
 {
-    TerraformGame_ game(/*bShippingImprovements=*/true);
+    TerraformGame_ game(/*bExcludes=*/true);
     BaseManager& home = game.MakeBase(4, 4);
-    const ImprovementRegistry& rImprovements = game.shippingImprovements;
+    const ImprovementRegistry& rImprovements = game.fixtures.improvements;
 
     Tile& rDirect = *game.pState->GetWorldMap().GetTile(5, 4);
     game.pState->GetTileEffects().AddOccupantWithEffects(rDirect, "Forest");
@@ -552,7 +540,7 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
 {
     // The order has already been paid for. If terrain shifted while it ran, the tile keeps
     // what it had rather than losing the incumbent to a placement that then refuses.
-    TerraformGame_ game(/*bShippingImprovements*/ true);
+    TerraformGame_ game(/*bExcludes=*/true);
     BaseManager& home = game.MakeBase(4, 4);
     Unit& former = game.MakeFormer(6, 4, &home);
     Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
@@ -565,7 +553,7 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
     REQUIRE(tile.HasImprovement("Road"));
 
     const std::optional<TerraformProject_t> farm = FindTerraformProject(
-        "Farm", game.shippingImprovements,
+        "Farm", game.fixtures.improvements,
         *game.fixtures.dataContext.terrainOperationRegistry);
     REQUIRE(farm);
     std::mt19937 rng(3);

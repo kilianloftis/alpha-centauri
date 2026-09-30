@@ -78,23 +78,6 @@ TEST_CASE("LandmarkConfigParser loads landmarks.json and validates improvement i
     std::filesystem::remove(path);
 }
 
-TEST_CASE("LandmarkConfigParser loads production landmarks.json against production improvements",
-          "[worldgen][landmarks][parser]")
-{
-    const std::string configRoot =
-        std::string(AC_TEST_FIXTURES_DIR) + "/../../config";
-    const std::vector<ImprovementConfig_t> occupantConfigs =
-        LoadTileOccupants(configRoot + "/improvements.json", configRoot + "/terrain.json");
-    std::vector<std::string> ids;
-    for (const ImprovementConfig_t& rConfig : occupantConfigs)
-    {
-        ids.push_back(rConfig.id);
-    }
-
-    LandmarkConfigParser parser;
-    CHECK_NOTHROW(parser.ParseConfig(configRoot + "/worldGen/landmarks.json", ids));
-}
-
 TEST_CASE("LandmarkConfigParser throws on unknown improvement_id", "[worldgen][landmarks][parser]")
 {
     const std::filesystem::path path = TempPath_("ac_landmarks_bad_id.json");

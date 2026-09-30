@@ -1,0 +1,338 @@
+[
+  {
+    "id": "Colony_Pod",
+    "name": "Colony Pod",
+    "unit_name": "Colony Pod",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "single_use"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "found_base"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "ModifyPopulation",
+        "parameters": {
+          "amount": -1
+        }
+      }
+    ]
+  },
+  {
+    "id": "Transport",
+    "name": "Transport",
+    "unit_name": "Transport",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": {
+          "carries": [
+            "land"
+          ]
+        }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": {
+          "requires_harbor": true
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "sea"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Supply_Crawler",
+    "name": "Supply Crawler",
+    "unit_name": "Supply",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "supply_crawl"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
+    ],
+    "scrap": {
+      "formula": "minerals"
+    }
+  },
+  {
+    "id": "Terraformer",
+    "name": "Terraformer",
+    "unit_name": "Former",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "terraform"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Probe_Team",
+    "name": "Probe Team",
+    "unit_name": "Probe",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "probe_team"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "non_combatant"
+        }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisUnit",
+        "parameters": {
+          "grid": "zoc",
+          "cell": "deny"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Algorithmic_Enhancement",
+    "name": "Algorithmic Enhancement",
+    "type": "ability",
+    "required_tech": "planetary_networks",
+    "mineral_cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "probe_failure_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_probe_block"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Tectonic_Payload",
+    "name": "Tectonic Payload",
+    "unit_name": "Tectonic",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "Earthquake",
+        "parameters": {
+          "levels_stat": "earthquake_levels"
+        }
+      },
+      {
+        "type": "AddVirtualMinerals",
+        "parameters": {
+          "amount": 5
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
+  },
+  {
+    "id": "Fungal_Payload",
+    "name": "Fungal Payload",
+    "unit_name": "Fungal",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "FungalBloom",
+        "parameters": {
+          "tiles_stat": "fungal_bloom_tiles"
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
+  },
+  {
+    "id": "Planet_Buster",
+    "name": "Planet Buster",
+    "unit_name": "Planet Buster",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "Explosion",
+        "parameters": {
+          "radius_stat": "explosion_radius"
+        }
+      },
+      {
+        "type": "CommitAtrocity",
+        "parameters": {
+          "severity": "Major"
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
+  }
+]

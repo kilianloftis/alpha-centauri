@@ -38,7 +38,7 @@ struct ResearchTestFixture
         luaRuntime = std::make_unique<LuaRuntime>();
         TechCostConfigParser techCostParser;
         techCostConfig = std::make_unique<TechCostConfig_t>(
-            techCostParser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua",
+            techCostParser.ParseConfig(actest::FixturePath("tech_cost.lua"),
                                        *luaRuntime));
         techCostCalculator = std::make_unique<TechCostCalculator>(*techCostConfig, *luaRuntime);
         research = std::make_unique<ResearchManager>(techRegistry, *techCostCalculator,

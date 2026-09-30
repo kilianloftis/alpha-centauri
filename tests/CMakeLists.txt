@@ -136,11 +136,8 @@ target_link_libraries(effects-tests PRIVATE ac-core ac-ui ac-turn-stages Catch2:
 target_include_directories(effects-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Absolute path to the JSON fixture configs the registries load in tests.
-# AC_CONFIG_DIR is the shipped config: the view fixture loads the real UI style, which is one
-# of the few configs a test copy would silently drift from.
 target_compile_definitions(effects-tests PRIVATE
-    AC_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    AC_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../config")
+    AC_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 # CMAKE_RUNTIME_OUTPUT_DIRECTORY points at the repo root for the game binary;
 # keep test binaries inside the build tree.

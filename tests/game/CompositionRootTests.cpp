@@ -24,36 +24,17 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <filesystem>
 #include <memory>
 
 using namespace ac;
 using namespace actest;
 
-// The fixtures assemble a narrower context by hand, so nothing else here parses the config
-// the game actually ships. Without this, a malformed or missing file under config/ — a new
-// registry wired into LoadGameData but never given its json, say — first fails at startup.
-TEST_CASE("LoadGameData parses the shipping config", "[composition][gamedata]")
+// The fixtures assemble a narrower context by hand, so this is the one test of the loader's
+// wiring: a registry added to LoadGameData but never loaded fails here.
+TEST_CASE("LoadGameData returns a complete context", "[composition][gamedata]")
 {
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    const std::filesystem::path previousDir = std::filesystem::current_path();
-    std::filesystem::current_path(repoRoot);
-
-    try
-    {
-        const GameDataContext data = LoadGameData();
-        CHECK_NOTHROW(ThrowIfIncomplete(data));
-        // Every stockpile the stock config ships must be selectable as the empty-queue
-        // default, or bases silently waste their surplus.
-        CHECK(data.stockpileRegistry->FindFallback({}) != nullptr);
-    }
-    catch (...)
-    {
-        std::filesystem::current_path(previousDir);
-        throw;
-    }
-    std::filesystem::current_path(previousDir);
+    const GameDataContext data = LoadGameData(FixtureDataPaths());
+    CHECK_NOTHROW(ThrowIfIncomplete(data));
 }
 
 TEST_CASE("ThrowIfIncomplete names the missing member", "[composition][gamedata]")

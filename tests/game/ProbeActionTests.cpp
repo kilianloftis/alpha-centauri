@@ -64,7 +64,7 @@ struct ProbeGame_
             // luaRuntime is already created by BaseFixture; reuse it.
             TechCostConfigParser techCostParser;
             pTechCostConfig = std::make_unique<TechCostConfig_t>(techCostParser.ParseConfig(
-                std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua",
+                actest::FixturePath("tech_cost.lua"),
                 *fixtures.dataContext.luaRuntime));
             fixtures.dataContext.techCostCalculator = std::make_unique<TechCostCalculator>(
                 *pTechCostConfig, *fixtures.dataContext.luaRuntime);

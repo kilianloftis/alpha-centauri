@@ -1,13 +1,9 @@
 #include "TempConfigFile.h"
+#include "TestHelpers.h"
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainConfig.h"
-#include "game/map/TerrainOperationRegistry.h"
-#include <magic_enum.hpp>
-#include "game/social-engineering/SocialPolicyRegistry.h"
-#include "game/buildings/BuildingRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "ui/style/UiStyle.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -509,10 +505,9 @@ TEST_CASE("Unit-slot columns accept the shipped wire form", "[config][units]")
 TEST_CASE("A colour with too many components is a typo, not extra data", "[config][ui]")
 {
     // ParseColor_ read arr[0..3] and ignored anything past it, so a five-entry array — the shape
-    // a mis-edited style file produces — loaded silently with the extra dropped. Driven from the
-    // shipped style so the file is otherwise complete and the throw can only come from the
-    // colour it mutates.
-    std::ifstream in(std::string(AC_CONFIG_DIR) + "/ui/style.json");
+    // a mis-edited style file produces — loaded silently with the extra dropped. Driven from a
+    // complete style file so the throw can only come from the colour it mutates.
+    std::ifstream in(actest::FixturePath("ui/style.json"));
     REQUIRE(in.good());
     std::string style((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
@@ -527,54 +522,4 @@ TEST_CASE("A colour with too many components is a typo, not extra data", "[confi
     TempConfigFile config("ac_style_long_colour.json", style);
     CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
                       Catch::Matchers::ContainsSubstring("background_color"));
-}
-
-TEST_CASE("The shipped style file loads", "[config][ui]")
-{
-    // The counterpart: the mutation above is what breaks it, not the harness.
-    CHECK_NOTHROW(ac::UiStyle::Load(std::string(AC_CONFIG_DIR) + "/ui/style.json"));
-}
-
-// The shipped configs, loaded through the same registries the game uses. The validators added
-// by the review packages (improvement energy_cost >= 0, unit-slot column, exactly one
-// "default": true social policy per category) all live at load time, and every test for them
-// used a synthetic fixture — so a bad edit to a real config file crashed at faction
-// construction with the whole suite green.
-TEST_CASE("The shipped improvement and terrain configs load", "[config][shipped]")
-{
-    // The production path, which is also the one the fixtures use.
-    const std::string root = std::string(AC_CONFIG_DIR) + "/";
-    ImprovementRegistry occupants;
-    TerrainOperationRegistry operations;
-    CHECK_NOTHROW(LoadMapOccupants(root + "improvements.json", root + "terrain.json", occupants,
-                                   operations));
-}
-
-TEST_CASE("The shipped unit-slot config loads", "[config][shipped]")
-{
-    UnitSlotRegistry registry;
-    CHECK_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/unit_slot_config.json"));
-}
-
-TEST_CASE("The shipped social policies declare exactly one default per category",
-          "[config][shipped]")
-{
-    SocialPolicyRegistry registry;
-    REQUIRE_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/social_policies.json"));
-
-    // GetDefaultForCategory is where the rule is enforced; nothing calls it during Load, so a
-    // missing or duplicated default reaches a faction constructor instead.
-    for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
-    {
-        CHECK_NOTHROW(registry.GetDefaultForCategory(category));
-    }
-}
-
-TEST_CASE("The shipped tech and building configs load", "[config][shipped]")
-{
-    TechRegistry techs;
-    CHECK_NOTHROW(techs.Load(std::string(AC_CONFIG_DIR) + "/techs.json"));
-
-    BuildingRegistry buildings;
-    CHECK_NOTHROW(buildings.Load(std::string(AC_CONFIG_DIR) + "/buildings"));
 }

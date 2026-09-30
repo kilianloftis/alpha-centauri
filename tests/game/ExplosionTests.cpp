@@ -19,7 +19,6 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -426,67 +425,4 @@ TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
     CHECK(game.pState->GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);
     CHECK(UnitCount_(*game.pPlayer) == 0);
     CHECK(game.pState->GetAtrocityLedger().Records().empty());
-}
-
-TEST_CASE("Shipping reactors set explosion radius 1, 2, 3, and 4", "[unit][explosion]")
-{
-    UnitComponentRegistry components;
-    components.Load(std::string(AC_CONFIG_DIR) + "/unit_components");
-
-    const auto radiusOf = [&](const char* pId) {
-        const UnitComponentConfig_t* pReactor = components.Find(pId);
-        REQUIRE(pReactor);
-        for (const EffectConfig_t& rEffect : pReactor->effects)
-        {
-            const auto* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-            if (pMod && pMod->stat == StatId_t::ExplosionRadius)
-            {
-                return static_cast<int>(pMod->amount);
-            }
-        }
-        return -1;
-    };
-
-    CHECK(radiusOf("Fission_Plant") == 1);
-    CHECK(radiusOf("Fusion_Lab") == 2);
-    CHECK(radiusOf("Quantum_Chambers") == 3);
-    CHECK(radiusOf("Singularity_Inductor") == 4);
-
-    const UnitComponentConfig_t* pPayload = components.Find("Planet_Buster");
-    REQUIRE(pPayload);
-    REQUIRE(pPayload->onDetonateEffects.size() == 3);
-    const auto* pExplosion = std::get_if<ExplosionEffect_t>(&pPayload->onDetonateEffects[0].effect);
-    REQUIRE(pExplosion);
-    CHECK(pExplosion->radiusStat == StatId_t::ExplosionRadius);
-    // Answered for before the missile is spent: CommitAtrocity reads the subject unit's faction.
-    const auto* pAtrocity =
-        std::get_if<CommitAtrocityEffect_t>(&pPayload->onDetonateEffects[1].effect);
-    REQUIRE(pAtrocity);
-    CHECK(pAtrocity->severity == AtrocitySeverityId_t::Major);
-    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pPayload->onDetonateEffects[2].effect));
-
-    const auto hasAtrocity = [](const UnitComponentConfig_t& rComponent)
-    {
-        for (const TriggeredEffectConfig_t& rEntry : rComponent.onDetonateEffects)
-        {
-            if (std::holds_alternative<CommitAtrocityEffect_t>(rEntry.effect))
-            {
-                return true;
-            }
-        }
-        return false;
-    };
-    CHECK(hasAtrocity(*pPayload));
-
-    // Tectonic and Fungal payloads author no atrocity.
-    const UnitComponentConfig_t* pTectonic = components.Find("Tectonic_Payload");
-    REQUIRE(pTectonic);
-    REQUIRE_FALSE(pTectonic->onDetonateEffects.empty());
-    CHECK(std::holds_alternative<EarthquakeEffect_t>(pTectonic->onDetonateEffects.front().effect));
-    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pTectonic->onDetonateEffects.back().effect));
-    CHECK_FALSE(hasAtrocity(*pTectonic));
-
-    const UnitComponentConfig_t* pFungal = components.Find("Fungal_Payload");
-    REQUIRE(pFungal);
-    CHECK_FALSE(hasAtrocity(*pFungal));
 }

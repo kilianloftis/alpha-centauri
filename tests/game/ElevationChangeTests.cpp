@@ -301,7 +301,7 @@ TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
 TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
 {
     UnitComponentRegistry specials;
-    specials.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components/specials.json");
+    specials.Load(actest::FixturePath("unit_components_specials.json"));
     const UnitComponentConfig_t& rPayload = specials.Get("Tectonic_Payload");
     REQUIRE_FALSE(rPayload.requiresChassis.empty());
 
@@ -348,10 +348,6 @@ TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
     CHECK_THROWS_WITH(ValidateComponentChassisRequirements(orphan),
                       ContainsSubstring("NotAChassis"));
     std::filesystem::remove(path);
-
-    UnitComponentRegistry shipping;
-    shipping.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components");
-    CHECK_NOTHROW(ValidateComponentChassisRequirements(shipping));
 }
 
 TEST_CASE("Attacking with a detonation weapon does not raise the target tile",

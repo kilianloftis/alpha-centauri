@@ -34,19 +34,14 @@ using Catch::Approx;
 namespace
 {
 
-std::string ShippingDifficultyPath()
-{
-    return std::string(AC_TEST_FIXTURES_DIR) + "/../../config/difficulty.json";
-}
-
 void SelectDifficulty_(FactionFixture& rFixtures, const char* difficultyId);
 
-// Swaps in the shipping levels and selects one. Setting game rules bumps the revision the
+// Swaps in the full difficulty levels and selects one. Setting game rules bumps the revision the
 // effects pool samples, so any faction built earlier re-resolves against the new config.
-void UseShippingDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
+void UseFixtureDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
 {
     rFixtures.dataContext.difficultyConfig = std::make_unique<DifficultyConfig_t>(
-        DifficultyConfigParser{}.ParseConfig(ShippingDifficultyPath()));
+        DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty/levels.json")));
     SelectDifficulty_(rFixtures, difficultyId);
 }
 
@@ -114,7 +109,7 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
 TEST_CASE("AI CostMultiplier applies only to AI factions", "[difficulty][effects]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
 
     Faction& rHuman = fixtures.MakeFaction();
     Faction& rAi = fixtures.MakeFaction();
@@ -128,7 +123,7 @@ TEST_CASE("AI CostMultiplier applies only to AI factions", "[difficulty][effects
 TEST_CASE("Citizen MaxClamp cancels the last-defender baseline only", "[difficulty][effects]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
 
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
@@ -142,7 +137,7 @@ TEST_CASE("Citizen MaxClamp cancels the last-defender baseline only", "[difficul
 TEST_CASE("SizeFreeDrones follows the difficulty matrix", "[difficulty][effects]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "talent");
+    UseFixtureDifficulty_(fixtures, "talent");
 
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
@@ -155,7 +150,7 @@ TEST_CASE("ConqueredDroneCap is 0.25 per difficulty level plus base_conquest -0.
 {
     const auto resolveCap = [](const char* difficultyId) {
         FactionFixture fixtures;
-        UseShippingDifficulty_(fixtures, difficultyId);
+        UseFixtureDifficulty_(fixtures, difficultyId);
         Faction& rFaction = fixtures.MakeFaction();
         BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
         return ResolveBaseStat_(rBase, StatId_t::ConqueredDroneCap, 0.0);
@@ -173,13 +168,13 @@ TEST_CASE("ConqueredDroneCap is 0.25 per difficulty level plus base_conquest -0.
 TEST_CASE("EcologicalDamage MultiplyGeometric is present on Talent", "[difficulty][effects]")
 {
     // Difficulty is one factor of the eco multiplier stack. The fixture difficulty levels
-    // author no eco multiplier, so the shipping Talent level must multiply that baseline by 3.
+    // author no eco multiplier, so the full Talent level must multiply that baseline by 3.
     FactionFixture fixtures;
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
     const double baseline = ResolveBaseStat_(rBase, StatId_t::EcologicalDamage, 1.0);
 
-    UseShippingDifficulty_(fixtures, "talent");
+    UseFixtureDifficulty_(fixtures, "talent");
     CHECK(ResolveBaseStat_(rBase, StatId_t::EcologicalDamage, 1.0) == Approx(3.0 * baseline));
 }
 
@@ -187,7 +182,7 @@ TEST_CASE("TechCostDiff follows difficulty banding", "[difficulty][effects]")
 {
     const auto resolveDiff = [](const char* difficultyId) {
         FactionFixture fixtures;
-        UseShippingDifficulty_(fixtures, difficultyId);
+        UseFixtureDifficulty_(fixtures, difficultyId);
         Faction& rFaction = fixtures.MakeFaction();
         BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
         return ResolveBaseStat_(rBase, StatId_t::TechCostDiff, 0.0);
@@ -206,11 +201,11 @@ TEST_CASE("Bureaucracy PureMultiplier multiplies difficulty and Efficiency",
 {
     const auto resolveBureaucracy = [](const char* difficultyId) {
         FactionFixture fixtures;
-        UseShippingDifficulty_(fixtures, difficultyId);
-        // Shipping Efficiency SE emits MultiplyGeometric on bureaucracy; fixture SE does not.
+        UseFixtureDifficulty_(fixtures, difficultyId);
+        // These Efficiency effects emit MultiplyGeometric on bureaucracy; the shared ones do not.
         fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
         fixtures.dataContext.socialRatingRegistry->Load(
-            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
+            FixturePath("difficulty/social_rating_effects.json"));
         Faction& rFaction = fixtures.MakeFaction();
         BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
         return ResolveBaseStat_(rBase, StatId_t::Bureaucracy, 1.0);
@@ -228,13 +223,13 @@ TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
 {
     // Citizen + Efficiency 0 on 80×40 → limit 16.
     FactionFixture fixtures(80, 40);
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
     fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
     fixtures.dataContext.socialRatingRegistry->Load(
-        std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
+        FixturePath("difficulty/social_rating_effects.json"));
     fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
         PopCompositionConfigParser{}.ParseConfig(
-            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/pop_composition.json"));
+            FixturePath("difficulty/pop_composition.json")));
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
     fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
@@ -275,13 +270,13 @@ TEST_CASE("A captured base gains recently-conquered drones",
           "[difficulty][effects][drones][conquest]")
 {
     FactionFixture fixtures(80, 40);
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
     fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
     fixtures.dataContext.socialRatingRegistry->Load(
-        std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
+        FixturePath("difficulty/social_rating_effects.json"));
     fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
         PopCompositionConfigParser{}.ParseConfig(
-            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/pop_composition.json"));
+            FixturePath("difficulty/pop_composition.json")));
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
     fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
@@ -307,7 +302,7 @@ TEST_CASE("A captured base gains recently-conquered drones",
 TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
 
     Faction& rHuman = fixtures.MakeFaction();
     Faction& rAi = fixtures.MakeFaction();
@@ -321,7 +316,7 @@ TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][ef
 TEST_CASE("Command Center MaxClamp follows difficulty", "[difficulty][effects][upkeep]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "citizen");
+    UseFixtureDifficulty_(fixtures, "citizen");
 
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
@@ -335,7 +330,7 @@ TEST_CASE("Command Center MaxClamp follows difficulty", "[difficulty][effects][u
 TEST_CASE("Changing difficulty mid-campaign re-resolves live factions", "[difficulty][effects]")
 {
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "talent");
+    UseFixtureDifficulty_(fixtures, "talent");
 
     Faction& rHuman = fixtures.MakeFaction();
     Faction& rAi = fixtures.MakeFaction();

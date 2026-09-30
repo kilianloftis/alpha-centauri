@@ -149,6 +149,17 @@ inline void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t 
     rConfig.effects.push_back(effect);
 }
 
+// The improvement and terrain files, under tests/fixtures/, a fixture session loads.
+struct OccupantFiles_t
+{
+    std::string improvements = "improvements.json";
+    std::string terrain = "terrain.json";
+};
+
+// The fixture occupants with the Farm, Forest, Mine and Fungus excludes rules.
+inline const OccupantFiles_t k_ExcludesOccupantFiles{"improvements_excludes.json",
+                                                     "terrain_excludes.json"};
+
 struct WorldFixture
 {
     // Declared first so it is destroyed last: factions, bases, and units created by the
@@ -172,13 +183,13 @@ struct WorldFixture
         return rContext.elevationRules;
     }
 
-    explicit WorldFixture(int width = 9, int height = 9)
+    explicit WorldFixture(int width = 9, int height = 9, const OccupantFiles_t& rOccupants = {})
         : map(width, height, LoadMapRules(dataContext))
     {
         // The same call production uses, so the fixture cannot drift from it or skip the
         // improvement-shadows-operation check that only this path performs.
         dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
-        ac::LoadMapOccupants(FixturePath("improvements.json"), FixturePath("terrain.json"),
+        ac::LoadMapOccupants(FixturePath(rOccupants.improvements), FixturePath(rOccupants.terrain),
                              improvements, *dataContext.terrainOperationRegistry);
         unitComponents.Load(FixturePath("unit_components.json"));
         // Before the TileEffectsContext: it holds the yield rules by reference and stamps
@@ -287,8 +298,8 @@ struct BaseFixture : WorldFixture
     {
     }
 
-    explicit BaseFixture(int width, int height)
-        : WorldFixture(width, height)
+    explicit BaseFixture(int width, int height, const OccupantFiles_t& rOccupants = {})
+        : WorldFixture(width, height, rOccupants)
     {
         ownerDefinition.id = "test_base_owner";
         pOwnerFaction = std::make_unique<ac::Faction>(
@@ -354,8 +365,9 @@ struct FactionFixture : BaseFixture
     }
 
     explicit FactionFixture(int width, int height,
-                            std::vector<ac::EffectConfig_t> worldRules = {})
-        : BaseFixture(width, height)
+                            std::vector<ac::EffectConfig_t> worldRules = {},
+                            const OccupantFiles_t& rOccupants = {})
+        : BaseFixture(width, height, rOccupants)
     {
         factionDefinition.id = "test_faction";
         // NOTE: do not (re)load dataContext.tileYieldRules here. WorldFixture already parsed

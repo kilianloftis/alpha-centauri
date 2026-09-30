@@ -18,7 +18,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -28,12 +27,9 @@ using namespace actest;
 TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
 {
     FactionFixture fixture;
-    // Point the fixture context at shipping natives for EnsureNativeDesign.
+    // Point the fixture context at the full native set for EnsureNativeDesign.
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pDesign = EnsureNativeDesign(rFaction, fixture.dataContext, "Mind_Worm");
@@ -58,10 +54,7 @@ TEST_CASE("Locusts of Chiron are air without fuel", "[native]")
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pDesign =
@@ -75,10 +68,7 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pWorm =
@@ -128,10 +118,7 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pIsle =
@@ -176,10 +163,7 @@ TEST_CASE("Fungal Tower is land psi combat visible in fog", "[native]")
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pDesign =
@@ -195,10 +179,7 @@ TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[nativ
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rOwner = fixture.MakeFaction();
     Faction& rObserver = fixture.MakeFaction();
@@ -235,10 +216,7 @@ TEST_CASE("Alien Artifact is non-combat", "[native]")
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pDesign =
@@ -252,10 +230,7 @@ TEST_CASE("Isle of the Deep cargo capacity scales with IntrinsicXp", "[native][c
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& rFaction = fixture.MakeFaction();
     const NativeDesign* pDesign =
@@ -286,10 +261,7 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    fixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
     Faction& observer = fixture.MakeFaction();
     Faction& owner = fixture.MakeFaction();
@@ -312,13 +284,10 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
 namespace
 {
 
-void LoadShippingNatives_(FactionFixture& rFixture)
+void LoadNatives_(FactionFixture& rFixture)
 {
     rFixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    rFixture.dataContext.nativeUnitRegistry->Load(
-        (repoRoot / "config" / "native_units.json").string());
+    rFixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 }
 
 const NativeDesign& RequireNative_(Faction& rFaction, const GameDataContext& rData,
@@ -359,7 +328,7 @@ TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP"
           "[native][xp]")
 {
     FactionFixture fixture;
-    LoadShippingNatives_(fixture);
+    LoadNatives_(fixture);
     Faction& rFaction = fixture.MakeFaction();
     BaseManager& rBase = fixture.MakeFactionBase(rFaction, 2, 2);
     rBase.GetBuildingManager().AddBuilding("Command_Center");
@@ -413,7 +382,7 @@ TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[nativ
     NativeDesign plainDesign(plainConfig);
 
     FactionFixture fixture;
-    LoadShippingNatives_(fixture);
+    LoadNatives_(fixture);
     Faction& rFaction = fixture.MakeFaction();
     BaseManager& rBase = fixture.MakeFactionBase(rFaction, 2, 2);
     rBase.GetBuildingManager().AddBuilding("Centauri_Preserve");

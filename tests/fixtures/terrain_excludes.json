@@ -1,0 +1,430 @@
+{
+  "features": [
+    {
+      "id": "Flat",
+      "name": "Flat",
+      "tags": [
+        "landform"
+      ],
+      "effects": []
+    },
+    {
+      "id": "Rolling",
+      "name": "Rolling",
+      "tags": [
+        "landform"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Rocky",
+      "name": "Rocky",
+      "tags": [
+        "landform"
+      ],
+      "move_cost": 2,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "minerals",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "tile_defense",
+            "amount": 25,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Arid",
+      "name": "Arid",
+      "tags": [
+        "landform"
+      ],
+      "effects": []
+    },
+    {
+      "id": "Moist",
+      "name": "Moist",
+      "tags": [
+        "landform"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Wet",
+      "name": "Wet",
+      "tags": [
+        "landform"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 2,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "River",
+      "name": "River",
+      "excludes": [
+        "Mine"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "energy",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Water",
+      "name": "Water",
+      "tags": [
+        "landform"
+      ],
+      "suppress_yield_sources": [
+        "Flat",
+        "Rolling",
+        "Rocky",
+        "Arid",
+        "Moist",
+        "Wet",
+        "River",
+        "@resource_bonus"
+      ],
+      "effects": []
+    },
+    {
+      "id": "Ocean",
+      "name": "Ocean",
+      "tags": [
+        "landform"
+      ],
+      "effects": []
+    },
+    {
+      "id": "OceanShelf",
+      "name": "Ocean Shelf",
+      "tags": [
+        "landform"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Fungus",
+      "name": "Fungus",
+      "move_cost": 3,
+      "suppress_yield_sources": [
+        "@landform",
+        "River",
+        "@land_terraform",
+        "SoilEnricher",
+        "KelpFarm",
+        "MiningPlatform",
+        "TidalHarness",
+        "@resource_bonus",
+        "Minerals",
+        "Energy"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "tile_defense",
+            "amount": 25,
+            "op": "AddPercent"
+          }
+        },
+        {
+          "type": "Conceal",
+          "scope": "ThisTile",
+          "parameters": {
+            "channel": "terrain"
+          }
+        }
+      ],
+      "excludes": [
+        "@buildable"
+      ]
+    },
+    {
+      "id": "Nutrients",
+      "name": "Nutrients",
+      "tags": [
+        "resource_bonus"
+      ],
+      "frequency": 10,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 2,
+            "op": "Add",
+            "bypass_clamp": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "Monolith",
+      "name": "Monolith",
+      "tags": [
+        "resource_bonus"
+      ],
+      "frequency": 3,
+      "excludes": [
+        "@resource_bonus",
+        "Monolith"
+      ],
+      "suppress_yield_sources": [
+        "@landform",
+        "River",
+        "@land_terraform",
+        "SoilEnricher",
+        "@resource_bonus"
+      ],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "minerals",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "energy",
+            "amount": 2,
+            "op": "Add"
+          }
+        }
+      ],
+      "on_visit_effects": [
+        {
+          "type": "RestoreHitPoints",
+          "parameters": {
+            "amount": 100,
+            "op": "SetPercent"
+          }
+        },
+        {
+          "type": "GrantXp",
+          "parameters": {
+            "amount": 1,
+            "op": "Add",
+            "remove_host_chance": "1/32"
+          },
+          "once_per": {
+            "scope": "unit",
+            "key": "monolith_xp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Aquifer",
+      "name": "Aquifer",
+      "domain": "land",
+      "effects": []
+    }
+  ],
+  "operations": [
+    {
+      "id": "PlantFungus",
+      "name": "Plant Fungus",
+      "turns_required": 6,
+      "energy_cost": 0,
+      "on_complete_effects": [
+        {
+          "type": "SetTerrainFeature",
+          "parameters": {
+            "feature": "Fungus",
+            "present": true
+          },
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus",
+            "present": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "RemoveFungus",
+      "name": "Remove Fungus",
+      "turns_required": 6,
+      "energy_cost": 0,
+      "on_complete_effects": [
+        {
+          "type": "SetTerrainFeature",
+          "parameters": {
+            "feature": "Fungus",
+            "present": false
+          },
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus"
+          }
+        }
+      ]
+    },
+    {
+      "id": "LevelTerrain",
+      "name": "Level Terrain",
+      "turns_required": 8,
+      "energy_cost": 0,
+      "on_complete_effects": [
+        {
+          "type": "StepRockiness",
+          "parameters": {
+            "steps": -1
+          },
+          "condition": {
+            "kind": "AnyOf",
+            "values": [
+              "Rocky",
+              "Rolling"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "RaiseLand",
+      "name": "Raise Land",
+      "turns_required": 12,
+      "energy_cost": 0,
+      "energy_cost_source": "RaiseLowerQuote",
+      "former_domain": "Any",
+      "on_complete_effects": [
+        {
+          "type": "ElevationChange",
+          "parameters": {
+            "direction": "raise"
+          }
+        }
+      ]
+    },
+    {
+      "id": "LowerLand",
+      "name": "Lower Land",
+      "turns_required": 12,
+      "energy_cost": 0,
+      "energy_cost_source": "RaiseLowerQuote",
+      "former_domain": "Any",
+      "on_complete_effects": [
+        {
+          "type": "ElevationChange",
+          "parameters": {
+            "direction": "lower"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Aquifer",
+      "name": "Aquifer",
+      "turns_required": 18,
+      "energy_cost": 0,
+      "on_complete_effects": [
+        {
+          "type": "SetTerrainFeature",
+          "parameters": {
+            "feature": "Aquifer",
+            "present": true
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              {
+                "kind": "TargetTileHas",
+                "value": "Aquifer",
+                "present": false
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Water",
+                "present": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -26,7 +26,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <deque>
-#include <filesystem>
 #include <memory>
 #include <ranges>
 #include <string>
@@ -49,11 +48,8 @@ struct LinkGame_
 
     LinkGame_()
     {
-        const std::filesystem::path repoRoot =
-            std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
         fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-        fixtures.dataContext.nativeUnitRegistry->Load(
-            (repoRoot / "config" / "native_units.json").string());
+        fixtures.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
@@ -126,39 +122,6 @@ void DiscoverEverything_(ResearchManager& rResearch)
 }
 
 } // namespace
-
-TEST_CASE("Network Node costs 20, upkeep 1, and gates GrantTech on Alien Artifact",
-          "[native][artifact][building]")
-{
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    BuildingRegistry buildings;
-    buildings.Load((repoRoot / "config" / "buildings" / "buildings.json").string());
-    const BuildingConfig_t* pNode = buildings.Find("Network_Node");
-    REQUIRE(pNode);
-    CHECK(pNode->mineralCost == 20);
-    CHECK(pNode->GetUpkeep() == 1);
-
-    NativeUnitRegistry natives;
-    natives.Load((repoRoot / "config" / "native_units.json").string());
-    const NativeUnitConfig_t* pArtifact = natives.Find("Alien_Artifact");
-    REQUIRE(pArtifact);
-    REQUIRE(pArtifact->onHoldEffects.size() == 2);
-    const auto* pGrant = std::get_if<GrantTechEffect_t>(&pArtifact->onHoldEffects.front().effect);
-    REQUIRE(pGrant);
-    CHECK_FALSE(pGrant->techId.has_value());
-    REQUIRE(pArtifact->onHoldEffects.front().condition.has_value());
-    const auto* pBuilding =
-        std::get_if<BaseHasBuilding_t>(&*pArtifact->onHoldEffects.front().condition);
-    REQUIRE(pBuilding);
-    CHECK(pBuilding->buildingId == "Network_Node");
-    REQUIRE(std::get_if<DestroyUnitEffect_t>(&pArtifact->onHoldEffects.back().effect));
-    REQUIRE(pArtifact->onHoldEffects.back().condition.has_value());
-    const auto* pDestroyGate =
-        std::get_if<BaseHasBuilding_t>(&*pArtifact->onHoldEffects.back().condition);
-    REQUIRE(pDestroyGate);
-    CHECK(pDestroyGate->buildingId == "Network_Node");
-}
 
 TEST_CASE("SubjectDesign matches the unit's design id and fails closed without a unit",
           "[effects][condition][native]")

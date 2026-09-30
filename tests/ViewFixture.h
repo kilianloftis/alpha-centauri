@@ -36,13 +36,13 @@ struct ViewFixture : WorldFixture
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<ac::ViewFactory> pFactory;
 
-    // The shipped style, not a hand-built one: views index into it constantly and a test copy
-    // would drift. Loaded once per process — UiStyle is still a singleton (deferred, package 14).
+    // Loaded once per process — UiStyle is still a singleton (deferred, package 14), so every
+    // test loads this same file.
     static void EnsureStyleLoaded()
     {
         static const bool bLoaded = []
         {
-            ac::UiStyle::Load(std::string(AC_CONFIG_DIR) + "/ui/style.json");
+            ac::UiStyle::Load(FixturePath("ui/style.json"));
             return true;
         }();
         (void)bLoaded;
@@ -90,13 +90,11 @@ struct ViewFixture : WorldFixture
         }
 
         // WorldView reads player hotkeys from this path; relative defaults break under ctest's
-        // build-dir cwd. Project actions resolve against the shipping improvements and terrain
-        // operations. GameState uses the fixture registries separately.
-        dataContext.paths.hotkeys = std::string(AC_CONFIG_DIR) + "/ui/hotkeys.json";
+        // build-dir cwd. Project actions resolve against the context's occupants.
+        dataContext.paths.hotkeys = FixturePath("hotkeys.json");
         dataContext.improvementRegistry = std::make_unique<ac::ImprovementRegistry>();
         dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
-        ac::LoadMapOccupants(std::string(AC_CONFIG_DIR) + "/improvements.json",
-                             std::string(AC_CONFIG_DIR) + "/terrain.json",
+        ac::LoadMapOccupants(FixturePath("improvements.json"), FixturePath("terrain.json"),
                              *dataContext.improvementRegistry,
                              *dataContext.terrainOperationRegistry);
         pHotkeys = std::make_unique<ac::HotkeyConfig>(ac::HotkeyConfig::Load(

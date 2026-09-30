@@ -122,7 +122,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     LuaRuntime lua;
     TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider(faction);
@@ -156,7 +156,7 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effec
     LuaRuntime lua;
     TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
@@ -179,7 +179,7 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider ver
     LuaRuntime lua;
     TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider(faction);
@@ -220,7 +220,7 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
     LuaRuntime lua;
     TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider(faction);

@@ -1,0 +1,233 @@
+{
+  "bureaucracy_limit_formula": "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)",
+  "bureaucracy_drone_formula": "max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit))",
+  "size_drone_formula": "max(0, base_size - size_free_drones)",
+  "occupation_drone_formula": "((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))",
+  "assimilation_drones": 5,
+  "assimilation_decay_turns": 10,
+  "drone_type": "Drone",
+  "talent_type": "Talent",
+  "riot_threshold": 1,
+  "golden_age_threshold": 0,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "drones",
+        "amount": 0,
+        "op": "MinClamp"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "drones",
+        "amount": 1,
+        "op": "MaxClamp",
+        "amount_source": "BaseSize"
+      }
+    }
+  ],
+  "golden_age_effects": [
+    {
+      "type": "StatModifier",
+      "scope": "ThisBase",
+      "parameters": {
+        "stat": "econ",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "ThisBase",
+      "parameters": {
+        "stat": "growth_rate",
+        "amount": 2,
+        "op": "AddPercent"
+      }
+    }
+  ],
+  "riot_tiers": [
+    {
+      "min_turns": 1,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "min_turns": 2,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ],
+      "on_enter_effects": [
+        {
+          "type": "DestroyFacility",
+          "parameters": {
+            "count": 1,
+            "exclude_hq": true,
+            "exclude_secret_projects": false
+          }
+        }
+      ]
+    },
+    {
+      "min_turns": 3,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ],
+      "on_enter_effects": [
+        {
+          "type": "Rebel"
+        }
+      ]
+    }
+  ],
+  "rebel_selection": {
+    "distance_mode": "none",
+    "fade_radius": 8,
+    "distance_weight_per_tile": 1,
+    "base_join_weight": 1,
+    "missing_hq_distance": 12
+  }
+}

@@ -18,7 +18,7 @@ void EnsureStyleLoaded_()
 {
     static const bool bLoaded = []
     {
-        UiStyle::Load(std::string(AC_CONFIG_DIR) + "/ui/style.json");
+        UiStyle::Load(actest::FixturePath("ui/style.json"));
         return true;
     }();
     (void)bLoaded;

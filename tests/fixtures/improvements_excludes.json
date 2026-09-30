@@ -1,0 +1,777 @@
+[
+  {
+    "id": "Road",
+    "name": "Road",
+    "turns_required": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "move_cost",
+          "amount": "1/3",
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "MagTube",
+    "name": "Mag Tube",
+    "turns_required": 3,
+    "required_tech": "monopole_magnets",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "move_cost",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Farm",
+    "name": "Farm",
+    "turns_required": 4,
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "excludes": [
+      "Rocky",
+      "Forest",
+      "ThermalBorehole"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Forest",
+    "name": "Forest",
+    "turns_required": 4,
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "excludes": [
+      "Farm",
+      "Mine",
+      "SolarCollector",
+      "ThermalBorehole",
+      "Fungus",
+      "Rocky"
+    ],
+    "suppress_yield_sources": [
+      "@landform"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "KelpFarm",
+    "name": "Kelp Farm",
+    "turns_required": 4,
+    "tags": [
+      "sea_terraform"
+    ],
+    "domain": "sea",
+    "excludes": [
+      "Ocean"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Mine",
+    "name": "Mine",
+    "turns_required": 8,
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "excludes": [
+      "Forest",
+      "ThermalBorehole",
+      "SolarCollector"
+    ]
+  },
+  {
+    "id": "SolarCollector",
+    "name": "Solar Collector",
+    "turns_required": 4,
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "excludes": [
+      "Mine",
+      "Forest",
+      "ThermalBorehole",
+      "Mirror"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount_source": "ElevationEnergy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Bunker",
+    "name": "Bunker",
+    "turns_required": 5,
+    "required_tech": "advanced_military_algorithms",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "collateral_susceptibility",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "bombard_min_hp_percent",
+          "amount": 50,
+          "op": "MinClamp"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Base",
+    "name": "Base",
+    "domain": "land",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 100,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "bombard_min_hp_percent",
+          "amount": 50,
+          "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "collateral_susceptibility",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "land"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "sea"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "orbital"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "airdrop_launch"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
+        },
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Airbase",
+    "name": "Airbase",
+    "turns_required": 10,
+    "required_tech": "doctrine_air_power",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "orbital"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "airdrop_launch"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Sensor",
+    "name": "Sensor",
+    "turns_required": 4,
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "vision",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "channel": "terrain"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Mirror",
+    "name": "Mirror",
+    "turns_required": 12,
+    "required_tech": "ecological_engineering",
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "excludes": [
+      "SolarCollector",
+      "ThermalBorehole"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount_source": "ElevationEnergy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "min_radius": 1,
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "SolarCollector"
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "min_radius": 1,
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Mirror"
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 7,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 7,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Condenser",
+    "name": "Condenser",
+    "turns_required": 12,
+    "required_tech": "ecological_engineering",
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "moisture_tier",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 5,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 5,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ThermalBorehole",
+    "name": "Thermal Borehole",
+    "turns_required": 24,
+    "required_tech": "ecological_engineering",
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "terminates_river": true,
+    "suppress_yield_sources": [
+      "@landform",
+      "Farm",
+      "Mine"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 6,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 6,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 9,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 9,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_cloak_detector",
+    "name": "Detects cloak only on River tiles",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "River"
+        },
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
+  },
+  {
+    "id": "unowned_cloak_detector",
+    "name": "Detect without territory ownership (never stamps ownerFaction)",
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
+  },
+  {
+    "id": "EffectRadiusBeacon",
+    "name": "Effect Radius Beacon (radius on the effect)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "MixedRadius",
+    "name": "Mixed Radius (sibling effects with different radii)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "WeirdAura",
+    "name": "Weird Aura (probe: non-ThisTile effects on an improvement)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 5,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_sam_battery",
+    "name": "Test SAM Battery",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "orbital"
+          ]
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "moisture": {
+    "base_min": 0.25,
+    "base_range": 0.5,
+    "coastal_peak_bonus": 0.12,
+    "coastal_radius": 2,
+    "tropical_peak_bonus": 0.1,
+    "tropical_half_width": 0.35,
+    "orographic_strength": 0.45,
+    "orographic_elev_scale": 1000.0,
+    "arid_threshold": 0.4,
+    "moist_threshold": 0.7
+  },
+  "rockiness": {
+    "low": {
+      "flat": 0.45,
+      "rolling": 0.35,
+      "rocky": 0.2
+    },
+    "average": {
+      "flat": 0.55,
+      "rolling": 0.35,
+      "rocky": 0.1
+    },
+    "high": {
+      "flat": 0.7,
+      "rolling": 0.25,
+      "rocky": 0.05
+    }
+  },
+  "aquifers": {
+    "fraction": 0.002
+  },
+  "fungus": {
+    "fraction": 0.08,
+    "min_patch_tiles": 1,
+    "max_patch_tiles": 16,
+    "patch_size_skew": 4.0
+  },
+  "tile_bonuses": {
+    "fraction": 0.04
+  }
+}

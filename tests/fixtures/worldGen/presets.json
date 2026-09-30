@@ -1,0 +1,16 @@
+[
+  {
+    "id": "islands",
+    "name": "Islands",
+    "type": "Islands",
+    "frequency": 0.035,
+    "octaves": 4,
+    "lacunarity": 2.1,
+    "gain": 0.45,
+    "continent_scale": 1.2,
+    "center_bias": 0.05,
+    "edge_falloff": 0.15,
+    "min_elevation": -4000,
+    "max_elevation": 4000
+  }
+]

@@ -165,7 +165,7 @@ TEST_CASE("UnitDesign GetBaseCost uses CostMultiplier seed when no contributions
 TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[unit][stats][specials]")
 {
     UnitComponentRegistry specials;
-    specials.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components/specials.json");
+    specials.Load(actest::FixturePath("unit_components_specials.json"));
 
     actest::EffectPool pool;
     UnitComponentConfig_t chassis;

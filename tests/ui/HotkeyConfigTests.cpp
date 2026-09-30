@@ -1,3 +1,5 @@
+#include "TestHelpers.h"
+
 #include "ui/HotkeyConfig.h"
 
 #include "game/map/ImprovementRegistry.h"
@@ -24,9 +26,8 @@ struct OccupantRegistries
 
     OccupantRegistries()
     {
-        LoadMapOccupants(std::string(AC_CONFIG_DIR) + "/improvements.json",
-                         std::string(AC_CONFIG_DIR) + "/terrain.json",
-                         improvements, operations);
+        LoadMapOccupants(actest::FixturePath("improvements.json"),
+                         actest::FixturePath("terrain.json"), improvements, operations);
     }
 };
 
@@ -108,11 +109,11 @@ const TerraformHotkey_t* FindProject(const HotkeyConfig& rConfig, const std::str
 
 } // namespace
 
-TEST_CASE("Shipping hotkeys load, with Bombard and Farm both on F", "[ui][hotkeys]")
+TEST_CASE("A hotkeys file loads, with Bombard and Farm both on F", "[ui][hotkeys]")
 {
     OccupantRegistries registries;
     const HotkeyConfig config = HotkeyConfig::Load(
-        std::string(AC_CONFIG_DIR) + "/ui/hotkeys.json", registries.improvements, registries.operations);
+        actest::FixturePath("hotkeys.json"), registries.improvements, registries.operations);
 
     const std::optional<HotkeyChord_t> bombard = config.Find(HotkeyAction_t::Bombard);
     REQUIRE(bombard.has_value());

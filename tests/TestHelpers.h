@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/GameDataPaths.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/ElevationRulesConfigParser.h"
 #include "game/map/MapGenerationConfig.h"
@@ -30,6 +31,52 @@ inline std::string FixturePath(const std::string& rName)
     return std::string(AC_TEST_FIXTURES_DIR) + "/" + rName;
 }
 
+// Every file LoadGameData reads, from tests/fixtures/.
+inline ac::GameDataPaths FixtureDataPaths()
+{
+    ac::GameDataPaths paths;
+    paths.popTypes = FixturePath("pop_types.json");
+    // buildings.json grants an unknown building on purpose, which the loader rejects.
+    paths.buildings = FixturePath("buildings_loadable.json");
+    paths.stockpiles = FixturePath("stockpiles.json");
+    paths.improvements = FixturePath("improvements.json");
+    paths.terrain = FixturePath("terrain.json");
+    paths.unitComponents = FixturePath("unit_components.json");
+    paths.unitSlots = FixturePath("unit_slots.json");
+    paths.nativeUnits = FixturePath("native_units.json");
+    // techs.json plus every tech the other files cite.
+    paths.techs = FixturePath("techs_full.json");
+    paths.socialPolicies = FixturePath("social_policies.json");
+    paths.socialRatings = FixturePath("social_rating_effects.json");
+    paths.factions = FixturePath("factions");
+    paths.popComposition = FixturePath("pop_composition.json");
+    paths.popGrowth = FixturePath("pop_growth.json");
+    paths.production = FixturePath("production.json");
+    paths.commerce = FixturePath("commerce.json");
+    paths.techCost = FixturePath("tech_cost.lua");
+    paths.worldGenPresets = FixturePath("worldGen/presets.json");
+    paths.worldGenDecoration = FixturePath("worldGen/decoration.json");
+    paths.worldGenLandmarks = FixturePath("worldGen/landmarks.json");
+    paths.tileYieldRules = FixturePath("tile_yield_rules.json");
+    paths.elevationRules = FixturePath("map_rules.json");
+    paths.interactionGrids = FixturePath("interaction_grids.json");
+    paths.moraleLevels = FixturePath("morale_levels.json");
+    paths.probeActions = FixturePath("probe_actions.json");
+    paths.baseConquest = FixturePath("base_conquest.json");
+    paths.councilProposals = FixturePath("council/proposals.json");
+    paths.councilRules = FixturePath("council/rules.json");
+    paths.hotkeys = FixturePath("hotkeys.json");
+    paths.difficulty = FixturePath("difficulty.json");
+    paths.policeRules = FixturePath("police_rules.json");
+    paths.worldRules = FixturePath("world_rules.json");
+    paths.atrocities = FixturePath("atrocities.json");
+    paths.ecoDamage = FixturePath("eco_damage.json");
+    paths.ecoDamageFormula = FixturePath("eco_damage.lua");
+    paths.nativeLifeLevels = FixturePath("native_life_levels.json");
+    paths.worldEvents = FixturePath("world_events.json");
+    return paths;
+}
+
 // Map-rules ocean line plus the session-default preset's elevation range.
 // Address is stable for Tile::BindMapRules.
 inline ac::ElevationRulesConfig_t LoadTestMapRules()
@@ -38,13 +85,12 @@ inline ac::ElevationRulesConfig_t LoadTestMapRules()
         ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
     const std::string presetId = ac::MapGenerationConfig_t{}.presetId;
     const std::vector<ac::WorldGenPresetConfig_t> presets =
-        ac::WorldGenPresetConfigParser{}.ParseConfig(std::string(AC_CONFIG_DIR)
-                                                     + "/worldGen/presets.json");
+        ac::WorldGenPresetConfigParser{}.ParseConfig(FixturePath("worldGen/presets.json"));
     const auto it = std::ranges::find_if(
         presets, [&](const ac::WorldGenPresetConfig_t& rPreset) { return rPreset.id == presetId; });
     if (it == presets.end())
     {
-        throw std::runtime_error("config/worldGen/presets.json has no '" + presetId + "' preset");
+        throw std::runtime_error("worldGen/presets.json has no '" + presetId + "' preset");
     }
     ac::WorldGenPresetConfigParser::ApplyElevationRange(rules, *it);
     return rules;

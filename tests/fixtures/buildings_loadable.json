@@ -1,0 +1,1434 @@
+[
+  {
+    "id": "granted_hall",
+    "name": "Granted Hall",
+    "upkeep": 5,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 3,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": {
+          "tech_id": "some_tech"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "grantor_local",
+    "name": "Grantor (ThisBase scope)",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "grantor_global",
+    "name": "Grantor (FactionGlobal scope)",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "nested_outer",
+    "name": "Nested Grantor (outer)",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "nested_middle"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "nested_middle",
+    "name": "Nested Grantor (middle)",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 4,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "cycle_a",
+    "name": "Cycle A",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "cycle_b"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "cycle_b",
+    "name": "Cycle B",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "cycle_a"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "instant_grantor",
+    "name": "On-Complete Grantor",
+    "on_complete_effects": [
+      {
+        "type": "AddBuilding",
+        "parameters": {
+          "building_id": "flat_nutrient"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "instant_infiltrator",
+    "name": "On-Complete Infiltrator",
+    "on_complete_effects": [
+      {
+        "type": "SetInfiltration"
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "flat_nutrient",
+    "name": "Flat Nutrient Building",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "farm_booster",
+    "name": "Farm Booster",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Farm"
+          }
+        }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "unit_attack_array",
+    "name": "Unit Attack Array (+25% attack to all faction units)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "parameters": {
+          "stat": "attack",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "amphibious_grantor",
+    "name": "Amphibious Grantor (grants amphibious enter override to all faction units)",
+    "effects": [
+      {
+        "type": "InteractionOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "grid": "enter",
+          "actor_domain": "land",
+          "surface": "water",
+          "cell": "allow"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "values": [
+            "Water",
+            "Base"
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "cloaking_project",
+    "name": "Cloaking Project (Conceal cloak on all faction units)",
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "FactionUnits",
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Aerospace_Complex",
+    "name": "Aerospace Complex (+2 starting XP to air units)",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 2,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectDomain",
+              "domain": "air"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Skunkworks",
+    "name": "Skunkworks (no prototype surcharge / retool penalty)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "prototype_surcharge_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "retool_penalty_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Command_Center",
+    "name": "Command Center (+2 starting XP to land units)",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 2,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectDomain",
+              "domain": "land"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer",
+    "upkeep": 1
+  },
+  {
+    "id": "Centauri_Preserve",
+    "name": "Centauri Preserve (+1 starting XP to native life)",
+    "mineral_cost": 100,
+    "upkeep": 1,
+    "category": "grow",
+    "required_tech": "centauri_meditation",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "IsNativeLife"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_train_attack",
+    "name": "Test Train Attack (+1 Attack stamped at production)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ProducedAtThisBase",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Command_Nexus",
+    "name": "Command Nexus",
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Command_Center"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Childrens_Creche",
+    "name": "Children's Cr\u00e8che",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "creche"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "IsDefending"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            },
+            {
+              "kind": "OriginBaseIsTargetBase"
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_bonus",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "component_attack_array",
+    "name": "Component Attack Array (+1 attack to units with test_weapon)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "HasComponent",
+          "component": "test_weapon"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_beacon",
+    "name": "World Beacon (+10 energy to every base of every faction)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "energy",
+          "amount": 10
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "labs_amplifier",
+    "name": "Labs Amplifier (+50% Labs at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "labs",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "minerals_amplifier",
+    "name": "Minerals Amplifier (-10% minerals at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": -10,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "growth_shrine",
+    "name": "Growth Shrine (+1 Growth rating in this base only)",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "growth",
+          "amount": 1
+        }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "faction_growth_shrine",
+    "name": "Faction Growth Shrine (+2 Growth rating faction-wide)",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "rating": "growth",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "morale_shrine",
+    "name": "Morale Shrine (+1 Morale rating in this base only)",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "morale",
+          "amount": 1
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "gated_rating_hall",
+    "name": "Granted hall whose Morale rating mod is removed by gene_splicing",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "rating": "morale",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "rating_grantor",
+    "name": "Ungated grantor of gated_rating_hall",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "gated_rating_hall"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "gated_grantor",
+    "name": "Grantor removed by gene_splicing",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "gated_morale_policy_building",
+    "name": "Morale rating mod removed by gene_splicing",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "rating": "morale",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "center_booster",
+    "name": "Base Center Tile Booster",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 2,
+          "op": "Add",
+          "selector": {
+            "kind": "BaseTile"
+          }
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "Sky_Hydroponics_Lab",
+    "name": "Sky Hydroponics Lab",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "Orbital_Power_Transmitter",
+    "name": "Orbital Power Transmitter",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "test_odp_always_hit",
+    "name": "Test ODP Always Hit",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        }
+      },
+      {
+        "type": "Intercept",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_odp_always_miss",
+    "name": "Test ODP Always Miss",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1
+        }
+      },
+      {
+        "type": "Intercept",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_odp_miss_destroy",
+    "name": "Test ODP Miss Destroys Source",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 100
+        }
+      },
+      {
+        "type": "Intercept",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_odp_thisbase_miss_destroy",
+    "name": "Test ODP (ThisBase) Miss Destroys Source",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisBase",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_base_aaa",
+    "name": "Test Base AAA",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisBase",
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Perimeter_Defense",
+    "name": "Perimeter Defense",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "last_defender_pop_loss",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_last_defender_pop_loss_cap",
+    "name": "Test Last Defender Pop Loss Cap",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "last_defender_pop_loss",
+          "amount": 1,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_capture_facility_shield",
+    "name": "Test Capture Facility Shield",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "capture_facilities_destroyed_min",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "capture_facilities_destroyed_max_percent",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_secret_project",
+    "name": "Test Secret Project",
+    "secret_project": true,
+    "effects": [],
+    "category": "discover"
+  },
+  {
+    "id": "test_facility_a",
+    "name": "Test Facility A",
+    "allow_multiple": true,
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "test_hurry_facility",
+    "name": "Test Hurry Facility",
+    "mineral_cost": 20,
+    "allow_multiple": true,
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "test_gated_facility",
+    "name": "Test Gated Facility",
+    "required_tech": "advanced_build",
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "upkeep_hall",
+    "name": "Upkeep Hall",
+    "allow_multiple": true,
+    "upkeep": 2,
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "test_facility_b",
+    "name": "Test Facility B",
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "energy_tap",
+    "name": "Energy Tap (+10 energy at this base)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "Headquarters",
+    "name": "Headquarters",
+    "mineral_cost": 0,
+    "upkeep": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "headquarters"
+        }
+      }
+    ],
+    "scrap": {
+      "formula": null
+    },
+    "category": "conquer"
+  },
+  {
+    "id": "drone_hall",
+    "name": "Drone Hall (+2 drones at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "drones",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "talent_academy",
+    "name": "Talent Academy (+1 talent at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "talents",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "punishment_sphere",
+    "name": "Punishment Sphere (-1 talent at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "talents",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "free_support_depot",
+    "name": "Free Support Depot (+2 free unit support at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "free_unit_support",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "support_cost_penalty",
+    "name": "Support Cost Penalty (+1 mineral upkeep on all faction units)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "mineral_cache",
+    "name": "Mineral Cache (+50 minerals at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 50,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "founding_minerals_project",
+    "name": "Test Project (+5 starting minerals to all owner bases)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 5,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "Recreation_Commons",
+    "name": "Recreation Commons",
+    "mineral_cost": 4,
+    "category": "build",
+    "required_tech": "",
+    "upkeep": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "drones",
+          "amount": -2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "commerce_rate_doubler",
+    "name": "Commerce Rate Doubler (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rate",
+          "amount": 100,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "commerce_energy_bonus_shrine",
+    "name": "Commerce Energy Bonus Shrine (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "commerce_energy_bonus",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "commerce_rating_shrine",
+    "name": "Commerce Rating Shrine (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "Network_Node",
+    "name": "Network Node",
+    "mineral_cost": 20,
+    "upkeep": 1
+  },
+  {
+    "id": "world_unit_attack",
+    "name": "World Unit Attack (+1 attack to every unit)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_tile_defense",
+    "name": "World Tile Defense (+50% tile defense)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_move_clamp",
+    "name": "World Move Clamp (move cost ceiling 0)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "move_cost",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_intercept_always_hit",
+    "name": "World Intercept Always Hit",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "land"
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Pressure_Dome",
+    "name": "Pressure Dome",
+    "category": "build",
+    "mineral_cost": 0,
+    "upkeep": 0,
+    "effects": []
+  },
+  {
+    "id": "test_tree_farm",
+    "name": "Test Tree Farm",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_hybrid_forest",
+    "name": "Test Hybrid Forest",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_eco_preserve",
+    "name": "Test Eco Preserve",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_eco_temple",
+    "name": "Test Eco Temple",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_nanoreplicator",
+    "name": "Test Nanoreplicator",
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_orbital_mining",
+    "name": "Test Orbital Mining",
+    "mineral_cost": 10,
+    "category": "build",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_dirty_facility",
+    "name": "Test Dirty Facility",
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_planet_plus1",
+    "name": "Test Planet +1",
+    "mineral_cost": 10,
+    "category": "grow",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "planet",
+          "amount": 1
+        }
+      }
+    ]
+  }
+]

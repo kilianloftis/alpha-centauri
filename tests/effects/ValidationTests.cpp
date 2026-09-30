@@ -399,10 +399,8 @@ TEST_CASE("ValidateEffectReferences: HasComponent condition ids must exist",
 TEST_CASE("ValidateTriggeredEffectReferences: SubjectDesign ids must exist",
           "[effects][validation][condition]")
 {
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
     NativeUnitRegistry natives;
-    natives.Load((repoRoot / "config" / "native_units.json").string());
+    natives.Load(actest::FixturePath("native_units_full.json"));
 
     TriggeredEffectConfig_t good;
     good.effect = GrantTechEffect_t{};

@@ -1,0 +1,301 @@
+[
+  {
+    "id": "build_tech",
+    "name": "Build Tech",
+    "category": "build"
+  },
+  {
+    "id": "grow_tech",
+    "name": "Grow Tech",
+    "category": "grow"
+  },
+  {
+    "id": "discover_tech",
+    "name": "Discover Tech",
+    "category": "discover"
+  },
+  {
+    "id": "conquer_tech",
+    "name": "Conquer Tech",
+    "category": "conquer"
+  },
+  {
+    "id": "advanced_build",
+    "name": "Advanced Build",
+    "category": "build",
+    "prerequisites": [
+      "build_tech"
+    ]
+  },
+  {
+    "id": "efficient_maintenance",
+    "name": "Efficient Maintenance",
+    "category": "build",
+    "prerequisites": [
+      "advanced_build"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "upkeep_hall"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fusion_power",
+    "name": "Fusion Power",
+    "category": "discover",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "quantum_power",
+    "name": "Quantum Power",
+    "category": "discover",
+    "prerequisites": [
+      "fusion_power"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "intellectual_integrity",
+    "name": "Intellectual Integrity",
+    "category": "discover"
+  },
+  {
+    "id": "industrial_automation",
+    "name": "Industrial Automation",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "environmental_economics",
+    "name": "Environmental Economics",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "planetary_economics",
+    "name": "Planetary Economics",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_economics",
+    "name": "Industrial Economics",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_nanorobotics",
+    "name": "Industrial Nanorobotics",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sentient_econometrics",
+    "name": "Sentient Econometrics",
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "graviton_theory",
+    "name": "Graviton Theory",
+    "category": "discover",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "orbital_insertion"
+        }
+      }
+    ]
+  },
+  {
+    "id": "secrets_of_the_human_brain",
+    "name": "Secrets of the Human Brain",
+    "category": "discover",
+    "on_discover_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": {
+          "selection": "Available"
+        },
+        "once_per": {
+          "scope": "world",
+          "key": "secrets_of_the_human_brain_first"
+        }
+      }
+    ]
+  },
+  {
+    "id": "discover_chain_parent",
+    "name": "Discover Chain Parent",
+    "category": "discover",
+    "on_discover_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": {
+          "tech_id": "discover_chain_child"
+        }
+      }
+    ]
+  },
+  {
+    "id": "discover_chain_child",
+    "name": "Discover Chain Child",
+    "category": "discover"
+  },
+  {
+    "id": "centauri_meditation",
+    "name": "Centauri Meditation",
+    "category": "discover"
+  },
+  {
+    "id": "some_tech",
+    "name": "Some Tech",
+    "category": "discover"
+  },
+  {
+    "id": "gene_splicing",
+    "name": "Gene Splicing",
+    "category": "grow"
+  },
+  {
+    "id": "monopole_magnets",
+    "name": "Monopole Magnets",
+    "category": "build"
+  },
+  {
+    "id": "advanced_military_algorithms",
+    "name": "Advanced Military Algorithms",
+    "category": "conquer"
+  },
+  {
+    "id": "doctrine_air_power",
+    "name": "Doctrine: Air Power",
+    "category": "conquer"
+  },
+  {
+    "id": "ecological_engineering",
+    "name": "Ecological Engineering",
+    "category": "grow"
+  },
+  {
+    "id": "orbital_spaceflight",
+    "name": "Orbital Spaceflight",
+    "category": "build"
+  },
+  {
+    "id": "advanced_spaceflight",
+    "name": "Advanced Spaceflight",
+    "category": "build"
+  },
+  {
+    "id": "advanced_ecological_engineering",
+    "name": "Advanced Ecological Engineering",
+    "category": "grow"
+  },
+  {
+    "id": "mind_machine_interface",
+    "name": "Mind/Machine Interface",
+    "category": "discover"
+  }
+]

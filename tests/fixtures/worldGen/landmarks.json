@@ -1,0 +1,13 @@
+[
+  {
+    "id": "NutrientPatch",
+    "improvement_id": "Nutrients",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 8,
+    "shape": {
+      "kind": "disk",
+      "radius": 1
+    }
+  }
+]

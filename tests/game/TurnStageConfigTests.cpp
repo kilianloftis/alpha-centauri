@@ -24,17 +24,17 @@ std::string WriteTempJson_(const std::string& contents)
     return path;
 }
 
-std::string StockTurnStagesPath_()
+std::string BuiltInTurnStagesPath_()
 {
-    return std::string(AC_TEST_FIXTURES_DIR) + "/../../config/turn_stages.json";
+    return actest::FixturePath("turn_stages.json");
 }
 
 } // namespace
 
-TEST_CASE("TurnStageConfigParser loads default turn_stages.json", "[TurnStageConfig]")
+TEST_CASE("TurnStageConfigParser loads a stage list", "[TurnStageConfig]")
 {
     TurnStageConfigParser parser;
-    const auto stages = parser.ParseConfig(StockTurnStagesPath_());
+    const auto stages = parser.ParseConfig(BuiltInTurnStagesPath_());
     REQUIRE_FALSE(stages.empty());
     for (const auto& stage : stages)
     {
@@ -42,13 +42,12 @@ TEST_CASE("TurnStageConfigParser loads default turn_stages.json", "[TurnStageCon
     }
 }
 
-// Every stock stage id must resolve to a registered creator of the matching kind. Without
-// this, a typo or a wrong repeatForEachFaction flag in turn_stages.json only fails at
-// startup: the parser accepts unknown ids as mod stages, so parsing alone proves nothing.
-TEST_CASE("Every stock turn stage id resolves to a built-in creator", "[TurnStageConfig]")
+// Every built-in stage id must resolve to a registered creator of the matching kind. The parser
+// accepts unknown ids as mod stages, so parsing alone proves nothing.
+TEST_CASE("Every built-in turn stage id resolves to a built-in creator", "[TurnStageConfig]")
 {
     TurnStageFactory factory;
-    factory.LoadConfig(StockTurnStagesPath_());
+    factory.LoadConfig(BuiltInTurnStagesPath_());
     const TurnStageRegistries_t registries = factory.CreateStages();
 
     const size_t created = registries.global.size() + registries.perFaction.size();

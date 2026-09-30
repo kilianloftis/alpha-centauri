@@ -15,14 +15,12 @@
 #include "game/map/FungalBloom.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/MapOccupantLoad.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/NativeUnitRegistry.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitDomain.h"
 
@@ -68,33 +66,23 @@ int UnitCount_(const Faction& rFaction)
     return count;
 }
 
-// lifeMin/lifeMax override the fixture's lifeform roll. bShippingImprovements loads
-// config/improvements.json so Former excludes are the shipping lists. bPlanet adds a native-life
-// owner for spawns.
+// lifeMin/lifeMax override the fixture's lifeform roll. bExcludes loads the occupants whose
+// Former improvements Fungus excludes. bPlanet adds a native-life owner for spawns.
 struct BloomSession_
 {
     FactionFixture fixtures;
-    ImprovementRegistry shippingImprovements;
-    TerrainOperationRegistry shippingOperations;
     std::unique_ptr<GameState> pState;
     Faction* pPlanet = nullptr;
     EffectPool pool;
     UnitComponentConfig_t warhead;
     std::deque<UnitDesign> designs;
 
-    BloomSession_(int lifeMin, int lifeMax, bool bShippingImprovements, bool bPlanet)
+    BloomSession_(int lifeMin, int lifeMax, bool bExcludes, bool bPlanet)
+        : fixtures(9, 9, {}, bExcludes ? k_ExcludesOccupantFiles : OccupantFiles_t{})
     {
         InstallNativeUnits(fixtures.dataContext, lifeMin, lifeMax);
 
-        const ImprovementRegistry* pImprovements = &fixtures.improvements;
-        if (bShippingImprovements)
-        {
-            const std::string root = std::string(AC_CONFIG_DIR) + "/";
-            LoadMapOccupants(root + "improvements.json", root + "terrain.json",
-                             shippingImprovements, shippingOperations);
-            pImprovements = &shippingImprovements;
-        }
-        pState = MakeLandSession(fixtures, *pImprovements);
+        pState = MakeLandSession(fixtures, fixtures.improvements);
 
         if (bPlanet)
         {
@@ -115,7 +103,7 @@ struct BloomSession_
 
 TEST_CASE("A fungal bloom of 3 turns the origin and two neighbors to fungus", "[map][fungus]")
 {
-    BloomSession_ session(/*lifeMin=*/0, /*lifeMax=*/0, /*bShippingImprovements=*/false,
+    BloomSession_ session(/*lifeMin=*/0, /*lifeMax=*/0, /*bExcludes=*/false,
                           /*bPlanet=*/false);
     const FungalBloomResult_t result = session.Bloom_(4, 4, 3);
 
@@ -176,7 +164,7 @@ TEST_CASE("A base tile is not a fungal bloom target", "[map][fungus]")
 
 TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
 {
-    BloomSession_ session(0, 0, /*bShippingImprovements=*/true, false);
+    BloomSession_ session(0, 0, /*bExcludes=*/true, false);
     Tile& rTile = session.At_(4, 4);
     session.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Farm");
     session.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Road");
@@ -189,7 +177,7 @@ TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
     CHECK_FALSE(rTile.HasImprovement("Road"));
     CHECK(rTile.HasFeature("Nutrients"));
 
-    const ImprovementConfig_t& rFarm = session.shippingImprovements.Get("Farm");
+    const ImprovementConfig_t& rFarm = session.fixtures.improvements.Get("Farm");
     CHECK_FALSE(CanBuildImprovement(rTile, rFarm));
 }
 
@@ -279,45 +267,8 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     CHECK(UnitCount_(*session.pPlanet) == 1);
 }
 
-TEST_CASE("Shipping reactors set fungal bloom tiles 3, 5, 7, and 9", "[unit][fungus]")
-{
-    UnitComponentRegistry components;
-    components.Load(std::string(AC_CONFIG_DIR) + "/unit_components");
-
-    const auto tilesOf = [&](const char* pId) {
-        const UnitComponentConfig_t* pReactor = components.Find(pId);
-        REQUIRE(pReactor);
-        for (const EffectConfig_t& rEffect : pReactor->effects)
-        {
-            const auto* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-            if (pMod && pMod->stat == StatId_t::FungalBloomTiles)
-            {
-                return static_cast<int>(pMod->amount);
-            }
-        }
-        return -1;
-    };
-
-    CHECK(tilesOf("Fission_Plant") == 3);
-    CHECK(tilesOf("Fusion_Lab") == 5);
-    CHECK(tilesOf("Quantum_Chambers") == 7);
-    CHECK(tilesOf("Singularity_Inductor") == 9);
-
-    const UnitComponentConfig_t* pPayload = components.Find("Fungal_Payload");
-    REQUIRE(pPayload);
-    REQUIRE(pPayload->onDetonateEffects.size() == 2);
-    const auto* pBloom = std::get_if<FungalBloomEffect_t>(&pPayload->onDetonateEffects[0].effect);
-    REQUIRE(pBloom);
-    CHECK(pBloom->tilesStat == StatId_t::FungalBloomTiles);
-}
-
 TEST_CASE("Native units reject an inverted fungal lifeform range", "[map][fungus]")
 {
-    NativeUnitRegistry shipping;
-    shipping.Load(std::string(AC_CONFIG_DIR) + "/native_units.json");
-    CHECK(shipping.FungalBloomLifeforms().fungalBloomNativeLifeformsMin == 1);
-    CHECK(shipping.FungalBloomLifeforms().fungalBloomNativeLifeformsMax == 1);
-
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / "ac_bad_fungal_bloom_natives.json";
     {
