@@ -817,6 +817,8 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Deferred:** `NextStep`'s full Dijkstra per move fragment (wants a benchmark, sequenced with package 10); the `[L]` hygiene block (batched into package 16); and the *shape* of the `GameDataContext` dependency — removing `SetGameDataContext` needs the `GameState` god-facade split. Note the stacking rule ships off, so its new throw is not reachable in a real session today.
 
+**Update (2026-09-30):** the `GameDataContext` item is done without the god-facade split. `GameState` holds the ruleset, session-level code reads `GameState::GetGameData()`, and `SetGameDataContext` is gone. The `GameState` / `Faction` god-facade split stays deferred.
+
 ### Package 8 — Units: combat, probes, conquest (2026-08-06)
 
 **Status:** complete — both [H] and all six [M] fixed; the [L] hygiene block is batched into package 16.  
@@ -1102,8 +1104,8 @@ when the parser actually *rejects* a non-empty `scriptPath` with an explicit mes
 
 `UiStyle` is a 36-member typed bag *and* a file-scope singleton reached through `Style()`. UI code
 cannot take a `const UiStyle&` at construction, and a test cannot supply an alternate theme
-without mutating process state — so `ViewFixture` loads the shipped `config/ui/style.json` once
-per process because it has no other option.
+without mutating process state — so `ViewFixture` loads `tests/fixtures/ui/style.json` once per
+process because it has no other option.
 
 ### Why now
 

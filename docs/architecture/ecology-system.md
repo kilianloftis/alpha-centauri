@@ -96,7 +96,8 @@ stage caps the roll at `eco_damage.json`'s `fungal_pop.max_chance_percent`.
 
 ## Components
 
-- **`BaseEcology`** (owned by `BaseManager`): walks the base tile plus
+- **`BaseEcology`** (owned by `BaseManager`, which hands it the `EcoDamageCalculator` and the
+  atrocity config from `BaseRules_t` at construction): walks the base tile plus
   `WorkerAssignmentManager::GetWorkableTiles()`, resolving each tile's own
   `CollectTileEffects` in the tile's context (so a `TargetTileHas` condition such as the
   sea-base term applies). A tile adds its worked weight only when `IsTileWorkedByThisBase`

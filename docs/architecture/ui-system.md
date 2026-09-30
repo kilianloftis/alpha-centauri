@@ -213,6 +213,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### WorldView Input Routing
 - **Coordinator**: `WorldView::HandleKey` and `WorldView::HandleMouse` are thin coordinators that dispatch to owned sub-controllers before handling view-lifecycle input themselves.
+- **Dependencies**: `WorldView` takes `GameState` and `HotkeyConfig`, not the ruleset. Order legality comes from the session's executors — founding (`TryFoundBase`), terraform eligibility (`CanStartTerraformProject`) and probe menus (`ProbeActionExecutor`) — which read definition data from `GameState::GetGameData()`.
 - **HotkeyConfig**: Loaded once from `config/ui/hotkeys.json`. Chords there cover unit orders, `Bombard`, each former project by its id, camera pans, world chrome (`Cancel`, `EndTurn`, `NextUnit`), and view shortcuts. `ctrl`, `alt`, and `shift` are part of the chord. An action with no entry is unbound. Order actions may share a chord; the selected unit decides which one is valid, and two valid orders on that chord throw.
 - **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&`, `WorldMap&`, and `HotkeyConfig&`. Pans with the `PanLeft`, `PanRight`, `PanUp`, and `PanDown` chords and will later own mouse edge-scroll state (last mouse position, scroll accumulator).
 - **UnitOrderInputController**: Owned by `WorldView`; constructed with `HotkeyConfig&`. Dispatches the order chords (`Hold`, `SkipTurn`, `AttachTransport`, `UnloadTransport`, `Disband`, `SupplyCrawl`, `FoundBase`, `Detonate`, `Airdrop`). Supply crawl, found base, detonate, and airdrop count only when the selected unit can perform them, so a shared chord can resolve to a different order. Two orders that are both valid throw. Also handles right-click-and-hold for `MoveOrder_t`. A long-press inside bombard range sets a bombard request; `WorldView` calls `TryBeginBombard_` from that flag.
@@ -221,7 +222,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
-- **Dependencies**: `GameState`, `GameDataContext`, `Graphics`
+- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`
 - **Owner**: `Engine` creates and owns it during initialization
 - **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
   `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,

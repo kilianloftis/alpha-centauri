@@ -116,6 +116,11 @@ Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`
 > `GameDataContext` around wholesale; the leaf classes it feeds (`BaseManager`,
 > `PopulationManager`, `BuildingManager`) now declare narrow, named dependencies instead of
 > taking the whole struct.
+>
+> **Status (2026-09-30):** `Engine` owns the context and holds it `const`. `GameState`,
+> `Faction` and `ViewFactory` hold it, and `GameState::GetGameData()` is the only accessor that
+> hands it out. `Faction::CreateBase` no longer takes it; `BaseManager` takes a `BaseRules_t`
+> bundle built by `MakeBaseRules`.
 
 `include/game/GameDataContext.h` documents itself as "immutable definition data loaded once at startup; never serialised — always reconstructible from config files." In reality it holds:
 

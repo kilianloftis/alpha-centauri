@@ -55,10 +55,11 @@ it, and concealment still applies. Destroying the tower removes the marker.
 
 ## Factory
 
-`EnsureNativeDesign(Faction&, GameDataContext&, nativeId)` registers (or returns) the
-faction’s `NativeDesign` by stable config id — same role as `EnsureAdHocDesign` for
+`EnsureNativeDesign(Faction&, const NativeUnitRegistry&, nativeId)` registers (or returns)
+the faction’s `NativeDesign` by stable config id — same role as `EnsureAdHocDesign` for
 component lists. A fungal bloom calls it on the session's native-life faction (Planet,
-`config/factions/planet/`) for each lifeform it spawns. Eco-damage fungal-pop spawning
+`config/factions/planet/`) for each lifeform it spawns, with the registry from
+`GameState::GetGameData()`. Eco-damage fungal-pop spawning
 should call it the same way.
 
 ## Lifecycle starting XP

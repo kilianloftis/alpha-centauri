@@ -201,7 +201,7 @@ the rest of the turn when `AttackingEndsTurn`.
 
 **Bombard.** A unit with the `bombard` rule flag has no melee attack. `IsWithinBombardRange`
 is the declare gate: the flag, any remaining movement fragments, and Chebyshev distance in
-`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `F` is bombard targeting or the Farm terraform binding. The key walks those actions, runs the one that is valid, and throws when both are. The next click fires a targeting shot. `CollectBombardTargets`
+`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `F` is bombard targeting or the Farm terraform binding. The key walks those actions, runs the one that is valid, and throws when both are. Whether the terraform binding is valid is `UnitOrderExecutor::CanStartTerraformProject`, the same check `TryStartTerraform` makes: it resolves the project id against the improvements and the terrain operation registry the executor took at construction, and reads the elevation rules of the Former's world. The next click fires a targeting shot. `CollectBombardTargets`
 chooses the duel or the strike list from the same hostile census melee uses (surface units,
 then embarked cargo on a base) and the same `attack_unit` gate. `TryBombard` resolves that
 choice, and when `TileHasUnits` is false removes one random id from `NonBaseImprovementIds`.
@@ -341,4 +341,6 @@ Razing (population reaching zero) tombstones the base's Secret Projects through
 Both entry points need session-wide state the map and pathfinder cannot supply. That reaches
 the executor through `IUnitOrderWorld`, a narrow interface `GameState` implements and passes
 to the executor's constructor. It is nullable: movement-only test harnesses build an executor
-with no world, which disables intercept and conquest but leaves stepping intact.
+with no world, which disables intercept and conquest but leaves stepping intact. The conquest
+data — `base_conquest.json` and the escape pod's unit components — comes from the session's
+ruleset, `GameState::GetGameData()`.
