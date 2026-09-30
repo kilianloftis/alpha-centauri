@@ -9,6 +9,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/ElevationChange.h"
+#include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -165,9 +166,9 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
     return std::nullopt;
 }
 
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
-                              const ElevationRulesConfig_t& rRules)
+int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap)
 {
+    const ElevationRulesConfig_t& rRules = rTile.MapRules();
     if (rRules.referenceLevelMeters <= 0)
     {
         throw std::logic_error("QuoteRaiseLowerEnergyCost: reference_level_meters must be > 0");
@@ -195,18 +196,18 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
 }
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
-                        const GameState& rGameState, const ElevationRulesConfig_t& rRules)
+                        const GameState& rGameState)
 {
     if (rProject.energyCostSource == EnergyCostSource_t::RaiseLowerQuote)
     {
         return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId(),
-                                         rGameState.GetWorldMap(), rRules);
+                                         rGameState.GetWorldMap());
     }
     return rProject.project.energyCost;
 }
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
-                       const GameState& rGameState, const ElevationRulesConfig_t& rRules)
+                       const GameState& rGameState)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::Terraform))
     {
@@ -226,12 +227,13 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
     }
 
     const std::vector<CoexistenceOverrideEffect_t> overrides = ActiveCoexistenceOverrides(rUnit);
-    if (!CanApplyProject_(rUnit, rProject, rUnit.GetTile(), overrides, rRules))
+    if (!CanApplyProject_(rUnit, rProject, rUnit.GetTile(), overrides,
+                          rUnit.GetTile().MapRules()))
     {
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, rProject, rGameState, rRules);
+    const int cost = TerraformEnergyCost(rUnit, rProject, rGameState);
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 

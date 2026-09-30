@@ -57,8 +57,6 @@ struct AttackGame_
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
-        pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
-
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";
         aiDefinition = fixtures.factionDefinition;
@@ -79,7 +77,7 @@ struct AttackGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         while (pBase->GetPopulation().GetSize() < pop)

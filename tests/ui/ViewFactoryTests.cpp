@@ -48,7 +48,7 @@ TEST_CASE("Opening a base needs the player faction too", "[ui][factory]")
         fixture.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rOwner.CreateBase(
         fixture.pState->AllocateBaseId(), "Rival", fixture.pState->GetWorldMap().GetTile(4, 4),
-        fixture.dataContext, fixture.pState->GetTileEffects(),
+        fixture.pState->GetTileEffects(),
         fixture.pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
 

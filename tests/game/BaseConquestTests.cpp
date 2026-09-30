@@ -79,8 +79,6 @@ struct ConquestGame_
         fixtures.dataContext.baseConquestConfig->escapeColonyPod.componentIds = {
             "test_chassis", "test_colony_pod"};
 
-        pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
-
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";
         playerDefinition.identity.species = playerSpecies;
@@ -104,7 +102,7 @@ struct ConquestGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         while (pBase->GetPopulation().GetSize() < pop)

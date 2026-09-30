@@ -119,7 +119,6 @@ public:
     // new address — for future save/load reconstruction, NOT the live transfer path (see
     // TransferBaseTo).
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
-                                        const GameDataContext& rDataContext,
                                         TileEffectsContext& rTileEffects,
                                         const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
     // Identity-preserving ownership move: ReleaseBase → rebind owner → rReceiver.AddBase.
@@ -128,12 +127,11 @@ public:
     // (psych may differ) and migrates this base's building deploy cooldowns.
     // Throws if baseId is missing or rReceiver is this faction.
     void TransferBaseTo(BaseId_t baseId, Faction& rReceiver);
-    // Factory method: unpacks the individual registries/calculators BaseManager needs from
-    // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
-    // named dependencies instead of taking the whole context. If the faction has no
-    // Headquarters, the new base is granted that building (first-base / rebuilt-HQ founding).
+    // Factory method: unpacks the individual registries/calculators BaseManager needs from the
+    // faction's ruleset so BaseManager itself can declare narrow, named dependencies instead of
+    // taking the whole context. If the faction has no Headquarters, the new base is granted
+    // that building (first-base / rebuilt-HQ founding).
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
-                            const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,
                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
                             std::optional<int> initialPopulation = std::nullopt,

@@ -1,7 +1,6 @@
 #include "ui/world/UnitOrderInputController.h"
 
 #include "ui/HotkeyConfig.h"
-#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -124,15 +123,13 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
 
 bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
                                            const Tile* pHoveredTile,
-                                           const Pathfinder* pPathfinder, GameState* pGameState,
-                                           const GameDataContext* pDataContext)
+                                           const Pathfinder* pPathfinder, GameState* pGameState)
 {
     ClearRequestFlags_();
 
     if (rEvent.button == MouseButton_t::Left)
     {
-        return HandleLeftButton_(rEvent, pSelectedUnit, pHoveredTile, pPathfinder, pGameState,
-                                 pDataContext);
+        return HandleLeftButton_(rEvent, pSelectedUnit, pHoveredTile, pPathfinder, pGameState);
     }
 
     // Mouse move: update preview destination while holding.
@@ -169,15 +166,14 @@ bool UnitOrderInputController::HasExceededHoldThreshold_() const
 bool UnitOrderInputController::HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
                                                  const Tile* pHoveredTile,
                                                  const Pathfinder* pPathfinder,
-                                                 GameState* pGameState,
-                                                 const GameDataContext* pDataContext)
+                                                 GameState* pGameState)
 {
     if (rEvent.bPressed)
     {
         return BeginLeftHold_(pSelectedUnit, pHoveredTile);
     }
 
-    return FinishLeftHold_(pPathfinder, pGameState, pDataContext);
+    return FinishLeftHold_(pPathfinder, pGameState);
 }
 
 bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile)
@@ -196,8 +192,7 @@ bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* p
     return true;
 }
 
-bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState,
-                                               const GameDataContext* pDataContext)
+bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState)
 {
     if (!m_bLeftButtonHeld)
     {
@@ -212,7 +207,7 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
     const bool bOtherTile = pMover && pDest && pDest != &pMover->GetTile();
 
     if (bOtherTile && pPathfinder && bHeldLongEnough
-        && TryResolveHoldRelease_(*pMover, *pDest, *pPathfinder, pGameState, pDataContext))
+        && TryResolveHoldRelease_(*pMover, *pDest, *pPathfinder, pGameState))
     {
         return true;
     }
@@ -226,8 +221,7 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
 
 bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& rDest,
                                                       const Pathfinder& rPathfinder,
-                                                      GameState* pGameState,
-                                                      const GameDataContext* pDataContext)
+                                                      GameState* pGameState)
 {
     const WorldMap& rMap = rPathfinder.GetWorldMap();
     if (rMover.GetFlag(RuleFlagId_t::Bombard) && pGameState
@@ -252,7 +246,7 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
             : nullptr;
 
     if (bAdjacent
-        && TryAdjacentInteract_(rMover, rDest, pGameState, pDataContext, pAttackableHostile))
+        && TryAdjacentInteract_(rMover, rDest, pGameState, pAttackableHostile))
     {
         return true;
     }
@@ -262,12 +256,10 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
 
 bool UnitOrderInputController::TryAdjacentInteract_(Unit& rMover, const Tile& rDest,
                                                     GameState* pGameState,
-                                                    const GameDataContext* pDataContext,
                                                     const Unit* pVisibleHostile)
 {
-    if (pGameState && pDataContext
-        && pGameState->GetProbeActions().CanOpenProbeActions(rMover, rDest, *pGameState,
-                                                             *pDataContext))
+    if (pGameState
+        && pGameState->GetProbeActions().CanOpenProbeActions(rMover, rDest, *pGameState))
     {
         m_bProbeActionRequested = true;
         m_pInteractTarget = &rDest;

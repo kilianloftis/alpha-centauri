@@ -52,7 +52,6 @@ struct TerraformGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
@@ -67,7 +66,7 @@ struct TerraformGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = pPlayer->CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         return *pBase;
@@ -266,7 +265,7 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
         former, "RaiseLand", *game.pState));
     CHECK(game.pPlayer->GetEconomy().GetEnergy() < energyBefore);
     game.FinishTerraform(former);
-    const ElevationRulesConfig_t& rRules = game.fixtures.dataContext.elevationRules;
+    const ElevationRulesConfig_t& rRules = tile.MapRules();
     const int raised = tile.GetElevation();
     CHECK(raised >= 1000 + rRules.levelMinMeters);
     CHECK(raised <= 1000 + rRules.levelMaxMeters);

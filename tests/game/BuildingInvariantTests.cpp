@@ -75,7 +75,7 @@ struct BuildingGame_
     {
         BaseManager* pBase = rFaction.CreateBase(
             pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            fixtures.dataContext, pState->GetTileEffects(),
+            pState->GetTileEffects(),
             pState->GetSecretProjectAvailability());
         REQUIRE(pBase != nullptr);
         return *pBase;

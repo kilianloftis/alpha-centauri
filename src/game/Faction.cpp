@@ -388,7 +388,6 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
 
 BaseManager* Faction::CreateBaseFromSnapshot(
     const BaseSnapshot_t& rSnapshot,
-    const GameDataContext& rDataContext,
     TileEffectsContext& rTileEffects,
     const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
 {
@@ -399,16 +398,16 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
-        *rDataContext.buildingRegistry,
-        *rDataContext.stockpileRegistry,
-        *rDataContext.socialRatingRegistry,
-        *rDataContext.popTypeRegistry,
-        *rDataContext.popTypeAvailabilityCalculator,
-        *rDataContext.growthConfig,
-        *rDataContext.productionConfig,
-        *rDataContext.hurryProductionCalculator,
-        *rDataContext.scrapRefundCalculator,
-        *rDataContext.popCompositionCalculator,
+        *m_rDataContext.buildingRegistry,
+        *m_rDataContext.stockpileRegistry,
+        *m_rDataContext.socialRatingRegistry,
+        *m_rDataContext.popTypeRegistry,
+        *m_rDataContext.popTypeAvailabilityCalculator,
+        *m_rDataContext.growthConfig,
+        *m_rDataContext.productionConfig,
+        *m_rDataContext.hurryProductionCalculator,
+        *m_rDataContext.scrapRefundCalculator,
+        *m_rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
         rSnapshot.populationSize,
@@ -425,13 +424,13 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     if (!rSnapshot.productionItemId.empty())
     {
         const IConstructable* pItem = nullptr;
-        if (rDataContext.buildingRegistry)
+        if (m_rDataContext.buildingRegistry)
         {
-            pItem = rDataContext.buildingRegistry->Find(rSnapshot.productionItemId);
+            pItem = m_rDataContext.buildingRegistry->Find(rSnapshot.productionItemId);
         }
-        if (!pItem && rDataContext.stockpileRegistry)
+        if (!pItem && m_rDataContext.stockpileRegistry)
         {
-            pItem = rDataContext.stockpileRegistry->Find(rSnapshot.productionItemId);
+            pItem = m_rDataContext.stockpileRegistry->Find(rSnapshot.productionItemId);
         }
         if (!pItem)
         {
@@ -850,7 +849,6 @@ const BaseManager* Faction::FindNearestBase(const Tile& rFrom) const
 }
 
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
-                                  const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
                                   const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
                                   std::optional<int> initialPopulation,
@@ -862,16 +860,16 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     }
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
-        *rDataContext.buildingRegistry,
-        *rDataContext.stockpileRegistry,
-        *rDataContext.socialRatingRegistry,
-        *rDataContext.popTypeRegistry,
-        *rDataContext.popTypeAvailabilityCalculator,
-        *rDataContext.growthConfig,
-        *rDataContext.productionConfig,
-        *rDataContext.hurryProductionCalculator,
-        *rDataContext.scrapRefundCalculator,
-        *rDataContext.popCompositionCalculator,
+        *m_rDataContext.buildingRegistry,
+        *m_rDataContext.stockpileRegistry,
+        *m_rDataContext.socialRatingRegistry,
+        *m_rDataContext.popTypeRegistry,
+        *m_rDataContext.popTypeAvailabilityCalculator,
+        *m_rDataContext.growthConfig,
+        *m_rDataContext.productionConfig,
+        *m_rDataContext.hurryProductionCalculator,
+        *m_rDataContext.scrapRefundCalculator,
+        *m_rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
         initialPopulation,
@@ -891,7 +889,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     // without the flag loses half its energy before IncomeCollection — credits fall even as
     // tile production rises. Transfers use AddBase, not CreateBase, and do not grant.
     if (GetHeadquarters() == nullptr
-        && rDataContext.buildingRegistry->Find("Headquarters")
+        && m_rDataContext.buildingRegistry->Find("Headquarters")
         && pRawBase->GetBuildingManager().CanAddBuilding("Headquarters"))
     {
         pRawBase->GetBuildingManager().AddBuilding("Headquarters");

@@ -299,7 +299,7 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
 
     const GameDataContext& rData = rFaction.GetDataContext();
     const UnitDesign* pDesign =
-        EnsureAdHocDesign(rFaction, rData, rGrant.componentIds, "granted");
+        EnsureAdHocDesign(rFaction, *rData.unitComponentRegistry, rGrant.componentIds, "granted");
     if (!pDesign)
     {
         rOut.push_back(UnitsGranted_t{0, {}});

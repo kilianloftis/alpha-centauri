@@ -175,18 +175,6 @@ struct WorldFixture
     ac::UnitComponentRegistry& unitComponents;
     std::unique_ptr<ac::TileEffectsContext> ctx;
 
-    // Every dependency a Faction or BaseManager takes is loaded here rather than in the
-    // derived fixtures, because those dependencies are references now: there is no
-    // "half-loaded context" for a fixture to construct against. That is deliberate — fixture
-    // bases used to be built with a null rating registry and null research manager, so they
-    // resolved social ratings to nothing while the real game resolved them, with no
-    // diagnostic. A fixture that diverges from Engine is not a fixture.
-    static const ac::ElevationRulesConfig_t& LoadMapRules(ac::GameDataContext& rContext)
-    {
-        rContext.elevationRules = LoadTestMapRules();
-        return rContext.elevationRules;
-    }
-
     template <typename T>
     static T& CreateInContext(std::unique_ptr<T>& pSlot)
     {
@@ -194,11 +182,20 @@ struct WorldFixture
         return *pSlot;
     }
 
+    // Every dependency a Faction or BaseManager takes is loaded here rather than in the
+    // derived fixtures, because those dependencies are references now: there is no
+    // "half-loaded context" for a fixture to construct against. That is deliberate — fixture
+    // bases used to be built with a null rating registry and null research manager, so they
+    // resolved social ratings to nothing while the real game resolved them, with no
+    // diagnostic. A fixture that diverges from Engine is not a fixture.
     explicit WorldFixture(int width = 9, int height = 9, const OccupantFiles_t& rOccupants = {})
-        : map(width, height, LoadMapRules(dataContext))
+        : map(width, height, TestMapRules())
         , improvements(CreateInContext(dataContext.improvementRegistry))
         , unitComponents(CreateInContext(dataContext.unitComponentRegistry))
     {
+        // As LoadGameData leaves it: the preset's elevation range belongs to the map.
+        dataContext.elevationRules =
+            ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
         // The same call production uses, so the fixture cannot drift from it or skip the
         // improvement-shadows-operation check that only this path performs.
         dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
@@ -596,7 +593,7 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState
 {
     ac::BaseManager* pBase = rFaction.CreateBase(
         rState.AllocateBaseId(), "TestBase", rState.GetWorldMap().GetTile(x, y),
-        rFixtures.dataContext, rState.GetTileEffects(), rState.GetSecretProjectAvailability());
+        rState.GetTileEffects(), rState.GetSecretProjectAvailability());
     if (!pBase)
     {
         throw std::runtime_error("MakeSessionBase: CreateBase failed");

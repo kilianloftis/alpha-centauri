@@ -268,7 +268,7 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     Tile* pTile = game.pState->GetWorldMap().GetTile(3, 3);
     REQUIRE(pTile);
     BaseManager* pBase = game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "TestBase", pTile, game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "TestBase", pTile,
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     REQUIRE(pBase);
 

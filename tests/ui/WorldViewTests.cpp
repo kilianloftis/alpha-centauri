@@ -386,7 +386,6 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
 TEST_CASE("F builds a Farm for a former", "[ui][world][bombard]")
 {
     ViewFixture fixture;
-    fixture.pState->GetUnitOrderExecutor().SetGameDataContext(fixture.dataContext);
     fixture.pPlayer->GetEconomy().AddEnergy(100);
     Tile* pTile = fixture.pState->GetWorldMap().GetTile(4, 4);
     REQUIRE(pTile);
@@ -438,7 +437,6 @@ TEST_CASE("F arms bombard when the unit can fire, and the next click shoots", "[
 TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]")
 {
     ViewFixture fixture;
-    fixture.pState->GetUnitOrderExecutor().SetGameDataContext(fixture.dataContext);
     fixture.pPlayer->GetEconomy().AddEnergy(100);
     Tile* pTile = fixture.pState->GetWorldMap().GetTile(0, 0);
     REQUIRE(pTile);

@@ -115,7 +115,7 @@ struct UnitProductionGame_
     {
         BaseManager* pBase = rFaction.CreateBase(
             pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            fixtures.dataContext, pState->GetTileEffects(),
+            pState->GetTileEffects(),
             pState->GetSecretProjectAvailability(),
             /*initialPopulation*/ 3);
         REQUIRE(pBase != nullptr);
@@ -585,7 +585,7 @@ TEST_CASE("CreateBaseFromSnapshot restores a queued unit design", "[production][
     REQUIRE(game.pFaction->ExtractBase(base.GetBaseId()).has_value());
 
     BaseManager* pRestored = game.pFaction->CreateBaseFromSnapshot(
-        snapshot, game.fixtures.dataContext, game.pState->GetTileEffects(),
+        snapshot, game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
     REQUIRE(pRestored != nullptr);
     REQUIRE(pRestored->GetProduction().GetCurrentProduction() != nullptr);

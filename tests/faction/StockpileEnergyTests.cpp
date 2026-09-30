@@ -337,7 +337,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(2, 2),
-        fixtures.dataContext, pState->GetTileEffects(),
+        pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
 
@@ -644,7 +644,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
-        fixtures.dataContext, pState->GetTileEffects(),
+        pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
     REQUIRE(pBase->GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
@@ -689,7 +689,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
-        fixtures.dataContext, pState->GetTileEffects(),
+        pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
     pBase->GetProduction().SetMineralStockpile(12);
@@ -700,7 +700,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     const std::optional<BaseSnapshot_t> extracted = faction.ExtractBase(pBase->GetBaseId());
     REQUIRE(extracted.has_value());
     BaseManager* pRestored = faction.CreateBaseFromSnapshot(
-        *extracted, fixtures.dataContext, pState->GetTileEffects(),
+        *extracted, pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pRestored != nullptr);
 

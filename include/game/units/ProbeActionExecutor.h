@@ -21,7 +21,6 @@ class MindControlLedger;
 class WorldMap;
 class GameState;
 class Tile;
-struct GameDataContext;
 
 // Orchestrates probe missions: order-domain gates (moves, adjacency), energy payment,
 // chance/roll setup, effect application, promote, and probe destruction.
@@ -42,13 +41,11 @@ public:
                            const Tile& rTile, GameState& rGameState) const;
 
     // True when the probe may open the action menu against rTile (at least one legal action).
-    bool CanOpenProbeActions(const Unit& rProbe, const Tile& rTile, GameState& rGameState,
-                             const GameDataContext& rDataContext) const;
+    bool CanOpenProbeActions(const Unit& rProbe, const Tile& rTile, GameState& rGameState) const;
 
     // Legal (id, display name) pairs for the probe against rTile.
     std::vector<std::pair<ProbeActionId_t, std::string>> ListAvailableProbeActions(
-        const Unit& rProbe, const Tile& rTile, GameState& rGameState,
-        const GameDataContext& rDataContext) const;
+        const Unit& rProbe, const Tile& rTile, GameState& rGameState) const;
 
     // Pay energy when required, roll mission/escape, apply the action effect, promote XP on
     // full success, and DestroyUnit the probe on mission failure or failed escape.
@@ -57,8 +54,7 @@ public:
     // caller-supplied flag defaulting to false that no caller ever set, so risk_repeat was
     // dead config.
     ProbeActionResult_t TryProbeAction(Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile,
-                                       GameState& rGameState, const GameDataContext& rDataContext,
-                                       const BuildingId_t& facilityId = {});
+                                       GameState& rGameState, const BuildingId_t& facilityId = {});
 
 private:
     bool CanTryProbeAction_(const Unit& rUnit, const ProbeActionConfig_t& rAction,
@@ -72,11 +68,9 @@ private:
     int ResolveMissionRisk_(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
                             const BuildingId_t& facilityId, bool bRepeatAtBase) const;
     void FillProbeChances_(ProbeActionResult_t& rResult, const Unit& rUnit,
-                           const ProbeTarget_t& rTarget, const GameDataContext& rDataContext,
-                           int risk) const;
+                           const ProbeTarget_t& rTarget, int risk) const;
     ProbeActionResult_t ResolveProbeRoll_(Unit& rUnit, const ProbeActionConfig_t& rAction,
                                           const ProbeTarget_t& rTarget, GameState& rGameState,
-                                          const GameDataContext& rDataContext,
                                           const BuildingId_t& facilityId,
                                           ProbeActionResult_t result,
                                           const ProbeRollResult_t& roll);

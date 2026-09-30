@@ -171,7 +171,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     // during GameState's own construction (same contract as m_secretProjectAvailability).
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
-        *rGameData.moraleCalculator, m_rng, this);
+        *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, this);
     m_pUnitOrderExecutor->SetImprovementVisitHandler(
         [this](Unit& rMover)
         {
@@ -637,16 +637,14 @@ std::optional<CombatResult_t> GameState::TryInterceptAttack(
 }
 
 BaseConquestResult_t GameState::ResolvePostCombatBaseConquest(
-    Unit& rAttacker, const Tile& rDefenderTile, const GameDataContext& rDataContext,
-    std::mt19937& rRng)
+    Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng)
 {
-    return ac::ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *this, rDataContext, rRng);
+    return ac::ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *this, rRng);
 }
 
-BaseConquestResult_t GameState::ResolveBaseEntryConquest(
-    Unit& rMover, const GameDataContext& rDataContext, std::mt19937& rRng)
+BaseConquestResult_t GameState::ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng)
 {
-    return ac::ResolveBaseEntryConquest(rMover, *this, rDataContext, rRng);
+    return ac::ResolveBaseEntryConquest(rMover, *this, rRng);
 }
 
 TileEffectsContext& GameState::GetTileEffects()

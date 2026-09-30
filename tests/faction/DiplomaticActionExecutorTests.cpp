@@ -202,7 +202,6 @@ TEST_CASE("Base transfer without Pact is invalid", "[diplomacy][executor]")
     BaseManager* pBase = game.pPlayer->CreateBase(
         game.pState->AllocateBaseId(), "Gift",
         game.pState->GetWorldMap().GetTile(2, 2),
-        game.fixtures.dataContext,
         game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
     REQUIRE(pBase);
@@ -224,7 +223,6 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     BaseManager* pBase = game.pPlayer->CreateBase(
         game.pState->AllocateBaseId(), "Gift",
         game.pState->GetWorldMap().GetTile(2, 2),
-        game.fixtures.dataContext,
         game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
     REQUIRE(pBase);
@@ -326,7 +324,7 @@ TEST_CASE("The same base cannot be offered twice in one proposal", "[diplomacy][
         game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus_t::Pact);
     BaseManager* pBase = game.pPlayer->CreateBase(
         game.pState->AllocateBaseId(), "Gift", game.pState->GetWorldMap().GetTile(2, 2),
-        game.fixtures.dataContext, game.pState->GetTileEffects(),
+        game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
     REQUIRE(pBase);
 

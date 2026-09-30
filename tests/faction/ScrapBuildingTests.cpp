@@ -249,7 +249,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(2, 2),
-        fixtures.dataContext, pState->GetTileEffects(),
+        pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
 

@@ -423,7 +423,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = rFaction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
-        fixtures.dataContext, pState->GetTileEffects(),
+        pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
 

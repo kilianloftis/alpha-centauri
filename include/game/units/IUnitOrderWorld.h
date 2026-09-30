@@ -13,7 +13,6 @@ class BaseManager;
 class Tile;
 class TileEffectsContext;
 class Unit;
-struct GameDataContext;
 
 // Narrow session surface UnitOrderExecutor needs beyond the map / pathfinder it already
 // holds. GameState implements it; movement-only harnesses construct the executor with a
@@ -30,11 +29,9 @@ public:
         std::mt19937& rRng) = 0;
 
     virtual BaseConquestResult_t ResolvePostCombatBaseConquest(
-        Unit& rAttacker, const Tile& rDefenderTile, const GameDataContext& rDataContext,
-        std::mt19937& rRng) = 0;
+        Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) = 0;
 
-    virtual BaseConquestResult_t ResolveBaseEntryConquest(
-        Unit& rMover, const GameDataContext& rDataContext, std::mt19937& rRng) = 0;
+    virtual BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) = 0;
 };
 
 } // namespace ac

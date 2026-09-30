@@ -89,7 +89,7 @@ struct ModHarness_
     {
         BaseManager* pBase = pFaction->CreateBase(
             pState->AllocateBaseId(), "ModBase", pState->GetWorldMap().GetTile(x, y),
-            fixtures.dataContext, pState->GetTileEffects(),
+            pState->GetTileEffects(),
             pState->GetSecretProjectAvailability());
         REQUIRE(pBase != nullptr);
         return *pBase;

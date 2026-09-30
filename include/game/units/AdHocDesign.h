@@ -8,8 +8,8 @@ namespace ac
 {
 
 class Faction;
+class UnitComponentRegistry;
 class UnitDesign;
-struct GameDataContext;
 
 // Assembles a UnitDesign from a bare list of component ids and registers it with the faction's
 // Military, returning the design (or the existing one, since UnitDesign::GetId is derived from
@@ -20,13 +20,13 @@ struct GameDataContext;
 // because designs are per-faction and player-authored and there is no registry of named ones.
 //
 // Empty componentIds returns nullptr — a legitimate "this ruleset has no such unit". An id that
-// is not in the component registry throws: callers validate their ids at load (see
-// GameDataContext), so reaching here with a bad one is a programmer error, and returning null
-// would silently swallow the unit at the one moment the rule fires.
+// is not in rComponents throws: callers validate their ids at load (see LoadGameData), so
+// reaching here with a bad one is a programmer error, and returning null would silently swallow
+// the unit at the one moment the rule fires.
 //
 // slotPrefix names the generated slots ("escape_slot_0", …); it only has to be unique within
 // one design.
-const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const GameDataContext& rDataContext,
+const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegistry& rComponents,
                                     std::span<const std::string> componentIds,
                                     std::string_view slotPrefix);
 

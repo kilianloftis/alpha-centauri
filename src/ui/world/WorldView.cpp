@@ -12,7 +12,6 @@
 #include "ui/world/EndTurnButton.h"
 #include "ui/world/MinimapDisplay.h"
 #include "game/GameState.h"
-#include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
@@ -29,7 +28,6 @@
 #include "game/units/FuelRules.h"
 #include "game/units/AirdropRules.h"
 #include "game/units/AttackRules.h"
-#include "game/units/TerraformRules.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/world/AirdropFailMessages.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -61,7 +59,6 @@ constexpr int    k_InvalidTileCoord  = -1;
 
 WorldView::WorldView(
     GameState& rGameState,
-    GameDataContext& rGameDataContext,
     const HotkeyConfig& rHotkeys,
     const WorldMap& rWorldMap,
     WindowLayout_t layout,
@@ -73,7 +70,6 @@ WorldView::WorldView(
 )
 : IWorldView(layout)
 , m_rGameState(rGameState)
-, m_rGameDataContext(rGameDataContext)
 , m_rHotkeys(rHotkeys)
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
@@ -538,8 +534,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         }
         else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
         {
-            if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(
-                    *pControllable, m_rGameState, m_rGameDataContext))
+            if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(*pControllable, m_rGameState))
             {
                 // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
                 SelectNextAvailableUnit_();
@@ -696,8 +691,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     }
 
     const bool bOrderHandled = m_pUnitOrderInputController->HandleMouse(
-        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState,
-        &m_rGameDataContext);
+        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState);
 
     if (bOrderHandled)
     {
@@ -826,11 +820,8 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
             {
                 continue;
             }
-            const std::optional<TerraformProject_t> resolved = FindTerraformProject(
-                rBinding.projectId, *m_rGameDataContext.improvementRegistry,
-                *m_rGameDataContext.terrainOperationRegistry);
-            if (!resolved
-                || !CanStartTerraform(rUnit, *resolved, m_rGameState, m_rGameDataContext.elevationRules))
+            if (!m_rGameState.GetUnitOrderExecutor().CanStartTerraformProject(
+                    rUnit, rBinding.projectId, m_rGameState))
             {
                 continue;
             }
@@ -970,8 +961,8 @@ void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPla
 void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
 {
     std::vector<std::pair<ProbeActionId_t, std::string>> actions =
-        m_rGameState.GetProbeActions().ListAvailableProbeActions(
-            rProbe, rTargetTile, m_rGameState, m_rGameDataContext);
+        m_rGameState.GetProbeActions().ListAvailableProbeActions(rProbe, rTargetTile,
+                                                                 m_rGameState);
     if (actions.empty())
     {
         return;
@@ -996,8 +987,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
                                }
                                const ProbeActionResult_t result =
                                    m_rGameState.GetProbeActions().TryProbeAction(
-                                       *pProbe, id, *pTargetTile, m_rGameState,
-                                       m_rGameDataContext);
+                                       *pProbe, id, *pTargetTile, m_rGameState);
                                if (result.outcome != ProbeActionOutcome_t::Rejected)
                                {
                                    SelectNextAvailableUnit_();

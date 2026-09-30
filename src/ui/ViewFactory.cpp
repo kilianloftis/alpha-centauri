@@ -30,7 +30,7 @@ Faction* ViewFactory::RequirePlayerFaction_() const
 
 ViewFactory::ViewFactory(
     GameState& rGameState,
-    GameDataContext& rGameDataContext,
+    const GameDataContext& rGameDataContext,
     const HotkeyConfig& rHotkeys,
     Graphics& rGraphics,
     GameSettings& rSettings
@@ -54,7 +54,6 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
 {
     return std::make_unique<WorldView>(
         m_rGameState,
-        m_rGameDataContext,
         m_rHotkeys,
         m_rGameState.GetWorldMap(),
         layout,

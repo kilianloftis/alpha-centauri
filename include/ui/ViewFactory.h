@@ -21,7 +21,7 @@ namespace ac
 
 class Faction;
 class GameState;
-class GameDataContext;
+struct GameDataContext;
 class GameSettings;
 class Graphics;
 class BaseManager;
@@ -35,7 +35,7 @@ class ViewFactory
 public:
     ViewFactory(
         GameState& rGameState,
-        GameDataContext& rGameDataContext,
+        const GameDataContext& rGameDataContext,
         const HotkeyConfig& rHotkeys,
         Graphics& rGraphics,
         GameSettings& rSettings
@@ -107,7 +107,7 @@ private:
     Faction* RequirePlayerFaction_() const;
 
     GameState& m_rGameState;
-    GameDataContext& m_rGameDataContext;
+    const GameDataContext& m_rGameDataContext;
     const HotkeyConfig& m_rHotkeys;
     Graphics& m_rGraphics;
     GameSettings& m_rSettings;

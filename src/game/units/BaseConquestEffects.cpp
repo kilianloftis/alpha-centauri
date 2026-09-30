@@ -111,8 +111,8 @@ bool NoteIfAlreadyRazed_(BaseManager& rBase, BaseConquestResult_t& rResult)
 }
 
 int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount,
-                     GameState& rGameState, const GameDataContext& rDataContext,
-                     const EscapeColonyPodConfig_t& rPodConfig, std::mt19937& rRng)
+                     GameState& rGameState, const EscapeColonyPodConfig_t& rPodConfig,
+                     std::mt19937& rRng)
 {
     if (podCount <= 0)
     {
@@ -120,7 +120,8 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     }
 
     const UnitDesign* pDesign =
-        EnsureAdHocDesign(rFleeingFaction, rDataContext, rPodConfig.componentIds, "escape");
+        EnsureAdHocDesign(rFleeingFaction, *rGameState.GetGameData().unitComponentRegistry,
+                          rPodConfig.componentIds, "escape");
     if (!pDesign)
     {
         return 0;
@@ -155,7 +156,6 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
 // Human ↔ Progenitor capture: the base keeps one pop, half the displaced colonists flee as
 // escape pods. Reports both counts through rResult, which owns every conquest tally.
 void ApplySpeciesClashPopulation_(BaseManager& rBase, GameState& rGameState,
-                                  const GameDataContext& rDataContext,
                                   const BaseConquestConfig_t& rConfig, std::mt19937& rRng,
                                   BaseConquestResult_t& rResult)
 {
@@ -170,7 +170,7 @@ void ApplySpeciesClashPopulation_(BaseManager& rBase, GameState& rGameState,
     const int flee = removed / 2;
 
     rResult.escapePodsSpawned = SpawnEscapePods_(
-        rOwner, rBase.GetTile(), flee, rGameState, rDataContext, rConfig.escapeColonyPod, rRng);
+        rOwner, rBase.GetTile(), flee, rGameState, rConfig.escapeColonyPod, rRng);
 
     // Leave population 1 in the base; flee pods are separate units on adjacent tiles.
     rResult.populationLost = RemovePopulation_(rBase, removed);
@@ -228,12 +228,12 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameSta
 }
 
 BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameState& rGameState,
-                                   const GameDataContext& rDataContext, std::mt19937& rRng)
+                                   std::mt19937& rRng)
 {
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::Captured;
 
-    const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rDataContext);
+    const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rGameState.GetGameData());
     Faction& rOldOwner = rBase.GetFaction();
     Faction& rNewOwner = rCapturer.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
@@ -248,7 +248,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
 
     if (bCrossSpecies)
     {
-        ApplySpeciesClashPopulation_(rBase, rGameState, rDataContext, rConfig, rRng, result);
+        ApplySpeciesClashPopulation_(rBase, rGameState, rConfig, rRng, result);
     }
     else
     {
@@ -271,7 +271,6 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
 BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
                                                    const Tile& rDefenderTile,
                                                    GameState& rGameState,
-                                                   const GameDataContext& rDataContext,
                                                    std::mt19937& rRng)
 {
     BaseManager* pBase = rGameState.FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY());
@@ -304,7 +303,6 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
 
 BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
                                               GameState& rGameState,
-                                              const GameDataContext& rDataContext,
                                               std::mt19937& rRng)
 {
     BaseManager* pBase =
@@ -329,7 +327,7 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
 
     if (CanCaptureBase(rMover))
     {
-        return ApplyCapture_(rMover, *pBase, rGameState, rDataContext, rRng);
+        return ApplyCapture_(rMover, *pBase, rGameState, rRng);
     }
 
     return {};

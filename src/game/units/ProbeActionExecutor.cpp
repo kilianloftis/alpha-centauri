@@ -12,7 +12,6 @@
 #include "game/map/WorldMap.h"
 #include "game/mind-control/MindControlLedger.h"
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/GameState.h"
 
 #include <algorithm>
@@ -70,8 +69,7 @@ bool ProbeActionExecutor::CanTryProbeAction(const Unit& rUnit,
 }
 
 std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAvailableProbeActions(
-    const Unit& rProbe, const Tile& rTile, GameState& rGameState,
-    const GameDataContext& rDataContext) const
+    const Unit& rProbe, const Tile& rTile, GameState& rGameState) const
 {
     std::vector<std::pair<ProbeActionId_t, std::string>> actions;
     for (const ProbeActionConfig_t& rAction : m_rProbeActions.actions)
@@ -85,15 +83,14 @@ std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAv
 }
 
 bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rTile,
-                                              GameState& rGameState,
-                                              const GameDataContext& rDataContext) const
+                                              GameState& rGameState) const
 {
-    return !ListAvailableProbeActions(rProbe, rTile, rGameState, rDataContext).empty();
+    return !ListAvailableProbeActions(rProbe, rTile, rGameState).empty();
 }
 
 ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile, GameState& rGameState,
-    const GameDataContext& rDataContext, const BuildingId_t& facilityId)
+    const BuildingId_t& facilityId)
 {
     ProbeActionResult_t result;
     const ProbeActionConfig_t* pAction = m_rProbeActions.Find(actionId);
@@ -121,10 +118,9 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     }
 
     const int risk = ResolveMissionRisk_(*pAction, *target, facilityId, bRepeatAtBase);
-    FillProbeChances_(result, rUnit, *target, rDataContext, risk);
+    FillProbeChances_(result, rUnit, *target, risk);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
-    return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, rDataContext, facilityId,
-                             result, roll);
+    return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, result, roll);
 }
 
 bool ProbeActionExecutor::NoteAndCheckRepeatAtBase_(FactionId_t actorFactionId,
@@ -191,8 +187,7 @@ int ProbeActionExecutor::ResolveMissionRisk_(const ProbeActionConfig_t& rAction,
 }
 
 void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const Unit& rUnit,
-                                            const ProbeTarget_t& rTarget,
-                                            const GameDataContext& rDataContext, int risk) const
+                                            const ProbeTarget_t& rTarget, int risk) const
 {
     EffectContext_t ctx;
     const int morale = m_rMorale.EffectiveMoraleLevel(rUnit, ctx);
@@ -216,16 +211,16 @@ void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const 
 
 ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     Unit& rUnit, const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-    GameState& rGameState, const GameDataContext& rDataContext, const BuildingId_t& facilityId,
-    ProbeActionResult_t result, const ProbeRollResult_t& roll)
+    GameState& rGameState, const BuildingId_t& facilityId, ProbeActionResult_t result,
+    const ProbeRollResult_t& roll)
 {
     if (!roll.missionSucceeded)
     {
         return FailMission_(rUnit, result);
     }
 
-    if (!ApplyProbeActionEffect(rUnit, rAction, rTarget, rGameState, rDataContext, facilityId,
-                                result, m_rRng))
+    if (!ApplyProbeActionEffect(rUnit, rAction, rTarget, rGameState, facilityId, result,
+                                m_rRng))
     {
         // Handler failed after paying cost — treat as rejected but keep energy spent.
         result.outcome = ProbeActionOutcome_t::Rejected;

@@ -12,7 +12,6 @@ namespace ac
 class Tile;
 class GameState;
 class HotkeyConfig;
-struct GameDataContext;
 
 class UnitOrderInputController
 {
@@ -20,11 +19,10 @@ public:
     explicit UnitOrderInputController(const HotkeyConfig& rHotkeys);
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
-    // pGameState / pDataContext are used so probe validity can be deferred to
-    // ProbeActionExecutor (via GameState). Attack still uses local enemy-unit checks.
+    // pGameState is used so probe validity can be deferred to ProbeActionExecutor.
+    // Attack still uses local enemy-unit checks.
     bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile,
-                     const Pathfinder* pPathfinder, GameState* pGameState = nullptr,
-                     const GameDataContext* pDataContext = nullptr);
+                     const Pathfinder* pPathfinder, GameState* pGameState = nullptr);
 
     // True after the most recent HandleKey/HandleMouse call assigned an order.
     bool WasOrderAssigned() const { return m_bOrderAssigned; }
@@ -79,14 +77,13 @@ private:
 
     bool HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
                            const Tile* pHoveredTile, const Pathfinder* pPathfinder,
-                           GameState* pGameState, const GameDataContext* pDataContext);
+                           GameState* pGameState);
     bool BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile);
-    bool FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState,
-                         const GameDataContext* pDataContext);
+    bool FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState);
     bool TryResolveHoldRelease_(Unit& rMover, const Tile& rDest, const Pathfinder& rPathfinder,
-                                GameState* pGameState, const GameDataContext* pDataContext);
+                                GameState* pGameState);
     bool TryAdjacentInteract_(Unit& rMover, const Tile& rDest, GameState* pGameState,
-                              const GameDataContext* pDataContext, const Unit* pVisibleHostile);
+                              const Unit* pVisibleHostile);
     bool TryAssignMoveOrder_(Unit& rMover, const Tile& rDest, const Unit* pVisibleHostile);
     bool UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile,
                             const Pathfinder& rPathfinder);

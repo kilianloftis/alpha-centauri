@@ -126,7 +126,6 @@ TEST_CASE("Seeing a foreign base establishes Known", "[diplomacy][first-contact]
     game.pB->CreateBase(
         game.pState->AllocateBaseId(), "Enemy",
         game.pState->GetWorldMap().GetTile(5, 4),
-        game.fixtures.dataContext,
         game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
 

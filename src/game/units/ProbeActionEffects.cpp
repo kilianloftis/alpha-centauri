@@ -240,9 +240,8 @@ bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, GameState& rGameState
 }
 
 bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseManager& rBase,
-                      GameState& rGameState, const GameDataContext& rDataContext,
-                      const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
-                      std::mt19937& rRng)
+                      GameState& rGameState, const BuildingId_t& facilityId,
+                      ProbeActionResult_t& rResult, std::mt19937& rRng)
 {
     Faction& rActor = rProbe.GetFaction();
 
@@ -287,7 +286,6 @@ bool ApplyUnitAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, Unit& rT
 
 bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
                             const ProbeTarget_t& rTarget, GameState& rGameState,
-                            const GameDataContext& rDataContext,
                             const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                             std::mt19937& rRng)
 {
@@ -298,7 +296,7 @@ bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
             if constexpr (std::is_same_v<T, ProbeBaseTarget_t>)
             {
                 return ApplyBaseAction_(rProbe, rAction, rConcrete.rBase, rGameState,
-                                        rDataContext, facilityId, rResult, rRng);
+                                        facilityId, rResult, rRng);
             }
             else
             {

@@ -28,7 +28,6 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/map/TerrainOperationRegistry.h"
 #include <algorithm>
@@ -47,6 +46,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder,
                                      const MoraleCalculator& rMorale,
+                                     const TerrainOperationRegistry& rTerrainOperations,
                                      std::mt19937& rRng,
                                      IUnitOrderWorld* pWorld)
     : m_rMoveCosts(rMoveCosts)
@@ -55,6 +55,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
     , m_rTileEffects(rTileEffects)
     , m_rPathfinder(rPathfinder)
     , m_rMorale(rMorale)
+    , m_rTerrainOperations(rTerrainOperations)
     , m_rRng(rRng)
     , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, rRng)
     , m_pWorld(pWorld)
@@ -102,12 +103,11 @@ bool UnitOrderExecutor::SpendAttackAction_(Unit& rAttacker, bool bSpendRemaining
 
 bool UnitOrderExecutor::ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile)
 {
-    if (!m_pWorld || m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) == nullptr)
+    if (!m_pWorld)
     {
         return false;
     }
-    RequireGameData_("post-combat base conquest");
-    return m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *m_pGameData, m_rRng)
+    return m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, m_rRng)
         .bActorDestroyed;
 }
 
@@ -137,16 +137,6 @@ void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_
         {
             rRevealed.Reveal(*pUnit);
         }
-    }
-}
-
-void UnitOrderExecutor::RequireGameData_(const char* pWhat) const
-{
-    if (!m_pGameData)
-    {
-        throw std::logic_error(
-            std::string("UnitOrderExecutor: ") + pWhat + " needs a GameDataContext, but none was "
-            "bound (SetGameDataContext). This is a wiring error, not a movement-only harness.");
     }
 }
 
@@ -285,17 +275,8 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
     {
         return true;
     }
-    // Only demand game data where a conquest can actually happen. ResolveBaseEntryConquest
-    // no-ops when the arrival tile holds no base, so guarding unconditionally would turn every
-    // step onto ordinary ground into a hard error for any world that has not been handed its
-    // data — far wider than the "capture silently skipped" defect being fixed.
-    if (!m_pWorld->FindBaseAt(rMover.GetTile().GetX(), rMover.GetTile().GetY()))
-    {
-        return true;
-    }
-    RequireGameData_("base entry");
     // A native raider spends itself on the raid, so this can free rMover.
-    return !m_pWorld->ResolveBaseEntryConquest(rMover, *m_pGameData, m_rRng).bActorDestroyed;
+    return !m_pWorld->ResolveBaseEntryConquest(rMover, m_rRng).bActorDestroyed;
 }
 
 void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo)
@@ -504,8 +485,7 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     return result;
 }
 
-BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
-                                             const GameDataContext& rDataContext)
+BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
     {
@@ -535,7 +515,6 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
         rGameState.AllocateBaseId(),
         rFaction.SuggestBaseName(),
         pTile,
-        rDataContext,
         rGameState.GetTileEffects(),
         rGameState.GetSecretProjectAvailability(),
         std::nullopt,
@@ -551,24 +530,27 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
     return pBase;
 }
 
+bool UnitOrderExecutor::CanStartTerraformProject(const Unit& rUnit, const std::string& projectId,
+                                                 const GameState& rGameState) const
+{
+    const std::optional<TerraformProject_t> resolved =
+        FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
+    return resolved && CanStartTerraform(rUnit, *resolved, rGameState);
+}
+
 bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& projectId,
                                           GameState& rGameState)
 {
-    RequireGameData_("terraform");
-    const std::optional<TerraformProject_t> resolved = FindTerraformProject(
-        projectId, m_rTileEffects.GetImprovements(), *m_pGameData->terrainOperationRegistry);
-    if (!resolved)
+    if (!CanStartTerraformProject(rUnit, projectId, rGameState))
     {
         return false;
     }
-    if (!CanStartTerraform(rUnit, *resolved, rGameState, m_pGameData->elevationRules))
-    {
-        return false;
-    }
+    const TerraformProject_t resolved =
+        *FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
 
-    const int cost = TerraformEnergyCost(rUnit, *resolved, rGameState, m_pGameData->elevationRules);
+    const int cost = TerraformEnergyCost(rUnit, resolved, rGameState);
     rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
-    rUnit.SetOrder(TerraformOrder_t{projectId, resolved->project.turnsRequired});
+    rUnit.SetOrder(TerraformOrder_t{projectId, resolved.project.turnsRequired});
     rUnit.SpendRemainingMoveFragments();
     return true;
 }
@@ -731,10 +713,8 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     // tile left the improvement's domain).
 
     // Order remains until Execute clears on Complete — safe to read rOrder here.
-    RequireGameData_("terraform");
     const std::optional<TerraformProject_t> project = FindTerraformProject(
-        rOrder.projectId, m_rTileEffects.GetImprovements(),
-        *m_pGameData->terrainOperationRegistry);
+        rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
     if (!project)
     {
         std::cerr << "Terraform completed with no effect: project '" << rOrder.projectId

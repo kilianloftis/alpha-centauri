@@ -59,8 +59,6 @@ struct ScrambleGame_
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
-        pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
-
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";
         aiDefinition = fixtures.factionDefinition;

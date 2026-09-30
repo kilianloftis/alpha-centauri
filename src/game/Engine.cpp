@@ -235,7 +235,6 @@ void Engine::StartNewGame_()
     WorldGenerator worldGen;
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
-    WorldGenPresetConfigParser::ApplyElevationRange(m_gameDataContext->elevationRules, rPreset);
     m_pGameState = std::make_unique<GameState>(
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
@@ -247,7 +246,6 @@ void Engine::StartNewGame_()
         // Distinct sub-stream from world generation, so changing map size does not shift
         // combat rolls (and vice versa).
         static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
-    m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());
@@ -320,7 +318,6 @@ void Engine::StartNewGame_()
 
         BaseManager* pBase = pFaction->CreateBase(
             m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
-            *m_gameDataContext,
             m_pGameState->GetTileEffects(),
             m_pGameState->GetSecretProjectAvailability(),
             /*initialPopulation=*/3);

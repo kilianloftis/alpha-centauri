@@ -19,7 +19,6 @@ namespace ac
 {
 
 class GameState;
-class GameDataContext;
 class HotkeyConfig;
 class BaseManager;
 class Graphics;
@@ -50,7 +49,6 @@ public:
 
     WorldView(
         GameState& rGameState,
-        GameDataContext& rGameDataContext,
         const HotkeyConfig& rHotkeys,
         const WorldMap& rWorldMap,
         WindowLayout_t layout,
@@ -129,7 +127,6 @@ private:
     void ShowAirdropNotice_(std::string message);
 
     GameState& m_rGameState;
-    GameDataContext& m_rGameDataContext;
     const HotkeyConfig& m_rHotkeys;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;

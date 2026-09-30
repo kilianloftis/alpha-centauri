@@ -55,7 +55,8 @@ struct FuelHarness_
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(), rng)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(),
+                 *fixture.dataContext.terrainOperationRegistry, rng)
     {
     }
 };

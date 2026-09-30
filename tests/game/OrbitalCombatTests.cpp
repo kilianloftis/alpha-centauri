@@ -63,7 +63,7 @@ struct OrbitalGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         return *pBase;

@@ -15,7 +15,7 @@ class TurnStageFactory;
 class TurnProcessor;
 class GameState;
 class EventBridge;
-class GameDataContext;
+struct GameDataContext;
 class HotkeyConfig;
 class ViewFactory;
 class UIManager;
@@ -55,7 +55,7 @@ private:
     // TileEffectsContext all hold non-owning references into the definition data, so it
     // must outlive them. Members are destroyed in reverse declaration order, so GameState
     // (and every faction/base/unit it owns) is torn down while this is still alive.
-    std::unique_ptr<GameDataContext> m_gameDataContext;
+    std::unique_ptr<const GameDataContext> m_gameDataContext;
     // Resolved once in Initialize_ (map config seed, or a drawn one when that is 0) and used to
     // derive every per-faction seed, so a session's random choices are reproducible.
     unsigned int m_sessionSeed = 0;

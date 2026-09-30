@@ -861,7 +861,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
         pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rFaction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
-        fixtures.dataContext, pState->GetTileEffects(), pState->GetSecretProjectAvailability(),
+        pState->GetTileEffects(), pState->GetSecretProjectAvailability(),
         /*initialPopulation*/ 3);
     REQUIRE(pBase != nullptr);
 

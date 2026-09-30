@@ -11,7 +11,6 @@ class Unit;
 class BaseManager;
 class GameState;
 class Tile;
-struct GameDataContext;
 
 // Outcomes of a conquest-related mutation (for tests / UI hooks).
 enum class BaseConquestOutcome_t
@@ -41,13 +40,11 @@ struct BaseConquestResult_t
 BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
                                                    const Tile& rDefenderTile,
                                                    GameState& rGameState,
-                                                   const GameDataContext& rDataContext,
                                                    std::mt19937& rRng);
 
 // Unit entered a foreign base tile with no garrison: capture (!CannotCaptureBases) or raid.
 BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
                                               GameState& rGameState,
-                                              const GameDataContext& rDataContext,
                                               std::mt19937& rRng);
 
 } // namespace ac

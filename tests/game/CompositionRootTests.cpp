@@ -106,7 +106,7 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     // skipped entirely.
     BaseManager* pBase = pFaction->CreateBase(
         state.AllocateBaseId(), "PreExisting", state.GetWorldMap().GetTile(4, 4),
-        fixture.dataContext, state.GetTileEffects(), state.GetSecretProjectAvailability());
+        state.GetTileEffects(), state.GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
 
     Faction& rAdded = state.AddFaction(std::move(pFaction));
@@ -138,7 +138,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
         state.AllocateFactionId(), true, incumbentDef, fixture.dataContext,
         state.GetWorldMap(), settings, k_TestFactionSeed));
     rIncumbent.CreateBase(state.AllocateBaseId(), "Incumbent", state.GetWorldMap().GetTile(2, 4),
-                          fixture.dataContext, state.GetTileEffects(),
+                          state.GetTileEffects(),
                           state.GetSecretProjectAvailability());
     state.GetTileEffects().AddOccupantWithEffects(*state.GetWorldMap().GetTile(4, 4), "Sensor");
     rIncumbent.RebuildVisibility();
@@ -149,7 +149,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
         state.AllocateFactionId(), false, arrivalDef, fixture.dataContext,
         state.GetWorldMap(), settings, k_TestFactionSeed + 1);
     pArrival->CreateBase(state.AllocateBaseId(), "Arrival", state.GetWorldMap().GetTile(6, 4),
-                         fixture.dataContext, state.GetTileEffects(),
+                         state.GetTileEffects(),
                          state.GetSecretProjectAvailability());
 
     // Precondition: the sighting really is one-way.

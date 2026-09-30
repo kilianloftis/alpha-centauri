@@ -100,7 +100,7 @@ struct FoundBaseGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         return *pBase;
@@ -182,7 +182,7 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     REQUIRE(CountUnits_(*game.pPlayer) == 1);
 
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     CHECK(pNew->GetTile().GetX() == 7);
     CHECK(pNew->GetTile().GetY() == 4);
@@ -220,7 +220,7 @@ TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals"
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     // Pod 10 + project AllOwnerBases +5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 15);
@@ -237,7 +237,7 @@ TEST_CASE("Support -2 cancels the colony pod's 10 free founding minerals",
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     // Pod +10 offset by Support ≤ -2 StartingMinerals -10.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 0);
@@ -254,7 +254,7 @@ TEST_CASE("Support -2 still allows project StartingMinerals above the cancelled 
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     // Pod 10 + project 5 + Support -10 → 5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 5);
@@ -272,7 +272,7 @@ TEST_CASE("Founding minerals above the retool threshold may switch freely",
         game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod_rich"}, &home);
 
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     REQUIRE(pNew->GetProduction().GetMineralStockpile() == 40);
 
@@ -299,7 +299,7 @@ TEST_CASE("TryFoundBase without SingleUse leaves the unit alive", "[unit][found-
     REQUIRE_FALSE(pod.GetFlag(RuleFlagId_t::SingleUse));
 
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        pod, *game.pState, game.fixtures.dataContext);
+        pod, *game.pState);
     REQUIRE(pNew);
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 1);
@@ -312,13 +312,13 @@ TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][
 
     Unit& scout = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis"}, &home);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
-        scout, *game.pState, game.fixtures.dataContext));
+        scout, *game.pState));
     CHECK(game.pPlayer->GetBaseCount() == 1);
     CHECK(CountUnits_(*game.pPlayer) == 1);
 
     Unit& tooClose = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_colony_pod"}, &home);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
-        tooClose, *game.pState, game.fixtures.dataContext));
+        tooClose, *game.pState));
     CHECK(game.pPlayer->GetBaseCount() == 1);
     CHECK(CountUnits_(*game.pPlayer) == 2);
 
@@ -332,7 +332,7 @@ TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][
 
     Unit& inForeign = game.MakeUnit(*game.pPlayer, 0, 3, {"test_chassis", "test_colony_pod"}, &home);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
-        inForeign, *game.pState, game.fixtures.dataContext));
+        inForeign, *game.pState));
     CHECK(game.pPlayer->GetBaseCount() == 1);
 }
 
@@ -356,18 +356,18 @@ TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy
     Unit& landPod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
     CHECK(landPod.GetDomain() == UnitDomain_t::Land);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
-        landPod, *game.pState, game.fixtures.dataContext));
+        landPod, *game.pState));
     CHECK(game.pPlayer->GetBaseCount() == 1);
 
     Unit& seaOnLand = game.MakeUnit(*game.pPlayer, 1, 4, {"test_sea_chassis", "test_colony_pod"}, &home);
     BaseManager* pLandFounded = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        seaOnLand, *game.pState, game.fixtures.dataContext);
+        seaOnLand, *game.pState);
     REQUIRE(pLandFounded);
     CHECK_FALSE(pLandFounded->MayOccupyWater());
 
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_sea_chassis", "test_colony_pod"}, &home);
     BaseManager* pSea = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        seaPod, *game.pState, game.fixtures.dataContext);
+        seaPod, *game.pState);
     REQUIRE(pSea);
     CHECK(pSea->GetTile().IsWater());
     CHECK(pSea->MayOccupyWater());
@@ -431,7 +431,7 @@ TEST_CASE("A land base is razed when its tile becomes water unless it may occupy
     water.SetElevation(-100);
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 7, 1, {"test_sea_chassis", "test_colony_pod"});
     BaseManager* pSea = game.pState->GetUnitOrderExecutor().TryFoundBase(
-        seaPod, *game.pState, game.fixtures.dataContext);
+        seaPod, *game.pState);
     REQUIRE(pSea);
     REQUIRE(pSea->MayOccupyWater());
     CrossElevation_(*game.pState, pSea->GetTile(), 500);

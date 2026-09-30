@@ -71,7 +71,7 @@ struct TriggerGame_
         Tile* pTile = pState->GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = pFaction->CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile, fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", pTile,
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         return *pBase;
@@ -493,7 +493,6 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     {
         pTile->SetElevation(100);
     }
-    game.pState->GetUnitOrderExecutor().SetGameDataContext(game.fixtures.dataContext);
 
     Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
     game.pState->GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
@@ -541,7 +540,6 @@ TEST_CASE("Unset visit handler skips Investigate enqueue and auto-apply",
     {
         pTile->SetElevation(100);
     }
-    game.pState->GetUnitOrderExecutor().SetGameDataContext(game.fixtures.dataContext);
     game.pState->GetUnitOrderExecutor().SetImprovementVisitHandler({});
 
     Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
@@ -669,7 +667,7 @@ TEST_CASE("In a probe mission context RecordMindControl credits the actor, not t
     Tile* pTile = game.pState->GetWorldMap().GetTile(4, 4);
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
-        game.pState->AllocateBaseId(), "Target", pTile, game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "Target", pTile,
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     REQUIRE(pVictimBase);
 
@@ -773,7 +771,7 @@ TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not 
     Tile* pTile = game.pState->GetWorldMap().GetTile(4, 4);
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
-        game.pState->AllocateBaseId(), "Target", pTile, game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "Target", pTile,
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     REQUIRE(pVictimBase);
 

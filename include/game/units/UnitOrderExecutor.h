@@ -24,7 +24,7 @@ class Pathfinder;
 class BaseManager;
 class GameState;
 class IUnitOrderWorld;
-struct GameDataContext;
+class TerrainOperationRegistry;
 
 // Outcome of one applied step. A native raider is consumed by the base it raids, so a step
 // can legally end with the mover gone; bMoverDestroyed is the signal that no caller may
@@ -51,13 +51,10 @@ public:
                       TileEffectsContext& rTileEffects,
                       Pathfinder& rPathfinder,
                       const MoraleCalculator& rMorale,
+                      const TerrainOperationRegistry& rTerrainOperations,
                       std::mt19937& rRng,
                       IUnitOrderWorld* pWorld = nullptr);
     ~UnitOrderExecutor() = default;
-
-    // Required for base conquest ownership transfer; Engine / tests set after construction,
-    // matching DiplomaticActionExecutor — GameState is built before the data context binds.
-    void SetGameDataContext(const GameDataContext& rGameData) { m_pGameData = &rGameData; }
 
     // Session visit/investigate policy for tiles with on_visit_effects. Unset skips visit
     // handling (movement-only harnesses). Engine / GameState set after construction.
@@ -72,8 +69,8 @@ public:
     // DestroyUnit'd by the caller (PlayerActions under DeferDestruction), or UnitDestroyed
     // if the unit died advancing the order and is already gone.
     // Clears the unit's order whenever progress is not Continue.
-    // When world + GameDataContext are bound, entering an undefended foreign base may
-    // capture it or trigger a native raid.
+    // When a world is bound, entering an undefended foreign base may capture it or trigger a
+    // native raid.
     OrderProgress_t Execute(Unit& rUnit);
 
     // Drop turn-scoped orders (currently SkipTurn) when moves refresh at TurnStart.
@@ -95,8 +92,8 @@ public:
     // When world is bound, ready Intercept effects may destroy the attacker before
     // CombatResolver runs. Otherwise an eligible Scramble unit may path onto the
     // target tile hop-by-hop and become the combat defender. After the last garrison dies on a
-    // base tile, last-defender casualties / adjacent native raid apply when GameDataContext is
-    // bound — ownership transfer still requires a later enter-tile order while moves remain.
+    // base tile, last-defender casualties / adjacent native raid apply when a world is bound —
+    // ownership transfer still requires a later enter-tile order while moves remain.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
     // One bombard shot. nullopt when the attacker lacks the flag, has no movement
@@ -115,8 +112,12 @@ public:
     // territory). Observers hang off Faction::OnBaseAdded, which CreateBase fires — callers do
     // not wire anything (see EventBridge::WireBase). SingleUse colony pods are DestroyUnit'd
     // here on Expended. Returns the new base, or nullptr.
-    BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState,
-                              const GameDataContext& rDataContext);
+    BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState);
+
+    // Whether rUnit may start projectId (a buildable improvement or a terrain operation) on
+    // its tile now, under the rules of the world it stands in.
+    bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId,
+                                  const GameState& rGameState) const;
 
     // Begin a Former terraform project for projectId (a buildable improvement or a terrain
     // operation). Spends energy up front and
@@ -177,9 +178,6 @@ private:
     // Returns false when the arrival destroyed rMover (native raid).
     bool ApplyArrivalEffects_(Unit& rMover);
     StepResult_t SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
-    // Throws when a path needing the data context is reached without one bound. That
-    // combination used to no-op silently: no capture, no native raid, no diagnostic.
-    void RequireGameData_(const char* pWhat) const;
     void CollectVisibleHostileIds_(const Unit& rObserver,
                                    std::unordered_set<UnitId_t>& rOut) const;
     bool HasNewlyVisibleHostile_(const Unit& rObserver,
@@ -199,9 +197,9 @@ private:
     TileEffectsContext& m_rTileEffects;
     Pathfinder& m_rPathfinder;
     const MoraleCalculator& m_rMorale;
+    const TerrainOperationRegistry& m_rTerrainOperations;
     std::mt19937& m_rRng;
     CombatResolver m_combat;
-    const GameDataContext* m_pGameData = nullptr;
     ImprovementVisitHandler m_improvementVisitHandler;
     IUnitOrderWorld* const m_pWorld;
 };

@@ -86,7 +86,7 @@ struct BlastGame_
     BaseManager& MakeBase_(int x, int y)
     {
         BaseManager* pBase = pPlayer->CreateBase(
-            pState->AllocateBaseId(), "TestBase", &At_(x, y), fixtures.dataContext,
+            pState->AllocateBaseId(), "TestBase", &At_(x, y),
             pState->GetTileEffects(), pState->GetSecretProjectAvailability());
         REQUIRE(pBase);
         return *pBase;
@@ -295,7 +295,7 @@ TEST_CASE("Detonating a Planet Buster names the first foreign base destroyed",
     Faction& rBystander = game.AddFaction_();
 
     BaseManager* pVictimBase = rVictim.CreateBase(
-        game.pState->AllocateBaseId(), "VictimBase", &game.At_(4, 4), game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "VictimBase", &game.At_(4, 4),
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     REQUIRE(pVictimBase);
 
@@ -323,7 +323,7 @@ TEST_CASE("A Planet Buster next to a foreign base names that owner even off the 
     BlastGame_ game;
     Faction& rVictim = game.AddFaction_();
     BaseManager* pVictimBase = rVictim.CreateBase(
-        game.pState->AllocateBaseId(), "VictimBase", &game.At_(5, 4), game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "VictimBase", &game.At_(5, 4),
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     REQUIRE(pVictimBase);
     game.pState->RebuildTerritory();
@@ -344,7 +344,7 @@ TEST_CASE("A Planet Buster on own land that kills foreign units names the enemy"
     BlastGame_ game;
     Faction& rEnemy = game.AddFaction_();
     game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "Home", &game.At_(4, 4), game.fixtures.dataContext,
+        game.pState->AllocateBaseId(), "Home", &game.At_(4, 4),
         game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
     game.pState->RebuildTerritory();
     REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(game.At_(4, 4))

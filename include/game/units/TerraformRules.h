@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
 
@@ -45,14 +44,14 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
                                                       const ImprovementRegistry& rImprovements,
                                                       const TerrainOperationRegistry& rOperations);
 
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
-                              const ElevationRulesConfig_t& rRules);
+// These read the elevation rules of the world the tile or unit stands in.
+int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap);
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
-                       const GameState& rGameState, const ElevationRulesConfig_t& rRules);
+                       const GameState& rGameState);
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
-                        const GameState& rGameState, const ElevationRulesConfig_t& rRules);
+                        const GameState& rGameState);
 
 // Place the project's improvement and fire its on_complete_effects against the Former's tile.
 // An improvement refuses before it removes anything when terrain would still conflict, and
