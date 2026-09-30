@@ -1333,6 +1333,9 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
         case EffectSourceKind_t::WorldRules:
+        case EffectSourceKind_t::EcoDamage:
+        case EffectSourceKind_t::NativeLifeLevel:
+        case EffectSourceKind_t::WorldEvent:
         case EffectSourceKind_t::MoraleLevel:
         case EffectSourceKind_t::NativeUnit:
             bCanSupplyOriginBase = false;

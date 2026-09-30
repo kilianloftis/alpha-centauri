@@ -47,6 +47,10 @@
 #include "game/atrocities/AtrocityConfigParser.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/ecology/EcoDamageCalculator.h"
+#include "game/ecology/EcoDamageConfig.h"
+#include "game/world-events/WorldEventConfig.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -92,10 +96,14 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.councilRules.get(), "councilRules"},
         {rData.difficultyConfig.get(), "difficultyConfig"},
         {rData.atrocitiesConfig.get(), "atrocitiesConfig"},
+        {rData.nativeLifeLevelConfig.get(), "nativeLifeLevelConfig"},
+        {rData.worldEventsConfig.get(), "worldEventsConfig"},
+        {rData.ecoDamageConfig.get(), "ecoDamageConfig"},
         {rData.luaRuntime.get(), "luaRuntime"},
         {rData.droneCalculator.get(), "droneCalculator"},
         {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
         {rData.techCostCalculator.get(), "techCostCalculator"},
+        {rData.ecoDamageCalculator.get(), "ecoDamageCalculator"},
         {rData.hurryProductionCalculator.get(), "hurryProductionCalculator"},
         {rData.scrapRefundCalculator.get(), "scrapRefundCalculator"},
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
@@ -251,6 +259,14 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.difficultyConfig =
         std::make_unique<DifficultyConfig_t>(difficultyParser.ParseConfig(rPaths.difficulty));
 
+    NativeLifeLevelConfigParser nativeLifeParser;
+    rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>(
+        nativeLifeParser.ParseConfig(rPaths.nativeLifeLevels));
+
+    WorldEventsConfigParser worldEventsParser;
+    rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>(
+        worldEventsParser.ParseConfig(rPaths.worldEvents));
+
     // pop_composition.json: drone clamps (effects) plus mood thresholds (plain scalars). Loaded
     // before the Lua-backed calculators that consume it.
     PopCompositionConfigParser compositionParser;
@@ -272,14 +288,19 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         }
     }
 
+    // Effect-declaring and Lua-backed at once: the runtime is created here so eco_damage.lua
+    // can load before ValidateEffectReferences walks eco_damage.json's effect lists.
+    rData.luaRuntime = std::make_unique<LuaRuntime>();
+    EcoDamageConfigParser ecoDamageParser;
+    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(
+        rPaths.ecoDamage, rPaths.ecoDamageFormula, *rData.luaRuntime));
+
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
     ValidateRequiredTechReferences(rData);
 
     // --- Formula configs / calculators (depend on registries + LuaRuntime) ---
-    rData.luaRuntime = std::make_unique<LuaRuntime>();
-
     {
         const std::unordered_map<std::string, double> kSmokeCases[] = {
             {{"attack_strength", 1.0}, {"defense_strength", 1.0}},
@@ -305,6 +326,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         techCostParser.ParseConfig(rPaths.techCost, *rData.luaRuntime));
     rData.techCostCalculator =
         std::make_unique<TechCostCalculator>(*rData.techCostConfig, *rData.luaRuntime);
+    rData.ecoDamageCalculator =
+        std::make_unique<EcoDamageCalculator>(*rData.ecoDamageConfig, *rData.luaRuntime);
 
     rData.hurryProductionCalculator = std::make_unique<HurryProductionCalculator>(
         *rData.productionConfig, *rData.luaRuntime);

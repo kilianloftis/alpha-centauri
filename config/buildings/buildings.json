@@ -118,6 +118,15 @@
           "amount": 1,
           "op": "Add"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ],
     "category": "build",

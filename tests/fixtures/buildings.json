@@ -1248,5 +1248,187 @@
     "mineral_cost": 0,
     "upkeep": 0,
     "effects": []
+  },
+  {
+    "id": "test_tree_farm",
+    "name": "Test Tree Farm",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_hybrid_forest",
+    "name": "Test Hybrid Forest",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_eco_preserve",
+    "name": "Test Eco Preserve",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_eco_temple",
+    "name": "Test Eco Temple",
+    "mineral_cost": 10,
+    "category": "grow",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantCleanMinerals",
+        "parameters": {
+          "amount": 1,
+          "requires_first_bloom": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_nanoreplicator",
+    "name": "Test Nanoreplicator",
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_damage_reduction",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_orbital_mining",
+    "name": "Test Orbital Mining",
+    "mineral_cost": 10,
+    "category": "build",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_dirty_facility",
+    "name": "Test Dirty Facility",
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_planet_plus1",
+    "name": "Test Planet +1",
+    "mineral_cost": 10,
+    "category": "grow",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "planet",
+          "amount": 1
+        }
+      }
+    ]
   }
 ]

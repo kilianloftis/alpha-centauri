@@ -1,0 +1,50 @@
+{
+  "default": "normal",
+  "levels": [
+    {
+      "id": "rare",
+      "name": "Rare",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 1,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ]
+    },
+    {
+      "id": "normal",
+      "name": "Average",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ]
+    },
+    {
+      "id": "abundant",
+      "name": "Abundant",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ]
+    }
+  ]
+}

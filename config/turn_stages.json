@@ -110,6 +110,17 @@
     }
   },
   {
+    "id": "EcoDamage",
+    "name": "Ecological Damage",
+    "description": "Rolls each base's eco-damage score as a fungal-pop percentage and applies eco_damage.json's on_pop_effects on a hit. Must run after Population so the turn's composition is settled, and after WorldEvents so active world events (Perihelion) are in this turn's multiplier stack",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "VictoryConditionChecks",
     "name": "Victory Condition Checks",
     "description": "Checks if any faction has achieved victory",

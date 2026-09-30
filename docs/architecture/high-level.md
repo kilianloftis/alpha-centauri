@@ -95,6 +95,13 @@ graph TB
         CouncilProposalRegistry[CouncilProposalRegistry]
     end
 
+    subgraph "Ecology System"
+        EcologyLedger[EcologyLedger<br/>blooms / grants / virtual minerals]
+        BaseEcology[BaseEcology<br/>per-base score + memo]
+        EcoDamageCalculator[EcoDamageCalculator<br/>eco_damage.lua]
+        WorldEventTracker[WorldEventTracker<br/>active world events]
+    end
+
     subgraph "Configuration"
         TurnStagesConfig[config/turn_stages.json]
         ImprovementsConfigFile[config/improvements.json]
@@ -185,6 +192,11 @@ graph TB
     PlanetaryCouncil --> CouncilProposalRegistry
     PlanetaryCouncil --> Signal
     CouncilEffects --> ActiveEffect
+
+    GameState --> EcologyLedger
+    GameState --> WorldEventTracker
+    BaseEcology --> EcoDamageCalculator
+    BaseEcology --> EcologyLedger
 
     BaseDisplay --> Graphics
     BaseDisplay --> Base
@@ -552,9 +564,22 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Dependencies**:
   - `CommitAtrocity` is authored in trigger lists (`genetic_plague`'s `on_success_effects`; the Planet Buster `on_detonate_effects`). Planet Buster victim comes from `AtrocityRules::BlastVictim` over what `Explosion` destroyed (first foreign base, else first foreign unit), handed over in `derivedVictim` rather than territory
   - Writes Vendetta (through `ApplyVendetta`) and `PlanetaryCouncil::Expel`
-  - Read by `CommerceCalculator` (sanctions zero a pair) and, once built, the eco-damage term
+  - Read by `CommerceCalculator` (sanctions zero a pair) and `BaseEcology` (counted records' `eco_virtual_minerals`)
   - Unknown severity names fail when the effect list or `atrocities.json` is loaded
 - **Details**: See `docs/architecture/atrocity-system.md` for detailed architecture
+
+### Ecology System
+- **Purpose**: SMAC's per-base ecological damage — a fungal-pop percentage each base rolls every turn — plus the world-event registry whose Perihelion scales it.
+- **Components**:
+  - `BaseEcology` (owned by `BaseManager`, read through `GetEcologicalDamage()`): assembles the terraform sum, minerals, the resolved eco stats and the session ledgers into `EcoDamageInputs_t`, memoized on every revision an input reads.
+  - `EcoDamageCalculator`: thin Lua bridge over `config/eco_damage.lua`; owned by `GameDataContext`.
+  - `EcologyLedger`: per-faction fungal blooms, clean-mineral grants and virtual minerals. World-scoped, owned by `GameState`, sibling of `AtrocityLedger` and `MindControlLedger`.
+  - `WorldEventTracker`: the active set of `config/world_events.json` events. Created by `GameState::CreateWorldEvents`; advanced by the `WorldEvents` stage; active events' effects reach every faction through `CollectWorldExtras`.
+  - `NativeLifeLevelConfig_t`: `config/native_life_levels.json`, selected by `GameRulesConfig_t::nativeLifeLevelId` and injected into `FactionEffectsPool` like difficulty.
+- **Dependencies**:
+  - The `EcoDamage` stage rolls the score after `WorldEvents`, and applies `eco_damage.json`'s `on_pop_effects` (`FungalBloom`) on a hit
+  - `GrantCleanMinerals` (eco facilities' `on_complete_effects`) and `AddVirtualMinerals` (Tectonic Payload's `on_detonate_effects`) write the ledger
+- **Details**: See `docs/architecture/ecology-system.md` for detailed architecture
 
 ### UI Components
 - **Purpose**: Display components that render game information using the Graphics interface

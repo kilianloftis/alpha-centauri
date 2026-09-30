@@ -24,6 +24,9 @@ struct GameRulesConfig_t
     // Id of a level in config/difficulty.json. Empty (the default) defers to that file's
     // "default" key, so the shipping default lives in one place rather than two.
     std::string difficultyId;
+    // Id of a level in config/native_life_levels.json; empty defers to its "default". A
+    // campaign property with the same save caveat as difficultyId.
+    std::string nativeLifeLevelId;
 
     bool operator==(const GameRulesConfig_t&) const = default;
 };

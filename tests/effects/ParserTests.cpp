@@ -85,6 +85,13 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("capture_pop_loss") == StatId_t::CapturePopLoss);
     CHECK(ParseStatId("conquered_drone_cap") == StatId_t::ConqueredDroneCap);
     CHECK(ParseStatId("ecological_damage") == StatId_t::EcologicalDamage);
+    CHECK(ParseStatId("eco_damage_contribution") == StatId_t::EcoDamageContribution);
+    CHECK(ParseStatId("eco_damage_worked_contribution")
+          == StatId_t::EcoDamageWorkedContribution);
+    CHECK(ParseStatId("eco_terraform_scale") == StatId_t::EcoTerraformScale);
+    CHECK(ParseStatId("eco_clean_minerals") == StatId_t::EcoCleanMinerals);
+    CHECK(ParseStatId("eco_damage_reduction") == StatId_t::EcoDamageReduction);
+    CHECK(ParseStatId("eco_mineral_offset") == StatId_t::EcoMineralOffset);
     CHECK(ParseStatId("tech_cost_diff") == StatId_t::TechCostDiff);
     CHECK(ParseStatId("bureaucracy") == StatId_t::Bureaucracy);
 
@@ -1923,6 +1930,71 @@ TEST_CASE("ParseTriggeredEffectConfig: RecordMindControl rejects bad parameters"
 
     CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "RecordMindControl", "scope": "FactionGlobal", "parameters": { "weight": 4 }
+    })")), ContainsSubstring("one-shot"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: GrantCleanMinerals carries an amount and a bloom gate",
+          "[effects][parser][triggered][ecology]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantCleanMinerals",
+                         "parameters": { "amount": 2, "requires_first_bloom": true } })"),
+        "on_complete_effects");
+    const auto* pGrant = std::get_if<GrantCleanMineralsEffect_t>(&config.effect);
+    REQUIRE(pGrant);
+    CHECK(pGrant->amount == 2);
+    CHECK(pGrant->bRequiresFirstBloom);
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: GrantCleanMinerals rejects bad parameters",
+          "[effects][parser][triggered][ecology]")
+{
+    const auto parse = [](const char* pParameters)
+    {
+        return TriggeredEffectParser::ParseTriggeredEffectConfig(
+            json::parse(std::string(R"({ "type": "GrantCleanMinerals", "parameters": )")
+                        + pParameters + " }"),
+            "on_complete_effects");
+    };
+    CHECK_THROWS_AS(parse(R"({ "requires_first_bloom": true })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 0, "requires_first_bloom": true })"),
+                    std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": -1, "requires_first_bloom": true })"),
+                    std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 1.5, "requires_first_bloom": true })"),
+                    std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 1 })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 1, "requires_first_bloom": 1 })"), std::runtime_error);
+
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "GrantCleanMinerals", "scope": "FactionGlobal",
+        "parameters": { "amount": 1, "requires_first_bloom": true }
+    })")), ContainsSubstring("one-shot"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: AddVirtualMinerals carries a positive amount",
+          "[effects][parser][triggered][ecology]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "AddVirtualMinerals", "parameters": { "amount": 5 } })"),
+        "on_detonate_effects");
+    const auto* pAdd = std::get_if<AddVirtualMineralsEffect_t>(&config.effect);
+    REQUIRE(pAdd);
+    CHECK(pAdd->amount == 5);
+
+    const auto parse = [](const char* pParameters)
+    {
+        return TriggeredEffectParser::ParseTriggeredEffectConfig(
+            json::parse(std::string(R"({ "type": "AddVirtualMinerals", "parameters": )")
+                        + pParameters + " }"),
+            "on_detonate_effects");
+    };
+    CHECK_THROWS_AS(parse("{}"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 0 })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": -5 })"), std::runtime_error);
+    CHECK_THROWS_AS(parse(R"({ "amount": 2.5 })"), std::runtime_error);
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "AddVirtualMinerals", "scope": "FactionGlobal", "parameters": { "amount": 5 }
     })")), ContainsSubstring("one-shot"));
 }
 

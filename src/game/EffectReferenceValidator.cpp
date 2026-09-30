@@ -20,6 +20,9 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/DifficultyConfig.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/ecology/EcoDamageConfig.h"
+#include "game/world-events/WorldEventConfig.h"
 #include "game/units/BaseConquestConfig.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/social-engineering/SocialRatingConfig.h"
@@ -200,6 +203,8 @@ struct TriggeredPayloadValidator
 
     void operator()(const CommitAtrocityEffect_t&) const {}
     void operator()(const RecordMindControlEffect_t&) const {}
+    void operator()(const GrantCleanMineralsEffect_t&) const {}
+    void operator()(const AddVirtualMineralsEffect_t&) const {}
 
     // Only terrain a tile stores in its own right can be set: the depth bands come from
     // elevation and the two axes are always present, so writing either here would be undone
@@ -398,6 +403,12 @@ void ValidateEffectReferences(const GameDataContext& rData)
         RequireRegistry(rData.productionConfig, "productionConfig");
     const DifficultyConfig_t& rDifficultyConfig =
         RequireRegistry(rData.difficultyConfig, "difficultyConfig");
+    const NativeLifeLevelConfig_t& rNativeLifeConfig =
+        RequireRegistry(rData.nativeLifeLevelConfig, "nativeLifeLevelConfig");
+    const WorldEventsConfig_t& rWorldEventsConfig =
+        RequireRegistry(rData.worldEventsConfig, "worldEventsConfig");
+    const EcoDamageConfig_t& rEcoDamageConfig =
+        RequireRegistry(rData.ecoDamageConfig, "ecoDamageConfig");
 
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
@@ -483,6 +494,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
         const std::string sourceId =
             std::string("probe_action:") + ProbeActionIdToString(rAction.id);
         validate(rAction.effects, sourceId);
+        validateTriggered(rAction.onPaidEffects, sourceId);
         validateTriggered(rAction.onSuccessEffects, sourceId);
     }
     // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
@@ -507,6 +519,19 @@ void ValidateEffectReferences(const GameDataContext& rData)
     {
         validate(rLevel.effects, "difficulty:" + rLevel.id);
     }
+    for (const NativeLifeLevel_t& rLevel : rNativeLifeConfig.levels)
+    {
+        validate(rLevel.effects, "native_life_level:" + rLevel.id);
+    }
+    for (const WorldEventConfig_t& rEvent : rWorldEventsConfig.events)
+    {
+        const std::string sourceId = "world_event:" + rEvent.id;
+        validate(rEvent.effects, sourceId);
+        validateTriggered(rEvent.onStartEffects, sourceId);
+        validateTriggered(rEvent.onEndEffects, sourceId);
+    }
+    validate(rEcoDamageConfig.effects, "eco_damage");
+    validateTriggered(rEcoDamageConfig.onPopEffects, "eco_damage.fungal_pop");
 }
 
 } // namespace ac

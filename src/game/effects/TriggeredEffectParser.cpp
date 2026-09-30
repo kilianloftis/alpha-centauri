@@ -21,6 +21,20 @@ namespace
 
 using ParseFn_ = std::function<void(const nlohmann::json&, TriggeredEffectConfig_t&)>;
 
+int ParsePositiveInt_(const nlohmann::json& parameters, const char* pKey, const char* pType)
+{
+    if (!parameters.contains(pKey) || !parameters.at(pKey).is_number_integer())
+    {
+        throw std::runtime_error(std::string(pType) + " '" + pKey + "' must be an integer");
+    }
+    const int value = parameters.at(pKey).get<int>();
+    if (value < 1)
+    {
+        throw std::runtime_error(std::string(pType) + " '" + pKey + "' must be >= 1");
+    }
+    return value;
+}
+
 void ParseAddBuilding_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
     const std::string buildingId = parameters.value("building_id", "");
@@ -178,15 +192,7 @@ void ParseDestroyFacility_(const nlohmann::json& parameters, TriggeredEffectConf
     };
 
     DestroyFacilityEffect_t destroy;
-    if (!parameters.contains("count") || !parameters.at("count").is_number_integer())
-    {
-        throw std::runtime_error("DestroyFacility 'count' must be an integer");
-    }
-    destroy.count = parameters.at("count").get<int>();
-    if (destroy.count < 1)
-    {
-        throw std::runtime_error("DestroyFacility 'count' must be >= 1");
-    }
+    destroy.count = ParsePositiveInt_(parameters, "count", "DestroyFacility");
     destroy.excludeHq = requireBool("exclude_hq");
     destroy.excludeSecretProjects = requireBool("exclude_secret_projects");
     rEffect.effect = destroy;
@@ -301,17 +307,27 @@ void ParseCommitAtrocity_(const nlohmann::json& parameters, TriggeredEffectConfi
 
 void ParseRecordMindControl_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
-    if (!parameters.contains("weight") || !parameters.at("weight").is_number_integer())
+    rEffect.effect =
+        RecordMindControlEffect_t{ParsePositiveInt_(parameters, "weight", "RecordMindControl")};
+}
+
+void ParseGrantCleanMinerals_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    GrantCleanMineralsEffect_t grant;
+    grant.amount = ParsePositiveInt_(parameters, "amount", "GrantCleanMinerals");
+    if (!parameters.contains("requires_first_bloom")
+        || !parameters.at("requires_first_bloom").is_boolean())
     {
-        throw std::runtime_error("RecordMindControl 'weight' must be an integer");
+        throw std::runtime_error("GrantCleanMinerals 'requires_first_bloom' must be a boolean");
     }
-    RecordMindControlEffect_t record;
-    record.weight = parameters.at("weight").get<int>();
-    if (record.weight < 1)
-    {
-        throw std::runtime_error("RecordMindControl 'weight' must be >= 1");
-    }
-    rEffect.effect = record;
+    grant.bRequiresFirstBloom = parameters.at("requires_first_bloom").get<bool>();
+    rEffect.effect = grant;
+}
+
+void ParseAddVirtualMinerals_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    rEffect.effect =
+        AddVirtualMineralsEffect_t{ParsePositiveInt_(parameters, "amount", "AddVirtualMinerals")};
 }
 
 void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
@@ -414,6 +430,8 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"ElevationChange", ParseElevationChange_},
         {"CommitAtrocity", ParseCommitAtrocity_},
         {"RecordMindControl", ParseRecordMindControl_},
+        {"GrantCleanMinerals", ParseGrantCleanMinerals_},
+        {"AddVirtualMinerals", ParseAddVirtualMinerals_},
     };
     return k_Parsers;
 }

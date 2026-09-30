@@ -219,8 +219,8 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
     const auto effects = CollectTileEffects(tile);
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 1.0);
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
-    CHECK(CountBySource(effects, "Farm") == 1);
-    CHECK(CountBySource(effects, "Mine") == 1);
+    CHECK(CountBySource(effects, "Farm") == static_cast<int>(pFarm->effects.size()));
+    CHECK(CountBySource(effects, "Mine") == static_cast<int>(pMine->effects.size()));
 }
 
 TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a tile's own features",

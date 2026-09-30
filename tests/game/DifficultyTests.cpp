@@ -172,12 +172,15 @@ TEST_CASE("ConqueredDroneCap is 0.25 per difficulty level plus base_conquest -0.
 
 TEST_CASE("EcologicalDamage MultiplyGeometric is present on Talent", "[difficulty][effects]")
 {
+    // Difficulty is one factor of the eco multiplier stack. The fixture difficulty levels
+    // author no eco multiplier, so the shipping Talent level must multiply that baseline by 3.
     FactionFixture fixtures;
-    UseShippingDifficulty_(fixtures, "talent");
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
+    const double baseline = ResolveBaseStat_(rBase, StatId_t::EcologicalDamage, 1.0);
 
-    CHECK(ResolveBaseStat_(rBase, StatId_t::EcologicalDamage, 1.0) == Approx(3.0));
+    UseShippingDifficulty_(fixtures, "talent");
+    CHECK(ResolveBaseStat_(rBase, StatId_t::EcologicalDamage, 1.0) == Approx(3.0 * baseline));
 }
 
 TEST_CASE("TechCostDiff follows difficulty banding", "[difficulty][effects]")

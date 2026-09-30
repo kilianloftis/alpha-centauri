@@ -1,0 +1,27 @@
+{
+  "events": [
+    {
+      "id": "Perihelion",
+      "name": "Solar Perihelion",
+      "trigger": {
+        "kind": "Cycle",
+        "cycle_years": 80,
+        "duration_years": 20,
+        "start_year_offset": 0
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "WorldGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "on_start_effects": [],
+      "on_end_effects": []
+    }
+  ]
+}

@@ -137,6 +137,7 @@ BaseManager::BaseManager(
           *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
+    , m_ecology(*this)
     , m_bMayOccupyWater(bMayOccupyWater)
 {
     m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)
@@ -744,6 +745,11 @@ const Tile& BaseManager::GetTile() const
 const BaseEffects_t& BaseManager::GetBaseEffects() const
 {
     return m_effects.Get();
+}
+
+int BaseManager::GetEcologicalDamage() const
+{
+    return m_ecology.GetDamage();
 }
 
 TileYieldView_t BaseManager::GetWorkedTileYield(const Tile& rTile) const

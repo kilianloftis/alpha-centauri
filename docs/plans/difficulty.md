@@ -65,7 +65,7 @@ Six levels. Where a feature is omitted on a harder level, it is **off** (not inh
 | No production penalty | `effects`: `RetoolPenaltyScale` `MultiplyGeometric` **0** | Interpret as retool forfeit. Stat already exists. Citizen + Specialist. (Earlier plan text that said “retooling is not difficulty-controlled” is **withdrawn**.) |
 | Command Center upkeep cap | `effects`: `FacilityEnergyUpkeep` `MaxClamp` **0 / 1 / 1 / 2 / 3 / 3**, `buildingFilter` `BuildingId: Command_Center` | Tech `fusion_power` / `quantum_power` already emit `Add` +1 on CC. Clamp caps the RawScaled result. **Done:** RawScaled + tech Adds. |
 | Pop before drones | `effects`: `SizeFreeDrones` — **or** `rules.size_drone_divisor` | See drones note below. |
-| Higher ecological damage | `effects`: `EcologicalDamage` scale | **Stat not defined yet.** |
+| Higher ecological damage | `effects`: `EcologicalDamage` scale | Live: PureMultiplier, one factor of the eco multiplier stack ([ecology-system.md](../architecture/ecology-system.md)). |
 | Combat handicap | `effects`: Attack/Defense (or dedicated scale) | **Magnitude unknown;** natives-only needs a native unit filter. |
 
 ### Rules (non-effect fields)
@@ -104,7 +104,7 @@ Bureaucracy base-limit already consumes `Difficulty_t` (0…5) in `pop_compositi
 | **Power overloads** | Boolean planned; **no power-overload gameplay** to wire yet. |
 | **Incited pact/treaty scripts** | Boolean stub; diplomacy scripts not implemented. |
 | **AI auto personality** | Boolean stub; AIProfile / faction AI personality auto-assign not wired as a difficulty consumer. |
-| **EcologicalDamage stat** | **Not in `StatId_t` yet.** Add when eco meter exists; until then stub `rules.higher_ecological_damage` boolean so levels are expressible. |
+| **EcologicalDamage stat** | Live: PureMultiplier, read by the eco score formula. |
 | **Combat handicap vs natives** | Needs native-life unit filter (or psi/native domain gate) plus combat resolve hook — neither is a finished difficulty consumer. |
 | **AI SP “player has prerequisite”** | Availability policy field planned; `SecretProjectAvailabilityCalculator` must learn to read it. |
 | **Research disabled turns** | Field planned; ResearchManager / labs accumulation must gate on turn index. |
@@ -134,7 +134,7 @@ bureaucracy drones in `pop_composition.json`'s `drone_formula`.
 | No prototype cost | `effects`: `PrototypeSurchargeScale` MultiplyGeometric `0` |
 | No production penalty | `effects`: `RetoolPenaltyScale` MultiplyGeometric `0` |
 | CC upkeep cap | `effects`: `FacilityEnergyUpkeep` MaxClamp + `buildingFilter` `Command_Center` |
-| Higher eco damage (later) | `effects`: `EcologicalDamage` — **needs stat + magnitude** |
+| Higher eco damage | `effects`: `EcologicalDamage` MultiplyGeometric 3 / 5 |
 | Combat handicap (later) | Attack/Defense (or scale) — **needs magnitude** (+ natives filter) |
 
 **Use rules** for turn gates, availability policy, and systems without a stat:
@@ -149,7 +149,6 @@ bureaucracy drones in `pop_composition.json`'s `drone_formula`.
 | Incited pact/treaty scripts | `rules.no_incited_pact_treaty_scripts` (stub) |
 | AI auto personality | `rules.ai_auto_personality` (stub) |
 | Combat handicap mode | `rules.combat_handicap` / `combat_handicap_natives_only` until % known |
-| Higher eco (until stat) | `rules.higher_ecological_damage` boolean stub |
 | Size-drone divisor | `rules.size_drone_divisor` **or** `SizeFreeDrones` effects |
 
 ```mermaid
@@ -189,8 +188,7 @@ flowchart LR
         "no_incited_pact_treaty_scripts": true,
         "ai_auto_personality": false,
         "combat_handicap": true,
-        "combat_handicap_natives_only": false,
-        "higher_ecological_damage": false
+        "combat_handicap_natives_only": false
       },
       "effects": [
         {
@@ -270,7 +268,7 @@ Building id is `Command_Center` (production techs: `fusion_power`, `quantum_powe
    - `DifficultyConfigParser` via `EffectConfigParser::ParseEffects(..., EffectSourceKind_t::Difficulty, id)`
    - `EffectSourceKind_t::Difficulty` like Faction/Tech in `ValidateScopeForSource`
    - **Already done / in tree:** `MaxClamp`/`MinClamp` in modifier stack; `FacilityEnergyUpkeep` RawScaled; fusion/quantum CC `Add`s
-   - **Still needed for eco later:** `EcologicalDamage` PureMultiplier (or RawScaled) when the eco meter lands
+   - `EcologicalDamage` is a PureMultiplier the eco score formula reads
 
 2. **Load path:** [`GameDataPaths`](include/game/GameDataPaths.h) `difficulty`; [`LoadGameData`](src/game/GameDataContext.cpp) owns config (replace ad-hoc WIP loader with typed parser).
 

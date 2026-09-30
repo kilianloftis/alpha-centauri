@@ -1,15 +1,12 @@
 ---
-name: ModifyCounter
-overview: "A triggered effect that writes a stored per-faction tally (`CounterId_t`), read by C++ rules. The first counter is SMAC's `mind_control_total`: paying for Mind Control or Total Thought Control adds 4, a successful Subvert Unit adds 1, and the acting faction's total raises the base mind-control cost."
+name: Mind control ledger
+overview: "A RecordMindControl triggered effect writes SMAC's mind_control_total into a GameState-owned MindControlLedger, read by the base mind-control cost. Paying for Mind Control or Total Thought Control records 4, a successful Subvert Unit records 1, and the acting faction's total raises the base mind-control cost."
 todos:
-  - id: counter-enum
-    content: CounterId_t (MindControlTotal) + ParseCounterId in EffectEnums.h
-    status: completed
-  - id: faction-store
-    content: Faction counter array + GetCounter / SetCounter
+  - id: ledger
+    content: MindControlLedger (Record / Total) owned by GameState, sibling of AtrocityLedger
     status: completed
   - id: effect-arm
-    content: ModifyCounterEffect_t, ParseModifyCounter_, ApplyOne_ arm, IsPerFactionSubject_, CounterModified_t, EffectReferenceValidator no-op
+    content: RecordMindControlEffect_t, ParseRecordMindControl_, ApplyOne_ arm, IsPerFactionSubject_, MindControlRecorded_t, EffectReferenceValidator no-op
     status: completed
   - id: probe-paid-list
     content: on_paid_effects on probe actions (rejected without cost); ApplyProbePaidEffects fired after payment, before the roll
@@ -18,70 +15,55 @@ todos:
     content: Subvert Unit runs on_success_effects; parser rejects on_success_effects on handlers that never run them
     status: completed
   - id: probe-config
-    content: Author ModifyCounter entries and mind_control_divisor in config and fixture
+    content: Author RecordMindControl entries and mind_control_divisor in config and fixture
     status: completed
   - id: probe-reader
-    content: QuoteProbeActionCost takes the actor; mind_control_divisor required on base-target costs; actor total / divisor in the first factor
+    content: QuoteProbeActionCost takes the actor and the ledger; mind_control_divisor required on base-target costs; actor total / divisor in the first factor
     status: completed
   - id: tests
     content: Parser, dispatch, probe writer and cost tests; ./bd test
     status: completed
   - id: docs
-    content: effects-system.md (triggered list, Counters section, trigger-slot table); TriggeredEffect.h, ProbeActionConfig.h and ProbeRules comments
+    content: effects-system.md (triggered list, RecordMindControl section, trigger-slot table); TriggeredEffect.h, ProbeActionConfig.h and ProbeRules comments
     status: completed
 isProject: false
 ---
 
-# ModifyCounter
+# Mind control ledger
 
 ## What it is
 
-A **counter** is a stored integer that records a fact, such as "how much mind control this
-faction has done". A triggered effect writes it, and C++ rules read it. It is neither of the
-things it resembles:
-
-- **A stat** (`StatId_t`) is derived: it is resolved from continuous effects and has no storage,
-  so triggers never write one.
-- **A `oncePer` key** is an open string that only the dispatcher reads.
-
-A counter's weight belongs to the rule that reads it (in config). The save holds only the count.
+SMAC remembers how much mind control each faction has done, and that history raises what the
+next base mind-control costs. It is a stored fact, not a derived stat: a `StatId_t` is resolved
+from continuous effects and has no storage, so triggers never write one. Stored per-faction
+tallies are **one ledger per concern**, like `AtrocityLedger`: this one is `MindControlLedger`.
 
 ```json
-{ "type": "ModifyCounter", "parameters": { "counter": "mind_control_total", "amount": 4 } }
+{ "type": "RecordMindControl", "parameters": { "weight": 4 } }
 ```
 
 ## Design
 
-**`CounterId_t`**
-- A closed enum in `EffectEnums.h`, beside `StatId_t` and `RuleFlagId_t`, with a
-  `ParseCounterId` that mirrors `ParseStatId`: snake_case wire forms, throwing on an unknown id.
-- It grows only when a reader is written. The first entry is `MindControlTotal`
-  (`mind_control_total`).
+**`MindControlLedger`** (`include/game/mind-control/MindControlLedger.h`)
+- World-scoped, owned by `GameState` beside `AtrocityLedger`, keyed by `FactionId_t`.
+- `Record(actor, weight)` rejects a non-positive weight; `Total(actor)` is 0 for a faction with
+  nothing recorded.
+- A stub holding per-actor totals. Per-act records (victim, kind, year) come with the
+  mind-control cost calculator and SMAC's per-target `diplo_mind_control`.
+- It is save data, so it serializes with `GameState` once serialization is wired.
 
-**Storage on `Faction`**
-- A zero-initialized `std::array<int, magic_enum::enum_count<CounterId_t>()>` beside
-  `m_consumedTriggerKeys`, with `GetCounter(CounterId_t)` and `SetCounter(CounterId_t, int)`.
-- It is save data, so it goes wherever `Faction` serializes once serialization is wired.
+**`RecordMindControlEffect_t { int weight; }`**
+- **Parser.** `ParseRecordMindControl_` requires `weight` as a positive integer
+  (`is_number_integer()`, so 1.5 is rejected rather than truncated). Registered in the type
+  table, so the continuous parser rejects it with the one-shot message.
+- **Dispatch.** A per-faction subject, like `CommitAtrocity`: it applies once to each faction in
+  `context.factions`, never to the context base's owner. In a probe mission the actor is in
+  `factions` while `pBase` and `pFaction` name the victim. The `ApplyOne_` arm records the
+  weight, pushes `MindControlRecorded_t { weight }` and returns `true`.
+- **Validator.** `EffectReferenceValidator`'s triggered visitor has an empty arm: there is
+  nothing to cross-reference.
 
-**`ModifyCounterEffect_t { CounterId_t counter; int amount; }`**
-- **Parser.** `ParseModifyCounter_`:
-  - `counter` is required and goes through `ParseCounterId`.
-  - `amount` is required and must be a positive integer. Check `is_number_integer()`, as
-    `ParseDestroyFacility_` does for `count`; `RequireNumber` returns a double, and the cast
-    would truncate 1.5 to 1.
-  - Register it in the parser's type table. The continuous parser then rejects it
-    automatically.
-- **Dispatch.** It is a per-faction subject, like `GrantEnergy`: it applies once to each
-  faction in `context.factions`, never to the context base's owner. In a probe mission the
-  actor is in `factions` while `pBase` and `pFaction` name the victim. The `ApplyOne_` arm:
-  - calls `SetCounter(counter, GetCounter(counter) + amount)`
-  - pushes `CounterModified_t { counter, amount }`
-  - returns `true`
-- **Validator.** `EffectReferenceValidator`'s triggered visitor gets an empty
-  `operator()(const ModifyCounterEffect_t&)`. There is nothing to cross-reference, because the
-  id is enum-parsed.
-
-## First counter: `mind_control_total`
+## SMAC's `mind_control_total`
 
 In SMAC (Thinker `probe.cpp`):
 - Mind Control and Total Thought Control add 4 to the prober's total **when the cost is paid**
@@ -126,12 +108,13 @@ Three things are missing in the repo today:
 
 Author these in both `config/probe_actions.json` and `tests/fixtures/probe_actions.json`:
 - `mind_control_base` and `total_thought_control`: `on_paid_effects` holds
-  `ModifyCounter mind_control_total 4`, and `cost` gains `"mind_control_divisor": 4`.
-- `subvert_unit`: `on_success_effects` holds `ModifyCounter mind_control_total 1`.
+  `RecordMindControl` with weight 4, and `cost` gains `"mind_control_divisor": 4`.
+- `subvert_unit`: `on_success_effects` holds `RecordMindControl` with weight 1.
 
 **Reader**
-1. `QuoteProbeActionCost` takes the acting `const Faction&`. Both callers, `CanProbeAction`
-   and `ProbeActionExecutor::TryPayProbeCost_`, pass the probe's faction.
+1. `QuoteProbeActionCost` takes the acting `const Faction&` and the `MindControlLedger`. Both
+   callers, `CanProbeAction` and `ProbeActionExecutor::TryPayProbeCost_`, pass the probe's
+   faction; `ProbeActionExecutor` borrows the ledger from `GameState` at construction.
 2. `ProbeCostConfig_t` gains `mindControlDivisor`, parsed from `mind_control_divisor`, the
    same way `riot_turns` is handled:
    - It is required and must be positive on a base-target cost.
@@ -143,10 +126,9 @@ Author these in both `config/probe_actions.json` and `tests/fixtures/probe_actio
 
 ## Tests
 
-- **Parser: `ModifyCounter`**
-  - `ModifyCounter` parses.
-  - Rejected: a missing or unknown counter; a missing, zero, negative or fractional amount; a
-    `factionFilter`.
+- **Parser: `RecordMindControl`**
+  - `RecordMindControl` parses with its weight.
+  - Rejected: a missing, zero, negative or fractional weight; a `factionFilter`.
   - In a continuous `effects` list it fails with the one-shot message.
 - **Parser: probe actions**
   - `on_paid_effects` on an action without `cost` is rejected.
@@ -154,12 +136,12 @@ Author these in both `config/probe_actions.json` and `tests/fixtures/probe_actio
   - `mind_control_divisor` is rejected when missing or zero on a base-target cost, and when
     present on a unit-target cost.
 - **Dispatch**
-  - It increments the context faction's counter and reports `CounterModified_t`.
+  - It adds to the context faction's ledger total and reports `MindControlRecorded_t`.
   - A multi-faction context credits each faction once.
   - A probe mission context (`pBase` = the target) credits the actor, not the base's owner.
   - A `oncePer` entry fires once.
 - **Probe writers**
-  - Mind Control adds 4 to the actor's counter; the former owner's is unchanged.
+  - Mind Control adds 4 to the actor's total; the former owner's is unchanged.
   - Total Thought Control adds 4.
   - A busted Mind Control still adds 4. Force the failed outcome by raising the action's risk
     in the test's config, which zeroes the success rate.
@@ -175,13 +157,11 @@ Run with `./bd test`.
 ## Docs
 
 - **`docs/architecture/effects-system.md`**
-  - Add `ModifyCounter` to the triggered type list.
+  - Add `RecordMindControl` to the triggered type list and the per-faction-subject list.
   - Add `on_paid_effects` to the `probe_actions.json` row of the trigger-slot table.
-  - Add a short Counters section covering: stored facts versus derived stats; the closed enum
-    that grows with its readers; faction-scoped storage; and how counters differ from
-    `oncePer` keys.
-- **`TriggeredEffect.h`:** a comment on `ModifyCounterEffect_t` covering the per-faction
-  subject and the positive integer amount.
+  - Add a short `RecordMindControl` section naming `MindControlLedger` and its reader.
+- **`TriggeredEffect.h`:** a comment on `RecordMindControlEffect_t` covering the per-faction
+  subject and the positive integer weight.
 - **`ProbeActionConfig.h`:** the `ProbeCostConfig_t` formula comment gains the history term;
   comments on `onPaidEffects` and on which handlers run `onSuccessEffects`.
 - **`ProbeRules`:** the `QuoteMindControlBaseCost_` formula comment, and the

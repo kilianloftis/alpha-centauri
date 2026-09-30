@@ -70,6 +70,16 @@ struct MindControlRecorded_t
     int weight = 0;
 };
 
+struct CleanMineralsGranted_t
+{
+    int amount = 0;
+};
+
+struct VirtualMineralsAdded_t
+{
+    int amount = 0;
+};
+
 struct HitPointsRestored_t
 {
     int amount = 0;
@@ -143,7 +153,9 @@ using TriggeredEffectResult_t = std::variant<
     RockinessChanged_t,
     ElevationChanged_t,
     AtrocityCommitted_t,
-    MindControlRecorded_t
+    MindControlRecorded_t,
+    CleanMineralsGranted_t,
+    VirtualMineralsAdded_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources

@@ -13,6 +13,7 @@
 #include "game/faction/base/production/ScrapPayout.h"
 #include "game/faction/base/BaseEffectsCache.h"
 #include "game/faction/base/HomeBaseIndex.h"
+#include "game/ecology/BaseEcology.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
@@ -301,6 +302,10 @@ public:
     // Final effect list this base resolves against (faction pool + pops + SE rating expansion).
     const BaseEffects_t& GetBaseEffects() const;
 
+    // Percentage chance of a fungal pop in this base's radius (see BaseEcology). Requires the
+    // owning faction to be bound to a GameState.
+    int GetEcologicalDamage() const;
+
     // Worked / preview tile yield after base-wide (and, for worked tiles, pop) effects.
     // .effective honours MaxClamp; .potential is uncapped (for UI).
     TileYieldView_t GetWorkedTileYield(const Tile& rTile) const;
@@ -396,6 +401,7 @@ private:
 
     // Assembles and memoizes the effect list this base resolves against.
     BaseEffectsCache m_effects;
+    BaseEcology m_ecology;
     // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
     // raze already performed.
     bool m_bRazed = false;

@@ -207,6 +207,22 @@ struct RecordMindControlEffect_t
     int weight = 0;
 };
 
+// Raises the subject faction's clean-minerals cap permanently in the EcologyLedger. Authored in
+// on_complete_effects, so only a facility that is built (not captured or granted) credits it.
+// bRequiresFirstBloom withholds the grant until the faction has had a fungal bloom.
+struct GrantCleanMineralsEffect_t
+{
+    int amount = 0;
+    bool bRequiresFirstBloom = false;
+};
+
+// Charges the subject faction virtual minerals in the EcologyLedger: eco damage no production
+// caused (a tectonic detonation). Permanent, and ungated by the Charter.
+struct AddVirtualMineralsEffect_t
+{
+    int amount = 0;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -227,7 +243,9 @@ using TriggeredEffectVariant_t = std::variant<
     StepRockinessEffect_t,
     ElevationChangeEffect_t,
     CommitAtrocityEffect_t,
-    RecordMindControlEffect_t
+    RecordMindControlEffect_t,
+    GrantCleanMineralsEffect_t,
+    AddVirtualMineralsEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

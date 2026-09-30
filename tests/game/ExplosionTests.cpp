@@ -393,6 +393,41 @@ TEST_CASE("A warhead that authors no atrocity records none", "[map][explosion][d
     CHECK(game.pState->GetAtrocityLedger().Records().empty());
 }
 
+TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
+          "[map][explosion][detonate][ecology]")
+{
+    BlastGame_ game;
+    game.warhead.id = "tectonic_test";
+    game.warhead.type = "weapon";
+    TriggeredEffectConfig_t charge;
+    charge.effect = AddVirtualMineralsEffect_t{5};
+    game.warhead.onDetonateEffects.push_back(std::move(charge));
+    TriggeredEffectConfig_t spend;
+    spend.effect = DestroyUnitEffect_t{};
+    game.warhead.onDetonateEffects.push_back(std::move(spend));
+
+    const UnitComponentConfig_t* pChassis = game.fixtures.unitComponents.Find("test_chassis");
+    REQUIRE(pChassis);
+    const std::vector<UnitSlotConfig_t> slots = {
+        {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+        {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+    };
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> assigned = {
+        {"weapon", &game.warhead},
+        {"chassis", pChassis},
+    };
+    game.designs.emplace_back(slots, assigned);
+    Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), game.designs.back(),
+        game.pState->GetWorldMap().GetUnitPositions(), game.At_(4, 4),
+        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+
+    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    CHECK(game.pState->GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);
+    CHECK(UnitCount_(*game.pPlayer) == 0);
+    CHECK(game.pState->GetAtrocityLedger().Records().empty());
+}
+
 TEST_CASE("Shipping reactors set explosion radius 1, 2, 3, and 4", "[unit][explosion]")
 {
     UnitComponentRegistry components;
@@ -446,9 +481,9 @@ TEST_CASE("Shipping reactors set explosion radius 1, 2, 3, and 4", "[unit][explo
     // Tectonic and Fungal payloads author no atrocity.
     const UnitComponentConfig_t* pTectonic = components.Find("Tectonic_Payload");
     REQUIRE(pTectonic);
-    REQUIRE(pTectonic->onDetonateEffects.size() == 2);
-    CHECK(std::holds_alternative<EarthquakeEffect_t>(pTectonic->onDetonateEffects[0].effect));
-    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pTectonic->onDetonateEffects[1].effect));
+    REQUIRE_FALSE(pTectonic->onDetonateEffects.empty());
+    CHECK(std::holds_alternative<EarthquakeEffect_t>(pTectonic->onDetonateEffects.front().effect));
+    CHECK(std::holds_alternative<DestroyUnitEffect_t>(pTectonic->onDetonateEffects.back().effect));
     CHECK_FALSE(hasAtrocity(*pTectonic));
 
     const UnitComponentConfig_t* pFungal = components.Find("Fungal_Payload");

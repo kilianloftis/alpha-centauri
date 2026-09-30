@@ -47,6 +47,7 @@ graph TB
         PlayerActions[PlayerActions]
         PostActionsProduction[PostActionsProduction]
         Mood[Mood]
+        EcoDamage[EcoDamage]
     end
 
     subgraph "Turn Execution"
@@ -99,6 +100,7 @@ graph TB
     PerFactionTurnStage --> PlayerActions
     PerFactionTurnStage --> PostActionsProduction
     PerFactionTurnStage --> Mood
+    PerFactionTurnStage --> EcoDamage
     PerFactionTurnStage --> CustomPerFactionTurnStage
 
     TurnProcessor --> Advance
@@ -184,9 +186,19 @@ about a pending riot without being a yielding stage.
 
 - **`TurnStart`**: increments mission year (`GameState::k_StartingMissionYear` → first
   playable year `k_FirstPlayableMissionYear`), publishes turn-start events, refreshes moves.
-- **`WorldEvents`**: forest/kelp spread via `SpreadTerraformImprovements`, using
-  `GameState::GetRng()` and `GetYearsSinceFirstPlayableYear()` (session stream — not a
-  private year×area seed).
+- **`WorldEvents`**: advances the world-event registry (`config/world_events.json`) through
+  `GameState::GetWorldEvents()` — each `Cycle` event is re-evaluated against
+  `GetYearsSinceFirstPlayableYear()`, and an event that starts or ends this turn fires its
+  `on_start_effects` / `on_end_effects` once with every faction as the subject. Active events'
+  continuous `effects` reach every faction through `CollectWorldExtras`. Then forest/kelp spread
+  via `SpreadTerraformImprovements`, using `GameState::GetRng()` (session stream — not a private
+  year×area seed). A `GameState` without `CreateWorldEvents` runs no events.
+- **`EcoDamage`**: per faction, after `WorldEvents` so an event starting this turn (Perihelion)
+  is already in the multiplier stack. Each base rolls `BaseManager::GetEcologicalDamage()`,
+  capped at `max_chance_percent`, as a fungal-pop percentage; a hit records the bloom in the
+  `EcologyLedger`, publishes `EvFungalBloom`, tells the player about their own bases, and
+  applies `eco_damage.json`'s `on_pop_effects` on a pop tile in the base radius. See
+  [ecology-system.md](ecology-system.md).
 - **`Population`**: composition recalculation, then `ForecastMood` per base — which sets
   *pending* riot / golden-age state and enqueues the player's warning, without applying any
   gameplay effect. Stays after `BaseProduction` because a facility completed this turn can

@@ -199,9 +199,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     faction treasury (`EconomyManager`), not tile energy.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
   - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `EarthquakeLevels` (Additive levels an `Earthquake` triggered effect raises when its `levels_stat` names this stat; reactors Add their tier), `FungalBloomTiles` (Additive tiles a `FungalBloom` converts when its `tiles_stat` names this stat; reactors Add 3, 5, 7, 9), `ExplosionRadius` (Additive Chebyshev radius an `Explosion` wipes when its `radius_stat` names this stat; reactors Add 1, 2, 3, 4; radius 1 is 9 tiles), `CollateralDamage` (HP the attacker removes from other occupants when it kills a defender; the attacker's stat alone), `CollateralSusceptibility` (PureMultiplier, seed 1; each occupant scales that splash by `lround(splash * susceptibility)`; a tile `MaxClamp` that leaves 0 skips that occupant; `world_rules.json` `MultiplyGeometric` 0 on air), `PlanetPearls` (energy credits paid to the killer of a wild native; the design Adds the base and the intrinsic lifecycle level `MultiplyGeometric`s it), `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MoveCost` (RawScaled tile-entry ceiling; `MaxClamp` only; amount stored as move fragments), `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
-  - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (RawScaled: seed is the accrued amount), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
+  - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (PureMultiplier: the eco multiplier stack — difficulty, Planet rating, native life level and Perihelion each emit MultiplyGeometric), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
   - Research cost: `TechCost` (Additive percent points fed to `tech_cost.lua`). Faction-scoped emitters (e.g. University) become `faction_modifier`. Optional per-tech `ThisTech` emitters on the tech being researched become `tech_modifier`. There is no per-tech base cost field.
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
+  - Ecology (see [ecology-system.md](ecology-system.md)): `EcoDamageContribution` and `EcoDamageWorkedContribution` (Additive, Tile — per-improvement terraform weights; the worked half counts only on tiles the base's own pops work), `EcoTerraformScale` (PureMultiplier, Base — Tree Farm / Hybrid Forest), `EcoCleanMinerals` (Additive, Faction — the cap baseline from `eco_damage.json`), `EcoDamageReduction` (Additive, Base — Goodfacs), `EcoMineralOffset` (Additive, Base, signed — minerals ecology does not charge, or charges extra).
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
   - Commerce: `CommerceRate` (PureMultiplier, Faction — Global Trade Pact; scales formula
     result like scrap), `CommerceRating` (Additive, Base — Economy SE / faction bonuses in
@@ -485,7 +486,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl`, `GrantCleanMinerals`, `AddVirtualMinerals` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -514,6 +515,8 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 | `pop_composition.json` riot tiers | `effects` | `on_enter_effects` |
 | `improvements.json` | `effects` | `on_visit_effects` — Investigate / AI auto via `ApplyVisitEffects` |
 | `techs.json` | `effects` | `on_discover_effects` — `ApplyTechDiscoverEffects` on `OnTechDiscovered` |
+| `eco_damage.json` | `effects` | `fungal_pop.on_pop_effects` — the `EcoDamage` stage, with base, owner and pop tile stamped |
+| `world_events.json` | `effects` (while active) | `on_start_effects`, `on_end_effects` — the `WorldEvents` stage, every faction as subject |
 
 `on_paid_effects` fire once a paid probe action's cost is paid, before the success roll, so a
 failed attempt still fires them; an action without `cost` rejects the list. `on_success_effects`
@@ -642,7 +645,8 @@ then silently never fired.
   apply so a faction-identity condition sees the member being credited. An entry needing a
   subject the bag lacks is **skipped**, not guessed at.
 - **One application per subject**: a faction-subject entry (`GrantTech`, `GrantEnergy`,
-  `GrantUnit`, `SetInfiltration`, `CommitAtrocity`, `RecordMindControl`) runs once per listed faction, which is how a council
+  `GrantUnit`, `SetInfiltration`, `CommitAtrocity`, `RecordMindControl`, `GrantCleanMinerals`,
+  `AddVirtualMinerals`) runs once per listed faction, which is how a council
   `GrantEnergy` credits every member. A base-, unit- or world-subject entry runs once however
   long the faction list is, so a `DestroyFacility` cannot hit one base once per member.
 - **Results** are what let callers report. Probe missions map `FacilitiesDestroyed_t` /
@@ -684,6 +688,16 @@ Thought Control records 4 (`on_paid_effects`), a successful Subvert Unit records
 (`on_success_effects`), and the base mind-control quote adds the actor's total divided by the
 cost's `mind_control_divisor` to its first factor. The ledger is a stub holding per-actor
 totals; per-act records and a mind-control cost calculator come later.
+
+### GrantCleanMinerals / AddVirtualMinerals
+Both write the subject faction's tally in `GameState`'s `EcologyLedger`, per-faction-subject
+like `RecordMindControl`, with a required positive integer `amount`. `GrantCleanMinerals`
+raises the eco clean-minerals cap permanently; its required `requires_first_bloom` withholds
+the grant (reporting no change, so a `oncePer` key stays unspent) until the faction has had a
+fungal bloom. It is authored in `on_complete_effects`, so only a facility that is built — not
+captured or granted — credits it. `AddVirtualMinerals` charges eco damage no production caused
+(the Tectonic Payload's detonation), ungated by the Charter. See
+[ecology-system.md](ecology-system.md).
 
 ### GrantUnit
 There is no registry of named designs (they are per-faction and player-authored, with ids
@@ -879,7 +893,7 @@ grants fewer units and reports the real count rather than throwing.
       then the econ/labs/psych split) rather than crediting it directly — using the faction's
       split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
-  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Tech`, `Production`, `Stockpile`, `Difficulty`, `BaseConquest`) and runs `ValidateEffectForSource` on every entry.
+  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Tech`, `Production`, `Stockpile`, `Difficulty`, `BaseConquest`, `EcoDamage`, `NativeLifeLevel`, `WorldEvent`, …) and runs `ValidateEffectForSource` on every entry.
 - **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md). `ThisUnit` is legal on `UnitComponent`, `MoraleLevel`, and `NativeUnit` sources.
 
 ### EffectReferenceValidator (post-load id validation)

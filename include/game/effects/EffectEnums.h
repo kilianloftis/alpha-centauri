@@ -216,9 +216,29 @@ enum class StatId_t
     // as a double so the 0.25 steps are not rounded away before the cap is taken.
     ConqueredDroneCap,
 
-    // Ecological damage accrued from terraforming / population (RawScaled: seed is the raw
-    // accrued amount the resolve site holds). Difficulty emits MultiplyGeometric.
+    // The eco-damage multiplier stack (PureMultiplier, seed 1.0): difficulty, the Planet
+    // rating, native life abundance and Perihelion each emit MultiplyGeometric. The eco score
+    // formula multiplies by the resolved product once.
     EcologicalDamage,
+
+    // Per-improvement weight toward a base's terraform sum (Additive, Tile). Counted on every
+    // tile in the base radius. Improvements stack: a tile's contribution is the sum over its
+    // features.
+    EcoDamageContribution,
+    // The extra weight counted only while the base's own pops work the tile (Additive, Tile).
+    // A supply-crawled tile is not worked by the base, so it counts the unworked weight only.
+    EcoDamageWorkedContribution,
+    // Scales the terraform term (PureMultiplier, Base). Tree Farm halves it, Hybrid Forest
+    // zeroes it.
+    EcoTerraformScale,
+    // Baseline clean-minerals cap (Additive, Faction). Blooms and grants add on top from the
+    // EcologyLedger.
+    EcoCleanMinerals,
+    // Goodfacs: the mineral term is divided by (1 + this) (Additive, Base).
+    EcoDamageReduction,
+    // Signed offset on the minerals the eco formula charges (Additive, Base). Negative for
+    // minerals that do not answer to ecology (orbital), positive for a dirty facility.
+    EcoMineralOffset,
 
     // Weight toward receiving a rebelling base (Additive, Faction domain). RebelFactionPicker
     // resolves with seed 1.0 so factions without modifiers still participate equally.
@@ -302,6 +322,11 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::CommerceRating:
         case StatId_t::InefficiencyDenominator:
+        case StatId_t::EcoDamageContribution:
+        case StatId_t::EcoDamageWorkedContribution:
+        case StatId_t::EcoCleanMinerals:
+        case StatId_t::EcoDamageReduction:
+        case StatId_t::EcoMineralOffset:
         case StatId_t::RebelJoinWeight: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
         case StatId_t::PrototypeSurchargeScale:
@@ -313,13 +338,14 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:
+        case StatId_t::EcologicalDamage:
+        case StatId_t::EcoTerraformScale:
         case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
         case StatId_t::PromotionChance:
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ScrapRefund:
-        case StatId_t::EcologicalDamage:
         case StatId_t::MoveCost:             return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
@@ -396,12 +422,16 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
         case StatId_t::CapturePopLoss:
         case StatId_t::ConqueredDroneCap:
-        case StatId_t::EcologicalDamage: return ResolveDomain_t::Base;
+        case StatId_t::EcologicalDamage:
+        case StatId_t::EcoTerraformScale:
+        case StatId_t::EcoDamageReduction:
+        case StatId_t::EcoMineralOffset: return ResolveDomain_t::Base;
 
         case StatId_t::TechCost:
         case StatId_t::TechCostDiff:
         case StatId_t::CommerceRate:
         case StatId_t::CouncilVotes:
+        case StatId_t::EcoCleanMinerals:
         case StatId_t::RebelJoinWeight: return ResolveDomain_t::Faction;
 
         case StatId_t::Attack:
@@ -435,6 +465,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::MoistureTier:
         case StatId_t::TileDefense:
         case StatId_t::MoveCost:
+        case StatId_t::EcoDamageContribution:
+        case StatId_t::EcoDamageWorkedContribution:
         case StatId_t::BombardMinHpPercent: return ResolveDomain_t::Tile;
     }
     return ResolveDomain_t::Base; // unreachable; all enumerators handled above
@@ -516,6 +548,13 @@ inline StatId_t ParseStatId(const std::string& rStat)
         return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
     if (rStat == "bombard_min_hp_percent")   return StatId_t::BombardMinHpPercent;
     if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
+    if (rStat == "eco_damage_contribution")  return StatId_t::EcoDamageContribution;
+    if (rStat == "eco_damage_worked_contribution")
+        return StatId_t::EcoDamageWorkedContribution;
+    if (rStat == "eco_terraform_scale")      return StatId_t::EcoTerraformScale;
+    if (rStat == "eco_clean_minerals")       return StatId_t::EcoCleanMinerals;
+    if (rStat == "eco_damage_reduction")     return StatId_t::EcoDamageReduction;
+    if (rStat == "eco_mineral_offset")       return StatId_t::EcoMineralOffset;
     if (rStat == "rebel_join_weight")         return StatId_t::RebelJoinWeight;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
@@ -859,6 +898,14 @@ enum class EffectSourceKind_t
     Growth,
     // config/world_rules.json: standing WorldGlobal effects appended once per session.
     WorldRules,
+    // config/eco_damage.json's continuous `effects` (the clean-minerals baseline). No origin
+    // base — FactionGlobal / AllOwnerBases only, like Difficulty.
+    EcoDamage,
+    // config/native_life_levels.json: the session abundance level's continuous effects.
+    NativeLifeLevel,
+    // config/world_events.json: an event's `effects`, served to every faction while it is
+    // active.
+    WorldEvent,
 };
 
 } // namespace ac

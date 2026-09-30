@@ -313,6 +313,24 @@ they may still garrison and defend.
 
 **Implemented** 2026-09-14.
 
+## 13. What the eco-damage terraform sum counts
+
+Sourced from *Ecology (Advanced)*, which enumerates the counted set outright: Mines, Solar
+Collectors, Farms, Soil Enrichers, Roads, Mag Tubes, Condensers, Mirrors and Boreholes count;
+Sensors, Bunkers and Airbases do not. Kelp Farms count but are never doubled for being worked,
+and a Forest subtracts 1. The sum is over **improvements, not squares**: a worked tile holding
+a Road and a Mine contributes 4, and 6 once a Mag Tube joins them. A supply-crawled tile counts
+its unworked weight only.
+
+Still open, and authored so a ruling is a config edit: Mining Platforms and Tidal Harnesses
+author nothing; the Tectonic Payload charges `AddVirtualMinerals 5`, ungated by the Charter
+(*Ecology (Revised)* tags that term `[confirm]`); Perihelion's cycle starts on the first
+playable year (`start_year_offset` 0); every base rolls independently, so a faction may pop more
+than once a turn; and the pop tile is uniform among the base's non-base, non-fungus workable
+tiles.
+
+**Implemented** 2026-09-29.
+
 ## Deferred by decision, not by uncertainty
 
 - **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a

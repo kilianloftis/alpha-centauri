@@ -5,6 +5,8 @@
 #include "game/IWorldEffectsSource.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/mind-control/MindControlLedger.h"
+#include "game/ecology/EcologyLedger.h"
+#include "game/world-events/WorldEventTracker.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
@@ -136,6 +138,10 @@ public:
     MindControlLedger& GetMindControlLedger();
     const MindControlLedger& GetMindControlLedger() const;
 
+    // Fungal blooms, clean-mineral grants and virtual minerals each faction carries.
+    EcologyLedger& GetEcologyLedger();
+    const EcologyLedger& GetEcologyLedger() const;
+
     DiplomaticActionExecutor& GetDiplomaticActionExecutor();
 
     // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
@@ -192,6 +198,12 @@ public:
     // Null until CreatePlanetaryCouncil (most unit-test fixtures never create one).
     PlanetaryCouncil* GetPlanetaryCouncil();
     const PlanetaryCouncil* GetPlanetaryCouncil() const;
+
+    // Start tracking the world-event registry. rConfig must outlive this GameState. Throws if
+    // already created. Without it the WorldEvents stage runs no events.
+    void CreateWorldEvents(const WorldEventsConfig_t& rConfig);
+    WorldEventTracker* GetWorldEvents();
+    const WorldEventTracker* GetWorldEvents() const;
 
     // Recompute world territory from every faction's bases. Also wired as each faction's
     // OnBaseListChanged handler so founding a base keeps ownership current.
@@ -256,6 +268,7 @@ private:
     std::unique_ptr<DiplomacyLedger> m_pDiplomacy;
     std::unique_ptr<AtrocityLedger> m_pAtrocities;
     std::unique_ptr<MindControlLedger> m_pMindControl;
+    std::unique_ptr<EcologyLedger> m_pEcology;
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;
@@ -265,6 +278,7 @@ private:
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::unique_ptr<ProbeActionExecutor> m_pProbeActions;
     std::unique_ptr<PlanetaryCouncil> m_pCouncil;
+    std::unique_ptr<WorldEventTracker> m_pWorldEvents;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
     IdAllocator m_unitIdAllocator;

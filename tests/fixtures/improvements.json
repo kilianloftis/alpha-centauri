@@ -12,6 +12,24 @@
           "amount": "1/3",
           "op": "MaxClamp"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -28,6 +46,24 @@
           "stat": "move_cost",
           "amount": 0,
           "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
+          "op": "Add"
         }
       }
     ]
@@ -49,6 +85,24 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
           "amount": 1,
           "op": "Add"
         }
@@ -96,6 +150,15 @@
           "amount": 1,
           "op": "Add"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -119,6 +182,15 @@
           "amount": 2,
           "op": "Add"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -137,6 +209,24 @@
         "parameters": {
           "stat": "minerals",
           "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 1,
           "op": "Add"
         }
       }
@@ -163,6 +253,24 @@
         "parameters": {
           "stat": "energy",
           "amount_source": "ElevationEnergy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
           "amount": 1,
           "op": "Add"
         }
@@ -288,6 +396,19 @@
         "parameters": {
           "flag": "airdrop_launch"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
+        },
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -410,6 +531,24 @@
           "amount": 1,
           "op": "Add"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 7,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 7,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -430,6 +569,24 @@
         "parameters": {
           "stat": "moisture_tier",
           "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 5,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 5,
           "op": "Add"
         }
       }
@@ -466,6 +623,24 @@
         "parameters": {
           "stat": "energy",
           "amount": 6,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_contribution",
+          "amount": 9,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "eco_damage_worked_contribution",
+          "amount": 9,
           "op": "Add"
         }
       }

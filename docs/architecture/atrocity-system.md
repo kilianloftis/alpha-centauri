@@ -34,7 +34,7 @@ graph TB
         DiplomacyLedger[DiplomacyLedger<br/>Vendetta]
         PlanetaryCouncil[PlanetaryCouncil<br/>Expel]
         CommerceCalculator[CommerceCalculator<br/>sanctions zero the pair]
-        EcoDamage[(EcoDamage<br/>atrocities term, not yet built)]
+        EcoDamage[BaseEcology<br/>virtual minerals term]
         TurnStart[TurnStart<br/>ExpireSanctions]
         Notices[PlayerInteractionQueue<br/>AtrocityCommitted notice]
     end
@@ -61,7 +61,7 @@ graph TB
     AtrocitiesConfig --> AtrocityParser
 
     AtrocityLedger -->|IsSanctioned missionYear| CommerceCalculator
-    AtrocityLedger -.->|EcoVirtualMinerals| EcoDamage
+    AtrocityLedger -->|EcoVirtualMinerals| EcoDamage
     TurnStart -->|ExpireSanctions| AtrocityLedger
 
     style AtrocityLedger fill:#f9f,stroke:#333,stroke-width:4px
@@ -73,7 +73,6 @@ graph TB
     style ExplosionArm fill:#bbf,stroke:#333,stroke-width:2px
     style DerivedVictim fill:#ffd,stroke:#333,stroke-width:2px
     style GameState fill:#fbf,stroke:#333,stroke-width:3px
-    style EcoDamage fill:#eee,stroke:#999,stroke-width:1px
 ```
 
 ## Component Overview

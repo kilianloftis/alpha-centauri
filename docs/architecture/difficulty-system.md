@@ -159,11 +159,11 @@ Difficulty stats split cleanly by whether the resolve site holds a raw number:
 |---|---|---|
 | `SizeFreeDrones` | Additive | `0.0` — free pops before size drones; difficulty is the sole source |
 | `Bureaucracy` | PureMultiplier | `1.0` — difficulty and Efficiency SE emit MultiplyGeometric; map root stays in the Lua limit formula |
+| `EcologicalDamage` | PureMultiplier | `1.0` — difficulty (×3 / ×5) is one factor of the eco multiplier stack beside the Planet rating, native life level and Perihelion; see [ecology-system.md](ecology-system.md) |
 | `TechCostDiff` | Additive | `0.0` — ordinals fed to the Lua formulas |
 | `LastDefenderPopLoss`, `CapturePopLoss` | Additive | `0.0` — `base_conquest.json`'s effects list Adds the baseline |
 | `ConqueredDroneCap` | Additive | `0.0` — difficulty Adds `0.25 × level` (Citizen = 1); `base_conquest.json` Adds −0.5 |
 | `FacilityEnergyUpkeep` | RawScaled | `BuildingConfig_t::upkeep` |
-| `EcologicalDamage` | RawScaled | the accrued amount the resolve site holds |
 
 A stat is only RawScaled when there is a pre-existing number for modifiers to act on. A
 difficulty-only count is Additive: `SeedFor` throws for RawScaled, so classifying one of those

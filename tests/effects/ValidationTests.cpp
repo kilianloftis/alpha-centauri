@@ -2,6 +2,10 @@
 // compile-time single sources of truth: scope routing (LaneFor/IsFactionLane) and stat
 // seed semantics (KindFor/SeedFor).
 
+#include "TempConfigFile.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/ecology/EcoDamageConfig.h"
+#include "game/world-events/WorldEventConfig.h"
 #include "game/EffectReferenceValidator.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -69,6 +73,9 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.commerceConfig = std::make_unique<CommerceConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
+    rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>();
+    rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>();
+    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
 }
@@ -183,7 +190,21 @@ static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);
     static_assert(KindFor(StatId_t::ConqueredDroneCap) == StatKind_t::Additive);
     static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMaxPercent) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::RawScaled);
+// A pure product of difficulty x Planet rating x native life x perihelion; the eco formula
+// multiplies by it once, so there is no raw value for it to scale.
+static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::EcoDamageContribution) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EcoDamageWorkedContribution) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EcoTerraformScale) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::EcoCleanMinerals) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EcoDamageReduction) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EcoMineralOffset) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::EcoDamageContribution) == ResolveDomain_t::Tile);
+static_assert(DomainFor(StatId_t::EcoDamageWorkedContribution) == ResolveDomain_t::Tile);
+static_assert(DomainFor(StatId_t::EcoTerraformScale) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::EcoCleanMinerals) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::EcoDamageReduction) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::EcoMineralOffset) == ResolveDomain_t::Base);
 static_assert(KindFor(StatId_t::RebelJoinWeight) == StatKind_t::Additive);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
@@ -244,8 +265,11 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
     // SocialRatingResolver looks up the axis table whenever the accumulated total is non-zero,
     // which is the first turn after a player adopts a policy declaring the modifier. A modifier
     // naming an axis with no table has to fail at load, not there.
+    const actest::TempConfigFile growthOnly("growth_only_ratings.json", R"([
+        { "id": "growth", "levels": { "2": [] } }
+    ])");
     SocialRatingRegistry ratings;
-    ratings.Load(actest::FixturePath("social_rating_effects.json"));
+    ratings.Load(growthOnly.Path());
 
     const auto ratingModifier = [](SocialRatingId_t rating) {
         EffectConfig_t config;
@@ -257,7 +281,7 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
     CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Growth), "policy_x",
                                            nullptr, nullptr, nullptr, nullptr, &ratings));
 
-    // The fixture defines no table for Planet.
+    // The registry defines no table for Planet.
     REQUIRE(ratings.Find("planet") == nullptr);
     CHECK_THROWS_WITH(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Planet),
                                                "policy_x", nullptr, nullptr, nullptr, nullptr,

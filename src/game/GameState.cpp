@@ -146,6 +146,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
     , m_pAtrocities(std::make_unique<AtrocityLedger>())
     , m_pMindControl(std::make_unique<MindControlLedger>())
+    , m_pEcology(std::make_unique<EcologyLedger>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
     , m_secretProjectAvailability(*this)
@@ -289,6 +290,10 @@ uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
     {
         stamp = mix(stamp, m_pCouncil->GetRevision().Get());
     }
+    if (m_pWorldEvents)
+    {
+        stamp = mix(stamp, m_pWorldEvents->GetRevision());
+    }
     return stamp;
 }
 
@@ -305,6 +310,10 @@ std::vector<ActiveEffect_t> GameState::CollectSessionWorldEffects() const
     {
         const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
         result.insert(result.end(), councilWorld.begin(), councilWorld.end());
+    }
+    if (m_pWorldEvents)
+    {
+        m_pWorldEvents->AppendActiveEffects(result);
     }
     AppendStandingWorldRules_(result);
     return result;
@@ -332,6 +341,10 @@ std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) c
         result.insert(result.end(), councilWorld.begin(), councilWorld.end());
         const std::vector<ActiveEffect_t>& councilFaction = m_pCouncil->CollectFactionEffects(rFor);
         result.insert(result.end(), councilFaction.begin(), councilFaction.end());
+    }
+    if (m_pWorldEvents)
+    {
+        m_pWorldEvents->AppendActiveEffects(result);
     }
     AppendStandingWorldRules_(result);
     return result;
@@ -549,6 +562,16 @@ const MindControlLedger& GameState::GetMindControlLedger() const
     return *m_pMindControl;
 }
 
+EcologyLedger& GameState::GetEcologyLedger()
+{
+    return *m_pEcology;
+}
+
+const EcologyLedger& GameState::GetEcologyLedger() const
+{
+    return *m_pEcology;
+}
+
 DiplomaticActionExecutor& GameState::GetDiplomaticActionExecutor()
 {
     return *m_pDiplomaticActionExecutor;
@@ -687,6 +710,25 @@ FirstContactResolver& GameState::GetFirstContactResolver()
 const FirstContactResolver& GameState::GetFirstContactResolver() const
 {
     return *m_pFirstContact;
+}
+
+void GameState::CreateWorldEvents(const WorldEventsConfig_t& rConfig)
+{
+    if (m_pWorldEvents)
+    {
+        throw std::logic_error("GameState::CreateWorldEvents: world events already exist");
+    }
+    m_pWorldEvents = std::make_unique<WorldEventTracker>(rConfig);
+}
+
+WorldEventTracker* GameState::GetWorldEvents()
+{
+    return m_pWorldEvents.get();
+}
+
+const WorldEventTracker* GameState::GetWorldEvents() const
+{
+    return m_pWorldEvents.get();
 }
 
 void GameState::CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,

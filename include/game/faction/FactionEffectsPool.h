@@ -87,6 +87,12 @@ private:
     // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.
     std::vector<ActiveEffect_t> CollectDifficultyEffects_() const;
 
+    // Session native life level continuous effects; same mid-campaign rule as difficulty.
+    std::vector<ActiveEffect_t> CollectNativeLifeEffects_() const;
+
+    // eco_damage.json continuous effects (the clean-minerals baseline).
+    std::vector<ActiveEffect_t> CollectEcoDamageEffects_() const;
+
     // Erase effects whose removedByTech is already discovered.
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 

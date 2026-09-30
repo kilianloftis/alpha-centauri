@@ -996,5 +996,87 @@
         }
       ]
     }
+  },
+  {
+    "id": "planet",
+    "levels": {
+      "-3": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 6,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "-2": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 5,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "-1": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 4,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "0": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "1": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "2": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 1,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "3": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 1,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ]
+    }
   }
 ]

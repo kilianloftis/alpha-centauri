@@ -277,6 +277,12 @@
         }
       },
       {
+        "type": "AddVirtualMinerals",
+        "parameters": {
+          "amount": 5
+        }
+      },
+      {
         "type": "DestroyUnit"
       }
     ]

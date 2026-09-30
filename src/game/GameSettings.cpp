@@ -126,6 +126,15 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
             }
             rConfig.difficultyId = pSection->at("difficulty").get<std::string>();
         }
+        if (pSection->contains("native_life"))
+        {
+            if (!pSection->at("native_life").is_string())
+            {
+                throw std::runtime_error("Game settings '" + rPath
+                                         + "': game_rules.native_life must be a string");
+            }
+            rConfig.nativeLifeLevelId = pSection->at("native_life").get<std::string>();
+        }
     }
 }
 
@@ -167,6 +176,7 @@ void LoadPauseOnEvents_(const nlohmann::json& rJson, PauseOnEventsConfig_t& rCon
             pSection->value("delay_in_transcendence", rConfig.delayInTranscendence);
         rConfig.atrocityCommitted =
             pSection->value("atrocity_committed", rConfig.atrocityCommitted);
+        rConfig.fungalBloom = pSection->value("fungal_bloom", rConfig.fungalBloom);
     }
 }
 
@@ -281,6 +291,7 @@ void GameSettings::Save(const std::string& path) const
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
         {"auto_return_low_fuel_air", m_gameRules.autoReturnLowFuelAir},
         {"difficulty", m_gameRules.difficultyId},
+        {"native_life", m_gameRules.nativeLifeLevelId},
     };
     json["visibility"] = {
         {"remove_shroud", m_visibility.removeShroud},
@@ -300,6 +311,7 @@ void GameSettings::Save(const std::string& path) const
         {"population_limit_reached", m_pauseOnEvents.populationLimitReached},
         {"delay_in_transcendence", m_pauseOnEvents.delayInTranscendence},
         {"atrocity_committed", m_pauseOnEvents.atrocityCommitted},
+        {"fungal_bloom", m_pauseOnEvents.fungalBloom},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
     json["graphics"] = {

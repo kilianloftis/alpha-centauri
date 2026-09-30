@@ -4,6 +4,8 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/world-events/WorldEventConfig.h"
 #include "game/Faction.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
@@ -212,6 +214,8 @@ void Engine::InitializeApp_()
     // still point at the settings file, rather than from the first Faction constructor.
     m_gameDataContext->difficultyConfig->RequireForSession(
         m_pSettings->GetGameRules().difficultyId);
+    m_gameDataContext->nativeLifeLevelConfig->RequireForSession(
+        m_pSettings->GetGameRules().nativeLifeLevelId);
 }
 
 void Engine::StartNewGame_()
@@ -498,6 +502,7 @@ void Engine::StartNewGame_()
 
     m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
                                          *m_gameDataContext->councilRules);
+    m_pGameState->CreateWorldEvents(*m_gameDataContext->worldEventsConfig);
     m_councilAiVoteConn = m_pGameState->GetPlanetaryCouncil()->OnProposalOpened.ConnectScoped(
         [this](Faction& /*rProposer*/, const std::string& /*rProposalId*/) {
             if (PlanetaryCouncil* pCouncil = m_pGameState->GetPlanetaryCouncil())

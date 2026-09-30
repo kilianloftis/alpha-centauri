@@ -51,13 +51,21 @@ struct EvBaseLostPop
     int newSize;
 };
 
+// A base's eco-damage roll hit and fungus popped in its radius.
+struct EvFungalBloom
+{
+    FactionId_t factionId;
+    BaseId_t baseId;
+};
+
 using GameEvent = std::variant<
     EvTurnStarted,
     EvTechDiscovered,
     EvBaseBuilt,
     EvDroneRiot,
     EvBaseGainedPop,
-    EvBaseLostPop
+    EvBaseLostPop,
+    EvFungalBloom
 >;
 
 } // namespace ac

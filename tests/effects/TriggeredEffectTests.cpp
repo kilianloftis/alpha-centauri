@@ -708,3 +708,113 @@ TEST_CASE("A oncePer RecordMindControl fires once", "[effects][triggered][mind-c
     CHECK(ApplyTriggeredEffects(effects, context).empty());
     CHECK(game.pState->GetMindControlLedger().Total(game.pFaction->GetFactionId()) == 4);
 }
+
+TEST_CASE("GrantCleanMinerals gated on the first bloom credits nothing until the faction blooms",
+          "[effects][triggered][ecology]")
+{
+    TriggerGame_ game;
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        OnceEffect_(GrantCleanMineralsEffect_t{1, /*bRequiresFirstBloom=*/true},
+                    OnceScope_t::Faction, "eco_grant"),
+    };
+    EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    const FactionId_t factionId = game.pFaction->GetFactionId();
+
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    CHECK(ApplyTriggeredEffects(effects, context).empty());
+    CHECK(rLedger.CleanMineralGrants(factionId) == 0);
+    // A withheld grant has changed nothing, so its oncePer key is still unspent.
+    CHECK(game.pFaction->ConsumedTriggerKeys().count("eco_grant") == 0);
+
+    rLedger.RecordFungalBloom(factionId);
+    const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
+    REQUIRE(results.size() == 1);
+    CHECK(std::get<CleanMineralsGranted_t>(results[0]).amount == 1);
+    CHECK(rLedger.CleanMineralGrants(factionId) == 1);
+}
+
+TEST_CASE("GrantCleanMinerals without the bloom gate credits before any bloom",
+          "[effects][triggered][ecology]")
+{
+    TriggerGame_ game;
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        Effect_(GrantCleanMineralsEffect_t{2, /*bRequiresFirstBloom=*/false}),
+    };
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    ApplyTriggeredEffects(effects, context);
+    CHECK(game.pState->GetEcologyLedger().CleanMineralGrants(game.pFaction->GetFactionId())
+          == 2);
+}
+
+TEST_CASE("Ecology ledger effects credit each faction in a multi-faction context once",
+          "[effects][triggered][ecology]")
+{
+    TriggerGame_ game;
+    Faction& second = game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+        actest::k_TestFactionSeed));
+    const std::vector<TriggeredEffectConfig_t> effects = {
+        Effect_(AddVirtualMineralsEffect_t{5}),
+        Effect_(GrantCleanMineralsEffect_t{1, /*bRequiresFirstBloom=*/false}),
+    };
+
+    TriggeredEffectContext_t context(*game.pState, {game.pFaction, &second});
+    CHECK(ApplyTriggeredEffects(effects, context).size() == 4);
+
+    const EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    for (const Faction* pFaction : {game.pFaction, &second})
+    {
+        CHECK(rLedger.VirtualMinerals(pFaction->GetFactionId()) == 5);
+        CHECK(rLedger.CleanMineralGrants(pFaction->GetFactionId()) == 1);
+    }
+}
+
+TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not the base's owner",
+          "[effects][triggered][ecology]")
+{
+    TriggerGame_ game;
+    Faction& victim = game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+        actest::k_TestFactionSeed));
+    Tile* pTile = game.pState->GetWorldMap().GetTile(4, 4);
+    REQUIRE(pTile);
+    BaseManager* pVictimBase = victim.CreateBase(
+        game.pState->AllocateBaseId(), "Target", pTile, game.fixtures.dataContext,
+        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+    REQUIRE(pVictimBase);
+
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    context.pBase = pVictimBase;
+    context.pTile = pTile;
+    context.pFaction = &victim;
+    context.actionTarget = victim.GetFactionId();
+    const std::vector<TriggeredEffectConfig_t> effects = {Effect_(AddVirtualMineralsEffect_t{5})};
+    const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
+
+    REQUIRE(results.size() == 1);
+    CHECK(std::get<VirtualMineralsAdded_t>(results[0]).amount == 5);
+    const EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    CHECK(rLedger.VirtualMinerals(game.pFaction->GetFactionId()) == 5);
+    CHECK(rLedger.VirtualMinerals(victim.GetFactionId()) == 0);
+}
+
+TEST_CASE("Every ecology ledger write moves its revision", "[effects][triggered][ecology]")
+{
+    EcologyLedger ledger;
+    uint64_t revision = ledger.GetRevision();
+    ledger.RecordFungalBloom(1);
+    CHECK(ledger.GetRevision() != revision);
+    revision = ledger.GetRevision();
+    ledger.GrantCleanMinerals(1, 1);
+    CHECK(ledger.GetRevision() != revision);
+    revision = ledger.GetRevision();
+    ledger.AddVirtualMinerals(1, 5);
+    CHECK(ledger.GetRevision() != revision);
+
+    CHECK(ledger.FungalBlooms(1) == 1);
+    CHECK(ledger.FungalBlooms(2) == 0);
+    CHECK_THROWS_AS(ledger.AddVirtualMinerals(1, 0), std::invalid_argument);
+    CHECK_THROWS_AS(ledger.GrantCleanMinerals(1, -1), std::invalid_argument);
+}

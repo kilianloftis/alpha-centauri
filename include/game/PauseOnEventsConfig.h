@@ -23,6 +23,7 @@ enum class PauseOnEventId_t
     PopulationLimitReached,
     DelayInTranscendence,
     AtrocityCommitted,
+    FungalBloom,
 };
 
 struct PauseOnEventsConfig_t
@@ -40,6 +41,7 @@ struct PauseOnEventsConfig_t
     bool populationLimitReached = true;
     bool delayInTranscendence = true;
     bool atrocityCommitted = true;
+    bool fungalBloom = true;
 
     bool operator==(const PauseOnEventsConfig_t&) const = default;
 
@@ -73,6 +75,8 @@ struct PauseOnEventsConfig_t
             return delayInTranscendence;
         case PauseOnEventId_t::AtrocityCommitted:
             return atrocityCommitted;
+        case PauseOnEventId_t::FungalBloom:
+            return fungalBloom;
         }
         return true;
     }

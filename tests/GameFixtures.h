@@ -48,6 +48,9 @@
 #include "game/units/MoraleConfig.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/units/BaseConquestConfig.h"
+#include "game/units/NativeUnitConfig.h"
+#include "game/units/NativeUnitRegistry.h"
+#include "game/faction/FactionConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/map/ElevationRulesConfigParser.h"
@@ -56,6 +59,10 @@
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
 #include "game/atrocities/AtrocityConfigParser.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/ecology/EcoDamageCalculator.h"
+#include "game/ecology/EcoDamageConfig.h"
+#include "game/world-events/WorldEventConfig.h"
 
 #include <deque>
 #include <memory>
@@ -232,6 +239,18 @@ struct WorldFixture
             ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
         dataContext.atrocitiesConfig = std::make_unique<ac::AtrocitiesConfig_t>(
             ac::AtrocityConfigParser{}.ParseConfig(FixturePath("atrocities.json")));
+        dataContext.nativeLifeLevelConfig = std::make_unique<ac::NativeLifeLevelConfig_t>(
+            ac::NativeLifeLevelConfigParser{}.ParseConfig(FixturePath("native_life_levels.json")));
+        dataContext.worldEventsConfig = std::make_unique<ac::WorldEventsConfig_t>(
+            ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
+        // Built before any Faction: the pool holds a reference into `effects`. Tests that want
+        // a different formula edit damageFormula in place.
+        dataContext.ecoDamageConfig = std::make_unique<ac::EcoDamageConfig_t>(
+            ac::EcoDamageConfigParser{}.ParseConfig(FixturePath("eco_damage.json"),
+                                                    FixturePath("eco_damage.lua"),
+                                                    *dataContext.luaRuntime));
+        dataContext.ecoDamageCalculator = std::make_unique<ac::EcoDamageCalculator>(
+            *dataContext.ecoDamageConfig, *dataContext.luaRuntime);
         // Built here, before any Faction exists: FactionEffectsPool holds a reference into
         // `effects`, so a test replacing this config later would dangle it.
         dataContext.baseConquestConfig = std::make_unique<ac::BaseConquestConfig_t>();
@@ -487,5 +506,68 @@ struct FactionFixture : BaseFixture
         map.GetUnitPositions().MoveUnit(rUnit, At(x, y));
     }
 };
+
+// The fixture native units (one land and one sea lifeform), with every fungal bloom spawning
+// between lifeformsMin and lifeformsMax of them.
+inline void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int lifeformsMax)
+{
+    rData.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
+    rData.nativeUnitRegistry->Load(FixturePath("native_units.json"));
+    ac::NativeLifeConfig_t life;
+    life.fungalBloomNativeLifeformsMin = lifeformsMin;
+    life.fungalBloomNativeLifeformsMax = lifeformsMax;
+    rData.nativeUnitRegistry->SetFungalBloomLifeforms(life);
+}
+
+// A live GameState on its own 9x9 all-land map over rFixtures' data, for tests that need
+// session factions rather than FactionFixture's bind state.
+inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures,
+                                                      const ac::ImprovementRegistry& rImprovements)
+{
+    auto pMap = std::make_unique<ac::WorldMap>(9, 9, TestMapRules());
+    for (auto& pTile : pMap->GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    return std::make_unique<ac::GameState>(
+        std::move(pMap), rImprovements, &rFixtures.unitComponents, rFixtures.settings,
+        *rFixtures.dataContext.moraleCalculator, rFixtures.dataContext.tileYieldRules,
+        rFixtures.dataContext.interactionGrids, k_TestRngSeed);
+}
+
+// rDefinition must outlive the session.
+inline ac::Faction& AddSessionFaction(FactionFixture& rFixtures, ac::GameState& rState,
+                                      const ac::FactionConfig_t& rDefinition,
+                                      bool bIsPlayerControlled)
+{
+    return rState.AddFaction(std::make_unique<ac::Faction>(
+        rState.AllocateFactionId(), bIsPlayerControlled, rDefinition, rFixtures.dataContext,
+        rState.GetWorldMap(), rFixtures.settings, k_TestFactionSeed));
+}
+
+// The native-life faction a fungal bloom spawns lifeforms for.
+inline ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures, ac::GameState& rState)
+{
+    rFixtures.extraDefinitions.push_back(
+        std::make_unique<ac::FactionConfig_t>(rFixtures.factionDefinition));
+    ac::FactionConfig_t& rPlanet = *rFixtures.extraDefinitions.back();
+    rPlanet.id = "planet";
+    rPlanet.identity.species = ac::FactionSpecies_t::NativeLife;
+    rPlanet.identity.participatesInCouncil = false;
+    return AddSessionFaction(rFixtures, rState, rPlanet, /*bIsPlayerControlled=*/false);
+}
+
+inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState& rState,
+                                        ac::Faction& rFaction, int x, int y)
+{
+    ac::BaseManager* pBase = rFaction.CreateBase(
+        rState.AllocateBaseId(), "TestBase", rState.GetWorldMap().GetTile(x, y),
+        rFixtures.dataContext, rState.GetTileEffects(), rState.GetSecretProjectAvailability());
+    if (!pBase)
+    {
+        throw std::runtime_error("MakeSessionBase: CreateBase failed");
+    }
+    return *pBase;
+}
 
 } // namespace actest

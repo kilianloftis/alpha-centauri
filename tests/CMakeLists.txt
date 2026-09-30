@@ -63,6 +63,11 @@ add_executable(effects-tests
     game/TerraformTests.cpp
     game/ElevationChangeTests.cpp
     game/FungalBloomTests.cpp
+    game/EcoDamageTests.cpp
+    game/EcoDamageStageTests.cpp
+    game/EcoScaleTests.cpp
+    game/NativeLifeLevelConfigTests.cpp
+    game/WorldEventTests.cpp
     game/ExplosionTests.cpp
     game/BombardTests.cpp
     game/TileResourceRestrictionTests.cpp

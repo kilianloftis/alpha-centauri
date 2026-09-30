@@ -23,7 +23,9 @@ Population
 - Drone/talent balance and mood forecast
 Player Actions
 World events
-- Mindworms, fungus, disasters
+- Cyclic world events start or end (Solar Perihelion); mindworms, fungus, disasters
+Ecological damage
+- Each base rolls its eco-damage score as the chance of a fungal bloom in its radius
 Victory condition checks
 - Conquest, transcendence, diplomatic, economic
 Turn end

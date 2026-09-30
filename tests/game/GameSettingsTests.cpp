@@ -87,6 +87,27 @@ TEST_CASE("GameSettings Save and Load round-trip difficulty", "[GameSettings]")
     std::filesystem::remove(path);
 }
 
+TEST_CASE("GameSettings Save and Load round-trip native life level", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_native_life.json");
+    std::filesystem::remove(path);
+
+    {
+        GameSettings settings;
+        CHECK(settings.GetGameRules().nativeLifeLevelId.empty());
+        GameRulesConfig_t rules = settings.GetGameRules();
+        rules.nativeLifeLevelId = "abundant";
+        settings.SetGameRules(rules);
+        settings.Save(path.string());
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    CHECK(loaded.GetGameRules().nativeLifeLevelId == "abundant");
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("GameSettings Save and Load round-trip auto_return_low_fuel_air", "[GameSettings]")
 {
     const std::filesystem::path path = TempSettingsPath("ac_settings_auto_return.json");
@@ -324,6 +345,7 @@ TEST_CASE("GameSettings Save and Load round-trip pause_on_events", "[GameSetting
         config.droneRiots = false;
         config.buildOrdersOutOfDate = false;
         config.atrocityCommitted = false;
+        config.fungalBloom = false;
         settings.SetPauseOnEvents(config);
         settings.Save(path.string());
     }
@@ -335,6 +357,7 @@ TEST_CASE("GameSettings Save and Load round-trip pause_on_events", "[GameSetting
     CHECK_FALSE(loaded.GetPauseOnEvents().droneRiots);
     CHECK_FALSE(loaded.GetPauseOnEvents().buildOrdersOutOfDate);
     CHECK_FALSE(loaded.GetPauseOnEvents().atrocityCommitted);
+    CHECK_FALSE(loaded.GetPauseOnEvents().fungalBloom);
 
     std::filesystem::remove(path);
 }

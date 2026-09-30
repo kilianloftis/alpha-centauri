@@ -42,6 +42,13 @@ add_library(ac-core STATIC
     game/atrocities/AtrocityLedger.cpp
     game/atrocities/AtrocityRules.cpp
     game/mind-control/MindControlLedger.cpp
+    game/ecology/EcologyLedger.cpp
+    game/ecology/EcoDamageConfigParser.cpp
+    game/ecology/EcoDamageCalculator.cpp
+    game/ecology/BaseEcology.cpp
+    game/NativeLifeLevelConfig.cpp
+    game/world-events/WorldEventConfig.cpp
+    game/world-events/WorldEventTracker.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/HomeBaseIndex.cpp
@@ -222,6 +229,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/PlayerActions.cpp
     game/stages/Mood.cpp
     game/stages/WorldEvents.cpp
+    game/stages/EcoDamage.cpp
     game/stages/VictoryConditionChecks.cpp
     game/stages/TurnEnd.cpp
     game/stages/Save.cpp

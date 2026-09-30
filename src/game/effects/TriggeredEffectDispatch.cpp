@@ -555,7 +555,9 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                           || std::is_same_v<T, GrantUnitEffect_t>
                           || std::is_same_v<T, SetInfiltrationEffect_t>
                           || std::is_same_v<T, CommitAtrocityEffect_t>
-                          || std::is_same_v<T, RecordMindControlEffect_t>)
+                          || std::is_same_v<T, RecordMindControlEffect_t>
+                          || std::is_same_v<T, GrantCleanMineralsEffect_t>
+                          || std::is_same_v<T, AddVirtualMineralsEffect_t>)
             {
                 return true;
             }
@@ -633,6 +635,25 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 rCtx.rGameState.GetMindControlLedger().Record(rFaction.GetFactionId(),
                                                               rConcrete.weight);
                 rOut.push_back(MindControlRecorded_t{rConcrete.weight});
+                return true;
+            }
+            else if constexpr (std::is_same_v<T, GrantCleanMineralsEffect_t>)
+            {
+                EcologyLedger& rEcology = rCtx.rGameState.GetEcologyLedger();
+                if (rConcrete.bRequiresFirstBloom
+                    && rEcology.FungalBlooms(rFaction.GetFactionId()) == 0)
+                {
+                    return false;
+                }
+                rEcology.GrantCleanMinerals(rFaction.GetFactionId(), rConcrete.amount);
+                rOut.push_back(CleanMineralsGranted_t{rConcrete.amount});
+                return true;
+            }
+            else if constexpr (std::is_same_v<T, AddVirtualMineralsEffect_t>)
+            {
+                rCtx.rGameState.GetEcologyLedger().AddVirtualMinerals(rFaction.GetFactionId(),
+                                                                      rConcrete.amount);
+                rOut.push_back(VirtualMineralsAdded_t{rConcrete.amount});
                 return true;
             }
             else if constexpr (std::is_same_v<T, ModifyPopulationEffect_t>)

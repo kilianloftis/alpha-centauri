@@ -42,6 +42,10 @@ struct GameDataPaths
     std::string policeRules = "config/police_rules.json";
     std::string worldRules = "config/world_rules.json";
     std::string atrocities = "config/atrocities.json";
+    std::string ecoDamage = "config/eco_damage.json";
+    std::string ecoDamageFormula = "config/eco_damage.lua";
+    std::string nativeLifeLevels = "config/native_life_levels.json";
+    std::string worldEvents = "config/world_events.json";
 };
 
 } // namespace ac

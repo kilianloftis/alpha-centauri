@@ -1,0 +1,50 @@
+{
+  "fungal_bloom_native_lifeforms_min": 1,
+  "fungal_bloom_native_lifeforms_max": 1,
+  "units": [
+    {
+      "id": "Mind_Worm",
+      "name": "Mind Worm",
+      "domain": "land",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": { "flag": "native_life" }
+        }
+      ]
+    },
+    {
+      "id": "Isle_of_the_Deep",
+      "name": "Isle of the Deep",
+      "domain": "sea",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": { "stat": "movement", "amount": 4, "op": "Add" }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": { "flag": "native_life" }
+        }
+      ]
+    }
+  ]
+}

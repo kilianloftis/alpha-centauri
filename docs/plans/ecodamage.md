@@ -3,35 +3,35 @@ name: Ecological damage
 overview: "Per-base eco-damage score assembled from tile/base/faction effect contributions and a Lua formula in `config/eco_damage.lua`, a faction-wide clean-minerals cap raised by fungal blooms and eco facilities, and a per-faction `EcoDamage` turn stage that rolls the score as a fungal-pop percentage and applies the `FungalBloom` effect on a hit."
 todos:
   - id: stats
-    content: Add EcoDamageContribution / EcoDamageWorkedContribution / EcoTerraformScale / EcoCleanMinerals / EcoDamageReduction to StatId_t, ParseStatId, KindFor, DomainFor
-    status: pending
+    content: Add EcoDamageContribution / EcoDamageWorkedContribution / EcoTerraformScale / EcoCleanMinerals / EcoDamageReduction / EcoMineralOffset to StatId_t, ParseStatId, KindFor, DomainFor
+    status: completed
   - id: config
     content: Add config/eco_damage.json + config/eco_damage.lua, EcoDamageConfig_t/parser, EffectSourceKind_t::EcoDamage, GameDataPaths + LoadGameData
-    status: pending
+    status: completed
   - id: contributions
     content: Author eco contributions on improvements.json (Borehole/Mirror/Condenser/Forest/Farm/Mine/Solar/SoilEnricher/KelpFarm/Base-on-water)
-    status: pending
+    status: completed
   - id: calculator
     content: EcoDamageCalculator (Lua bridge) + EcoDamageInputs_t; BaseManager::GetEcologicalDamage() memoized on the base effects revision
-    status: pending
+    status: completed
   - id: faction-state
-    content: Faction fungal-bloom counter + clean-mineral grant counter; GrantCleanMinerals triggered effect
-    status: pending
+    content: "EcologyLedger on GameState (blooms, clean-mineral grants, virtual minerals, revision); GrantCleanMinerals + AddVirtualMinerals triggered effects; entries on the four eco facilities and Tectonic_Payload"
+    status: completed
   - id: stage
-    content: EcoDamage per-faction turn stage after WorldEvents; roll + pop-tile pick + EvFungalBloom + player notice; on_pop_effects applies FungalBloom with the tile stamped
-    status: pending
+    content: EcoDamage per-faction turn stage after WorldEvents; roll + pop-tile pick + EvFungalBloom + player notice; records the bloom in EcologyLedger; on_pop_effects applies FungalBloom with the tile stamped
+    status: completed
   - id: eco-scale
     content: "Eco multiplier emitters: planet levels in social_rating_effects.json, config/native_life_levels.json + GameRulesConfig.nativeLifeLevelId + FactionEffectsPool"
-    status: pending
+    status: completed
   - id: world-events
     content: config/world_events.json registry with a Cycle trigger, active-event state on GameState, WorldEvents starts/expires events, CollectWorldExtras serves active effects; Perihelion is the first entry
-    status: pending
+    status: completed
   - id: docs
     content: docs/architecture/ecology-system.md; update high-level, turn-system, effects-system, difficulty-system, game-rules/turn-structure
-    status: pending
+    status: completed
   - id: tests
     content: Parser, calculator, contribution-routing, cap, stage-roll tests; ./bd test
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -126,12 +126,18 @@ the list inert.
   tile — which is exactly SMAC's "worked (not crawled)" exclusion, for free.
 - `LuaRuntime` + the `tech_cost.lua` pattern (a `.lua` file returning a named formula string,
   with its own `GameDataPaths` entry) is the model for the score formula.
+- **Stored per-faction tallies are one ledger per concern.** `AtrocityLedger` and
+  `MindControlLedger` are both owned by `GameState`, keyed by `FactionId_t`, and written by a
+  concern-specific triggered effect (`CommitAtrocity`, `RecordMindControl`) whose dispatch arm
+  is per-faction-subject — it credits each faction in `context.factions`, so in a probe mission
+  or a detonation that is the actor. Eco follows the same pattern with an `EcologyLedger`; see
+  [The ecology ledger](#the-ecology-ledger).
 
 ## Design
 
 ### 1. Score
 
-Five new stats, one existing. Each is a distinct quantity, so each is its own `StatId_t`.
+Six new stats, one existing. Each is a distinct quantity, so each is its own `StatId_t`.
 
 | Stat | Wire form | Kind | Domain | Emitters |
 |---|---|---|---|---|
@@ -163,8 +169,10 @@ struct EcoDamageInputs_t
     double terraformScale = 1.0;   // resolved EcoTerraformScale
     int minerals = 0;              // GetMineralProduction outright
     int mineralOffset = 0;         // resolved EcoMineralOffset (negative for orbital)
-    int cleanMinerals = 0;         // resolved EcoCleanMinerals + blooms + grants
-    int virtualMinerals = 0;    // atrocity ledger + faction accumulator (see Virtual minerals)
+    int cleanMinerals = 0;         // resolved EcoCleanMinerals (the base 16)
+    int fungalBlooms = 0;          // EcologyLedger::FungalBlooms
+    int cleanMineralGrants = 0;    // EcologyLedger::CleanMineralGrants
+    int virtualMinerals = 0;       // AtrocityLedger::EcoVirtualMinerals + EcologyLedger::VirtualMinerals
     int damageReduction = 0;       // resolved EcoDamageReduction
     int techs = 0;
     double ecoScale = 1.0;         // ResolveBaseStat(EcologicalDamage, 1.0)
@@ -186,18 +194,25 @@ crawled**) improvements" rule, and it holds without a crawler check in the eco c
 `IsTileAssigned` instead would silently double every crawled improvement — and also every tile a
 neighbouring or enemy base works — so the walk must not drift onto it.
 
-The result is memoized against the base effects revision, the world's worked-tile and
-map-appearance revisions, and `AtrocityLedger::GetRevision()` — the same validation shape
-`CommerceManager` uses, and it folds in that last one for the same reason commerce does: **an
-atrocity moves the eco score without touching any effect pool**, so without it a fresh atrocity
-would keep serving the old score for the rest of the turn. Crawl start and stop both go through `WorkedTileIndex`, so they bump
-the worked-tile revision and invalidate the memo like any worker reassignment.
+The base's own tile is outside `GetWorkableTiles()` but still carries improvements — the sea-base
+term rides `Base` — so the walk adds it too, at its unworked weight: no pop works it.
+
+The score lives in `BaseEcology`, which `BaseManager` owns and `GetEcologicalDamage()` reads. It
+is memoized against the faction's composed effects version, its research revision, the base's
+population and mood revisions, the base map's worked-tile and appearance revisions,
+`AtrocityLedger::GetRevision()` and `EcologyLedger::GetRevision()` — the same validation shape
+`CommerceManager` uses. The two ledger revisions are there for the same reason commerce folds in
+the atrocity revision: **an atrocity, a bloom, a clean-mineral grant and
+a tectonic strike all move the eco score without touching any effect pool**, so without them the
+base would keep serving the old score for the rest of the turn. Crawl start and stop both go
+through `WorkedTileIndex`, so they bump the worked-tile revision and invalidate the memo like any
+worker reassignment.
 
 ### 2. Threshold
 
 There is no separate threshold check. The score **is** the percentage. A new per-faction turn
-stage `EcoDamage` sits **after** `WorldEvents` and, for each of the faction's bases, rolls
-`rng % 100 < min(100, score)`.
+stage `EcoDamage` sits **after** `WorldEvents` and, for each of the faction's bases, rolls a
+uniform `0..99` against `min(max_chance_percent, score)`.
 
 It is its own stage rather than work inside `WorldEvents` because the roll is per faction per
 base and `WorldEvents` is `repeatForEachFaction: false` — putting it there means hand-rolling a
@@ -219,12 +234,16 @@ No longer a stub: the `FungalBloom` triggered effect exists, so `on_pop_effects`
 real entry. On a successful roll the stage:
 
 1. picks the **pop tile** from the base's radius and stamps it as `pTile`,
-2. calls `Faction::RecordFungalBloom()`, which increments the faction's bloom counter (this is
-   the `+1` to `Cleanmins` and the gate that starts crediting eco-facility grants),
+2. calls `EcologyLedger::RecordFungalBloom(owner)` — the `+1` to `Cleanmins` and the gate that
+   starts crediting eco-facility grants,
 3. emits `EvFungalBloom { factionId, baseId }` on the `EventBus`,
-4. enqueues a `PlayerInteractionQueue` notice,
+4. enqueues a `PlayerInteractionQueue` notice (`PauseOnEventId_t::FungalBloom`) when the base
+   is the player's,
 5. applies `eco_damage.json`'s `on_pop_effects` through `ApplyTriggeredEffects` with base,
    faction **and tile** stamped.
+
+The bloom is recorded in C++ rather than by an authored entry: the stage is its only writer, so
+a `RecordFungalBloom` effect type would be config surface with nothing else to use it.
 
 `FungalBloom` does the rest of the work already, and more than this plan originally scoped for
 it: `ApplyFungalBloom` converts the origin plus a random sample of its Chebyshev-1 neighbours
@@ -235,8 +254,9 @@ destroying improvements and releasing mind worms are therefore all covered by on
 entry — none of them needs code here.
 
 > **Trap:** `FungalBloom_` returns false when the context has no `pTile`, so an `on_pop_effects`
-> list applied with only base and faction stamped would silently do nothing. Stamping the tile
-> is what makes the entry fire, and it is the one thing the eco stage must get right.
+> list applied with only base and faction stamped would silently plant nothing, while the
+> ledger has already counted the bloom. Stamping the tile is the one thing the eco stage must
+> get right.
 
 Two magnitude sources are authored on `FungalBloom`, and the eco pop must use the literal one:
 `tiles_stat` resolves off a **subject unit** (that is how a fungal payload takes its size from
@@ -260,7 +280,7 @@ Three contributors sum into the one `virtual_minerals` input, with different lif
 | Source | Channel | Lifetime |
 |---|---|---|
 | Atrocity records | `AtrocityLedger::EcoVirtualMinerals(perpetrator, rConfig)` | permanent, `bCounted`-gated at commission |
-| One-shot events (a tectonic detonation, nerve gas) | new triggered effect `AddVirtualMinerals`, crediting a permanent `Faction` accumulator | permanent, ungated |
+| One-shot events (a tectonic detonation, nerve gas) | new triggered effect `AddVirtualMinerals`, writing `EcologyLedger` | permanent, ungated |
 | Standing sources (a facility that is simply dirty) | the `EcoMineralOffset` stat, **positive** | continuous, vanishes with its emitter |
 
 `EcoMineralOffset` is signed and that is deliberate — it is the same quantity in both
@@ -275,13 +295,14 @@ next entry in its own `on_detonate_effects`, so by the time anything resolves ec
 missile is gone. There is nothing left to pool. The damage has to be **recorded**, not emitted,
 and recording is what the triggered family is for.
 
-That gives the plan a clean dividing line, and `GrantCleanMinerals` is already on the same side
-of it for the same structural reason — the cap grant must outlive the Tree Farm being scrapped:
+That gives the plan a clean dividing line, and the clean-mineral grant is already on the same
+side of it for the same structural reason — the cap grant must outlive the Tree Farm being
+scrapped:
 
 | The contribution… | Channel |
 |---|---|
 | should track its emitter, and vanish with it | a `StatId_t` — `EcoMineralOffset`, `EcoDamageReduction`, `EcoTerraformScale` |
-| must outlive whatever caused it | a triggered effect writing a permanent counter — `AddVirtualMinerals`, `GrantCleanMinerals` |
+| must outlive whatever caused it | an `EcologyLedger` tally, written by a triggered effect — `AddVirtualMinerals`, `GrantCleanMinerals` (and blooms, written by the stage) |
 
 A facility that is dirty *while it stands* is the first row, and `EcoMineralOffset` already
 serves it. A missile that wrecked something and then ceased to exist is the second.
@@ -295,30 +316,38 @@ hit points), and uses `ModifierOp_t` only for *how* to apply, never for *which s
 The supported seam between the families is **`amount_source`**: a continuous effect whose
 amount is read from live subject state, the way `BasesOwned` and `BaseSize` already work. So a
 triggered effect reaches a stat by mutating state an `amount_source` reads. That would let the
-accumulator feed `EcoMineralOffset` directly and collapse `virtual_minerals` into it.
+ledger's virtual minerals feed `EcoMineralOffset` directly and collapse the `virtual_minerals`
+input into it.
 
 **Not taken, for one concrete reason:** it only pays off if *both* contributors go that way, and
 the atrocity half cannot cheaply. Weighting records needs `AtrocitiesConfig_t` inside the
 amount-source evaluation, which means stamping another config pointer onto `EffectContext_t`
-(as `pTileYieldRules` is stamped for `ElevationEnergy`). Routing only the accumulator through a
+(as `pTileYieldRules` is stamped for `ElevationEnergy`). Routing only the ecology half through a
 stat while atrocities stay a direct call leaves two inputs anyway, so it buys nothing. Both stay
-direct calls, summed into one `virtual_minerals` input.
+direct reads, summed into one `virtual_minerals` input.
 
-> **Trap:** author `AddVirtualMinerals` **before** `DestroyUnit` in the list, as above.
+> **Trap:** author `AddVirtualMinerals` **before** `DestroyUnit` in the list, as below.
 > `DestroyUnit` is conventionally last for exactly this reason — `ExplosionEffect_t` spares the
 > subject unit so "a following `DestroyUnit` can spend it".
 
-**The triggered effect** is the only new machinery:
+**The triggered effect:**
 
 ```json
 { "type": "AddVirtualMinerals", "parameters": { "amount": 5 } }
 ```
 
-It credits `pFaction` through `Faction::AddVirtualMinerals(int)`, held like `m_cleanMineralGrants`
-— permanent, because the atrocity ledger sets that precedent ("a record is never removed, so the
-eco term stays stable for the rest of the game") and a half-decaying term would be a second rule
-nothing sources. It carries no Charter gate: this channel is for physical consequences, and the
-Charter is a legal instrument.
+It is a per-faction-subject arm like `RecordMindControl`. `ApplyDetonation` builds its context
+from the unit's faction, so it credits the detonating faction. The tally is permanent, because
+the atrocity ledger sets that precedent ("a record is never removed, so the eco term stays
+stable for the rest of the game") and a half-decaying term would be a second rule nothing
+sources. It carries no Charter gate: this channel is for physical consequences, and the Charter
+is a legal instrument.
+
+Unlike mind control, where the weight is on the reader (`mind_control_divisor`), this weight
+sits on the **writer**. That is deliberate: every contributor has its own size (a tectonic
+strike, nerve gas), and a reader-side weight could only apply one number to all of them. The
+atrocity half already works this way — `eco_virtual_minerals` is authored per severity in
+`config/atrocities.json`.
 
 That split is what finally lets the Tectonic Payload be modelled honestly. It is **not** an
 atrocity — it writes no record, takes no integrity hit, triggers no vendetta — but its
@@ -327,15 +356,15 @@ detonation still wrecks the ecology, so it authors the physical half alone, in
 
 ```json
 "on_detonate_effects": [
-  { "type": "Earthquake",          "parameters": { "levels_stat": "earthquake_levels" } },
-  { "type": "AddVirtualMinerals",  "parameters": { "amount": 5 } },
+  { "type": "Earthquake",         "parameters": { "levels_stat": "earthquake_levels" } },
+  { "type": "AddVirtualMinerals", "parameters": { "amount": 5 } },
   { "type": "DestroyUnit" }
 ]
 ```
 
 The magnitude is **not sourced** — see [Rules decisions](#rules-decisions-needed). Authoring it
-explicitly is the point: it is one number in a config file, and setting it to 0 turns the rule
-off without touching code.
+explicitly is the point: it is one number in a config file, and deleting the entry turns the
+rule off without touching code.
 
 ### What stays out of the effects system
 
@@ -439,23 +468,30 @@ outcome will eventually want.
 ### Clean minerals over time
 
 `Cleanmins = 16 + blooms + eco facilities built since the first bloom`. The 16 is a config
-effect; the other two are live faction state, because SMAC's grant is **permanent** — it survives
-the facility being sold or destroyed — and so cannot be a continuous effect.
+effect; the other two are `EcologyLedger` tallies, because SMAC's grant is **permanent** — it survives the
+facility being sold or destroyed — and so cannot be a continuous effect. The sum happens in
+`eco_damage.lua`, not C++: the engine hands the formula `clean_minerals`, `fungal_blooms` and
+`clean_mineral_grants` separately, so a mod that wants blooms to count double changes the formula
+rather than the engine.
 
-`Faction` gains two counters: `m_fungalBlooms` and `m_cleanMineralGrants`.
-
-A new triggered effect carries the grant:
+A new triggered effect carries the grant, placed in `on_complete_effects` on Tree Farm, Hybrid
+Forest, Centauri Preserve and Temple of Planet — and **not** on Nanoreplicator, which raises
+`Goodfacs` but never the cap:
 
 ```json
-{ "type": "GrantCleanMinerals", "parameters": { "amount": 1 } }
+{ "type": "GrantCleanMinerals", "parameters": { "amount": 1, "requires_first_bloom": true } }
 ```
 
-placed in `on_complete_effects` on Tree Farm, Hybrid Forest, Centauri Preserve and Temple of
-Planet — and **not** on Nanoreplicator, which raises `Goodfacs` but never the cap.
-`TriggeredEffectDispatch` credits `pFaction` and honours `eco_damage.json`'s
-`clean_minerals.grants_require_first_bloom`, so a build before the faction's first bloom credits
-nothing — the quirk Apolyton #175, *Ecology (Revised)* and the CivFanatics thread all describe,
-switchable by mods.
+`requires_first_bloom` is the "since the first bloom" quirk that Apolyton #175, *Ecology
+(Revised)* and the CivFanatics thread all describe: with it set, the arm reads
+`EcologyLedger::FungalBlooms` and credits nothing before the faction's first bloom. Both
+parameters are required. The gate lives on the entry rather than in `eco_damage.json` because
+the dispatcher has no path to the eco config, and giving it one for a single flag would couple
+`TriggeredEffectDispatch` to a subsystem.
+
+> **Trap:** the flag sits on four separate entries, one per facility. Setting it wrong on one of
+> them is silent: that facility credits the cap from turn one. `CleanMineralsTests` checks all
+> four buildings rather than one representative.
 
 **"Built, not acquired" is why the grant lives in `on_complete_effects`.** The sources are
 specific that the facility must be *built*: a captured or granted one does not raise the cap.
@@ -469,13 +505,61 @@ being produced credits nothing.
 > `FactionGlobal` effect would break two rules at once — it would credit acquired facilities and
 > stop being permanent when one is scrapped — and both failures are silent.
 
+### The ecology ledger
+
+`EcologyLedger` (`include/game/ecology/EcologyLedger.h`) is a sibling of `AtrocityLedger` and
+`MindControlLedger`: `GameState` owns one, and it holds three per-faction tallies.
+
+```cpp
+class EcologyLedger
+{
+public:
+    void RecordFungalBloom(FactionId_t faction);
+    void GrantCleanMinerals(FactionId_t faction, int amount);  // amount must be positive
+    void AddVirtualMinerals(FactionId_t faction, int amount);  // amount must be positive
+
+    int FungalBlooms(FactionId_t faction) const;        // 0 when it has none
+    int CleanMineralGrants(FactionId_t faction) const;
+    int VirtualMinerals(FactionId_t faction) const;
+
+    Revision GetRevision() const;                       // bumped by every write
+
+private:
+    std::map<FactionId_t, int> m_fungalBlooms;
+    std::map<FactionId_t, int> m_cleanMineralGrants;
+    std::map<FactionId_t, int> m_virtualMinerals;
+    Revision m_revision;
+};
+```
+
+It is one ledger for the ecology concern, not three, because all three tallies feed the same
+score and the same memo. A single revision covers them.
+
+The revision is the one thing `MindControlLedger` lacks. The probe cost quote is not memoized,
+so mind control never needed one, but the eco score is, and a bloom, a grant or a tectonic
+strike moves it without touching any effect pool.
+
+| Writer | Tally |
+|---|---|
+| `EcoDamage` stage, directly | `RecordFungalBloom` |
+| `GrantCleanMinerals` triggered effect | `GrantCleanMinerals` |
+| `AddVirtualMinerals` triggered effect | `AddVirtualMinerals` |
+
+Both triggered effects are per-faction-subject arms, like `RecordMindControl`. Each pushes a
+result (`CleanMineralsGranted_t`, `VirtualMineralsAdded_t`), and each parses `amount` with
+`is_number_integer()` and rejects values below 1, as `ParseRecordMindControl_` does.
+`GrantCleanMinerals` returns `false` when the first-bloom gate withholds it, so a `oncePer` key
+on it stays unspent.
+
+The ledger is save data and serializes with `GameState`, alongside the other two, once that is
+wired.
+
 ## Config shape
 
 ### `config/eco_damage.json`
 
 ```json
 {
-  "formula_file": "config/eco_damage.lua",
   "effects": [
     {
       "type": "StatModifier",
@@ -483,9 +567,6 @@ being produced credits nothing.
       "parameters": { "stat": "eco_clean_minerals", "amount": 16, "op": "Add" }
     }
   ],
-  "clean_minerals": {
-    "grants_require_first_bloom": true
-  },
   "fungal_pop": {
     "max_chance_percent": 100,
     "on_pop_effects": [
@@ -549,11 +630,15 @@ the formula.
 ```lua
 -- Variables set by the engine before evaluating damage_formula:
 --   terraform_raw, terraform_scale, minerals, mineral_offset, clean_minerals,
---   virtual_minerals, damage_reduction, techs, eco_scale
+--   fungal_blooms, clean_mineral_grants, virtual_minerals, damage_reduction, techs,
+--   eco_scale
+--
+-- clean_minerals is the resolved eco_clean_minerals stat (the base 16); fungal_blooms and
+-- clean_mineral_grants are the faction's EcologyLedger tallies, raw.
 --
 -- virtual_minerals arrives pre-weighted. Do not multiply by 5 here: that factor is
--- Major.eco_virtual_minerals in config/atrocities.json, and every other contributor
--- likewise authors its own amount.
+-- Major.eco_virtual_minerals in config/atrocities.json, and every AddVirtualMinerals
+-- entry likewise authors its own amount.
 --
 -- eco_scale is the resolved EcologicalDamage stat: difficulty x Planet rating x native
 -- life x perihelion, already multiplied together by the effect stack.
@@ -561,9 +646,11 @@ the formula.
 function eco_damage_formula()
     local terraform = (terraform_raw / 8) * terraform_scale
 
+    local cap = clean_minerals + fungal_blooms + clean_mineral_grants
+
     local clean1 = 0
-    if terraform > 0 then clean1 = math.min(clean_minerals, terraform) end
-    local clean2 = clean_minerals - clean1
+    if terraform > 0 then clean1 = math.min(cap, terraform) end
+    local clean2 = cap - clean1
 
     local mineral_term = (minerals + mineral_offset - clean2 + virtual_minerals) / (1 + damage_reduction)
     local factor = math.max(0, math.floor((terraform - clean1) + mineral_term))
@@ -593,33 +680,47 @@ and the sea-base term rides the existing `Base` improvement:
   "parameters": { "stat": "eco_damage_contribution", "amount": 1, "op": "Add" } }
 ```
 
+### `config/buildings/buildings.json`
+
+Tree Farm, Hybrid Forest, Centauri Preserve and Temple of Planet each carry the gated
+`GrantCleanMinerals` in `on_complete_effects`, shown under
+[Clean minerals over time](#clean-minerals-over-time). They land when those buildings are
+authored (see [Missing systems](#missing-systems)).
+
 ## Code additions
 
 | File | Change |
 |---|---|
-| `include/game/effects/EffectEnums.h` | five `StatId_t` enumerators, `ParseStatId` entries, `KindFor` / `DomainFor` arms, `EffectSourceKind_t::EcoDamage` |
-| `include/game/ecology/EcoDamageConfig.h` + `EcoDamageConfigParser.h/.cpp` | `EcoDamageConfig_t` and its parser; required keys, `ParseEffects(..., EffectSourceKind_t::EcoDamage, ...)` |
-| `include/game/ecology/EcoDamageCalculator.h` + `.cpp` | `EcoDamageInputs_t`, Lua bridge, non-finite/negative rejection |
+| `include/game/effects/EffectEnums.h` | six `StatId_t` enumerators, `ParseStatId` entries, `KindFor` / `DomainFor` arms, `EffectSourceKind_t::EcoDamage` |
+| `include/game/ecology/EcologyLedger.h` + `src/game/ecology/EcologyLedger.cpp` | the ledger and its revision |
+| `include/game/GameState.h` + `.cpp` | own `m_pEcology`; `GetEcologyLedger()` const and non-const, beside `GetMindControlLedger()` |
+| `include/game/effects/TriggeredEffect.h` | `GrantCleanMineralsEffect_t { int amount; bool bRequiresFirstBloom; }` and `AddVirtualMineralsEffect_t { int amount; }` in `TriggeredEffectVariant_t` |
+| `include/game/effects/TriggeredEffectDispatch.h` | `CleanMineralsGranted_t`, `VirtualMineralsAdded_t` in `TriggeredEffectResult_t` |
+| `src/game/effects/TriggeredEffectParser.cpp` | `ParseGrantCleanMinerals_` / `ParseAddVirtualMinerals_` + type-table entries |
+| `src/game/effects/TriggeredEffectDispatch.cpp` | both in `IsPerFactionSubject_`, and an `ApplyOne_` arm for each writing the ledger |
+| `src/game/EffectReferenceValidator.cpp` | empty visitor arms for both |
+| `include/game/ecology/EcoDamageConfig.h` + `src/game/ecology/EcoDamageConfigParser.cpp` | `EcoDamageConfig_t` and `EcoDamageConfigParser`; required keys, `ParseEffects(..., EffectSourceKind_t::EcoDamage, ...)`, and the formula `eco_damage.lua` returns |
+| `include/game/ecology/EcoDamageCalculator.h` + `.cpp` | `EcoDamageInputs_t`, Lua bridge, negative rejection (`EvalInt` already rejects non-finite) |
+| `include/game/ecology/BaseEcology.h` + `.cpp` | input assembly, the terraform walk, and the memo |
 | `include/game/GameDataPaths.h` | `ecoDamage = "config/eco_damage.json"`, `ecoDamageFormula = "config/eco_damage.lua"` |
-| `src/game/GameDataContext.cpp` | own both; load after the improvement/building registries, before `ValidateEffectReferences`; build the calculator with the other formula calculators |
-| `src/game/EffectReferenceValidator.cpp` | walk the new config's `effects` and `fungal_pop.on_pop_effects` |
-| `include/game/faction/base/BaseManager.h` + `.cpp` | `GetEcologicalDamage()`, its memo, and the terraform walk over `GetWorkableTiles()` |
-| `include/game/Faction.h` + `.cpp` | `m_fungalBlooms`, `m_cleanMineralGrants`, `m_virtualMinerals`, `RecordFungalBloom()`, `AddCleanMineralGrant(int)`, `AddVirtualMinerals(int)`, and their getters |
-| `include/game/effects/TriggeredEffect.h` | `GrantCleanMineralsEffect_t` and `AddVirtualMineralsEffect_t` in `TriggeredEffectVariant_t` |
-| `config/unit_components/specials.json` | `Tectonic_Payload` gains `AddVirtualMinerals` to its `on_detonate_effects` |
-| `src/game/effects/TriggeredEffectParser.cpp` | `ParseGrantCleanMinerals_` / `ParseAddVirtualMinerals_` + dispatch-table entries |
-| `src/game/effects/TriggeredEffectDispatch.cpp` | an `ApplyOne_` arm for each; both skip when the context has no faction |
+| `src/game/GameDataContext.cpp` | own `ecoDamageConfig`, `nativeLifeLevelConfig`, `worldEventsConfig` and `ecoDamageCalculator`; the Lua runtime is created before `eco_damage.lua` loads, ahead of `ValidateEffectReferences` |
+| `src/game/EffectReferenceValidator.cpp` | walk `eco_damage.json`'s `effects` and `fungal_pop.on_pop_effects`, every native life level, every world event's lists, and probe `on_paid_effects` |
+| `include/game/faction/base/BaseManager.h` + `.cpp` | owns `BaseEcology`; `GetEcologicalDamage()` |
+| `config/unit_components/specials.json` | `Tectonic_Payload` gains `AddVirtualMinerals 5` in its `on_detonate_effects`, before `DestroyUnit` |
 | `include/game/stages/EcoDamage.h` + `src/game/stages/EcoDamage.cpp` | the per-faction stage, `TurnStageRegistrar<EcoDamage>` |
-| `config/turn_stages.json` | the `EcoDamage` entry between `Population` and `WorldEvents` |
-| `config/buildings/buildings.json` | `Nessus_Mining_Station` gains `AllOwnerBases eco_mineral_offset -1` beside its `minerals +1` |
+| `config/turn_stages.json` | the `EcoDamage` entry between `WorldEvents` and `VictoryConditionChecks` |
+| `config/buildings/buildings.json` | `Nessus_Mining_Station` gains `AllOwnerBases eco_mineral_offset -1` beside its `minerals +1`; the four eco facilities, once authored, carry `GrantCleanMinerals` |
 | `config/social_rating_effects.json` | fill the `planet` level table, **including a new `"0"` row** |
 | `config/native_life_levels.json` + `include/game/NativeLifeLevelConfig.h` + parser | `default` and a `levels` array of `{ id, name, effects }`; `FindById` / `RequireForSession` mirroring `DifficultyConfig_t`. **Not** `NativeLifeConfig_t`, which is taken |
 | `include/game/GameRulesConfig.h` | `nativeLifeLevelId` beside `difficultyId` |
-| `src/game/faction/FactionEffectsPool.cpp` | `CollectNativeLifeEffects_()` mirroring `CollectDifficultyEffects_()`, appended in `Rebuild_` |
-| `config/world_events.json` + `include/game/WorldEventConfig.h` + parser | the event registry; `EffectSourceKind_t::WorldEvent`; `GameDataPaths::worldEvents` |
-| `include/game/GameState.h` + `.cpp` | active-event id set + its `Revision`; `CollectWorldExtras` appends every active event's `effects`; `GetWorldCompositionStamp` folds in the active-event revision |
-| `src/game/stages/WorldEvents.cpp` | re-evaluate each event's `Cycle` predicate against the mission year, update the active set, and fire `on_start_effects` / `on_end_effects` on the edges |
-| `include/game/EventTypes.h` | `EvFungalBloom` |
+| `src/game/GameSettings.cpp`, `src/game/Engine.cpp` | `game_rules.native_life` load/save; `Engine` validates the id like difficulty and calls `CreateWorldEvents` |
+| `src/game/faction/FactionEffectsPool.cpp` | `CollectNativeLifeEffects_()` mirroring `CollectDifficultyEffects_()`, and `CollectEcoDamageEffects_()`, appended in `Rebuild_` |
+| `config/world_events.json` + `include/game/world-events/WorldEventConfig.h` + `.cpp` | the event registry and `WorldEventsConfigParser`; `IsWorldEventActive`; `EffectSourceKind_t::WorldEvent`; `GameDataPaths::worldEvents` |
+| `include/game/world-events/WorldEventTracker.h` + `.cpp` | the active set and its `Revision`; `Advance` returns the events that started and ended |
+| `include/game/GameState.h` + `.cpp` | `CreateWorldEvents` / `GetWorldEvents`; `CollectWorldExtras` and `CollectSessionWorldEffects` append every active event's `effects`; `GetWorldCompositionStamp` folds in the tracker revision |
+| `src/game/stages/WorldEvents.cpp` | advance the tracker against the years since the first playable year and fire `on_start_effects` / `on_end_effects` on the edges, every faction as subject |
+| `include/lib/GameEvent.h` | `EvFungalBloom` |
+| `include/game/PauseOnEventsConfig.h`, `GameSettings.cpp`, `SettingsPanel.cpp` | the `FungalBloom` pause event and its `fungal_bloom` toggle |
 
 ## Rules decisions needed
 
@@ -644,8 +745,8 @@ Still open:
    commit one — it writes no record, takes no integrity hit, triggers no vendetta. What is *not*
    settled is the ecological half. *Ecology (Revised)* puts `TectonicPayloadsUsed` in the
    atrocity term but tags it `[confirm]`, and no other source mentions it. The plan authors
-   `AddVirtualMinerals 5` — the weight that source implies — as one tunable number; 0 turns it
-   off. Whether it should be ungated (as authored) or follow the Charter like an atrocity is the
+   `AddVirtualMinerals 5` — the weight that source implies — as one tunable number. The
+   effect rejects an amount of 0, so turning the rule off means deleting the entry. Whether it should be ungated (as authored) or follow the Charter like an atrocity is the
    same open question.
 6. **Which tile in the base radius the pop lands on.** The sources only say a pop happens
    "within the base radius". The stage picks uniformly among the base's workable tiles that are
@@ -666,8 +767,8 @@ with a named input, not a silent zero.
 |---|---|
 | Tree Farm, Hybrid Forest, Centauri Preserve, Temple of Planet, Nanoreplicator are not in `config/buildings/buildings.json` | `EcoTerraformScale` and `EcoDamageReduction` have no emitters until they are authored; the stats resolve to their identity seeds meanwhile |
 | Pholus Mutagen and Singularity Inductor are not in `projects.json` | same, for the faction-wide half of `Goodfacs` |
-| ~~No atrocity ledger~~ — **built**. `AtrocityLedger::EcoVirtualMinerals(perpetrator, rConfig)` sums `eco_virtual_minerals` over that faction's **counted** records; see `docs/architecture/atrocity-system.md` | assemble `atrocityMinerals` from that call instead of hard-zeroing it, and keep the `5 *` out of the formula — the factor is `Major.eco_virtual_minerals` in `config/atrocities.json`, `Simple` is 0. Gated by `bCounted`, so an act committed while the Charter was repealed never reaches the eco term. Takes `AtrocitiesConfig_t`, owned by `GameDataContext::atrocitiesConfig`. Tectonic payloads add **nothing** — see [Rules decisions](#rules-decisions-needed) |
-| Orbital minerals are **live** (`Nessus_Mining_Station` emits `AllOwnerBases minerals +1`) but not subtracted | not a deferred gap — a day-one correctness bug. SMAC excludes orbital minerals from the eco term, so shipping without the subtraction charges eco damage for minerals nobody terraformed for. Needs a way to attribute part of a resolved `Minerals` stat to orbital sources |
+| ~~No atrocity ledger~~ — **built**. `AtrocityLedger::EcoVirtualMinerals(perpetrator, rConfig)` sums `eco_virtual_minerals` over that faction's **counted** records; see `docs/architecture/atrocity-system.md` | add that call to `EcologyLedger::VirtualMinerals` to form `virtualMinerals`, and keep the `5 *` out of the formula — the factor is `Major.eco_virtual_minerals` in `config/atrocities.json`, `Simple` is 0. Gated by `bCounted`, so an act committed while the Charter was repealed never reaches the eco term. Takes `AtrocitiesConfig_t`, owned by `GameDataContext::atrocitiesConfig`. Tectonic payloads add nothing **to the ledger**; their eco damage goes through `EcologyLedger` — see [Rules decisions](#rules-decisions-needed) |
+| Orbital minerals are **live** (`Nessus_Mining_Station` emits `AllOwnerBases minerals +1`) but not subtracted | not a deferred gap — a day-one correctness bug. SMAC excludes orbital minerals from the eco term, so shipping without the subtraction charges eco damage for minerals nobody terraformed for. Solved here by `EcoMineralOffset`, authored beside the `minerals +1` — see [What stays out of the effects system](#what-stays-out-of-the-effects-system) |
 | No native life **abundance** setting | added here as `GameRulesConfig_t::nativeLifeLevelId` + `config/native_life_levels.json`, the Difficulty shape; needs a new-game menu row |
 | No world-event system | `config/world_events.json` and the active-event set are built here, minimally: `WorldEvents` currently only spreads terraform improvements. Perihelion is the only shipping entry, and `Cycle` the only trigger kind |
 | ~~No mind worm or native unit spawning~~ — **built**. `ApplyFungalBloom` plants the fungus, lets the tile drop incompatible improvements, and spawns native lifeforms from `NativeUnitRegistry` onto the new tiles | nothing left to do: the whole outcome is one authored `FungalBloom` entry in `on_pop_effects`. Requires a native-life faction in the session — `ApplyFungalBloom` throws without one when a lifeform would spawn |
@@ -676,9 +777,20 @@ with a named input, not a silent zero.
 
 ## Tests
 
-- `ParserTests.cpp` — the five new wire forms round-trip through `ParseStatId`.
+- `ParserTests.cpp` — the six new stat wire forms round-trip through `ParseStatId`;
+  `GrantCleanMinerals` and `AddVirtualMinerals` parse, and are rejected with a missing, zero,
+  negative or fractional `amount`; `GrantCleanMinerals` without `requires_first_bloom` is
+  rejected; both fail with the one-shot message in a continuous `effects` list.
+- `TriggeredEffectTests.cpp`:
+  - `GrantCleanMinerals` with the gate set credits nothing at 0 blooms, returns false and leaves
+    a `oncePer` key unspent; it credits at 1 bloom;
+  - with the gate cleared it credits at 0 blooms;
+  - both arms credit each faction in a multi-faction context once, and credit the actor, not
+    the base's owner, in a probe mission context;
+  - every ledger write bumps `EcologyLedger::GetRevision()`.
 - `ValidationTests.cpp` — `static_assert` on `KindFor` / `DomainFor` for each.
-- New `tests/ecology/EcoDamageTests.cpp`:
+- New `tests/game/EcoDamageTests.cpp` (score inputs through `BaseEcology`, the fixture formula,
+  and the config parser):
   - a base under its cap scores 0;
   - one borehole worked contributes `18`, idle `9`, and a kelp farm contributes `1` either way;
   - a borehole on a tile held by a **supply crawler** contributes `9`, not `18`, and still `9`
@@ -697,24 +809,31 @@ with a named input, not a silent zero.
   - a counted Major atrocity adds 5, a Simple act adds 0, and an act committed with the Charter
     repealed adds 0; committing one mid-turn invalidates the eco memo rather than serving a
     stale score;
-  - a tectonic detonation adds its authored amount with the Charter in force **and** repealed —
-    this channel is ungated — and writes no atrocity record;
+  - `AddVirtualMinerals` adds its authored amount with the Charter in force **and** repealed —
+    this channel is ungated — and writes no atrocity record; in `ExplosionTests.cpp`, a fixture
+    warhead's charge lands before its `DestroyUnit` spends it;
   - the contribution is divided by `(1 + Goodfacs)`, so a Centauri Preserve halves a tectonic
     scar exactly as it halves a foundry — the guard against it being bolted onto the score;
   - a positive `EcoMineralOffset` raises the score by the same amount a negative one lowers it.
-- New `tests/ecology/EcoScaleTests.cpp` — the multiplier stack:
+- New `tests/game/EcoScaleTests.cpp` — the multiplier stack:
   - a faction at PLANET 0 resolves `EcologicalDamage` to `3 × difficulty`, which is the
     regression guard on the `"0"` row existing;
   - PLANET +2 and +3 both resolve to ×1, and PLANET +4 clamps to the +3 row;
   - rare / normal / abundant native life scale the same base 1× / 2× / 3×;
   - an active Perihelion event doubles a base's resolved `EcologicalDamage`, and ending it
     restores the prior value rather than serving a stale pool.
-- `tests/ecology/CleanMineralsTests.cpp` — a `GrantCleanMinerals` before the first bloom credits
-  nothing; after it credits 1 and survives the facility being scrapped; a Tree Farm that arrives
-  by capture or by a triggered `AddBuilding` credits nothing at any time; and a Nanoreplicator
-  credits nothing while still counting toward `EcoDamageReduction`.
-- Turn-stage test — a base with a 100% score blooms, the faction's counter increments, and
-  `EvFungalBloom` fires; a 0% score does neither.
+- New `tests/game/NativeLifeLevelConfigTests.cpp` — the native life level parser requires
+  every key and resolves the session level.
+- Clean-mineral grants in `tests/game/EcoDamageStageTests.cpp`, against fixture eco facilities:
+  - **each of the four** eco facilities completed before the first bloom credits nothing;
+  - after the first bloom each credits 1, and the grant survives the facility being scrapped;
+  - a Tree Farm that arrives by capture or by a triggered `AddBuilding` credits nothing at any
+    time;
+  - a Nanoreplicator credits nothing while still counting toward `EcoDamageReduction`;
+  - a grant credited mid-turn invalidates the eco memo. That is the guard on the ledger
+    revision.
+- Turn-stage test — a base with a 100% score blooms, `EcologyLedger::FungalBlooms` increments
+  for its owner, and `EvFungalBloom` fires; a 0% score does neither.
 - Outcome wiring, against the real `FungalBloom` effect rather than a stub:
   - the pop tile is inside the base radius, is never the base tile, and is never a tile that
     already had fungus;
@@ -723,16 +842,19 @@ with a named input, not a silent zero.
   - **a context missing `pTile` fires nothing** — the regression guard on the trap above, since
     `FungalBloom_` returns false rather than throwing;
   - the second bloom raises `Cleanmins` by 2 in total, so blooms compound the cap.
-- New `tests/game/WorldEventTests.cpp` — Perihelion is active for mission years 0–19, inactive
-  for 20–79, active again at 80; `on_start_effects` / `on_end_effects` fire once on each edge and
+- New `tests/game/WorldEventTests.cpp` — the parser; Perihelion is active for mission years
+  0–19, inactive for 20–79, active again at 80; `on_start_effects` / `on_end_effects` fire once on each edge and
   not on the turns between; and its `effects` reach every faction's pool while active and no
   faction's once it ends.
 - Stage-ordering test — a Perihelion that begins this turn is already in the stack when
   `EcoDamage` rolls in the same turn.
-- `UniversalRoutingTests.cpp` — an `EcoDamage`-sourced `FactionGlobal` effect reaches the faction
-  lane.
-- Fixtures: `tests/fixtures/eco_damage.json` and `eco_damage.lua`; eco contributions added to
-  `tests/fixtures/improvements.json`.
+- The cap test reads `eco_damage.json`'s `FactionGlobal` baseline at two bases, which is the
+  proof an `EcoDamage`-sourced effect reaches the faction lane.
+- `GameSettingsTests.cpp` — `native_life` and the `fungal_bloom` pause toggle round-trip.
+- Fixtures: `tests/fixtures/eco_damage.json`, `eco_damage.lua`, `native_life_levels.json`,
+  `native_units.json` and `world_events.json`; eco contributions on `tests/fixtures/improvements.json`; a `planet` axis in
+  `social_rating_effects.json`; eco facilities and a stackable PLANET building in
+  `buildings.json`.
 
 Run with `./bd test`.
 
@@ -742,8 +864,10 @@ Run with `./bd test`.
 - `docs/architecture/high-level.md` — the new subsystem and its stage.
 - `docs/architecture/turn-system.md` and `docs/game-rules/turn-structure.md` — the `EcoDamage`
   stage and its ordering constraint.
-- `docs/architecture/effects-system.md` — the five stats in the StatId list, `EcoDamage` in the
-  source-kind list, and the `eco_damage.json` row in the trigger-slot table.
+- `docs/architecture/effects-system.md` — the six stats in the StatId list, `EcoDamage` in the
+  source-kind list, the `eco_damage.json` row in the trigger-slot table, `GrantCleanMinerals` and
+  `AddVirtualMinerals` in the triggered type list and the per-faction-subject list, and a short
+  section beside `RecordMindControl` naming `EcologyLedger`.
 - `docs/architecture/difficulty-system.md` — the `EcologicalDamage` row is live, not pending, and
   difficulty is now one contributor to a shared stack rather than its only emitter.
 - `docs/architecture/faction-system.md` — `CollectNativeLifeEffects_` beside

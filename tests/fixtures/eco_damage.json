@@ -1,0 +1,15 @@
+{
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionGlobal",
+      "parameters": { "stat": "eco_clean_minerals", "amount": 16, "op": "Add" }
+    }
+  ],
+  "fungal_pop": {
+    "max_chance_percent": 100,
+    "on_pop_effects": [
+      { "type": "FungalBloom", "parameters": { "tiles": 1 } }
+    ]
+  }
+}

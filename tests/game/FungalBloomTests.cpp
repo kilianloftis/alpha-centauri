@@ -68,14 +68,14 @@ int UnitCount_(const Faction& rFaction)
     return count;
 }
 
-// lifeMin/lifeMax override the map-rules roll. bShippingImprovements loads config/improvements.json
-// so Former excludes are the shipping lists. bPlanet adds a native-life owner for spawns.
+// lifeMin/lifeMax override the fixture's lifeform roll. bShippingImprovements loads
+// config/improvements.json so Former excludes are the shipping lists. bPlanet adds a native-life
+// owner for spawns.
 struct BloomSession_
 {
     FactionFixture fixtures;
     ImprovementRegistry shippingImprovements;
     TerrainOperationRegistry shippingOperations;
-    ElevationRulesConfig_t rules;
     std::unique_ptr<GameState> pState;
     Faction* pPlanet = nullptr;
     EffectPool pool;
@@ -84,15 +84,7 @@ struct BloomSession_
 
     BloomSession_(int lifeMin, int lifeMax, bool bShippingImprovements, bool bPlanet)
     {
-        rules = TestMapRules();
-
-        fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-        fixtures.dataContext.nativeUnitRegistry->Load(std::string(AC_CONFIG_DIR)
-                                                      + "/native_units.json");
-        NativeLifeConfig_t life;
-        life.fungalBloomNativeLifeformsMin = lifeMin;
-        life.fungalBloomNativeLifeformsMax = lifeMax;
-        fixtures.dataContext.nativeUnitRegistry->SetFungalBloomLifeforms(life);
+        InstallNativeUnits(fixtures.dataContext, lifeMin, lifeMax);
 
         const ImprovementRegistry* pImprovements = &fixtures.improvements;
         if (bShippingImprovements)
@@ -102,30 +94,12 @@ struct BloomSession_
                              shippingImprovements, shippingOperations);
             pImprovements = &shippingImprovements;
         }
+        pState = MakeLandSession(fixtures, *pImprovements);
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, rules);
-        for (auto& pTile : pMap->GetTiles())
+        if (bPlanet)
         {
-            pTile->SetElevation(100);
+            pPlanet = &AddNativeLifeFaction(fixtures, *pState);
         }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), *pImprovements, &fixtures.unitComponents, fixtures.settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids, k_TestRngSeed);
-
-        if (!bPlanet)
-        {
-            return;
-        }
-        fixtures.extraDefinitions.push_back(
-            std::make_unique<FactionConfig_t>(fixtures.factionDefinition));
-        FactionConfig_t& rDef = *fixtures.extraDefinitions.back();
-        rDef.id = "planet";
-        rDef.identity.species = FactionSpecies_t::NativeLife;
-        rDef.identity.participatesInCouncil = false;
-        pPlanet = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), /*bIsPlayerControlled=*/false, rDef, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     }
 
     Tile& At_(int x, int y) { return *pState->GetWorldMap().GetTile(x, y); }

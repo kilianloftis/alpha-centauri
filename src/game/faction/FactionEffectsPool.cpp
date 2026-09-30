@@ -4,6 +4,8 @@
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
+#include "game/NativeLifeLevelConfig.h"
+#include "game/ecology/EcoDamageConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
@@ -192,6 +194,32 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() cons
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectNativeLifeEffects_() const
+{
+    const GameDataContext& rData = m_rFaction.GetDataContext();
+    if (!rData.nativeLifeLevelConfig)
+    {
+        throw std::runtime_error("FactionEffectsPool: GameDataContext has no nativeLifeLevelConfig");
+    }
+    const NativeLifeLevel_t& rLevel = rData.nativeLifeLevelConfig->RequireForSession(
+        m_rFaction.GetSettings().GetGameRules().nativeLifeLevelId);
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(rLevel.effects, nullptr, "native_life_level", result);
+    return result;
+}
+
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectEcoDamageEffects_() const
+{
+    const GameDataContext& rData = m_rFaction.GetDataContext();
+    if (!rData.ecoDamageConfig)
+    {
+        throw std::runtime_error("FactionEffectsPool: GameDataContext has no ecoDamageConfig");
+    }
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(rData.ecoDamageConfig->effects, nullptr, "eco_damage", result);
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectProductionEffects_() const
 {
     std::vector<ActiveEffect_t> result;
@@ -225,7 +253,8 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
     rOut.push_back(m_rFaction.GetResearch().GetRevision());
     rOut.push_back(m_rFaction.GetSocialEngineering().GetRevision());
     rOut.push_back(m_rFaction.GetUnitManager().GetRevision());
-    // Difficulty is changeable mid-campaign; a rules change must invalidate the pool.
+    // Difficulty and native life are changeable mid-campaign; a rules change must invalidate
+    // the pool.
     rOut.push_back(m_rFaction.GetSettings().GetGameRulesRevision().Get());
     for (const BaseManager& rBase : m_rFaction.Bases())
     {
@@ -271,6 +300,14 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> diffEffects = CollectDifficultyEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), diffEffects.begin(),
                                   diffEffects.end());
+
+    const std::vector<ActiveEffect_t> nativeLifeEffects = CollectNativeLifeEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), nativeLifeEffects.begin(),
+                                  nativeLifeEffects.end());
+
+    const std::vector<ActiveEffect_t> ecoDamageEffects = CollectEcoDamageEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), ecoDamageEffects.begin(),
+                                  ecoDamageEffects.end());
 
     const std::vector<ActiveEffect_t> productionEffects = CollectProductionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), productionEffects.begin(),
