@@ -36,8 +36,6 @@ struct CouncilGame_
 {
     FactionFixture fixtures;
     GameSettings settings;
-    CouncilProposalRegistry councilRegistry;
-    CouncilRulesConfig_t councilRules;
     std::unique_ptr<GameState> pState;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
@@ -46,8 +44,7 @@ struct CouncilGame_
 
     CouncilGame_()
     {
-        councilRegistry.Load(FixturePath("council/proposals.json"));
-        councilRules = CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
+        InstallCouncil(fixtures.dataContext);
 
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
@@ -55,10 +52,7 @@ struct CouncilGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids,
-            actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -79,7 +73,7 @@ struct CouncilGame_
         fixtures.MakeFactionBase(*pB, 6, 2);
         fixtures.MakeFactionBase(*pC, 4, 6);
 
-        pState->CreatePlanetaryCouncil(councilRegistry, councilRules);
+        pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(2100);
     }
 
@@ -354,8 +348,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
 
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
-    GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-                    *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState state(std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
     Faction& rA = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

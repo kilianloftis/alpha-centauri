@@ -132,7 +132,8 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     Faction& rTarget = rBase.GetFaction();
     Faction& rActor = rProbe.GetFaction();
     EffectContext_t ctx;
-    const int morale = rGameState.GetMoraleCalculator().EffectiveMoraleLevel(rProbe, ctx);
+    const int morale =
+        rGameState.GetGameData().moraleCalculator->EffectiveMoraleLevel(rProbe, ctx);
     const int stolen = StealEnergyAmount_(rBase, rTarget, morale);
     // StealEnergyAmount_ clamps to the target's treasury, so this can never overdraw.
     rTarget.GetEconomy().SpendEnergy(stolen);

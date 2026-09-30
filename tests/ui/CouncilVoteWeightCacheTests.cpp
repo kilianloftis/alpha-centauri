@@ -6,8 +6,6 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/council/CouncilProposalRegistry.h"
-#include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -29,16 +27,13 @@ struct CouncilFixture_
 {
     FactionFixture fixtures;
     GameSettings settings;
-    CouncilProposalRegistry councilRegistry;
-    CouncilRulesConfig_t councilRules;
     std::unique_ptr<GameState> pState;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
     CouncilFixture_()
     {
-        councilRegistry.Load(FixturePath("council/proposals.json"));
-        councilRules = CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
+        InstallCouncil(fixtures.dataContext);
 
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (const auto& pTile : pMap->GetTiles())
@@ -46,8 +41,7 @@ struct CouncilFixture_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
 
         pA = &pState->AddFaction(std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -59,7 +53,7 @@ struct CouncilFixture_
         fixtures.MakeFactionBase(*pA, 2, 2);
         fixtures.MakeFactionBase(*pB, 6, 2);
 
-        pState->CreatePlanetaryCouncil(councilRegistry, councilRules);
+        pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(2100);
     }
 

@@ -18,7 +18,6 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/MovementConstants.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -71,8 +70,7 @@ struct ConquestGame_
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
         actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
                                     StatId_t::CaptureFacilitiesDestroyedMin, 1);
@@ -80,9 +78,6 @@ struct ConquestGame_
                                     StatId_t::CaptureFacilitiesDestroyedMaxPercent, 100);
         fixtures.dataContext.baseConquestConfig->escapeColonyPod.componentIds = {
             "test_chassis", "test_colony_pod"};
-        fixtures.dataContext.unitComponentRegistry =
-            std::make_unique<UnitComponentRegistry>();
-        fixtures.dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));
 
         pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 

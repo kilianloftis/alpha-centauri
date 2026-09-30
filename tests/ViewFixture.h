@@ -9,7 +9,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/ViewFactory.h"
@@ -59,10 +58,8 @@ struct ViewFixture : WorldFixture
         factionDefinition.id = "test_faction";
         factionDefinition.identity.name = "Test Faction";
 
-        // ViewFactory reads these two off the data context; WorldFixture loads the component
-        // registry as a standalone member for the rules tests, so it is loaded again here.
-        dataContext.unitComponentRegistry = std::make_unique<ac::UnitComponentRegistry>();
-        dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));
+        // ViewFactory reads the slot registry off the data context; WorldFixture does not
+        // load one.
         dataContext.unitSlotRegistry = std::make_unique<ac::UnitSlotRegistry>();
         dataContext.unitSlotRegistry->Load(FixturePath("unit_slots.json"));
 
@@ -77,10 +74,8 @@ struct ViewFixture : WorldFixture
             }
         }
 
-        pState = std::make_unique<ac::GameState>(
-            std::move(pMap), improvements,
-            &unitComponents, settings, morale(), dataContext.tileYieldRules,
-            dataContext.interactionGrids, k_TestRngSeed);
+        pState = std::make_unique<ac::GameState>(std::move(pMap), dataContext, settings,
+                                                 k_TestRngSeed);
 
         if (bWithPlayerFaction)
         {
@@ -90,13 +85,8 @@ struct ViewFixture : WorldFixture
         }
 
         // WorldView reads player hotkeys from this path; relative defaults break under ctest's
-        // build-dir cwd. Project actions resolve against the context's occupants.
+        // build-dir cwd.
         dataContext.paths.hotkeys = FixturePath("hotkeys.json");
-        dataContext.improvementRegistry = std::make_unique<ac::ImprovementRegistry>();
-        dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
-        ac::LoadMapOccupants(FixturePath("improvements.json"), FixturePath("terrain.json"),
-                             *dataContext.improvementRegistry,
-                             *dataContext.terrainOperationRegistry);
         pHotkeys = std::make_unique<ac::HotkeyConfig>(ac::HotkeyConfig::Load(
             dataContext.paths.hotkeys, *dataContext.improvementRegistry,
             *dataContext.terrainOperationRegistry));

@@ -110,8 +110,8 @@ TEST_CASE("TurnProcessor throws instead of silently skipping a stage id missing 
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     TurnProcessor processor(GlobalTurnStageRegistry_t{}, PerFactionTurnStageRegistry_t{},
                              {"NoSuchStage"});
@@ -127,8 +127,8 @@ TEST_CASE("TurnProcessor executes stages until a yield, including per-faction st
     fixtures.MakeFaction();
 
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.improvements, nullptr, settings,
-                        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.dataContext,
+                        settings, actest::k_TestRngSeed);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -160,8 +160,8 @@ TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     GlobalTurnStageRegistry_t global;
     auto pStage = std::make_unique<YieldOnceGlobalStage>();
@@ -195,8 +195,8 @@ TEST_CASE("TurnProcessor wraps to the start of the stage order after the last st
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     // Yields once, then Continues and resets so the next cycle yields again.
     class YieldEachCycleStage : public GlobalTurnStage
@@ -250,8 +250,8 @@ TEST_CASE("TurnProcessor resumes the same faction after a per-faction stage yiel
     fixtures.MakeFaction();
 
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.improvements, nullptr, settings,
-                        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.dataContext,
+                        settings, actest::k_TestRngSeed);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -282,8 +282,8 @@ TEST_CASE("TurnProcessor throws if the stage order has no yielding stage",
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     GlobalTurnStageRegistry_t global;
     global["OnlyContinue"] = std::make_unique<CountingGlobalStage>();
@@ -297,8 +297,8 @@ TEST_CASE("TurnProcessor Reset recovers after a no-yield stage order throw",
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     class YieldAfterContinue : public GlobalTurnStage
     {
@@ -335,8 +335,8 @@ TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     class ThrowingStage : public GlobalTurnStage
     {
@@ -376,8 +376,8 @@ TEST_CASE("TurnProcessor unbound replace hook does not skip ExecuteImpl",
 {
     actest::WorldFixture world;
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.improvements, nullptr, settings,
-                        *world.dataContext.moraleCalculator, world.dataContext.tileYieldRules, world.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), world.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     HookContext hooks;
     Hook_t replace;
@@ -419,8 +419,8 @@ TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id o
     // Allocate so the first living faction can have a higher id than the second insertion
     // would under a naive "< resumeId" skip — use GameState allocators after construct.
     GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.improvements, nullptr, settings,
-                        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+    GameState gameState(std::make_unique<WorldMap>(3, 3, actest::TestMapRules()), fixtures.dataContext,
+                        settings, actest::k_TestRngSeed);
 
     // Burn a low id so the first added faction is not id 1 contiguous-only assumption.
     (void)gameState.AllocateFactionId();

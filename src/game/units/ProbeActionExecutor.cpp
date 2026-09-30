@@ -36,10 +36,12 @@ bool AreOnOrAdjacent_(const Tile& rA, const Tile& rB, const WorldMap& rMap)
 } // namespace
 
 ProbeActionExecutor::ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
+                                         const ProbeActionsConfig_t& rProbeActions,
                                          std::mt19937& rRng,
                                          const MindControlLedger& rMindControl)
     : m_rWorldMap(rWorldMap)
     , m_rMorale(rMorale)
+    , m_rProbeActions(rProbeActions)
     , m_rRng(rRng)
     , m_rMindControl(rMindControl)
 {
@@ -72,12 +74,7 @@ std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAv
     const GameDataContext& rDataContext) const
 {
     std::vector<std::pair<ProbeActionId_t, std::string>> actions;
-    if (!rDataContext.probeActionsConfig)
-    {
-        return actions;
-    }
-
-    for (const ProbeActionConfig_t& rAction : rDataContext.probeActionsConfig->actions)
+    for (const ProbeActionConfig_t& rAction : m_rProbeActions.actions)
     {
         if (CanTryProbeAction(rProbe, rAction, rTile, rGameState))
         {
@@ -99,11 +96,7 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     const GameDataContext& rDataContext, const BuildingId_t& facilityId)
 {
     ProbeActionResult_t result;
-    if (!rDataContext.probeActionsConfig)
-    {
-        return result;
-    }
-    const ProbeActionConfig_t* pAction = rDataContext.probeActionsConfig->Find(actionId);
+    const ProbeActionConfig_t* pAction = m_rProbeActions.Find(actionId);
     if (!pAction)
     {
         return result;
@@ -204,7 +197,7 @@ void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const 
     EffectContext_t ctx;
     const int morale = m_rMorale.EffectiveMoraleLevel(rUnit, ctx);
     const int targetProbeEffect =
-        TargetProbeDefenseEffect(rTarget, rDataContext.probeActionsConfig->successFormula);
+        TargetProbeDefenseEffect(rTarget, m_rProbeActions.successFormula);
 
     // Thinker: failure-scale (Algo) only when the target does not BlocksProbeTeams; success
     // scale (HSA) always applies against that target.
@@ -217,7 +210,7 @@ void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const 
 
     rResult.chances =
         ComputeProbeChances(morale, risk, targetProbeEffect,
-                            rDataContext.probeActionsConfig->successFormula, failureScale,
+                            m_rProbeActions.successFormula, failureScale,
                             successScale);
 }
 

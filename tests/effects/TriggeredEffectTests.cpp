@@ -21,7 +21,6 @@
 #include "game/map/WorldMap.h"
 #include "game/mind-control/MindControlLedger.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -55,20 +54,13 @@ struct TriggerGame_
 
     TriggerGame_()
     {
-        // GrantUnit assembles its design from the component registry on the data context,
-        // which FactionFixture leaves unset (it keeps its own registry by value).
-        fixtures.dataContext.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
-        fixtures.dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));
-
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
         pFaction = &pState->AddFaction(std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
             pState->GetWorldMap(), settings, actest::k_TestFactionSeed));

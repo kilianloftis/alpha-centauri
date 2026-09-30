@@ -32,7 +32,8 @@ struct GameDataContext;
 class ProbeActionExecutor
 {
 public:
-    ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale, std::mt19937& rRng,
+    ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
+                        const ProbeActionsConfig_t& rProbeActions, std::mt19937& rRng,
                         const MindControlLedger& rMindControl);
 
     // Order-domain gates plus CanProbeAction mechanics for one configured action against
@@ -94,6 +95,7 @@ private:
 
     WorldMap& m_rWorldMap;
     const MoraleCalculator& m_rMorale;
+    const ProbeActionsConfig_t& m_rProbeActions;
     std::mt19937& m_rRng;
     const MindControlLedger& m_rMindControl;
     // (actor faction, target base) pairs that have already been probed this session.

@@ -9,8 +9,6 @@
 #include "game/atrocities/AtrocityEffects.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/atrocities/AtrocityRules.h"
-#include "game/council/CouncilProposalRegistry.h"
-#include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/ResearchManager.h"
@@ -37,8 +35,6 @@ struct AtrocityGame_
 {
     FactionFixture fixtures;
     GameSettings settings;
-    CouncilProposalRegistry councilRegistry;
-    CouncilRulesConfig_t councilRules;
     std::unique_ptr<GameState> pState;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
@@ -46,8 +42,7 @@ struct AtrocityGame_
 
     AtrocityGame_()
     {
-        councilRegistry.Load(FixturePath("council/proposals.json"));
-        councilRules = CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
+        InstallCouncil(fixtures.dataContext);
 
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
@@ -55,9 +50,7 @@ struct AtrocityGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
         pA = &AddFaction_(fixtures.factionDefinition, true);
         pB = &AddFaction_(fixtures.factionDefinition, false);
@@ -67,7 +60,7 @@ struct AtrocityGame_
         fixtures.MakeFactionBase(*pB, 6, 2);
         fixtures.MakeFactionBase(*pC, 4, 6);
 
-        pState->CreatePlanetaryCouncil(councilRegistry, councilRules);
+        pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(k_StartYear);
     }
 

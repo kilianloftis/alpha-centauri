@@ -50,7 +50,7 @@ struct EcoSession_
     EcoSession_()
     {
         InstallNativeUnits(fixtures.dataContext, k_LifeformsPerBloom, k_LifeformsPerBloom);
-        pState = MakeLandSession(fixtures, fixtures.improvements);
+        pState = MakeLandSession(fixtures);
         pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);
         pAi = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
@@ -234,7 +234,7 @@ TEST_CASE("A Perihelion starting this turn is in the stack when EcoDamage rolls"
           "[ecology][stage][world-events]")
 {
     EcoSession_ session;
-    session.pState->CreateWorldEvents(*session.fixtures.dataContext.worldEventsConfig);
+    session.pState->CreateWorldEvents();
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
     const double baseline = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
                                             SeedFor(StatId_t::EcologicalDamage));

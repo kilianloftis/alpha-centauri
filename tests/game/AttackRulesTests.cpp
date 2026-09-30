@@ -15,7 +15,6 @@
 #include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
-#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitSlotConfig.h"
@@ -56,12 +55,8 @@ struct AttackGame_
         auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
-        fixtures.dataContext.unitComponentRegistry =
-            std::make_unique<UnitComponentRegistry>();
-        fixtures.dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));
         pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 
         playerDefinition = fixtures.factionDefinition;

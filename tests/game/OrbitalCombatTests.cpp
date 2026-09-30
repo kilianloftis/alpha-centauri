@@ -2,8 +2,6 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/council/CouncilProposalRegistry.h"
-#include "game/council/CouncilRulesConfigParser.h"
 #include "game/orbital/OrbitalAttack.h"
 #include "game/orbital/OrbitalCensus.h"
 #include "game/units/InterceptRules.h"
@@ -48,8 +46,7 @@ struct OrbitalGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -571,13 +568,9 @@ TEST_CASE("WorldGlobal building intercept fires for another faction and charges 
 TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
           "[orbital][intercept][world][council]")
 {
-    CouncilProposalRegistry councilRegistry;
-    councilRegistry.Load(FixturePath("council/world_intercept.json"));
-    const CouncilRulesConfig_t rules =
-        CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
-
     OrbitalGame_ game;
-    game.pState->CreatePlanetaryCouncil(councilRegistry, rules);
+    InstallCouncil(game.fixtures.dataContext, "council/world_intercept.json");
+    game.pState->CreatePlanetaryCouncil();
 
     Unit& defender = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "test_armor"});
     Unit& attacker = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_weapon"});

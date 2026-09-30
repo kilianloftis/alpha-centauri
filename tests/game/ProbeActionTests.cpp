@@ -18,7 +18,6 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
-#include "game/units/ProbeActionConfigParser.h"
 #include "game/units/ProbeActionEffects.h"
 #include "game/units/ProbeActionResult.h"
 #include "game/units/ProbeRules.h"
@@ -54,9 +53,6 @@ struct ProbeGame_
 
     ProbeGame_(bool bWithTechs = false)
     {
-        fixtures.dataContext.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>(
-            ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
-
         if (bWithTechs)
         {
             fixtures.dataContext.techRegistry = std::make_unique<TechRegistry>();
@@ -76,10 +72,7 @@ struct ProbeGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids,
-            actest::k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,

@@ -242,16 +242,11 @@ void Engine::StartNewGame_()
                           *m_gameDataContext->improvementRegistry,
                           m_gameDataContext->elevationRules,
                           m_sessionSeed),
-        *m_gameDataContext->improvementRegistry,
-        m_gameDataContext->unitComponentRegistry.get(),
+        *m_gameDataContext,
         *m_pSettings,
-        *m_gameDataContext->moraleCalculator,
-        m_gameDataContext->tileYieldRules,
-        m_gameDataContext->interactionGrids,
         // Distinct sub-stream from world generation, so changing map size does not shift
         // combat rolls (and vice versa).
-        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u),
-        m_gameDataContext->worldRules);
+        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
     m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
@@ -500,9 +495,8 @@ void Engine::StartNewGame_()
         }
     }
 
-    m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
-                                         *m_gameDataContext->councilRules);
-    m_pGameState->CreateWorldEvents(*m_gameDataContext->worldEventsConfig);
+    m_pGameState->CreatePlanetaryCouncil();
+    m_pGameState->CreateWorldEvents();
     m_councilAiVoteConn = m_pGameState->GetPlanetaryCouncil()->OnProposalOpened.ConnectScoped(
         [this](Faction& /*rProposer*/, const std::string& /*rProposalId*/) {
             if (PlanetaryCouncil* pCouncil = m_pGameState->GetPlanetaryCouncil())

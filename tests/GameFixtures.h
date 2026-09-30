@@ -5,6 +5,8 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfigParser.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -50,6 +52,7 @@
 #include "game/units/BaseConquestConfig.h"
 #include "game/units/NativeUnitConfig.h"
 #include "game/units/NativeUnitRegistry.h"
+#include "game/units/ProbeActionConfigParser.h"
 #include "game/faction/FactionConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
@@ -167,8 +170,9 @@ struct WorldFixture
     ac::GameDataContext dataContext;
     ac::GameSettings settings; // session prefs; a Faction constructor dependency
     ac::WorldMap map;
-    ac::ImprovementRegistry improvements;
-    ac::UnitComponentRegistry unitComponents;
+    // The context's own registries, so a session built on dataContext sees the same ones.
+    ac::ImprovementRegistry& improvements;
+    ac::UnitComponentRegistry& unitComponents;
     std::unique_ptr<ac::TileEffectsContext> ctx;
 
     // Every dependency a Faction or BaseManager takes is loaded here rather than in the
@@ -183,8 +187,17 @@ struct WorldFixture
         return rContext.elevationRules;
     }
 
+    template <typename T>
+    static T& CreateInContext(std::unique_ptr<T>& pSlot)
+    {
+        pSlot = std::make_unique<T>();
+        return *pSlot;
+    }
+
     explicit WorldFixture(int width = 9, int height = 9, const OccupantFiles_t& rOccupants = {})
         : map(width, height, LoadMapRules(dataContext))
+        , improvements(CreateInContext(dataContext.improvementRegistry))
+        , unitComponents(CreateInContext(dataContext.unitComponentRegistry))
     {
         // The same call production uses, so the fixture cannot drift from it or skip the
         // improvement-shadows-operation check that only this path performs.
@@ -254,6 +267,8 @@ struct WorldFixture
             ac::NativeLifeLevelConfigParser{}.ParseConfig(FixturePath("native_life_levels.json")));
         dataContext.worldEventsConfig = std::make_unique<ac::WorldEventsConfig_t>(
             ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
+        dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
+            ac::ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
         // Built before any Faction: the pool holds a reference into `effects`. Tests that want
         // a different formula edit damageFormula in place.
         dataContext.ecoDamageConfig = std::make_unique<ac::EcoDamageConfig_t>(
@@ -380,11 +395,10 @@ struct FactionFixture : BaseFixture
         {
             rMoved.GetFaction().RebuildVisibility();
         });
+        dataContext.worldRules = std::move(worldRules);
         pBindMap = std::make_unique<ac::WorldMap>(1, 1, actest::TestMapRules());
-        pBindState = std::make_unique<ac::GameState>(
-            std::move(pBindMap), improvements, &unitComponents, settings, morale(),
-            dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed,
-            worldRules);
+        pBindState = std::make_unique<ac::GameState>(std::move(pBindMap), dataContext, settings,
+                                                     k_TestRngSeed);
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
@@ -531,20 +545,28 @@ inline void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int
     rData.nativeUnitRegistry->SetFungalBloomLifeforms(life);
 }
 
+// The fixture council rules plus the proposals in rProposalsFile. Call before
+// GameState::CreatePlanetaryCouncil.
+inline void InstallCouncil(ac::GameDataContext& rData,
+                           const std::string& rProposalsFile = "council/proposals.json")
+{
+    rData.councilProposalRegistry = std::make_unique<ac::CouncilProposalRegistry>();
+    rData.councilProposalRegistry->Load(FixturePath(rProposalsFile));
+    rData.councilRules = std::make_unique<ac::CouncilRulesConfig_t>(
+        ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
+}
+
 // A live GameState on its own 9x9 all-land map over rFixtures' data, for tests that need
 // session factions rather than FactionFixture's bind state.
-inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures,
-                                                      const ac::ImprovementRegistry& rImprovements)
+inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures)
 {
     auto pMap = std::make_unique<ac::WorldMap>(9, 9, TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
     }
-    return std::make_unique<ac::GameState>(
-        std::move(pMap), rImprovements, &rFixtures.unitComponents, rFixtures.settings,
-        *rFixtures.dataContext.moraleCalculator, rFixtures.dataContext.tileYieldRules,
-        rFixtures.dataContext.interactionGrids, k_TestRngSeed);
+    return std::make_unique<ac::GameState>(std::move(pMap), rFixtures.dataContext,
+                                           rFixtures.settings, k_TestRngSeed);
 }
 
 // rDefinition must outlive the session.

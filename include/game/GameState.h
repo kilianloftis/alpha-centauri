@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/Faction.h"
-#include "game/effects/EffectConfig.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/mind-control/MindControlLedger.h"
@@ -15,7 +14,6 @@
 #include "game/orbital/OrbitalAttack.h"
 #include "game/orbital/OrbitalCensus.h"
 #include "game/PlayerInteractionQueue.h"
-#include "game/units/MoraleCalculator.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Pathfinder.h"
@@ -36,15 +34,10 @@
 namespace ac
 {
 
-class ImprovementRegistry;
 class TileEffectsContext;
-class UnitComponentRegistry;
 class EventBus;
 class GameSettings;
-class CouncilProposalRegistry;
-struct CouncilRulesConfig_t;
-struct TileYieldRulesConfig_t;
-struct InteractionGridsConfig_t;
+struct GameDataContext;
 class PlanetaryCouncil;
 
 class GameState : public IUnitOrderWorld, public IWorldEffectsSource
@@ -55,36 +48,25 @@ public:
     static constexpr int k_StartingMissionYear = 2099;
     static constexpr int k_FirstPlayableMissionYear = k_StartingMissionYear + 1;
 
-    // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
-    // if units never project auras. Throws if pWorldMap is null.
+    // Throws if pWorldMap is null.
+    // rGameData is the ruleset this session plays by. It must outlive this GameState.
     // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
-    // rMorale is the GameDataContext-owned calculator (XP ranks / combat % / promotion),
-    // borrowed here for the combat and probe paths. It must outlive this GameState.
     // rngSeed seeds the session RNG behind every combat, promotion and probe roll. Injected
     // rather than drawn from std::random_device so a session is reproducible from the seed the
     // composition root resolves and reports; tests pass a fixed value to keep rolls stable.
-    // rYieldRules must outlive this GameState: it is handed to the TileEffectsContext, which
-    // stamps it into per-tile resolution for terrain-scaled amount sources.
-    // rInteractionGrids must outlive this GameState (movement / attack / ZOC matrices).
-    // rWorldRules is copied. Empty leaves the standing world rules off.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
-              const ImprovementRegistry& rImprovements,
-              const UnitComponentRegistry* pUnitComponents,
+              const GameDataContext& rGameData,
               GameSettings& rSettings,
-              const MoraleCalculator& rMorale,
-              const TileYieldRulesConfig_t& rYieldRules,
-              const InteractionGridsConfig_t& rInteractionGrids,
-              uint32_t rngSeed,
-              const std::vector<EffectConfig_t>& rWorldRules = {});
+              uint32_t rngSeed);
     ~GameState();
 
     // Build the Planetary Council from factions currently in this GameState that
     // participate in the council. Call after the starting factions have been added.
-    // Registry/rules must outlive this GameState. Throws if already created.
-    void CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
-                                const CouncilRulesConfig_t& rRules);
+    // Throws if already created.
+    void CreatePlanetaryCouncil();
 
-    const MoraleCalculator& GetMoraleCalculator() const;
+    // Registries, configs and calculators: the rules every stage, rule module and view reads.
+    const GameDataContext& GetGameData() const;
 
     // Mission year
     int GetMissionYear() const;
@@ -199,9 +181,9 @@ public:
     PlanetaryCouncil* GetPlanetaryCouncil();
     const PlanetaryCouncil* GetPlanetaryCouncil() const;
 
-    // Start tracking the world-event registry. rConfig must outlive this GameState. Throws if
-    // already created. Without it the WorldEvents stage runs no events.
-    void CreateWorldEvents(const WorldEventsConfig_t& rConfig);
+    // Start tracking the world-event registry. Throws if already created. Without it the
+    // WorldEvents stage runs no events.
+    void CreateWorldEvents();
     WorldEventTracker* GetWorldEvents();
     const WorldEventTracker* GetWorldEvents() const;
 
@@ -252,7 +234,7 @@ private:
 
     int m_missionYear;
     GameSettings& m_rSettings;
-    const MoraleCalculator& m_rMorale;
+    const GameDataContext& m_rGameData;
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
     PlayerInteractionQueue m_playerInteractions;
@@ -288,7 +270,6 @@ private:
     std::unordered_set<std::string> m_destroyedSecretProjects;
     // Idempotent session wiring for production on_complete + mood notices (transfer-safe).
     std::unordered_set<BaseManager*> m_sessionWiredBases;
-    std::vector<EffectConfig_t> m_worldRules;
 };
 
 } // namespace ac

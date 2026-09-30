@@ -82,7 +82,7 @@ struct BloomSession_
     {
         InstallNativeUnits(fixtures.dataContext, lifeMin, lifeMax);
 
-        pState = MakeLandSession(fixtures, fixtures.improvements);
+        pState = MakeLandSession(fixtures);
 
         if (bPlanet)
         {

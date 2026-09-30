@@ -70,9 +70,7 @@ struct BlastGame_
             pTile->SetElevation(3000);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, fixtures.settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
-            fixtures.dataContext.interactionGrids, k_TestRngSeed);
+            std::move(pMap), fixtures.dataContext, fixtures.settings, k_TestRngSeed);
         pPlayer = &pState->AddFaction(std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
             pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));

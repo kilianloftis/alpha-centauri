@@ -31,14 +31,12 @@ namespace
 struct WorldEventSession_
 {
     FactionFixture fixtures;
-    // Declared before the GameState: a tracker created from it holds a reference.
-    WorldEventsConfig_t worldEvents;
     std::unique_ptr<GameState> pState;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     WorldEventSession_()
-        : pState(MakeLandSession(fixtures, fixtures.improvements))
+        : pState(MakeLandSession(fixtures))
     {
         pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);
@@ -85,7 +83,7 @@ TEST_CASE("A Cycle event is active for its duration in every cycle", "[world-eve
 TEST_CASE("WorldEvents fires on_start and on_end once on each edge", "[world-events][stage]")
 {
     WorldEventSession_ session;
-    session.worldEvents = ParseWorldEvents_(R"({ "events": [ {
+    *session.fixtures.dataContext.worldEventsConfig = ParseWorldEvents_(R"({ "events": [ {
         "id": "Pulse", "name": "Pulse",
         "trigger": { "kind": "Cycle", "cycle_years": 4, "duration_years": 2,
                      "start_year_offset": 0 },
@@ -93,7 +91,7 @@ TEST_CASE("WorldEvents fires on_start and on_end once on each edge", "[world-eve
         "on_start_effects": [ { "type": "GrantEnergy", "parameters": { "amount": 10 } } ],
         "on_end_effects": [ { "type": "GrantEnergy", "parameters": { "amount": 1 } } ]
     } ] })");
-    session.pState->CreateWorldEvents(session.worldEvents);
+    session.pState->CreateWorldEvents();
     EconomyManager& rEconomy = session.pPlayer->GetEconomy();
     const int start = rEconomy.GetEnergy();
 
@@ -114,7 +112,7 @@ TEST_CASE("WorldEvents fires on_start and on_end once on each edge", "[world-eve
 TEST_CASE("An active event's effects reach every faction and leave with it", "[world-events]")
 {
     WorldEventSession_ session;
-    session.pState->CreateWorldEvents(*session.fixtures.dataContext.worldEventsConfig);
+    session.pState->CreateWorldEvents();
     const BaseManager& rPlayerBase = session.MakeBase(*session.pPlayer, 2, 2);
     const BaseManager& rAiBase = session.MakeBase(*session.pAi, 6, 6);
     const auto scale = [](const BaseManager& rBase) {

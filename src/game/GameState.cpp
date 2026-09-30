@@ -128,17 +128,12 @@ void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
 } // namespace
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
-                     const ImprovementRegistry& rImprovements,
-                     const UnitComponentRegistry* pUnitComponents,
+                     const GameDataContext& rGameData,
                      GameSettings& rSettings,
-                     const MoraleCalculator& rMorale,
-                     const TileYieldRulesConfig_t& rYieldRules,
-                     const InteractionGridsConfig_t& rInteractionGrids,
-                     uint32_t rngSeed,
-                     const std::vector<EffectConfig_t>& rWorldRules)
+                     uint32_t rngSeed)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
-    , m_rMorale(rMorale)
+    , m_rGameData(rGameData)
     , m_visibilitySettingsChanged(rSettings.OnVisibilityChanged.ConnectScoped(
           [this]() { OnVisibilitySettingsChanged_(); }))
     , m_pEventBus(std::make_unique<EventBus>())
@@ -150,16 +145,16 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
     , m_secretProjectAvailability(*this)
-    , m_worldRules(rWorldRules)
 {
     if (!m_worldMap)
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
     m_pTileEffects = std::make_unique<TileEffectsContext>(
-        *m_worldMap, rImprovements, pUnitComponents, rYieldRules, rInteractionGrids);
+        *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
+        rGameData.tileYieldRules, rGameData.interactionGrids);
     m_pTileEffects->BindWorldEffects(*this);
-    m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
+    m_pMoveCosts = std::make_unique<MoveCostCalculator>(*rGameData.improvementRegistry);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pFirstContact = std::make_unique<FirstContactResolver>(
@@ -175,8 +170,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     // Passing *this is safe here: the executor only stores the pointer and never calls back
     // during GameState's own construction (same contract as m_secretProjectAvailability).
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
-        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder, m_rMorale,
-        m_rng, this);
+        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
+        *rGameData.moraleCalculator, m_rng, this);
     m_pUnitOrderExecutor->SetImprovementVisitHandler(
         [this](Unit& rMover)
         {
@@ -189,8 +184,9 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                 ApplyVisitEffects(*this, rMover, m_rng);
             }
         });
-    m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng,
-                                                            *m_pMindControl);
+    m_pProbeActions = std::make_unique<ProbeActionExecutor>(
+        *m_worldMap, *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng,
+        *m_pMindControl);
 }
 
 GameState::~GameState()
@@ -203,9 +199,9 @@ GameState::~GameState()
     }
 }
 
-const MoraleCalculator& GameState::GetMoraleCalculator() const
+const GameDataContext& GameState::GetGameData() const
 {
-    return m_rMorale;
+    return m_rGameData;
 }
 
 GameSettings& GameState::GetSettings()
@@ -352,7 +348,7 @@ std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) c
 
 void GameState::AppendStandingWorldRules_(std::vector<ActiveEffect_t>& rOut) const
 {
-    AppendActiveEffects(m_worldRules, nullptr, "world_rules", rOut);
+    AppendActiveEffects(m_rGameData.worldRules, nullptr, "world_rules", rOut);
 }
 
 Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
@@ -712,13 +708,13 @@ const FirstContactResolver& GameState::GetFirstContactResolver() const
     return *m_pFirstContact;
 }
 
-void GameState::CreateWorldEvents(const WorldEventsConfig_t& rConfig)
+void GameState::CreateWorldEvents()
 {
     if (m_pWorldEvents)
     {
         throw std::logic_error("GameState::CreateWorldEvents: world events already exist");
     }
-    m_pWorldEvents = std::make_unique<WorldEventTracker>(rConfig);
+    m_pWorldEvents = std::make_unique<WorldEventTracker>(*m_rGameData.worldEventsConfig);
 }
 
 WorldEventTracker* GameState::GetWorldEvents()
@@ -731,8 +727,7 @@ const WorldEventTracker* GameState::GetWorldEvents() const
     return m_pWorldEvents.get();
 }
 
-void GameState::CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
-                                       const CouncilRulesConfig_t& rRules)
+void GameState::CreatePlanetaryCouncil()
 {
     if (m_pCouncil)
     {
@@ -747,7 +742,9 @@ void GameState::CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
             members.push_back(&rFaction);
         }
     }
-    m_pCouncil = std::make_unique<PlanetaryCouncil>(rRegistry, rRules, std::move(members));
+    m_pCouncil = std::make_unique<PlanetaryCouncil>(*m_rGameData.councilProposalRegistry,
+                                                    *m_rGameData.councilRules,
+                                                    std::move(members));
 }
 
 PlanetaryCouncil* GameState::GetPlanetaryCouncil()
