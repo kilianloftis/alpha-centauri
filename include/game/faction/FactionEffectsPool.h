@@ -12,6 +12,8 @@ class Faction;
 class BuildingRegistry;
 class ResearchManager;
 class SocialRatingRegistry;
+struct DifficultyConfig_t;
+struct NativeLifeLevelConfig_t;
 
 // Assembles and memoizes the faction-wide *local* active effect pool for one owning
 // Faction (bound at construction). WorldGlobal peers and council extras are composed
@@ -33,7 +35,10 @@ public:
                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
                        const std::vector<EffectConfig_t>& rPoliceRules,
                        const std::vector<EffectConfig_t>& rPopCompositionEffects,
-                       const std::vector<EffectConfig_t>& rGrowthEffects);
+                       const std::vector<EffectConfig_t>& rGrowthEffects,
+                       const DifficultyConfig_t& rDifficulty,
+                       const NativeLifeLevelConfig_t& rNativeLifeLevels,
+                       const std::vector<EffectConfig_t>& rEcoDamageEffects);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -82,8 +87,8 @@ private:
     // ThisBase half stays on the base path via BaseEffectsCache.
     std::vector<ActiveEffect_t> CollectMoodEffects_() const;
 
-    // Session difficulty continuous effects, re-resolved from the owner's GameDataContext
-    // and current game rules. Not cached at construction: difficulty is changeable
+    // Session difficulty continuous effects, re-resolved from the difficulty levels and the
+    // current game rules. Not cached at construction: difficulty is changeable
     // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.
     std::vector<ActiveEffect_t> CollectDifficultyEffects_() const;
 
@@ -118,6 +123,9 @@ private:
     const std::vector<EffectConfig_t>& m_rPoliceRules;
     const std::vector<EffectConfig_t>& m_rPopCompositionEffects;
     const std::vector<EffectConfig_t>& m_rGrowthEffects;
+    const DifficultyConfig_t& m_rDifficulty;
+    const NativeLifeLevelConfig_t& m_rNativeLifeLevels;
+    const std::vector<EffectConfig_t>& m_rEcoDamageEffects;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

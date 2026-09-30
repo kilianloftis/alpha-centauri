@@ -24,7 +24,7 @@ class Faction;
 class CommerceManager
 {
 public:
-    explicit CommerceManager(const Faction& rOwner);
+    CommerceManager(const Faction& rOwner, const CommerceConfig_t& rConfig, LuaRuntime& rLua);
     ~CommerceManager() = default;
 
     CommerceManager(const CommerceManager&) = delete;

@@ -443,13 +443,14 @@ TEST_CASE("A partner-side change reaches the composition input key", "[commerce]
     game.MakeHqBase(*game.pB, 6, 2);
     game.pA->GetEconomy().SetEnergyAllocation(EnergyAllocation_t{34, 33, 33});
 
-    const CompositionInputKey_t before = ReadCompositionInputKey(a1);
+    const DroneCalculator& rDrones = *game.fixtures.dataContext.droneCalculator;
+    const CompositionInputKey_t before = ReadCompositionInputKey(a1, rDrones);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
 
     // The key is read through GetPsychProduction, which resolves commerce live, so a treaty
     // signed on the far side of the planet shows up here with no notification path.
-    const CompositionInputKey_t after = ReadCompositionInputKey(a1);
+    const CompositionInputKey_t after = ReadCompositionInputKey(a1, rDrones);
     CHECK(after.psychAvailable > before.psychAvailable);
     CHECK_FALSE(before == after);
 }

@@ -36,12 +36,13 @@ namespace
 
 void SelectDifficulty_(FactionFixture& rFixtures, const char* difficultyId);
 
-// Swaps in the full difficulty levels and selects one. Setting game rules bumps the revision the
-// effects pool samples, so any faction built earlier re-resolves against the new config.
+// Loads the full difficulty levels into the existing config, which factions built earlier hold
+// by reference, and selects one. Setting game rules bumps the revision the effects pool samples,
+// so those factions re-resolve against the new levels.
 void UseFixtureDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
 {
-    rFixtures.dataContext.difficultyConfig = std::make_unique<DifficultyConfig_t>(
-        DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty/levels.json")));
+    *rFixtures.dataContext.difficultyConfig =
+        DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty/levels.json"));
     SelectDifficulty_(rFixtures, difficultyId);
 }
 

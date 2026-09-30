@@ -70,6 +70,7 @@ add_library(ac-core STATIC
     game/faction/base/BaseEffectsCache.cpp
     game/faction/base/BuildingDestruction.cpp
     game/faction/base/BaseMoodEffects.cpp
+    game/faction/base/BaseRules.cpp
     game/faction/base/production/ProductionCompletion.cpp
     game/faction/base/production/ProductionPauseGates.cpp
     game/faction/base/population/AwayFromHomeDrones.cpp

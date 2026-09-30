@@ -1,7 +1,6 @@
 #include "game/ecology/BaseEcology.h"
 
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/faction/ResearchManager.h"
@@ -39,8 +38,11 @@ double ResolveTileContribution_(const Tile& rTile, bool bWorked)
 
 } // namespace
 
-BaseEcology::BaseEcology(const BaseManager& rBase)
+BaseEcology::BaseEcology(const BaseManager& rBase, const EcoDamageCalculator& rCalculator,
+                         const AtrocitiesConfig_t& rAtrocities)
     : m_rBase(rBase)
+    , m_rCalculator(rCalculator)
+    , m_rAtrocities(rAtrocities)
 {
 }
 
@@ -50,9 +52,7 @@ int BaseEcology::GetDamage() const
     CollectRevisions_(rGameState, m_scratchRevisions);
     if (m_scratchRevisions != m_cachedStamp)
     {
-        m_cachedDamage =
-            m_rBase.GetFaction().GetDataContext().ecoDamageCalculator->Calculate(
-                CollectInputs_(rGameState));
+        m_cachedDamage = m_rCalculator.Calculate(CollectInputs_(rGameState));
         m_cachedStamp = m_scratchRevisions;
     }
     return m_cachedDamage;
@@ -88,8 +88,7 @@ EcoDamageInputs_t BaseEcology::CollectInputs_(const GameState& rGameState) const
     inputs.fungalBlooms = rEcology.FungalBlooms(factionId);
     inputs.cleanMineralGrants = rEcology.CleanMineralGrants(factionId);
     inputs.virtualMinerals =
-        rGameState.GetAtrocityLedger().EcoVirtualMinerals(
-            factionId, *rFaction.GetDataContext().atrocitiesConfig)
+        rGameState.GetAtrocityLedger().EcoVirtualMinerals(factionId, m_rAtrocities)
         + rEcology.VirtualMinerals(factionId);
     inputs.damageReduction = FinalizeResolvedStat(ResolveBaseStat(
         rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction)));

@@ -95,7 +95,7 @@ struct BloomSession_
     FungalBloomResult_t Bloom_(int x, int y, int count)
     {
         return ApplyFungalBloom(At_(x, y), pState->GetWorldMap(), count, pState->GetRng(),
-                                *pState, *fixtures.dataContext.nativeUnitRegistry);
+                                *pState);
     }
 };
 

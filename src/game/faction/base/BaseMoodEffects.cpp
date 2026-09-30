@@ -1,12 +1,8 @@
 #include "game/faction/base/BaseMoodEffects.h"
 
-#include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
-
-#include <stdexcept>
 
 namespace ac
 {
@@ -14,22 +10,11 @@ namespace ac
 namespace
 {
 
-const PopCompositionConfig_t& RequireConfig_(const BaseManager& rBase)
-{
-    const GameDataContext& rData = rBase.GetFaction().GetDataContext();
-    if (!rData.popCompositionConfig)
-    {
-        throw std::runtime_error(
-            "BaseMoodEffects: GameDataContext has no popCompositionConfig");
-    }
-    return *rData.popCompositionConfig;
-}
-
 template <typename AppendFn>
 void AppendMood_(const BaseManager& rBase, AppendFn append, std::vector<ActiveEffect_t>& rOut)
 {
-    const PopCompositionConfig_t& rConfig = RequireConfig_(rBase);
     const PopulationManager& rPopulation = rBase.GetPopulation();
+    const PopCompositionConfig_t& rConfig = rPopulation.GetCompositionConfig();
 
     if (rPopulation.IsInGoldenAge())
     {
@@ -60,7 +45,8 @@ const RiotTier_t* ActiveRiotTierFor(const BaseManager& rBase)
     {
         return nullptr;
     }
-    return FindActiveRiotTier(RequireConfig_(rBase), rPopulation.GetConsecutiveRiotTurns());
+    return FindActiveRiotTier(rPopulation.GetCompositionConfig(),
+                              rPopulation.GetConsecutiveRiotTurns());
 }
 
 } // namespace ac

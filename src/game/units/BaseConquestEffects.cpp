@@ -36,8 +36,9 @@ namespace ac
 namespace
 {
 
-const BaseConquestConfig_t& RequireBaseConquestConfig_(const GameDataContext& rData)
+const BaseConquestConfig_t& RequireBaseConquestConfig_(const GameState& rGameState)
 {
+    const GameDataContext& rData = rGameState.GetGameData();
     if (!rData.baseConquestConfig)
     {
         throw std::runtime_error("GameDataContext: baseConquestConfig is null");
@@ -233,7 +234,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::Captured;
 
-    const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rGameState.GetGameData());
+    const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rGameState);
     Faction& rOldOwner = rBase.GetFaction();
     Faction& rNewOwner = rCapturer.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();

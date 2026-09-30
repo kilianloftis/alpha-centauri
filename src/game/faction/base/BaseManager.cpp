@@ -1,5 +1,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BaseEffectsCache.h"
+#include "game/faction/base/BaseRules.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
@@ -91,16 +92,7 @@ BaseManager::BaseManager(
     BaseId_t baseId,
     std::string name,
     Tile& tile,
-    const BuildingRegistry& rBuildingRegistry,
-    const StockpileRegistry& rStockpileRegistry,
-    const SocialRatingRegistry& rSocialRatingRegistry,
-    const PopTypeRegistry& rPopTypeRegistry,
-    const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
-    const GrowthConfig_t& rGrowthConfig,
-    const ProductionConfig_t& rProductionConfig,
-    const HurryProductionCalculator& rHurryCalculator,
-    const ScrapRefundCalculator& rScrapCalculator,
-    PopCompositionCalculator& rCompositionCalculator,
+    const BaseRules_t& rRules,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
     std::optional<int> initialPopulation,
@@ -111,25 +103,25 @@ BaseManager::BaseManager(
     , m_rTileEffects(rTileEffects)
     , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
     , m_homeUnits(*this)
-    , m_rBuildingRegistry(rBuildingRegistry)
-    , m_rStockpileRegistry(rStockpileRegistry)
-    , m_rSocialRatings(rSocialRatingRegistry)
-    , m_rHurryCalculator(rHurryCalculator)
-    , m_rScrapCalculator(rScrapCalculator)
+    , m_rBuildingRegistry(rRules.rBuildings)
+    , m_rStockpileRegistry(rRules.rStockpiles)
+    , m_rSocialRatings(rRules.rSocialRatings)
+    , m_rHurryCalculator(rRules.rHurry)
+    , m_rScrapCalculator(rRules.rScrap)
     , m_pPopulation(std::make_unique<PopulationManager>(
-          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig,
-          rCompositionCalculator, rFaction.GetResearch(), *this,
+          rRules.rPopTypes, rRules.rPopTypeAvailability, rRules.rGrowth, rRules.rComposition,
+          rRules.rDrones, rFaction.GetResearch(), *this,
           ResolveFoundingPopulation_(rFaction, initialPopulation)))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
-    , m_pBuildings(std::make_unique<BuildingManager>(rBuildingRegistry, pSecretProjectCalculator,
+    , m_pBuildings(std::make_unique<BuildingManager>(rRules.rBuildings, pSecretProjectCalculator,
                                                      rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(
           *m_pWorkerAssignments, rFaction.GetEconomy(), rFaction.GetCommerce(), *this,
           m_rSocialRatings, m_tile, m_rTileEffects, m_homeUnits))
     , m_pProduction(std::make_unique<ProductionManager>(
-          rProductionConfig,
+          rRules.rProduction,
           [this]() -> const IConstructable* {
               return m_rStockpileRegistry.FindFallback(
                   m_pFaction->GetResearch().GetDiscoveredTechs());
@@ -137,7 +129,7 @@ BaseManager::BaseManager(
           *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
-    , m_ecology(*this)
+    , m_ecology(*this, rRules.rEcoDamage, rRules.rAtrocities)
     , m_bMayOccupyWater(bMayOccupyWater)
 {
     m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)

@@ -40,6 +40,7 @@ public:
                       const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                       const GrowthConfig_t& rGrowthConfig,
                       PopCompositionCalculator& rCompositionCalculator,
+                      const DroneCalculator& rDroneCalculator,
                       const ResearchManager& rResearchManager,
                       BaseManager& rBase,
                       int initialSize);
@@ -242,6 +243,7 @@ private:
     const ResearchManager* m_pResearch;
     const GrowthConfig_t& m_rGrowthConfig;
     PopCompositionCalculator& m_rCompositionCalculator;
+    const DroneCalculator& m_rDroneCalculator;
     BaseManager& m_rBase;
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;

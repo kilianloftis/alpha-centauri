@@ -29,7 +29,7 @@ EcoDamage::EcoDamage(HookContext hookContext)
 
 StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    const EcoDamageConfig_t& rConfig = *rFaction.GetDataContext().ecoDamageConfig;
+    const EcoDamageConfig_t& rConfig = *rGameState.GetGameData().ecoDamageConfig;
     std::mt19937& rRng = rGameState.GetRng();
 
     std::vector<BaseId_t> baseIds;
@@ -103,7 +103,7 @@ void EcoDamage::Pop_(GameState& rGameState, BaseManager& rBase, Tile& rPopTile)
     TriggeredEffectContext_t context(rGameState, rBase);
     context.pTile = &rPopTile;
     context.pRng = &rGameState.GetRng();
-    ApplyTriggeredEffects(rFaction.GetDataContext().ecoDamageConfig->onPopEffects, context);
+    ApplyTriggeredEffects(rGameState.GetGameData().ecoDamageConfig->onPopEffects, context);
 }
 
 } // namespace ac

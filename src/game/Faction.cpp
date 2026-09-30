@@ -10,10 +10,12 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/CommerceManager.h"
 #include "game/DifficultyConfig.h"
+#include "game/ecology/EcoDamageConfig.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/units/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
+#include "game/faction/base/BaseRules.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ScrapPayout.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -67,21 +69,26 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     // Distinct sub-streams from one seed, so flavor and research picks do not correlate.
     , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity, seed))
     , m_pEconomy(std::make_unique<EconomyManager>())
-    , m_pCommerce(std::make_unique<CommerceManager>(*this))
+    , m_pCommerce(std::make_unique<CommerceManager>(*this, *rDataContext.commerceConfig,
+                                                    *rDataContext.luaRuntime))
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(*rDataContext.techRegistry,
                                                     *rDataContext.techCostCalculator, this))
     , m_pResearchSelector(std::make_unique<ResearchSelector>(*m_pResearch, seed ^ 0x9E3779B9u))
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(
           *rDataContext.socialPolicyRegistry))
-    , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
+    , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator,
+                                             rDataContext.interactionGrids))
     , m_effectsPool(*this, *rDataContext.buildingRegistry, m_baseListRevision,
                     rDataContext.tileYieldRules.effects, *rDataContext.socialRatingRegistry,
                     rDataContext.productionConfig->effects,
                     rDataContext.baseConquestConfig->effects,
                     rDataContext.policeRules,
                     rDataContext.popCompositionConfig->effects,
-                    rDataContext.growthConfig->effects)
+                    rDataContext.growthConfig->effects,
+                    *rDataContext.difficultyConfig,
+                    *rDataContext.nativeLifeLevelConfig,
+                    rDataContext.ecoDamageConfig->effects)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
     , m_composedEffects(*this)
@@ -98,7 +105,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     {
         for (const NativeUnitConfig_t& rConfig : rDataContext.nativeUnitRegistry->GetAll())
         {
-            EnsureNativeDesign(*this, rDataContext, rConfig.id);
+            EnsureNativeDesign(*this, *rDataContext.nativeUnitRegistry, rConfig.id);
         }
     }
 }
@@ -398,16 +405,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
-        *m_rDataContext.buildingRegistry,
-        *m_rDataContext.stockpileRegistry,
-        *m_rDataContext.socialRatingRegistry,
-        *m_rDataContext.popTypeRegistry,
-        *m_rDataContext.popTypeAvailabilityCalculator,
-        *m_rDataContext.growthConfig,
-        *m_rDataContext.productionConfig,
-        *m_rDataContext.hurryProductionCalculator,
-        *m_rDataContext.scrapRefundCalculator,
-        *m_rDataContext.popCompositionCalculator,
+        MakeBaseRules(m_rDataContext),
         &rSecretProjectAvailability,
         rTileEffects,
         rSnapshot.populationSize,
@@ -860,16 +858,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     }
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
-        *m_rDataContext.buildingRegistry,
-        *m_rDataContext.stockpileRegistry,
-        *m_rDataContext.socialRatingRegistry,
-        *m_rDataContext.popTypeRegistry,
-        *m_rDataContext.popTypeAvailabilityCalculator,
-        *m_rDataContext.growthConfig,
-        *m_rDataContext.productionConfig,
-        *m_rDataContext.hurryProductionCalculator,
-        *m_rDataContext.scrapRefundCalculator,
-        *m_rDataContext.popCompositionCalculator,
+        MakeBaseRules(m_rDataContext),
         &rSecretProjectAvailability,
         rTileEffects,
         initialPopulation,

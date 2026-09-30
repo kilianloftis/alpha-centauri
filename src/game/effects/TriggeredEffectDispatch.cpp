@@ -182,7 +182,7 @@ bool Rebel_(TriggeredEffectContext_t& rCtx, std::vector<TriggeredEffectResult_t>
     {
         return false;
     }
-    const GameDataContext& rData = rCtx.pBase->GetFaction().GetDataContext();
+    const GameDataContext& rData = rCtx.rGameState.GetGameData();
     if (!rData.popCompositionConfig)
     {
         throw std::runtime_error("ApplyTriggeredEffects: Rebel requires a popCompositionConfig");
@@ -297,9 +297,9 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
         return false;
     }
 
-    const GameDataContext& rData = rFaction.GetDataContext();
     const UnitDesign* pDesign =
-        EnsureAdHocDesign(rFaction, *rData.unitComponentRegistry, rGrant.componentIds, "granted");
+        EnsureAdHocDesign(rFaction, *rCtx.rGameState.GetGameData().unitComponentRegistry,
+                          rGrant.componentIds, "granted");
     if (!pDesign)
     {
         rOut.push_back(UnitsGranted_t{0, {}});
@@ -478,26 +478,8 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
         }
         tiles = rCtx.pUnit->GetStat(*rConfig.tilesStat);
     }
-    const GameDataContext* pData = nullptr;
-    if (rCtx.pUnit)
-    {
-        pData = &rCtx.pUnit->GetFaction().GetDataContext();
-    }
-    else
-    {
-        for (const Faction& rFaction : rCtx.rGameState.Factions())
-        {
-            pData = &rFaction.GetDataContext();
-            break;
-        }
-    }
-    if (!pData || !pData->nativeUnitRegistry)
-    {
-        throw std::logic_error("FungalBloom: no native unit registry is available");
-    }
     const FungalBloomResult_t result = ApplyFungalBloom(
-        *rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(), rCtx.rGameState,
-        *pData->nativeUnitRegistry);
+        *rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(), rCtx.rGameState);
     if (result.tilesFungused == 0)
     {
         return false;
@@ -859,7 +841,7 @@ void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& 
     TriggeredEffectContext_t context(rGameState, rProducedAt);
     context.pUnit = &rUnit;
 
-    const GameDataContext& rData = rProducedAt.GetFaction().GetDataContext();
+    const GameDataContext& rData = rGameState.GetGameData();
     if (rData.productionConfig)
     {
         ApplyTriggeredEffects(rData.productionConfig->onUnitProducedEffects, context);
@@ -921,7 +903,7 @@ void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
 
 void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const TechId& rTechId)
 {
-    const TechConfig_t* pTech = rFaction.GetResearch().GetTechRegistry().Find(rTechId);
+    const TechConfig_t* pTech = rGameState.GetGameData().techRegistry->Find(rTechId);
     if (!pTech || pTech->onDiscoverEffects.empty())
     {
         return;

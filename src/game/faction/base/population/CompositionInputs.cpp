@@ -1,7 +1,6 @@
 #include "game/faction/base/population/CompositionInputs.h"
 
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
@@ -12,20 +11,13 @@
 #include "game/map/WorldMap.h"
 #include "game/population/calculators/DroneCalculator.h"
 
-#include <stdexcept>
 
 namespace ac
 {
 
-CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase)
+CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
+                                                 const DroneCalculator& rDrones)
 {
-    const GameDataContext& rData = rBase.GetFaction().GetDataContext();
-    if (!rData.droneCalculator)
-    {
-        throw std::runtime_error("BuildCompositionInputs: GameDataContext.droneCalculator is null");
-    }
-    const DroneCalculator& rDrones = *rData.droneCalculator;
-
     // GetBaseEffects includes SE rating expansion (Efficiency -> Bureaucracy MultiplyGeometric).
     const BaseEffects_t& rBaseEffects = rBase.GetBaseEffects();
     const int baseSize = rBase.GetPopulation().GetSize();
@@ -70,9 +62,10 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase)
     return inputs;
 }
 
-CompositionInputKey_t ReadCompositionInputKey(const BaseManager& rBase)
+CompositionInputKey_t ReadCompositionInputKey(const BaseManager& rBase,
+                                              const DroneCalculator& rDrones)
 {
-    const CompositionEffectInputs_t effects = BuildCompositionInputs(rBase);
+    const CompositionEffectInputs_t effects = BuildCompositionInputs(rBase, rDrones);
     CompositionInputKey_t key;
     key.dronePressure = effects.dronePressure;
     key.resolvedTalents = effects.resolvedTalents;

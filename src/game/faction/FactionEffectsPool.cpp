@@ -1,11 +1,9 @@
 #include "game/faction/FactionEffectsPool.h"
 
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
 #include "game/NativeLifeLevelConfig.h"
-#include "game/ecology/EcoDamageConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
@@ -34,7 +32,10 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
                                        const std::vector<EffectConfig_t>& rPoliceRules,
                                        const std::vector<EffectConfig_t>& rPopCompositionEffects,
-                                       const std::vector<EffectConfig_t>& rGrowthEffects)
+                                       const std::vector<EffectConfig_t>& rGrowthEffects,
+                                       const DifficultyConfig_t& rDifficulty,
+                                       const NativeLifeLevelConfig_t& rNativeLifeLevels,
+                                       const std::vector<EffectConfig_t>& rEcoDamageEffects)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
@@ -45,6 +46,9 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rPoliceRules(rPoliceRules)
     , m_rPopCompositionEffects(rPopCompositionEffects)
     , m_rGrowthEffects(rGrowthEffects)
+    , m_rDifficulty(rDifficulty)
+    , m_rNativeLifeLevels(rNativeLifeLevels)
+    , m_rEcoDamageEffects(rEcoDamageEffects)
     , m_cachedPool(rFaction)
 {
 }
@@ -174,13 +178,8 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopCompositionEffects_() 
 
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() const
 {
-    const GameDataContext& rData = m_rFaction.GetDataContext();
-    if (!rData.difficultyConfig)
-    {
-        throw std::runtime_error("FactionEffectsPool: GameDataContext has no difficultyConfig");
-    }
-    const DifficultyLevel_t& rLevel = rData.difficultyConfig->RequireForSession(
-        m_rFaction.GetSettings().GetGameRules().difficultyId);
+    const DifficultyLevel_t& rLevel =
+        m_rDifficulty.RequireForSession(m_rFaction.GetSettings().GetGameRules().difficultyId);
 
     // Append from the level's own storage, then drop the entries this faction does not
     // match. ActiveEffect_t borrows EffectConfig_t by pointer, so filtering into a local
@@ -196,12 +195,7 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() cons
 
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectNativeLifeEffects_() const
 {
-    const GameDataContext& rData = m_rFaction.GetDataContext();
-    if (!rData.nativeLifeLevelConfig)
-    {
-        throw std::runtime_error("FactionEffectsPool: GameDataContext has no nativeLifeLevelConfig");
-    }
-    const NativeLifeLevel_t& rLevel = rData.nativeLifeLevelConfig->RequireForSession(
+    const NativeLifeLevel_t& rLevel = m_rNativeLifeLevels.RequireForSession(
         m_rFaction.GetSettings().GetGameRules().nativeLifeLevelId);
     std::vector<ActiveEffect_t> result;
     AppendActiveEffects(rLevel.effects, nullptr, "native_life_level", result);
@@ -210,13 +204,8 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectNativeLifeEffects_() cons
 
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectEcoDamageEffects_() const
 {
-    const GameDataContext& rData = m_rFaction.GetDataContext();
-    if (!rData.ecoDamageConfig)
-    {
-        throw std::runtime_error("FactionEffectsPool: GameDataContext has no ecoDamageConfig");
-    }
     std::vector<ActiveEffect_t> result;
-    AppendActiveEffects(rData.ecoDamageConfig->effects, nullptr, "eco_damage", result);
+    AppendActiveEffects(m_rEcoDamageEffects, nullptr, "eco_damage", result);
     return result;
 }
 

@@ -34,9 +34,9 @@ bool CharterInForce_(const GameState& rGameState)
     return pCouncil->HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden);
 }
 
-int AtrocityThreshold_(const Faction& rPerpetrator)
+int AtrocityThreshold_(const GameState& rGameState, const Faction& rPerpetrator)
 {
-    const GameDataContext& rData = rPerpetrator.GetDataContext();
+    const GameDataContext& rData = rGameState.GetGameData();
     if (!rData.difficultyConfig)
     {
         throw std::runtime_error("CommitAtrocity requires a difficultyConfig");
@@ -147,7 +147,7 @@ void AnnounceToPlayer_(GameState& rGameState, const Faction& rPerpetrator, const
 AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
                                    Faction* pVictim, AtrocitySeverityId_t severity)
 {
-    const GameDataContext& rData = rPerpetrator.GetDataContext();
+    const GameDataContext& rData = rGameState.GetGameData();
     if (!rData.atrocitiesConfig)
     {
         throw std::runtime_error("CommitAtrocity requires an atrocitiesConfig");
@@ -189,7 +189,7 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     record.perpetrator = perpetratorId;
     record.victim = victimId;
     record.severity = bCounted ? EffectiveSeverityId(severity, rLedger.SimpleCount(perpetratorId),
-                                                     AtrocityThreshold_(rPerpetrator))
+                                                     AtrocityThreshold_(rGameState, rPerpetrator))
                                : severity;
     record.missionYear = rGameState.GetMissionYear();
     record.bCharterInForce = bCharterInForce;

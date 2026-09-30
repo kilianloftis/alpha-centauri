@@ -76,8 +76,8 @@ struct LinkGame_
 
     Unit& MakeArtifact(Faction& rFaction, const Tile& rTile, BaseManager* pHome)
     {
-        const NativeDesign* pDesign =
-            EnsureNativeDesign(rFaction, fixtures.dataContext, "Alien_Artifact");
+        const NativeDesign* pDesign = EnsureNativeDesign(
+            rFaction, *fixtures.dataContext.nativeUnitRegistry, "Alien_Artifact");
         REQUIRE(pDesign);
         return rFaction.GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), *pDesign, pState->GetWorldMap().GetUnitPositions(), rTile,

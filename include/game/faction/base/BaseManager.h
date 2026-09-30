@@ -42,10 +42,7 @@ class SocialRatingRegistry;
 class IEffectsProvider;
 class Tile;
 class Faction;
-class PopTypeRegistry;
-class PopTypeAvailabilityCalculator;
-struct GrowthConfig_t;
-class PopCompositionCalculator;
+struct BaseRules_t;
 class SecretProjectAvailabilityCalculator;
 class Unit;
 
@@ -95,11 +92,12 @@ class BaseManager
 public:
     // rFaction is the owning faction; its lifetime must outlive this base.
     //
-    // Narrow, named dependencies rather than the whole GameDataContext (Faction::CreateBase
-    // unpacks them). They are references: the composition root always supplies them, and the
-    // pointer form had three different null behaviours — throw, silent skip of all
-    // social-rating expansion, and a no-op RecalculateComposition — which is how fixture bases
-    // came to resolve ratings differently from real ones.
+    // rRules names the ruleset pieces a base reads rather than taking the whole
+    // GameDataContext; the constructor copies each into the member or part that uses it. They
+    // are references: the composition root always supplies them, and the pointer form had
+    // three different null behaviours — throw, silent skip of all social-rating expansion, and
+    // a no-op RecalculateComposition — which is how fixture bases came to resolve ratings
+    // differently from real ones.
     //
     // Research manager, economy manager and effects provider are NOT parameters: they are the
     // owning faction's, and passing them separately let a caller inject one faction's economy
@@ -114,16 +112,7 @@ public:
         BaseId_t baseId,
         std::string name,
         Tile& tile,
-        const BuildingRegistry& rBuildingRegistry,
-        const StockpileRegistry& rStockpileRegistry,
-        const SocialRatingRegistry& rSocialRatingRegistry,
-        const PopTypeRegistry& rPopTypeRegistry,
-        const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
-        const GrowthConfig_t& rGrowthConfig,
-        const ProductionConfig_t& rProductionConfig,
-        const HurryProductionCalculator& rHurryCalculator,
-        const ScrapRefundCalculator& rScrapCalculator,
-        PopCompositionCalculator& rCompositionCalculator,
+        const BaseRules_t& rRules,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
         std::optional<int> initialPopulation = std::nullopt,

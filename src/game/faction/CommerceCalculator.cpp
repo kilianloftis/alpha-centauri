@@ -30,9 +30,8 @@ namespace
 
 // Sum of commerce_rating Add amounts on a faction's discovered techs only (no SE / faction
 // bonuses). Used for totalCommerceTech across the planet.
-int TechCommerceRatingContribution_(const Faction& rFaction)
+int TechCommerceRatingContribution_(const Faction& rFaction, const TechRegistry& rTechs)
 {
-    const TechRegistry& rTechs = *rFaction.GetDataContext().techRegistry;
     int total = 0;
     for (const TechId& rId : rFaction.GetResearch().GetDiscoveredTechs())
     {
@@ -75,10 +74,11 @@ int TechCommerceRatingContribution_(const Faction& rFaction)
 // and divide by zero, or below that and invert the ratio.
 int TechDenominator_(const GameState& rGameState)
 {
+    const TechRegistry& rTechs = *rGameState.GetGameData().techRegistry;
     int total = 0;
     for (const Faction& rFaction : rGameState.Factions())
     {
-        total += TechCommerceRatingContribution_(rFaction);
+        total += TechCommerceRatingContribution_(rFaction, rTechs);
     }
     return std::max(1, total + 1);
 }

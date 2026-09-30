@@ -13,6 +13,7 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BaseRules.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
@@ -332,16 +333,7 @@ struct BaseFixture : WorldFixture
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
-            *dataContext.buildingRegistry,
-            *dataContext.stockpileRegistry,
-            *dataContext.socialRatingRegistry,
-            *dataContext.popTypeRegistry,
-            *dataContext.popTypeAvailabilityCalculator,
-            *dataContext.growthConfig,
-            *dataContext.productionConfig,
-            *dataContext.hurryProductionCalculator,
-            *dataContext.scrapRefundCalculator,
-            *dataContext.popCompositionCalculator,
+            ac::MakeBaseRules(dataContext),
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
             /*secretProjectCalculator*/ nullptr,
@@ -470,16 +462,7 @@ struct FactionFixture : BaseFixture
     {
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
-            *dataContext.buildingRegistry,
-            *dataContext.stockpileRegistry,
-            *dataContext.socialRatingRegistry,
-            *dataContext.popTypeRegistry,
-            *dataContext.popTypeAvailabilityCalculator,
-            *dataContext.growthConfig,
-            *dataContext.productionConfig,
-            *dataContext.hurryProductionCalculator,
-            *dataContext.scrapRefundCalculator,
-            *dataContext.popCompositionCalculator,
+            ac::MakeBaseRules(dataContext),
             /*secretProjectCalculator*/ nullptr,
             *ctx,
             initialPopulation);

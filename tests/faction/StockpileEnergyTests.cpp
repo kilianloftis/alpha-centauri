@@ -22,6 +22,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BaseRules.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -93,48 +94,38 @@ std::string StockpileJson_(const char* pId, const char* pName, const char* pStat
         "effects": [)" + MineralsConverted_(pStat, pAmount) + R"(] })";
 }
 
-BaseManager& MakeBaseWithStockpiles_(FactionFixture& rFixtures, Faction& rFaction,
-                                     StockpileRegistry& rStockpiles)
+BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
+                           const BuildingRegistry& rBuildings,
+                           const StockpileRegistry& rStockpiles)
 {
-    auto pBase = std::make_unique<BaseManager>(
-        rFaction, rFixtures.nextBaseId++, "TestBase", rFixtures.At(4, 4),
-        *rFixtures.dataContext.buildingRegistry,
-        rStockpiles,
-        *rFixtures.dataContext.socialRatingRegistry,
-        *rFixtures.dataContext.popTypeRegistry,
-        *rFixtures.dataContext.popTypeAvailabilityCalculator,
-        *rFixtures.dataContext.growthConfig,
-        *rFixtures.dataContext.productionConfig,
-        *rFixtures.dataContext.hurryProductionCalculator,
-        *rFixtures.dataContext.scrapRefundCalculator,
-        *rFixtures.dataContext.popCompositionCalculator,
-        nullptr,
-        *rFixtures.ctx);
+    const BaseRules_t fixture = MakeBaseRules(rFixtures.dataContext);
+    const BaseRules_t rules{
+        .rBuildings = rBuildings,
+        .rStockpiles = rStockpiles,
+        .rSocialRatings = fixture.rSocialRatings,
+        .rPopTypes = fixture.rPopTypes,
+        .rPopTypeAvailability = fixture.rPopTypeAvailability,
+        .rGrowth = fixture.rGrowth,
+        .rProduction = fixture.rProduction,
+        .rHurry = fixture.rHurry,
+        .rScrap = fixture.rScrap,
+        .rComposition = fixture.rComposition,
+        .rDrones = fixture.rDrones,
+        .rEcoDamage = fixture.rEcoDamage,
+        .rAtrocities = fixture.rAtrocities,
+    };
+    auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.nextBaseId++, "TestBase",
+                                               rFixtures.At(4, 4), rules, nullptr, *rFixtures.ctx);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;
 }
 
-BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
-                           BuildingRegistry& rBuildings, StockpileRegistry& rStockpiles)
+BaseManager& MakeBaseWithStockpiles_(FactionFixture& rFixtures, Faction& rFaction,
+                                     const StockpileRegistry& rStockpiles)
 {
-    auto pBase = std::make_unique<BaseManager>(
-        rFaction, rFixtures.nextBaseId++, "TestBase", rFixtures.At(4, 4),
-        rBuildings,
-        rStockpiles,
-        *rFixtures.dataContext.socialRatingRegistry,
-        *rFixtures.dataContext.popTypeRegistry,
-        *rFixtures.dataContext.popTypeAvailabilityCalculator,
-        *rFixtures.dataContext.growthConfig,
-        *rFixtures.dataContext.productionConfig,
-        *rFixtures.dataContext.hurryProductionCalculator,
-        *rFixtures.dataContext.scrapRefundCalculator,
-        *rFixtures.dataContext.popCompositionCalculator,
-        nullptr,
-        *rFixtures.ctx);
-    BaseManager& rBase = *pBase;
-    rFaction.AddBase(std::move(pBase));
-    return rBase;
+    return MakeBaseWith_(rFixtures, rFaction, *rFixtures.dataContext.buildingRegistry,
+                         rStockpiles);
 }
 
 std::string WriteTempBuildings_(const std::string& rContents)

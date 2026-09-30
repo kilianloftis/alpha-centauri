@@ -35,7 +35,7 @@ void ApplyVendetta(GameState& rGameState, FactionId_t a, FactionId_t b)
         return;
     }
 
-    const InteractionGridsConfig_t& rGrids = pA->GetDataContext().interactionGrids;
+    const InteractionGridsConfig_t& rGrids = rGameState.GetGameData().interactionGrids;
     EvacuateUnitsFromTerritory(*pA, b, rGameState.GetWorldMap(), rGrids);
     EvacuateUnitsFromTerritory(*pB, a, rGameState.GetWorldMap(), rGrids);
 }

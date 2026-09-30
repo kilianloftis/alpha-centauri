@@ -21,6 +21,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                                      const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                                      const GrowthConfig_t& rGrowthConfig,
                                      PopCompositionCalculator& rCompositionCalculator,
+                                     const DroneCalculator& rDroneCalculator,
                                      const ResearchManager& rResearchManager,
                                      BaseManager& rBase,
                                      int initialSize)
@@ -30,6 +31,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
     , m_pResearch(&rResearchManager)
     , m_rGrowthConfig(rGrowthConfig)
     , m_rCompositionCalculator(rCompositionCalculator)
+    , m_rDroneCalculator(rDroneCalculator)
     , m_rBase(rBase)
     , m_nutrientStockpile(0)
     , m_riot(OnWillRiot, OnIsRioting, OnRiotEnded)
@@ -407,7 +409,7 @@ bool PopulationManager::IsDestroyed() const
 
 CompositionEffectInputs_t PopulationManager::BuildCompositionInputs_() const
 {
-    return BuildCompositionInputs(m_rBase);
+    return BuildCompositionInputs(m_rBase, m_rDroneCalculator);
 }
 
 PopCompositionResult_t PopulationManager::ComputeComposition() const
@@ -425,7 +427,7 @@ PopCompositionResult_t PopulationManager::ComputeComposition() const
 void PopulationManager::RecalculateComposition()
 {
     ApplyCompositionResult(ComputeComposition());
-    m_appliedCompositionInputKey = ReadCompositionInputKey(m_rBase);
+    m_appliedCompositionInputKey = ReadCompositionInputKey(m_rBase, m_rDroneCalculator);
 }
 
 void PopulationManager::EnsureCompositionCurrent()
@@ -434,7 +436,7 @@ void PopulationManager::EnsureCompositionCurrent()
     {
         return;
     }
-    const CompositionInputKey_t current = ReadCompositionInputKey(m_rBase);
+    const CompositionInputKey_t current = ReadCompositionInputKey(m_rBase, m_rDroneCalculator);
     if (m_appliedCompositionInputKey == current)
     {
         return;

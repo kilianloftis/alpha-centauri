@@ -4,6 +4,7 @@ namespace ac
 {
 
 class BaseManager;
+class DroneCalculator;
 
 // Everything pop composition needs that has to be resolved against a base's effect list.
 // Assembled outside PopulationManager because only BaseManager can build that list, and
@@ -34,8 +35,10 @@ struct CompositionInputKey_t
 
 // Same shape as ComputeAwayFromHomeDrones / ComputeGarrisonPoliceSuppression, which this
 // calls: a base-scoped rule that needs no state of its own.
-CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase);
+CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
+                                                 const DroneCalculator& rDrones);
 
-CompositionInputKey_t ReadCompositionInputKey(const BaseManager& rBase);
+CompositionInputKey_t ReadCompositionInputKey(const BaseManager& rBase,
+                                              const DroneCalculator& rDrones);
 
 } // namespace ac

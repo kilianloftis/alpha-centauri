@@ -1,7 +1,6 @@
 #include "game/faction/CommerceManager.h"
 
 #include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
@@ -20,9 +19,10 @@ const std::vector<CommercePartnerLine_t>& NoLines_()
 
 } // namespace
 
-CommerceManager::CommerceManager(const Faction& rOwner)
+CommerceManager::CommerceManager(const Faction& rOwner, const CommerceConfig_t& rConfig,
+                                 LuaRuntime& rLua)
     : m_rOwner(rOwner)
-    , m_calculator(*rOwner.GetDataContext().commerceConfig, *rOwner.GetDataContext().luaRuntime)
+    , m_calculator(rConfig, rLua)
 {}
 
 void CommerceManager::CollectRevisions_(std::vector<uint64_t>& rOut) const

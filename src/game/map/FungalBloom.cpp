@@ -71,19 +71,14 @@ std::vector<const NativeUnitConfig_t*> EligibleNatives_(const NativeUnitRegistry
     return eligible;
 }
 
-int PlaceLifeforms_(Faction& rPlanet, const std::vector<Tile*>& rNewTiles, int lifeformCount,
-                    std::mt19937& rRng, GameState& rGameState)
+int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
+                    const std::vector<Tile*>& rNewTiles, int lifeformCount, std::mt19937& rRng,
+                    GameState& rGameState)
 {
-    const NativeUnitRegistry* pRegistry = rPlanet.GetDataContext().nativeUnitRegistry.get();
-    if (!pRegistry)
-    {
-        throw std::logic_error("ApplyFungalBloom: no native unit registry is available");
-    }
-
     std::vector<Tile*> habitable;
     for (Tile* pTile : rNewTiles)
     {
-        if (!EligibleNatives_(*pRegistry, *pTile).empty())
+        if (!EligibleNatives_(rNatives, *pTile).empty())
         {
             habitable.push_back(pTile);
         }
@@ -98,11 +93,10 @@ int PlaceLifeforms_(Faction& rPlanet, const std::vector<Tile*>& rNewTiles, int l
     for (int n = 0; n < lifeformCount; ++n)
     {
         Tile& rTile = *habitable[tileDist(rRng)];
-        const std::vector<const NativeUnitConfig_t*> eligible = EligibleNatives_(*pRegistry, rTile);
+        const std::vector<const NativeUnitConfig_t*> eligible = EligibleNatives_(rNatives, rTile);
         std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
         const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
-        const NativeDesign* pDesign = EnsureNativeDesign(rPlanet, rPlanet.GetDataContext(),
-                                                         rConfig.id);
+        const NativeDesign* pDesign = EnsureNativeDesign(rPlanet, rNatives, rConfig.id);
         if (!pDesign)
         {
             throw std::logic_error("ApplyFungalBloom: native design '" + rConfig.id
@@ -116,15 +110,15 @@ int PlaceLifeforms_(Faction& rPlanet, const std::vector<Tile*>& rNewTiles, int l
     return spawned;
 }
 
-int SpawnLifeforms_(const std::vector<Tile*>& rNewTiles, int lifeformCount, std::mt19937& rRng,
-                    GameState& rGameState)
+int SpawnLifeforms_(const NativeUnitRegistry& rNatives, const std::vector<Tile*>& rNewTiles,
+                    int lifeformCount, std::mt19937& rRng, GameState& rGameState)
 {
     Faction* pPlanet = FindNativeLifeFaction_(rGameState);
     if (!pPlanet)
     {
         throw std::logic_error("ApplyFungalBloom: no native-life faction in the session");
     }
-    return PlaceLifeforms_(*pPlanet, rNewTiles, lifeformCount, rRng, rGameState);
+    return PlaceLifeforms_(*pPlanet, rNatives, rNewTiles, lifeformCount, rRng, rGameState);
 }
 
 std::vector<Tile*> SelectBloomTiles_(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
@@ -194,13 +188,17 @@ int RollLifeformCount_(const NativeUnitRegistry& rNatives, std::mt19937& rRng)
 } // namespace
 
 FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
-                                     std::mt19937& rRng, GameState& rGameState,
-                                     const NativeUnitRegistry& rNatives)
+                                     std::mt19937& rRng, GameState& rGameState)
 {
     FungalBloomResult_t result;
     if (tileCount <= 0)
     {
         return result;
+    }
+    const NativeUnitRegistry* pNatives = rGameState.GetGameData().nativeUnitRegistry.get();
+    if (!pNatives)
+    {
+        throw std::logic_error("ApplyFungalBloom: no native unit registry is available");
     }
 
     const ImprovementConfig_t& rFungus =
@@ -213,13 +211,13 @@ FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int til
         return result;
     }
 
-    const int lifeformCount = RollLifeformCount_(rNatives, rRng);
+    const int lifeformCount = RollLifeformCount_(*pNatives, rRng);
     if (lifeformCount <= 0)
     {
         return result;
     }
 
-    result.lifeforms = SpawnLifeforms_(newly, lifeformCount, rRng, rGameState);
+    result.lifeforms = SpawnLifeforms_(*pNatives, newly, lifeformCount, rRng, rGameState);
     return result;
 }
 
