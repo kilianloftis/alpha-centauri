@@ -150,7 +150,8 @@ its treasury, its discovered techs, its explored map, its bases.
 ## DiplomacyLedger
 
 Five axes. Two are directional and one is per-faction rather than pairwise, which is why they are
-separate maps rather than fields of one relationship record:
+separate containers rather than fields of one relationship record. Contact and infiltration are
+sets: a pair is either in them or not.
 
 | Axis | Key | Meaning |
 |---|---|---|

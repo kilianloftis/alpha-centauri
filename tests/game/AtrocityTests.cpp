@@ -557,7 +557,8 @@ TEST_CASE("A Major atrocity's universal Vendetta obliges nobody to defend the pe
     // The AI partner joins the world against the perpetrator, ending its Pact; the human
     // partner is never forced and is not asked to defend the perpetrator either.
     CHECK(game.Diplomacy().HasVendetta(rPartner.GetFactionId(), rPerpetrator.GetFactionId()));
-    CHECK(game.Diplomacy().HasPact(rHuman.GetFactionId(), rPerpetrator.GetFactionId()));
+    CHECK(game.Diplomacy().GetStatus(rHuman.GetFactionId(), rPerpetrator.GetFactionId())
+          == DiplomaticStatus_t::Pact);
     CHECK_FALSE(game.pState->GetPlayerInteractions().AnyOf(
         [](const QueuedInteraction_t& rQueued)
         { return std::holds_alternative<PactObligationInteraction_t>(rQueued.payload); }));

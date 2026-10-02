@@ -30,7 +30,6 @@ enum class VendettaKind_t
     SneakAttack
 };
 
-// Empty string for Neutral; otherwise the status name.
 std::string ToString(DiplomaticStatus_t status);
 
 } // namespace ac

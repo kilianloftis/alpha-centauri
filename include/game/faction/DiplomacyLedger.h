@@ -6,6 +6,7 @@
 #include "lib/Revision.h"
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,9 +31,6 @@ public:
     // Every pair whose status is not Neutral.
     std::vector<FactionPair> GetStatusPairs() const;
 
-    bool HasTruce(FactionId_t a, FactionId_t b) const;
-    bool HasTreaty(FactionId_t a, FactionId_t b) const;
-    bool HasPact(FactionId_t a, FactionId_t b) const;
     bool HasVendetta(FactionId_t a, FactionId_t b) const;
 
     bool AreKnown(FactionId_t a, FactionId_t b) const;
@@ -64,9 +62,9 @@ private:
     };
 
     std::map<FactionPair, StatusEntry_t> m_statuses;
-    std::map<FactionPair, bool> m_known;
+    std::set<FactionPair> m_known;
     std::map<DirectedFactionPair, int> m_grievances;
-    std::map<DirectedFactionPair, bool> m_infiltration;
+    std::set<DirectedFactionPair> m_infiltration;
     std::map<FactionId_t, int> m_integrity;
 };
 

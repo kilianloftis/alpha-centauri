@@ -50,7 +50,7 @@ void CommlinksPanel::Render(Graphics& rGraphics)
 
         const float rowY = m_layout.y + (style.rowStartY + static_cast<float>(row) * style.rowHeight) * m_layout.height;
         const std::string& rName = rFaction.GetDefinition().identity.name;
-        const std::string status = ToString(rLedger.GetStatus(playerId, otherId));
+        const DiplomaticStatus_t status = rLedger.GetStatus(playerId, otherId);
 
         rGraphics.DrawText(
             rName,
@@ -59,10 +59,10 @@ void CommlinksPanel::Render(Graphics& rGraphics)
             style.rowFontSize,
             style.factionNameColor);
 
-        if (!status.empty())
+        if (status != DiplomaticStatus_t::Neutral)
         {
             rGraphics.DrawText(
-                status,
+                ToString(status),
                 m_layout.x + style.statusPadX * m_layout.width,
                 rowY,
                 style.rowFontSize,

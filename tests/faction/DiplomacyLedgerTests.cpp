@@ -9,9 +9,6 @@ TEST_CASE("Diplomatic status defaults to None", "[diplomacy]")
 {
     DiplomacyLedger ledger;
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Neutral);
-    CHECK_FALSE(ledger.HasTruce(1, 2));
-    CHECK_FALSE(ledger.HasTreaty(1, 2));
-    CHECK_FALSE(ledger.HasPact(1, 2));
     CHECK_FALSE(ledger.HasVendetta(1, 2));
 }
 
@@ -21,7 +18,6 @@ TEST_CASE("Diplomatic status is symmetric", "[diplomacy]")
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Treaty);
     CHECK(ledger.GetStatus(2, 1) == DiplomaticStatus_t::Treaty);
-    CHECK(ledger.HasTreaty(2, 1));
 }
 
 TEST_CASE("Each diplomatic status round-trips", "[diplomacy]")
@@ -30,16 +26,12 @@ TEST_CASE("Each diplomatic status round-trips", "[diplomacy]")
 
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Truce);
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Truce);
-    CHECK(ledger.HasTruce(1, 2));
 
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Treaty);
-    CHECK(ledger.HasTreaty(1, 2));
-    CHECK_FALSE(ledger.HasTruce(1, 2));
 
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Pact);
-    CHECK(ledger.HasPact(1, 2));
 
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Vendetta);
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Vendetta);
@@ -52,7 +44,6 @@ TEST_CASE("Setting None clears a stored status", "[diplomacy]")
     ledger.SetStatus(3, 5, DiplomaticStatus_t::Pact);
     ledger.SetStatus(3, 5, DiplomaticStatus_t::Neutral);
     CHECK(ledger.GetStatus(3, 5) == DiplomaticStatus_t::Neutral);
-    CHECK_FALSE(ledger.HasPact(3, 5));
 }
 
 TEST_CASE("Self-pair status is rejected", "[diplomacy]")

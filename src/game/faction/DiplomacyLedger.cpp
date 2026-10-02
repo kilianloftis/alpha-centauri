@@ -58,21 +58,6 @@ std::vector<FactionPair> DiplomacyLedger::GetStatusPairs() const
     return pairs;
 }
 
-bool DiplomacyLedger::HasTruce(FactionId_t a, FactionId_t b) const
-{
-    return GetStatus(a, b) == DiplomaticStatus_t::Truce;
-}
-
-bool DiplomacyLedger::HasTreaty(FactionId_t a, FactionId_t b) const
-{
-    return GetStatus(a, b) == DiplomaticStatus_t::Treaty;
-}
-
-bool DiplomacyLedger::HasPact(FactionId_t a, FactionId_t b) const
-{
-    return GetStatus(a, b) == DiplomaticStatus_t::Pact;
-}
-
 bool DiplomacyLedger::HasVendetta(FactionId_t a, FactionId_t b) const
 {
     return GetStatus(a, b) == DiplomaticStatus_t::Vendetta;
@@ -80,20 +65,20 @@ bool DiplomacyLedger::HasVendetta(FactionId_t a, FactionId_t b) const
 
 bool DiplomacyLedger::AreKnown(FactionId_t a, FactionId_t b) const
 {
-    const FactionPair key = FactionPair::Canonical(a, b);
-    const auto it = m_known.find(key);
-    return it != m_known.end() && it->second;
+    return m_known.contains(FactionPair::Canonical(a, b));
 }
 
 void DiplomacyLedger::SetKnown(FactionId_t a, FactionId_t b, bool known)
 {
     const FactionPair key = FactionPair::Canonical(a, b);
-    if (!known)
+    if (known)
+    {
+        m_known.insert(key);
+    }
+    else
     {
         m_known.erase(key);
-        return;
     }
-    m_known[key] = true;
 }
 
 void DiplomacyLedger::SetKnown(const std::vector<FactionId_t>& rFactionIds)
@@ -136,20 +121,20 @@ void DiplomacyLedger::AddGrievance(FactionId_t holder, FactionId_t against, int 
 
 bool DiplomacyLedger::HasInfiltration(FactionId_t infiltrator, FactionId_t target) const
 {
-    const DirectedFactionPair key = DirectedFactionPair::Make(infiltrator, target);
-    const auto it = m_infiltration.find(key);
-    return it != m_infiltration.end() && it->second;
+    return m_infiltration.contains(DirectedFactionPair::Make(infiltrator, target));
 }
 
 void DiplomacyLedger::SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated)
 {
     const DirectedFactionPair key = DirectedFactionPair::Make(infiltrator, target);
-    if (!infiltrated)
+    if (infiltrated)
+    {
+        m_infiltration.insert(key);
+    }
+    else
     {
         m_infiltration.erase(key);
-        return;
     }
-    m_infiltration[key] = true;
 }
 
 int DiplomacyLedger::GetIntegrity(FactionId_t faction) const
