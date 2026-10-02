@@ -13,6 +13,7 @@
 #include <random>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace ac
 {
@@ -179,8 +180,9 @@ private:
                                            CombatEngagement_t engagement);
     // Every faction the shot will hit: units it strikes, or the territory owner of an
     // empty tile's improvements.
-    void DeclareBombardHostility_(const Unit& rAttacker, const Tile& rTargetTile,
-                                  const BombardTargeting_t& rTargeting, bool bOccupied);
+    std::vector<FactionId_t> BombardVictims_(FactionId_t aggressor, const Tile& rTargetTile,
+                                             const BombardTargeting_t& rTargeting,
+                                             bool bOccupied) const;
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).

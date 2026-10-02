@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/DiplomaticStatus.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
 #include "game/units/Unit.h"
@@ -80,6 +81,7 @@ struct PactObligationInteraction_t
 {
     FactionId_t allyId = 0;
     FactionId_t aggressorId = 0;
+    VendettaEntry_t entry = VendettaEntry_t::Declaration;
 };
 
 // A player unit's move order stopped at the border of territory its faction may not enter

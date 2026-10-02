@@ -474,12 +474,8 @@ struct FactionFixture : BaseFixture
         return rBase;
     }
 
-    // Builds a design from fixture components (one synthetic slot per component) and
-    // creates a live unit at (x, y), registered on the world map for aura/position queries.
-    ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
-                       const std::vector<std::string>& rComponentIds,
-                       ac::BaseManager* pHomeBase = nullptr,
-                       ac::BaseManager* pProducedAt = nullptr)
+    // A design from fixture components, one synthetic slot per component.
+    const ac::UnitDesign& MakeDesign(const std::vector<std::string>& rComponentIds)
     {
         std::vector<ac::UnitSlotConfig_t> slots;
         std::unordered_map<std::string, const ac::UnitComponentConfig_t*> assigned;
@@ -499,10 +495,17 @@ struct FactionFixture : BaseFixture
             assigned[slot.id] = pComponent;
             slots.push_back(slot);
         }
-        designs.emplace_back(slots, assigned);
+        return designs.emplace_back(slots, assigned);
+    }
 
+    // Creates a live unit at (x, y), registered on the world map for aura/position queries.
+    ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
+                       const std::vector<std::string>& rComponentIds,
+                       ac::BaseManager* pHomeBase = nullptr,
+                       ac::BaseManager* pProducedAt = nullptr)
+    {
         // The unit registers itself in the map's position index for its lifetime.
-        return rFaction.GetUnitManager().CreateUnit(nextUnitId++, designs.back(),
+        return rFaction.GetUnitManager().CreateUnit(nextUnitId++, MakeDesign(rComponentIds),
                                                     map.GetUnitPositions(), At(x, y),
                                                     pHomeBase, pProducedAt);
     }
@@ -585,6 +588,17 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState
         throw std::runtime_error("MakeSessionBase: CreateBase failed");
     }
     return *pBase;
+}
+
+// A live unit of rFaction at (x, y) on rState's map.
+inline ac::Unit& MakeSessionUnit(FactionFixture& rFixtures, ac::GameState& rState,
+                                 ac::Faction& rFaction, int x, int y,
+                                 const std::vector<std::string>& rComponentIds = {"test_chassis"})
+{
+    ac::WorldMap& rMap = rState.GetWorldMap();
+    return rFaction.GetUnitManager().CreateUnit(rState.AllocateUnitId(),
+                                                rFixtures.MakeDesign(rComponentIds),
+                                                rMap.GetUnitPositions(), *rMap.GetTile(x, y));
 }
 
 } // namespace actest

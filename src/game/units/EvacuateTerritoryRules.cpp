@@ -1,6 +1,7 @@
 #include "game/units/EvacuateTerritoryRules.h"
 
 #include "game/Faction.h"
+#include "game/faction/DiplomacyRules.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -18,6 +19,19 @@ namespace ac
 namespace
 {
 
+bool HoldsUnitItMayNotShareWith_(const Unit& rUnit, const Tile& rTile, const WorldMap& rWorldMap)
+{
+    for (const Unit* pOther : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pOther && !MayShareTiles(rUnit.GetFaction(), pOther->GetFaction().GetFactionId()))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A unit already on its own territory stays; whoever shares the tile with it moves instead.
 bool IsValidEvacuateDestination_(const Unit& rUnit, const Tile& rTile,
                                  const WorldMap& rWorldMap, FactionId_t ownFactionId,
                                  const InteractionGridsConfig_t& rGrids)
@@ -27,6 +41,10 @@ bool IsValidEvacuateDestination_(const Unit& rUnit, const Tile& rTile,
         return false;
     }
     if (!CanHoldTileWithoutCarrier(rUnit, rTile, rWorldMap, rGrids))
+    {
+        return false;
+    }
+    if (&rTile != &rUnit.GetTile() && HoldsUnitItMayNotShareWith_(rUnit, rTile, rWorldMap))
     {
         return false;
     }

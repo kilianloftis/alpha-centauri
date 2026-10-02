@@ -39,6 +39,30 @@ bool AiHonorsDefensiveObligation_(const GameState& /*rGameState*/, FactionId_t /
     return true;
 }
 
+void WithdrawFromTerritories_(Faction& rA, Faction& rB, WorldMap& rWorldMap,
+                              const InteractionGridsConfig_t& rGrids)
+{
+    EvacuateUnitsFromTerritory(rA, rB.GetFactionId(), rWorldMap, rGrids);
+    EvacuateUnitsFromTerritory(rB, rA.GetFactionId(), rWorldMap, rGrids);
+}
+
+void WithdrawOnDeclaration_(GameState& rGameState, FactionId_t a, FactionId_t b,
+                            VendettaEntry_t entry)
+{
+    if (entry != VendettaEntry_t::Declaration)
+    {
+        return;
+    }
+    Faction* pA = rGameState.FindFaction(a);
+    Faction* pB = rGameState.FindFaction(b);
+    if (!pA || !pB || !HasDiplomacy_(*pA) || !HasDiplomacy_(*pB))
+    {
+        return;
+    }
+    WithdrawFromTerritories_(*pA, *pB, rGameState.GetWorldMap(),
+                             rGameState.GetGameData().interactionGrids);
+}
+
 bool IsObligationQueued_(const GameState& rGameState, FactionId_t ally, FactionId_t aggressor)
 {
     return rGameState.GetPlayerInteractions().AnyOf(
@@ -49,6 +73,72 @@ bool IsObligationQueued_(const GameState& rGameState, FactionId_t ally, FactionI
             return pObligation && pObligation->allyId == ally
                 && pObligation->aggressorId == aggressor;
         });
+}
+
+void StartVendetta_(GameState& rGameState, FactionId_t declarer, FactionId_t target,
+                    VendettaEntry_t entry)
+{
+    if (declarer == target)
+    {
+        throw std::invalid_argument("DeclareVendetta: a faction cannot declare on itself");
+    }
+    const DiplomacyLedger& rLedger = rGameState.GetDiplomacyLedger();
+    if (rLedger.HasVendetta(declarer, target))
+    {
+        return;
+    }
+    ApplyStatusChange(rGameState, declarer, target, DiplomaticStatus_t::Vendetta);
+    WithdrawOnDeclaration_(rGameState, declarer, target, entry);
+
+    const Faction* pDeclarer = rGameState.FindFaction(declarer);
+    const Faction* pTarget = rGameState.FindFaction(target);
+    if (!pDeclarer || !pTarget || !HasDiplomacy_(*pDeclarer) || !HasDiplomacy_(*pTarget))
+    {
+        return;
+    }
+
+    std::vector<FactionId_t> partners;
+    for (const Faction& rPartner : rGameState.Factions())
+    {
+        const FactionId_t partnerId = rPartner.GetFactionId();
+        if (partnerId == declarer || partnerId == target || !HasDiplomacy_(rPartner)
+            || !StatusRulesFor(rGameState, partnerId, target).bDefensiveObligation
+            || rLedger.HasVendetta(partnerId, declarer))
+        {
+            continue;
+        }
+        partners.push_back(partnerId);
+    }
+
+    for (const FactionId_t partnerId : partners)
+    {
+        if (rGameState.FindFaction(partnerId)->IsPlayerControlled())
+        {
+            if (!IsObligationQueued_(rGameState, target, declarer))
+            {
+                EnqueueForPlayer(rGameState,
+                                 PactObligationInteraction_t{target, declarer, entry});
+            }
+            continue;
+        }
+        ResolveDefensiveObligation(
+            rGameState, partnerId, target, declarer,
+            AiHonorsDefensiveObligation_(rGameState, partnerId, target, declarer), entry);
+    }
+}
+
+void EnterVendetta_(GameState& rGameState, FactionId_t defender, FactionId_t aggressor,
+                    VendettaEntry_t entry)
+{
+    if (defender == aggressor)
+    {
+        throw std::invalid_argument("JoinVendetta: a faction cannot defend against itself");
+    }
+    if (!rGameState.GetDiplomacyLedger().HasVendetta(defender, aggressor))
+    {
+        ApplyStatusChange(rGameState, defender, aggressor, DiplomaticStatus_t::Vendetta);
+        WithdrawOnDeclaration_(rGameState, defender, aggressor, entry);
+    }
 }
 
 } // namespace
@@ -88,8 +178,7 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
 
     if (rFrom.bEnterTerritory && !rTo.bEnterTerritory)
     {
-        EvacuateUnitsFromTerritory(*pA, b, rWorldMap, rGrids);
-        EvacuateUnitsFromTerritory(*pB, a, rWorldMap, rGrids);
+        WithdrawFromTerritories_(*pA, *pB, rWorldMap, rGrids);
     }
     if (rFrom.bShareTiles && !rTo.bShareTiles)
     {
@@ -116,75 +205,24 @@ void ExpireDiplomaticStatuses(GameState& rGameState)
 
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target)
 {
-    if (declarer == target)
-    {
-        throw std::invalid_argument("DeclareVendetta: a faction cannot declare on itself");
-    }
-    const DiplomacyLedger& rLedger = rGameState.GetDiplomacyLedger();
-    if (rLedger.HasVendetta(declarer, target))
-    {
-        return;
-    }
-    ApplyStatusChange(rGameState, declarer, target, DiplomaticStatus_t::Vendetta);
-
-    const Faction* pDeclarer = rGameState.FindFaction(declarer);
-    const Faction* pTarget = rGameState.FindFaction(target);
-    if (!pDeclarer || !pTarget || !HasDiplomacy_(*pDeclarer) || !HasDiplomacy_(*pTarget))
-    {
-        return;
-    }
-
-    std::vector<FactionId_t> partners;
-    for (const Faction& rPartner : rGameState.Factions())
-    {
-        const FactionId_t partnerId = rPartner.GetFactionId();
-        if (partnerId == declarer || partnerId == target || !HasDiplomacy_(rPartner)
-            || !StatusRulesFor(rGameState, partnerId, target).bDefensiveObligation
-            || rLedger.HasVendetta(partnerId, declarer))
-        {
-            continue;
-        }
-        partners.push_back(partnerId);
-    }
-
-    for (const FactionId_t partnerId : partners)
-    {
-        if (rGameState.FindFaction(partnerId)->IsPlayerControlled())
-        {
-            if (!IsObligationQueued_(rGameState, target, declarer))
-            {
-                EnqueueForPlayer(rGameState, PactObligationInteraction_t{target, declarer});
-            }
-            continue;
-        }
-        ResolveDefensiveObligation(
-            rGameState, partnerId, target, declarer,
-            AiHonorsDefensiveObligation_(rGameState, partnerId, target, declarer));
-    }
+    StartVendetta_(rGameState, declarer, target, VendettaEntry_t::Declaration);
 }
 
 void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggressor)
 {
-    if (defender == aggressor)
-    {
-        throw std::invalid_argument("JoinVendetta: a faction cannot defend against itself");
-    }
-    if (!rGameState.GetDiplomacyLedger().HasVendetta(defender, aggressor))
-    {
-        ApplyStatusChange(rGameState, defender, aggressor, DiplomaticStatus_t::Vendetta);
-    }
+    EnterVendetta_(rGameState, defender, aggressor, VendettaEntry_t::Declaration);
 }
 
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
-                              DefensiveObligationMode_t mode)
+                              DefensiveObligationMode_t mode, VendettaEntry_t entry)
 {
     switch (mode)
     {
     case DefensiveObligationMode_t::JoinAsDefender:
-        JoinVendetta(rGameState, partner, aggressor);
+        EnterVendetta_(rGameState, partner, aggressor, entry);
         return;
     case DefensiveObligationMode_t::SeparateDeclaration:
-        DeclareVendetta(rGameState, partner, aggressor);
+        StartVendetta_(rGameState, partner, aggressor, entry);
         return;
     }
 }
@@ -203,7 +241,7 @@ void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t v
     }
     if (!StatusRulesFor(rGameState, aggressor, victim).bMayAttack)
     {
-        DeclareVendetta(rGameState, aggressor, victim);
+        StartVendetta_(rGameState, aggressor, victim, VendettaEntry_t::SneakAttack);
     }
 }
 
@@ -220,11 +258,13 @@ void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t terri
 }
 
 void ResolveDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally,
-                                FactionId_t aggressor, bool bDeclareVendetta)
+                                FactionId_t aggressor, bool bDeclareVendetta,
+                                VendettaEntry_t entry)
 {
     if (bDeclareVendetta)
     {
-        HonorDefensiveObligation(rGameState, partner, aggressor, k_DefensiveObligationMode);
+        HonorDefensiveObligation(rGameState, partner, aggressor, k_DefensiveObligationMode,
+                                 entry);
         return;
     }
     const DiplomacyLedger& rLedger = rGameState.GetDiplomacyLedger();

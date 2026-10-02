@@ -352,6 +352,7 @@ void InteractionPresenter::PresentPactObligation_(const PactObligationInteractio
     const FactionId_t playerId = pPlayer->GetFactionId();
     const FactionId_t allyId = rObligation.allyId;
     const FactionId_t aggressorId = rObligation.aggressorId;
+    const VendettaEntry_t entry = rObligation.entry;
     const DiplomaticStatus_t status = m_rGameState.GetDiplomacyLedger().GetStatus(playerId, allyId);
     const std::optional<DiplomaticStatus_t> lower = StepDown(status);
     const std::string& rAllyName = pAlly->GetDefinition().identity.name;
@@ -360,17 +361,19 @@ void InteractionPresenter::PresentPactObligation_(const PactObligationInteractio
     std::vector<PopupChoice_t> choices;
     choices.push_back(
         {"Declare Vendetta on the " + rAggressorName,
-         [this, playerId, allyId, aggressorId]
+         [this, playerId, allyId, aggressorId, entry]
          {
-             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, true);
+             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, true,
+                                        entry);
              CompleteAndAdvance_();
          }});
     choices.push_back(
         {"Stand aside (" + ToString(status) + " with the " + rAllyName + " becomes "
              + (lower ? ToString(*lower) : std::string{}) + ")",
-         [this, playerId, allyId, aggressorId]
+         [this, playerId, allyId, aggressorId, entry]
          {
-             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, false);
+             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, false,
+                                        entry);
              CompleteAndAdvance_();
          }});
     PushChoice_("The " + rAggressorName + " attacked the " + rAllyName + ", our "

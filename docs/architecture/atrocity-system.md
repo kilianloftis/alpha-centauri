@@ -171,8 +171,8 @@ its revision bump is what invalidates `CommerceManager`'s memo.
 |---|---|
 | Commerce sanctions | `AtrocityLedger::ExtendSanction`, counted Simple acts only; `CommerceCalculator` drops the owner and skips sanctioned partners |
 | Victim memory | `AtrocityLedger::HasVictimized` and `HasCommittedMajorAgainst`. Written with the record, before the gates |
-| Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: the perpetrator declares Vendetta on the victim, which obliges the victim's Pact partners (see `diplomacy-system.md`) |
-| Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta, via `JoinVendetta` (evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced |
+| Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: a sneak attack, so nobody withdraws from territory. It obliges the victim's Pact partners, who join as part of the sneak attack (see `diplomacy-system.md`) |
+| Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta (including the victim's partners, who joined through the sneak attack), via `JoinVendetta`, a declaration (each side withdraws from the other's territory, evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced |
 | Council expulsion | `PlanetaryCouncil::Expel`, counted acts whose tier sets it |
 | Eco-damage | `AtrocityLedger::EcoVirtualMinerals`, counted records only (eco calculator not yet built) |
 | Player notice | `EnqueueForPlayer`, gated by `PauseOnEventId_t::AtrocityCommitted`. Phrased from `AtrocitySeverityLabel`, not from the enumerator name |

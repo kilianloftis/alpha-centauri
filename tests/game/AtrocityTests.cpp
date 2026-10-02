@@ -12,7 +12,9 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/ResearchManager.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -546,6 +548,49 @@ TEST_CASE("A Major atrocity's universal Vendetta obliges nobody to defend the pe
     CHECK_FALSE(game.pState->GetPlayerInteractions().AnyOf(
         [](const QueuedInteraction_t& rQueued)
         { return std::holds_alternative<PactObligationInteraction_t>(rQueued.payload); }));
+}
+
+TEST_CASE("An atrocity sneak-attacks its victim while the world declares on the perpetrator",
+          "[atrocity][evacuate]")
+{
+    AtrocityGame_ game;
+    Faction& rPerpetrator = *game.pA;
+    Faction& rVictim = *game.pB;
+    Faction& rBystander = *game.pC;
+    Faction& rVictimPartner =
+        game.AddFaction_(game.fixtures.factionDefinition, /*bPlayer=*/false);
+    game.Diplomacy().SetStatus(rVictim.GetFactionId(), rVictimPartner.GetFactionId(),
+                               DiplomaticStatus_t::Pact);
+    MakeSessionBase(game.fixtures, *game.pState, rPerpetrator, 1, 1);
+    MakeSessionBase(game.fixtures, *game.pState, rVictim, 7, 1);
+    MakeSessionBase(game.fixtures, *game.pState, rBystander, 1, 7);
+    MakeSessionBase(game.fixtures, *game.pState, rVictimPartner, 7, 7);
+
+    const TerritoryMap& rTerritory = game.pState->GetWorldMap().GetTerritory();
+    REQUIRE(rTerritory.GetOwner(6, 1) == rVictim.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(1, 6) == rBystander.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(2, 1) == rPerpetrator.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(1, 2) == rPerpetrator.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(2, 2) == rPerpetrator.GetFactionId());
+    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 6, 1);
+    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictim, 2, 1);
+    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 1, 6);
+    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, *game.pState, rBystander, 1, 2);
+    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictimPartner, 2, 2);
+
+    CommitAtrocity(*game.pState, rPerpetrator, &rVictim, k_Major);
+
+    REQUIRE(game.Diplomacy().HasVendetta(rPerpetrator.GetFactionId(), rVictim.GetFactionId()));
+    REQUIRE(game.Diplomacy().HasVendetta(rBystander.GetFactionId(), rPerpetrator.GetFactionId()));
+    REQUIRE(game.Diplomacy().HasVendetta(rVictimPartner.GetFactionId(),
+                                         rPerpetrator.GetFactionId()));
+    // The act against the victim, and the victim's partner joining in, are a sneak attack.
+    CHECK(rTerritory.GetOwner(rInVictimLand.GetTile()) == rVictim.GetFactionId());
+    CHECK(rTerritory.GetOwner(rVictimGuest.GetTile()) == rPerpetrator.GetFactionId());
+    CHECK(rTerritory.GetOwner(rPartnerGuest.GetTile()) == rPerpetrator.GetFactionId());
+    // The bystander declares, so each side withdraws.
+    CHECK(rTerritory.GetOwner(rInBystanderLand.GetTile()) != rBystander.GetFactionId());
+    CHECK(rTerritory.GetOwner(rBystanderGuest.GetTile()) != rPerpetrator.GetFactionId());
 }
 
 TEST_CASE("Nuking your own ground is an atrocity with nobody to resent you for it", "[atrocity]")

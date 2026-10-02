@@ -2,6 +2,7 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/orbital/OrbitalAttack.h"
 #include "game/orbital/OrbitalCensus.h"
 #include "game/units/InterceptRules.h"
@@ -305,6 +306,23 @@ TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital]
     CHECK(std::ranges::distance(game.pAi->GetUnitManager().Units()) == 0);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", game.pState->GetMissionYear())
           == 0);
+}
+
+TEST_CASE("An attack ended by interception is still a hostile act", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
+
+    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
+    REQUIRE(result);
+    REQUIRE(result->bAttackerDestroyed);
+    CHECK(game.pState->GetDiplomacyLedger().HasVendetta(game.pAi->GetFactionId(),
+                                                        game.pPlayer->GetFactionId()));
 }
 
 TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][intercept]")

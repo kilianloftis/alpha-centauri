@@ -251,14 +251,18 @@ rolled against has its order cleared.
 
 **Diplomatic evacuate (forced relocate).** `EvacuateUnitsFromTerritory` teleports a guest
 faction's free units off a named host's territory onto the nearest Chebyshev own-territory
-tile that passes `CanHoldTileWithoutCarrier` and `CanPlaceUnitOnTile`. Search expands
+tile that passes `CanHoldTileWithoutCarrier` and `CanPlaceUnitOnTile` and holds no unit the
+guest may not share a tile with (`MayShareTiles`). `EvacuateUnitsSharingWith` does the same
+for units standing on a tile with the host's units or in its bases. A unit already on its own
+territory is home and stays, so of two factions sharing a tile there, the guest moves. Search expands
 rings and stops at the first hit; free units that share an origin tile share one search and
 move together when placement allows. Mutation is raw `UnitPositionIndex::MoveUnit` — no
 move fragments spent, no airdrop/arrival combat path. Every guest unit on the host's tiles
 (including embarked cargo) has its order cleared; embarked passengers are not relocated
 separately (the carrier tows them). When no legal own-territory tile exists the unit stays
-put (orders still cleared). Diplomacy is the intended caller; `DiplomaticActionExecutor`
-does not invoke it yet.
+put (orders still cleared). Diplomacy is the caller: `ApplyStatusChange` when a status
+loses `enter_territory` or `share_tiles`, and a declared Vendetta (see
+[diplomacy-system.md](diplomacy-system.md#declaration-vs-sneak-attack)).
 
 **Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
 against one other thing (the column). "Actor" is always the unit whose own overrides

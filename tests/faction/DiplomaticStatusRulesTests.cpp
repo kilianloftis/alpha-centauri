@@ -15,14 +15,13 @@
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/EvacuateTerritoryEffects.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
-#include "game/units/UnitSlotConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
@@ -30,7 +29,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -79,25 +77,33 @@ struct StatusGame_
     Unit& MakeUnit(Faction& rFaction, int x, int y,
                    const std::vector<std::string>& rComponentIds = {"test_chassis"})
     {
-        std::vector<UnitSlotConfig_t> slots;
-        std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
-        int slotIndex = 0;
-        for (const std::string& rId : rComponentIds)
+        return MakeSessionUnit(fixtures, *pState, rFaction, x, y, rComponentIds);
+    }
+
+    void ProposeVendetta(Faction& rProposer, Faction& rRecipient)
+    {
+        Ledger().SetKnown(rProposer.GetFactionId(), rRecipient.GetFactionId());
+        DiplomaticProposal_t proposal;
+        proposal.proposer = rProposer.GetFactionId();
+        proposal.recipient = rRecipient.GetFactionId();
+        proposal.requestedStatus = DiplomaticStatus_t::Vendetta;
+        REQUIRE(pState->GetDiplomaticActionExecutor().Propose(*pState, proposal)
+                == DiplomaticProposeResult_t::Accepted);
+    }
+
+    bool SharesAnyTile(Faction& rX, Faction& rY)
+    {
+        for (const Unit& rUnitX : rX.GetUnitManager().Units())
         {
-            const UnitComponentConfig_t* pComponent = fixtures.unitComponents.Find(rId);
-            REQUIRE(pComponent);
-            UnitSlotConfig_t slot;
-            slot.id = "slot_" + std::to_string(slotIndex++);
-            slot.displayName = slot.id;
-            slot.componentType = pComponent->type;
-            slot.required = true;
-            assigned[slot.id] = pComponent;
-            slots.push_back(slot);
+            for (const Unit& rUnitY : rY.GetUnitManager().Units())
+            {
+                if (&rUnitX.GetTile() == &rUnitY.GetTile())
+                {
+                    return true;
+                }
+            }
         }
-        fixtures.designs.emplace_back(slots, assigned);
-        return rFaction.GetUnitManager().CreateUnit(pState->AllocateUnitId(),
-                                                    fixtures.designs.back(),
-                                                    Map().GetUnitPositions(), At(x, y));
+        return false;
     }
 
     const InteractionGridsConfig_t& Grids() { return fixtures.dataContext.interactionGrids; }
@@ -241,6 +247,128 @@ TEST_CASE("A Pact ending in Vendetta clears shared tiles and bases but not terri
     CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
 }
 
+TEST_CASE("An evacuated unit is not set down among units it may not share a tile with",
+          "[diplomacy][status][evacuate]")
+{
+    StatusGame_ game;
+    REQUIRE(game.Owner(4, 4) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pB, 4, 4);
+    // Occupy every tile of B's on the ring nearest the guest.
+    for (int y = 3; y <= 5; ++y)
+    {
+        REQUIRE(game.Owner(5, y) == game.pB->GetFactionId());
+        game.MakeUnit(*game.pA, 5, y);
+    }
+
+    EvacuateUnitsFromTerritory(*game.pB, game.pA->GetFactionId(), game.Map(), game.Grids());
+
+    CHECK(game.Map().GetTerritory().GetOwner(rGuest.GetTile()) == game.pB->GetFactionId());
+    CHECK_FALSE(game.SharesAnyTile(*game.pA, *game.pB));
+}
+
+TEST_CASE("Declaring Vendetta moves each side's units out of the other's territory",
+          "[diplomacy][status][evacuate][declaration]")
+{
+    StatusGame_ game;
+    REQUIRE(game.Owner(6, 4) == game.pB->GetFactionId());
+    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pA, 6, 4);
+    Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
+
+    game.ProposeVendetta(*game.pA, *game.pB);
+
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
+    CHECK(game.Map().GetTerritory().GetOwner(rGuest.GetTile()) == game.pA->GetFactionId());
+    CHECK(game.Map().GetTerritory().GetOwner(rVisitor.GetTile()) == game.pB->GetFactionId());
+}
+
+TEST_CASE("Declaring Vendetta on a Pact partner clears territory, shared tiles and bases",
+          "[diplomacy][status][evacuate][declaration]")
+{
+    StatusGame_ game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
+
+    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
+    Unit& rInBase = game.MakeUnit(*game.pA, 7, 4);
+    Unit& rStacked = game.MakeUnit(*game.pA, 4, 0);
+    Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+
+    game.ProposeVendetta(*game.pA, *game.pB);
+
+    CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
+    CHECK(&rStacked.GetTile() != &rPartner.GetTile());
+    CHECK(game.Map().GetTerritory().GetOwner(rInTerritory.GetTile()) == game.pA->GetFactionId());
+}
+
+TEST_CASE("A sneak attack leaves each side's units in the other's territory",
+          "[diplomacy][status][evacuate][sneak]")
+{
+    StatusGame_ game;
+    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
+    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pA, 6, 3);
+    Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
+
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
+    CHECK(&rGuest.GetTile() == &game.At(6, 3));
+    CHECK(&rVisitor.GetTile() == &game.At(2, 4));
+}
+
+TEST_CASE("A sneak attack on a Pact partner clears shared tiles and bases but not territory",
+          "[diplomacy][status][evacuate][sneak]")
+{
+    StatusGame_ game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
+
+    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
+    Unit& rInBase = game.MakeUnit(*game.pA, 7, 4);
+    Unit& rStacked = game.MakeUnit(*game.pA, 4, 0);
+    Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+
+    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
+    CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
+    CHECK(&rStacked.GetTile() != &rPartner.GetTile());
+    CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
+}
+
+TEST_CASE("A sneak attack out of a shared stack resolves, then separates the two factions",
+          "[diplomacy][status][evacuate][sneak]")
+{
+    StatusGame_ game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
+
+    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pB, 4, 0);
+    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+    game.MakeUnit(*game.pA, 5, 0);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+    const UnitId_t attackerId = rAttacker.GetUnitId();
+    const UnitId_t defenderId = rDefender.GetUnitId();
+
+    const std::optional<CombatResult_t> result =
+        game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, game.At(5, 0));
+
+    REQUIRE(result);
+    CHECK(result->attackerId == attackerId);
+    CHECK(result->defenderId == defenderId);
+    CHECK_FALSE(result->rounds.empty());
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
+    CHECK_FALSE(game.SharesAnyTile(*game.pA, *game.pB));
+    CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
+}
+
 TEST_CASE("Attacking a faction you are not at Vendetta with declares Vendetta",
           "[diplomacy][status][hostile]")
 {
@@ -276,6 +404,58 @@ TEST_CASE("An AI Pact partner of the victim declares Vendetta on the aggressor",
     CHECK(game.Status(*game.pB, *game.pC) == DiplomaticStatus_t::Pact);
 }
 
+TEST_CASE("A Pact partner defending against a declaration leaves the aggressor's territory",
+          "[diplomacy][status][obligation][declaration]")
+{
+    StatusGame_ game;
+    game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
+    MakeSessionBase(game.fixtures, *game.pState, *game.pC, 4, 8);
+    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
+    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
+
+    game.ProposeVendetta(*game.pA, *game.pB);
+
+    CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
+    CHECK(game.Map().GetTerritory().GetOwner(rDefenderGuest.GetTile())
+          != game.pA->GetFactionId());
+}
+
+TEST_CASE("A Pact partner defending against a sneak attack stays in the aggressor's territory",
+          "[diplomacy][status][obligation][sneak]")
+{
+    StatusGame_ game;
+    game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
+    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
+    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
+
+    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+
+    CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
+    CHECK(&rDefenderGuest.GetTile() == &game.At(2, 4));
+}
+
+TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack",
+          "[diplomacy][status][obligation][sneak]")
+{
+    StatusGame_ game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
+    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
+    Unit& rAggressorGuest = game.MakeUnit(*game.pC, 2, 4);
+
+    ApplyHostileAct(*game.pState, game.pC->GetFactionId(), game.pB->GetFactionId());
+
+    const std::vector<PactObligationInteraction_t> obligations =
+        game.Queued<PactObligationInteraction_t>();
+    REQUIRE(obligations.size() == 1);
+    CHECK(obligations.front().entry == VendettaEntry_t::SneakAttack);
+
+    ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
+                               game.pC->GetFactionId(), true, obligations.front().entry);
+
+    CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
+    CHECK(&rAggressorGuest.GetTile() == &game.At(2, 4));
+}
+
 TEST_CASE("Factions without a defensive obligation stay out of it",
           "[diplomacy][status][obligation]")
 {
@@ -309,7 +489,7 @@ TEST_CASE("Honoring a Pact declares Vendetta on the aggressor", "[diplomacy][sta
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
     ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
-                               game.pC->GetFactionId(), true);
+                               game.pC->GetFactionId(), true, VendettaEntry_t::Declaration);
 
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Pact);
@@ -322,7 +502,7 @@ TEST_CASE("Declining a Pact obligation steps the Pact down to a Treaty",
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
     ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
-                               game.pC->GetFactionId(), false);
+                               game.pC->GetFactionId(), false, VendettaEntry_t::Declaration);
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Neutral);
@@ -528,7 +708,8 @@ TEST_CASE("Honoring an obligation as a defender obliges nobody on the aggressor'
     game.Set(*game.pA, rD, DiplomaticStatus_t::Pact);
 
     HonorDefensiveObligation(*game.pState, game.pC->GetFactionId(), rD.GetFactionId(),
-                             DefensiveObligationMode_t::JoinAsDefender);
+                             DefensiveObligationMode_t::JoinAsDefender,
+                             VendettaEntry_t::Declaration);
 
     CHECK(game.Status(*game.pC, rD) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Queued<PactObligationInteraction_t>().empty());
@@ -544,7 +725,8 @@ TEST_CASE("Honoring an obligation as a separate declaration obliges the aggresso
     game.Set(*game.pA, rD, DiplomaticStatus_t::Pact);
 
     HonorDefensiveObligation(*game.pState, game.pC->GetFactionId(), rD.GetFactionId(),
-                             DefensiveObligationMode_t::SeparateDeclaration);
+                             DefensiveObligationMode_t::SeparateDeclaration,
+                             VendettaEntry_t::Declaration);
 
     CHECK(game.Status(*game.pC, rD) == DiplomaticStatus_t::Vendetta);
     const std::vector<PactObligationInteraction_t> obligations =

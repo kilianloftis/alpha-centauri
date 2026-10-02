@@ -373,14 +373,17 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         return std::nullopt;
     }
 
+    // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
+    // move either side before the blow lands.
+    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
+    const FactionId_t victim = pDefender->GetFaction().GetFactionId();
     if (m_pWorld)
     {
-        m_pWorld->OnHostileAct(rAttacker.GetFaction().GetFactionId(),
-                               pDefender->GetFaction().GetFactionId());
         if (std::optional<CombatResult_t> intercepted =
                 m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
         {
             // Intercept destroys the attacker; no attack history / move spend on a dead unit.
+            m_pWorld->OnHostileAct(aggressor, victim);
             return intercepted;
         }
     }
@@ -418,14 +421,18 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     {
         result.bAttackerDestroyed = true;
     }
+    if (m_pWorld)
+    {
+        m_pWorld->OnHostileAct(aggressor, victim);
+    }
     return result;
 }
 
-void UnitOrderExecutor::DeclareBombardHostility_(const Unit& rAttacker, const Tile& rTargetTile,
-                                                 const BombardTargeting_t& rTargeting,
-                                                 bool bOccupied)
+std::vector<FactionId_t> UnitOrderExecutor::BombardVictims_(FactionId_t aggressor,
+                                                            const Tile& rTargetTile,
+                                                            const BombardTargeting_t& rTargeting,
+                                                            bool bOccupied) const
 {
-    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
     std::vector<FactionId_t> victims;
     const auto addVictim = [&](FactionId_t victim)
     {
@@ -453,10 +460,7 @@ void UnitOrderExecutor::DeclareBombardHostility_(const Unit& rAttacker, const Ti
     {
         addVictim(m_rWorldMap.GetTerritory().GetOwner(rTargetTile));
     }
-    for (const FactionId_t victim : victims)
-    {
-        m_pWorld->OnHostileAct(aggressor, victim);
-    }
+    return victims;
 }
 
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
@@ -471,10 +475,9 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     BombardResult_t result;
     const BombardTargeting_t targeting =
         CollectBombardTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
-    if (m_pWorld)
-    {
-        DeclareBombardHostility_(rAttacker, rTargetTile, targeting, bOccupied);
-    }
+    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
+    const std::vector<FactionId_t> victims =
+        BombardVictims_(aggressor, rTargetTile, targeting, bOccupied);
 
     if (targeting.pDuelTarget)
     {
@@ -526,6 +529,13 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     {
         result.bAttackerDestroyed = true;
         result.combats.back().bAttackerDestroyed = true;
+    }
+    if (m_pWorld)
+    {
+        for (const FactionId_t victim : victims)
+        {
+            m_pWorld->OnHostileAct(aggressor, victim);
+        }
     }
     return result;
 }

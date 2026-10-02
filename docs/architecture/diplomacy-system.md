@@ -30,15 +30,16 @@ graph TB
     subgraph "Status mutation (DiplomacyStatusEffects)"
         ApplyStatusChange[ApplyStatusChange<br/>status + commlink + eviction]
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
-        ApplyHostileAct[ApplyHostileAct<br/>declares Vendetta unless may_attack]
-        DeclareVendetta[DeclareVendetta<br/>Vendetta + defensive obligation]
-        JoinVendetta[JoinVendetta<br/>Vendetta, obliges nobody]
-        ResolveObligation[ResolveDefensiveObligation]
+        ApplyHostileAct[ApplyHostileAct<br/>sneak attack unless may_attack]
+        DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
+        JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
+        StartVendetta[StartVendetta_ / EnterVendetta_<br/>private, take VendettaEntry_t]
+        ResolveObligation[ResolveDefensiveObligation<br/>carries VendettaEntry_t]
         EvacuateTerritory[EvacuateUnitsFromTerritory<br/>EvacuateUnitsSharingWith]
     end
 
     subgraph "Hostile act sources"
-        Combat[UnitOrderExecutor<br/>TryAttack / TryBombard]
+        Combat[UnitOrderExecutor<br/>TryAttack / TryBombard<br/>after combat resolves]
         Probe[ProbeActionExecutor<br/>when ProbeDetected]
         Atrocity[CommitAtrocity]
     end
@@ -92,14 +93,15 @@ graph TB
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
     Atrocity --> ApplyHostileAct
-    ApplyHostileAct --> DeclareVendetta
-    DeclareVendetta --> ApplyStatusChange
-    DeclareVendetta -->|AI partners| ResolveObligation
-    DeclareVendetta -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t]
+    ApplyHostileAct -->|SneakAttack| StartVendetta
+    DeclareVendetta -->|Declaration| StartVendetta
+    JoinVendetta -->|Declaration| StartVendetta
+    StartVendetta --> ApplyStatusChange
+    StartVendetta -->|Declaration only:<br/>EvacuateUnitsFromTerritory| EvacuateTerritory
+    StartVendetta -->|AI partners| ResolveObligation
+    StartVendetta -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t<br/>+ entry]
     PlayerInteractionQueue -->|InteractionPresenter| ResolveObligation
-    ResolveObligation -->|honor: JoinAsDefender| JoinVendetta
-    ResolveObligation -->|honor: SeparateDeclaration| DeclareVendetta
-    JoinVendetta --> ApplyStatusChange
+    ResolveObligation -->|honor, inherited entry| StartVendetta
     ResolveObligation -->|decline: StepDown| ApplyStatusChange
     ApplyStatusChange -->|SetStatus / SetKnown| DiplomacyLedger
     ApplyStatusChange -->|rules lost| EvacuateTerritory
@@ -222,34 +224,56 @@ The ledger counts the turns each pair has held its status; changing the status r
 count. `ExpireDiplomaticStatuses` ages every pair once per turn and applies `StepDown` to any
 status held for its `duration_turns` (a Truce becomes Neutral).
 
+### Declaration vs. sneak attack
+
+The entry point decides which kind of Vendetta begins. Callers never choose it:
+
+| Kind | Entry point | Started by | Territory | Shared tiles and bases |
+|---|---|---|---|---|
+| Declaration | `DeclareVendetta`, `JoinVendetta` | a proposal with `requestedStatus` Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+| Sneak attack | `ApplyHostileAct` | a hostile act | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+
+Both run through the private `StartVendetta_` (obliges the target's partners) or
+`EnterVendetta_` (obliges nobody), which take a `VendettaEntry_t`.
+
+The territory withdrawal is part of declaring, not a rule of the Vendetta status, which allows
+entering territory. It runs only where the previous status let units in: breaking a Treaty at
+its border withdraws nothing, because a Treaty kept both sides out.
+
+A defensive obligation inherits the kind of the Vendetta that raised it, through every link of
+the chain: partners honoring a sneak attack's obligation are part of the surprise and withdraw
+from nothing. This is the one place the kind is decided earlier and acted on later, so it
+travels as data: `HonorDefensiveObligation` and `ResolveDefensiveObligation` take a
+`VendettaEntry_t`, and `PactObligationInteraction_t` carries it so the player's answer keeps it.
+Native life has no diplomacy and never withdraws.
+
 ### Declaring Vendetta and the defensive obligation
 
-Vendetta is entered one of two ways. `DeclareVendetta(declarer, target)` starts a conflict
-and obliges the target's partners. `JoinVendetta(defender, aggressor)` enters a conflict
-already under way on the defending side and obliges nobody. Both are no-ops for a pair
-already at Vendetta.
+Vendetta is entered one of two ways. Starting a conflict obliges the target's partners;
+entering a conflict already under way on the defending side obliges nobody. Both are no-ops
+for a pair already at Vendetta.
 
-Declarations:
+Starting a conflict:
 
-- a proposal whose `requestedStatus` is Vendetta (the proposer declares), and
-  `TradeDeclareVendetta_t` (the receiver declares on the third party);
-- breaking an agreement at a territory border (`ResolveTerritoryEntry`);
-- a hostile act, below;
-- honoring a defensive obligation under `SeparateDeclaration`.
+- `DeclareVendetta`: a proposal whose `requestedStatus` is Vendetta (the proposer declares),
+  `TradeDeclareVendetta_t` (the receiver declares on the third party), and breaking an
+  agreement at a territory border (`ResolveTerritoryEntry`);
+- `ApplyHostileAct`: a hostile act, below, as a sneak attack;
+- honoring a defensive obligation under `SeparateDeclaration`, with the obligation's kind.
 
-Joins:
+Entering a conflict on the defending side:
 
 - atrocity universal Vendetta: every living AI comes to the victim's defence. Nobody is obliged
   to defend the perpetrator, and its AI Pact partners' Pacts end as they join, so the atrocity's
   Vendetta overrides every defensive obligation toward the perpetrator without a special case;
-- honoring a defensive obligation under `JoinAsDefender`.
+- honoring a defensive obligation under `JoinAsDefender`, with the obligation's kind.
 
-After a declaration, every faction whose status with the **target** carries
+After a conflict starts, every faction whose status with the **target** carries
 `defensive_obligation`, and that is not already at Vendetta with the **declarer**, must choose:
 
 - **Honor:** `HonorDefensiveObligation`, by `DefensiveObligationMode_t`:
-  - `JoinAsDefender` — `JoinVendetta` against the declarer; nobody further is obliged.
-  - `SeparateDeclaration` — `DeclareVendetta` on the declarer, which obliges the declarer's own
+  - `JoinAsDefender` — enter the conflict against the declarer; nobody further is obliged.
+  - `SeparateDeclaration` — start a conflict with the declarer, which obliges the declarer's own
     partners in turn; the chain ends because a pair already at Vendetta is never asked again.
 
   **Hardcoded** to `JoinAsDefender` for now (TODO: a `config/diplomacy.json` setting).
@@ -263,13 +287,15 @@ life has no diplomacy: its status can change, but it neither obliges nor is obli
 
 ### Hostile acts
 
-`ApplyHostileAct(aggressor, victim)` declares Vendetta on the victim unless their status allows
-attacks (`may_attack`). An attack on a faction already at Vendetta therefore obliges nobody. It
-is called by:
+`ApplyHostileAct(aggressor, victim)` starts a Vendetta as a `SneakAttack` unless their status
+allows attacks (`may_attack`). An attack on a faction already at Vendetta therefore obliges
+nobody. It is called by:
 
-- `UnitOrderExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, before
-  combat resolves. A bombard counts against every faction whose units it targets, or the
-  territory owner of an empty tile's improvements.
+- `UnitOrderExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, after
+  combat resolves (including an attack ended by interception). A sneak attack on a Pact partner
+  clears shared tiles, and doing that first would teleport a stacked attacker or defender away
+  before the blow. A bombard counts against every faction whose units it targets, or the
+  territory owner of an empty tile's improvements, collected before the strikes.
 - `ProbeActionExecutor`, when `ProbeDetected` says the target identified the sender. **Stub:** the
   detection roll is not implemented and nothing is detected yet.
 - `CommitAtrocity`, for the victim, whether or not the atrocity's penalties apply.
@@ -337,7 +363,7 @@ save-game serialisation work to exist first. Recorded in
 | Can the giver afford all of it at once? | `DiplomaticActionExecutor::ValidateGiverTotals_` |
 | What does accepting change? | `DiplomaticActionExecutor::ApplyItem_` |
 | What may two factions do to each other? | `DiplomacyRules` reading `DiplomacyConfig_t` for their status |
-| How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles` |
+| How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built
 

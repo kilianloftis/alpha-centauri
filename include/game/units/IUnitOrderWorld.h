@@ -34,7 +34,7 @@ public:
 
     virtual BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) = 0;
 
-    // aggressor's unit is about to attack something of victim's.
+    // aggressor's unit attacked something of victim's. Called once the attack has resolved.
     virtual void OnHostileAct(FactionId_t aggressor, FactionId_t victim) = 0;
 
     // A player unit's move order reached the border of territoryOwner's territory, which its

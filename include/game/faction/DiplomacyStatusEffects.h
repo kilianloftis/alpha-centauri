@@ -21,25 +21,29 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
 // duration_turns.
 void ExpireDiplomaticStatuses(GameState& rGameState);
 
-// declarer declares Vendetta on target. No-op when they are already at Vendetta. Every
-// faction whose status with target carries a defensive obligation, and that is not already at
-// Vendetta with declarer, must then decide whether to declare Vendetta on declarer: the player
-// is asked through a PactObligationInteraction_t, AI factions decide at once. Native life has
-// no diplomacy: its status changes, but nobody is obliged.
+// declarer formally declares Vendetta on target. No-op when they are already at Vendetta.
+// Each side's units withdraw from the other's territory. Every faction whose status with
+// target carries a defensive obligation, and that is not already at Vendetta with declarer,
+// must then decide whether to declare Vendetta on declarer: the player is asked through a
+// PactObligationInteraction_t, AI factions decide at once. Native life has no diplomacy: its
+// status changes, but nothing is withdrawn and nobody is obliged.
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target);
 
-// defender enters an existing conflict against aggressor on the defending side: Vendetta,
-// obliging nobody. No-op when they are already at Vendetta. Used for honoring an obligation
-// as a defender and for atrocity universal Vendetta (the world defending the victim).
+// defender formally enters an existing conflict against aggressor on the defending side:
+// Vendetta, obliging nobody. No-op when they are already at Vendetta. Each side's units
+// withdraw from the other's territory. Used for atrocity universal Vendetta (the world
+// defending the victim).
 void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggressor);
 
-// partner honors its defensive obligation against aggressor under mode.
+// partner honors its defensive obligation against aggressor under mode, as part of a Vendetta
+// that began as entry: after a sneak attack, the partner withdraws from nothing either.
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
-                              DefensiveObligationMode_t mode);
+                              DefensiveObligationMode_t mode, VendettaEntry_t entry);
 
 // aggressor attacked victim (combat, bombardment, a detected probe action, an atrocity).
-// Unless their status already permits attacks, aggressor declares Vendetta on victim. Native
-// life has no diplomacy and is ignored on either side.
+// Unless their status already permits attacks, this is a sneak attack: Vendetta without a
+// declaration, so only units sharing tiles or bases move, and the victim's partners are obliged
+// as part of the sneak attack. Native life has no diplomacy and is ignored on either side.
 void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t victim);
 
 // The player's answer when rUnit's move order stopped at territoryOwner's border. Breaking
@@ -47,10 +51,11 @@ void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t v
 void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner,
                            bool bBreakAgreement);
 
-// partner's answer to its defensive obligation toward ally. Declaring honors it
-// (HonorDefensiveObligation, under the session's mode); declining steps the partner's status
-// with ally down one rung.
+// partner's answer to its defensive obligation toward ally, raised by a Vendetta that began
+// as entry. Declaring honors it (HonorDefensiveObligation, under the session's mode);
+// declining steps the partner's status with ally down one rung.
 void ResolveDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally,
-                                FactionId_t aggressor, bool bDeclareVendetta);
+                                FactionId_t aggressor, bool bDeclareVendetta,
+                                VendettaEntry_t entry);
 
 } // namespace ac
