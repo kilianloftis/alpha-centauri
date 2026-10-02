@@ -5,7 +5,7 @@ graph TB
     subgraph "Session (GameState)"
         GameState[GameState]
         DiplomacyLedger[DiplomacyLedger<br/>pairwise status + known-ness]
-        DiplomaticActionExecutor[DiplomaticActionExecutor<br/>validate, then apply]
+        DiplomaticActionExecutor[DiplomaticActionExecutor<br/>pending slot + routing]
         FirstContactResolver[FirstContactResolver<br/>marks factions known]
     end
 
@@ -18,7 +18,12 @@ graph TB
         TradeCommFrequency[TradeCommFrequency_t]
         TradeWorldMap[TradeWorldMap_t]
         TradeDeclareVendetta[TradeDeclareVendetta_t]
-        TradeKind[TradeKind_t<br/>+ TradeKindOf trait]
+        TradeKind[TradeKind_t<br/>+ TradeKindOf trait, TradeKinds]
+    end
+
+    subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalEffects)"
+        IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals; StepUp only]
+        ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item]
     end
 
     subgraph "Status definition"
@@ -32,12 +37,13 @@ graph TB
 
     subgraph "Transition rules (DiplomaticTransitionRules)"
         StepUpDown[StepUp / StepDown]
-        CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta / CanRequestStatus]
+        CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
     end
 
     subgraph "Transition effects (DiplomaticTransitionEffects)"
         ApplyStatusChange[ApplyStatusChange<br/>status + commlink + eviction]
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
+        CancelTreaty[CancelTreaty<br/>one-sided StepDown]
         ApplyHostileAct[ApplyHostileAct<br/>sneak attack unless may_attack]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
@@ -54,9 +60,7 @@ graph TB
     end
 
     subgraph "Action menu (DiplomacyActions)"
-        CanTrade[CanTrade<br/>relationship gate per item type]
-        GetAvailableActions[GetAvailableActions]
-        GetAvailableTrades[GetAvailableTrades<br/>folds over the variant]
+        GetAvailableActions[GetAvailableActions<br/>Trade whenever the pair has met]
     end
 
     subgraph "Affected faction state"
@@ -82,19 +86,20 @@ graph TB
     TradeItem --> TradeDeclareVendetta
     TradeItem -.->|one trait per alternative| TradeKind
 
-    DiplomaticActionExecutor -->|Validate_: CanRequestStatus| CanPropose
-    DiplomaticActionExecutor -->|Validate_| CanTrade
+    DiplomaticActionExecutor -->|Propose / Accept| IsValidProposal
+    DiplomaticActionExecutor -->|accepted| ApplyProposal
+    IsValidProposal -->|CanProposeStepUp| CanPropose
+    IsValidProposal -->|AreKnown| DiplomacyLedger
     GetAvailableActions --> CanPropose
-    GetAvailableTrades --> CanTrade
     CanPropose --> DiplomacyLedger
-    CanTrade --> DiplomacyLedger
 
-    DiplomaticActionExecutor -->|Apply_| EconomyManager
-    DiplomaticActionExecutor -->|Apply_| ResearchManager
-    DiplomaticActionExecutor -->|Apply_| FactionExploredMap
-    DiplomaticActionExecutor -->|Apply_| Bases
-    DiplomaticActionExecutor -->|requestedStatus| ApplyStatusChange
-    DiplomaticActionExecutor -->|requestedStatus Vendetta<br/>TradeDeclareVendetta_t| DeclareVendetta
+    ApplyProposal --> EconomyManager
+    ApplyProposal --> ResearchManager
+    ApplyProposal --> FactionExploredMap
+    ApplyProposal --> Bases
+    ApplyProposal -->|requestedStatus| ApplyStatusChange
+    ApplyProposal -->|TradeDeclareVendetta_t:<br/>the giver declares| DeclareVendetta
+    CancelTreaty -->|StepDown| ApplyStatusChange
     CanPropose --> StepUpDown
     AtrocityEffects[AtrocityEffects<br/>universal Vendetta] -->|living AI only| JoinVendetta
     TerritoryEntry[TerritoryEntryEffects<br/>BreakAgreementAndContinue] --> DeclareVendetta
@@ -126,7 +131,7 @@ graph TB
     style DiplomacyLedger fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomaticActionExecutor fill:#f9f,stroke:#333,stroke-width:4px
     style TradeItem fill:#bbf,stroke:#333,stroke-width:3px
-    style CanTrade fill:#bfb,stroke:#333,stroke-width:2px
+    style IsValidProposal fill:#bfb,stroke:#333,stroke-width:2px
     style ApplyStatusChange fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomacyConfig fill:#bfb,stroke:#333,stroke-width:2px
     style AtrocityEffects fill:#eee,stroke:#999,stroke-width:1px
@@ -160,7 +165,7 @@ separate maps rather than fields of one relationship record:
   it has no diplomacy (`HasDiplomacy`), so every rule that asks whether two factions have met
   already excludes it.
 - **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
-  `CanRequestStatus`), not in the ledger — the ledger stores, the rules decide.
+  `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
   maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
   `JoinVendetta` (`game/faction/DiplomaticTransitionEffects.h`) for living AI factions only, and
@@ -168,8 +173,8 @@ separate maps rather than fields of one relationship record:
   `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
   `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
 - **Every status change goes through `ApplyStatusChange`** (`game/faction/DiplomaticTransitionEffects.h`):
-  proposals, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry, hostile acts, and
-  defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
+  proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
+  hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
 
 ## Diplomatic statuses
 
@@ -213,8 +218,9 @@ The transitions are code (`StepUp` / `StepDown` in `DiplomaticTransitionRules.h`
 | Pact | — | Treaty |
 | Vendetta | Truce | — |
 
-Any status can go to Vendetta. A proposal's `requestedStatus` must be `StepUp(current)`,
-`StepDown(current)` (a cancel), or Vendetta (`CanRequestStatus`).
+Any status can go to Vendetta. A proposal's `requestedStatus` can only be `StepUp(current)`.
+Cancelling (`CancelTreaty`) and declaring Vendetta (`DeclareVendetta`) are one-sided, so the other
+side has nothing to accept.
 
 ### Where each rule is read
 
@@ -248,7 +254,7 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 
 | Kind | Entry point | Started by | Territory | Shared tiles and bases |
 |---|---|---|---|---|
-| Declaration | `DeclareVendetta`, `JoinVendetta` | a proposal with `requestedStatus` Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+| Declaration | `DeclareVendetta`, `JoinVendetta` | the diplomacy menu's Declare Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 | Sneak attack | `ApplyHostileAct` | a hostile act | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
 Both run through the private `EnterVendetta_`: the status change and, for a declaration, the
@@ -274,8 +280,8 @@ for a pair already at Vendetta, and for native life on either side.
 
 Starting a conflict:
 
-- `DeclareVendetta`: a proposal whose `requestedStatus` is Vendetta (the proposer declares),
-  `TradeDeclareVendetta_t` (the receiver declares on the third party), and breaking an
+- `DeclareVendetta`: called directly (declaring is one-sided, not a proposal), by
+  `TradeDeclareVendetta_t` (the item's giver declares on the third party), and by breaking an
   agreement at a territory border (`BreakAgreementAndContinue`);
 - `ApplyHostileAct`: a hostile act, below, as a sneak attack;
 - honoring a defensive obligation under `SeparateDeclaration`, with the obligation's kind.
@@ -332,45 +338,49 @@ Native life has no diplomacy and is ignored on either side.
 
 `TradeItem_t` is a `std::variant`; each alternative is a payload struct. `TradeKind_t` is the
 category a UI or AI offers, and the mapping between them is **one trait per alternative**
-(`TradeKindOf<T>`) declared next to the variant.
+(`TradeKindOf<T>`) declared next to the variant. `TradeKinds()` lists one kind per alternative
+through the trait, so a new alternative without a trait is a compile error rather than a category
+that silently never appears.
 
-This matters because the mapping used to be three parallel hand-kept tables (the enum, a probe
-array, and a `kindOrder` array), and nothing failed to compile when they drifted.
-`GetAvailableTrades` now folds over `std::variant_size`, so a new alternative without a trait is a
-compile error rather than a category that silently never appears.
-
-`CanTrade` gates on the **relationship and the item's type only**, never on payload values —
-`TradeBase_t` and `TradeDeclareVendetta_t` require a Pact, everything else needs only "known and
-not at vendetta". The fold relies on that: it probes with a default-constructed alternative.
+Two factions that have met may trade any item under any status, Vendetta included: a Truce can be
+bought with credits. A Vendetta only makes the other side less likely to accept, which is AI
+evaluation's concern. Whether the giver actually has the item is validation's question, below.
 
 ## The proposal lifecycle
 
-1. **`Propose`** validates the whole proposal (below). An invalid proposal is rejected without
-   touching any state.
+1. **`Propose`** validates the whole proposal (`IsValidProposal`, below). An invalid proposal,
+   including one that asks for nothing, is rejected without touching any state.
 2. If the recipient is **AI**, `EvaluateResponse_` decides (currently a stub that always agrees)
    and the proposal applies immediately.
 3. If the recipient is the **player**, the proposal is held in `m_pending` and `PendingPlayer` is
    returned. There is exactly one slot: a second proposal arriving while one is pending is
    refused with `Busy` rather than overwriting it, because the first proposer has already been
    told to wait.
-4. **`Accept`** re-validates (state may have moved since the proposal arrived) and applies.
-   **`Reject`** drops it.
+4. **`Accept`** re-validates (state may have moved since the proposal arrived) and applies
+   (`ApplyProposal`). **`Reject`** drops it.
+
+Declaring Vendetta and cancelling an agreement are not proposals: the other side cannot refuse
+them.
 
 ## Validation is aggregate, application is not transactional
 
-Validation happens in two layers, and the distinction is load-bearing:
+`IsValidProposal` (`DiplomaticProposalRules`) checks each side against its own giver (`give`
+runs from proposer to recipient, `demand` the other way) in two layers, and the distinction is
+load-bearing:
 
-- **Per item** (`ValidateItem_`) — does the giver have this tech, own this base, know this
-  faction?
-- **Per giver, across the whole proposal** (`ValidateGiverTotals_`) — do the *total* credits fit
-  in the treasury, and is any base offered twice? Without this, two `TradeCredits_t` items each
-  worth the whole balance both passed (each was checked against the full treasury independently)
-  and both applied, ending the trade at a negative treasury with no error anywhere.
+- **Per item** (`CanDeliver_`) — does the giver have this tech, own this base, know this faction,
+  have these credits?
+- **Per side** (`IsValidSide_`) — do the *total* credits fit in the giver's treasury, and is any
+  base or tech offered twice? Each item passing on its own does not make the whole side
+  deliverable: two credit items can each fit a treasury that cannot hold both, and a tech handed
+  over a second time throws.
 
-`give` and `demand` run in opposite directions and are costed against their own givers.
+`CanDeliver_` and `ApplyProposal`'s `Deliver_` are visitors with one `operator()` per alternative,
+so a new `TradeItem_t` alternative fails to compile until both handle it.
 
-Application then goes through `EconomyManager::SpendEnergy`, so the class that owns the treasury
-is the second line of defence.
+`ApplyProposal` (`DiplomaticProposalEffects`) applies the requested status, then `give`, then
+`demand`. Credits go through `EconomyManager::SpendEnergy`, so the class that owns the treasury is
+the second line of defence.
 
 **Known limitation:** application is *not* a transaction. If `Faction::TransferBaseTo` throws
 part-way through a multi-item proposal, earlier items stay applied. Closing that needs
@@ -385,19 +395,20 @@ save-game serialisation work to exist first. Recorded in
 | May these two factions talk at all? | `DiplomacyLedger::AreKnown` (never true for native life) |
 | Does this faction take part in diplomacy at all? | `DiplomaticPermissionRules::HasDiplomacy` |
 | Must this faction defend its ally? | `DiplomaticPermissionRules::IsObligedToDefend` |
-| Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` / `CanRequestStatus` |
-| What does changing a status do? | `DiplomaticTransitionEffects::ApplyStatusChange`, and the Vendetta and obligation entry points around it |
-| May this *kind* of item be traded between them? | `DiplomacyActions::CanTrade` |
-| Does the giver actually have it? | `DiplomaticActionExecutor::ValidateItem_` |
-| Can the giver afford all of it at once? | `DiplomaticActionExecutor::ValidateGiverTotals_` |
-| What does accepting change? | `DiplomaticActionExecutor::ApplyItem_` |
+| Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` |
+| What does changing a status do? | `DiplomaticTransitionEffects::ApplyStatusChange`, and the Vendetta, cancel and obligation entry points around it |
+| Is this proposal valid? | `DiplomaticProposalRules::IsValidProposal` |
+| Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_` |
+| Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
+| What does accepting change? | `DiplomaticProposalEffects::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built
 
 - **AI evaluation.** `EvaluateResponse_` always agrees. Real evaluation needs an AI attitude
-  model, which does not exist.
+  model, which does not exist. It should weigh the relationship: a recipient at Vendetta with the
+  proposer is less likely to accept.
 - **A proposal queue.** One pending slot, with `Busy` as the refusal. A per-recipient queue needs
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate

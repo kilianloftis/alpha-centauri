@@ -93,7 +93,7 @@ graph TB
     BuildingManager -->|borrows| BuildingRegistry
     SocialEngineeringManager -->|borrows| SocialPolicyRegistry
 
-    DiplomaticActionExecutor -->|moves energy/tech/bases between| Faction
+    DiplomaticActionExecutor -->|ApplyProposal moves<br/>energy/tech/bases between| Faction
 
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
     style GameState fill:#fbf,stroke:#333,stroke-width:3px
@@ -252,7 +252,8 @@ Caller contract: the faction must have been constructed against the session's `W
 `Faction` owns no diplomacy object. Pairwise status lives in `DiplomacyLedger` on `GameState`,
 because a relationship is a property of the *pair*, not of either side; storing it per faction
 would mean two copies that can disagree. Proposals and trades run through
-`DiplomaticActionExecutor`, also on `GameState`.
+`DiplomaticActionExecutor`, also on `GameState`, which validates them with `IsValidProposal` and
+applies them with `ApplyProposal`.
 
 See `docs/architecture/diplomacy-system.md`.
 

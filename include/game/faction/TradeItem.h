@@ -53,7 +53,7 @@ using TradeItem_t = std::variant<TradeCredits_t,
                                  TradeWorldMap_t,
                                  TradeDeclareVendetta_t>;
 
-// Categories of TradeItem_t the UI/AI can offer (relationship-gated, not ownership-gated).
+// Categories of TradeItem_t the UI/AI can offer.
 enum class TradeKind_t
 {
     Credits,
@@ -65,8 +65,8 @@ enum class TradeKind_t
 };
 
 // One trait per alternative, next to the alternatives. A new TradeItem_t member without a
-// specialisation fails to compile at the GetAvailableTrades fold rather than silently dropping
-// out of the category list.
+// specialisation fails to compile in TradeKinds rather than silently dropping out of the
+// category list.
 template <typename T>
 struct TradeKindOf;
 
@@ -83,16 +83,18 @@ template <> struct TradeKindOf<TradeWorldMap_t>
 template <> struct TradeKindOf<TradeDeclareVendetta_t>
 { static constexpr TradeKind_t value = TradeKind_t::DeclareVendetta; };
 
-// The kind of a live item — the same mapping, applied to a value rather than a type.
-TradeKind_t KindOf(const TradeItem_t& rItem);
+// One kind per TradeItem_t alternative, in variant order.
+std::vector<TradeKind_t> TradeKinds();
 
+std::string ToString(TradeKind_t kind);
 std::string ToString(const TradeItem_t& rItem);
 
 struct DiplomaticProposal_t
 {
     FactionId_t proposer = 0;
     FactionId_t recipient = 0;
-    // nullopt = keep current status. Otherwise StepUp, StepDown (cancel), or Vendetta.
+    // nullopt = keep the current status. Otherwise StepUp of the current status: cancelling and
+    // declaring Vendetta are one-sided (CancelTreaty, DeclareVendetta), not proposals.
     std::optional<DiplomaticStatus_t> requestedStatus;
     std::vector<TradeItem_t> give;   // proposer → recipient
     std::vector<TradeItem_t> demand; // recipient → proposer

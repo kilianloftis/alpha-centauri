@@ -47,25 +47,3 @@ TEST_CASE("Canceling steps down one status at a time", "[diplomacy][transitions]
         CHECK(CanCancelTreaty(ledger, 1, 2));
     }
 }
-
-TEST_CASE("A requested status must be the next step up, the next step down, or Vendetta",
-          "[diplomacy][transitions]")
-{
-    DiplomacyLedger strangers;
-    CHECK_FALSE(CanRequestStatus(strangers, 1, 2, DiplomaticStatus_t::Treaty));
-    CHECK_FALSE(CanRequestStatus(strangers, 1, 2, DiplomaticStatus_t::Vendetta));
-
-    DiplomacyLedger ledger;
-    Meet_(ledger);
-    ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
-    CHECK(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Pact));
-    CHECK(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Neutral));
-    CHECK(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Vendetta));
-    CHECK_FALSE(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Treaty));
-    CHECK_FALSE(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Truce));
-
-    ledger.SetStatus(1, 2, DiplomaticStatus_t::Vendetta);
-    CHECK(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Truce));
-    CHECK_FALSE(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Vendetta));
-    CHECK_FALSE(CanRequestStatus(ledger, 1, 2, DiplomaticStatus_t::Neutral));
-}

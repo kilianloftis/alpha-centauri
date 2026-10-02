@@ -2,22 +2,13 @@
 
 #include "game/faction/DiplomaticTransitionRules.h"
 
-#include <cstddef>
 #include <stdexcept>
-#include <type_traits>
-#include <utility>
-#include <variant>
 
 namespace ac
 {
 
 namespace
 {
-
-bool RequireKnown_(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    return rLedger.AreKnown(a, b);
-}
 
 DiplomaticActionKind_t ProposeKindFor_(DiplomaticStatus_t target)
 {
@@ -38,59 +29,6 @@ DiplomaticActionKind_t ProposeKindFor_(DiplomaticStatus_t target)
 
 } // namespace
 
-bool CanTrade(const DiplomacyLedger& rLedger,
-              FactionId_t a,
-              FactionId_t b,
-              const TradeItem_t& rItem)
-{
-    if (!RequireKnown_(rLedger, a, b))
-    {
-        return false;
-    }
-    if (rLedger.GetStatus(a, b) == DiplomaticStatus_t::Vendetta)
-    {
-        return false;
-    }
-
-    return std::visit(
-        [&](const auto& rConcrete) -> bool
-        {
-            using T = std::decay_t<decltype(rConcrete)>;
-            if constexpr (std::is_same_v<T, TradeBase_t>
-                          || std::is_same_v<T, TradeDeclareVendetta_t>)
-            {
-                return rLedger.HasPact(a, b);
-            }
-            else
-            {
-                return true;
-            }
-        },
-        rItem);
-}
-
-std::vector<TradeKind_t> GetAvailableTrades(const DiplomacyLedger& rLedger,
-                                            FactionId_t a,
-                                            FactionId_t b)
-{
-    // Enumerate the variant itself rather than a hand-kept parallel table: a default-constructed
-    // alternative is enough because CanTrade gates on the relationship and the item's *type*,
-    // never on payload values.
-    std::vector<TradeKind_t> kinds;
-    [&]<size_t... I>(std::index_sequence<I...>)
-    {
-        (([&]
-        {
-            using Alternative = std::variant_alternative_t<I, TradeItem_t>;
-            if (CanTrade(rLedger, a, b, TradeItem_t{Alternative{}}))
-            {
-                kinds.push_back(TradeKindOf<Alternative>::value);
-            }
-        }()), ...);
-    }(std::make_index_sequence<std::variant_size_v<TradeItem_t>>{});
-    return kinds;
-}
-
 std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
                                                       FactionId_t a,
                                                       FactionId_t b)
@@ -108,7 +46,7 @@ std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& r
     {
         actions.push_back(DiplomaticActionKind_t::CancelTreaty);
     }
-    if (!GetAvailableTrades(rLedger, a, b).empty())
+    if (rLedger.AreKnown(a, b))
     {
         actions.push_back(DiplomaticActionKind_t::Trade);
     }
@@ -132,35 +70,7 @@ std::string ToString(DiplomaticActionKind_t kind)
     case DiplomaticActionKind_t::Trade:
         return "Trade";
     }
-    return "Unknown";
-}
-
-TradeKind_t KindOf(const TradeItem_t& rItem)
-{
-    return std::visit(
-        [](const auto& rConcrete) { return TradeKindOf<std::decay_t<decltype(rConcrete)>>::value; },
-        rItem);
-}
-
-std::string ToString(TradeKind_t kind)
-{
-    // Display labels insert spaces the enumerator names do not carry.
-    switch (kind)
-    {
-    case TradeKind_t::Credits:
-        return "Credits";
-    case TradeKind_t::Technology:
-        return "Technology";
-    case TradeKind_t::Base:
-        return "Base";
-    case TradeKind_t::CommFrequency:
-        return "Comm Frequency";
-    case TradeKind_t::WorldMap:
-        return "World Map";
-    case TradeKind_t::DeclareVendetta:
-        return "Declare Vendetta";
-    }
-    throw std::runtime_error("ToString: unhandled TradeKind_t");
+    throw std::runtime_error("ToString: unhandled DiplomaticActionKind_t");
 }
 
 } // namespace ac

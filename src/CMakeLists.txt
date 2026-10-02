@@ -33,6 +33,8 @@ add_library(ac-core STATIC
     game/faction/DiplomaticTransitionRules.cpp
     game/faction/TradeItem.cpp
     game/faction/DiplomaticActionExecutor.cpp
+    game/faction/DiplomaticProposalEffects.cpp
+    game/faction/DiplomaticProposalRules.cpp
     game/faction/FirstContactResolver.cpp
     game/council/CouncilAiStub.cpp
     game/council/CouncilEffects.cpp

@@ -109,7 +109,7 @@ TEST_CASE("Declaring Vendetta moves each side's units out of the other's territo
     Unit& rGuest = game.MakeUnit(*game.pA, 6, 4);
     Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
 
-    game.ProposeVendetta(*game.pA, *game.pB);
+    DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Map().GetTerritory().GetOwner(rGuest.GetTile()) == game.pA->GetFactionId());
@@ -129,7 +129,7 @@ TEST_CASE("Declaring Vendetta on a Pact partner clears territory, shared tiles a
     Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
     Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
 
-    game.ProposeVendetta(*game.pA, *game.pB);
+    DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
     CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
     CHECK(&rStacked.GetTile() != &rPartner.GetTile());
@@ -247,7 +247,7 @@ TEST_CASE("A Pact partner defending against a declaration leaves the aggressor's
     REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
     Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
 
-    game.ProposeVendetta(*game.pA, *game.pB);
+    DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Map().GetTerritory().GetOwner(rDefenderGuest.GetTile())
@@ -357,19 +357,13 @@ TEST_CASE("Native life has no diplomacy to change", "[diplomacy][status][hostile
     CHECK_FALSE(game.Ledger().AreKnown(game.pA->GetFactionId(), rPlanet.GetFactionId()));
 }
 
-TEST_CASE("Declaring Vendetta by proposal obliges the target's Pact partners",
+TEST_CASE("Declaring Vendetta obliges the target's Pact partners",
           "[diplomacy][status][obligation]")
 {
     DiplomacyFixture game;
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
-    game.Ledger().SetKnown(game.pA->GetFactionId(), game.pB->GetFactionId());
 
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pA->GetFactionId();
-    proposal.recipient = game.pB->GetFactionId();
-    proposal.requestedStatus = DiplomaticStatus_t::Vendetta;
-    REQUIRE(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-            == DiplomaticProposeResult_t::Accepted);
+    DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
@@ -459,4 +453,29 @@ TEST_CASE("A status change naming a faction outside the session throws and chang
                                       DiplomaticStatus_t::Treaty),
                     std::invalid_argument);
     CHECK(game.Ledger().GetStatus(game.pA->GetFactionId(), stranger) == DiplomaticStatus_t::Neutral);
+}
+
+TEST_CASE("Cancelling an agreement steps it down one rung", "[diplomacy][status][cancel]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
+
+    CancelTreaty(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+
+    CancelTreaty(*game.pState, game.pB->GetFactionId(), game.pA->GetFactionId());
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Neutral);
+}
+
+TEST_CASE("Neutral and Vendetta have no agreement to cancel", "[diplomacy][status][cancel]")
+{
+    DiplomacyFixture game;
+    CHECK_THROWS_AS(CancelTreaty(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId()),
+                    std::logic_error);
+
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
+    CHECK_THROWS_AS(CancelTreaty(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId()),
+                    std::logic_error);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
 }

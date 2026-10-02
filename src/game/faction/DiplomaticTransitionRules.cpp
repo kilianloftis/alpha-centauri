@@ -28,23 +28,4 @@ bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t 
     return StepDown(rLedger.GetStatus(a, b)).has_value();
 }
 
-bool CanRequestStatus(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b,
-                      DiplomaticStatus_t requested)
-{
-    if (requested == DiplomaticStatus_t::Vendetta)
-    {
-        return CanDeclareVendetta(rLedger, a, b);
-    }
-    const DiplomaticStatus_t current = rLedger.GetStatus(a, b);
-    if (StepUp(current) == requested)
-    {
-        return CanProposeStepUp(rLedger, a, b);
-    }
-    if (StepDown(current) == requested)
-    {
-        return CanCancelTreaty(rLedger, a, b);
-    }
-    return false;
-}
-
 } // namespace ac

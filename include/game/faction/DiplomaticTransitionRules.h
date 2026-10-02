@@ -51,9 +51,4 @@ bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId
 // Whether a and b hold a status with a StepDown to cancel into.
 bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
 
-// Whether a may ask b to move their status to requested: StepUp of the current status,
-// StepDown (a cancel), or Vendetta.
-bool CanRequestStatus(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b,
-                      DiplomaticStatus_t requested);
-
 } // namespace ac

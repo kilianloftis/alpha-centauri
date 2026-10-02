@@ -5,9 +5,7 @@
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/DiplomaticTransitionEffects.h"
-#include "game/faction/TradeItem.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
@@ -67,15 +65,9 @@ struct DiplomacyFixture
         return MakeSessionUnit(fixtures, *pState, rFaction, x, y, rComponentIds);
     }
 
-    void ProposeVendetta(ac::Faction& rProposer, ac::Faction& rRecipient)
+    void MeetAll()
     {
-        Ledger().SetKnown(rProposer.GetFactionId(), rRecipient.GetFactionId());
-        ac::DiplomaticProposal_t proposal;
-        proposal.proposer = rProposer.GetFactionId();
-        proposal.recipient = rRecipient.GetFactionId();
-        proposal.requestedStatus = ac::DiplomaticStatus_t::Vendetta;
-        REQUIRE(pState->GetDiplomaticActionExecutor().Propose(*pState, proposal)
-                == ac::DiplomaticProposeResult_t::Accepted);
+        Ledger().SetKnown({pA->GetFactionId(), pB->GetFactionId(), pC->GetFactionId()});
     }
 
     bool SharesAnyTile(ac::Faction& rX, ac::Faction& rY)

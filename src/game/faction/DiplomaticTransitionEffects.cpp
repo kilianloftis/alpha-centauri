@@ -159,6 +159,17 @@ void ExpireDiplomaticStatuses(GameState& rGameState)
     }
 }
 
+void CancelTreaty(GameState& rGameState, FactionId_t a, FactionId_t b)
+{
+    const std::optional<DiplomaticStatus_t> lower =
+        StepDown(rGameState.GetDiplomacyLedger().GetStatus(a, b));
+    if (!lower)
+    {
+        throw std::logic_error("CancelTreaty: the pair holds no agreement to cancel");
+    }
+    ApplyStatusChange(rGameState, a, b, *lower);
+}
+
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target)
 {
     DeclareVendetta_(rGameState, declarer, target, VendettaKind_t::Declaration);

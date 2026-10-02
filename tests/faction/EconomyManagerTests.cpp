@@ -56,3 +56,18 @@ TEST_CASE("SetEnergyAllocation rejects percentages that do not sum to 100", "[ec
     CHECK(economy.GetEnergyAllocation().labsPercent == 50);
     CHECK(economy.GetEnergyAllocation().psychPercent == 10);
 }
+
+TEST_CASE("EconomyManager owns the never-negative rule", "[faction][economy]")
+{
+    EconomyManager economy;
+    economy.AddEnergy(40);
+
+    CHECK(economy.CanAfford(40));
+    CHECK_FALSE(economy.CanAfford(41));
+    CHECK_THROWS_AS(economy.CanAfford(-1), std::invalid_argument);
+
+    economy.SpendEnergy(40);
+    CHECK(economy.GetEnergy() == 0);
+    CHECK_THROWS_AS(economy.SpendEnergy(1), std::runtime_error);
+    CHECK(economy.GetEnergy() == 0);
+}

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/TradeItem.h"
 #include "game/faction/base/BaseTypes.h"
 #include <string>
 #include <vector>
@@ -19,24 +18,11 @@ enum class DiplomaticActionKind_t
     Trade
 };
 
-// Whether this specific trade item is legal between a and b (known, not vendetta;
-// bases and coordinated vendetta require Pact).
-bool CanTrade(const DiplomacyLedger& rLedger,
-              FactionId_t a,
-              FactionId_t b,
-              const TradeItem_t& rItem);
-
 // Primary UI/AI entry: legal actions for the pair (empty if not known).
 std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
                                                       FactionId_t a,
                                                       FactionId_t b);
 
-// Legal trade categories for the pair (empty under Vendetta / unknown).
-std::vector<TradeKind_t> GetAvailableTrades(const DiplomacyLedger& rLedger,
-                                          FactionId_t a,
-                                          FactionId_t b);
-
 std::string ToString(DiplomaticActionKind_t kind);
-std::string ToString(TradeKind_t kind);
 
 } // namespace ac

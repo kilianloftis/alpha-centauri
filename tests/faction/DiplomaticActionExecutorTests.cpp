@@ -1,21 +1,19 @@
-#include "GameFixtures.h"
+#include "DiplomacyFixture.h"
 
-#include "game/GameSettings.h"
-#include "game/GameState.h"
 #include "game/faction/DiplomaticActionExecutor.h"
-#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
+#include "game/faction/FactionExploredMap.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/TradeItem.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
-#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
-#include <memory>
-#include <stdexcept>
+
+#include <cstddef>
+#include <string>
 
 using namespace ac;
 using namespace actest;
@@ -23,375 +21,280 @@ using namespace actest;
 namespace
 {
 
-struct DiplomacyGame_
+DiplomaticProposal_t Proposal_(const Faction& rProposer, const Faction& rRecipient)
 {
-    FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    Faction* pPlayer = nullptr;
-    Faction* pAi = nullptr;
-    Faction* pThird = nullptr;
+    DiplomaticProposal_t proposal;
+    proposal.proposer = rProposer.GetFactionId();
+    proposal.recipient = rRecipient.GetFactionId();
+    return proposal;
+}
 
-    DiplomacyGame_()
-    {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-
-        auto pA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext, pState->GetWorldMap(), fixtures.settings,
-            actest::k_TestFactionSeed);
-        auto pB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext, pState->GetWorldMap(), fixtures.settings,
-            actest::k_TestFactionSeed);
-        auto pC = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext, pState->GetWorldMap(), fixtures.settings,
-            actest::k_TestFactionSeed);
-
-        pPlayer = &pState->AddFaction(std::move(pA));
-        pAi = &pState->AddFaction(std::move(pB));
-        pThird = &pState->AddFaction(std::move(pC));
-
-        pState->GetDiplomacyLedger().SetKnown(pPlayer->GetFactionId(), pAi->GetFactionId());
-        pState->GetDiplomacyLedger().SetKnown(pPlayer->GetFactionId(), pThird->GetFactionId());
-        pState->GetDiplomacyLedger().SetKnown(pAi->GetFactionId(), pThird->GetFactionId());
-    }
-};
+DiplomaticProposeResult_t Propose_(DiplomacyFixture& rGame, const DiplomaticProposal_t& rProposal)
+{
+    return rGame.pState->GetDiplomaticActionExecutor().Propose(*rGame.pState, rProposal);
+}
 
 } // namespace
 
 TEST_CASE("Propose treaty to AI is accepted and applied", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.requestedStatus = DiplomaticStatus_t::Treaty;
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
-TEST_CASE("A proposal must request the next status up, down, or Vendetta",
-          "[diplomacy][executor]")
+TEST_CASE("A proposal may only request the next status up", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
-    DiplomacyLedger& rLedger = game.pState->GetDiplomacyLedger();
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
 
     proposal.requestedStatus = DiplomaticStatus_t::Truce;
-    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
     proposal.requestedStatus = DiplomaticStatus_t::Pact;
-    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
+    // Declaring Vendetta and cancelling are one-sided, not offers.
+    proposal.requestedStatus = DiplomaticStatus_t::Vendetta;
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
 
-    rLedger.SetStatus(proposal.proposer, proposal.recipient, DiplomaticStatus_t::Pact);
+    game.Ledger().SetStatus(proposal.proposer, proposal.recipient, DiplomaticStatus_t::Treaty);
     proposal.requestedStatus = DiplomaticStatus_t::Neutral;
-    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
-    proposal.requestedStatus = DiplomaticStatus_t::Treaty;
-    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Accepted);
-    CHECK(rLedger.HasTreaty(proposal.proposer, proposal.recipient));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
+    proposal.requestedStatus = DiplomaticStatus_t::Pact;
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Pact);
+}
+
+TEST_CASE("An empty proposal is invalid", "[diplomacy][executor]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+
+    CHECK(Propose_(game, Proposal_(*game.pA, *game.pB)) == DiplomaticProposeResult_t::Invalid);
+    // Nor does it take the player's one pending slot.
+    CHECK(Propose_(game, Proposal_(*game.pB, *game.pA)) == DiplomaticProposeResult_t::Invalid);
+    CHECK_FALSE(game.pState->GetDiplomaticActionExecutor().GetPendingProposal().has_value());
 }
 
 TEST_CASE("Propose to player stays pending until Accept", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pAi->GetFactionId();
-    proposal.recipient = game.pPlayer->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t proposal = Proposal_(*game.pB, *game.pA);
     proposal.requestedStatus = DiplomaticStatus_t::Treaty;
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::PendingPlayer);
-    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::PendingPlayer);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Neutral);
 
     REQUIRE(game.pState->GetDiplomaticActionExecutor().Accept(*game.pState));
-    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
 TEST_CASE("Energy credits trade moves treasury", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    game.pPlayer->GetEconomy().AddEnergy(50);
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetEconomy().AddEnergy(50);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeCredits_t{20});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 30);
-    CHECK(game.pAi->GetEconomy().GetEnergy() == 20);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 30);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 20);
+}
+
+TEST_CASE("A Truce can be bought with credits", "[diplomacy][executor]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
+    game.pA->GetEconomy().AddEnergy(10);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.requestedStatus = DiplomaticStatus_t::Truce;
+    proposal.give.push_back(TradeCredits_t{5});
+
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Truce);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 5);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 5);
 }
 
 TEST_CASE("Technology trade grants tech to recipient", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    game.pPlayer->GetResearch().AddDiscoveredTech("test_tech");
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetResearch().AddDiscoveredTech("test_tech");
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeTechnology_t{"test_tech"});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pAi->GetResearch().HasDiscoveredTech("test_tech"));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pB->GetResearch().HasDiscoveredTech("test_tech"));
+}
+
+TEST_CASE("The same technology cannot be offered twice in one proposal", "[diplomacy][executor]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetResearch().AddDiscoveredTech("test_tech");
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.give.push_back(TradeTechnology_t{"test_tech"});
+    proposal.give.push_back(TradeTechnology_t{"test_tech"});
+
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
+    CHECK_FALSE(game.pB->GetResearch().HasDiscoveredTech("test_tech"));
 }
 
 TEST_CASE("Comm frequency introduces third faction", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    // Break known between AI and third so intro is meaningful.
-    game.pState->GetDiplomacyLedger().SetKnown(
-        game.pAi->GetFactionId(), game.pThird->GetFactionId(), false);
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.Ledger().SetKnown(game.pB->GetFactionId(), game.pC->GetFactionId(), false);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.give.push_back(TradeCommFrequency_t{game.pC->GetFactionId()});
 
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
-    proposal.give.push_back(TradeCommFrequency_t{game.pThird->GetFactionId()});
-
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pState->GetDiplomacyLedger().AreKnown(
-        game.pAi->GetFactionId(), game.pThird->GetFactionId()));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Ledger().AreKnown(game.pB->GetFactionId(), game.pC->GetFactionId()));
 }
 
-TEST_CASE("Third-party vendetta trade sets status", "[diplomacy][executor]")
+TEST_CASE("A Vendetta offered in a trade is declared by the side that gives it",
+          "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    game.pState->GetDiplomacyLedger().SetStatus(
-        game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus_t::Pact);
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
-    proposal.give.push_back(TradeDeclareVendetta_t{game.pThird->GetFactionId()});
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.demand.push_back(TradeDeclareVendetta_t{game.pC->GetFactionId()});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pState->GetDiplomacyLedger().HasVendetta(
-        game.pAi->GetFactionId(), game.pThird->GetFactionId()));
-    CHECK(game.pState->GetDiplomacyLedger().AreKnown(
-        game.pAi->GetFactionId(), game.pThird->GetFactionId()));
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Status(*game.pB, *game.pC) == DiplomaticStatus_t::Vendetta);
+    CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Neutral);
+
+    proposal.demand.clear();
+    proposal.give.push_back(TradeDeclareVendetta_t{game.pC->GetFactionId()});
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
 }
 
 TEST_CASE("World map trade merges explored tiles", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    Tile* pTile = game.pState->GetWorldMap().GetTile(3, 3);
-    REQUIRE(pTile);
-    game.pPlayer->GetExploredMap().Mark(*pTile);
-    REQUIRE(game.pPlayer->GetExploredMap().IsExplored(3, 3));
-    CHECK_FALSE(game.pAi->GetExploredMap().IsExplored(3, 3));
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetExploredMap().Mark(game.At(3, 3));
+    REQUIRE(game.pA->GetExploredMap().IsExplored(3, 3));
+    REQUIRE_FALSE(game.pB->GetExploredMap().IsExplored(3, 3));
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeWorldMap_t{});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pAi->GetExploredMap().IsExplored(3, 3));
-}
-
-TEST_CASE("Trade under vendetta is invalid", "[diplomacy][executor]")
-{
-    DiplomacyGame_ game;
-    game.pState->GetDiplomacyLedger().SetStatus(
-        game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus_t::Vendetta);
-    game.pPlayer->GetEconomy().AddEnergy(10);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
-    proposal.give.push_back(TradeCredits_t{5});
-
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Invalid);
-}
-
-TEST_CASE("Base transfer without Pact is invalid", "[diplomacy][executor]")
-{
-    DiplomacyGame_ game;
-    BaseManager* pBase = game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "Gift",
-        game.pState->GetWorldMap().GetTile(2, 2),
-        game.pState->GetTileEffects(),
-        game.pState->GetSecretProjectAvailability());
-    REQUIRE(pBase);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
-    proposal.give.push_back(TradeBase_t{pBase->GetBaseId()});
-
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Invalid);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pB->GetExploredMap().IsExplored(3, 3));
 }
 
 TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    game.pState->GetDiplomacyLedger().SetStatus(
-        game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus_t::Pact);
-    BaseManager* pBase = game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "Gift",
-        game.pState->GetWorldMap().GetTile(2, 2),
-        game.pState->GetTileEffects(),
-        game.pState->GetSecretProjectAvailability());
-    REQUIRE(pBase);
-    const BaseId_t baseId = pBase->GetBaseId();
-    const int popSize = pBase->GetPopulation().GetSize();
-    pBase->GetBuildingManager().AddBuilding("flat_nutrient");
-    pBase->GetPopulation().SetNutrientStockpile(17);
-    pBase->GetProduction().SetProduction(
-        &game.fixtures.dataContext.buildingRegistry->Get("farm_booster"), pBase->GetBaseEffects());
-    pBase->GetProduction().SetMineralStockpile(9);
-    REQUIRE(game.pPlayer->GetBaseCount() == 1);
-    REQUIRE(game.pAi->GetBaseCount() == 0);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    BaseManager& rBase = *game.pBaseA;
+    const BaseId_t baseId = rBase.GetBaseId();
+    const std::string name = rBase.GetName();
+    const int popSize = rBase.GetPopulation().GetSize();
+    rBase.GetBuildingManager().AddBuilding("flat_nutrient");
+    const std::size_t buildingCount = rBase.GetBuildingManager().GetBuildings().size();
+    rBase.GetPopulation().SetNutrientStockpile(17);
+    rBase.GetProduction().SetProduction(
+        &game.fixtures.dataContext.buildingRegistry->Get("farm_booster"), rBase.GetBaseEffects());
+    rBase.GetProduction().SetMineralStockpile(9);
+    const int receiverBases = game.pB->GetBaseCount();
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeBase_t{baseId});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pPlayer->GetBaseCount() == 0);
-    REQUIRE(game.pAi->GetBaseCount() == 1);
-    const BaseManager& rTransferred = *game.pAi->Bases().begin();
-    CHECK(rTransferred.GetFactionId() == game.pAi->GetFactionId());
-    CHECK(rTransferred.GetBaseId() == baseId);
-    CHECK(rTransferred.GetName() == "Gift");
-    CHECK(rTransferred.GetPopulation().GetSize() == popSize);
-    CHECK(rTransferred.GetPopulation().GetNutrientStockpile() == 17);
-    CHECK(rTransferred.GetBuildingManager().HasBuilding("Headquarters"));
-    CHECK(rTransferred.GetBuildingManager().HasBuilding("flat_nutrient"));
-    CHECK(rTransferred.GetBuildingManager().GetBuildings().size() == 2);
-    REQUIRE(rTransferred.GetProduction().GetCurrentProduction() != nullptr);
-    CHECK(rTransferred.GetProduction().GetCurrentProduction()->GetId() == "farm_booster");
-    CHECK(rTransferred.GetProduction().GetMineralStockpile() == 9);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->GetBaseCount() == 0);
+    CHECK(game.pB->GetBaseCount() == receiverBases + 1);
+    const BaseManager* pTransferred = game.pB->FindBase(baseId);
+    REQUIRE(pTransferred);
+    CHECK(pTransferred->GetFactionId() == game.pB->GetFactionId());
+    CHECK(pTransferred->GetName() == name);
+    CHECK(pTransferred->GetPopulation().GetSize() == popSize);
+    CHECK(pTransferred->GetPopulation().GetNutrientStockpile() == 17);
+    CHECK(pTransferred->GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(pTransferred->GetBuildingManager().HasBuilding("flat_nutrient"));
+    CHECK(pTransferred->GetBuildingManager().GetBuildings().size() == buildingCount);
+    REQUIRE(pTransferred->GetProduction().GetCurrentProduction() != nullptr);
+    CHECK(pTransferred->GetProduction().GetCurrentProduction()->GetId() == "farm_booster");
+    CHECK(pTransferred->GetProduction().GetMineralStockpile() == 9);
+}
+
+TEST_CASE("The same base cannot be offered twice in one proposal", "[diplomacy][executor]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.give.push_back(TradeBase_t{game.pBaseA->GetBaseId()});
+    proposal.give.push_back(TradeBase_t{game.pBaseA->GetBaseId()});
+    const int receiverBases = game.pB->GetBaseCount();
+
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
+    CHECK(game.pA->GetBaseCount() == 1);
+    CHECK(game.pB->GetBaseCount() == receiverBases);
 }
 
 TEST_CASE("A proposal is validated against its aggregate cost, not per item",
           "[diplomacy][executor]")
 {
-    // Each TradeCredits_t was checked against the giver's *full* treasury independently, so two
-    // items each worth most of the balance both validated and both applied — ending the trade
-    // with a negative treasury and no error anywhere.
-    DiplomacyGame_ game;
-    game.pPlayer->GetEconomy().AddEnergy(60);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetEconomy().AddEnergy(60);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeCredits_t{50});
     proposal.give.push_back(TradeCredits_t{50});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Invalid);
-    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 60);
-    CHECK(game.pAi->GetEconomy().GetEnergy() == 0);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 60);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 0);
 }
 
 TEST_CASE("Two affordable credit items in one proposal still go through",
           "[diplomacy][executor]")
 {
-    DiplomacyGame_ game;
-    game.pPlayer->GetEconomy().AddEnergy(60);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetEconomy().AddEnergy(60);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeCredits_t{20});
     proposal.give.push_back(TradeCredits_t{30});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 10);
-    CHECK(game.pAi->GetEconomy().GetEnergy() == 50);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 10);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 50);
 }
 
 TEST_CASE("Each side of a proposal is costed against its own giver", "[diplomacy][executor]")
 {
     // give and demand run in opposite directions; the aggregate must not be charged to one side.
-    DiplomacyGame_ game;
-    game.pPlayer->GetEconomy().AddEnergy(30);
-    game.pAi->GetEconomy().AddEnergy(30);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pA->GetEconomy().AddEnergy(30);
+    game.pB->GetEconomy().AddEnergy(30);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeCredits_t{25});
     proposal.demand.push_back(TradeCredits_t{25});
 
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 30);
-    CHECK(game.pAi->GetEconomy().GetEnergy() == 30);
-}
-
-TEST_CASE("The same base cannot be offered twice in one proposal", "[diplomacy][executor]")
-{
-    DiplomacyGame_ game;
-    game.pState->GetDiplomacyLedger().SetStatus(
-        game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus_t::Pact);
-    BaseManager* pBase = game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "Gift", game.pState->GetWorldMap().GetTile(2, 2),
-        game.pState->GetTileEffects(),
-        game.pState->GetSecretProjectAvailability());
-    REQUIRE(pBase);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pPlayer->GetFactionId();
-    proposal.recipient = game.pAi->GetFactionId();
-    proposal.give.push_back(TradeBase_t{pBase->GetBaseId()});
-    proposal.give.push_back(TradeBase_t{pBase->GetBaseId()});
-
-    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
-          == DiplomaticProposeResult_t::Invalid);
-    CHECK(game.pPlayer->GetBaseCount() == 1);
-    CHECK(game.pAi->GetBaseCount() == 0);
-}
-
-TEST_CASE("EconomyManager owns the never-negative rule", "[faction][economy]")
-{
-    EconomyManager economy;
-    economy.AddEnergy(40);
-
-    CHECK(economy.CanAfford(40));
-    CHECK_FALSE(economy.CanAfford(41));
-    CHECK_THROWS_AS(economy.CanAfford(-1), std::invalid_argument);
-
-    economy.SpendEnergy(40);
-    CHECK(economy.GetEnergy() == 0);
-    CHECK_THROWS_AS(economy.SpendEnergy(1), std::runtime_error);
-    CHECK(economy.GetEnergy() == 0);
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 30);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 30);
 }
 
 TEST_CASE("A second proposal to the player is refused, not silently dropped",
           "[diplomacy][executor]")
 {
-    // There is one pending slot. Overwriting it stranded the first proposer, which had already
-    // been told PendingPlayer and would wait forever.
-    DiplomacyGame_ game;
-    DiplomaticProposal_t first;
-    first.proposer = game.pAi->GetFactionId();
-    first.recipient = game.pPlayer->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    DiplomaticProposal_t first = Proposal_(*game.pB, *game.pA);
     first.requestedStatus = DiplomaticStatus_t::Treaty;
-
-    DiplomaticProposal_t second;
-    second.proposer = game.pThird->GetFactionId();
-    second.recipient = game.pPlayer->GetFactionId();
+    DiplomaticProposal_t second = Proposal_(*game.pC, *game.pA);
     second.requestedStatus = DiplomaticStatus_t::Treaty;
 
     DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
@@ -400,12 +303,10 @@ TEST_CASE("A second proposal to the player is refused, not silently dropped",
 
     // The first proposal is intact and is what Accept resolves.
     REQUIRE(rExecutor.GetPendingProposal().has_value());
-    CHECK(rExecutor.GetPendingProposal()->proposer == game.pAi->GetFactionId());
+    CHECK(rExecutor.GetPendingProposal()->proposer == game.pB->GetFactionId());
     REQUIRE(rExecutor.Accept(*game.pState));
-    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(game.pAi->GetFactionId(),
-                                                     game.pPlayer->GetFactionId()));
-    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTreaty(game.pThird->GetFactionId(),
-                                                          game.pPlayer->GetFactionId()));
+    CHECK(game.Status(*game.pB, *game.pA) == DiplomaticStatus_t::Treaty);
+    CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Neutral);
 
     // The slot is free again once the player answers.
     CHECK(rExecutor.Propose(*game.pState, second) == DiplomaticProposeResult_t::PendingPlayer);
@@ -416,12 +317,10 @@ TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
 {
     // Reject is the other half of the one-slot contract Busy relies on: without it a declined
     // proposal would block every later one forever.
-    DiplomacyGame_ game;
-    game.pAi->GetEconomy().AddEnergy(40);
-
-    DiplomaticProposal_t proposal;
-    proposal.proposer = game.pAi->GetFactionId();
-    proposal.recipient = game.pPlayer->GetFactionId();
+    DiplomacyFixture game;
+    game.MeetAll();
+    game.pB->GetEconomy().AddEnergy(40);
+    DiplomaticProposal_t proposal = Proposal_(*game.pB, *game.pA);
     proposal.give.push_back(TradeCredits_t{40});
 
     DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
@@ -430,8 +329,8 @@ TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
     rExecutor.Reject();
     CHECK_FALSE(rExecutor.GetPendingProposal().has_value());
     // Nothing moved.
-    CHECK(game.pAi->GetEconomy().GetEnergy() == 40);
-    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 0);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 40);
+    CHECK(game.pA->GetEconomy().GetEnergy() == 0);
     // Accepting a rejected proposal is a no-op, not a replay.
     CHECK_FALSE(rExecutor.Accept(*game.pState));
     // The slot is usable again.

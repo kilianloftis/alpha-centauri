@@ -19,6 +19,10 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
 // duration_turns.
 void ExpireDiplomaticStatuses(GameState& rGameState);
 
+// a cancels its agreement with b, stepping their status down one rung. One-sided, so not a
+// proposal. Throws when their status has nothing to cancel.
+void CancelTreaty(GameState& rGameState, FactionId_t a, FactionId_t b);
+
 // declarer formally declares Vendetta on target. No-op when they are already at Vendetta or
 // either side is native life. Each side's units withdraw from the other's territory. Every
 // faction obliged to defend target (IsObligedToDefend) then answers: the player through a
