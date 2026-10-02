@@ -8,7 +8,6 @@ namespace ac
 {
 
 class GameState;
-class Unit;
 
 // The single path for changing the status between a and b. Moves each side's units out of
 // whatever the new status's rules no longer allow: the other's territory when
@@ -45,11 +44,6 @@ void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, Factio
 // declaration, so only units sharing tiles or bases move, and the victim's partners are obliged
 // as part of the sneak attack. Native life has no diplomacy and is ignored on either side.
 void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t victim);
-
-// The player's answer when rUnit's move order stopped at territoryOwner's border. Breaking
-// declares Vendetta on the owner and resumes the order; otherwise the order is cancelled.
-void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner,
-                           bool bBreakAgreement);
 
 // partner's answer to its defensive obligation toward ally, raised by a Vendetta that began
 // as entry. Declaring honors it (HonorDefensiveObligation, under the session's mode);

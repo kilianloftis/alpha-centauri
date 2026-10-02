@@ -4,7 +4,7 @@
 #include "game/units/ProbeRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"

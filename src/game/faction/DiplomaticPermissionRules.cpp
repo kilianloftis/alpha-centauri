@@ -1,4 +1,4 @@
-#include "game/faction/DiplomacyRules.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
@@ -21,7 +21,8 @@ const GameState& SessionOf_(const Faction& rFaction)
     const GameState* pState = rFaction.GetGameState();
     if (!pState)
     {
-        throw std::logic_error("Diplomacy rules: faction is not attached to a game session");
+        throw std::logic_error(
+            "Diplomatic permission rules: faction is not attached to a game session");
     }
     return *pState;
 }

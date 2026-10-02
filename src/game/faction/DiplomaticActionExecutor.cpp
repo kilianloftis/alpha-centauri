@@ -4,7 +4,8 @@
 #include "game/GameState.h"
 #include "game/faction/DiplomacyActions.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -42,27 +43,6 @@ const Faction* FindFaction_(const GameState& rState, FactionId_t id)
         }
     }
     return nullptr;
-}
-
-bool StatusRequestLegal_(const DiplomacyLedger& rLedger,
-                         FactionId_t a,
-                         FactionId_t b,
-                         DiplomaticStatus_t requested)
-{
-    if (requested == DiplomaticStatus_t::Vendetta)
-    {
-        return CanDeclareVendetta(rLedger, a, b);
-    }
-    const DiplomaticStatus_t current = rLedger.GetStatus(a, b);
-    if (StepUp(current) == requested)
-    {
-        return CanProposeStepUp(rLedger, a, b);
-    }
-    if (StepDown(current) == requested)
-    {
-        return CanCancelTreaty(rLedger, a, b);
-    }
-    return false;
 }
 
 BaseManager* FindOwnedBase_(Faction& rFaction, BaseId_t baseId)
@@ -168,8 +148,8 @@ bool DiplomaticActionExecutor::Validate_(GameState& rState,
 
     if (rProposal.requestedStatus.has_value())
     {
-        if (!StatusRequestLegal_(rLedger, rProposal.proposer, rProposal.recipient,
-                                 *rProposal.requestedStatus))
+        if (!CanRequestStatus(rLedger, rProposal.proposer, rProposal.recipient,
+                              *rProposal.requestedStatus))
         {
             return false;
         }

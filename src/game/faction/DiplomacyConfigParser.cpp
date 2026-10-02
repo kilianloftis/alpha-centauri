@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "lib/config/EnumNames.h"
 
 #include <algorithm>

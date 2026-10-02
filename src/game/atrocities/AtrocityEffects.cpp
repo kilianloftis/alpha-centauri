@@ -10,7 +10,7 @@
 #include "game/atrocities/AtrocityRules.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 
 #include <stdexcept>
 #include <string>

@@ -22,18 +22,26 @@ graph TB
     end
 
     subgraph "Status definition"
-        DiplomaticStatus[DiplomaticStatus_t<br/>closed enum + StepUp / StepDown]
+        DiplomaticStatus[DiplomaticStatus_t<br/>closed enum]
         DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules<br/>config/diplomacy.json]
-        DiplomacyRules[DiplomacyRules<br/>StatusRulesFor / MayEnterTerritoryOf<br/>MayShareTiles / MayRepairAt]
     end
 
-    subgraph "Status mutation (DiplomacyStatusEffects)"
+    subgraph "What a status permits (DiplomaticPermissionRules)"
+        PermissionRules[StatusRulesFor / MayEnterTerritoryOf<br/>MayShareTiles / MayRepairAt]
+    end
+
+    subgraph "Transition rules (DiplomaticTransitionRules)"
+        StepUpDown[StepUp / StepDown]
+        CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta / CanRequestStatus]
+    end
+
+    subgraph "Transition effects (DiplomaticTransitionEffects)"
         ApplyStatusChange[ApplyStatusChange<br/>status + commlink + eviction]
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
         ApplyHostileAct[ApplyHostileAct<br/>sneak attack unless may_attack]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
-        StartVendetta[StartVendetta_ / EnterVendetta_<br/>private, take VendettaEntry_t]
+        VendettaImpl[DeclareVendetta_ / JoinVendetta_<br/>private, take VendettaEntry_t]
         ResolveObligation[ResolveDefensiveObligation<br/>carries VendettaEntry_t]
         EvacuateTerritory[EvacuateUnitsFromTerritory<br/>EvacuateUnitsSharingWith]
     end
@@ -44,8 +52,7 @@ graph TB
         Atrocity[CommitAtrocity]
     end
 
-    subgraph "Legality rules (DiplomacyActions)"
-        CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
+    subgraph "Action menu (DiplomacyActions)"
         CanTrade[CanTrade<br/>relationship gate per item type]
         GetAvailableActions[GetAvailableActions]
         GetAvailableTrades[GetAvailableTrades<br/>folds over the variant]
@@ -73,7 +80,7 @@ graph TB
     TradeItem --> TradeDeclareVendetta
     TradeItem -.->|one trait per alternative| TradeKind
 
-    DiplomaticActionExecutor -->|Validate_| CanPropose
+    DiplomaticActionExecutor -->|Validate_: CanRequestStatus| CanPropose
     DiplomaticActionExecutor -->|Validate_| CanTrade
     GetAvailableActions --> CanPropose
     GetAvailableTrades --> CanTrade
@@ -86,28 +93,31 @@ graph TB
     DiplomaticActionExecutor -->|Apply_| Bases
     DiplomaticActionExecutor -->|requestedStatus| ApplyStatusChange
     DiplomaticActionExecutor -->|requestedStatus Vendetta<br/>TradeDeclareVendetta_t| DeclareVendetta
-    CanPropose --> DiplomaticStatus
+    CanPropose --> StepUpDown
     AtrocityEffects[AtrocityEffects<br/>universal Vendetta] -->|living AI only| JoinVendetta
-    TerritoryEntry[ResolveTerritoryEntry<br/>break the agreement] --> DeclareVendetta
+    TerritoryEntry[TerritoryEntryEffects<br/>ResolveTerritoryEntry: break the agreement] --> DeclareVendetta
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
     Atrocity --> ApplyHostileAct
-    ApplyHostileAct -->|SneakAttack| StartVendetta
-    DeclareVendetta -->|Declaration| StartVendetta
-    JoinVendetta -->|Declaration| StartVendetta
-    StartVendetta --> ApplyStatusChange
-    StartVendetta -->|Declaration only:<br/>EvacuateUnitsFromTerritory| EvacuateTerritory
-    StartVendetta -->|AI partners| ResolveObligation
-    StartVendetta -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t<br/>+ entry]
+    ApplyHostileAct -->|SneakAttack| VendettaImpl
+    ApplyHostileAct -->|may_attack| PermissionRules
+    DeclareVendetta -->|Declaration| VendettaImpl
+    JoinVendetta -->|Declaration| VendettaImpl
+    VendettaImpl --> ApplyStatusChange
+    VendettaImpl -->|Declaration only:<br/>EvacuateUnitsFromTerritory| EvacuateTerritory
+    VendettaImpl -->|defensive_obligation| PermissionRules
+    VendettaImpl -->|AI partners| ResolveObligation
+    VendettaImpl -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t<br/>+ entry]
     PlayerInteractionQueue -->|InteractionPresenter| ResolveObligation
-    ResolveObligation -->|honor, inherited entry| StartVendetta
+    ResolveObligation -->|honor, inherited entry| VendettaImpl
     ResolveObligation -->|decline: StepDown| ApplyStatusChange
     ApplyStatusChange -->|SetStatus / SetKnown| DiplomacyLedger
     ApplyStatusChange -->|rules lost| EvacuateTerritory
     ApplyStatusChange --> DiplomacyConfig
-    DiplomacyRules --> DiplomacyConfig
-    DiplomacyRules --> DiplomacyLedger
+    Movement[MovementRules / StepEvaluator<br/>EvacuateTerritoryRules] --> PermissionRules
+    PermissionRules --> DiplomacyConfig
+    PermissionRules --> DiplomacyLedger
 
     style DiplomacyLedger fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomaticActionExecutor fill:#f9f,stroke:#333,stroke-width:4px
@@ -143,14 +153,14 @@ separate maps rather than fields of one relationship record:
 
 - **Known-ness** is set by `FirstContactResolver` during visibility rebuilds, and by
   `TradeCommFrequency_t` as a trade item (introducing a third party).
-- **Status legality** lives in `DiplomacyActions` (`CanProposeStepUp`, `CanCancelTreaty`), not
-  in the ledger — the ledger stores, the rules decide.
+- **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
+  `CanRequestStatus`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
   maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
-  `ApplyVendetta` (`game/faction/DiplomacyStatusEffects.h`) for living AI factions only. See
+  `JoinVendetta` (`game/faction/DiplomaticTransitionEffects.h`) for living AI factions only. See
   `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
   `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
-- **Every status change goes through `ApplyStatusChange`** (`game/faction/DiplomacyStatusEffects.h`):
+- **Every status change goes through `ApplyStatusChange`** (`game/faction/DiplomaticTransitionEffects.h`):
   proposals, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry, hostile acts, and
   defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
 
@@ -185,7 +195,7 @@ multiply, so a Treaty's `AddPercent -50` beside Global Trade Pact's `AddPercent 
 
 ### Transitions
 
-The transitions are code (`StepUp` / `StepDown` in `DiplomaticStatus.h`):
+The transitions are code (`StepUp` / `StepDown` in `DiplomaticTransitionRules.h`):
 
 | From | Propose (`StepUp`) | Cancel / decline / expire (`StepDown`) |
 |---|---|---|
@@ -196,13 +206,13 @@ The transitions are code (`StepUp` / `StepDown` in `DiplomaticStatus.h`):
 | Vendetta | Truce | — |
 
 Any status can go to Vendetta. A proposal's `requestedStatus` must be `StepUp(current)`,
-`StepDown(current)` (a cancel), or Vendetta.
+`StepDown(current)` (a cancel), or Vendetta (`CanRequestStatus`).
 
 ### Where each rule is read
 
 | Rule | Read by |
 |---|---|
-| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A player's move order stops at the border and asks: break the agreement (Vendetta) and continue, or cancel (`TerritoryEntryInteraction_t`, `ResolveTerritoryEntry`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
+| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A player's move order stops at the border and asks: break the agreement (Vendetta) and continue, or cancel (`TerritoryEntryInteraction_t`, `ResolveTerritoryEntry` in `units/TerritoryEntryEffects.h`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceCalculator` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
@@ -233,8 +243,8 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 | Declaration | `DeclareVendetta`, `JoinVendetta` | a proposal with `requestedStatus` Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 | Sneak attack | `ApplyHostileAct` | a hostile act | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
-Both run through the private `StartVendetta_` (obliges the target's partners) or
-`EnterVendetta_` (obliges nobody), which take a `VendettaEntry_t`.
+Both run through the private `DeclareVendetta_` (obliges the target's partners) or
+`JoinVendetta_` (obliges nobody), which take a `VendettaEntry_t`.
 
 The territory withdrawal is part of declaring, not a rule of the Vendetta status, which allows
 entering territory. It runs only where the previous status let units in: breaking a Treaty at
@@ -357,12 +367,13 @@ save-game serialisation work to exist first. Recorded in
 | Question | Answer |
 |---|---|
 | May these two factions talk at all? | `DiplomacyLedger::AreKnown` |
-| Is this status change legal? | `DiplomacyActions::CanPropose*` / `CanDeclareVendetta` / `CanCancelTreaty` |
+| Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` / `CanRequestStatus` |
+| What does changing a status do? | `DiplomaticTransitionEffects::ApplyStatusChange`, and the Vendetta and obligation entry points around it |
 | May this *kind* of item be traded between them? | `DiplomacyActions::CanTrade` |
 | Does the giver actually have it? | `DiplomaticActionExecutor::ValidateItem_` |
 | Can the giver afford all of it at once? | `DiplomaticActionExecutor::ValidateGiverTotals_` |
 | What does accepting change? | `DiplomaticActionExecutor::ApplyItem_` |
-| What may two factions do to each other? | `DiplomacyRules` reading `DiplomacyConfig_t` for their status |
+| What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built

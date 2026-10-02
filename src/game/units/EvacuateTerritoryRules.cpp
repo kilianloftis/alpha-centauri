@@ -1,7 +1,7 @@
 #include "game/units/EvacuateTerritoryRules.h"
 
 #include "game/Faction.h"
-#include "game/faction/DiplomacyRules.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"

@@ -1,16 +1,15 @@
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyConfig.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomacyRules.h"
+#include "game/faction/DiplomaticPermissionRules.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/units/BaseConquestRules.h"
 #include "game/units/EvacuateTerritoryEffects.h"
-#include "game/units/Unit.h"
-#include "game/units/UnitOrderExecutor.h"
 
 #include <optional>
 #include <stdexcept>
@@ -75,12 +74,12 @@ bool IsObligationQueued_(const GameState& rGameState, FactionId_t ally, FactionI
         });
 }
 
-void StartVendetta_(GameState& rGameState, FactionId_t declarer, FactionId_t target,
+void DeclareVendetta_(GameState& rGameState, FactionId_t declarer, FactionId_t target,
                     VendettaEntry_t entry)
 {
     if (declarer == target)
     {
-        throw std::invalid_argument("DeclareVendetta: a faction cannot declare on itself");
+        throw std::invalid_argument("DeclareVendetta_: a faction cannot declare on itself");
     }
     const DiplomacyLedger& rLedger = rGameState.GetDiplomacyLedger();
     if (rLedger.HasVendetta(declarer, target))
@@ -127,12 +126,12 @@ void StartVendetta_(GameState& rGameState, FactionId_t declarer, FactionId_t tar
     }
 }
 
-void EnterVendetta_(GameState& rGameState, FactionId_t defender, FactionId_t aggressor,
+void JoinVendetta_(GameState& rGameState, FactionId_t defender, FactionId_t aggressor,
                     VendettaEntry_t entry)
 {
     if (defender == aggressor)
     {
-        throw std::invalid_argument("JoinVendetta: a faction cannot defend against itself");
+        throw std::invalid_argument("JoinVendetta_: a faction cannot defend against itself");
     }
     if (!rGameState.GetDiplomacyLedger().HasVendetta(defender, aggressor))
     {
@@ -205,12 +204,12 @@ void ExpireDiplomaticStatuses(GameState& rGameState)
 
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target)
 {
-    StartVendetta_(rGameState, declarer, target, VendettaEntry_t::Declaration);
+    DeclareVendetta_(rGameState, declarer, target, VendettaEntry_t::Declaration);
 }
 
 void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggressor)
 {
-    EnterVendetta_(rGameState, defender, aggressor, VendettaEntry_t::Declaration);
+    JoinVendetta_(rGameState, defender, aggressor, VendettaEntry_t::Declaration);
 }
 
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
@@ -219,10 +218,10 @@ void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, Factio
     switch (mode)
     {
     case DefensiveObligationMode_t::JoinAsDefender:
-        EnterVendetta_(rGameState, partner, aggressor, entry);
+        JoinVendetta_(rGameState, partner, aggressor, entry);
         return;
     case DefensiveObligationMode_t::SeparateDeclaration:
-        StartVendetta_(rGameState, partner, aggressor, entry);
+        DeclareVendetta_(rGameState, partner, aggressor, entry);
         return;
     }
 }
@@ -241,20 +240,8 @@ void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t v
     }
     if (!StatusRulesFor(rGameState, aggressor, victim).bMayAttack)
     {
-        StartVendetta_(rGameState, aggressor, victim, VendettaEntry_t::SneakAttack);
+        DeclareVendetta_(rGameState, aggressor, victim, VendettaEntry_t::SneakAttack);
     }
-}
-
-void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner,
-                           bool bBreakAgreement)
-{
-    if (!bBreakAgreement)
-    {
-        rUnit.ClearOrder();
-        return;
-    }
-    DeclareVendetta(rGameState, rUnit.GetFaction().GetFactionId(), territoryOwner);
-    rGameState.GetUnitOrderExecutor().Execute(rUnit);
 }
 
 void ResolveDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally,

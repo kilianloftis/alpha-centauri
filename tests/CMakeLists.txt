@@ -28,7 +28,10 @@ add_executable(effects-tests
     faction/PsychTests.cpp
     faction/DiplomacyConfigParserTests.cpp
     faction/DiplomacyLedgerTests.cpp
-    faction/DiplomaticStatusRulesTests.cpp
+    faction/DiplomaticPermissionRulesTests.cpp
+    faction/DiplomaticStatusCommerceTests.cpp
+    faction/DiplomaticTransitionEffectsTests.cpp
+    faction/DiplomaticTransitionRulesTests.cpp
     faction/DiplomacyActionsTests.cpp
     faction/DiplomaticActionExecutorTests.cpp
     faction/FirstContactTests.cpp
@@ -95,6 +98,7 @@ add_executable(effects-tests
     game/PathfindingTests.cpp
     game/TerritoryTests.cpp
     game/EvacuateTerritoryTests.cpp
+    game/TerritoryEntryTests.cpp
     game/WorkerAssignmentTests.cpp
     game/HomeBaseTests.cpp
     game/MineralSupportTests.cpp

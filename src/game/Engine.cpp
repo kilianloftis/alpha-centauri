@@ -8,7 +8,7 @@
 #include "game/world-events/WorldEventConfig.h"
 #include "game/Faction.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"

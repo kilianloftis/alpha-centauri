@@ -27,9 +27,10 @@ add_library(ac-core STATIC
     game/faction/DiplomaticStatus.cpp
     game/faction/DiplomacyConfigParser.cpp
     game/faction/DiplomacyLedger.cpp
-    game/faction/DiplomacyRules.cpp
+    game/faction/DiplomaticPermissionRules.cpp
     game/faction/DiplomacyActions.cpp
-    game/faction/DiplomacyStatusEffects.cpp
+    game/faction/DiplomaticTransitionEffects.cpp
+    game/faction/DiplomaticTransitionRules.cpp
     game/faction/TradeItem.cpp
     game/faction/DiplomaticActionExecutor.cpp
     game/faction/FirstContactResolver.cpp
@@ -141,6 +142,7 @@ add_library(ac-core STATIC
     game/units/DisengageRules.cpp
     game/units/EvacuateTerritoryRules.cpp
     game/units/EvacuateTerritoryEffects.cpp
+    game/units/TerritoryEntryEffects.cpp
     game/units/InterceptRules.cpp
     game/units/ScrambleRules.cpp
     game/units/MovementRules.cpp

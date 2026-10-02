@@ -730,7 +730,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
 
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder)
 {
-    // TODO: per-turn healing. Repair inside a base must check MayRepairAt (DiplomacyRules.h).
+    // TODO: per-turn healing. Repair inside a base must check MayRepairAt (DiplomaticPermissionRules.h).
     // Clear the order when the unit reaches full HP.
     (void)rUnit;
     (void)rOrder;

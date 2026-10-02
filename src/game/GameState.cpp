@@ -12,7 +12,7 @@
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomacyStatusEffects.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/ResearchManager.h"

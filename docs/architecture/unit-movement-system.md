@@ -53,6 +53,8 @@ graph TD
     UnitOrderExecutor --> ScrambleRules
     IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, conquest]
     GameState[GameState]
+    TerritoryEntryEffects[TerritoryEntryEffects<br/>player's answer at a forbidden border:<br/>Vendetta and resume, or cancel]
+    TerritoryEntryEffects -->|resume the order| UnitOrderExecutor
 
     StepEvaluator --> MovementRules
     StepEvaluator --> TransportRules
@@ -135,7 +137,7 @@ destination inside. The objective step check reports `StepOutcome_t::BlockedByTe
 When the next step of a move order is refused that way, `Execute_` stops before it: a
 player unit keeps its order and `IUnitOrderWorld::OnTerritoryEntryRefused` queues one
 `TerritoryEntryInteraction_t` (declare Vendetta on the owner and continue, or cancel the
-order; `ResolveTerritoryEntry`). Any other unit drops the order. Unloading checks the same
+order; `ResolveTerritoryEntry` in `TerritoryEntryEffects.h`). Any other unit drops the order. Unloading checks the same
 outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`).
 
 `SpendMovesAndEnter_` splits arrival into two phases. `EnterTile_` does position and move

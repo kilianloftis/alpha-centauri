@@ -1,7 +1,7 @@
 #include "game/units/StepEvaluator.h"
 
 #include "game/Faction.h"
-#include "game/faction/DiplomacyRules.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/map/ImprovementIds.h"

@@ -66,7 +66,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `ProductionIdleInteraction_t` | Assign (open BaseView) / Later |
 | `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
 | `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `ResolveDefensiveObligation` → Complete |
-| `TerritoryEntryInteraction_t` | Break the agreement / Cancel the order → `ResolveTerritoryEntry` → Complete |
+| `TerritoryEntryInteraction_t` | Break the agreement / Cancel the order → `ResolveTerritoryEntry` (`units/TerritoryEntryEffects.h`) → Complete |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 

@@ -4,7 +4,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionResolve.h"
-#include "game/faction/DiplomacyRules.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"

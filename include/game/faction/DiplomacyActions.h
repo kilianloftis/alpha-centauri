@@ -19,12 +19,6 @@ enum class DiplomaticActionKind_t
     Trade
 };
 
-// Whether a and b may propose StepUp of their current status.
-bool CanProposeStepUp(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
-bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
-// Whether a and b hold a status with a StepDown to cancel into.
-bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
-
 // Whether this specific trade item is legal between a and b (known, not vendetta;
 // bases and coordinated vendetta require Pact).
 bool CanTrade(const DiplomacyLedger& rLedger,

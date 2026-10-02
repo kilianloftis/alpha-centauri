@@ -1,5 +1,7 @@
 #include "game/faction/DiplomacyActions.h"
 
+#include "game/faction/DiplomaticTransitionRules.h"
+
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -35,29 +37,6 @@ DiplomaticActionKind_t ProposeKindFor_(DiplomaticStatus_t target)
 }
 
 } // namespace
-
-bool CanProposeStepUp(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    return RequireKnown_(rLedger, a, b) && StepUp(rLedger.GetStatus(a, b)).has_value();
-}
-
-bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    if (!RequireKnown_(rLedger, a, b))
-    {
-        return false;
-    }
-    return rLedger.GetStatus(a, b) != DiplomaticStatus_t::Vendetta;
-}
-
-bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    if (!RequireKnown_(rLedger, a, b))
-    {
-        return false;
-    }
-    return StepDown(rLedger.GetStatus(a, b)).has_value();
-}
 
 bool CanTrade(const DiplomacyLedger& rLedger,
               FactionId_t a,
