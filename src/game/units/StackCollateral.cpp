@@ -3,10 +3,10 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/Faction.h"
+#include "game/faction/FactionConfig.h"
 #include "game/faction/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/units/BaseConquestRules.h"
 #include "game/units/PlanetPearls.h"
 #include "game/units/Unit.h"
 

@@ -494,7 +494,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
   - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
   - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
-  - `TerritoryEntryEffects`: `ResolveTerritoryEntry`, the player's answer when a move order stops at territory its faction may not enter — declare Vendetta on the owner and resume the order, or cancel it
+  - `TerritoryEntryEffects`: `BreakAgreementAndContinue`, the player's choice to break the agreement when a move order stops at territory its faction may not enter — declare Vendetta on the owner and resume the order
   - `BaseConquestRules` / `BaseConquestEffects`: Pure conquest predicates (garrison, capture veto, species) split from the world mutations they gate (population loss, facility destruction, capture, raze, native raid)
   - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest — that `GameState` implements and injects into `UnitOrderExecutor`; nullable so movement-only harnesses need no `GameState`
 - **Dependencies**:

@@ -112,7 +112,25 @@ DiplomaticStatusRules_t ParseStatus_(const nlohmann::json& rJson, DiplomaticStat
     {
         throw std::runtime_error(rContext + ": 'duration_turns' needs a status to expire into");
     }
+    if (rules.bDefensiveObligation && !StepDown(status))
+    {
+        throw std::runtime_error(rContext
+                                 + ": 'defensive_obligation' needs a status to step down into "
+                                   "when the obligation is declined");
+    }
     return rules;
+}
+
+DefensiveObligationMode_t RequireObligationMode_(const nlohmann::json& rJson,
+                                                 const std::string& rContext)
+{
+    const nlohmann::json& rValue = Require_(rJson, "defensive_obligation_mode", rContext);
+    if (!rValue.is_string())
+    {
+        throw std::runtime_error(rContext + ": 'defensive_obligation_mode' must be a string");
+    }
+    return EnumFromName<DefensiveObligationMode_t>(rValue.get<std::string>(),
+                                                   "defensive obligation mode");
 }
 
 } // namespace
@@ -131,7 +149,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     {
         throw std::runtime_error(context + " must be a JSON object");
     }
-    RejectUnknownKeys_(json, {"statuses"}, context);
+    RejectUnknownKeys_(json, {"statuses", "defensive_obligation_mode"}, context);
     const nlohmann::json& rStatuses = Require_(json, "statuses", context);
     if (!rStatuses.is_object())
     {
@@ -139,6 +157,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     }
 
     DiplomacyConfig_t config;
+    config.defensiveObligationMode = RequireObligationMode_(json, context);
     std::array<bool, k_DiplomaticStatusCount> seen{};
     for (const auto& [rName, rEntry] : rStatuses.items())
     {

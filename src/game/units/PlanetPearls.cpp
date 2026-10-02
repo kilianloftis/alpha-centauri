@@ -4,7 +4,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/Faction.h"
 #include "game/faction/EconomyManager.h"
-#include "game/units/BaseConquestRules.h"
+#include "game/faction/FactionConfig.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
 

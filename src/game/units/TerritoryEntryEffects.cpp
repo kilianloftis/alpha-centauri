@@ -9,14 +9,8 @@
 namespace ac
 {
 
-void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner,
-                           bool bBreakAgreement)
+void BreakAgreementAndContinue(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner)
 {
-    if (!bBreakAgreement)
-    {
-        rUnit.ClearOrder();
-        return;
-    }
     DeclareVendetta(rGameState, rUnit.GetFaction().GetFactionId(), territoryOwner);
     rGameState.GetUnitOrderExecutor().Execute(rUnit);
 }

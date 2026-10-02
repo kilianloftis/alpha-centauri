@@ -1,5 +1,6 @@
 #include "DiplomacyFixture.h"
 
+#include "game/faction/DiplomacyConfig.h"
 #include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/units/EvacuateTerritoryEffects.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -7,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 using namespace ac;
@@ -279,10 +281,10 @@ TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack"
     const std::vector<PactObligationInteraction_t> obligations =
         game.Queued<PactObligationInteraction_t>();
     REQUIRE(obligations.size() == 1);
-    CHECK(obligations.front().entry == VendettaEntry_t::SneakAttack);
+    CHECK(obligations.front().kind == VendettaKind_t::SneakAttack);
 
-    ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
-                               game.pC->GetFactionId(), true, obligations.front().entry);
+    HonorDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pC->GetFactionId(),
+                             obligations.front().kind);
 
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
     CHECK(&rAggressorGuest.GetTile() == &game.At(2, 4));
@@ -320,8 +322,8 @@ TEST_CASE("Honoring a Pact declares Vendetta on the aggressor", "[diplomacy][sta
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
-                               game.pC->GetFactionId(), true, VendettaEntry_t::Declaration);
+    HonorDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pC->GetFactionId(),
+                             VendettaKind_t::Declaration);
 
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Pact);
@@ -333,8 +335,7 @@ TEST_CASE("Declining a Pact obligation steps the Pact down to a Treaty",
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    ResolveDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId(),
-                               game.pC->GetFactionId(), false, VendettaEntry_t::Declaration);
+    DeclineDefensiveObligation(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Neutral);
@@ -347,8 +348,13 @@ TEST_CASE("Native life has no diplomacy to change", "[diplomacy][status][hostile
 
     ApplyHostileAct(*game.pState, rPlanet.GetFactionId(), game.pA->GetFactionId());
     ApplyHostileAct(*game.pState, game.pA->GetFactionId(), rPlanet.GetFactionId());
+    DeclareVendetta(*game.pState, game.pA->GetFactionId(), rPlanet.GetFactionId());
+    JoinVendetta(*game.pState, game.pB->GetFactionId(), rPlanet.GetFactionId());
+    JoinVendetta(*game.pState, rPlanet.GetFactionId(), game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, rPlanet) == DiplomaticStatus_t::Neutral);
+    CHECK(game.Status(*game.pB, rPlanet) == DiplomaticStatus_t::Neutral);
+    CHECK_FALSE(game.Ledger().AreKnown(game.pA->GetFactionId(), rPlanet.GetFactionId()));
 }
 
 TEST_CASE("Declaring Vendetta by proposal obliges the target's Pact partners",
@@ -393,8 +399,7 @@ TEST_CASE("Honoring an obligation as a defender obliges nobody on the aggressor'
     game.Set(*game.pA, rD, DiplomaticStatus_t::Pact);
 
     HonorDefensiveObligation(*game.pState, game.pC->GetFactionId(), rD.GetFactionId(),
-                             DefensiveObligationMode_t::JoinAsDefender,
-                             VendettaEntry_t::Declaration);
+                             VendettaKind_t::Declaration);
 
     CHECK(game.Status(*game.pC, rD) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Queued<PactObligationInteraction_t>().empty());
@@ -409,9 +414,11 @@ TEST_CASE("Honoring an obligation as a separate declaration obliges the aggresso
     game.Set(*game.pA, rD, DiplomaticStatus_t::Treaty);
     game.Set(*game.pA, rD, DiplomaticStatus_t::Pact);
 
+    game.fixtures.dataContext.diplomacyConfig->defensiveObligationMode =
+        DefensiveObligationMode_t::SeparateDeclaration;
+
     HonorDefensiveObligation(*game.pState, game.pC->GetFactionId(), rD.GetFactionId(),
-                             DefensiveObligationMode_t::SeparateDeclaration,
-                             VendettaEntry_t::Declaration);
+                             VendettaKind_t::Declaration);
 
     CHECK(game.Status(*game.pC, rD) == DiplomaticStatus_t::Vendetta);
     const std::vector<PactObligationInteraction_t> obligations =
@@ -428,4 +435,28 @@ TEST_CASE("Joining a Vendetta already under way changes nothing", "[diplomacy][s
     ExpireDiplomaticStatuses(*game.pState);
     JoinVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
     CHECK(game.Ledger().GetTurnsHeld(game.pA->GetFactionId(), game.pB->GetFactionId()) == 1);
+}
+
+TEST_CASE("Declining an obligation the partner does not owe throws",
+          "[diplomacy][status][obligation]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+
+    CHECK_THROWS_AS(DeclineDefensiveObligation(*game.pState, game.pA->GetFactionId(),
+                                               game.pB->GetFactionId()),
+                    std::logic_error);
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("A status change naming a faction outside the session throws and changes nothing",
+          "[diplomacy][status]")
+{
+    DiplomacyFixture game;
+    const FactionId_t stranger = game.pState->AllocateFactionId();
+
+    CHECK_THROWS_AS(ApplyStatusChange(*game.pState, game.pA->GetFactionId(), stranger,
+                                      DiplomaticStatus_t::Treaty),
+                    std::invalid_argument);
+    CHECK(game.Ledger().GetStatus(game.pA->GetFactionId(), stranger) == DiplomaticStatus_t::Neutral);
 }

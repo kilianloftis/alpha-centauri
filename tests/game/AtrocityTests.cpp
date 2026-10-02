@@ -525,6 +525,19 @@ TEST_CASE("Universal Vendetta skips humans and existing Vendettas", "[atrocity]"
           != DiplomaticStatus_t::Vendetta);
 }
 
+TEST_CASE("Native life does not join a universal Vendetta", "[atrocity]")
+{
+    AtrocityGame_ game;
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures, *game.pState);
+
+    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+
+    REQUIRE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
+    CHECK(game.Diplomacy().GetStatus(rPlanet.GetFactionId(), game.pA->GetFactionId())
+          == DiplomaticStatus_t::Neutral);
+    CHECK_FALSE(game.Diplomacy().AreKnown(rPlanet.GetFactionId(), game.pA->GetFactionId()));
+}
+
 TEST_CASE("A Major atrocity's universal Vendetta obliges nobody to defend the perpetrator",
           "[atrocity]")
 {

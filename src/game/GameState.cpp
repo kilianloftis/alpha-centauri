@@ -505,6 +505,21 @@ const Faction* GameState::FindFaction(FactionId_t factionId) const
     return nullptr;
 }
 
+Faction& GameState::RequireFaction(FactionId_t factionId)
+{
+    return const_cast<Faction&>(static_cast<const GameState*>(this)->RequireFaction(factionId));
+}
+
+const Faction& GameState::RequireFaction(FactionId_t factionId) const
+{
+    const Faction* pFaction = FindFaction(factionId);
+    if (!pFaction)
+    {
+        throw std::invalid_argument("GameState: no faction with id " + std::to_string(factionId));
+    }
+    return *pFaction;
+}
+
 const Faction* GameState::GetPlayerFaction() const
 {
     for (const auto& pFaction : m_factions)

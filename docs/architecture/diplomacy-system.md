@@ -23,11 +23,11 @@ graph TB
 
     subgraph "Status definition"
         DiplomaticStatus[DiplomaticStatus_t<br/>closed enum]
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules<br/>config/diplomacy.json]
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + defensive_obligation_mode<br/>config/diplomacy.json]
     end
 
     subgraph "What a status permits (DiplomaticPermissionRules)"
-        PermissionRules[StatusRulesFor / MayEnterTerritoryOf<br/>MayShareTiles / MayRepairAt]
+        PermissionRules[StatusRulesFor / MayEnterTerritoryOf<br/>MayShareTiles / MayRepairAt<br/>HasDiplomacy / IsObligedToDefend]
     end
 
     subgraph "Transition rules (DiplomaticTransitionRules)"
@@ -41,8 +41,9 @@ graph TB
         ApplyHostileAct[ApplyHostileAct<br/>sneak attack unless may_attack]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
-        VendettaImpl[DeclareVendetta_ / JoinVendetta_<br/>private, take VendettaEntry_t]
-        ResolveObligation[ResolveDefensiveObligation<br/>carries VendettaEntry_t]
+        VendettaImpl[EnterVendetta_ / DeclareVendetta_<br/>private, take VendettaKind_t]
+        RaiseObligations[RaiseDefensiveObligations_<br/>private, checks each partner in turn]
+        HonorDecline[HonorDefensiveObligation / DeclineDefensiveObligation<br/>carry VendettaKind_t]
         EvacuateTerritory[EvacuateUnitsFromTerritory<br/>EvacuateUnitsSharingWith]
     end
 
@@ -69,6 +70,7 @@ graph TB
     GameState --> DiplomaticActionExecutor
     GameState --> FirstContactResolver
     FirstContactResolver -->|SetKnown| DiplomacyLedger
+    FirstContactResolver -->|HasDiplomacy:<br/>never meets native life| PermissionRules
 
     DiplomaticActionExecutor --> DiplomaticProposal
     DiplomaticProposal --> TradeItem
@@ -95,7 +97,7 @@ graph TB
     DiplomaticActionExecutor -->|requestedStatus Vendetta<br/>TradeDeclareVendetta_t| DeclareVendetta
     CanPropose --> StepUpDown
     AtrocityEffects[AtrocityEffects<br/>universal Vendetta] -->|living AI only| JoinVendetta
-    TerritoryEntry[TerritoryEntryEffects<br/>ResolveTerritoryEntry: break the agreement] --> DeclareVendetta
+    TerritoryEntry[TerritoryEntryEffects<br/>BreakAgreementAndContinue] --> DeclareVendetta
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
@@ -104,14 +106,16 @@ graph TB
     ApplyHostileAct -->|may_attack| PermissionRules
     DeclareVendetta -->|Declaration| VendettaImpl
     JoinVendetta -->|Declaration| VendettaImpl
+    VendettaImpl -->|HasDiplomacy| PermissionRules
     VendettaImpl --> ApplyStatusChange
     VendettaImpl -->|Declaration only:<br/>EvacuateUnitsFromTerritory| EvacuateTerritory
-    VendettaImpl -->|defensive_obligation| PermissionRules
-    VendettaImpl -->|AI partners| ResolveObligation
-    VendettaImpl -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t<br/>+ entry]
-    PlayerInteractionQueue -->|InteractionPresenter| ResolveObligation
-    ResolveObligation -->|honor, inherited entry| VendettaImpl
-    ResolveObligation -->|decline: StepDown| ApplyStatusChange
+    VendettaImpl -->|DeclareVendetta_ only| RaiseObligations
+    RaiseObligations -->|IsObligedToDefend| PermissionRules
+    RaiseObligations -->|AI partners| HonorDecline
+    RaiseObligations -->|player partner| PlayerInteractionQueue[PlayerInteractionQueue<br/>PactObligationInteraction_t<br/>+ kind]
+    PlayerInteractionQueue -->|InteractionPresenter,<br/>while IsObligedToDefend holds| HonorDecline
+    HonorDecline -->|honor: defensive_obligation_mode,<br/>inherited kind| VendettaImpl
+    HonorDecline -->|decline: StepDown| ApplyStatusChange
     ApplyStatusChange -->|SetStatus / SetKnown| DiplomacyLedger
     ApplyStatusChange -->|rules lost| EvacuateTerritory
     ApplyStatusChange --> DiplomacyConfig
@@ -152,12 +156,15 @@ separate maps rather than fields of one relationship record:
 | `m_integrity` | `FactionId_t` | a faction's own reputation for keeping its word; not about any pair |
 
 - **Known-ness** is set by `FirstContactResolver` during visibility rebuilds, and by
-  `TradeCommFrequency_t` as a trade item (introducing a third party).
+  `TradeCommFrequency_t` as a trade item (introducing a third party). Native life is never met:
+  it has no diplomacy (`HasDiplomacy`), so every rule that asks whether two factions have met
+  already excludes it.
 - **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
   `CanRequestStatus`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
   maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
-  `JoinVendetta` (`game/faction/DiplomaticTransitionEffects.h`) for living AI factions only. See
+  `JoinVendetta` (`game/faction/DiplomaticTransitionEffects.h`) for living AI factions only, and
+  never native life. See
   `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
   `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
 - **Every status change goes through `ApplyStatusChange`** (`game/faction/DiplomaticTransitionEffects.h`):
@@ -181,8 +188,9 @@ one. What a mod tunes is each status's **rules**, in `config/diplomacy.json`:
 | `duration_turns` | null | 20 | null | null | null |
 
 (Shipping values. `null` duration means the status lasts until changed.) `DiplomacyConfigParser`
-requires all five statuses and every key but `effects`, and refuses a duration on a status with
-nowhere to step down to.
+requires all five statuses and every key but `effects`, and refuses a duration or a
+`defensive_obligation` on a status with nowhere to step down to. It also requires the top-level
+`defensive_obligation_mode` (see [the defensive obligation](#declaring-vendetta-and-the-defensive-obligation)).
 
 A status's `effects` may only be unconditional `FactionPair` `StatModifier commerce_rate`
 entries. Each faction's effect pool carries them once per partner, tagged with that partner
@@ -212,12 +220,12 @@ Any status can go to Vendetta. A proposal's `requestedStatus` must be `StepUp(cu
 
 | Rule | Read by |
 |---|---|
-| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A player's move order stops at the border and asks: break the agreement (Vendetta) and continue, or cancel (`TerritoryEntryInteraction_t`, `ResolveTerritoryEntry` in `units/TerritoryEntryEffects.h`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
+| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `units/TerritoryEntryEffects.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceCalculator` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
 | `may_attack` | `ApplyHostileAct`: an attack under a status that does not allow it declares Vendetta |
-| `defensive_obligation` | `DeclareVendetta` |
+| `defensive_obligation` | `IsObligedToDefend`: when a declaration raises obligations, and again when the player's prompt is shown |
 | `duration_turns` | `ExpireDiplomaticStatuses`, run by the TurnStart stage |
 
 ### ApplyStatusChange
@@ -243,8 +251,9 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 | Declaration | `DeclareVendetta`, `JoinVendetta` | a proposal with `requestedStatus` Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 | Sneak attack | `ApplyHostileAct` | a hostile act | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
-Both run through the private `DeclareVendetta_` (obliges the target's partners) or
-`JoinVendetta_` (obliges nobody), which take a `VendettaEntry_t`.
+Both run through the private `EnterVendetta_`: the status change and, for a declaration, the
+withdrawal. `DeclareVendetta_` then raises the target's partners' obligations. Both take a
+`VendettaKind_t`.
 
 The territory withdrawal is part of declaring, not a rule of the Vendetta status, which allows
 entering territory. It runs only where the previous status let units in: breaking a Treaty at
@@ -253,21 +262,21 @@ its border withdraws nothing, because a Treaty kept both sides out.
 A defensive obligation inherits the kind of the Vendetta that raised it, through every link of
 the chain: partners honoring a sneak attack's obligation are part of the surprise and withdraw
 from nothing. This is the one place the kind is decided earlier and acted on later, so it
-travels as data: `HonorDefensiveObligation` and `ResolveDefensiveObligation` take a
-`VendettaEntry_t`, and `PactObligationInteraction_t` carries it so the player's answer keeps it.
-Native life has no diplomacy and never withdraws.
+travels as data: `HonorDefensiveObligation` takes a `VendettaKind_t`, and
+`PactObligationInteraction_t` carries it so the player's answer keeps it. Native life never enters
+a Vendetta, so it never withdraws.
 
 ### Declaring Vendetta and the defensive obligation
 
 Vendetta is entered one of two ways. Starting a conflict obliges the target's partners;
 entering a conflict already under way on the defending side obliges nobody. Both are no-ops
-for a pair already at Vendetta.
+for a pair already at Vendetta, and for native life on either side.
 
 Starting a conflict:
 
 - `DeclareVendetta`: a proposal whose `requestedStatus` is Vendetta (the proposer declares),
   `TradeDeclareVendetta_t` (the receiver declares on the third party), and breaking an
-  agreement at a territory border (`ResolveTerritoryEntry`);
+  agreement at a territory border (`BreakAgreementAndContinue`);
 - `ApplyHostileAct`: a hostile act, below, as a sneak attack;
 - honoring a defensive obligation under `SeparateDeclaration`, with the obligation's kind.
 
@@ -278,22 +287,29 @@ Entering a conflict on the defending side:
   Vendetta overrides every defensive obligation toward the perpetrator without a special case;
 - honoring a defensive obligation under `JoinAsDefender`, with the obligation's kind.
 
-After a conflict starts, every faction whose status with the **target** carries
-`defensive_obligation`, and that is not already at Vendetta with the **declarer**, must choose:
+After a conflict starts, every faction obliged to defend the **target** must choose
+(`IsObligedToDefend`: its status with the target carries `defensive_obligation`, and it is not
+already at Vendetta with the **declarer**):
 
 - **Honor:** `HonorDefensiveObligation`, by `DefensiveObligationMode_t`:
   - `JoinAsDefender` — enter the conflict against the declarer; nobody further is obliged.
   - `SeparateDeclaration` — start a conflict with the declarer, which obliges the declarer's own
     partners in turn; the chain ends because a pair already at Vendetta is never asked again.
 
-  **Hardcoded** to `JoinAsDefender` for now (TODO: a `config/diplomacy.json` setting).
-- **Decline:** its status with the target steps down (Pact → Treaty).
+  The mode is `defensive_obligation_mode` in `config/diplomacy.json` (shipping: `JoinAsDefender`).
+- **Decline:** `DeclineDefensiveObligation` steps its status with the target down (Pact →
+  Treaty). The parser guarantees every status with the obligation has a rung to step down to.
 
 AI factions decide at once (**stub:** they always declare, pending an AI attitude model). The
 player gets a `PactObligationInteraction_t` on the `PlayerInteractionQueue`, which
 `InteractionPresenter` shows as a choice; the turn waits on it like any queued interaction. The
-same obligation is not queued twice. `ResolveDefensiveObligation` applies either answer. Native
-life has no diplomacy: its status can change, but it neither obliges nor is obliged.
+same obligation is not queued twice. Each faction is checked as the loop reaches it, so a later
+partner sees an earlier one's answer.
+
+The player's prompt is checked again when it is shown. An AI's whole pass runs before the player
+answers, so by then the player may already be at Vendetta with the aggressor, or no longer hold
+the obligating status; an obligation that no longer stands completes without asking. Native life
+never holds a status, so it neither obliges nor is obliged.
 
 ### Hostile acts
 
@@ -366,7 +382,9 @@ save-game serialisation work to exist first. Recorded in
 
 | Question | Answer |
 |---|---|
-| May these two factions talk at all? | `DiplomacyLedger::AreKnown` |
+| May these two factions talk at all? | `DiplomacyLedger::AreKnown` (never true for native life) |
+| Does this faction take part in diplomacy at all? | `DiplomaticPermissionRules::HasDiplomacy` |
+| Must this faction defend its ally? | `DiplomaticPermissionRules::IsObligedToDefend` |
 | Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` / `CanRequestStatus` |
 | What does changing a status do? | `DiplomaticTransitionEffects::ApplyStatusChange`, and the Vendetta and obligation entry points around it |
 | May this *kind* of item be traded between them? | `DiplomacyActions::CanTrade` |

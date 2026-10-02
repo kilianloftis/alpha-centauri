@@ -81,7 +81,7 @@ struct PactObligationInteraction_t
 {
     FactionId_t allyId = 0;
     FactionId_t aggressorId = 0;
-    VendettaEntry_t entry = VendettaEntry_t::Declaration;
+    VendettaKind_t kind = VendettaKind_t::Declaration;
 };
 
 // A player unit's move order stopped at the border of territory its faction may not enter

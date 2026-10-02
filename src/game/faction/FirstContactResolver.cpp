@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -13,9 +14,11 @@ namespace ac
 namespace
 {
 
-void MeetIfNeeded_(DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
+void MeetIfNeeded_(DiplomacyLedger& rLedger, const Faction& rA, const Faction& rB)
 {
-    if (a == b || rLedger.AreKnown(a, b))
+    const FactionId_t a = rA.GetFactionId();
+    const FactionId_t b = rB.GetFactionId();
+    if (a == b || !HasDiplomacy(rA) || !HasDiplomacy(rB) || rLedger.AreKnown(a, b))
     {
         return;
     }
@@ -76,7 +79,7 @@ void FirstContactResolver::ConsiderObserver(Faction& rObserver)
         if (ObserverSeesForeignUnit_(rObserver, *pOther)
             || ObserverSeesForeignBase_(rObserver, *pOther))
         {
-            MeetIfNeeded_(m_rLedger, observerId, pOther->GetFactionId());
+            MeetIfNeeded_(m_rLedger, rObserver, *pOther);
         }
     }
 }
@@ -98,7 +101,7 @@ void FirstContactResolver::ConsiderUnit(const Unit& rSubject)
         }
         if (pObserver->GetVisibleMap().IsVisible(rTile))
         {
-            MeetIfNeeded_(m_rLedger, pObserver->GetFactionId(), subjectFactionId);
+            MeetIfNeeded_(m_rLedger, *pObserver, rSubject.GetFaction());
         }
     }
 }

@@ -160,3 +160,18 @@ TEST_CASE("Already known is a no-op", "[diplomacy][first-contact]")
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
 }
+
+TEST_CASE("Seeing native life establishes no contact", "[diplomacy][first-contact]")
+{
+    ContactGame_ game;
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures, *game.pState);
+
+    // Each side arrives in the other's vision once.
+    game.MakeUnit(*game.pA, 4, 4);
+    game.MakeUnit(rPlanet, 5, 4);
+    game.MakeUnit(rPlanet, 1, 1);
+    game.MakeUnit(*game.pA, 2, 1);
+
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(game.pA->GetFactionId(),
+                                                          rPlanet.GetFactionId()));
+}

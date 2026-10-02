@@ -1,4 +1,5 @@
 {
+  "defensive_obligation_mode": "JoinAsDefender",
   "statuses": {
     "Neutral": {
       "enter_territory": true,

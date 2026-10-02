@@ -42,9 +42,4 @@ bool IsCrossSpeciesConquest(FactionSpecies_t attacker, FactionSpecies_t defender
         || (attacker == FactionSpecies_t::Progenitor && defender == FactionSpecies_t::Human);
 }
 
-bool IsNativeLifeFaction(FactionSpecies_t species)
-{
-    return species == FactionSpecies_t::NativeLife;
-}
-
 } // namespace ac

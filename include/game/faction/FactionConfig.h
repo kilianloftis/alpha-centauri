@@ -16,6 +16,11 @@ enum class FactionSpecies_t
     NativeLife,
 };
 
+inline bool IsNativeLifeFaction(FactionSpecies_t species)
+{
+    return species == FactionSpecies_t::NativeLife;
+}
+
 struct FactionIdentityConfig
 {
     std::string name;

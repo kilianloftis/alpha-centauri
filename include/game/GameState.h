@@ -105,6 +105,9 @@ public:
     // nullptr when no faction with that id has been added.
     Faction* FindFaction(FactionId_t factionId);
     const Faction* FindFaction(FactionId_t factionId) const;
+    // Throws std::invalid_argument when no faction with that id has been added.
+    Faction& RequireFaction(FactionId_t factionId);
+    const Faction& RequireFaction(FactionId_t factionId) const;
     // Returns the faction with IsPlayerControlled() set, or nullptr if none has been added yet.
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();

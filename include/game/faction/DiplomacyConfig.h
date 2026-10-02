@@ -38,6 +38,7 @@ struct DiplomaticStatusRules_t
 struct DiplomacyConfig_t
 {
     std::array<DiplomaticStatusRules_t, k_DiplomaticStatusCount> statuses{};
+    DefensiveObligationMode_t defensiveObligationMode{};
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

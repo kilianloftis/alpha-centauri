@@ -8,6 +8,7 @@
 #include "game/PlayerInteractionQueue.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomaticPermissionRules.h"
 #include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/faction/DiplomaticTransitionRules.h"
 #include "game/faction/UnitManager.h"
@@ -25,7 +26,6 @@
 #include "ui/world/WorldView.h"
 
 #include <algorithm>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -345,7 +345,9 @@ void InteractionPresenter::PresentPactObligation_(const PactObligationInteractio
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
     const Faction* pAlly = m_rGameState.FindFaction(rObligation.allyId);
     const Faction* pAggressor = m_rGameState.FindFaction(rObligation.aggressorId);
-    if (!pPlayer || !pAlly || !pAggressor)
+    if (!pPlayer || !pAlly || !pAggressor
+        || !IsObligedToDefend(m_rGameState, pPlayer->GetFactionId(), rObligation.allyId,
+                              rObligation.aggressorId))
     {
         CompleteAndAdvance_();
         return;
@@ -354,28 +356,25 @@ void InteractionPresenter::PresentPactObligation_(const PactObligationInteractio
     const FactionId_t playerId = pPlayer->GetFactionId();
     const FactionId_t allyId = rObligation.allyId;
     const FactionId_t aggressorId = rObligation.aggressorId;
-    const VendettaEntry_t entry = rObligation.entry;
+    const VendettaKind_t kind = rObligation.kind;
     const DiplomaticStatus_t status = m_rGameState.GetDiplomacyLedger().GetStatus(playerId, allyId);
-    const std::optional<DiplomaticStatus_t> lower = StepDown(status);
     const std::string& rAllyName = pAlly->GetDefinition().identity.name;
     const std::string& rAggressorName = pAggressor->GetDefinition().identity.name;
 
     std::vector<PopupChoice_t> choices;
     choices.push_back(
         {"Declare Vendetta on the " + rAggressorName,
-         [this, playerId, allyId, aggressorId, entry]
+         [this, playerId, aggressorId, kind]
          {
-             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, true,
-                                        entry);
+             HonorDefensiveObligation(m_rGameState, playerId, aggressorId, kind);
              CompleteAndAdvance_();
          }});
     choices.push_back(
         {"Stand aside (" + ToString(status) + " with the " + rAllyName + " becomes "
-             + (lower ? ToString(*lower) : std::string{}) + ")",
-         [this, playerId, allyId, aggressorId, entry]
+             + ToString(StepDown(status).value()) + ")",
+         [this, playerId, allyId]
          {
-             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, false,
-                                        entry);
+             DeclineDefensiveObligation(m_rGameState, playerId, allyId);
              CompleteAndAdvance_();
          }});
     PushChoice_("The " + rAggressorName + " attacked the " + rAllyName + ", our "
@@ -409,17 +408,17 @@ void InteractionPresenter::PresentTerritoryEntry_(const TerritoryEntryInteractio
          {
              if (Unit* pResolve = FindUnit_(unitId))
              {
-                 ResolveTerritoryEntry(m_rGameState, *pResolve, ownerId, true);
+                 BreakAgreementAndContinue(m_rGameState, *pResolve, ownerId);
              }
              CompleteAndAdvance_();
          }});
     choices.push_back(
         {"Cancel the order",
-         [this, unitId, ownerId]
+         [this, unitId]
          {
              if (Unit* pResolve = FindUnit_(unitId))
              {
-                 ResolveTerritoryEntry(m_rGameState, *pResolve, ownerId, false);
+                 pResolve->ClearOrder();
              }
              CompleteAndAdvance_();
          }});

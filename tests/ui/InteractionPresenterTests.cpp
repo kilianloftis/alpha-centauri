@@ -8,6 +8,7 @@
 #include "game/PlayerInteraction.h"
 #include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/Military.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -93,6 +94,14 @@ const UnitDesign& AddPodDesign_(ViewFixture& rFixture)
     const UnitDesign& rDesign = *pDesign;
     REQUIRE(rFixture.pPlayer->GetMilitary().AddDesign(std::move(pDesign)));
     return rDesign;
+}
+
+Faction& AddAiFaction_(ViewFixture& rFixture)
+{
+    return rFixture.pState->AddFaction(std::make_unique<Faction>(
+        rFixture.pState->AllocateFactionId(), /*bIsPlayerControlled*/ false,
+        rFixture.factionDefinition, rFixture.dataContext, rFixture.pState->GetWorldMap(),
+        rFixture.settings, actest::k_TestFactionSeed));
 }
 
 } // namespace
@@ -234,4 +243,44 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     CHECK(harness.advanceCount == 0);
     CHECK(harness.pWorldView->HasModalElement());
     CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);
+}
+
+TEST_CASE("A Pact obligation the player no longer owes completes without a prompt",
+          "[ui][InteractionPresenter][PlayerInteraction][diplomacy]")
+{
+    PresenterHarness_ harness;
+    ViewFixture& rFixture = harness.fixture;
+    const FactionId_t playerId = rFixture.pPlayer->GetFactionId();
+    const FactionId_t allyId = AddAiFaction_(rFixture).GetFactionId();
+    const FactionId_t aggressorId = AddAiFaction_(rFixture).GetFactionId();
+    DiplomacyLedger& rLedger = rFixture.pState->GetDiplomacyLedger();
+    rLedger.SetStatus(playerId, allyId, DiplomaticStatus_t::Pact);
+    // The aggressor attacked the player too before the prompt came up.
+    rLedger.SetStatus(playerId, aggressorId, DiplomaticStatus_t::Vendetta);
+
+    harness.Enqueue(PactObligationInteraction_t{allyId, aggressorId, VendettaKind_t::SneakAttack});
+    harness.pPresenter->Update();
+
+    CHECK(rFixture.pState->GetPlayerInteractions().Empty());
+    CHECK(harness.advanceCount == 1);
+    CHECK_FALSE(harness.pWorldView->HasModalElement());
+    CHECK(rLedger.GetStatus(playerId, allyId) == DiplomaticStatus_t::Pact);
+}
+
+TEST_CASE("A Pact obligation the player still owes asks for an answer",
+          "[ui][InteractionPresenter][PlayerInteraction][diplomacy]")
+{
+    PresenterHarness_ harness;
+    ViewFixture& rFixture = harness.fixture;
+    const FactionId_t playerId = rFixture.pPlayer->GetFactionId();
+    const FactionId_t allyId = AddAiFaction_(rFixture).GetFactionId();
+    const FactionId_t aggressorId = AddAiFaction_(rFixture).GetFactionId();
+    rFixture.pState->GetDiplomacyLedger().SetStatus(playerId, allyId, DiplomaticStatus_t::Pact);
+
+    harness.Enqueue(PactObligationInteraction_t{allyId, aggressorId, VendettaKind_t::SneakAttack});
+    harness.pPresenter->Update();
+
+    CHECK(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 0);
+    CHECK(rFixture.pState->GetPlayerInteractions().Size() == 1);
 }

@@ -28,7 +28,6 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/units/BaseConquestRules.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/faction/FactionRegistry.h"

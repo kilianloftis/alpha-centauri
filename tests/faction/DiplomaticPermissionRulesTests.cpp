@@ -63,3 +63,34 @@ TEST_CASE("Units repair in their own bases and in Pact partners' bases",
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
     CHECK(MayRepairAt(rUnit, *game.pBaseB));
 }
+
+TEST_CASE("A Pact partner must defend its ally until it is at Vendetta with the aggressor",
+          "[diplomacy][status][obligation]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const FactionId_t c = game.pC->GetFactionId();
+    game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Pact);
+
+    CHECK(IsObligedToDefend(*game.pState, a, b, c));
+
+    game.Ledger().SetStatus(a, c, DiplomaticStatus_t::Vendetta);
+    CHECK_FALSE(IsObligedToDefend(*game.pState, a, b, c));
+}
+
+TEST_CASE("Only a status carrying defensive_obligation obliges, and never the ally or aggressor",
+          "[diplomacy][status][obligation]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const FactionId_t c = game.pC->GetFactionId();
+
+    game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Treaty);
+    CHECK_FALSE(IsObligedToDefend(*game.pState, a, b, c));
+
+    game.Ledger().SetStatus(b, c, DiplomaticStatus_t::Pact);
+    CHECK_FALSE(IsObligedToDefend(*game.pState, b, b, c));
+    CHECK_FALSE(IsObligedToDefend(*game.pState, c, b, c));
+}

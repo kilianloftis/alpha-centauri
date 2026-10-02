@@ -49,26 +49,10 @@ TEST_CASE("Breaking the Treaty at the border declares Vendetta and resumes the m
     rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
     REQUIRE(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Continue);
 
-    ResolveTerritoryEntry(*game.pState, rScout, game.pB->GetFactionId(), true);
+    BreakAgreementAndContinue(*game.pState, rScout, game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(&rScout.GetTile() == &game.At(5, 4));
-}
-
-TEST_CASE("Cancelling at the border drops the order and keeps the Treaty",
-          "[diplomacy][status][territory]")
-{
-    DiplomacyFixture game;
-    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4);
-    rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
-    REQUIRE(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Continue);
-
-    ResolveTerritoryEntry(*game.pState, rScout, game.pB->GetFactionId(), false);
-
-    CHECK_FALSE(rScout.GetOrder().has_value());
-    CHECK(&rScout.GetTile() == &game.At(4, 4));
-    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
 TEST_CASE("An AI unit drops a move order that would enter forbidden territory",
@@ -111,7 +95,7 @@ TEST_CASE("Breaking a Treaty at the border obliges the owner's Pact partners",
     rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
     REQUIRE(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Continue);
 
-    ResolveTerritoryEntry(*game.pState, rScout, game.pB->GetFactionId(), true);
+    BreakAgreementAndContinue(*game.pState, rScout, game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
 }

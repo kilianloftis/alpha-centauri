@@ -64,6 +64,7 @@ TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
 
     CHECK(config.For(DiplomaticStatus_t::Vendetta).bMayAttack);
     CHECK_FALSE(config.For(DiplomaticStatus_t::Neutral).bMayAttack);
+    CHECK(config.defensiveObligationMode == DefensiveObligationMode_t::JoinAsDefender);
 }
 
 TEST_CASE("The diplomacy parser rejects incomplete or invalid statuses", "[diplomacy][parser]")
@@ -128,4 +129,41 @@ TEST_CASE("A duration is only legal on a status that can step down", "[diplomacy
               .For(DiplomaticStatus_t::Pact)
               .durationTurns
           == 5);
+}
+
+TEST_CASE("The diplomacy parser requires a known defensive obligation mode", "[diplomacy][parser]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_mode.json",
+                                 [](nlohmann::json& j) { j.erase("defensive_obligation_mode"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_unknown_mode.json",
+                                 [](nlohmann::json& j)
+                                 { j["defensive_obligation_mode"] = "StandAside"; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_numeric_mode.json",
+                                 [](nlohmann::json& j) { j["defensive_obligation_mode"] = 1; }),
+                    std::runtime_error);
+    CHECK(ParseEdited_("ac_diplomacy_separate_mode.json",
+                       [](nlohmann::json& j)
+                       { j["defensive_obligation_mode"] = "SeparateDeclaration"; })
+              .defensiveObligationMode
+          == DefensiveObligationMode_t::SeparateDeclaration);
+}
+
+TEST_CASE("A defensive obligation is only legal on a status that can step down",
+          "[diplomacy][parser]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_neutral_obligation.json",
+                                 [](nlohmann::json& j)
+                                 { j["statuses"]["Neutral"]["defensive_obligation"] = true; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_vendetta_obligation.json",
+                                 [](nlohmann::json& j)
+                                 { j["statuses"]["Vendetta"]["defensive_obligation"] = true; }),
+                    std::runtime_error);
+    CHECK(ParseEdited_("ac_diplomacy_treaty_obligation.json",
+                       [](nlohmann::json& j)
+                       { j["statuses"]["Treaty"]["defensive_obligation"] = true; })
+              .For(DiplomaticStatus_t::Treaty)
+              .bDefensiveObligation);
 }

@@ -23,7 +23,4 @@ bool CanCaptureBase(const Unit& rCapturer);
 // Human ↔ Progenitor conquest uses the harsher population rule.
 bool IsCrossSpeciesConquest(FactionSpecies_t attacker, FactionSpecies_t defender);
 
-// Faction whose units raid undefended bases instead of capturing them.
-bool IsNativeLifeFaction(FactionSpecies_t species);
-
 } // namespace ac

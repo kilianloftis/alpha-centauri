@@ -8,9 +8,8 @@ namespace ac
 class GameState;
 class Unit;
 
-// The player's answer when rUnit's move order stopped at territoryOwner's border. Breaking
-// declares Vendetta on the owner and resumes the order; otherwise the order is cancelled.
-void ResolveTerritoryEntry(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner,
-                           bool bBreakAgreement);
+// The player chose to break the agreement when rUnit's move order stopped at territoryOwner's
+// border: declares Vendetta on the owner and resumes the order.
+void BreakAgreementAndContinue(GameState& rGameState, Unit& rUnit, FactionId_t territoryOwner);
 
 } // namespace ac

@@ -4,6 +4,7 @@
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/FactionConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/units/Unit.h"
 #include "game/map/TerritoryMap.h"
@@ -34,6 +35,22 @@ const DiplomaticStatusRules_t& StatusRulesFor(const GameState& rGameState, Facti
 {
     return rGameState.GetGameData().diplomacyConfig->For(
         rGameState.GetDiplomacyLedger().GetStatus(a, b));
+}
+
+bool HasDiplomacy(const Faction& rFaction)
+{
+    return !IsNativeLifeFaction(rFaction.GetDefinition().identity.species);
+}
+
+bool IsObligedToDefend(const GameState& rGameState, FactionId_t partner, FactionId_t ally,
+                       FactionId_t aggressor)
+{
+    if (partner == ally || partner == aggressor)
+    {
+        return false;
+    }
+    return StatusRulesFor(rGameState, partner, ally).bDefensiveObligation
+        && !rGameState.GetDiplomacyLedger().HasVendetta(partner, aggressor);
 }
 
 bool MayEnterTerritoryOf(const Faction& rGuest, FactionId_t territoryOwner)
