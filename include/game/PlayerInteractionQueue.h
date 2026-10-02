@@ -2,6 +2,7 @@
 
 #include "game/PlayerInteraction.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <deque>
 
@@ -27,6 +28,12 @@ public:
 
     // True if any queued item is aimed at audienceFactionId.
     bool HasPendingFor(FactionId_t audienceFactionId) const;
+
+    template <typename Pred_t>
+    bool AnyOf(Pred_t&& rPred) const
+    {
+        return std::any_of(m_queue.begin(), m_queue.end(), rPred);
+    }
 
 private:
     std::deque<QueuedInteraction_t> m_queue;

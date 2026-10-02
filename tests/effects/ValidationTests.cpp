@@ -16,6 +16,7 @@
 #include "game/faction/FactionRegistry.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/CommerceConfig.h"
+#include "game/faction/DiplomacyConfig.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
@@ -71,6 +72,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>();
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
     rData.commerceConfig = std::make_unique<CommerceConfig_t>();
+    rData.diplomacyConfig = std::make_unique<DiplomacyConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
     rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>();
@@ -95,6 +97,7 @@ static_assert(LaneFor(EffectScope_t::ThisUnit) == EffectLane_t::UnitLocal);
 static_assert(LaneFor(EffectScope_t::ThisPop) == EffectLane_t::PopLocal);
 static_assert(LaneFor(EffectScope_t::ThisTile) == EffectLane_t::TileLocal);
 static_assert(LaneFor(EffectScope_t::ThisTech) == EffectLane_t::TechLocal);
+static_assert(LaneFor(EffectScope_t::FactionPair) == EffectLane_t::FactionPair);
 
 static_assert(!IsFactionLane(EffectScope_t::ThisBase));
 static_assert(IsFactionLane(EffectScope_t::AllOwnerBases));

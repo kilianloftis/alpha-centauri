@@ -12,6 +12,7 @@
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomacyStatusEffects.h"
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/ResearchManager.h"
@@ -645,6 +646,16 @@ BaseConquestResult_t GameState::ResolvePostCombatBaseConquest(
 BaseConquestResult_t GameState::ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng)
 {
     return ac::ResolveBaseEntryConquest(rMover, *this, rRng);
+}
+
+void GameState::OnHostileAct(FactionId_t aggressor, FactionId_t victim)
+{
+    ApplyHostileAct(*this, aggressor, victim);
+}
+
+void GameState::OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner)
+{
+    EnqueueForPlayer(*this, TerritoryEntryInteraction_t{rUnit.GetUnitId(), territoryOwner});
 }
 
 TileEffectsContext& GameState::GetTileEffects()

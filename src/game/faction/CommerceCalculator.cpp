@@ -116,11 +116,21 @@ CommerceCalculator::CommerceCalculator(const CommerceConfig_t& rConfig, LuaRunti
 namespace
 {
 
+// CommerceRate as rFaction resolves it toward rPartner: its own effects plus the FactionPair
+// effects of their diplomatic status.
+double CommerceRateToward_(const Faction& rFaction, const Faction& rPartner, double seed)
+{
+    EffectContext_t ctx;
+    ctx.pFaction = &rFaction;
+    ctx.pPartner = &rPartner;
+    return ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::CommerceRate, seed, &ctx);
+}
+
 int CommercePairValue_(const Faction& rBeneficiary,
                        const BaseManager& rBeneficiaryBase,
+                       const Faction& rPartner,
                        int beneficiaryEnergy,
                        int partnerEnergy,
-                       DiplomaticStatus_t status,
                        const CommerceConfig_t& rConfig,
                        LuaRuntime& rLua,
                        int techDenominator)
@@ -129,25 +139,19 @@ int CommercePairValue_(const Faction& rBeneficiary,
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceRating,
         SeedFor(StatId_t::CommerceRating)));
 
-    const double treatyFactor =
-        (status == DiplomaticStatus_t::Friendship) ? rConfig.treatyMultiplier : 1.0;
-
     const std::unordered_map<std::string, double> vars = {
         {"energy_ours", static_cast<double>(beneficiaryEnergy)},
         {"energy_theirs", static_cast<double>(partnerEnergy)},
         {"pair_multiplier", rConfig.pairMultiplier},
         {"commerce_tech", static_cast<double>(commerceTech)},
         {"tech_denominator", static_cast<double>(techDenominator)},
-        {"treaty_factor", treatyFactor},
-        {"treaty_multiplier", rConfig.treatyMultiplier},
     };
     int value = rLua.EvalInt(rConfig.formula, vars);
 
     // Same seam as scrap: formula first, then PureMultiplier effects scale the result
-    // (Global Trade Pact AddPercent 100 → ×2). Flat bonus last.
-    value = FinalizeResolvedStat(ResolveFactionStat(
-        rBeneficiary.GetActiveEffects(), StatId_t::CommerceRate,
-        static_cast<double>(value)));
+    // (Global Trade Pact AddPercent 100 → ×2, a Treaty's MultiplyGeometric 0.5). Flat bonus last.
+    value = FinalizeResolvedStat(
+        CommerceRateToward_(rBeneficiary, rPartner, static_cast<double>(value)));
     value += FinalizeResolvedStat(ResolveBaseStat(
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceEnergyBonus,
         SeedFor(StatId_t::CommerceEnergyBonus)));
@@ -191,8 +195,8 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
             continue;
         }
 
-        const DiplomaticStatus_t status = rDiplomacy.GetStatus(ownerId, rPartner.GetFactionId());
-        if (status != DiplomaticStatus_t::Friendship && status != DiplomaticStatus_t::Pact)
+        // A rate of zero (the diplomatic status's own factor) means the pair does not trade.
+        if (CommerceRateToward_(rOwner, rPartner, 1.0) <= 0.0)
         {
             continue;
         }
@@ -211,12 +215,12 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
 
             CommercePartnerLine_t line;
             line.pPartner = &rPartner;
-            line.status = status;
-            line.ourEnergy = CommercePairValue_(rOwner, *rOurs.pBase, rOurs.energy,
-                                                rTheirs.energy, status, rConfig, *m_pLua,
+            line.status = rDiplomacy.GetStatus(ownerId, rPartner.GetFactionId());
+            line.ourEnergy = CommercePairValue_(rOwner, *rOurs.pBase, rPartner, rOurs.energy,
+                                                rTheirs.energy, rConfig, *m_pLua,
                                                 techDenominator);
-            line.theirEnergy = CommercePairValue_(rPartner, *rTheirs.pBase, rTheirs.energy,
-                                                  rOurs.energy, status, rConfig, *m_pLua,
+            line.theirEnergy = CommercePairValue_(rPartner, *rTheirs.pBase, rOwner, rTheirs.energy,
+                                                  rOurs.energy, rConfig, *m_pLua,
                                                   techDenominator);
             lines[rOurs.pBase->GetBaseId()].push_back(line);
         }

@@ -67,17 +67,40 @@ struct DiplomacyGame_
 
 } // namespace
 
-TEST_CASE("Propose truce to AI is accepted and applied", "[diplomacy][executor]")
+TEST_CASE("Propose treaty to AI is accepted and applied", "[diplomacy][executor]")
 {
     DiplomacyGame_ game;
     DiplomaticProposal_t proposal;
     proposal.proposer = game.pPlayer->GetFactionId();
     proposal.recipient = game.pAi->GetFactionId();
-    proposal.requestedStatus = DiplomaticStatus_t::Truce;
+    proposal.requestedStatus = DiplomaticStatus_t::Treaty;
 
     CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
           == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pState->GetDiplomacyLedger().HasTruce(proposal.proposer, proposal.recipient));
+    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
+}
+
+TEST_CASE("A proposal must request the next status up, down, or Vendetta",
+          "[diplomacy][executor]")
+{
+    DiplomacyGame_ game;
+    DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
+    DiplomacyLedger& rLedger = game.pState->GetDiplomacyLedger();
+    DiplomaticProposal_t proposal;
+    proposal.proposer = game.pPlayer->GetFactionId();
+    proposal.recipient = game.pAi->GetFactionId();
+
+    proposal.requestedStatus = DiplomaticStatus_t::Truce;
+    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
+    proposal.requestedStatus = DiplomaticStatus_t::Pact;
+    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
+
+    rLedger.SetStatus(proposal.proposer, proposal.recipient, DiplomaticStatus_t::Pact);
+    proposal.requestedStatus = DiplomaticStatus_t::Neutral;
+    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Invalid);
+    proposal.requestedStatus = DiplomaticStatus_t::Treaty;
+    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::Accepted);
+    CHECK(rLedger.HasTreaty(proposal.proposer, proposal.recipient));
 }
 
 TEST_CASE("Propose to player stays pending until Accept", "[diplomacy][executor]")
@@ -86,14 +109,14 @@ TEST_CASE("Propose to player stays pending until Accept", "[diplomacy][executor]
     DiplomaticProposal_t proposal;
     proposal.proposer = game.pAi->GetFactionId();
     proposal.recipient = game.pPlayer->GetFactionId();
-    proposal.requestedStatus = DiplomaticStatus_t::Truce;
+    proposal.requestedStatus = DiplomaticStatus_t::Treaty;
 
     CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
           == DiplomaticProposeResult_t::PendingPlayer);
-    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTruce(proposal.proposer, proposal.recipient));
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
 
     REQUIRE(game.pState->GetDiplomaticActionExecutor().Accept(*game.pState));
-    CHECK(game.pState->GetDiplomacyLedger().HasTruce(proposal.proposer, proposal.recipient));
+    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(proposal.proposer, proposal.recipient));
 }
 
 TEST_CASE("Energy credits trade moves treasury", "[diplomacy][executor]")
@@ -364,12 +387,12 @@ TEST_CASE("A second proposal to the player is refused, not silently dropped",
     DiplomaticProposal_t first;
     first.proposer = game.pAi->GetFactionId();
     first.recipient = game.pPlayer->GetFactionId();
-    first.requestedStatus = DiplomaticStatus_t::Truce;
+    first.requestedStatus = DiplomaticStatus_t::Treaty;
 
     DiplomaticProposal_t second;
     second.proposer = game.pThird->GetFactionId();
     second.recipient = game.pPlayer->GetFactionId();
-    second.requestedStatus = DiplomaticStatus_t::Truce;
+    second.requestedStatus = DiplomaticStatus_t::Treaty;
 
     DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
     REQUIRE(rExecutor.Propose(*game.pState, first) == DiplomaticProposeResult_t::PendingPlayer);
@@ -379,9 +402,9 @@ TEST_CASE("A second proposal to the player is refused, not silently dropped",
     REQUIRE(rExecutor.GetPendingProposal().has_value());
     CHECK(rExecutor.GetPendingProposal()->proposer == game.pAi->GetFactionId());
     REQUIRE(rExecutor.Accept(*game.pState));
-    CHECK(game.pState->GetDiplomacyLedger().HasTruce(game.pAi->GetFactionId(),
+    CHECK(game.pState->GetDiplomacyLedger().HasTreaty(game.pAi->GetFactionId(),
                                                      game.pPlayer->GetFactionId()));
-    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTruce(game.pThird->GetFactionId(),
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTreaty(game.pThird->GetFactionId(),
                                                           game.pPlayer->GetFactionId()));
 
     // The slot is free again once the player answers.

@@ -7,6 +7,8 @@
 #include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomacyStatusEffects.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -21,6 +23,7 @@
 #include "ui/world/WorldView.h"
 
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -111,6 +114,10 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             [this](const ArtifactLinkInteraction_t& rLink) {
                 PresentArtifactLink_(rLink);
             },
+            [this](const PactObligationInteraction_t& rObligation) {
+                PresentPactObligation_(rObligation);
+            },
+            [this](const TerritoryEntryInteraction_t& rEntry) { PresentTerritoryEntry_(rEntry); },
         },
         rPayload);
 }
@@ -329,6 +336,90 @@ void InteractionPresenter::PresentArtifactLink_(const ArtifactLinkInteraction_t&
          }});
     choices.push_back({"Do nothing", [this] { CompleteAndAdvance_(); }});
     PushChoice_("Link the " + unitName + " to the " + hostName + "?", std::move(choices));
+}
+
+void InteractionPresenter::PresentPactObligation_(const PactObligationInteraction_t& rObligation)
+{
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction* pAlly = m_rGameState.FindFaction(rObligation.allyId);
+    const Faction* pAggressor = m_rGameState.FindFaction(rObligation.aggressorId);
+    if (!pPlayer || !pAlly || !pAggressor)
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const FactionId_t playerId = pPlayer->GetFactionId();
+    const FactionId_t allyId = rObligation.allyId;
+    const FactionId_t aggressorId = rObligation.aggressorId;
+    const DiplomaticStatus_t status = m_rGameState.GetDiplomacyLedger().GetStatus(playerId, allyId);
+    const std::optional<DiplomaticStatus_t> lower = StepDown(status);
+    const std::string& rAllyName = pAlly->GetDefinition().identity.name;
+    const std::string& rAggressorName = pAggressor->GetDefinition().identity.name;
+
+    std::vector<PopupChoice_t> choices;
+    choices.push_back(
+        {"Declare Vendetta on the " + rAggressorName,
+         [this, playerId, allyId, aggressorId]
+         {
+             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, true);
+             CompleteAndAdvance_();
+         }});
+    choices.push_back(
+        {"Stand aside (" + ToString(status) + " with the " + rAllyName + " becomes "
+             + (lower ? ToString(*lower) : std::string{}) + ")",
+         [this, playerId, allyId, aggressorId]
+         {
+             ResolveDefensiveObligation(m_rGameState, playerId, allyId, aggressorId, false);
+             CompleteAndAdvance_();
+         }});
+    PushChoice_("The " + rAggressorName + " attacked the " + rAllyName + ", our "
+                    + ToString(status) + " partner.",
+                std::move(choices));
+}
+
+void InteractionPresenter::PresentTerritoryEntry_(const TerritoryEntryInteraction_t& rEntry)
+{
+    Unit* pUnit = FindUnit_(rEntry.unitId);
+    const Faction* pOwner = m_rGameState.FindFaction(rEntry.ownerId);
+    if (!pUnit || !pOwner || !pUnit->GetOrder().has_value())
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const Tile& rTile = pUnit->GetTile();
+    m_rWorldView.CenterOnTile(rTile.GetX(), rTile.GetY());
+
+    const UnitId_t unitId = rEntry.unitId;
+    const FactionId_t ownerId = rEntry.ownerId;
+    const std::string status = ToString(m_rGameState.GetDiplomacyLedger().GetStatus(
+        pUnit->GetFaction().GetFactionId(), ownerId));
+    const std::string& rOwnerName = pOwner->GetDefinition().identity.name;
+
+    std::vector<PopupChoice_t> choices;
+    choices.push_back(
+        {"Break the " + status + " (Vendetta with the " + rOwnerName + ")",
+         [this, unitId, ownerId]
+         {
+             if (Unit* pResolve = FindUnit_(unitId))
+             {
+                 ResolveTerritoryEntry(m_rGameState, *pResolve, ownerId, true);
+             }
+             CompleteAndAdvance_();
+         }});
+    choices.push_back(
+        {"Cancel the order",
+         [this, unitId, ownerId]
+         {
+             if (Unit* pResolve = FindUnit_(unitId))
+             {
+                 ResolveTerritoryEntry(m_rGameState, *pResolve, ownerId, false);
+             }
+             CompleteAndAdvance_();
+         }});
+    PushChoice_("Our " + status + " with the " + rOwnerName + " forbids entering their territory.",
+                std::move(choices));
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)

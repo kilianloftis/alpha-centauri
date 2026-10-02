@@ -73,13 +73,32 @@ struct ArtifactLinkInteraction_t
     UnitId_t unitId = 0;
 };
 
+// aggressor attacked allyId, and the player's status with allyId carries a defensive
+// obligation. Declare Vendetta on aggressor, or decline and let the agreement with allyId
+// step down.
+struct PactObligationInteraction_t
+{
+    FactionId_t allyId = 0;
+    FactionId_t aggressorId = 0;
+};
+
+// A player unit's move order stopped at the border of territory its faction may not enter
+// (a Treaty). Break the agreement (Vendetta with the owner) and continue, or cancel the order.
+struct TerritoryEntryInteraction_t
+{
+    UnitId_t unitId = 0;
+    FactionId_t ownerId = 0;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
     ProductionWouldEmptyInteraction_t,
     ProductionIdleInteraction_t,
     ImprovementVisitInteraction_t,
-    ArtifactLinkInteraction_t
+    ArtifactLinkInteraction_t,
+    PactObligationInteraction_t,
+    TerritoryEntryInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

@@ -4,6 +4,7 @@
 #include "game/units/ProbeRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/faction/DiplomacyStatusEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -214,6 +215,12 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     GameState& rGameState, const BuildingId_t& facilityId, ProbeActionResult_t result,
     const ProbeRollResult_t& roll)
 {
+    if (ProbeDetected(rUnit, rAction, rTarget, roll))
+    {
+        ApplyHostileAct(rGameState, rUnit.GetFaction().GetFactionId(),
+                        rTarget.rFaction.GetFactionId());
+    }
+
     if (!roll.missionSucceeded)
     {
         return FailMission_(rUnit, result);

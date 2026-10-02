@@ -32,18 +32,24 @@ bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
                                const WorldMap& rWorldMap,
                                const InteractionGridsConfig_t& rGrids);
 
-// Full tile-entry predicate used by stepping, unloading, and attack legality.
+// Physical tile-entry predicate, used by attack legality.
 // Resolve(enter) allow, plus lifts that depend on the tile: sea on land via TileHarbors,
 // or land on water via FindBoardableTransport. Neither grants free ocean movement.
+bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                            const InteractionGridsConfig_t& rGrids);
+
+// Full tile-entry predicate used by stepping, unloading, and airdrops: physical entry, and
+// the territory owner's status with rMover's faction allows entering its territory.
 bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                   const InteractionGridsConfig_t& rGrids);
 
-// True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
+// True when a unit of rMover's faction, or of a faction it may share tiles with, already
+// occupies rTile.
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
-// True when rMover's faction has a base centered on rTile. Used by ZOC callers
-// (StepEvaluator); enter/hold use TileHarbors instead.
-bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
+// True when rTile holds a base of rMover's faction or of a faction it may share tiles with.
+// Used by ZOC callers (StepEvaluator); enter/hold use TileHarbors instead.
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
 // Whether a new unit (or move destination) may occupy rTile under the stacking rule.
 // The rule itself lives on UnitPositionIndex (see UnitPositionIndex::SetSingleUnitPerTile) —

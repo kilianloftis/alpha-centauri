@@ -8,9 +8,9 @@ using namespace ac;
 TEST_CASE("Diplomatic status defaults to None", "[diplomacy]")
 {
     DiplomacyLedger ledger;
-    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::None);
+    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Neutral);
     CHECK_FALSE(ledger.HasTruce(1, 2));
-    CHECK_FALSE(ledger.HasFriendship(1, 2));
+    CHECK_FALSE(ledger.HasTreaty(1, 2));
     CHECK_FALSE(ledger.HasPact(1, 2));
     CHECK_FALSE(ledger.HasVendetta(1, 2));
 }
@@ -18,10 +18,10 @@ TEST_CASE("Diplomatic status defaults to None", "[diplomacy]")
 TEST_CASE("Diplomatic status is symmetric", "[diplomacy]")
 {
     DiplomacyLedger ledger;
-    ledger.SetStatus(1, 2, DiplomaticStatus_t::Friendship);
-    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Friendship);
-    CHECK(ledger.GetStatus(2, 1) == DiplomaticStatus_t::Friendship);
-    CHECK(ledger.HasFriendship(2, 1));
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
+    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Treaty);
+    CHECK(ledger.GetStatus(2, 1) == DiplomaticStatus_t::Treaty);
+    CHECK(ledger.HasTreaty(2, 1));
 }
 
 TEST_CASE("Each diplomatic status round-trips", "[diplomacy]")
@@ -32,9 +32,9 @@ TEST_CASE("Each diplomatic status round-trips", "[diplomacy]")
     CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Truce);
     CHECK(ledger.HasTruce(1, 2));
 
-    ledger.SetStatus(1, 2, DiplomaticStatus_t::Friendship);
-    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Friendship);
-    CHECK(ledger.HasFriendship(1, 2));
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
+    CHECK(ledger.GetStatus(1, 2) == DiplomaticStatus_t::Treaty);
+    CHECK(ledger.HasTreaty(1, 2));
     CHECK_FALSE(ledger.HasTruce(1, 2));
 
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
@@ -50,8 +50,8 @@ TEST_CASE("Setting None clears a stored status", "[diplomacy]")
 {
     DiplomacyLedger ledger;
     ledger.SetStatus(3, 5, DiplomaticStatus_t::Pact);
-    ledger.SetStatus(3, 5, DiplomaticStatus_t::None);
-    CHECK(ledger.GetStatus(3, 5) == DiplomaticStatus_t::None);
+    ledger.SetStatus(3, 5, DiplomaticStatus_t::Neutral);
+    CHECK(ledger.GetStatus(3, 5) == DiplomaticStatus_t::Neutral);
     CHECK_FALSE(ledger.HasPact(3, 5));
 }
 
@@ -102,4 +102,24 @@ TEST_CASE("Integrity is per-faction", "[diplomacy]")
     ledger.AddIntegrity(1, 5);
     CHECK(ledger.GetIntegrity(1) == 5);
     CHECK(ledger.GetIntegrity(2) == 0);
+}
+
+TEST_CASE("Turns held count up per turn and restart only on a new status", "[diplomacy][ledger]")
+{
+    DiplomacyLedger ledger;
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Truce);
+    ledger.AgeStatuses();
+    ledger.AgeStatuses();
+    CHECK(ledger.GetTurnsHeld(2, 1) == 2);
+
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Truce);
+    CHECK(ledger.GetTurnsHeld(1, 2) == 2);
+
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Treaty);
+    CHECK(ledger.GetTurnsHeld(1, 2) == 0);
+
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Neutral);
+    ledger.AgeStatuses();
+    CHECK(ledger.GetTurnsHeld(1, 2) == 0);
+    CHECK(ledger.GetStatusPairs().empty());
 }

@@ -3,39 +3,21 @@
 namespace ac
 {
 
-std::string ToString(DiplomaticStatus_t status)
-{
-    switch (status)
-    {
-    case DiplomaticStatus_t::None:
-        return {};
-    case DiplomaticStatus_t::Truce:
-        return "Truce";
-    case DiplomaticStatus_t::Friendship:
-        return "Friendship";
-    case DiplomaticStatus_t::Pact:
-        return "Pact";
-    case DiplomaticStatus_t::Vendetta:
-        return "Vendetta";
-    }
-    return {};
-}
-
 DiplomaticStatus_t DiplomacyLedger::GetStatus(FactionId_t a, FactionId_t b) const
 {
     const FactionPair key = FactionPair::Canonical(a, b);
     const auto it = m_statuses.find(key);
     if (it == m_statuses.end())
     {
-        return DiplomaticStatus_t::None;
+        return DiplomaticStatus_t::Neutral;
     }
-    return it->second;
+    return it->second.status;
 }
 
 void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t status)
 {
     const FactionPair key = FactionPair::Canonical(a, b);
-    if (status == DiplomaticStatus_t::None)
+    if (status == DiplomaticStatus_t::Neutral)
     {
         if (m_statuses.erase(key) > 0)
         {
@@ -43,12 +25,37 @@ void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t
         }
         return;
     }
-    const auto [it, bInserted] = m_statuses.insert({key, status});
-    if (bInserted || it->second != status)
+    const auto [it, bInserted] = m_statuses.insert({key, StatusEntry_t{status, 0}});
+    if (bInserted || it->second.status != status)
     {
-        it->second = status;
+        it->second = StatusEntry_t{status, 0};
         m_statusRevision.Bump();
     }
+}
+
+int DiplomacyLedger::GetTurnsHeld(FactionId_t a, FactionId_t b) const
+{
+    const auto it = m_statuses.find(FactionPair::Canonical(a, b));
+    return it == m_statuses.end() ? 0 : it->second.turnsHeld;
+}
+
+void DiplomacyLedger::AgeStatuses()
+{
+    for (auto& [rPair, rEntry] : m_statuses)
+    {
+        ++rEntry.turnsHeld;
+    }
+}
+
+std::vector<FactionPair> DiplomacyLedger::GetStatusPairs() const
+{
+    std::vector<FactionPair> pairs;
+    pairs.reserve(m_statuses.size());
+    for (const auto& [rPair, rEntry] : m_statuses)
+    {
+        pairs.push_back(rPair);
+    }
+    return pairs;
 }
 
 bool DiplomacyLedger::HasTruce(FactionId_t a, FactionId_t b) const
@@ -56,9 +63,9 @@ bool DiplomacyLedger::HasTruce(FactionId_t a, FactionId_t b) const
     return GetStatus(a, b) == DiplomaticStatus_t::Truce;
 }
 
-bool DiplomacyLedger::HasFriendship(FactionId_t a, FactionId_t b) const
+bool DiplomacyLedger::HasTreaty(FactionId_t a, FactionId_t b) const
 {
-    return GetStatus(a, b) == DiplomaticStatus_t::Friendship;
+    return GetStatus(a, b) == DiplomaticStatus_t::Treaty;
 }
 
 bool DiplomacyLedger::HasPact(FactionId_t a, FactionId_t b) const

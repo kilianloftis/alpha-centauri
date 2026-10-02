@@ -20,6 +20,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -374,6 +375,8 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 
     if (m_pWorld)
     {
+        m_pWorld->OnHostileAct(rAttacker.GetFaction().GetFactionId(),
+                               pDefender->GetFaction().GetFactionId());
         if (std::optional<CombatResult_t> intercepted =
                 m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
         {
@@ -418,6 +421,44 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     return result;
 }
 
+void UnitOrderExecutor::DeclareBombardHostility_(const Unit& rAttacker, const Tile& rTargetTile,
+                                                 const BombardTargeting_t& rTargeting,
+                                                 bool bOccupied)
+{
+    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
+    std::vector<FactionId_t> victims;
+    const auto addVictim = [&](FactionId_t victim)
+    {
+        if (victim != aggressor && victim != k_NoFactionOwner
+            && std::find(victims.begin(), victims.end(), victim) == victims.end())
+        {
+            victims.push_back(victim);
+        }
+    };
+    if (rTargeting.pDuelTarget)
+    {
+        addVictim(rTargeting.pDuelTarget->GetFaction().GetFactionId());
+    }
+    else if (!rTargeting.bBombardPresentButIllegal)
+    {
+        for (const Unit* pTarget : rTargeting.strikeTargets)
+        {
+            if (pTarget)
+            {
+                addVictim(pTarget->GetFaction().GetFactionId());
+            }
+        }
+    }
+    if (!bOccupied && !NonBaseImprovementIds(rTargetTile).empty())
+    {
+        addVictim(m_rWorldMap.GetTerritory().GetOwner(rTargetTile));
+    }
+    for (const FactionId_t victim : victims)
+    {
+        m_pWorld->OnHostileAct(aggressor, victim);
+    }
+}
+
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     Unit& rAttacker, const Tile& rTargetTile)
 {
@@ -430,6 +471,10 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     BombardResult_t result;
     const BombardTargeting_t targeting =
         CollectBombardTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+    if (m_pWorld)
+    {
+        DeclareBombardHostility_(rAttacker, rTargetTile, targeting, bOccupied);
+    }
 
     if (targeting.pDuelTarget)
     {
@@ -622,6 +667,12 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
                                                 : OrderProgress_t::Complete;
         }
 
+        if (m_rSteps.EvaluateStep(rUnit, rUnit.GetTile(), *pNext).outcome
+            == StepOutcome_t::BlockedByTerritory)
+        {
+            return RefuseTerritoryEntry_(rUnit, *pNext);
+        }
+
         const Tile* pTileBefore = &rUnit.GetTile();
         const int movesBefore = rUnit.GetMoveFragmentsRemaining();
 
@@ -648,6 +699,17 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
     }
 }
 
+OrderProgress_t UnitOrderExecutor::RefuseTerritoryEntry_(Unit& rUnit, const Tile& rNext)
+{
+    if (m_pWorld && rUnit.GetFaction().IsPlayerControlled())
+    {
+        m_pWorld->OnTerritoryEntryRefused(rUnit, m_rWorldMap.GetTerritory().GetOwner(rNext));
+        return OrderProgress_t::Continue;
+    }
+    rUnit.ClearOrder();
+    return OrderProgress_t::Complete;
+}
+
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
 {
     // Hold indefinitely — nothing to do each turn
@@ -658,7 +720,8 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
 
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder)
 {
-    // TODO: Clear order when unit reaches full HP
+    // TODO: per-turn healing. Repair inside a base must check MayRepairAt (DiplomacyRules.h).
+    // Clear the order when the unit reaches full HP.
     (void)rUnit;
     (void)rOrder;
     return OrderProgress_t::Continue;

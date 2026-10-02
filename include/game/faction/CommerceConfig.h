@@ -12,10 +12,9 @@ struct CommerceConfig_t
 {
     // Exposed to formula as globals.
     double pairMultiplier{};
-    double treatyMultiplier{};
 
-    // Shipping SMAC pipeline (ceil pair → tech ratio → treaty_factor); rate and flat bonus
-    // are applied in C++ after eval.
+    // Shipping SMAC pipeline (ceil pair → tech ratio). CommerceRate (faction effects plus the
+    // pair's diplomatic status effects) and the flat bonus are applied in C++ after eval.
     std::string formula;
 };
 

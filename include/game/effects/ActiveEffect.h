@@ -57,6 +57,9 @@ struct ActiveEffect_t
     // Detect requires a stamped owner — see AppliesForFaction vs UnitVisibility's fail-closed
     // Detect gate. Unowned territory stores k_NoFactionOwner (has_value, matches nobody).
     std::optional<FactionId_t> ownerFaction;
+    // Set for FactionPair effects: the other faction of the pair. They match only a context
+    // whose pPartner is that faction.
+    std::optional<FactionId_t> partnerFaction;
 };
 
 // General faction gate for attributed tile effects: unset ownerFaction ⇒ applies to all
@@ -167,6 +170,9 @@ struct EffectContext_t
     const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;
     const Unit* pUnit = nullptr;
+    // The other faction when resolving pFaction's dealings with it (commerce). Admits that
+    // pair's FactionPair effects.
+    const Faction* pPartner = nullptr;
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
@@ -394,7 +400,8 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
         // true context-free resolution. Live units apply identity conditions in
         // CollectLiveUnitEffects and re-check via FilterByStatIdInContext with pUnit stamped.
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
-            && !pStatModifier->amountSource;
+            && !pStatModifier->amountSource
+            && LaneFor(effect.config->scope) != EffectLane_t::FactionPair;
     });
 }
 inline auto FilterByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statId) = delete;
@@ -421,11 +428,19 @@ inline const Unit* OpposingCombatant_(const EffectContext_t& ctx)
     return nullptr;
 }
 
+// Whether a FactionPair effect's partner is ctx.pPartner. False when ctx names no partner.
+bool MatchesPartner(const ActiveEffect_t& effect, const EffectContext_t& ctx);
+
 inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
                                          const EffectContext_t& ctx)
 {
     const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
     if (!pStatModifier || pStatModifier->stat != statId)
+    {
+        return false;
+    }
+    if (LaneFor(effect.config->scope) == EffectLane_t::FactionPair
+        && !MatchesPartner(effect, ctx))
     {
         return false;
     }

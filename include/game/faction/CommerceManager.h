@@ -31,7 +31,7 @@ public:
     CommerceManager& operator=(const CommerceManager&) = delete;
 
     // Partner breakdown for rBase. Empty when the owner has no bound GameState or no
-    // Friendship/Pact pairs that include this base.
+    // Trading pairs that include this base.
     const std::vector<CommercePartnerLine_t>& ComputeForBase(const BaseManager& rBase) const;
 
     // Commerce energy rBase earns this turn: its lines summed, negatives dropped so a line

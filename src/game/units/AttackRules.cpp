@@ -84,7 +84,7 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMa
                    const InteractionGridsConfig_t& rGrids)
 {
     // No attacking a tile the unit could not enter...
-    if (!CanEnterTile(rAttacker, rTargetTile, rWorldMap, rGrids))
+    if (!CanPhysicallyEnterTile(rAttacker, rTargetTile, rWorldMap, rGrids))
     {
         return false;
     }

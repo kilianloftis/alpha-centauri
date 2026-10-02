@@ -20,6 +20,7 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/CommerceConfigParser.h"
+#include "game/faction/DiplomacyConfigParser.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -84,6 +85,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.growthConfig.get(), "growthConfig"},
         {rData.productionConfig.get(), "productionConfig"},
         {rData.commerceConfig.get(), "commerceConfig"},
+        {rData.diplomacyConfig.get(), "diplomacyConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
         {rData.terrainOperationRegistry.get(), "terrainOperationRegistry"},
@@ -254,6 +256,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     CommerceConfigParser commerceParser;
     rData.commerceConfig =
         std::make_unique<CommerceConfig_t>(commerceParser.ParseConfig(rPaths.commerce));
+
+    DiplomacyConfigParser diplomacyParser;
+    rData.diplomacyConfig =
+        std::make_unique<DiplomacyConfig_t>(diplomacyParser.ParseConfig(rPaths.diplomacy));
 
     DifficultyConfigParser difficultyParser;
     rData.difficultyConfig =

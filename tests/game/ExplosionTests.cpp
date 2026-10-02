@@ -308,10 +308,9 @@ TEST_CASE("Detonating a Planet Buster names the first foreign base destroyed",
     CHECK(rLedger.Records().front().victim == rVictim.GetFactionId());
     CHECK(rLedger.Records().front().severity == AtrocitySeverityId_t::Major);
     CHECK_FALSE(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.pState->GetMissionYear()));
-    // Victim is excluded from universal Vendetta; a living AI bystander declares it.
-    CHECK(game.pState->GetDiplomacyLedger().GetStatus(rVictim.GetFactionId(),
-                                                      game.pPlayer->GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
+    // The victim is at Vendetta from the act itself; a living AI bystander declares it too.
+    CHECK(game.pState->GetDiplomacyLedger().HasVendetta(rVictim.GetFactionId(),
+                                                        game.pPlayer->GetFactionId()));
     CHECK(game.pState->GetDiplomacyLedger().GetStatus(rBystander.GetFactionId(),
                                                       game.pPlayer->GetFactionId())
           == DiplomaticStatus_t::Vendetta);

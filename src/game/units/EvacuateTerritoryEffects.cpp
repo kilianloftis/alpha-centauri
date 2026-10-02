@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -34,6 +35,26 @@ std::vector<Unit*> CollectUnitsOnHostTerritory_(Faction& rGuest,
         }
     }
     return onHost;
+}
+
+bool SharesTileWith_(const Unit& rUnit, const Faction& rHost, const WorldMap& rWorldMap)
+{
+    const Tile& rTile = rUnit.GetTile();
+    for (const BaseManager& rBase : rHost.Bases())
+    {
+        if (&rBase.GetTile() == &rTile)
+        {
+            return true;
+        }
+    }
+    for (const Unit* pOther : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pOther && &pOther->GetFaction() == &rHost)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Clears orders on every on-host unit. Groups non-embarked units by their origin tile.
@@ -130,23 +151,43 @@ void EvacuateOriginGroup_(std::vector<Unit*> pending, WorldMap& rWorldMap,
     }
 }
 
-} // namespace
-
-EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
-    Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
-    const InteractionGridsConfig_t& rGrids)
+EvacuateTerritoryResult_t EvacuateUnits_(const std::vector<Unit*>& rUnits, WorldMap& rWorldMap,
+                                         const InteractionGridsConfig_t& rGrids)
 {
     EvacuateTerritoryResult_t result;
-    const std::vector<Unit*> onHost =
-        CollectUnitsOnHostTerritory_(rGuest, hostTerritoryOwner, rWorldMap.GetTerritory());
-    FreeByOrigin_t freeByOrigin = ClearOrdersAndGroupFreeByOrigin_(onHost);
-
+    FreeByOrigin_t freeByOrigin = ClearOrdersAndGroupFreeByOrigin_(rUnits);
     for (auto& [pOrigin, units] : freeByOrigin)
     {
         (void)pOrigin;
         EvacuateOriginGroup_(std::move(units), rWorldMap, rGrids, result);
     }
     return result;
+}
+
+} // namespace
+
+EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
+    Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
+    const InteractionGridsConfig_t& rGrids)
+{
+    return EvacuateUnits_(
+        CollectUnitsOnHostTerritory_(rGuest, hostTerritoryOwner, rWorldMap.GetTerritory()),
+        rWorldMap, rGrids);
+}
+
+EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
+    Faction& rGuest, const Faction& rHost, WorldMap& rWorldMap,
+    const InteractionGridsConfig_t& rGrids)
+{
+    std::vector<Unit*> sharing;
+    for (Unit& rUnit : rGuest.GetUnitManager().Units())
+    {
+        if (SharesTileWith_(rUnit, rHost, rWorldMap))
+        {
+            sharing.push_back(&rUnit);
+        }
+    }
+    return EvacuateUnits_(sharing, rWorldMap, rGrids);
 }
 
 } // namespace ac

@@ -18,6 +18,9 @@ enum class StepOutcome_t
     BlockedByOccupant,
     BlockedByZoc,
     BlockedByTerrain,
+    // Physically enterable, but the territory owner's status with the mover forbids entry.
+    // Path planning does not report it; only the step itself does.
+    BlockedByTerritory,
     NotAdjacent,
 };
 
@@ -68,6 +71,10 @@ public:
     // Pathfinder to reject known domain-mismatched goals without flooding the reachable
     // land/sea component.
     bool CanPlanEnterTerrain(const Unit& rMover, const Tile& rTile) const;
+
+    // Whether rTile lies in territory rMover's faction may not enter under its current
+    // diplomatic status with the owner.
+    bool IsForbiddenTerritory(const Unit& rMover, const Tile& rTile) const;
 
 private:
     enum class Knowledge_t

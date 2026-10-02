@@ -8,6 +8,7 @@
 #include "game/world-events/WorldEventConfig.h"
 #include "game/Faction.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomacyStatusEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"
@@ -459,7 +460,7 @@ void Engine::StartNewGame_()
     // whole-world pass once every faction exists.
     m_pGameState->RebuildTerritory();
 
-    // Temporary: give the player commerce partners — first AI Pact, second AI Friendship.
+    // Temporary: give the player commerce partners — first AI Pact, second AI Treaty.
     {
         Faction* pPlayer = m_pGameState->GetPlayerFaction();
         if (pPlayer == nullptr)
@@ -481,12 +482,13 @@ void Engine::StartNewGame_()
             rDiplomacy.SetKnown(playerId, rFaction.GetFactionId());
             if (aiIndex == 0)
             {
-                rDiplomacy.SetStatus(playerId, rFaction.GetFactionId(), DiplomaticStatus_t::Pact);
+                ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
+                                  DiplomaticStatus_t::Pact);
             }
             else if (aiIndex == 1)
             {
-                rDiplomacy.SetStatus(
-                    playerId, rFaction.GetFactionId(), DiplomaticStatus_t::Friendship);
+                ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
+                                  DiplomaticStatus_t::Treaty);
             }
             ++aiIndex;
         }

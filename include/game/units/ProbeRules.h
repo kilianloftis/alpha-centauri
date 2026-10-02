@@ -71,6 +71,12 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
 // Roll mission then escape. RISK 0 missions are always successful (100%).
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng);
 
+// Whether the target faction identifies who sent the probe. A detected action is a hostile
+// act against the target.
+// TODO: the detection roll ("getting away cleanly") is not implemented; nothing is detected.
+bool ProbeDetected(const Unit& rProbe, const ProbeActionConfig_t& rAction,
+                   const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
+
 bool IsHeadquarters(const BaseManager& rBase);
 
 // Probe-mechanics eligibility only: ProbeTeam, required tech, target-kind match, HQ

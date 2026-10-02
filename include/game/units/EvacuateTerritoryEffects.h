@@ -24,4 +24,10 @@ EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
     Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
     const InteractionGridsConfig_t& rGrids);
 
+// The same relocation for every unit of rGuest that shares a tile with a unit of rHost or
+// stands in one of rHost's bases.
+EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
+    Faction& rGuest, const Faction& rHost, WorldMap& rWorldMap,
+    const InteractionGridsConfig_t& rGrids);
+
 } // namespace ac

@@ -20,7 +20,7 @@ CommerceConfig_t CommerceConfigParser::ParseConfig(const std::string& configPath
 
             for (const auto& [rKey, rUnused] : rJson.items())
             {
-                if (rKey != "pair_multiplier" && rKey != "treaty_multiplier" && rKey != "formula")
+                if (rKey != "pair_multiplier" && rKey != "formula")
                 {
                     fail("unknown key '" + rKey + "'");
                 }
@@ -59,8 +59,7 @@ CommerceConfig_t CommerceConfigParser::ParseConfig(const std::string& configPath
 
             CommerceConfig_t config;
             config.pairMultiplier = readPositive("pair_multiplier");
-            config.treatyMultiplier = readPositive("treaty_multiplier");
-            config.formula = std::move(formula);
+                    config.formula = std::move(formula);
             return config;
         });
 }

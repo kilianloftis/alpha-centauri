@@ -806,7 +806,9 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
             case EffectLane_t::PopLocal:
             case EffectLane_t::TileLocal:
             case EffectLane_t::TechLocal:
-                // Resolved by their own unit/pop/tile/tech; never apply to base-level calculations.
+            case EffectLane_t::FactionPair:
+                // Resolved by their own unit/pop/tile/tech/partner; never apply to base-level
+                // calculations.
                 break;
         }
     }
@@ -1013,6 +1015,12 @@ double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, doubl
     }
     return ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, statId, &ctx), seed, &ctx)
         .total;
+}
+
+bool MatchesPartner(const ActiveEffect_t& effect, const EffectContext_t& ctx)
+{
+    return ctx.pPartner && effect.partnerFaction
+        && *effect.partnerFaction == ctx.pPartner->GetFactionId();
 }
 
 double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t statId, double seed,

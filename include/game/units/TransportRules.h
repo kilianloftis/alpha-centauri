@@ -38,7 +38,7 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
                              const WorldMap& rWorldMap);
 
 // Whether an embarked passenger may step off its carrier's tile onto rTo
-// (adjacency + MovementRules::CanEnterTile).
+// (adjacency + MovementRules::CanPhysicallyEnterTile; territory is checked by the step).
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
                  const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids);
 

@@ -4,7 +4,9 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionResolve.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/faction/DiplomacyRules.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -78,8 +80,8 @@ bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
                        rWorldMap.GetTerritory());
 }
 
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                  const InteractionGridsConfig_t& rGrids)
+bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                            const InteractionGridsConfig_t& rGrids)
 {
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
@@ -104,12 +106,19 @@ bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldM
         && FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
 }
 
+bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                  const InteractionGridsConfig_t& rGrids)
+{
+    return CanPhysicallyEnterTile(rMover, rTile, rWorldMap, rGrids)
+        && MayEnterTerritoryOf(rMover.GetFaction(), rWorldMap.GetTerritory().GetOwner(rTile));
+}
+
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
-    const FactionId_t moverId = rMover.GetFaction().GetFactionId();
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit != &rMover && pUnit->GetFaction().GetFactionId() == moverId)
+        if (pUnit && pUnit != &rMover
+            && MayShareTiles(rMover.GetFaction(), pUnit->GetFaction().GetFactionId()))
         {
             return true;
         }
@@ -117,16 +126,14 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& 
     return false;
 }
 
-bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
-    for (const BaseManager& rBase : rMover.GetFaction().Bases())
+    if (!rTile.HasImprovement(ImprovementIds::k_Base))
     {
-        if (&rBase.GetTile() == &rTile)
-        {
-            return true;
-        }
+        return false;
     }
-    return false;
+    const FactionId_t owner = rWorldMap.GetTerritory().GetOwner(rTile);
+    return owner != k_NoFactionOwner && MayShareTiles(rMover.GetFaction(), owner);
 }
 
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)

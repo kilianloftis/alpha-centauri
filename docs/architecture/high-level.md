@@ -317,7 +317,7 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
-  - `CommerceManager` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Friendship/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
+  - `CommerceManager` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Treaty/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
@@ -567,11 +567,11 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Components**:
   - `AtrocityLedger`: Append-only record of committed atrocities plus the standing commerce-sanction expiry per faction. World-scoped, owned by `GameState` (`std::unique_ptr`), sibling of `DiplomacyLedger`.
   - `AtrocityRules`: Pure decisions — effective severity after Simple-count escalation, whether penalties apply, sanction expiry year, and which faction a blast is answered to.
-  - `AtrocityEffects` (`CommitAtrocity`): Records the commission, then charges a counted act — sanctions, universal Vendetta (living AI only, via `ApplyVendetta`), council expulsion, player notice. Victim memory is the record.
+  - `AtrocityEffects` (`CommitAtrocity`): Records the commission, then charges a counted act — sanctions, universal Vendetta (living AI only, via `ApplyStatusChange`), council expulsion, player notice. Victim memory is the record.
   - `AtrocitiesConfig_t`: `config/atrocities.json`. Severities are the closed enum `Simple` and `Major`, each with its own consequences. A counted Simple act that would pass the session level's atrocity threshold is answered for as Major. Landing exactly on the threshold stays Simple. A Major act does not add to that counter and carries no commerce sanction. The Charter gates both tiers. Either party being a Progenitor excuses the act. The threshold itself lives in `difficulty.json`, which states `player_atrocity_threshold` and `ai_atrocity_threshold` per level.
 - **Dependencies**:
   - `CommitAtrocity` is authored in trigger lists (`genetic_plague`'s `on_success_effects`; the Planet Buster `on_detonate_effects`). Planet Buster victim comes from `AtrocityRules::BlastVictim` over what `Explosion` destroyed (first foreign base, else first foreign unit), handed over in `derivedVictim` rather than territory
-  - Writes Vendetta (through `ApplyVendetta`) and `PlanetaryCouncil::Expel`
+  - Writes Vendetta (through `ApplyStatusChange`) and `PlanetaryCouncil::Expel`
   - Read by `CommerceCalculator` (sanctions zero a pair) and `BaseEcology` (counted records' `eco_virtual_minerals`)
   - Unknown severity names fail when the effect list or `atrocities.json` is loaded
 - **Details**: See `docs/architecture/atrocity-system.md` for detailed architecture
@@ -596,7 +596,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `BaseDisplay`: Displays base name, resource stockpiles, and click status text
   - `PopulationDisplay`: Displays current population and per-pop type breakdown
   - `GrowthDisplay`: Displays nutrient stockpile, growth threshold, and nutrient production
-  - `CommerceDisplay`: Lists Friendship/Pact commerce partners for the open base (shorthand, our energy, their energy)
+  - `CommerceDisplay`: Lists Treaty/Pact commerce partners for the open base (shorthand, our energy, their energy)
   - `WorldDisplay`: Displays the world map as a grid of tiles with terrain info
   - `BaseWorkableAreaDisplay`: Displays the 21-tile workable area around a base with resource production
 - **Dependencies**:

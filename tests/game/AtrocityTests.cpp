@@ -141,9 +141,10 @@ TEST_CASE("A Simple atrocity under the Charter sanctions and the victim remember
     CHECK_FALSE(game.Ledger().HasCommittedMajorAgainst(game.pA->GetFactionId(),
                                                        game.pB->GetFactionId()));
 
-    // A Simple atrocity is not a Major one: no vendetta, and the seat is kept.
-    CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), game.pA->GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
+    // The act is an attack on the victim. A Simple atrocity is not a Major one: no universal
+    // vendetta from bystanders, and the seat is kept.
+    CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
+    CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
     CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 }
 
@@ -222,9 +223,7 @@ TEST_CASE("Lesser atrocities escalate to Major once their count reaches the thre
     const AtrocityCommitted_t escalated =
         CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
     CHECK(escalated.severity == k_Major);
-    // Universal Vendetta covers living AI bystanders, not the victim.
-    CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), game.pA->GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
+    // Universal Vendetta covers living AI bystanders; the victim is at Vendetta from the act.
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), game.pA->GetFactionId())
           == DiplomaticStatus_t::Vendetta);
     CHECK_FALSE(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
@@ -296,8 +295,9 @@ TEST_CASE("An excused Simple act is recorded and does not escalate", "[atrocity]
 
     CHECK(game.Ledger().SimpleCount(game.pA->GetFactionId()) == 0);
     CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
-    CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), game.pA->GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
+    // Excused from penalties, but still an attack on the victim.
+    CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
+    CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
 }
 
 TEST_CASE("A Simple act against another species does not move the simple counter", "[atrocity]")
@@ -414,7 +414,7 @@ TEST_CASE("A repealed Charter lifts Major penalties and the victim still remembe
     CHECK(committed.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
     CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
-    CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
+    CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), id));
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
     CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 0);
     CHECK(game.Ledger().HasVictimized(id, game.pB->GetFactionId()));
@@ -448,8 +448,7 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
     CHECK_FALSE(game.Sanctioned(humanId));
     CHECK(game.Ledger().HasVictimized(humanId, rAlien.GetFactionId()));
-    CHECK(game.Diplomacy().GetStatus(rAlien.GetFactionId(), humanId)
-          != DiplomaticStatus_t::Vendetta);
+    CHECK(game.Diplomacy().HasVendetta(rAlien.GetFactionId(), humanId));
     CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t major =
@@ -465,8 +464,7 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
         CommitAtrocity(*game.pState, rAlien, game.pA, k_Major);
     CHECK_FALSE(progenitorPerp.PenaltiesApplied());
     CHECK(game.Ledger().HasCommittedMajorAgainst(rAlien.GetFactionId(), humanId));
-    CHECK(game.Diplomacy().GetStatus(humanId, rAlien.GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
+    CHECK(game.Diplomacy().HasVendetta(humanId, rAlien.GetFactionId()));
 
     const AtrocityCommitted_t bothProgenitors =
         CommitAtrocity(*game.pState, rUsurper, &rAlien, k_Major);
@@ -498,7 +496,7 @@ TEST_CASE("A victimless Major atrocity is still answered for", "[atrocity]")
           == DiplomaticStatus_t::Vendetta);
 }
 
-TEST_CASE("Universal Vendetta skips the victim, humans, and existing Vendettas", "[atrocity]")
+TEST_CASE("Universal Vendetta skips humans and existing Vendettas", "[atrocity]")
 {
     AtrocityGame_ game;
     Faction& rHuman = *game.pA;
@@ -511,8 +509,6 @@ TEST_CASE("Universal Vendetta skips the victim, humans, and existing Vendettas",
 
     CommitAtrocity(*game.pState, rHuman, &rVictim, k_Major);
 
-    CHECK(game.Diplomacy().GetStatus(rVictim.GetFactionId(), rHuman.GetFactionId())
-          != DiplomaticStatus_t::Vendetta);
     CHECK(game.Diplomacy().GetStatus(rBystander.GetFactionId(), rHuman.GetFactionId())
           == DiplomaticStatus_t::Vendetta);
     CHECK(game.Diplomacy().AreKnown(rBystander.GetFactionId(), rHuman.GetFactionId()));
@@ -525,6 +521,31 @@ TEST_CASE("Universal Vendetta skips the victim, humans, and existing Vendettas",
     CommitAtrocity(*game.pState, rAiPerp, &rVictim, k_Major);
     CHECK(game.Diplomacy().GetStatus(rHuman.GetFactionId(), rAiPerp.GetFactionId())
           != DiplomaticStatus_t::Vendetta);
+}
+
+TEST_CASE("A Major atrocity's universal Vendetta obliges nobody to defend the perpetrator",
+          "[atrocity]")
+{
+    AtrocityGame_ game;
+    Faction& rHuman = *game.pA;
+    Faction& rVictim = *game.pB;
+    Faction& rPartner = *game.pC;
+    Faction& rPerpetrator =
+        game.AddFaction_(game.fixtures.factionDefinition, /*bPlayer=*/false);
+    game.Diplomacy().SetStatus(rHuman.GetFactionId(), rPerpetrator.GetFactionId(),
+                               DiplomaticStatus_t::Pact);
+    game.Diplomacy().SetStatus(rPartner.GetFactionId(), rPerpetrator.GetFactionId(),
+                               DiplomaticStatus_t::Pact);
+
+    CommitAtrocity(*game.pState, rPerpetrator, &rVictim, k_Major);
+
+    // The AI partner joins the world against the perpetrator, ending its Pact; the human
+    // partner is never forced and is not asked to defend the perpetrator either.
+    CHECK(game.Diplomacy().HasVendetta(rPartner.GetFactionId(), rPerpetrator.GetFactionId()));
+    CHECK(game.Diplomacy().HasPact(rHuman.GetFactionId(), rPerpetrator.GetFactionId()));
+    CHECK_FALSE(game.pState->GetPlayerInteractions().AnyOf(
+        [](const QueuedInteraction_t& rQueued)
+        { return std::holds_alternative<PactObligationInteraction_t>(rQueued.payload); }));
 }
 
 TEST_CASE("Nuking your own ground is an atrocity with nobody to resent you for it", "[atrocity]")

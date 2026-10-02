@@ -52,7 +52,7 @@ graph TB
 
     AtrocityEffects --> AtrocityRules
     AtrocityEffects -->|Record / ExtendSanction| AtrocityLedger
-    AtrocityEffects -->|ApplyVendetta| DiplomacyLedger
+    AtrocityEffects -->|ApplyStatusChange| DiplomacyLedger
     AtrocityEffects -->|Expel| PlanetaryCouncil
     AtrocityEffects -->|EnqueueForPlayer| Notices
 
@@ -108,8 +108,9 @@ A counted Simple act adds `sanction_years_per_atrocity` × `SimpleCount` (the co
 act) onto whatever sanction time is left. The first adds 10 years, the second 20, and five in
 the same year come to 150. An excused act does not lengthen it.
 
-The Charter gates every tier. With it repealed, nothing is counted: no Vendetta, no
-expulsion, no sanction, and that record adds no eco weight. The victim fact is the
+The Charter gates every tier. With it repealed, nothing is counted: no universal Vendetta, no
+expulsion, no sanction, and that record adds no eco weight. The act is still an attack on the
+victim, so the victim pair goes to Vendetta either way (`ApplyHostileAct`). The victim fact is the
 record itself (`HasVictimized`, `HasCommittedMajorAgainst`), counted or not.
 
 A perpetrator named as its own victim is recorded **victimless**: razing your own ground is
@@ -170,7 +171,8 @@ its revision bump is what invalidates `CommerceManager`'s memo.
 |---|---|
 | Commerce sanctions | `AtrocityLedger::ExtendSanction`, counted Simple acts only; `CommerceCalculator` drops the owner and skips sanctioned partners |
 | Victim memory | `AtrocityLedger::HasVictimized` and `HasCommittedMajorAgainst`. Written with the record, before the gates |
-| Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta, via `ApplyVendetta` (ends a Pact with eviction, grants a commlink). Humans are never forced |
+| Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: the perpetrator declares Vendetta on the victim, which obliges the victim's Pact partners (see `diplomacy-system.md`) |
+| Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta, via `JoinVendetta` (evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced |
 | Council expulsion | `PlanetaryCouncil::Expel`, counted acts whose tier sets it |
 | Eco-damage | `AtrocityLedger::EcoVirtualMinerals`, counted records only (eco calculator not yet built) |
 | Player notice | `EnqueueForPlayer`, gated by `PauseOnEventId_t::AtrocityCommitted`. Phrased from `AtrocitySeverityLabel`, not from the enumerator name |

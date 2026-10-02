@@ -49,17 +49,17 @@ bool StatusRequestLegal_(const DiplomacyLedger& rLedger,
                          FactionId_t b,
                          DiplomaticStatus_t requested)
 {
-    switch (requested)
+    if (requested == DiplomaticStatus_t::Vendetta)
     {
-    case DiplomaticStatus_t::Truce:
-        return CanProposeTruce(rLedger, a, b);
-    case DiplomaticStatus_t::Friendship:
-        return CanProposeFriendship(rLedger, a, b);
-    case DiplomaticStatus_t::Pact:
-        return CanProposePact(rLedger, a, b);
-    case DiplomaticStatus_t::Vendetta:
         return CanDeclareVendetta(rLedger, a, b);
-    case DiplomaticStatus_t::None:
+    }
+    const DiplomaticStatus_t current = rLedger.GetStatus(a, b);
+    if (StepUp(current) == requested)
+    {
+        return CanProposeStepUp(rLedger, a, b);
+    }
+    if (StepDown(current) == requested)
+    {
         return CanCancelTreaty(rLedger, a, b);
     }
     return false;
@@ -327,12 +327,12 @@ void DiplomaticActionExecutor::Apply_(GameState& rState, const DiplomaticProposa
     {
         if (*rProposal.requestedStatus == DiplomaticStatus_t::Vendetta)
         {
-            ApplyVendetta(rState, rProposal.proposer, rProposal.recipient);
+            DeclareVendetta(rState, rProposal.proposer, rProposal.recipient);
         }
         else
         {
-            rState.GetDiplomacyLedger().SetStatus(
-                rProposal.proposer, rProposal.recipient, *rProposal.requestedStatus);
+            ApplyStatusChange(rState, rProposal.proposer, rProposal.recipient,
+                              *rProposal.requestedStatus);
         }
     }
     ApplyItems_(rState, rProposal.proposer, rProposal.recipient, rProposal.give);
@@ -389,8 +389,7 @@ void DiplomaticActionExecutor::ApplyItem_(GameState& rState,
             }
             else if constexpr (std::is_same_v<T, TradeDeclareVendetta_t>)
             {
-                // Vendetta trade item against a third faction
-                ApplyVendetta(rState, receiverId, rConcrete.againstFactionId);
+                DeclareVendetta(rState, receiverId, rConcrete.againstFactionId);
             }
         },
         rItem);

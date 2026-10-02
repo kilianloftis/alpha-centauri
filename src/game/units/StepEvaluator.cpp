@@ -1,10 +1,12 @@
 #include "game/units/StepEvaluator.h"
 
 #include "game/Faction.h"
+#include "game/faction/DiplomacyRules.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
@@ -20,11 +22,7 @@ namespace
 
 bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
 {
-    if (rOther.GetFaction().GetFactionId() == rMover.GetFaction().GetFactionId())
-    {
-        return false;
-    }
-    return true;
+    return !MayShareTiles(rMover.GetFaction(), rOther.GetFaction().GetFactionId());
 }
 
 // Invokes rFn(Unit&) for each hostile unit on rTile; stops early if rFn returns false.
@@ -101,7 +99,13 @@ bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,
             return true;
         }
     }
-    return CanEnterTile(rMover, rTile, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
+    return CanPhysicallyEnterTile(rMover, rTile, m_rWorldMap,
+                                  m_rTileEffects.GetInteractionGrids());
+}
+
+bool StepEvaluator::IsForbiddenTerritory(const Unit& rMover, const Tile& rTile) const
+{
+    return !MayEnterTerritoryOf(rMover.GetFaction(), m_rWorldMap.GetTerritory().GetOwner(rTile));
 }
 
 bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,
@@ -134,7 +138,7 @@ bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const
         return false;
     }
     // SMAC: ZOC→ZOC is legal when the destination already holds a friendly unit or base.
-    if (HasFriendlyOccupant(rMover, rTo, m_rWorldMap) || HasFriendlyBase(rMover, rTo))
+    if (HasFriendlyOccupant(rMover, rTo, m_rWorldMap) || HasFriendlyBase(rMover, rTo, m_rWorldMap))
     {
         return false;
     }
@@ -169,6 +173,12 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
     else if (!CanEnterTerrain_(rMover, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByTerrain;
+        return result;
+    }
+
+    if (knowledge == Knowledge_t::Objective && IsForbiddenTerritory(rMover, rTo))
+    {
+        result.outcome = StepOutcome_t::BlockedByTerritory;
         return result;
     }
 

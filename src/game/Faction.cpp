@@ -88,7 +88,8 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     rDataContext.growthConfig->effects,
                     *rDataContext.difficultyConfig,
                     *rDataContext.nativeLifeLevelConfig,
-                    rDataContext.ecoDamageConfig->effects)
+                    rDataContext.ecoDamageConfig->effects,
+                    *rDataContext.diplomacyConfig)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
     , m_composedEffects(*this)

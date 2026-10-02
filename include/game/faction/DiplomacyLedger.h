@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/DiplomaticStatus.h"
 #include "game/faction/FactionPair.h"
 #include "game/faction/base/BaseTypes.h"
 #include "lib/Revision.h"
@@ -11,20 +12,6 @@
 namespace ac
 {
 
-// Pairwise diplomatic standing between two factions.
-// Ordered from least to most aligned (excluding Vendetta, which is open hostility).
-enum class DiplomaticStatus_t
-{
-    None, // no affiliation (default)
-    Truce,
-    Friendship,
-    Pact,
-    Vendetta
-};
-
-// Empty string for None; otherwise the status name (Truce, Friendship, Pact, Vendetta).
-std::string ToString(DiplomaticStatus_t status);
-
 // World-scoped tracker for diplomatic state between factions.
 class DiplomacyLedger
 {
@@ -33,10 +20,18 @@ public:
     ~DiplomacyLedger() = default;
 
     DiplomaticStatus_t GetStatus(FactionId_t a, FactionId_t b) const;
+    // Changing a pair's status restarts its turns-held count; setting the same status does not.
     void SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t status);
 
+    // Turns the pair has held its current non-Neutral status (0 for Neutral).
+    int GetTurnsHeld(FactionId_t a, FactionId_t b) const;
+    // Once per game turn: every non-Neutral pair has held its status one turn longer.
+    void AgeStatuses();
+    // Every pair whose status is not Neutral.
+    std::vector<FactionPair> GetStatusPairs() const;
+
     bool HasTruce(FactionId_t a, FactionId_t b) const;
-    bool HasFriendship(FactionId_t a, FactionId_t b) const;
+    bool HasTreaty(FactionId_t a, FactionId_t b) const;
     bool HasPact(FactionId_t a, FactionId_t b) const;
     bool HasVendetta(FactionId_t a, FactionId_t b) const;
 
@@ -62,7 +57,13 @@ public:
 
 private:
     Revision m_statusRevision;
-    std::map<FactionPair, DiplomaticStatus_t> m_statuses;
+    struct StatusEntry_t
+    {
+        DiplomaticStatus_t status = DiplomaticStatus_t::Neutral;
+        int turnsHeld = 0;
+    };
+
+    std::map<FactionPair, StatusEntry_t> m_statuses;
     std::map<FactionPair, bool> m_known;
     std::map<DirectedFactionPair, int> m_grievances;
     std::map<DirectedFactionPair, bool> m_infiltration;

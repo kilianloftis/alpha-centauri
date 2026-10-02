@@ -2,9 +2,12 @@
 
 #include "game/Faction.h"
 #include "game/GameSettings.h"
+#include "game/GameState.h"
 #include "game/DifficultyConfig.h"
 #include "game/NativeLifeLevelConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/faction/DiplomacyConfig.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
@@ -17,6 +20,7 @@
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "lib/config/EnumNames.h"
 
 #include <algorithm>
 
@@ -35,7 +39,8 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const std::vector<EffectConfig_t>& rGrowthEffects,
                                        const DifficultyConfig_t& rDifficulty,
                                        const NativeLifeLevelConfig_t& rNativeLifeLevels,
-                                       const std::vector<EffectConfig_t>& rEcoDamageEffects)
+                                       const std::vector<EffectConfig_t>& rEcoDamageEffects,
+                                       const DiplomacyConfig_t& rDiplomacy)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
@@ -49,6 +54,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rDifficulty(rDifficulty)
     , m_rNativeLifeLevels(rNativeLifeLevels)
     , m_rEcoDamageEffects(rEcoDamageEffects)
+    , m_rDiplomacy(rDiplomacy)
     , m_cachedPool(rFaction)
 {
 }
@@ -209,6 +215,35 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectEcoDamageEffects_() const
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectDiplomaticStatusEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    const GameState* pState = m_rFaction.GetGameState();
+    if (!pState)
+    {
+        return result;
+    }
+    const DiplomacyLedger& rLedger = pState->GetDiplomacyLedger();
+    const FactionId_t selfId = m_rFaction.GetFactionId();
+    for (const Faction& rPartner : pState->Factions())
+    {
+        const FactionId_t partnerId = rPartner.GetFactionId();
+        if (partnerId == selfId)
+        {
+            continue;
+        }
+        const DiplomaticStatus_t status = rLedger.GetStatus(selfId, partnerId);
+        const std::size_t first = result.size();
+        AppendActiveEffects(m_rDiplomacy.For(status).effects, nullptr,
+                            "diplomacy_" + EnumToLowerName(status), result);
+        for (std::size_t i = first; i < result.size(); ++i)
+        {
+            result[i].partnerFaction = partnerId;
+        }
+    }
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectProductionEffects_() const
 {
     std::vector<ActiveEffect_t> result;
@@ -245,6 +280,12 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
     // Difficulty and native life are changeable mid-campaign; a rules change must invalidate
     // the pool.
     rOut.push_back(m_rFaction.GetSettings().GetGameRulesRevision().Get());
+    // Pair effects follow every status change and every faction that joins the session.
+    if (const GameState* pState = m_rFaction.GetGameState())
+    {
+        rOut.push_back(pState->GetDiplomacyLedger().GetRevision());
+        rOut.push_back(static_cast<uint64_t>(pState->GetNumFactions()));
+    }
     for (const BaseManager& rBase : m_rFaction.Bases())
     {
         rOut.push_back(rBase.GetBuildingManager().GetRevision());
@@ -305,6 +346,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> growthEffects = CollectGrowthEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), growthEffects.begin(),
                                   growthEffects.end());
+
+    const std::vector<ActiveEffect_t> diplomacyEffects = CollectDiplomaticStatusEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), diplomacyEffects.begin(),
+                                  diplomacyEffects.end());
 
     const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),

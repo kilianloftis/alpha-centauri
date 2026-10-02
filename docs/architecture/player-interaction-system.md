@@ -65,6 +65,8 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `ProductionAbandonInteraction_t` | Confirm / Defer → `BaseManager` API → Complete |
 | `ProductionIdleInteraction_t` | Assign (open BaseView) / Later |
 | `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
+| `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `ResolveDefensiveObligation` → Complete |
+| `TerritoryEntryInteraction_t` | Break the agreement / Cancel the order → `ResolveTerritoryEntry` → Complete |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -79,6 +81,8 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Production would empty base → `ProductionAbandonInteraction_t`
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
+- A Pact ally attacked → `PactObligationInteraction_t` (queued by `ApplyHostileAct`)
+- A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)
 
 **Follow-on PRs on the same spine**
 
@@ -87,6 +91,6 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - WorldEvents: notice + camera tile
 - AI path: AiReport notice + Yield the AI faction’s stage so the player sees news before more AI work
 
-Not in scope: priority/coalesce policies (serial FIFO only); merging council/diplomacy pending into this queue.
+Not in scope: priority/coalesce policies (serial FIFO only); merging council votes or pending diplomatic proposals into this queue.
 
 Payload arms are added when a producer needs them — a generic index-resolved choice arm was removed for that reason. Prefer a typed interaction whose resolve the presenter can route to the owning domain API.

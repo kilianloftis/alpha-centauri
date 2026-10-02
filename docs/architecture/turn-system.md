@@ -185,7 +185,9 @@ about a pending riot without being a yielding stage.
 ### Built-in stage behaviour (non-exhaustive)
 
 - **`TurnStart`**: increments mission year (`GameState::k_StartingMissionYear` → first
-  playable year `k_FirstPlayableMissionYear`), publishes turn-start events, refreshes moves.
+  playable year `k_FirstPlayableMissionYear`), publishes turn-start events, expires sanctions
+  and diplomatic statuses past their `duration_turns` (`ExpireDiplomaticStatuses`), refreshes
+  moves.
 - **`WorldEvents`**: advances the world-event registry (`config/world_events.json`) through
   `GameState::GetWorldEvents()` — each `Cycle` event is re-evaluated against
   `GetYearsSinceFirstPlayableYear()`, and an event that starts or ends this turn fires its
@@ -205,7 +207,7 @@ about a pending riot without being a yielding stage.
   change either. A base that starves to nothing is razed by `BaseManager`'s pop-loss handler as
   it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
   loop reaches it (see "Object lifetime" in `high-level.md`).
-- **`ResourceCollection`**: `ProduceBaseResources(GameState&)` — computes Friendship/Pact
+- **`ResourceCollection`**: `ProduceBaseResources(GameState&)` — computes Treaty/Pact
   commerce from the injected `CommerceManager`, then each base's `ProduceResources` adds that commerce to
   raw energy before inefficiency and the econ/labs/psych split.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral

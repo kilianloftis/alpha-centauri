@@ -39,7 +39,7 @@ public:
     // rBase is the owning BaseManager (same object for life; ownership transfer rebinds the
     // faction underneath it). Used for Efficiency rating and HQ identity.
     // rSocialRatings supplies the Efficiency level → inefficiency_denominator table.
-    // rCommerce supplies Friendship/Pact commerce energy for this base (rebound on transfer).
+    // rCommerce supplies Treaty/Pact commerce energy for this base (rebound on transfer).
     ResourceManager(
         const WorkerAssignmentManager& rWorkerAssignments,
         const EconomyManager& rEconomy,

@@ -113,6 +113,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
 | `ThisTech` | research cost for that tech | Resolved from the tech config when it is the research target (`ResearchManager`); never enters the faction pool on discovery (`AppendFactionLaneEffects` in `CollectDiscoveredTechEffects_`) |
+| `FactionPair` | the faction's dealings with one partner | `FactionEffectsPool::CollectDiplomaticStatusEffects_` adds the effects of the status the faction holds with each other session faction, tagged `ActiveEffect_t::partnerFaction`. `StatModifierMatchesInContext` admits one only when `EffectContext_t::pPartner` is that partner; `FilterByStatId` and `FilterForBase` never do. Read by `CommerceCalculator` (`CommerceRate`). |
 
 In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane_t`
 in `EffectEnums.h`, with the derived predicate `IsFactionLane`. Every collector/filter
@@ -127,6 +128,7 @@ certainly-impossible combinations — with a clear error:
 - `ThisPop` only on a pop type
 - `ThisUnit` only on a unit component
 - `ThisTech` only on a tech, and only as a `tech_cost` `StatModifier`
+- `FactionPair` only on a diplomatic status, and a diplomatic status only uses `FactionPair`
 - `ThisBase` / `ProducedAtThisBase` only on sources that can supply an origin base or
   pop-merge path: `Building`, `PopType`, `SocialPolicy`, `SocialRating`. Rejected on
   `UnitComponent`, `Improvement`, `ProbeAction`, `Faction`, `CouncilProposal`,
@@ -204,8 +206,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
   - Ecology (see [ecology-system.md](ecology-system.md)): `EcoDamageContribution` and `EcoDamageWorkedContribution` (Additive, Tile — per-improvement terraform weights; the worked half counts only on tiles the base's own pops work), `EcoTerraformScale` (PureMultiplier, Base — Tree Farm / Hybrid Forest), `EcoCleanMinerals` (Additive, Faction — the cap baseline from `eco_damage.json`), `EcoDamageReduction` (Additive, Base — Goodfacs), `EcoMineralOffset` (Additive, Base, signed — minerals ecology does not charge, or charges extra).
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
-  - Commerce: `CommerceRate` (PureMultiplier, Faction — Global Trade Pact; scales formula
-    result like scrap), `CommerceRating` (Additive, Base — Economy SE / faction bonuses in
+  - Commerce: `CommerceRate` (PureMultiplier, Faction — Global Trade Pact, plus each diplomatic
+    status's `FactionPair` rate toward a partner (Pact ×1, Treaty ×0.5, others ×0); scales
+    formula result like scrap), `CommerceRating` (Additive, Base — Economy SE / faction bonuses in
     the commerce tech ratio; social-rating expansions live on base effects),
     `CommerceEnergyBonus` (Additive, Base — flat add per commerce transaction after rate;
     Planetary Governor). Consumed by `CommerceCalculator` during `ResourceCollection`; see
@@ -363,6 +366,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
   - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
   - `ThisTech` — only the tech definition that declares the effect (`TechLocal` lane). Resolved when that tech is the current research target (`ResearchManager` feeds `tech_modifier` into `tech_cost.lua`). Must be a `tech_cost` `StatModifier` on a tech config. Never enters the faction pool when the tech is discovered.
+  - `FactionPair` — only the faction's dealings with one other faction (`FactionPair` lane). Declared by diplomatic statuses in `config/diplomacy.json`; the faction pool holds one copy per partner, tagged with it, and rebuilds when the diplomacy ledger's revision or the session's faction count changes. Resolves only in a context naming that partner (`EffectContext_t::pPartner`).
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.

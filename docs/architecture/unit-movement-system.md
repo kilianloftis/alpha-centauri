@@ -125,6 +125,19 @@ The `Query` exposes two views of the same terms, one per consumer:
 step because each step can reveal fog or hostiles (which also cancels the order via
 `CancelMoveOrderIfNewHostile_`).
 
+### Territory the unit may not enter
+
+Diplomacy can forbid entering another faction's territory (a Treaty's `enter_territory`; see
+[diplomacy-system.md](diplomacy-system.md)). Planning does not treat that as a wall: the
+`Pathfinder` costs a path as (forbidden-territory tiles entered, fragments), compared in that
+order, so it routes around such territory whenever it can and through it only to reach a
+destination inside. The objective step check reports `StepOutcome_t::BlockedByTerritory`.
+When the next step of a move order is refused that way, `Execute_` stops before it: a
+player unit keeps its order and `IUnitOrderWorld::OnTerritoryEntryRefused` queues one
+`TerritoryEntryInteraction_t` (declare Vendetta on the owner and continue, or cancel the
+order; `ResolveTerritoryEntry`). Any other unit drops the order. Unloading checks the same
+outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`).
+
 `SpendMovesAndEnter_` splits arrival into two phases. `EnterTile_` does position and move
 cost only; `ApplyArrivalEffects_` then runs the side effects of *being* on the new tile —
 boarding a transport parked there, improvement visit (Investigate prompt or AI auto-apply of

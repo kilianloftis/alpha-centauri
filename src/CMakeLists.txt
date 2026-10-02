@@ -24,7 +24,10 @@ add_library(ac-core STATIC
     game/faction/ResearchManager.cpp
     game/faction/ResearchSelector.cpp
     game/GameCategory.cpp
+    game/faction/DiplomaticStatus.cpp
+    game/faction/DiplomacyConfigParser.cpp
     game/faction/DiplomacyLedger.cpp
+    game/faction/DiplomacyRules.cpp
     game/faction/DiplomacyActions.cpp
     game/faction/DiplomacyStatusEffects.cpp
     game/faction/TradeItem.cpp

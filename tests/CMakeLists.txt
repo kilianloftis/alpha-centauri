@@ -26,7 +26,9 @@ add_executable(effects-tests
     faction/CommerceCalculatorTests.cpp
     faction/InefficiencyTests.cpp
     faction/PsychTests.cpp
+    faction/DiplomacyConfigParserTests.cpp
     faction/DiplomacyLedgerTests.cpp
+    faction/DiplomaticStatusRulesTests.cpp
     faction/DiplomacyActionsTests.cpp
     faction/DiplomaticActionExecutorTests.cpp
     faction/FirstContactTests.cpp

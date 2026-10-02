@@ -13,6 +13,7 @@ class BuildingRegistry;
 class ResearchManager;
 class SocialRatingRegistry;
 struct DifficultyConfig_t;
+struct DiplomacyConfig_t;
 struct NativeLifeLevelConfig_t;
 
 // Assembles and memoizes the faction-wide *local* active effect pool for one owning
@@ -38,7 +39,8 @@ public:
                        const std::vector<EffectConfig_t>& rGrowthEffects,
                        const DifficultyConfig_t& rDifficulty,
                        const NativeLifeLevelConfig_t& rNativeLifeLevels,
-                       const std::vector<EffectConfig_t>& rEcoDamageEffects);
+                       const std::vector<EffectConfig_t>& rEcoDamageEffects,
+                       const DiplomacyConfig_t& rDiplomacy);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -98,6 +100,10 @@ private:
     // eco_damage.json continuous effects (the clean-minerals baseline).
     std::vector<ActiveEffect_t> CollectEcoDamageEffects_() const;
 
+    // For every other session faction, the FactionPair effects of the status the two hold,
+    // tagged with that partner. None while the faction is not bound to a session.
+    std::vector<ActiveEffect_t> CollectDiplomaticStatusEffects_() const;
+
     // Erase effects whose removedByTech is already discovered.
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 
@@ -126,6 +132,7 @@ private:
     const DifficultyConfig_t& m_rDifficulty;
     const NativeLifeLevelConfig_t& m_rNativeLifeLevels;
     const std::vector<EffectConfig_t>& m_rEcoDamageEffects;
+    const DiplomacyConfig_t& m_rDiplomacy;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

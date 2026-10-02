@@ -1,0 +1,99 @@
+{
+  "statuses": {
+    "Neutral": {
+      "enter_territory": true,
+      "share_tiles": false,
+      "repair_at_bases": false,
+      "may_attack": false,
+      "defensive_obligation": false,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "parameters": {
+            "stat": "commerce_rate",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "duration_turns": null
+    },
+    "Truce": {
+      "enter_territory": true,
+      "share_tiles": false,
+      "repair_at_bases": false,
+      "may_attack": false,
+      "defensive_obligation": false,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "parameters": {
+            "stat": "commerce_rate",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "duration_turns": 3
+    },
+    "Treaty": {
+      "enter_territory": false,
+      "share_tiles": false,
+      "repair_at_bases": false,
+      "may_attack": false,
+      "defensive_obligation": false,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "parameters": {
+            "stat": "commerce_rate",
+            "amount": 0.5,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "duration_turns": null
+    },
+    "Pact": {
+      "enter_territory": true,
+      "share_tiles": true,
+      "repair_at_bases": true,
+      "may_attack": false,
+      "defensive_obligation": true,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "parameters": {
+            "stat": "commerce_rate",
+            "amount": 1,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "duration_turns": null
+    },
+    "Vendetta": {
+      "enter_territory": true,
+      "share_tiles": false,
+      "repair_at_bases": false,
+      "may_attack": true,
+      "defensive_obligation": false,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "parameters": {
+            "stat": "commerce_rate",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "duration_turns": null
+    }
+  }
+}

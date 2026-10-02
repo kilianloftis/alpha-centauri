@@ -7,7 +7,9 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/UnitManager.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementConstants.h"
@@ -317,4 +319,34 @@ TEST_CASE("Scramble MoveOrder walks hop by hop via Execute", "[unit][scramble]")
     CHECK(tilesSeen == result->scramblePath);
     CHECK(result->scramblePath.back() == &ground.GetTile());
     CHECK_FALSE(scrambler.GetOrder().has_value());
+}
+
+TEST_CASE("Scramble never routes into territory its faction may not enter", "[unit][scramble]")
+{
+    ScrambleGame_ game;
+    FactionConfig_t thirdDefinition = game.fixtures.factionDefinition;
+    thirdDefinition.id = "third";
+    Faction& rThird = AddSessionFaction(game.fixtures, *game.pState, thirdDefinition, false);
+    MakeSessionBase(game.fixtures, *game.pState, rThird, 5, 3);
+    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(5, 5) == rThird.GetFactionId());
+
+    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& scrambler =
+        game.MakeUnit(*game.pAi, 5, 7, {"test_flight_chassis", "test_weapon", "air_superiority"});
+    game.FullMoves(scrambler);
+    const Unit& attacker =
+        game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+
+    const auto findScrambler = [&]
+    {
+        return FindScrambler(attacker, ground, game.pState->GetWorldMap(),
+                             game.pState->GetTileEffects(), game.pState->GetPathfinder());
+    };
+
+    CHECK(findScrambler() == &scrambler);
+
+    // The defender already stands there (it entered before the Treaty); the scrambler may not.
+    game.pState->GetDiplomacyLedger().SetStatus(game.pAi->GetFactionId(), rThird.GetFactionId(),
+                                                DiplomaticStatus_t::Treaty);
+    CHECK(findScrambler() == nullptr);
 }

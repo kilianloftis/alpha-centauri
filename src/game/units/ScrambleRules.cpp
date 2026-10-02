@@ -85,8 +85,10 @@ bool CanScrambleTo_(const Unit& rCandidate,
         return false;
     }
 
+    // A scramble is an automatic reaction, so it never crosses territory its faction may not
+    // enter: that would need the player's decision to break the agreement.
     const Path_t path = rPathfinder.FindPath(rCandidate, rDest);
-    if (!path.bReachable || path.tiles.empty())
+    if (!path.bReachable || path.tiles.empty() || path.forbiddenTerritoryTiles > 0)
     {
         return false;
     }

@@ -51,8 +51,8 @@ BaseManager* AsBase(const ProbeTarget_t& rTarget);
 // subvertible). Units must pass IsUnitVisibleTo; bases only need the tile explored, since
 // they stay drawn from explored memory. Concealed occupants therefore yield no target,
 // which keeps the order a move until bumping into them reveals them.
-// TODO: "foreign" is faction identity only — Truce / Friendship / Pact partners resolve as
-// targets with no diplomatic gate or consequence.
+// TODO: "foreign" is faction identity only — Truce / Treaty / Pact partners resolve as
+// targets with no diplomatic gate.
 std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& rTile,
                                                 ProbeTargetKind_t kind, GameState& rGameState);
 

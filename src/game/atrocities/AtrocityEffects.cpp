@@ -51,9 +51,10 @@ int AtrocityThreshold_(const GameState& rGameState, const Faction& rPerpetrator)
                                              : rRules.aiAtrocityThreshold;
 }
 
-// Living AI factions declare Vendetta on the perpetrator, excluding the victim and anyone
-// already at Vendetta. Humans are never forced in. Each declaration ends a Pact through
-// ApplyVendetta (eviction + commlink).
+// Living AI factions join Vendetta against the perpetrator, excluding the victim and anyone
+// already at Vendetta. Humans are never forced in. Joining (JoinVendetta), not declaring: the
+// world defends the victim, so nobody is obliged to defend the perpetrator, and its AI Pact
+// partners' Pacts end as they join.
 void ApplyUniversalVendetta_(GameState& rGameState, FactionId_t perpetratorId,
                              std::optional<FactionId_t> victimId)
 {
@@ -78,7 +79,7 @@ void ApplyUniversalVendetta_(GameState& rGameState, FactionId_t perpetratorId,
         {
             continue;
         }
-        ApplyVendetta(rGameState, otherId, perpetratorId);
+        JoinVendetta(rGameState, otherId, perpetratorId);
     }
 }
 
@@ -196,6 +197,10 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     record.bCounted = bCounted;
 
     rLedger.Record(record);
+    if (victimId)
+    {
+        ApplyHostileAct(rGameState, perpetratorId, *victimId);
+    }
 
     result.severity = record.severity;
     if (bCounted)

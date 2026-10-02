@@ -787,10 +787,16 @@ TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffe
     CHECK(game.pA->GetEffectsVersion() != versionABefore);
     CHECK(game.pB->GetEffectsVersion() != versionBBefore);
 
+    // Diplomatic status rates are FactionPair effects in every local pool; only the council's
+    // faction-wide CommerceRate is under test.
     auto hasCommerceRate = [](const FactionEffects_t& rPool)
     {
         for (const ActiveEffect_t& rEffect : rPool.effects)
         {
+            if (LaneFor(rEffect.config->scope) == EffectLane_t::FactionPair)
+            {
+                continue;
+            }
             if (const auto* pStat = std::get_if<StatModifierEffect_t>(&rEffect.config->effect))
             {
                 if (pStat->stat == StatId_t::CommerceRate)

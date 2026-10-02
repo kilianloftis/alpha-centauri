@@ -220,7 +220,7 @@ public:
     EconomyManager& GetEconomy();
     const EconomyManager& GetEconomy() const;
 
-    // Commerce subsystem: Friendship/Pact pairing queries for produce, net income, and UI.
+    // Commerce subsystem: Treaty/Pact pairing queries for produce, net income, and UI.
     CommerceManager& GetCommerce();
     const CommerceManager& GetCommerce() const;
 

@@ -169,7 +169,7 @@ TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[comm
     CHECK(commerce.at(a1.GetBaseId()) == expected);
 }
 
-TEST_CASE("Friendship applies treaty_multiplier; Pact does not", "[commerce]")
+TEST_CASE("A Treaty's commerce effects halve the pair; a Pact trades at full rate", "[commerce]")
 {
     CommerceGame_ game;
     BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
@@ -180,16 +180,16 @@ TEST_CASE("Friendship applies treaty_multiplier; Pact does not", "[commerce]")
 
     DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
-                         DiplomaticStatus_t::Friendship);
+                         DiplomaticStatus_t::Treaty);
     CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
-          == static_cast<int>(std::floor(pairRaw * 0.5)));
+          == static_cast<int>(std::lround(pairRaw * 0.5)));
 
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
     CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == pairRaw);
 }
 
-TEST_CASE("No commerce for Truce, None, or Vendetta", "[commerce]")
+TEST_CASE("No commerce for Truce, Neutral, or Vendetta", "[commerce]")
 {
     CommerceGame_ game;
     game.MakeHqBase(*game.pA, 2, 2);
@@ -200,7 +200,7 @@ TEST_CASE("No commerce for Truce, None, or Vendetta", "[commerce]")
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Truce);
     CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).empty());
 
-    rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::None);
+    rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Neutral);
     CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).empty());
 
     rDiplomacy.SetStatus(
@@ -221,6 +221,22 @@ TEST_CASE("CommerceRate doubles pair value when present", "[commerce]")
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
     CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == pairRaw * 2);
+}
+
+TEST_CASE("A Treaty's halving stacks multiplicatively with a faction CommerceRate bonus",
+          "[commerce]")
+{
+    CommerceGame_ game;
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    a1.GetBuildingManager().AddBuilding("commerce_rate_doubler");
+
+    game.pState->GetDiplomacyLedger().SetStatus(
+        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Treaty);
+
+    const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+          == pairRaw);
 }
 
 TEST_CASE("commerce_rating and economic techs feed the tech ratio; total ignores rating",
@@ -275,7 +291,7 @@ TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[c
 
     const int econWithCommerce = a1.GetEconProduction();
     game.pState->GetDiplomacyLedger().SetStatus(
-        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::None);
+        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Neutral);
     const int econWithout = a1.GetEconProduction();
     CHECK(econWithCommerce > econWithout);
 
@@ -429,7 +445,7 @@ TEST_CASE("CommerceManager recomputes when a treaty changes", "[commerce]")
     const int pact = rCommerce.GetCommerceEnergy(a1);
     CHECK(pact > 0);
 
-    game.SetStatus(*game.pB, DiplomaticStatus_t::Friendship);
+    game.SetStatus(*game.pB, DiplomaticStatus_t::Treaty);
     CHECK(rCommerce.GetCommerceEnergy(a1) < pact);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Vendetta);

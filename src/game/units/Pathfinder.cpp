@@ -55,20 +55,25 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
     const int tileCount = m_rWorldMap.GetWidth() * m_rWorldMap.GetHeight();
     constexpr int k_inf = std::numeric_limits<int>::max();
 
-    std::vector<int> dist(static_cast<size_t>(tileCount), k_inf);
+    // Cost is (forbidden-territory tiles entered, move fragments), compared in that order: a
+    // route through territory the mover may not enter is taken only when no route avoids it,
+    // and the step onto such a tile is what asks the player (BlockedByTerritory).
+    using Cost_t = std::pair<int, int>;
+    const Cost_t k_unreached{k_inf, k_inf};
+    std::vector<Cost_t> dist(static_cast<size_t>(tileCount), k_unreached);
     std::vector<int> parent(static_cast<size_t>(tileCount), -1);
     const auto& tiles = m_rWorldMap.GetTiles();
 
     const int startIdx = m_rWorldMap.GetTileIndex(rStart);
     const int destIdx = m_rWorldMap.GetTileIndex(rDestination);
-    dist[static_cast<size_t>(startIdx)] = 0;
+    dist[static_cast<size_t>(startIdx)] = Cost_t{0, 0};
 
     const auto costs = m_rMoveCosts.ForUnit(rMover, m_rWorldMap);
 
     // Min-heap of (cost, tileIndex).
-    using Node_t = std::pair<int, int>;
+    using Node_t = std::pair<Cost_t, int>;
     std::priority_queue<Node_t, std::vector<Node_t>, std::greater<Node_t>> open;
-    open.push({0, startIdx});
+    open.push({Cost_t{0, 0}, startIdx});
 
     while (!open.empty())
     {
@@ -98,8 +103,10 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
                 }
                 const int edgeCost = costs.PlannedCostFragments(*pNeighbor);
                 // MagTube (0) is allowed; still advance so the search progresses.
-                const int newCost = cost + edgeCost;
-                if (newCost < 0)
+                const Cost_t newCost{
+                    cost.first + (m_rSteps.IsForbiddenTerritory(rMover, *pNeighbor) ? 1 : 0),
+                    cost.second + edgeCost};
+                if (newCost.second < 0)
                 {
                     // Overflow guard for pathological sums; treat as unreachable via this edge.
                     return;
@@ -114,7 +121,7 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
             });
     }
 
-    if (dist[static_cast<size_t>(destIdx)] == k_inf)
+    if (dist[static_cast<size_t>(destIdx)] == k_unreached)
     {
         return result;
     }
@@ -136,7 +143,8 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
     }
 
     result.tiles.assign(reversed.rbegin(), reversed.rend());
-    result.totalCostFragments = dist[static_cast<size_t>(destIdx)];
+    result.totalCostFragments = dist[static_cast<size_t>(destIdx)].second;
+    result.forbiddenTerritoryTiles = dist[static_cast<size_t>(destIdx)].first;
     result.bReachable = true;
     return result;
 }

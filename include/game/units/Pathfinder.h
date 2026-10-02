@@ -18,6 +18,9 @@ struct Path_t
 {
     std::vector<const Tile*> tiles;
     int totalCostFragments = 0;
+    // Tiles on the route in territory the mover may not enter. Nonzero only when no route
+    // avoids such territory; a move order stops at the first one (BlockedByTerritory).
+    int forbiddenTerritoryTiles = 0;
     bool bReachable = false;
 };
 

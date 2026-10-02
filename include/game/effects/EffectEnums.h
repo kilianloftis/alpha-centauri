@@ -741,6 +741,10 @@ enum class EffectScope_t
     // current research target (e.g. TechCost modifiers); never enters the faction pool when
     // the tech is discovered.
     ThisTech,
+    // Only the faction's dealings with one other faction (a diplomatic status's effects).
+    // Enters the faction pool once per partner, tagged with that partner, and resolves only
+    // in a context that names the same partner (EffectContext_t::pPartner).
+    FactionPair,
 };
 
 // Where an effect is resolved — its scope's "lane". This is the single source of truth for
@@ -774,6 +778,9 @@ enum class EffectLane_t
     TileLocal,
     // Resolved when costing the tech that declares the effect. Never enters the pool.
     TechLocal,
+    // Lives in the faction pool tagged with partnerFaction. Resolved only in a context naming
+    // that partner; never applies at base level, to units, or in a context-free resolve.
+    FactionPair,
 };
 
 constexpr EffectLane_t LaneFor(EffectScope_t scope)
@@ -790,6 +797,7 @@ constexpr EffectLane_t LaneFor(EffectScope_t scope)
         case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
         case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
         case EffectScope_t::ThisTech:      return EffectLane_t::TechLocal;
+        case EffectScope_t::FactionPair:   return EffectLane_t::FactionPair;
     }
     return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
 }
@@ -906,6 +914,9 @@ enum class EffectSourceKind_t
     // config/world_events.json: an event's `effects`, served to every faction while it is
     // active.
     WorldEvent,
+    // config/diplomacy.json: a status's `effects`, applied to each side of a pair holding it.
+    // FactionPair scope only.
+    DiplomaticStatus,
 };
 
 } // namespace ac

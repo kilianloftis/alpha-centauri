@@ -15,19 +15,20 @@ class GameState;
 struct CommerceConfig_t;
 class LuaRuntime;
 
-// One Friendship/Pact partner that contributes commerce to a specific base this turn.
+// One trading partner that contributes commerce to a specific base this turn.
 struct CommercePartnerLine_t
 {
     const Faction* pPartner = nullptr;
-    DiplomaticStatus_t status = DiplomaticStatus_t::None;
+    DiplomaticStatus_t status = DiplomaticStatus_t::Neutral;
     int ourEnergy = 0;
     int theirEnergy = 0;
 };
 
-// Pure commerce income math: pairs Friendship/Pact bases by pre-commerce energy and returns
-// per-base commerce energy for the owning faction. Does not mutate ResourceManager or treasury.
-// Pair income is one Lua formula from commerce.json; CommerceRate then CommerceEnergyBonus
-// are applied in C++ after. A faction under atrocity sanctions earns nothing and pays nothing:
+// Pure commerce income math: pairs the bases of factions whose CommerceRate toward each other
+// is above zero, by pre-commerce energy, and returns per-base commerce energy for the owning
+// faction. Does not mutate ResourceManager or treasury. Pair income is one Lua formula from
+// commerce.json; CommerceRate (the faction's effects plus its FactionPair effects toward the
+// partner) then CommerceEnergyBonus are applied in C++ after. A faction under atrocity sanctions earns nothing and pays nothing:
 // it is dropped as an owner and skipped as a partner.
 class CommerceCalculator
 {

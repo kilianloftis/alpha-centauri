@@ -253,6 +253,12 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
     return result;
 }
 
+bool ProbeDetected(const Unit& /*rProbe*/, const ProbeActionConfig_t& /*rAction*/,
+                   const ProbeTarget_t& /*rTarget*/, const ProbeRollResult_t& /*rRoll*/)
+{
+    return false;
+}
+
 bool IsHeadquarters(const BaseManager& rBase)
 {
     return ResolveFlag(rBase, RuleFlagId_t::Headquarters);

@@ -142,8 +142,9 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     {
         return false;
     }
-    // Unload uses full enter rules (friendly harbor, InteractionOverride sea base, land, etc.).
-    return CanEnterTile(rPassenger, rTo, rWorldMap, rGrids);
+    // Unload uses the physical enter rules (friendly harbor, InteractionOverride sea base,
+    // land, etc.). Territory is the step's own check (StepEvaluator, BlockedByTerritory).
+    return CanPhysicallyEnterTile(rPassenger, rTo, rWorldMap, rGrids);
 }
 
 bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)

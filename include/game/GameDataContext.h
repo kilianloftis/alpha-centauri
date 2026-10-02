@@ -51,6 +51,7 @@ class EcoDamageCalculator;
 struct NativeLifeLevelConfig_t;
 struct WorldEventsConfig_t;
 struct CommerceConfig_t;
+struct DiplomacyConfig_t;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
 // reconstructible from config files) plus the calculators/services built from that data.
@@ -86,6 +87,7 @@ struct GameDataContext
     std::unique_ptr<GrowthConfig_t> growthConfig;
     std::unique_ptr<ProductionConfig_t> productionConfig;
     std::unique_ptr<CommerceConfig_t> commerceConfig;
+    std::unique_ptr<DiplomacyConfig_t> diplomacyConfig;
     std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
     std::unique_ptr<TerrainOperationRegistry> terrainOperationRegistry;

@@ -92,7 +92,7 @@ struct DiplomaticProposal_t
 {
     FactionId_t proposer = 0;
     FactionId_t recipient = 0;
-    // nullopt = keep current status; None = cancel treaty to no affiliation.
+    // nullopt = keep current status. Otherwise StepUp, StepDown (cancel), or Vendetta.
     std::optional<DiplomaticStatus_t> requestedStatus;
     std::vector<TradeItem_t> give;   // proposer → recipient
     std::vector<TradeItem_t> demand; // recipient → proposer

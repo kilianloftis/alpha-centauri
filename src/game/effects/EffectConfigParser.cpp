@@ -1240,6 +1240,13 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
 {
     const EffectScope_t scope = rEffect.scope;
 
+    if ((scope == EffectScope_t::FactionPair) != (sourceKind == EffectSourceKind_t::DiplomaticStatus))
+    {
+        throw std::runtime_error(
+            "Effect on '" + rSourceId
+            + "': scope FactionPair is used by, and only by, diplomatic status effects");
+    }
+
     const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
     if (pStatModifier
         && pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted
@@ -1336,6 +1343,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::EcoDamage:
         case EffectSourceKind_t::NativeLifeLevel:
         case EffectSourceKind_t::WorldEvent:
+        case EffectSourceKind_t::DiplomaticStatus:
         case EffectSourceKind_t::MoraleLevel:
         case EffectSourceKind_t::NativeUnit:
             bCanSupplyOriginBase = false;

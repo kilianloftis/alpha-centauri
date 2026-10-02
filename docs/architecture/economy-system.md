@@ -90,7 +90,7 @@ graph TB
   (which already folds in base list, buildings, pops, research and SE).
 
 ### CommerceCalculator
-- **Purpose**: Pure per-turn commerce income math for Friendship / Pact partners.
+- **Purpose**: Pure per-turn commerce income math for Treaty / Pact partners.
 - **Atrocity sanctions**: Datalinks commerce step (10) reduces a pair to zero when sanctions are
   in effect against *either* faction. Applied where the pair is formed rather than after the Lua
   formula — a sanctioned owner returns no lines at all and a sanctioned partner is skipped — so the
@@ -101,16 +101,19 @@ graph TB
   base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base
   of every partner, so per-base callers belong behind `CommerceManager`'s memo rather than in
   a loop over `ComputeForBase`.
-- **Config**: `config/commerce.json` — `pair_multiplier`, `treaty_multiplier`, and a single
-  Lua `formula` (same pattern as hurry). Inputs: `energy_ours`, `energy_theirs`,
-  `pair_multiplier`, `commerce_tech`, `tech_denominator`, `treaty_factor` (1.0 for Pact,
-  `treaty_multiplier` for Friendship). `CommerceRate` and `CommerceEnergyBonus` are applied
-  in C++ after the formula (rate scales the result like scrap; flat bonus last).
+- **Config**: `config/commerce.json` — `pair_multiplier` and a single Lua `formula` (same
+  pattern as hurry). Inputs: `energy_ours`, `energy_theirs`, `pair_multiplier`,
+  `commerce_tech`, `tech_denominator`. `CommerceRate` toward the partner includes the pair's
+  diplomatic status rate (`FactionPair` effects from `config/diplomacy.json`: Pact ×1, Treaty
+  ×0.5, others ×0); a rate of 0 skips the pair. `CommerceRate` and
+  `CommerceEnergyBonus` are applied in C++ after the formula (rate scales the result like
+  scrap; flat bonus last).
 - **Formula** (per paired bases, owning faction):
   1. Rank each side's bases by pre-commerce `GetEnergyProduction()` (descending).
   2. Pair top-to-top; ignore surplus bases.
-  3. Eval `formula` (shipping SMAC: ceil pair → tech ratio → treaty factor).
-  4. Scale by faction `CommerceRate` (PureMultiplier on the formula result).
+  3. Eval `formula` (shipping SMAC: ceil pair → tech ratio).
+  4. Scale by `CommerceRate` toward the partner (PureMultiplier on the formula result): the
+     faction's effects plus its `FactionPair` effects for that partner.
   5. Add base `CommerceEnergyBonus` (Planetary Governor and similar).
   6. TODO: zero when sanctions apply to either faction.
 - **commerceTech**: resolved `CommerceRating` for the owning base (discovered economic techs'

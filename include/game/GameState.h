@@ -147,6 +147,8 @@ public:
     BaseConquestResult_t ResolvePostCombatBaseConquest(
         Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) override;
     BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) override;
+    void OnHostileAct(FactionId_t aggressor, FactionId_t victim) override;
+    void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
 
     // IWorldEffectsSource — peer WorldGlobal (from local pools) + council extras for rFor.
     // Bound onto each Faction in AddFaction so GetActiveEffects composes one pool.

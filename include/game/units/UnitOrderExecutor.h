@@ -25,6 +25,7 @@ class BaseManager;
 class GameState;
 class IUnitOrderWorld;
 class TerrainOperationRegistry;
+struct BombardTargeting_t;
 
 // Outcome of one applied step. A native raider is consumed by the base it raids, so a step
 // can legally end with the mover gone; bMoverDestroyed is the signal that no caller may
@@ -156,6 +157,9 @@ private:
     OrderProgress_t ExpendIfSingleUse_(const Unit& rUnit) const;
 
     OrderProgress_t Execute_(Unit& rUnit, MoveOrder_t& rOrder);
+    // The move's next step enters territory the unit may not enter. A player unit keeps its
+    // order and the world asks the player; any other unit drops the order.
+    OrderProgress_t RefuseTerritoryEntry_(Unit& rUnit, const Tile& rNext);
     OrderProgress_t Execute_(Unit& rUnit, HoldOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder);
@@ -173,6 +177,10 @@ private:
     bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
     CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
                                            CombatEngagement_t engagement);
+    // Every faction the shot will hit: units it strikes, or the territory owner of an
+    // empty tile's improvements.
+    void DeclareBombardHostility_(const Unit& rAttacker, const Tile& rTargetTile,
+                                  const BombardTargeting_t& rTargeting, bool bOccupied);
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).
