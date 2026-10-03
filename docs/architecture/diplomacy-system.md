@@ -32,19 +32,24 @@ graph TB
     end
 
     subgraph "What a status permits (DiplomaticPermissionRules)"
-        PermissionRules[StatusRulesFor / MayEnterTerritoryOf<br/>MayShareTiles / MayRepairAt<br/>HasDiplomacy / IsObligedToDefend]
+        PermissionRules[StatusRulesFor / MayEnterTerritoryOf unit<br/>MayShareTiles / MayRepairAt<br/>HasDiplomacy / IsObligedToDefend]
+    end
+
+    subgraph "Owner identity (UnitVisibility)"
+        OwnerKnown[IsOwnerKnownTo<br/>false for another faction's Covert unit]
     end
 
     subgraph "Transition rules (DiplomaticTransitionRules)"
         StepUpDown[StepUp / StepDown]
         CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
+        HostileActAgainst[HostileAct_t / HostileActAgainst<br/>attributed unless a side is covert]
     end
 
     subgraph "Transition effects (DiplomaticTransitionEffects)"
         ApplyStatusChange[ApplyStatusChange<br/>status + commlink + eviction]
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
         CancelTreaty[CancelTreaty<br/>one-sided StepDown]
-        ApplyHostileAct[ApplyHostileAct<br/>sneak attack unless may_attack]
+        ApplyHostileAct[ApplyHostileAct<br/>ignores unattributed acts;<br/>sneak attack unless may_attack]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
         VendettaImpl[EnterVendetta_ / DeclareVendetta_<br/>private, take VendettaKind_t]
@@ -54,9 +59,9 @@ graph TB
     end
 
     subgraph "Hostile act sources"
-        Combat[UnitOrderExecutor<br/>TryAttack / TryBombard<br/>after combat resolves]
-        Probe[ProbeActionExecutor<br/>when ProbeDetected]
-        Atrocity[CommitAtrocity]
+        Combat[UnitOrderExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
+        Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
+        Atrocity[CommitAtrocity<br/>always attributed]
     end
 
     subgraph "Action menu (DiplomacyActions)"
@@ -75,6 +80,7 @@ graph TB
     GameState --> FirstContactResolver
     FirstContactResolver -->|SetKnown| DiplomacyLedger
     FirstContactResolver -->|HasDiplomacy:<br/>never meets native life| PermissionRules
+    FirstContactResolver -->|never meets the owner<br/>of a covert unit| OwnerKnown
 
     DiplomaticActionExecutor --> DiplomaticProposal
     DiplomaticProposal --> TradeItem
@@ -107,6 +113,9 @@ graph TB
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
     Atrocity --> ApplyHostileAct
+    Combat --> HostileActAgainst
+    Probe --> HostileActAgainst
+    HostileActAgainst --> OwnerKnown
     ApplyHostileAct -->|SneakAttack| VendettaImpl
     ApplyHostileAct -->|may_attack| PermissionRules
     DeclareVendetta -->|Declaration| VendettaImpl
@@ -127,6 +136,8 @@ graph TB
     Movement[MovementRules / StepEvaluator<br/>EvacuateTerritoryRules] --> PermissionRules
     PermissionRules --> DiplomacyConfig
     PermissionRules --> DiplomacyLedger
+    PermissionRules -->|MayEnterTerritoryOf:<br/>covert units ignore bans| OwnerKnown
+    EvacuateTerritory -->|leaves covert units| OwnerKnown
 
     style DiplomacyLedger fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomaticActionExecutor fill:#f9f,stroke:#333,stroke-width:4px
@@ -164,7 +175,9 @@ sets: a pair is either in them or not.
 - **Known-ness** is set by `FirstContactResolver` during visibility rebuilds, and by
   `TradeCommFrequency_t` as a trade item (introducing a third party). Native life is never met:
   it has no diplomacy (`HasDiplomacy`), so every rule that asks whether two factions have met
-  already excludes it.
+  already excludes it. A covert unit does not meet its owner either, since the observer cannot
+  tell whose it is (`IsOwnerKnownTo`). Its own sight still meets the factions it sees, and
+  contact is mutual.
 - **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
   `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
@@ -227,7 +240,7 @@ side has nothing to accept.
 
 | Rule | Read by |
 |---|---|
-| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `units/TerritoryEntryEffects.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
+| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `units/TerritoryEntryEffects.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceCalculator` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
@@ -238,7 +251,8 @@ side has nothing to accept.
 ### ApplyStatusChange
 
 Sets the status and compares the old status's rules with the new one's. When `enter_territory`
-is lost, each side's units leave the other's territory (`EvacuateUnitsFromTerritory`). When
+is lost, each side's units leave the other's territory (`EvacuateUnitsFromTerritory`), except
+covert units the other side cannot identify. When
 `share_tiles` is lost, each side's units leave tiles shared with the other and the other's bases
 (`EvacuateUnitsSharingWith`). Vendetta also grants mutual known-contact. A Pact ending in Vendetta
 therefore clears shared tiles and bases but not territory, because Vendetta allows entering it.
@@ -320,20 +334,38 @@ never holds a status, so it neither obliges nor is obliged.
 
 ### Hostile acts
 
-`ApplyHostileAct(aggressor, victim)` starts a Vendetta as a `SneakAttack` unless their status
-allows attacks (`may_attack`). An attack on a faction already at Vendetta therefore obliges
-nobody. It is called by:
+`ApplyHostileAct(HostileAct_t)` starts a Vendetta between `aggressor` and `victim` as a
+`SneakAttack` unless their status allows attacks (`may_attack`). An attack on a faction already at
+Vendetta therefore obliges nobody. An unattributed act is ignored, and so is native life on either
+side, which has no diplomacy.
+
+A `HostileAct_t` is built before the act resolves, because combat may destroy either unit before
+it is reported. `HostileActAgainst` (`DiplomaticTransitionRules.h`) builds it from the acting unit
+and either the targeted unit or the faction whose bases or improvements were hit. It is
+**attributed** when each owner knows whose unit the other is (`IsOwnerKnownTo` in
+`UnitVisibility.h`).
+
+A unit with the `Covert` rule flag (shipping: Probe Team) has an owner no other faction knows.
+Acting against one is not a hostile act against its owner, and its own attacks, bombards and probe
+actions are not hostile acts against their victims. **Stub:** detection is not implemented, so a
+covert unit is never identified.
+
+`ApplyHostileAct` is called by:
 
 - `UnitOrderExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, after
   combat resolves (including an attack ended by interception). A sneak attack on a Pact partner
   clears shared tiles, and doing that first would teleport a stacked attacker or defender away
-  before the blow. A bombard counts against every faction whose units it targets, or the
-  territory owner of an empty tile's improvements, collected before the strikes.
-- `ProbeActionExecutor`, when `ProbeDetected` says the target identified the sender. **Stub:** the
-  detection roll is not implemented and nothing is detected yet.
-- `CommitAtrocity`, for the victim, whether or not the atrocity's penalties apply.
-
-Native life has no diplomacy and is ignored on either side.
+  before the blow.
+  - An attack's act is against the defender `FindAttackableHostileOnTile` picked, so a covert
+    defender leaves it unattributed whatever else is stacked with it.
+  - A bombard makes one act per faction whose units it targets, or for the territory owner of an
+    empty tile's improvements, all collected before the strikes. Each act is attributed when any
+    of that faction's targets is.
+- `ProbeActionExecutor`, with `ProbeHostileAct`: the act against the targeted unit or base, also
+  attributed when `ProbeDetected` says the target identified the sender. **Stub:** the detection
+  roll is not implemented and nothing is detected yet.
+- `CommitAtrocity`, for the victim, whether or not the atrocity's penalties apply. An atrocity is
+  always attributed, even when a covert unit commits it.
 
 ## TradeItem_t and TradeKind_t
 
@@ -414,7 +446,8 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate
   transfers and a status change; the only timer is a status's own `duration_turns`.
-- **Probe detection.** `ProbeDetected` never detects, so probe actions do not yet cause Vendetta.
+- **Detection.** `IsOwnerKnownTo` never identifies a covert unit and `ProbeDetected` never
+  detects, so covert units, shipping probe teams included, never cause Vendetta.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
 - **Integrity, grievances, and blemishes.** The Datalinks name six integrity levels
   (Noble → Treacherous) and directed grievances. None of that is wired yet.

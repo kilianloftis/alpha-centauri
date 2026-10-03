@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/units/BaseConquestEffects.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/units/CombatResolver.h"
 
@@ -34,8 +35,8 @@ public:
 
     virtual BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) = 0;
 
-    // aggressor's unit attacked something of victim's. Called once the attack has resolved.
-    virtual void OnHostileAct(FactionId_t aggressor, FactionId_t victim) = 0;
+    // A unit's attack, described before it resolved. Called once it has resolved.
+    virtual void OnHostileAct(const HostileAct_t& rAct) = 0;
 
     // A player unit's move order reached the border of territoryOwner's territory, which its
     // faction may not enter. The order is kept until the player decides.

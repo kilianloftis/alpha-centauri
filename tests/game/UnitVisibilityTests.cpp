@@ -355,3 +355,17 @@ TEST_CASE("Detect without ownerFaction never pierces cloak",
     REQUIRE(observer.GetVisibleMap().IsVisible(cloaked.GetTile()));
     CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
 }
+
+TEST_CASE("A covert unit's owner is known only to its own faction", "[visibility][covert]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& observer = fixture.MakeFaction();
+
+    const Unit& covert = fixture.MakeUnit(owner, 4, 4, {"test_chassis", "covert"});
+    const Unit& ordinary = fixture.MakeUnit(owner, 5, 4, {"test_chassis"});
+
+    CHECK(IsOwnerKnownTo(owner.GetFactionId(), covert));
+    CHECK_FALSE(IsOwnerKnownTo(observer.GetFactionId(), covert));
+    CHECK(IsOwnerKnownTo(observer.GetFactionId(), ordinary));
+}

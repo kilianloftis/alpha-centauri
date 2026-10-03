@@ -199,7 +199,9 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     rLedger.Record(record);
     if (victimId)
     {
-        ApplyHostileAct(rGameState, perpetratorId, *victimId);
+        ApplyHostileAct(rGameState, HostileAct_t{.aggressor = perpetratorId,
+                                                 .victim = *victimId,
+                                                 .bAttributed = true});
     }
 
     result.severity = record.severity;

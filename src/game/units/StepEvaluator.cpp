@@ -105,7 +105,7 @@ bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,
 
 bool StepEvaluator::IsForbiddenTerritory(const Unit& rMover, const Tile& rTile) const
 {
-    return !MayEnterTerritoryOf(rMover.GetFaction(), m_rWorldMap.GetTerritory().GetOwner(rTile));
+    return !MayEnterTerritoryOf(rMover, m_rWorldMap.GetTerritory().GetOwner(rTile));
 }
 
 bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,

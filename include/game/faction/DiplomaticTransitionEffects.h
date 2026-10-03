@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/DiplomaticStatus.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "game/faction/base/BaseTypes.h"
 
 namespace ac
@@ -35,11 +36,11 @@ void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t ta
 // Vendetta (the world defending the victim).
 void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggressor);
 
-// aggressor attacked victim (combat, bombardment, a detected probe action, an atrocity).
-// Unless their status already permits attacks, this is a sneak attack: Vendetta without a
-// declaration, so only units sharing tiles or bases move, and the victim's partners are obliged
-// as part of the sneak attack. Native life has no diplomacy and is ignored on either side.
-void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t victim);
+// rAct.aggressor attacked rAct.victim. Unless their status already permits attacks, this is a
+// sneak attack: Vendetta without a declaration, so only units sharing tiles or bases move, and
+// the victim's partners are obliged as part of the sneak attack. An unattributed act is ignored,
+// and so is native life on either side, which has no diplomacy.
+void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct);
 
 // partner honors its defensive obligation against aggressor, entering the conflict as the
 // config's defensive_obligation_mode says. kind is how the Vendetta that raised the obligation

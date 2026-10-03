@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/DiplomaticTransitionRules.h"
 #include "game/units/AirdropRules.h"
 #include "game/units/CombatResolver.h"
 #include "game/units/MoraleCalculator.h"
@@ -178,11 +179,11 @@ private:
     bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
     CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
                                            CombatEngagement_t engagement);
-    // Every faction the shot will hit: units it strikes, or the territory owner of an
-    // empty tile's improvements.
-    std::vector<FactionId_t> BombardVictims_(FactionId_t aggressor, const Tile& rTargetTile,
-                                             const BombardTargeting_t& rTargeting,
-                                             bool bOccupied) const;
+    // One act per faction the shot will hit: units it strikes, or the territory owner of an
+    // empty tile's improvements. Attributed when any of that faction's targets is.
+    std::vector<HostileAct_t> BombardHostileActs_(const Unit& rAttacker, const Tile& rTargetTile,
+                                                  const BombardTargeting_t& rTargeting,
+                                                  bool bOccupied) const;
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).

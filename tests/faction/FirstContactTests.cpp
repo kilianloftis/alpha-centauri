@@ -175,3 +175,25 @@ TEST_CASE("Seeing native life establishes no contact", "[diplomacy][first-contac
     CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(game.pA->GetFactionId(),
                                                           rPlanet.GetFactionId()));
 }
+
+TEST_CASE("Seeing a covert unit establishes no contact", "[diplomacy][first-contact][covert]")
+{
+    ContactGame_ game;
+    // A's base sees two tiles out; B's units see one, so they never see A back.
+    game.pA->CreateBase(
+        game.pState->AllocateBaseId(), "Watch",
+        game.pState->GetWorldMap().GetTile(4, 4),
+        game.pState->GetTileEffects(),
+        game.pState->GetSecretProjectAvailability());
+
+    Unit& rCovert = game.MakeUnit(*game.pB, 6, 4, {"test_chassis", "covert"});
+
+    REQUIRE(game.pA->GetVisibleMap().IsVisible(rCovert.GetTile()));
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(
+        game.pA->GetFactionId(), game.pB->GetFactionId()));
+
+    game.MakeUnit(*game.pB, 6, 4);
+
+    CHECK(game.pState->GetDiplomacyLedger().AreKnown(
+        game.pA->GetFactionId(), game.pB->GetFactionId()));
+}

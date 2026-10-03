@@ -9,6 +9,24 @@ namespace ac
 {
 
 class DiplomacyLedger;
+class Unit;
+
+// aggressor acted against victim (combat, bombardment, a probe action, an atrocity). Built
+// before the act resolves: either unit may not survive it.
+struct HostileAct_t
+{
+    FactionId_t aggressor;
+    FactionId_t victim;
+    // Each owner knows whose unit the other is.
+    bool bAttributed;
+};
+
+// rActor's act against rTarget's owner. A covert unit on either side leaves it unattributed.
+HostileAct_t HostileActAgainst(const Unit& rActor, const Unit& rTarget);
+
+// rActor's act against victim's bases or improvements. Attributed when victim knows whose unit
+// rActor is.
+HostileAct_t HostileActAgainst(const Unit& rActor, FactionId_t victim);
 
 // The status a pair may propose next. Any status may also go to Vendetta.
 constexpr std::optional<DiplomaticStatus_t> StepUp(DiplomaticStatus_t status)

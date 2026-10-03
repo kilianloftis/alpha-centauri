@@ -180,11 +180,15 @@ void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggre
     EnterVendetta_(rGameState, defender, aggressor, VendettaKind_t::Declaration);
 }
 
-void ApplyHostileAct(GameState& rGameState, FactionId_t aggressor, FactionId_t victim)
+void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct)
 {
-    if (!StatusRulesFor(rGameState, aggressor, victim).bMayAttack)
+    if (!rAct.bAttributed)
     {
-        DeclareVendetta_(rGameState, aggressor, victim, VendettaKind_t::SneakAttack);
+        return;
+    }
+    if (!StatusRulesFor(rGameState, rAct.aggressor, rAct.victim).bMayAttack)
+    {
+        DeclareVendetta_(rGameState, rAct.aggressor, rAct.victim, VendettaKind_t::SneakAttack);
     }
 }
 

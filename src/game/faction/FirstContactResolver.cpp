@@ -5,6 +5,7 @@
 #include "game/faction/DiplomaticPermissionRules.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/units/Unit.h"
 
@@ -39,13 +40,15 @@ bool ObserverSeesForeignBase_(const Faction& rObserver, const Faction& rOther)
 }
 
 // Fog of war only: Conceal hides the unit sprite/combat target, but a foreign unit on a
-// currently visible tile still establishes diplomatic Known.
+// currently visible tile still establishes diplomatic Known. A covert unit does not, since the
+// observer cannot tell whose it is.
 bool ObserverSeesForeignUnit_(const Faction& rObserver, const Faction& rOther)
 {
     const FactionVisibleMap& rVisible = rObserver.GetVisibleMap();
     for (const Unit& rUnit : rOther.GetUnitManager().Units())
     {
-        if (rVisible.IsVisible(rUnit.GetTile()))
+        if (rVisible.IsVisible(rUnit.GetTile())
+            && IsOwnerKnownTo(rObserver.GetFactionId(), rUnit))
         {
             return true;
         }
@@ -95,7 +98,8 @@ void FirstContactResolver::ConsiderUnit(const Unit& rSubject)
         {
             continue;
         }
-        if (m_rLedger.AreKnown(pObserver->GetFactionId(), subjectFactionId))
+        if (m_rLedger.AreKnown(pObserver->GetFactionId(), subjectFactionId)
+            || !IsOwnerKnownTo(pObserver->GetFactionId(), rSubject))
         {
             continue;
         }

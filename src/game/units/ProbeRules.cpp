@@ -259,6 +259,17 @@ bool ProbeDetected(const Unit& /*rProbe*/, const ProbeActionConfig_t& /*rAction*
     return false;
 }
 
+HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAction,
+                             const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll)
+{
+    const ProbeUnitTarget_t* pUnitTarget = std::get_if<ProbeUnitTarget_t>(&rTarget.ref);
+    HostileAct_t act = pUnitTarget
+        ? HostileActAgainst(rProbe, pUnitTarget->rUnit)
+        : HostileActAgainst(rProbe, rTarget.rFaction.GetFactionId());
+    act.bAttributed = act.bAttributed || ProbeDetected(rProbe, rAction, rTarget, rRoll);
+    return act;
+}
+
 bool IsHeadquarters(const BaseManager& rBase)
 {
     return ResolveFlag(rBase, RuleFlagId_t::Headquarters);

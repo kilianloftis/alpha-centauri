@@ -375,15 +375,14 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 
     // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
     // move either side before the blow lands.
-    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
-    const FactionId_t victim = pDefender->GetFaction().GetFactionId();
+    const HostileAct_t act = HostileActAgainst(rAttacker, *pDefender);
     if (m_pWorld)
     {
         if (std::optional<CombatResult_t> intercepted =
                 m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
         {
             // Intercept destroys the attacker; no attack history / move spend on a dead unit.
-            m_pWorld->OnHostileAct(aggressor, victim);
+            m_pWorld->OnHostileAct(act);
             return intercepted;
         }
     }
@@ -423,28 +422,36 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     }
     if (m_pWorld)
     {
-        m_pWorld->OnHostileAct(aggressor, victim);
+        m_pWorld->OnHostileAct(act);
     }
     return result;
 }
 
-std::vector<FactionId_t> UnitOrderExecutor::BombardVictims_(FactionId_t aggressor,
-                                                            const Tile& rTargetTile,
-                                                            const BombardTargeting_t& rTargeting,
-                                                            bool bOccupied) const
+std::vector<HostileAct_t> UnitOrderExecutor::BombardHostileActs_(
+    const Unit& rAttacker, const Tile& rTargetTile, const BombardTargeting_t& rTargeting,
+    bool bOccupied) const
 {
-    std::vector<FactionId_t> victims;
-    const auto addVictim = [&](FactionId_t victim)
+    std::vector<HostileAct_t> acts;
+    const auto addAct = [&](const HostileAct_t& rAct)
     {
-        if (victim != aggressor && victim != k_NoFactionOwner
-            && std::find(victims.begin(), victims.end(), victim) == victims.end())
+        if (rAct.victim == rAct.aggressor || rAct.victim == k_NoFactionOwner)
         {
-            victims.push_back(victim);
+            return;
+        }
+        const auto it = std::find_if(acts.begin(), acts.end(), [&](const HostileAct_t& rKnown)
+                                     { return rKnown.victim == rAct.victim; });
+        if (it == acts.end())
+        {
+            acts.push_back(rAct);
+        }
+        else
+        {
+            it->bAttributed = it->bAttributed || rAct.bAttributed;
         }
     };
     if (rTargeting.pDuelTarget)
     {
-        addVictim(rTargeting.pDuelTarget->GetFaction().GetFactionId());
+        addAct(HostileActAgainst(rAttacker, *rTargeting.pDuelTarget));
     }
     else if (!rTargeting.bBombardPresentButIllegal)
     {
@@ -452,15 +459,15 @@ std::vector<FactionId_t> UnitOrderExecutor::BombardVictims_(FactionId_t aggresso
         {
             if (pTarget)
             {
-                addVictim(pTarget->GetFaction().GetFactionId());
+                addAct(HostileActAgainst(rAttacker, *pTarget));
             }
         }
     }
     if (!bOccupied && !NonBaseImprovementIds(rTargetTile).empty())
     {
-        addVictim(m_rWorldMap.GetTerritory().GetOwner(rTargetTile));
+        addAct(HostileActAgainst(rAttacker, m_rWorldMap.GetTerritory().GetOwner(rTargetTile)));
     }
-    return victims;
+    return acts;
 }
 
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
@@ -475,9 +482,8 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     BombardResult_t result;
     const BombardTargeting_t targeting =
         CollectBombardTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
-    const FactionId_t aggressor = rAttacker.GetFaction().GetFactionId();
-    const std::vector<FactionId_t> victims =
-        BombardVictims_(aggressor, rTargetTile, targeting, bOccupied);
+    const std::vector<HostileAct_t> acts =
+        BombardHostileActs_(rAttacker, rTargetTile, targeting, bOccupied);
 
     if (targeting.pDuelTarget)
     {
@@ -532,9 +538,9 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     }
     if (m_pWorld)
     {
-        for (const FactionId_t victim : victims)
+        for (const HostileAct_t& rAct : acts)
         {
-            m_pWorld->OnHostileAct(aggressor, victim);
+            m_pWorld->OnHostileAct(rAct);
         }
     }
     return result;

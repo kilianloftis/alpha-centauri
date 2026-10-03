@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -29,7 +30,8 @@ std::vector<Unit*> CollectUnitsOnHostTerritory_(Faction& rGuest,
     std::vector<Unit*> onHost;
     for (Unit& rUnit : rGuest.GetUnitManager().Units())
     {
-        if (IsOnTerritoryOf(rUnit.GetTile(), hostTerritoryOwner, rTerritory))
+        if (IsOnTerritoryOf(rUnit.GetTile(), hostTerritoryOwner, rTerritory)
+            && IsOwnerKnownTo(hostTerritoryOwner, rUnit))
         {
             onHost.push_back(&rUnit);
         }

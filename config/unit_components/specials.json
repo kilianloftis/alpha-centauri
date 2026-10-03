@@ -232,6 +232,13 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "covert"
+        }
       }
     ]
   },

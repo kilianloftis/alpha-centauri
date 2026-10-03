@@ -146,6 +146,10 @@ explored/visible maps from the world map and takes a first visibility reading.
     step reveals the attributed occupants. Bombard does not. Fog and Conceal stay in force
     after the shot, and `IsUnitVisibleTo` still treats only contact reveal as seen through
     them. The map draws the bombarded units while playback is up, then stops.
+  - Seeing a unit is not knowing whose it is. `IsOwnerKnownTo` (`UnitVisibility.h`) is false
+    for another faction's unit with the `Covert` rule flag, so the first-contact sweep skips
+    covert units, and diplomacy treats acts by or against them as unattributed. See
+    [diplomacy-system.md](diplomacy-system.md#hostile-acts).
 
 - The **seed** drives every per-faction random choice (base names, the starting research
   target). It is injected rather than drawn from `std::random_device` inside `FactionFlavor` /

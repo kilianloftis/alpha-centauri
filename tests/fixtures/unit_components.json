@@ -248,6 +248,20 @@
     ]
   },
   {
+    "id": "covert",
+    "name": "Covert",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "covert"
+        }
+      }
+    ]
+  },
+  {
     "id": "test_weapon",
     "name": "Test Weapon",
     "unit_name": "Laser",

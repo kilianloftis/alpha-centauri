@@ -19,9 +19,11 @@ public:
                          std::vector<std::unique_ptr<Faction>>& rFactions);
 
     // Establish mutual Known when a foreign unit or base sits on rObserver's visible map.
+    // Covert units do not count.
     void ConsiderObserver(Faction& rObserver);
 
-    // Establish mutual Known when any other faction's visible map covers rSubject's tile.
+    // Establish mutual Known when any other faction's visible map covers rSubject's tile,
+    // unless rSubject is covert to that faction.
     void ConsiderUnit(const Unit& rSubject);
 
 private:

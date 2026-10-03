@@ -622,6 +622,9 @@ enum class RuleFlagId_t
     AttackingEndsTurn,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
+    // Owner is unknown to other factions (IsOwnerKnownTo): its hostile acts and those against
+    // it are unattributed, it is not met on sight, and territory bans do not hold it (Probe Team).
+    Covert,
 
     // Unit / tile flags
     // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
@@ -700,6 +703,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
+    if (rFlag == "covert")                      return RuleFlagId_t::Covert;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     if (rFlag == "harbors")                     return RuleFlagId_t::Harbors;
     if (rFlag == "airdrop_launch")              return RuleFlagId_t::AirdropLaunch;

@@ -215,11 +215,7 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     GameState& rGameState, const BuildingId_t& facilityId, ProbeActionResult_t result,
     const ProbeRollResult_t& roll)
 {
-    if (ProbeDetected(rUnit, rAction, rTarget, roll))
-    {
-        ApplyHostileAct(rGameState, rUnit.GetFaction().GetFactionId(),
-                        rTarget.rFaction.GetFactionId());
-    }
+    ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
 
     if (!roll.missionSucceeded)
     {

@@ -5,6 +5,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomaticTransitionEffects.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionRevealedUnits.h"
@@ -149,6 +150,20 @@ BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
     BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 4, 4);
     REQUIRE_FALSE(IsHeadquarters(rTarget));
     return rTarget;
+}
+
+DiplomaticStatus_t PlayerStatusWithAi_(ProbeGame_& rGame)
+{
+    return rGame.pState->GetDiplomacyLedger().GetStatus(rGame.pPlayer->GetFactionId(),
+                                                        rGame.pAi->GetFactionId());
+}
+
+// Signed before any probe is placed, since a Treaty moves each side out of the other's
+// territory.
+void SignTreaty_(ProbeGame_& rGame)
+{
+    ApplyStatusChange(*rGame.pState, rGame.pPlayer->GetFactionId(), rGame.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Treaty);
 }
 
 } // namespace
@@ -705,4 +720,52 @@ TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][c
     CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
                                game.pState->GetMindControlLedger())
           == before);
+}
+
+TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta",
+          "[probe][action][diplomacy][covert]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    SignTreaty_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+}
+
+TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy][covert]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    SignTreaty_(game);
+    Unit& probe =
+        game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team", "covert"}, &home);
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomacy][covert]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    SignTreaty_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "covert"});
+
+    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
 }

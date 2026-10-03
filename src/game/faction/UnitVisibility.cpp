@@ -119,4 +119,10 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
     return true;
 }
 
+bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject)
+{
+    return rSubject.GetFaction().GetFactionId() == observer
+        || !rSubject.GetFlag(RuleFlagId_t::Covert);
+}
+
 } // namespace ac

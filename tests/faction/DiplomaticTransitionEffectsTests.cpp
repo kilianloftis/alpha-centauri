@@ -14,6 +14,16 @@
 using namespace ac;
 using namespace actest;
 
+namespace
+{
+
+HostileAct_t AttributedAct_(FactionId_t aggressor, FactionId_t victim)
+{
+    return {.aggressor = aggressor, .victim = victim, .bAttributed = true};
+}
+
+} // namespace
+
 TEST_CASE("A Truce steps down to Neutral once its duration has passed",
           "[diplomacy][status][expiry]")
 {
@@ -167,7 +177,7 @@ TEST_CASE("A sneak attack on a Pact partner clears shared tiles and bases but no
     Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
     Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
 
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
@@ -225,13 +235,71 @@ TEST_CASE("Bombarding a faction declares Vendetta", "[diplomacy][status][hostile
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
 }
 
+TEST_CASE("An unattributed hostile act changes nothing", "[diplomacy][status][hostile][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+
+    ApplyHostileAct(*game.pState, HostileAct_t{.aggressor = game.pA->GetFactionId(),
+                                               .victim = game.pB->GetFactionId(),
+                                               .bAttributed = false});
+
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("Attacking a covert unit keeps the Treaty", "[diplomacy][status][hostile][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
+
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("A covert attacker keeps the Treaty", "[diplomacy][status][hostile][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon", "covert"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("Bombarding only covert units keeps the Treaty", "[diplomacy][status][hostile][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "bombard"});
+    game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
+
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(5, 0)));
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("Bombarding a covert unit stacked with an ordinary one declares Vendetta",
+          "[diplomacy][status][hostile][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "bombard"});
+    game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
+    game.MakeUnit(*game.pB, 5, 0);
+
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(5, 0)));
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
+}
+
 TEST_CASE("An AI Pact partner of the victim declares Vendetta on the aggressor",
           "[diplomacy][status][obligation]")
 {
     DiplomacyFixture game;
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
 
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
@@ -262,7 +330,7 @@ TEST_CASE("A Pact partner defending against a sneak attack stays in the aggresso
     REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
     Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
 
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
     CHECK(&rDefenderGuest.GetTile() == &game.At(2, 4));
@@ -276,7 +344,7 @@ TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack"
     REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
     Unit& rAggressorGuest = game.MakeUnit(*game.pC, 2, 4);
 
-    ApplyHostileAct(*game.pState, game.pC->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pC->GetFactionId(), game.pB->GetFactionId()));
 
     const std::vector<PactObligationInteraction_t> obligations =
         game.Queued<PactObligationInteraction_t>();
@@ -296,7 +364,7 @@ TEST_CASE("Factions without a defensive obligation stay out of it",
     DiplomacyFixture game;
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Treaty);
 
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Neutral);
 }
@@ -307,8 +375,8 @@ TEST_CASE("The player is asked once to honor a Pact when an ally is attacked",
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    ApplyHostileAct(*game.pState, game.pC->GetFactionId(), game.pB->GetFactionId());
-    ApplyHostileAct(*game.pState, game.pC->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pC->GetFactionId(), game.pB->GetFactionId()));
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pC->GetFactionId(), game.pB->GetFactionId()));
 
     const std::vector<PactObligationInteraction_t> obligations = game.Queued<PactObligationInteraction_t>();
     REQUIRE(obligations.size() == 1);
@@ -346,8 +414,8 @@ TEST_CASE("Native life has no diplomacy to change", "[diplomacy][status][hostile
     DiplomacyFixture game;
     Faction& rPlanet = AddNativeLifeFaction(game.fixtures, *game.pState);
 
-    ApplyHostileAct(*game.pState, rPlanet.GetFactionId(), game.pA->GetFactionId());
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), rPlanet.GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(rPlanet.GetFactionId(), game.pA->GetFactionId()));
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), rPlanet.GetFactionId()));
     DeclareVendetta(*game.pState, game.pA->GetFactionId(), rPlanet.GetFactionId());
     JoinVendetta(*game.pState, game.pB->GetFactionId(), rPlanet.GetFactionId());
     JoinVendetta(*game.pState, rPlanet.GetFactionId(), game.pB->GetFactionId());
@@ -377,7 +445,7 @@ TEST_CASE("Attacking a faction already at Vendetta obliges nobody",
     game.Ledger().SetStatus(game.pB->GetFactionId(), game.pC->GetFactionId(),
                             DiplomaticStatus_t::Pact);
 
-    ApplyHostileAct(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
+    ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Neutral);
 }

@@ -140,6 +140,10 @@ player unit keeps its order and `IUnitOrderWorld::OnTerritoryEntryRefused` queue
 order; `BreakAgreementAndContinue` in `TerritoryEntryEffects.h`). Any other unit drops the order. Unloading checks the same
 outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`).
 
+`MayEnterTerritoryOf` takes the unit, not its faction. A unit with the `Covert` rule flag
+ignores the ban wherever the territory's owner does not know whose unit it is
+(`IsOwnerKnownTo`), so it is never refused, asked, or routed around.
+
 `SpendMovesAndEnter_` splits arrival into two phases. `EnterTile_` does position and move
 cost only; `ApplyArrivalEffects_` then runs the side effects of *being* on the new tile —
 boarding a transport parked there, improvement visit (Investigate prompt or AI auto-apply of
@@ -262,7 +266,8 @@ move together when placement allows. Mutation is raw `UnitPositionIndex::MoveUni
 move fragments spent, no airdrop/arrival combat path. Every guest unit on the host's tiles
 (including embarked cargo) has its order cleared; embarked passengers are not relocated
 separately (the carrier tows them). When no legal own-territory tile exists the unit stays
-put (orders still cleared). Diplomacy is the caller: `ApplyStatusChange` when a status
+put (orders still cleared). Covert units the host cannot identify are not evacuated from its
+territory. Diplomacy is the caller: `ApplyStatusChange` when a status
 loses `enter_territory` or `share_tiles`, and a declared Vendetta (see
 [diplomacy-system.md](diplomacy-system.md#declaration-vs-sneak-attack)).
 

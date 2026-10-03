@@ -110,7 +110,7 @@ bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldM
                   const InteractionGridsConfig_t& rGrids)
 {
     return CanPhysicallyEnterTile(rMover, rTile, rWorldMap, rGrids)
-        && MayEnterTerritoryOf(rMover.GetFaction(), rWorldMap.GetTerritory().GetOwner(rTile));
+        && MayEnterTerritoryOf(rMover, rWorldMap.GetTerritory().GetOwner(rTile));
 }
 
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)

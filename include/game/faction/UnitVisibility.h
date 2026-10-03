@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
+
 namespace ac
 {
 
@@ -20,5 +22,9 @@ class Unit;
 // use this check.
 bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
                      const TileEffectsContext& rTileEffects);
+
+// Whether observer knows which faction owns rSubject: its own units, and any unit without Covert.
+// TODO: detection — a covert unit's owner becomes known to an observer that detects it.
+bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject);
 
 } // namespace ac

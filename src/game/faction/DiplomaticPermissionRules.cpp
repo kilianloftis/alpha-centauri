@@ -5,6 +5,7 @@
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/FactionConfig.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/units/Unit.h"
 #include "game/map/TerritoryMap.h"
@@ -53,14 +54,16 @@ bool IsObligedToDefend(const GameState& rGameState, FactionId_t partner, Faction
         && !rGameState.GetDiplomacyLedger().HasVendetta(partner, aggressor);
 }
 
-bool MayEnterTerritoryOf(const Faction& rGuest, FactionId_t territoryOwner)
+bool MayEnterTerritoryOf(const Unit& rGuest, FactionId_t territoryOwner)
 {
-    const FactionId_t guestId = rGuest.GetFactionId();
-    if (territoryOwner == k_NoFactionOwner || territoryOwner == guestId)
+    const Faction& rGuestFaction = rGuest.GetFaction();
+    const FactionId_t guestId = rGuestFaction.GetFactionId();
+    if (territoryOwner == k_NoFactionOwner || territoryOwner == guestId
+        || !IsOwnerKnownTo(territoryOwner, rGuest))
     {
         return true;
     }
-    return StatusRulesFor(SessionOf_(rGuest), guestId, territoryOwner).bEnterTerritory;
+    return StatusRulesFor(SessionOf_(rGuestFaction), guestId, territoryOwner).bEnterTerritory;
 }
 
 bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase)

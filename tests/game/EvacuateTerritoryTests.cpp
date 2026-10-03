@@ -54,6 +54,25 @@ TEST_CASE("Evacuate moves guest unit to nearest own territory without spending m
     CHECK(&unit.GetTile() != &fixture.At(6, 4));
 }
 
+TEST_CASE("Evacuate leaves a covert unit in the host's territory", "[evacuate][covert]")
+{
+    FactionFixture fixture;
+    Faction& guest = fixture.MakeFaction();
+    Faction& host = fixture.MakeFaction();
+
+    fixture.MakeFactionBase(guest, 1, 4);
+    fixture.MakeFactionBase(host, 7, 4);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == host.GetFactionId());
+
+    Unit& covert = fixture.MakeUnit(guest, 6, 4, {"test_chassis", "covert"});
+    covert.SetOrder(MoveOrder_t{&fixture.At(7, 4)});
+
+    const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
+    CHECK(result.unitsMoved == 0);
+    CHECK(&covert.GetTile() == &fixture.At(6, 4));
+    CHECK(covert.GetOrder().has_value());
+}
+
 TEST_CASE("Evacuate leaves units on own or unowned tiles alone", "[evacuate]")
 {
     FactionFixture fixture;

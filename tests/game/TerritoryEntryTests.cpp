@@ -40,6 +40,22 @@ TEST_CASE("A player's move stops at the border of Treaty territory and asks",
     CHECK(entries.front().ownerId == game.pB->GetFactionId());
 }
 
+TEST_CASE("A covert unit enters Treaty territory without asking",
+          "[diplomacy][status][territory][covert]")
+{
+    DiplomacyFixture game;
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
+    REQUIRE(game.Owner(5, 4) == game.pB->GetFactionId());
+    Unit& rScout = game.MakeUnit(*game.pA, 4, 4, {"test_chassis", "covert"});
+
+    rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
+    game.pState->GetUnitOrderExecutor().Execute(rScout);
+
+    CHECK(&rScout.GetTile() == &game.At(5, 4));
+    CHECK(game.Queued<TerritoryEntryInteraction_t>().empty());
+    CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
+}
+
 TEST_CASE("Breaking the Treaty at the border declares Vendetta and resumes the move",
           "[diplomacy][status][territory]")
 {

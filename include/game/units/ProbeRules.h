@@ -4,6 +4,7 @@
 #include "game/units/ProbeTarget.h"
 
 #include "game/effects/EffectEnums.h"
+#include "game/faction/DiplomaticTransitionRules.h"
 
 #include <cstdint>
 #include <optional>
@@ -71,11 +72,15 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
 // Roll mission then escape. RISK 0 missions are always successful (100%).
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng);
 
-// Whether the target faction identifies who sent the probe. A detected action is a hostile
-// act against the target.
+// Whether the target faction detects the probe and so learns who sent a covert one.
 // TODO: the detection roll ("getting away cleanly") is not implemented; nothing is detected.
 bool ProbeDetected(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                    const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
+
+// The action as a hostile act against the target's faction: HostileActAgainst the targeted unit
+// or base faction, and attributed as well when ProbeDetected.
+HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAction,
+                             const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
 
 bool IsHeadquarters(const BaseManager& rBase);
 

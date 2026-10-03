@@ -663,9 +663,9 @@ BaseConquestResult_t GameState::ResolveBaseEntryConquest(Unit& rMover, std::mt19
     return ac::ResolveBaseEntryConquest(rMover, *this, rRng);
 }
 
-void GameState::OnHostileAct(FactionId_t aggressor, FactionId_t victim)
+void GameState::OnHostileAct(const HostileAct_t& rAct)
 {
-    ApplyHostileAct(*this, aggressor, victim);
+    ApplyHostileAct(*this, rAct);
 }
 
 void GameState::OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner)

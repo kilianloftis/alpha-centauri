@@ -23,9 +23,9 @@ bool HasDiplomacy(const Faction& rFaction);
 bool IsObligedToDefend(const GameState& rGameState, FactionId_t partner, FactionId_t ally,
                        FactionId_t aggressor);
 
-// Whether rGuest's units may stand in territory owned by territoryOwner. Always true for
-// unowned tiles and the guest's own territory.
-bool MayEnterTerritoryOf(const Faction& rGuest, FactionId_t territoryOwner);
+// Whether rGuest may stand in territory owned by territoryOwner. Always true for unowned tiles,
+// the guest's own territory, and an owner that does not know whose unit rGuest is (Covert).
+bool MayEnterTerritoryOf(const Unit& rGuest, FactionId_t territoryOwner);
 
 // Whether units of rA and faction b may stand on the same tile. Always true for one faction.
 bool MayShareTiles(const Faction& rA, FactionId_t b);
