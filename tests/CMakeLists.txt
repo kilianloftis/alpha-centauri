@@ -129,6 +129,7 @@ add_executable(effects-tests
     ui/HotkeyConfigTests.cpp
     ui/WorldViewTests.cpp
     ui/TileRendererTests.cpp
+    ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp

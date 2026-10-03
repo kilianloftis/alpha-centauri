@@ -201,11 +201,11 @@ the map.
 Views are rendered bottom-to-top through the stack. Each view renders its own `UIElement`s in its `Render()` method.
 
 ### WorldDisplay Viewport
-- **Purpose**: Controls which portion of the world map is visible on screen.
-- **State**: `m_tileSize` (pixel size per tile), `m_cameraX`/`m_cameraY` (top-left tile coordinates of the viewport).
-- **Rendering**: `Render(x, y, w, h)` computes how many tiles fit in the given pixel area from `m_tileSize`, then renders only the tile range `[cameraX, cameraX + tilesWide) x [cameraY, cameraY + tilesHigh)`. Layers are drawn in this order: tiles, bases, then units.
-- **Configurability**: `SetTileSize()` and `MapViewport::SetCamera()` are the sole control points. Tile size is intentionally configurable to support zoom and per-platform tuning.
-- **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
+- **Purpose**: Controls which portion of the world map is visible on screen as a 2:1 isometric diamond grid (`MapViewport`). Gameplay topology stays square.
+- **State**: diamond width (`TileSize` / `TileWidth`), height = width / 2, `m_cameraX`/`m_cameraY` (projection anchor).
+- **Rendering**: `ForEachVisibleTile` enumerates diamonds whose AABB intersects the layout, back-to-front by `relX+relY`. Layers: tiles, bases, then units.
+- **Configurability**: Constructor tile size and `MapViewport::SetCamera()` are the control points. Tile size supports zoom and per-platform tuning.
+- **Mouse hit-testing**: `WorldView::HandleMouse` calls `MapViewport::WorldCoordsAtPixel` (inverse isometric transform with wrap-X).
 - **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
 - **Unit Selection**: Left-clicking a tile with a base opens that base (`m_onOpenBase`), even when units are garrisoned there — the base screen's unit stack is how the player picks a unit on a base tile. Otherwise, left-clicking a tile with units selects the first visible unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`.
 - **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. `Shift+D` opens Disband Units (`Disband`, `Self Destruct`, `Cancel`); `Disband` quotes `Faction::QuoteScrapUnit` and confirms before `ScrapUnit`. `Self Destruct` is a stub notice. Order execution is delegated to the turn-processing `UnitOrderExecutor`.

@@ -22,6 +22,8 @@ namespace ac
 namespace
 {
 
+constexpr float k_IsoHeightRatio = 0.5f;
+
 enum class SpriteCacheState_t
 {
     Untried,
@@ -119,8 +121,8 @@ Color_t SpriteTint_(const Tile& rTile, bool bFogged)
 
 // True when a sprite was drawn. Empty path, missing file, or load/draw failure → false so the
 // caller can paint the procedural fallback.
-bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float y, float size,
-                    const Color_t& tint)
+bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float y, float width,
+                    float height, const Color_t& tint)
 {
     if (path.empty())
     {
@@ -142,11 +144,11 @@ bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float
         rState = SpriteCacheState_t::Loaded;
     }
 
-    return rGraphics.DrawSprite(path, x, y, size, size, tint);
+    return rGraphics.DrawSprite(path, x, y, width, height, tint);
 }
 
 bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::string& contentId,
-                         float x, float y, float size, const Color_t& tint)
+                         float x, float y, float width, float height, const Color_t& tint)
 {
     // Improvement layer already returns PascalCase config ids; other layers use TileLayerContent.
     const bool bLooksLikeConfigId =
@@ -157,26 +159,29 @@ bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::stri
     {
         return false;
     }
-    return TryDrawSprite_(rGraphics, pOccupant->spritePath, x, y, size, tint);
+    return TryDrawSprite_(rGraphics, pOccupant->spritePath, x, y, width, height, tint);
 }
 
-void DrawInsetRect_(Graphics& rGraphics, float x, float y, float size, float insetRatio,
-                    const Color_t& color)
+void DrawInsetDiamond_(Graphics& rGraphics, float x, float y, float width, float height,
+                       float insetRatio, const Color_t& color)
 {
-    const float inset = size * insetRatio;
-    const float span = size - 2.0f * inset;
-    if (span <= 0.0f)
+    const float insetX = width * insetRatio;
+    const float insetY = height * insetRatio;
+    const float spanW = width - 2.0f * insetX;
+    const float spanH = height - 2.0f * insetY;
+    if (spanW <= 0.0f || spanH <= 0.0f)
     {
         return;
     }
-    rGraphics.DrawFilledRect(x + inset, y + inset, span, span, color);
+    rGraphics.DrawFilledDiamond(x + insetX, y + insetY, spanW, spanH, color);
 }
 
-void DrawRockinessRing_(Graphics& rGraphics, float x, float y, float size, const Color_t& ringColor,
-                        const Color_t& holeColor, float outerInsetRatio, float innerInsetRatio)
+void DrawRockinessRing_(Graphics& rGraphics, float x, float y, float width, float height,
+                        const Color_t& ringColor, const Color_t& holeColor, float outerInsetRatio,
+                        float innerInsetRatio)
 {
-    DrawInsetRect_(rGraphics, x, y, size, outerInsetRatio, ringColor);
-    DrawInsetRect_(rGraphics, x, y, size, innerInsetRatio, holeColor);
+    DrawInsetDiamond_(rGraphics, x, y, width, height, outerInsetRatio, ringColor);
+    DrawInsetDiamond_(rGraphics, x, y, width, height, innerInsetRatio, holeColor);
 }
 
 bool ShouldSkipLandProceduralOverlays_(const Tile& rTile)
@@ -185,8 +190,8 @@ bool ShouldSkipLandProceduralOverlays_(const Tile& rTile)
            || rTile.HasImprovement(ImprovementIds::k_Forest);
 }
 
-void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                              bool bFogged, const Color_t& baseFill)
+void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, float y, float width,
+                              float height, bool bFogged, const Color_t& baseFill)
 {
     if (ShouldSkipLandProceduralOverlays_(rTile))
     {
@@ -201,12 +206,12 @@ void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, f
     }
     const Color_t ring =
         DimColor_(rockiness == Rockiness_t::Rocky ? s.rockyRingColor : s.rollingRingColor, dim);
-    DrawRockinessRing_(rGraphics, x, y, size, ring, baseFill, s.landformRingOuterInsetRatio,
+    DrawRockinessRing_(rGraphics, x, y, width, height, ring, baseFill, s.landformRingOuterInsetRatio,
                        s.landformRingInnerInsetRatio);
 }
 
-void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                             bool bFogged)
+void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, float y, float width,
+                             float height, bool bFogged)
 {
     if (ShouldSkipLandProceduralOverlays_(rTile))
     {
@@ -221,7 +226,7 @@ void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, fl
     }
     const Color_t center =
         DimColor_(moisture == Moisture_t::Wet ? s.wetCenterColor : s.moistCenterColor, dim);
-    DrawInsetRect_(rGraphics, x, y, size, s.landformRingInnerInsetRatio, center);
+    DrawInsetDiamond_(rGraphics, x, y, width, height, s.landformRingInnerInsetRatio, center);
 }
 
 } // namespace
@@ -271,10 +276,12 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
                           bool bFogged)
 {
     const auto& s = Style().tileRenderer;
+    const float width = size;
+    const float height = size * k_IsoHeightRatio;
     const Color_t baseFill = FillColor(rTile, bFogged);
     const Color_t tint = SpriteTint_(rTile, bFogged);
 
-    rGraphics.DrawFilledRect(x, y, size, size, baseFill);
+    rGraphics.DrawFilledDiamond(x, y, width, height, baseFill);
 
     for (const TileLayer_t& rLayer : ResolveTileLayers(rTile))
     {
@@ -282,7 +289,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, size, tint))
+        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, width, height, tint))
         {
             continue;
         }
@@ -291,11 +298,11 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
             || (rLayer.type == TileLayerType_t::Landform
                 && *rLayer.contentId == TileLayerContent::k_Rolling))
         {
-            DrawProceduralRockiness_(rGraphics, rTile, x, y, size, bFogged, baseFill);
+            DrawProceduralRockiness_(rGraphics, rTile, x, y, width, height, bFogged, baseFill);
         }
         else if (rLayer.type == TileLayerType_t::Moisture)
         {
-            DrawProceduralMoisture_(rGraphics, rTile, x, y, size, bFogged);
+            DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
         }
     }
 
@@ -312,7 +319,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y, size, tint);
+        (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y, width, height, tint);
     }
 
     // Optional terrain bonuses / monolith sit in GetTerrainFeatures, not improvements.
@@ -330,10 +337,10 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        (void)TryDrawSprite_(rGraphics, pFeature->spritePath, x, y, size, tint);
+        (void)TryDrawSprite_(rGraphics, pFeature->spritePath, x, y, width, height, tint);
     }
 
-    rGraphics.DrawRect(x, y, size, size, s.tileBorderColor, s.tileBorderWidth);
+    rGraphics.DrawDiamond(x, y, width, height, s.tileBorderColor, s.tileBorderWidth);
 }
 
 } // namespace ac

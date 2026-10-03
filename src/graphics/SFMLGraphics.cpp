@@ -269,6 +269,32 @@ public:
         m_window.draw(rect);
     }
 
+    void DrawFilledDiamond(float x, float y, float width, float height, const Color_t& color) override
+    {
+        sf::ConvexShape diamond(4);
+        diamond.setPoint(0, {width * 0.5f, 0.0f});
+        diamond.setPoint(1, {width, height * 0.5f});
+        diamond.setPoint(2, {width * 0.5f, height});
+        diamond.setPoint(3, {0.0f, height * 0.5f});
+        diamond.setPosition({x, y});
+        diamond.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
+        diamond.setOutlineThickness(0.0f);
+        m_window.draw(diamond);
+    }
+
+    void DrawDiamond(float x, float y, float width, float height, const Color_t& color,
+                     float thickness) override
+    {
+        const float xMid = x + width * 0.5f;
+        const float yMid = y + height * 0.5f;
+        const float xRight = x + width;
+        const float yBottom = y + height;
+        DrawLine(xMid, y, xRight, yMid, color, thickness);
+        DrawLine(xRight, yMid, xMid, yBottom, color, thickness);
+        DrawLine(xMid, yBottom, x, yMid, color, thickness);
+        DrawLine(x, yMid, xMid, y, color, thickness);
+    }
+
     void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness) override
     {
         const float dx = x2 - x1;

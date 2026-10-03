@@ -11,6 +11,7 @@ class Tile;
 // Fills by fungus/forest overlay or elevation (blue water / brown land), then draws
 // ResolveTileLayers bottom-to-top with scaled sprites tinted by elevation/fog.
 // Missing assets fall back to procedural moisture/rockiness cues.
+// Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
 class TileRenderer
 {
 public:
@@ -19,6 +20,7 @@ public:
     static Color_t FillColor(const Tile& rTile, bool bFogged = false);
 
     // Fogged tiles use a dimmed fill and muted overlay colors (explored memory on the world map).
+    // `size` is the diamond width in pixels; height is size / 2.
     static void Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
                        bool bFogged = false);
 };

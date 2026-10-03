@@ -182,7 +182,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
                 CHECK(rSprite.x == 10.0f);
                 CHECK(rSprite.y == 20.0f);
                 CHECK(rSprite.destWidth == 100.0f);
-                CHECK(rSprite.destHeight == 100.0f);
+                CHECK(rSprite.destHeight == 50.0f);
                 bFound = true;
             }
         }

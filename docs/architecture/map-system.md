@@ -211,7 +211,7 @@ graph TB
   - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture_t, Rockiness_t, Vegetation, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
-  - `TileRenderer`: consumes `ResolveTileLayers`, scales sprites to the viewport tile size, tints by elevation/fog; procedural moisture/rockiness rings when a layer sprite is missing
+  - `TileRenderer`: consumes `ResolveTileLayers`, scales sprites to the isometric diamond AABB, tints by elevation/fog; procedural moisture/rockiness cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
   1. `Landform`: water (`Tile::IsWater()`), flat, or rolling

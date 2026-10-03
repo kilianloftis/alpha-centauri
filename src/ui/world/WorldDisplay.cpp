@@ -148,8 +148,8 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
             return;
         }
 
-        // Top-right corner so the marker stays clear of base names and unit chips.
-        const float markerX = tileX + tileSize - markerWidth - inset;
+        // Near the top vertex so the marker stays clear of base names and unit chips.
+        const float markerX = tileX + (tileSize - markerWidth) * 0.5f;
         const float markerY = tileY + inset;
 
         rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.sensorMarkerColor);
@@ -180,9 +180,10 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
             return;
         }
 
-        // Centered so the marker reads as a tile landmark (Sensors own the top-right).
+        // Centered on the diamond so the marker reads as a tile landmark.
+        const float tileHeight = m_viewport.TileHeight();
         const float markerX = tileX + (tileSize - markerWidth) * 0.5f;
-        const float markerY = tileY + (tileSize - markerHeight) * 0.5f;
+        const float markerY = tileY + (tileHeight - markerHeight) * 0.5f;
 
         rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.monolithMarkerColor);
         rGraphics.DrawText("M", markerX + inset, markerY + inset, fontSize, s.monolithLabelColor);
@@ -323,18 +324,19 @@ void WorldDisplay::Render(Graphics& rGraphics)
     }
 
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const float tileSize = m_viewport.TileSize();
+    const float tileWidth = m_viewport.TileWidth();
+    const float tileHeight = m_viewport.TileHeight();
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
         if (fog.explored && !fog.explored->IsExplored(rTile))
         {
-            rGraphics.DrawFilledRect(tileX, tileY, tileSize, tileSize,
-                                     Style().worldDisplay.shroudColor);
+            rGraphics.DrawFilledDiamond(tileX, tileY, tileWidth, tileHeight,
+                                        Style().worldDisplay.shroudColor);
             return;
         }
 
         const bool bFogged = fog.visible && !fog.visible->IsVisible(rTile);
-        TileRenderer::Render(rGraphics, rTile, tileX, tileY, tileSize, bFogged);
+        TileRenderer::Render(rGraphics, rTile, tileX, tileY, tileWidth, bFogged);
     });
 
     RenderBases_(rGraphics);

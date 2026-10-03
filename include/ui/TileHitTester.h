@@ -11,9 +11,9 @@ namespace ac
 class TileHitTester
 {
 public:
-    // Hit-test the full world map grid.
-    // gridOriginX/Y: top-left pixel position of the grid (same x,y passed to WorldDisplay::Render).
-    // Returns world tile coordinates (col, row), or nullopt if outside the grid.
+    // Hit-test an orthogonal (axis-aligned) tile grid. The world map uses
+    // MapViewport::WorldCoordsAtPixel for isometric diamonds instead.
+    // Returns tile coordinates (col, row), or nullopt if outside the grid.
     static std::optional<std::pair<int, int>> HitTestWorldGrid(
         float mouseX, float mouseY,
         float gridOriginX, float gridOriginY,

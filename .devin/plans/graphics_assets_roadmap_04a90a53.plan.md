@@ -4,7 +4,10 @@ overview: High-level roadmap for extracting SMAC art into local PNGs, wiring con
 todos:
   - id: phase1-terrain
     content: "Phase 1: extract_terrain.py + wire TileLayerResolver into TileRenderer with scaled sprites"
-    status: pending
+    status: completed
+  - id: phase1b-isometric
+    content: "Phase 1b: isometric MapViewport (diamond project/unproject, hit-test, draw order, art)"
+    status: completed
   - id: phase2-bases
     content: "Phase 2: harden extract_faction.py + draw base sprites on WorldDisplay"
     status: pending
@@ -94,6 +97,14 @@ Document layout discoveries next to each extractor (region tables are reverse-en
 **Extractor + renderer:** see Phase 1 detailed plan (`extract_terrain.py`, `TileLayerResolver` draw path, scaled+tinted sprites).
 
 Phase 1 deliberately skips bases, units, and UI chrome.
+
+### Phase 1b — Isometric map viewport
+
+**Goal:** SMAC-style diamond presentation; gameplay grid stays square.
+
+See detailed plan: [isometric_map_viewport.plan.md](isometric_map_viewport.plan.md) — `MapViewport` project/unproject, hit-test, back-to-front draw, diamond `TileRenderer` footprint, art mask/crops; elevation skirts deferred inside that plan.
+
+Land this before Phase 2 so faction bases sit on the diamond grid.
 
 ### Phase 2 — Faction bases on the map
 

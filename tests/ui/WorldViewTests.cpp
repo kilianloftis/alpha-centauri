@@ -147,15 +147,18 @@ MouseEvent_t ReleaseAt_(int x, int y)
     return MouseEvent_t{MouseButton_t::Left, x, y, {}, /*bPressed*/ false};
 }
 
-// Pixel center of a camera-relative map cell. Camera starts at (0,0); FullScreen + style
-// map layout put world tile (tileX, tileY) in that cell for the 9×9 fixture map.
+// Pixel center of an isometric diamond. Camera starts at (0,0); FullScreen + style map
+// layout put world tile (tileX, tileY) on that diamond for the 9×9 fixture map.
 std::pair<int, int> MapTileClick_(const WindowLayout_t& rFullscreen, int tileX, int tileY)
 {
     const WindowLayout_t mapLayout = ResolveLayout(rFullscreen, Style().layouts.map);
-    const float tileSize = mapLayout.height * Style().worldDisplay.defaultTileScale;
-    const int x = static_cast<int>(mapLayout.x + (static_cast<float>(tileX) + 0.5f) * tileSize);
-    const int y = static_cast<int>(mapLayout.y + (static_cast<float>(tileY) + 0.5f) * tileSize);
-    return {x, y};
+    const float tileWidth = mapLayout.height * Style().worldDisplay.defaultTileScale;
+    const float tileHeight = tileWidth * 0.5f;
+    const float halfW = tileWidth * 0.5f;
+    const float halfH = tileHeight * 0.5f;
+    const float x = mapLayout.x + static_cast<float>(tileX - tileY) * halfW + halfW;
+    const float y = mapLayout.y + static_cast<float>(tileX + tileY) * halfH + halfH;
+    return {static_cast<int>(x), static_cast<int>(y)};
 }
 
 } // namespace

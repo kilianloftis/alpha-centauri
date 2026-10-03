@@ -36,7 +36,6 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/ProbeActionResult.h"
 #include "game/effects/EffectEnums.h"
-#include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
 #include <magic_enum.hpp>
@@ -659,15 +658,8 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
     const MapViewport& rViewport = m_pWorldDisplay->GetViewport();
 
-    auto tile = TileHitTester::HitTestWorldGrid(
-        static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        m_mapLayout.x, m_mapLayout.y, rViewport.TileSize(),
-        rViewport.VisibleCols(),
-        rViewport.VisibleRows());
-
-    const auto worldCoords = tile
-        ? rViewport.WorldCoordsAt(tile->first, tile->second)
-        : std::nullopt;
+    const auto worldCoords = rViewport.WorldCoordsAtPixel(
+        static_cast<float>(rEvent.x), static_cast<float>(rEvent.y));
     const int worldX = worldCoords ? worldCoords->first : k_InvalidTileCoord;
     const int worldY = worldCoords ? worldCoords->second : k_InvalidTileCoord;
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
@@ -742,7 +734,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         return;
     }
 
-    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && tile)
+    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && worldCoords)
     {
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
         const FactionExploredMap* pExplored =

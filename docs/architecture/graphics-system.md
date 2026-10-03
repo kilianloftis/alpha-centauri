@@ -68,6 +68,7 @@ graph TB
   - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)` / `DrawSprite(..., destWidth, destHeight, tint)`: Draw a sprite at position, optionally scaled and color-multiplied (elevation/fog on map tiles)
   - `DrawText(text, x, y, size)`: Draw text at position
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
+  - `DrawFilledDiamond` / `DrawDiamond`: Isometric tile footprint whose AABB is `(x, y, width, height)`
   - `SetMouseCursor(path, hotspotX, hotspotY)`: Apply a custom OS cursor from an image file. Empty path or load failure leaves the current cursor and returns false; the backend keeps the cursor object alive until the next set/reset
   - `ResetMouseCursor()`: Restore the system arrow cursor
 
@@ -113,18 +114,23 @@ UI components use the Graphics interface to render game information.
   - `SetPopulation()`: Set the population manager to display
   - `SetCurrentPop()`: Set population directly
 
-### WorldDisplay
-- **Purpose**: Displays the world map as a grid of tiles with base markers
-- **File**: `ui/world/WorldDisplay.h`, `ui/world/WorldDisplay.cpp`
-- **Dependencies**: Graphics, GameState (WorldMap + factions/bases)
+### WorldDisplay / MapViewport
+- **Purpose**: Displays the world map as a SMAC-style 2:1 isometric diamond grid with base markers
+- **File**: `ui/world/WorldDisplay.h`, `ui/world/MapViewport.h`
+- **Model vs presentation**: `WorldMap` stays square (neighbors, wrap-X, pathfinding). All isometric
+  math lives in `MapViewport` (`PixelOriginOf` / `PixelCenterOf` / `WorldCoordsAtPixel` /
+  depth-ordered `ForEachVisibleTile`).
 - **Methods**:
-  - `Render(rGraphics)`: Render the visible viewport from the stored layout/camera
+  - `Render(rGraphics)`: Painter’s-algorithm pass over visible diamonds from the stored camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
-  - `GetViewport().SetCamera(tileX, tileY)`: Set the top-left tile of the viewport
-- **Tile drawing**: Each cell is painted by `TileRenderer` — elevation-colored fill, then
-  `ResolveTileLayers` sprites scaled to the tile size with an elevation/fog tint. Missing
+  - `GetViewport().SetCamera(tileX, tileY)`: Anchor tile for the isometric projection
+- **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
+  `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Missing
   PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
-  `extract_terrain.py` against a local SMAC install to populate `assets/sprites/`.
+  `extract_terrain.py` against a local SMAC install to populate `assets/sprites/` (diamond
+  alpha mask applied by default). Elevation perspective / cliff skirts are a follow-on.
+- **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel`. Orthogonal
+  `TileHitTester::HitTestWorldGrid` remains for non-iso grids; base workable area stays orthogonal.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
   render (no per-frame base-info DTO). Base-at-tile clicks go through
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
@@ -132,6 +138,7 @@ UI components use the Graphics interface to render game information.
 ### TileRenderer
 - **Purpose**: Shared map-cell paint for the world map, location preview, and similar views
 - **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
+- **Footprint**: 2:1 diamond (`size` = width, height = size / 2)
 - **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
 - **Layers**: fungus wins vegetation; cliff-edge compositing deferred
 
@@ -149,13 +156,13 @@ UI components use the Graphics interface to render game information.
   - Base center: Yellow "BASE" label
 
 ### TileHitTester
-- **Purpose**: Converts pixel coordinates (e.g. mouse clicks) to world tile coordinates
+- **Purpose**: Converts pixel coordinates to tile coordinates for orthogonal grids
 - **File**: `ui/TileHitTester.h`, `ui/TileHitTester.cpp`
 - **Dependencies**: None (stateless utility, all methods are static)
 - **Methods**:
-  - `HitTestWorldGrid(mouseX, mouseY, gridOriginX, gridOriginY, tileSize, mapWidth, mapHeight)`: Returns `optional<pair<int,int>>` tile coords for clicks on the world map grid
+  - `HitTestWorldGrid(...)`: Orthogonal grid helper (world map uses `MapViewport::WorldCoordsAtPixel`)
   - `HitTestBaseWorkableArea(mouseX, mouseY, renderCenterX, renderCenterY, tileSize, baseX, baseY)`: Returns `optional<pair<int,int>>` tile coords for clicks on the base workable area (validates diamond pattern)
-- **Usage**: Shared by WorldDisplay and BaseWorkableAreaDisplay to translate mouse input into tile selection
+- **Usage**: Base workable area and similar orthogonal panels
 
 ## View System
 

@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageChops, ImageDraw
 except ImportError:
     sys.exit("Pillow is required:  pip install Pillow")
 
@@ -171,16 +171,40 @@ def to_rgba(sprite: Image.Image, key_indices: frozenset[int], *, keyed: bool) ->
     return rgba
 
 
+def apply_diamond_mask(rgba: Image.Image) -> Image.Image:
+    """Keep pixels inside a diamond covering the full AABB (2:1 isometric footprint).
+
+    Square texture.pcx crops are stretched into a W×W/2 diamond on the map; masking
+    here so corners stay transparent when drawn into that AABB.
+    """
+    width, height = rgba.size
+    mask = Image.new("L", (width, height), 0)
+    ImageDraw.Draw(mask).polygon(
+        [
+            (width // 2, 0),
+            (width - 1, height // 2),
+            (width // 2, height - 1),
+            (0, height // 2),
+        ],
+        fill=255,
+    )
+    red, green, blue, alpha = rgba.split()
+    return Image.merge("RGBA", (red, green, blue, ImageChops.multiply(alpha, mask)))
+
+
 def extract_regions(
     sheets: dict[str, Image.Image],
     out_root: Path,
     *,
     keyed: bool,
+    diamond_mask: bool,
 ) -> list[Path]:
     written: list[Path] = []
     for region in REGIONS:
         sheet = sheets[region.sheet]
         sprite = to_rgba(sheet.crop(region.box), region.key_indices, keyed=keyed)
+        if diamond_mask:
+            sprite = apply_diamond_mask(sprite)
         destination = out_root / f"{region.path}.png"
         destination.parent.mkdir(parents=True, exist_ok=True)
         sprite.save(destination)
@@ -236,6 +260,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also write sprites/_terrain_contact_sheet.png outlining texture crops",
     )
+    parser.add_argument(
+        "--no-diamond-mask",
+        action="store_true",
+        help="keep square crops (default applies a diamond alpha mask for isometric draw)",
+    )
     args = parser.parse_args(argv)
 
     if not args.game_dir.is_dir():
@@ -245,7 +274,12 @@ def main(argv: list[str] | None = None) -> int:
         "texture": load_sheet(find_pcx(args.game_dir, "texture")),
         "ter1": load_sheet(find_pcx(args.game_dir, "ter1")),
     }
-    written = extract_regions(sheets, args.out, keyed=not args.no_transparency)
+    written = extract_regions(
+        sheets,
+        args.out,
+        keyed=not args.no_transparency,
+        diamond_mask=not args.no_diamond_mask,
+    )
     if args.contact_sheet:
         write_contact_sheet(sheets, args.out)
     print(f"terrain: {len(written)} sprites -> {args.out}")

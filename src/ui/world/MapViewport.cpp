@@ -3,16 +3,25 @@
 #include "game/map/MapUtils.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace ac
 {
 
+namespace
+{
+
+constexpr float k_IsoHeightRatio = 0.5f;
+
+} // namespace
+
 MapViewport::MapViewport(const WorldMap& rWorldMap, WindowLayout_t layout, float tileSize)
     : m_rWorldMap(rWorldMap)
     , m_layout(layout)
-    , m_tileSize(tileSize)
-    , m_visibleCols(static_cast<int>(layout.width / tileSize))
-    , m_visibleRows(static_cast<int>(layout.height / tileSize))
+    , m_tileWidth(tileSize)
+    , m_tileHeight(tileSize * k_IsoHeightRatio)
+    , m_visibleCols(std::max(1, static_cast<int>(layout.width / tileSize)))
+    , m_visibleRows(std::max(1, static_cast<int>(layout.height / (tileSize * k_IsoHeightRatio))))
 {
 }
 
@@ -45,60 +54,58 @@ int MapViewport::RowEnd() const
     return std::min(m_rWorldMap.GetHeight(), RowStart() + m_visibleRows);
 }
 
-int MapViewport::WorldXAt(int screenCol) const
+int MapViewport::WrapWorldX_(int worldX) const
 {
     const int mapWidth = m_rWorldMap.GetWidth();
-    return mapWidth > 0 ? WrapX(m_cameraX + screenCol, mapWidth) : m_cameraX + screenCol;
+    return mapWidth > 0 ? WrapX(worldX, mapWidth) : worldX;
 }
 
-int MapViewport::WorldYAt(int screenRow) const
+void MapViewport::AabbOriginFromRel_(int relX, int relY, float& rOutX, float& rOutY) const
 {
-    return RowStart() + screenRow;
+    const float halfW = m_tileWidth * 0.5f;
+    const float halfH = m_tileHeight * 0.5f;
+    rOutX = m_layout.x + static_cast<float>(relX - relY) * halfW;
+    rOutY = m_layout.y + static_cast<float>(relX + relY) * halfH;
 }
 
-const Tile* MapViewport::TileAt(int screenCol, int screenRow) const
+bool MapViewport::AabbIntersectsLayout_(float aabbX, float aabbY) const
 {
-    return m_rWorldMap.GetTile(WorldXAt(screenCol), WorldYAt(screenRow));
-}
-
-std::optional<int> MapViewport::ScreenColOf(int worldX) const
-{
-    const int mapWidth = m_rWorldMap.GetWidth();
-    if (mapWidth <= 0)
-    {
-        return std::nullopt;
-    }
-    const int screenCol = WrapX(worldX - m_cameraX, mapWidth);
-    if (screenCol >= m_visibleCols)
-    {
-        return std::nullopt;
-    }
-    return screenCol;
-}
-
-bool MapViewport::ContainsWorldY(int worldY) const
-{
-    return worldY >= RowStart() && worldY < RowEnd();
-}
-
-float MapViewport::PixelX(int screenCol) const
-{
-    return m_layout.x + static_cast<float>(screenCol) * m_tileSize;
-}
-
-float MapViewport::PixelYForWorldY(int worldY) const
-{
-    return m_layout.y + static_cast<float>(worldY - RowStart()) * m_tileSize;
+    const float layoutRight = m_layout.x + m_layout.width;
+    const float layoutBottom = m_layout.y + m_layout.height;
+    return aabbX < layoutRight && aabbX + m_tileWidth > m_layout.x && aabbY < layoutBottom
+           && aabbY + m_tileHeight > m_layout.y;
 }
 
 std::optional<std::pair<float, float>> MapViewport::PixelOriginOf(int worldX, int worldY) const
 {
-    const std::optional<int> screenCol = ScreenColOf(worldX);
-    if (!screenCol || !ContainsWorldY(worldY))
+    const int mapWidth = m_rWorldMap.GetWidth();
+    const int mapHeight = m_rWorldMap.GetHeight();
+    if (mapWidth <= 0 || worldY < 0 || worldY >= mapHeight)
     {
         return std::nullopt;
     }
-    return std::pair{PixelX(*screenCol), PixelYForWorldY(worldY)};
+
+    // Shortest horizontal wrap so markers track the on-screen instance nearest the camera.
+    int relX = worldX - m_cameraX;
+    const int halfWidth = mapWidth / 2;
+    while (relX > halfWidth)
+    {
+        relX -= mapWidth;
+    }
+    while (relX <= -halfWidth)
+    {
+        relX += mapWidth;
+    }
+    const int relY = worldY - m_cameraY;
+
+    float aabbX = 0.0f;
+    float aabbY = 0.0f;
+    AabbOriginFromRel_(relX, relY, aabbX, aabbY);
+    if (!AabbIntersectsLayout_(aabbX, aabbY))
+    {
+        return std::nullopt;
+    }
+    return std::pair{aabbX, aabbY};
 }
 
 std::optional<std::pair<float, float>> MapViewport::PixelCenterOf(const Tile& rTile) const
@@ -108,23 +115,37 @@ std::optional<std::pair<float, float>> MapViewport::PixelCenterOf(const Tile& rT
     {
         return std::nullopt;
     }
-    const float half = m_tileSize * 0.5f;
-    return std::pair{origin->first + half, origin->second + half};
+    return std::pair{origin->first + m_tileWidth * 0.5f, origin->second + m_tileHeight * 0.5f};
 }
 
-std::optional<std::pair<int, int>> MapViewport::WorldCoordsAt(int screenCol, int screenRow) const
+std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX, float pixelY) const
 {
-    if (screenCol < 0 || screenCol >= m_visibleCols
-        || screenRow < 0 || screenRow >= m_visibleRows)
+    const int mapWidth = m_rWorldMap.GetWidth();
+    const int mapHeight = m_rWorldMap.GetHeight();
+    if (mapWidth <= 0 || mapHeight <= 0 || m_tileWidth <= 0.0f || m_tileHeight <= 0.0f)
     {
         return std::nullopt;
     }
-    const int worldY = WorldYAt(screenRow);
-    if (worldY < 0 || worldY >= m_rWorldMap.GetHeight())
+    if (pixelX < m_layout.x || pixelY < m_layout.y
+        || pixelX >= m_layout.x + m_layout.width || pixelY >= m_layout.y + m_layout.height)
     {
         return std::nullopt;
     }
-    return std::pair{WorldXAt(screenCol), worldY};
+
+    // Unproject relative to diamond centers (AABB origin + half size).
+    const float ux = pixelX - m_layout.x - m_tileWidth * 0.5f;
+    const float uy = pixelY - m_layout.y - m_tileHeight * 0.5f;
+    const float fRelX = ux / m_tileWidth + uy / m_tileHeight;
+    const float fRelY = uy / m_tileHeight - ux / m_tileWidth;
+    const int relX = static_cast<int>(std::lround(fRelX));
+    const int relY = static_cast<int>(std::lround(fRelY));
+
+    const int worldY = m_cameraY + relY;
+    if (worldY < 0 || worldY >= mapHeight)
+    {
+        return std::nullopt;
+    }
+    return std::pair{WrapWorldX_(m_cameraX + relX), worldY};
 }
 
 } // namespace ac

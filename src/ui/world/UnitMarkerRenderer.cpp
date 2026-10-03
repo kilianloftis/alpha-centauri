@@ -27,10 +27,11 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
 
     const auto& s = Style().unitMarker;
     const WorldMap& rWorldMap = rGameState.GetWorldMap();
-    const float tileSize = rViewport.TileSize();
-    const float markerWidth = tileSize * s.widthRatio;
-    const float markerHeight = tileSize * s.heightRatio;
-    const float spacing = tileSize * s.spacingRatio;
+    const float tileWidth = rViewport.TileWidth();
+    const float tileHeight = rViewport.TileHeight();
+    const float markerWidth = tileWidth * s.widthRatio;
+    const float markerHeight = tileWidth * s.heightRatio;
+    const float spacing = tileWidth * s.spacingRatio;
     const Faction* pPlayer = rGameState.GetPlayerFaction();
 
     rViewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
@@ -57,9 +58,10 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
                 continue;
             }
 
+            // Anchor on the diamond center — AABB bottom-left sits outside the tile toward SW.
             const Rectangle_t marker{
-                tileX + spacing + (drawn * (markerWidth + spacing)),
-                tileY + tileSize - markerHeight - spacing,
+                tileX + (tileWidth - markerWidth) * 0.5f + (drawn * (markerWidth + spacing)),
+                tileY + (tileHeight - markerHeight) * 0.5f,
                 markerWidth,
                 markerHeight};
             ++drawn;
@@ -85,10 +87,10 @@ Rectangle_t UnitMarkerRenderer::MarkerRectOnTile(float tileX, float tileY, float
     const auto& s = Style().unitMarker;
     const float markerWidth = tileSize * s.widthRatio;
     const float markerHeight = tileSize * s.heightRatio;
-    const float spacing = tileSize * s.spacingRatio;
+    const float tileHeight = tileSize * 0.5f;
     return Rectangle_t{
-        tileX + spacing,
-        tileY + tileSize - markerHeight - spacing,
+        tileX + (tileSize - markerWidth) * 0.5f,
+        tileY + (tileHeight - markerHeight) * 0.5f,
         markerWidth,
         markerHeight};
 }
