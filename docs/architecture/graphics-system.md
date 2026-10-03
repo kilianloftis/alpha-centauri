@@ -65,7 +65,7 @@ graph TB
   - `PaceFrame()`: Sleep to honor `framerateLimit` without presenting — used when UIManager skips a quiet frame
   - `LoadTexture(id, path)`: Load a texture from file
   - `UpsertTextureRGBA(id, width, height, rgba)`: Create or replace an RGBA8 texture from tightly packed pixels (minimap terrain cache)
-  - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)`: Draw a sprite at position, optionally scaled
+  - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)` / `DrawSprite(..., destWidth, destHeight, tint)`: Draw a sprite at position, optionally scaled and color-multiplied (elevation/fog on map tiles)
   - `DrawText(text, x, y, size)`: Draw text at position
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
   - `SetMouseCursor(path, hotspotX, hotspotY)`: Apply a custom OS cursor from an image file. Empty path or load failure leaves the current cursor and returns false; the backend keeps the cursor object alive until the next set/reset
@@ -121,13 +121,19 @@ UI components use the Graphics interface to render game information.
   - `Render(rGraphics)`: Render the visible viewport from the stored layout/camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
   - `GetViewport().SetCamera(tileX, tileY)`: Set the top-left tile of the viewport
-- **Tile Display Format**: Each tile shows `moisture rockiness elevation(km)` as integers
-  - Moisture_t: 0=Arid, 1=Moist, 2=Wet
-  - Rockiness_t: 0=Flat, 1=Rolling, 2=Rocky
-  - Elevation: Integer km (elevation in meters / 1000)
+- **Tile drawing**: Each cell is painted by `TileRenderer` — elevation-colored fill, then
+  `ResolveTileLayers` sprites scaled to the tile size with an elevation/fog tint. Missing
+  PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
+  `extract_terrain.py` against a local SMAC install to populate `assets/sprites/`.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
   render (no per-frame base-info DTO). Base-at-tile clicks go through
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
+
+### TileRenderer
+- **Purpose**: Shared map-cell paint for the world map, location preview, and similar views
+- **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
+- **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
+- **Layers**: fungus wins vegetation; cliff-edge compositing deferred
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)

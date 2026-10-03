@@ -1,3 +1,4 @@
+#include "GameFixtures.h"
 #include "RecordingGraphics.h"
 #include "TestHelpers.h"
 
@@ -7,6 +8,10 @@
 #include "ui/style/UiStyle.h"
 
 #include <catch2/catch_test_macros.hpp>
+
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
 
 using namespace ac;
 using actest::RecordingGraphics;
@@ -139,5 +144,48 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         CHECK_FALSE(HasFilledColor_(graphics, s.rollingRingColor));
         CHECK_FALSE(HasFilledColor_(graphics, s.moistCenterColor));
         CHECK_FALSE(HasFilledColor_(graphics, s.wetCenterColor));
+    }
+
+    SECTION("occupant sprite_path draws a scaled tinted sprite")
+    {
+        // Bound tiles resolve Moist via the registry; ensure the configured PNG exists so CI
+        // without a prior extract_terrain.py run still exercises the sprite path.
+        actest::WorldFixture world(5, 5);
+        const std::string& spritePath = world.improvements.Get("Moist").spritePath;
+        REQUIRE_FALSE(spritePath.empty());
+        std::filesystem::create_directories(std::filesystem::path(spritePath).parent_path());
+        static const std::uint8_t k_Png[] = {
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+            0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+            0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
+            0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+        {
+            std::ofstream out(spritePath, std::ios::binary);
+            out.write(reinterpret_cast<const char*>(k_Png), sizeof(k_Png));
+        }
+
+        Tile& rTile = *world.map.GetTile(2, 2);
+        rTile.SetElevation(500);
+        rTile.SetMoisture(Moisture_t::Moist);
+        rTile.SetRockiness(Rockiness_t::Flat);
+
+        RecordingGraphics graphics;
+        TileRenderer::Render(graphics, rTile, 10.0f, 20.0f, 100.0f, /*bFogged*/ false);
+
+        REQUIRE_FALSE(graphics.sprites.empty());
+        bool bFound = false;
+        for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
+        {
+            if (rSprite.textureId == spritePath && rSprite.bScaled)
+            {
+                CHECK(rSprite.x == 10.0f);
+                CHECK(rSprite.y == 20.0f);
+                CHECK(rSprite.destWidth == 100.0f);
+                CHECK(rSprite.destHeight == 100.0f);
+                bFound = true;
+            }
+        }
+        CHECK(bFound);
     }
 }

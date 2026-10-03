@@ -78,6 +78,10 @@ public:
     virtual bool DrawSprite(const std::string& textureId, float x, float y) = 0;
     virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                             float destHeight) = 0;
+    // Color multiply (RGB/A channels of the sprite are scaled by tint). White leaves the
+    // texture unchanged. Used for elevation/fog shading on map tiles.
+    virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
+                            float destHeight, const Color_t& tint) = 0;
     virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;

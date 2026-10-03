@@ -51,9 +51,10 @@ namespace TileLayerContent
     // Rockiness layer (Layer 2)
     inline const std::string k_Rocky = "rocky";
 
-    // Vegetation layer (Layer 3)
+    // Vegetation layer (Layer 3) — fungus replaces farm/forest visually when present.
     inline const std::string k_Farm = "farm";
     inline const std::string k_Forest = "forest";
+    inline const std::string k_Fungus = "fungus";
 
     // Road layer (Layer 4)
     inline const std::string k_Road = "road";

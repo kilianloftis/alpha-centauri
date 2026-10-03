@@ -47,6 +47,20 @@ TEST_CASE("Tile layers resolve improvements by config id, not by sprite content 
     CHECK_FALSE(rImprovement.contentId.has_value());
 }
 
+TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
+{
+    actest::WorldFixture world(5, 5);
+    Tile& rTile = *world.map.GetTile(1, 1);
+    rTile.SetElevation(500);
+    rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
+    rTile.AddImprovement(world.improvements.Get("Farm"));
+
+    const auto layers = ResolveTileLayers(rTile);
+    const auto& rVegetation = layers[static_cast<size_t>(TileLayerType_t::Vegetation)];
+    REQUIRE(rVegetation.contentId.has_value());
+    CHECK(*rVegetation.contentId == TileLayerContent::k_Fungus);
+}
+
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")
 {
     actest::WorldFixture world(5, 5);

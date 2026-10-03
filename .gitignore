@@ -3,3 +3,7 @@ alpha-centauri
 settings.local.json.tmp*
 settings.json.tmp*
 build-asan
+
+# Extracted SMAC art (not redistributable). Populate with extract_*.py.
+assets/sprites/
+assets/factions/

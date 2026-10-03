@@ -3,10 +3,13 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
+#include "game/map/TileLayer.h"
+#include "game/map/TileLayerResolver.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 #include <string>
@@ -70,21 +73,54 @@ float Remap01_(float value, float inMin, float inMax)
     return (value - inMin) / (inMax - inMin);
 }
 
-const ImprovementConfig_t* FindTerrainFeature_(const Tile& rTile, std::string_view id)
+// TileLayerContent ids are lowercase; ImprovementConfig_t::id values are PascalCase.
+std::string ContentIdToConfigId_(const std::string& contentId)
+{
+    if (contentId.empty())
+    {
+        return contentId;
+    }
+    std::string id = contentId;
+    id[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(id[0])));
+    return id;
+}
+
+const ImprovementConfig_t* FindOccupantByConfigId_(const Tile& rTile, std::string_view configId)
 {
     for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
-        if (pFeature && pFeature->id == id)
+        if (pFeature && pFeature->id == configId)
         {
             return pFeature;
+        }
+    }
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement && pImprovement->id == configId)
+        {
+            return pImprovement;
         }
     }
     return nullptr;
 }
 
+// Soft elevation/fog multiply: blend white toward the procedural fill so texture detail remains.
+Color_t SpriteTint_(const Tile& rTile, bool bFogged)
+{
+    constexpr float k_ElevationTintBlend = 0.4f;
+    const Color_t fill = TileRenderer::FillColor(rTile, /*bFogged*/ false);
+    Color_t tint = LerpColor_(Color_t::White(), fill, k_ElevationTintBlend);
+    if (bFogged)
+    {
+        tint = DimColor_(tint, Style().tileRenderer.fogFillDimRatio);
+    }
+    return tint;
+}
+
 // True when a sprite was drawn. Empty path, missing file, or load/draw failure → false so the
 // caller can paint the procedural fallback.
-bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float y)
+bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float y, float size,
+                    const Color_t& tint)
 {
     if (path.empty())
     {
@@ -106,18 +142,22 @@ bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float
         rState = SpriteCacheState_t::Loaded;
     }
 
-    return rGraphics.DrawSprite(path, x, y);
+    return rGraphics.DrawSprite(path, x, y, size, size, tint);
 }
 
-bool TryDrawFeatureSprite_(Graphics& rGraphics, const Tile& rTile, std::string_view featureId,
-                           float x, float y)
+bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::string& contentId,
+                         float x, float y, float size, const Color_t& tint)
 {
-    const ImprovementConfig_t* pFeature = FindTerrainFeature_(rTile, featureId);
-    if (!pFeature)
+    // Improvement layer already returns PascalCase config ids; other layers use TileLayerContent.
+    const bool bLooksLikeConfigId =
+        !contentId.empty() && std::isupper(static_cast<unsigned char>(contentId.front()));
+    const std::string configId = bLooksLikeConfigId ? contentId : ContentIdToConfigId_(contentId);
+    const ImprovementConfig_t* pOccupant = FindOccupantByConfigId_(rTile, configId);
+    if (!pOccupant)
     {
         return false;
     }
-    return TryDrawSprite_(rGraphics, pFeature->spritePath, x, y);
+    return TryDrawSprite_(rGraphics, pOccupant->spritePath, x, y, size, tint);
 }
 
 void DrawInsetRect_(Graphics& rGraphics, float x, float y, float size, float insetRatio,
@@ -137,6 +177,51 @@ void DrawRockinessRing_(Graphics& rGraphics, float x, float y, float size, const
 {
     DrawInsetRect_(rGraphics, x, y, size, outerInsetRatio, ringColor);
     DrawInsetRect_(rGraphics, x, y, size, innerInsetRatio, holeColor);
+}
+
+bool ShouldSkipLandProceduralOverlays_(const Tile& rTile)
+{
+    return !rTile.IsLand() || rTile.HasFeature(ImprovementIds::k_Fungus)
+           || rTile.HasImprovement(ImprovementIds::k_Forest);
+}
+
+void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                              bool bFogged, const Color_t& baseFill)
+{
+    if (ShouldSkipLandProceduralOverlays_(rTile))
+    {
+        return;
+    }
+    const auto& s = Style().tileRenderer;
+    const float dim = bFogged ? s.fogFillDimRatio : 1.0f;
+    const Rockiness_t rockiness = rTile.GetRockiness();
+    if (rockiness != Rockiness_t::Rolling && rockiness != Rockiness_t::Rocky)
+    {
+        return;
+    }
+    const Color_t ring =
+        DimColor_(rockiness == Rockiness_t::Rocky ? s.rockyRingColor : s.rollingRingColor, dim);
+    DrawRockinessRing_(rGraphics, x, y, size, ring, baseFill, s.landformRingOuterInsetRatio,
+                       s.landformRingInnerInsetRatio);
+}
+
+void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                             bool bFogged)
+{
+    if (ShouldSkipLandProceduralOverlays_(rTile))
+    {
+        return;
+    }
+    const auto& s = Style().tileRenderer;
+    const float dim = bFogged ? s.fogFillDimRatio : 1.0f;
+    const Moisture_t moisture = rTile.GetMoisture();
+    if (moisture != Moisture_t::Moist && moisture != Moisture_t::Wet)
+    {
+        return;
+    }
+    const Color_t center =
+        DimColor_(moisture == Moisture_t::Wet ? s.wetCenterColor : s.moistCenterColor, dim);
+    DrawInsetRect_(rGraphics, x, y, size, s.landformRingInnerInsetRatio, center);
 }
 
 } // namespace
@@ -187,50 +272,65 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
 {
     const auto& s = Style().tileRenderer;
     const Color_t baseFill = FillColor(rTile, bFogged);
+    const Color_t tint = SpriteTint_(rTile, bFogged);
 
     rGraphics.DrawFilledRect(x, y, size, size, baseFill);
 
-    // Moisture/rockiness landform cues only on bare land. Water already reads as sea from the
-    // blue fill; fungus/forest stand in for vegetation sprites until those assets exist.
-    const bool bLandformOverlay = rTile.IsLand()
-                                  && !rTile.HasFeature(ImprovementIds::k_Fungus)
-                                  && !rTile.HasImprovement(ImprovementIds::k_Forest);
-    if (bLandformOverlay)
+    for (const TileLayer_t& rLayer : ResolveTileLayers(rTile))
     {
-        const float dim = bFogged ? s.fogFillDimRatio : 1.0f;
-        const Rockiness_t rockiness = rTile.GetRockiness();
-        if (rockiness == Rockiness_t::Rolling || rockiness == Rockiness_t::Rocky)
+        if (!rLayer.contentId.has_value())
         {
-            const std::string featureId = ToString(rockiness);
-            if (!TryDrawFeatureSprite_(rGraphics, rTile, featureId, x, y))
-            {
-                const Color_t ring = DimColor_(
-                    rockiness == Rockiness_t::Rocky ? s.rockyRingColor : s.rollingRingColor, dim);
-                DrawRockinessRing_(rGraphics, x, y, size, ring, baseFill,
-                                   s.landformRingOuterInsetRatio, s.landformRingInnerInsetRatio);
-            }
+            continue;
         }
-
-        const Moisture_t moisture = rTile.GetMoisture();
-        if (moisture == Moisture_t::Moist || moisture == Moisture_t::Wet)
+        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, size, tint))
         {
-            const std::string featureId = ToString(moisture);
-            if (!TryDrawFeatureSprite_(rGraphics, rTile, featureId, x, y))
-            {
-                const Color_t center = DimColor_(
-                    moisture == Moisture_t::Wet ? s.wetCenterColor : s.moistCenterColor, dim);
-                DrawInsetRect_(rGraphics, x, y, size, s.landformRingInnerInsetRatio, center);
-            }
+            continue;
+        }
+        // Per-layer procedural cues when that layer's sprite is missing.
+        if (rLayer.type == TileLayerType_t::Rockiness
+            || (rLayer.type == TileLayerType_t::Landform
+                && *rLayer.contentId == TileLayerContent::k_Rolling))
+        {
+            DrawProceduralRockiness_(rGraphics, rTile, x, y, size, bFogged, baseFill);
+        }
+        else if (rLayer.type == TileLayerType_t::Moisture)
+        {
+            DrawProceduralMoisture_(rGraphics, rTile, x, y, size, bFogged);
         }
     }
 
-    // Optional sprites for placed improvements (tile bonuses, etc.). Missing assets are skipped.
+    // Improvements already drawn via the Improvement layer when they are the dominant occupant.
+    // Also draw any remaining improvement sprites that carry art (e.g. tile bonuses on terrain).
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        if (pImprovement)
+        if (!pImprovement || pImprovement->spritePath.empty())
         {
-            (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y);
+            continue;
         }
+        if (pImprovement->id == ImprovementIds::k_Farm || pImprovement->id == ImprovementIds::k_Forest
+            || pImprovement->id == ImprovementIds::k_Road)
+        {
+            continue;
+        }
+        (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y, size, tint);
+    }
+
+    // Optional terrain bonuses / monolith sit in GetTerrainFeatures, not improvements.
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
+    {
+        if (!pFeature || pFeature->spritePath.empty())
+        {
+            continue;
+        }
+        // Axes (Flat/Moist/…) and water bands are drawn via layers; skip duplicates.
+        if (pFeature->id == "Flat" || pFeature->id == "Rolling" || pFeature->id == "Rocky"
+            || pFeature->id == "Arid" || pFeature->id == "Moist" || pFeature->id == "Wet"
+            || pFeature->id == "Water" || pFeature->id == "Ocean" || pFeature->id == "OceanShelf"
+            || pFeature->id == "Fungus" || pFeature->id == "River")
+        {
+            continue;
+        }
+        (void)TryDrawSprite_(rGraphics, pFeature->spritePath, x, y, size, tint);
     }
 
     rGraphics.DrawRect(x, y, size, size, s.tileBorderColor, s.tileBorderWidth);

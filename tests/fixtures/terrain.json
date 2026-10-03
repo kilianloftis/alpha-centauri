@@ -68,6 +68,7 @@
       "tags": [
         "landform"
       ],
+      "sprite_path": "assets/sprites/landforms/moist.png",
       "effects": [
         {
           "type": "StatModifier",

@@ -33,6 +33,17 @@ public:
         ac::Color_t color{};
     };
 
+    struct SpriteDraw_t
+    {
+        std::string textureId;
+        float x = 0.0f;
+        float y = 0.0f;
+        float destWidth = 0.0f;
+        float destHeight = 0.0f;
+        ac::Color_t tint = ac::Color_t::White();
+        bool bScaled = false;
+    };
+
     void PumpEvents() override {}
     void Clear() override { ++clearCount; }
     void Display() override { ++displayCount; }
@@ -45,13 +56,21 @@ public:
         ++upsertTextureCount;
         return true;
     }
-    bool DrawSprite(const std::string&, float, float) override
+    bool DrawSprite(const std::string& textureId, float x, float y) override
     {
+        sprites.push_back(SpriteDraw_t{textureId, x, y, 0.0f, 0.0f, ac::Color_t::White(), false});
         ++spriteCount;
         return true;
     }
-    bool DrawSprite(const std::string&, float, float, float, float) override
+    bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
+                    float destHeight) override
     {
+        return DrawSprite(textureId, x, y, destWidth, destHeight, ac::Color_t::White());
+    }
+    bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
+                    float destHeight, const ac::Color_t& tint) override
+    {
+        sprites.push_back(SpriteDraw_t{textureId, x, y, destWidth, destHeight, tint, true});
         ++spriteCount;
         return true;
     }
@@ -138,6 +157,7 @@ public:
 
     std::vector<TextDraw_t> texts;
     std::vector<RectDraw_t> rects;
+    std::vector<SpriteDraw_t> sprites;
     int clearCount = 0;
     int displayCount = 0;
     int paceCount = 0;

@@ -215,6 +215,12 @@ public:
     bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                     float destHeight) override
     {
+        return DrawSprite(textureId, x, y, destWidth, destHeight, Color_t::White());
+    }
+
+    bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
+                    float destHeight, const Color_t& tint) override
+    {
         auto it = m_textures.find(textureId);
         if (it == m_textures.end())
         {
@@ -232,6 +238,7 @@ public:
         sprite.setPosition({x, y});
         sprite.setScale({destWidth / static_cast<float>(size.x),
                          destHeight / static_cast<float>(size.y)});
+        sprite.setColor(sf::Color(tint.r, tint.g, tint.b, tint.a));
         m_window.draw(sprite);
         return true;
     }

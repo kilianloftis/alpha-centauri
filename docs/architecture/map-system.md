@@ -172,9 +172,11 @@ graph LR
 
 ### Tile Visual Layer System
 
-Two id domains meet here and must not be swapped: `TileLayerContent` holds lowercase **sprite** ids (`"farm"`), while `ImprovementIds` / `config/improvements.json` hold PascalCase **config** ids (`"Farm"`). The resolver probes tiles with config ids; the five fixed layers return `TileLayerContent` sprite ids.
+Two id domains meet here and must not be swapped: `TileLayerContent` holds lowercase **sprite** ids (`"farm"`), while `ImprovementIds` / `config/improvements.json` hold PascalCase **config** ids (`"Farm"`). The resolver probes tiles with config ids; the fixed layers return `TileLayerContent` sprite ids.
 
 The Improvement layer is the exception: it returns the config id verbatim, because there is no sprite-id mapping for the open-ended set of improvements that can occupy it (Borehole, Monolith, …). Its rendering priority and exclusion rules are still a TODO in `ResolveImprovementLayer_`; whatever resolves them owes this layer a mapping too.
+
+**Elevation is not a layer.** Continuous meters stay on `Tile`; [`TileRenderer`](../../include/ui/TileRenderer.h) applies an elevation/fog color multiply when drawing layer sprites (SMAC used palette offsets; cliff-edge compositing from `texture.pcx` is deferred). Populate sprites with `extract_terrain.py`.
 
 ```mermaid
 graph TB
@@ -184,7 +186,7 @@ graph TB
         Landform[Landform<br/>water / flat / rolling]
         Moisture_t[Moisture_t<br/>arid / moist / wet]
         Rockiness_t[Rockiness_t<br/>rocky / empty]
-        Vegetation[Vegetation<br/>farm / forest / empty]
+        Vegetation[Vegetation<br/>fungus / farm / forest / empty]
         Road[Road<br/>road / empty]
         Improvement[Improvement<br/>dominant other / empty]
     end
@@ -197,6 +199,8 @@ graph TB
     Layers --> Vegetation
     Layers --> Road
     Layers --> Improvement
+    TileRenderer[TileRenderer] --> Resolver
+    Tile -->|elevation tint| TileRenderer
 
     style Resolver fill:#fbf,stroke:#333,stroke-width:3px
     style Layers fill:#f9f,stroke:#333,stroke-width:3px
@@ -207,18 +211,20 @@ graph TB
   - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture_t, Rockiness_t, Vegetation, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
+  - `TileRenderer`: consumes `ResolveTileLayers`, scales sprites to the viewport tile size, tints by elevation/fog; procedural moisture/rockiness rings when a layer sprite is missing
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
   1. `Landform`: water (`Tile::IsWater()`), flat, or rolling
   2. `Moisture_t`: arid, moist, or wet
   3. `Rockiness_t`: rocky overlay (empty if not rocky)
-  4. `Vegetation`: farm or forest
+  4. `Vegetation`: fungus (if present), else farm or forest
   5. `Road`: road
   6. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
 - **Open Questions / TODOs**:
   - Landform generation rules beyond the elevation water threshold
   - Vegetation mutual exclusivity and placement rules (Borehole/Base vs Farm/Forest)
   - Improvement rendering priority and monolith/landmark handling
+  - Neighbor-based cliff/slope sprites from `assets/sprites/cliffs/`
 
 ### Tile Improvement Effects
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.

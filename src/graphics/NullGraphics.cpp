@@ -75,6 +75,11 @@ public:
         return true;
     }
 
+    bool DrawSprite(const std::string&, float, float, float, float, const Color_t&) override
+    {
+        return true;
+    }
+
     void DrawText(const std::string&, float, float, unsigned int, const Color_t&) override
     {
     }

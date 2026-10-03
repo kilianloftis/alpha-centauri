@@ -53,9 +53,13 @@ std::optional<std::string> ResolveRockinessLayer_(const Tile& rTile)
 
 std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 {
-    // TODO: Define vegetation placement rules and mutual exclusivity (farm vs forest).
-    // Boreholes and bases should exclude this layer via placement rules, not here.
+    // Fungus replaces farm/forest visually (Forest excludes Fungus in config; either may win).
     // Probe with config ids, return sprite content ids: the two domains differ in case.
+    if (rTile.HasFeature(ImprovementIds::k_Fungus))
+    {
+        return TileLayerContent::k_Fungus;
+    }
+
     if (rTile.HasImprovement(ImprovementIds::k_Farm))
     {
         return TileLayerContent::k_Farm;

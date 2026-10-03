@@ -8,9 +8,9 @@ namespace ac
 class Tile;
 
 // Shared terrain-tile cell drawing for the world map and location panel preview.
-// Fills by fungus/forest overlay or elevation (blue water / brown land). On land, moisture
-// and rockiness prefer ImprovementConfig_t::spritePath; when the path is empty or the asset
-// is missing, moist/wet paint a green center and rolling/rocky paint a grey middle ring.
+// Fills by fungus/forest overlay or elevation (blue water / brown land), then draws
+// ResolveTileLayers bottom-to-top with scaled sprites tinted by elevation/fog.
+// Missing assets fall back to procedural moisture/rockiness cues.
 class TileRenderer
 {
 public:
