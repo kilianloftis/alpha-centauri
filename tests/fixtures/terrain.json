@@ -68,7 +68,7 @@
       "tags": [
         "landform"
       ],
-      "sprite_path": "assets/sprites/landforms/moist.png",
+      "sprite_paths": ["tests/fixtures/sprites/moist_0.png"],
       "effects": [
         {
           "type": "StatModifier",
@@ -165,6 +165,7 @@
       "id": "Fungus",
       "name": "Fungus",
       "move_cost": 3,
+      "sprite_paths": ["tests/fixtures/sprites/fungus.png"],
       "suppress_yield_sources": [
         "@landform",
         "River",

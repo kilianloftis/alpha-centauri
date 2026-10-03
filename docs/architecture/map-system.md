@@ -176,16 +176,16 @@ Two id domains meet here and must not be swapped: `TileLayerContent` holds lower
 
 The Improvement layer is the exception: it returns the config id verbatim, because there is no sprite-id mapping for the open-ended set of improvements that can occupy it (Borehole, Monolith, …). Its rendering priority and exclusion rules are still a TODO in `ResolveImprovementLayer_`; whatever resolves them owes this layer a mapping too.
 
-**Elevation is not a layer.** Continuous meters stay on `Tile`; [`TileRenderer`](../../include/ui/TileRenderer.h) applies an elevation/fog color multiply when drawing layer sprites (SMAC used palette offsets; cliff-edge compositing from `texture.pcx` is deferred). Populate sprites with `extract_terrain.py`.
+**Elevation is not a layer.** Continuous meters stay on `Tile`; [`TileRenderer`](../../include/ui/TileRenderer.h) applies an elevation/fog color multiply when drawing layer sprites (SMAC used palette offsets; cliff-edge compositing from `texture.pcx` is deferred). Populate sprites with `extract_terrain.py`. Multi-asset landforms use ordered `sprite_paths`; the renderer picks a variant from tile coordinates and content id.
 
 ```mermaid
 graph TB
     subgraph "Tile Visual Layer System"
         Resolver[TileLayerResolver]
         Layers[std::array&lt;TileLayer_t&gt;]
-        Landform[Landform<br/>water / flat / rolling]
-        Moisture_t[Moisture_t<br/>arid / moist / wet]
-        Rockiness_t[Rockiness_t<br/>rocky / empty]
+        Landform[Landform<br/>OceanShelf / Ocean / water / empty on land]
+        Moisture_t[Moisture_t<br/>arid / moist / wet / empty on water]
+        Rockiness_t[Rockiness_t<br/>rolling / rocky / empty]
         Vegetation[Vegetation<br/>fungus / farm / forest / empty]
         Road[Road<br/>road / empty]
         Improvement[Improvement<br/>dominant other / empty]
@@ -211,12 +211,12 @@ graph TB
   - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture_t, Rockiness_t, Vegetation, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
-  - `TileRenderer`: consumes `ResolveTileLayers`, scales sprites to the isometric diamond AABB, tints by elevation/fog; procedural moisture/rockiness cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
+  - `TileRenderer`: consumes `ResolveTileLayers`, picks from `sprite_paths` via coordinate hash, scales sprites to the isometric diamond AABB, tints by elevation/fog; procedural moisture/rockiness cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
-  1. `Landform`: water (`Tile::IsWater()`), flat, or rolling
-  2. `Moisture_t`: arid, moist, or wet
-  3. `Rockiness_t`: rocky overlay (empty if not rocky)
+  1. `Landform`: `OceanShelf` / `Ocean` / water on sea; empty on land (flat has no sheet art)
+  2. `Moisture_t`: arid / moist / wet bases (empty on water — rainfall art must not cover sea sprites)
+  3. `Rockiness_t`: rolling / rocky keyed overlays above moisture (empty if flat or on water)
   4. `Vegetation`: fungus (if present), else farm or forest
   5. `Road`: road
   6. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
@@ -243,7 +243,7 @@ graph TB
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
-- **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
+- **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry `sprite_paths`/`description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
 - **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.fraction` of the tiles a bonus entry can occupy.
 
 ### Improvement coexistence (`CanBuildImprovement`)

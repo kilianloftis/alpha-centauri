@@ -38,17 +38,17 @@ struct TileLayer_t
 // Mods may add additional content IDs for custom layers.
 namespace TileLayerContent
 {
-    // Landform layer (Layer 0)
+    // Landform layer (Layer 0) — sea depth bands; flat land is empty (moisture carries art).
     inline const std::string k_Water = "water";
     inline const std::string k_Flat = "flat";
-    inline const std::string k_Rolling = "rolling";
 
     // Moisture layer (Layer 1)
     inline const std::string k_Arid = "arid";
     inline const std::string k_Moist = "moist";
     inline const std::string k_Wet = "wet";
 
-    // Rockiness layer (Layer 2)
+    // Rockiness layer (Layer 2) — keyed overlays drawn above moisture bases.
+    inline const std::string k_Rolling = "rolling";
     inline const std::string k_Rocky = "rocky";
 
     // Vegetation layer (Layer 3) — fungus replaces farm/forest visually when present.

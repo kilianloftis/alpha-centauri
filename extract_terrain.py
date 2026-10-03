@@ -11,8 +11,15 @@ Usage:
     python extract_terrain.py --game-dir "/path/to/Sid Meier's Alpha Centauri"
     python extract_terrain.py --contact-sheet
 
-texture.pcx uses palette indices 0 and 255 as magenta-family transparency keys
-(faction sheets use 255 only). ter1.pcx uses index 253 for its purple key.
+texture.pcx uses palette indices 0 and 255 as transparency keys (empty sheet pixels).
+Fungus art is a sparse overlay on that key: keep both indices transparent, then recolor
+the remaining teal detail toward SMAC pink (the sheet stores fungus cyan/teal).
+
+Rainfall-grid layout (col, row) — left 4×N block:
+  (0,0)/(2,0) rolling overlays; (1,0)/(3,0) rocky overlays;
+  (0,1) arid base; rows 2–5 moist bases (16 cells); rows 6–9 wet bases (16 cells).
+Flat has no dedicated art (moisture base alone). Rolling/rocky are keyed overlays.
+ter1.pcx uses index 253 for its purple key.
 """
 
 from __future__ import annotations
@@ -27,7 +34,6 @@ try:
 except ImportError:
     sys.exit("Pillow is required:  pip install Pillow")
 
-
 # --------------------------------------------------------------------------- #
 # Layout
 # --------------------------------------------------------------------------- #
@@ -36,7 +42,7 @@ except ImportError:
 TEXTURE_CELL = 56
 TEXTURE_STRIDE = 57
 
-# texture.pcx transparency (both indices appear as “empty” on the sheet).
+# texture.pcx transparency (both indices are empty on the sheet).
 TEXTURE_KEY_INDICES = frozenset({0, 255})
 # ter1.pcx purple key (+ spare magenta indices sometimes present).
 TER1_KEY_INDICES = frozenset({0, 253, 255})
@@ -53,6 +59,10 @@ class Region:
     y1: int
     sheet: str = "texture"  # texture | ter1
     key_indices: frozenset[int] = field(default_factory=lambda: TEXTURE_KEY_INDICES)
+    # Landform squares are masked to the iso diamond AABB.
+    diamond_mask: bool = True
+    # Recolor teal xenofungus sheet pixels toward in-game pink.
+    remap_fungus_pink: bool = False
 
     @property
     def box(self) -> tuple[int, int, int, int]:
@@ -65,12 +75,21 @@ def _grid_cell(col: int, row: int) -> tuple[int, int, int, int]:
     return (x0, y0, x0 + TEXTURE_CELL, y0 + TEXTURE_CELL)
 
 
+def _band_variants(stem: str, row0: int, row1: int) -> list[Region]:
+    """Row-major cells in [row0, row1] × cols 0..3 → stem_0.png …"""
+    regions: list[Region] = []
+    index = 0
+    for row in range(row0, row1 + 1):
+        for col in range(4):
+            regions.append(Region(f"sprites/landforms/{stem}_{index}", *_grid_cell(col, row)))
+            index += 1
+    return regions
+
+
 def _texture_regions() -> list[Region]:
     arid = _grid_cell(0, 1)
-    moist = _grid_cell(0, 6)
-    wet = _grid_cell(0, 9)
-    rolling = _grid_cell(0, 4)
-    rocky = _grid_cell(1, 0)
+    # Stand-in forest crop from a wet cell until dedicated forest art is mapped.
+    wet_forest = _grid_cell(0, 6)
 
     # Xenofungus autotile grid: guides at x=279/336/…, first interior cell ~y=260.
     fungus = (280, 260, 336, 316)
@@ -79,18 +98,25 @@ def _texture_regions() -> list[Region]:
     deep = (280, 136, 280 + TEXTURE_CELL, 136 + TEXTURE_CELL)
 
     return [
-        Region("sprites/landforms/flat", *arid),
         Region("sprites/landforms/arid", *arid),
-        Region("sprites/landforms/moist", *moist),
-        Region("sprites/landforms/wet", *wet),
-        Region("sprites/landforms/rolling", *rolling),
-        Region("sprites/landforms/rocky", *rocky),
-        # Rainy/green cell doubles as forest until a dedicated forest crop is refined.
-        Region("sprites/landforms/forest", *wet),
+        # Moisture bases: moist rows 2–5, wet rows 6–9 (16 variants each).
+        *_band_variants("moist", 2, 5),
+        *_band_variants("wet", 6, 9),
+        # Rockiness overlays on row 0 (magenta-keyed, not full bases).
+        Region("sprites/landforms/rolling_0", *_grid_cell(0, 0)),
+        Region("sprites/landforms/rolling_1", *_grid_cell(2, 0)),
+        Region("sprites/landforms/rocky_0", *_grid_cell(1, 0)),
+        Region("sprites/landforms/rocky_1", *_grid_cell(3, 0)),
+        Region("sprites/landforms/forest", *wet_forest),
         Region("sprites/landforms/water", *shelf),
         Region("sprites/landforms/ocean_shelf", *shelf),
         Region("sprites/landforms/ocean", *deep),
-        Region("sprites/landforms/fungus", *fungus),
+        # Xenofungus overlay: key empty pixels, recolor teal detail to pink.
+        Region(
+            "sprites/landforms/fungus",
+            *fungus,
+            remap_fungus_pink=True,
+        ),
         # Stand-in until the river autotile cluster is fully mapped; WorldDisplay still
         # draws river centerlines. Uses the deep-ocean cell as a blue water cue.
         Region("sprites/landforms/river", *deep),
@@ -192,6 +218,41 @@ def apply_diamond_mask(rgba: Image.Image) -> Image.Image:
     return Image.merge("RGBA", (red, green, blue, ImageChops.multiply(alpha, mask)))
 
 
+def clear_transparent_rgb(rgba: Image.Image) -> Image.Image:
+    """Zero RGB on alpha=0 pixels so chroma-key leftovers cannot leak when blending."""
+    pixels = rgba.load()
+    width, height = rgba.size
+    for y in range(height):
+        for x in range(width):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha == 0 and (red or green or blue):
+                pixels[x, y] = (0, 0, 0, 0)
+    return rgba
+
+
+def remap_fungus_pink(rgba: Image.Image) -> Image.Image:
+    """Recolor sheet teal/cyan fungus detail toward SMAC pink; leave brown tip accents."""
+    pixels = rgba.load()
+    width, height = rgba.size
+    for y in range(height):
+        for x in range(width):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha == 0:
+                pixels[x, y] = (0, 0, 0, 0)
+                continue
+            # Rust/brown tip accents on the sheet — keep as-is.
+            if red > green and red > blue and green < 100:
+                continue
+            value = max(red, green, blue) / 255.0
+            pixels[x, y] = (
+                min(255, int(220 * value + 40)),
+                min(255, int(40 * value + 20)),
+                min(255, int(180 * value + 40)),
+                alpha,
+            )
+    return rgba
+
+
 def extract_regions(
     sheets: dict[str, Image.Image],
     out_root: Path,
@@ -203,8 +264,11 @@ def extract_regions(
     for region in REGIONS:
         sheet = sheets[region.sheet]
         sprite = to_rgba(sheet.crop(region.box), region.key_indices, keyed=keyed)
-        if diamond_mask:
+        if region.remap_fungus_pink:
+            sprite = remap_fungus_pink(sprite)
+        if diamond_mask and region.diamond_mask:
             sprite = apply_diamond_mask(sprite)
+        sprite = clear_transparent_rgb(sprite)
         destination = out_root / f"{region.path}.png"
         destination.parent.mkdir(parents=True, exist_ok=True)
         sprite.save(destination)

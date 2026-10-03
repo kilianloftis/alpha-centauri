@@ -15,20 +15,30 @@ std::optional<std::string> ResolveLandformLayer_(const Tile& rTile)
 {
     if (rTile.IsWater())
     {
+        // Depth bands are PascalCase config ids (Ocean / OceanShelf); shared Water is fallback.
+        if (rTile.HasFeature("OceanShelf"))
+        {
+            return std::string("OceanShelf");
+        }
+        if (rTile.HasFeature("Ocean"))
+        {
+            return std::string("Ocean");
+        }
         return TileLayerContent::k_Water;
     }
 
-    // Rolling is part of the landform layer; rocky terrain is handled by the Rockiness_t layer.
-    if (rTile.GetRockiness() == Rockiness_t::Rolling)
-    {
-        return TileLayerContent::k_Rolling;
-    }
-
-    return TileLayerContent::k_Flat;
+    // Flat land has no dedicated sheet art — moisture bases carry the tile. Rolling/rocky
+    // are overlays on the rockiness layer so they draw above rainfall.
+    return std::nullopt;
 }
 
 std::optional<std::string> ResolveMoistureLayer_(const Tile& rTile)
 {
+    // Sea tiles keep moisture for yields/effects, but land rainfall art must not cover water.
+    if (rTile.IsWater())
+    {
+        return std::nullopt;
+    }
     switch (rTile.GetMoisture())
     {
         case Moisture_t::Wet:
@@ -43,12 +53,20 @@ std::optional<std::string> ResolveMoistureLayer_(const Tile& rTile)
 
 std::optional<std::string> ResolveRockinessLayer_(const Tile& rTile)
 {
-    if (rTile.GetRockiness() == Rockiness_t::Rocky)
+    if (rTile.IsWater())
     {
-        return TileLayerContent::k_Rocky;
+        return std::nullopt;
     }
-
-    return std::nullopt;
+    switch (rTile.GetRockiness())
+    {
+        case Rockiness_t::Rocky:
+            return TileLayerContent::k_Rocky;
+        case Rockiness_t::Rolling:
+            return TileLayerContent::k_Rolling;
+        case Rockiness_t::Flat:
+            return std::nullopt;
+    }
+    throw std::runtime_error("ResolveRockinessLayer_: unhandled Rockiness_t");
 }
 
 std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)

@@ -61,6 +61,63 @@ TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
     CHECK(*rVegetation.contentId == TileLayerContent::k_Fungus);
 }
 
+TEST_CASE("Land rockiness overlays resolve above moisture; flat landform is empty",
+          "[map][layers]")
+{
+    actest::WorldFixture world(5, 5);
+    Tile& rTile = *world.map.GetTile(2, 2);
+    rTile.SetElevation(500);
+    rTile.SetMoisture(Moisture_t::Moist);
+    rTile.SetRockiness(Rockiness_t::Rolling);
+
+    const auto layers = ResolveTileLayers(rTile);
+    CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landform)].contentId.has_value());
+    REQUIRE(layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId.has_value());
+    CHECK(*layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId
+          == TileLayerContent::k_Moist);
+    REQUIRE(layers[static_cast<size_t>(TileLayerType_t::Rockiness)].contentId.has_value());
+    CHECK(*layers[static_cast<size_t>(TileLayerType_t::Rockiness)].contentId
+          == TileLayerContent::k_Rolling);
+}
+
+TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock layers",
+          "[map][layers]")
+{
+    actest::WorldFixture world(5, 5);
+
+    Tile& rShelf = *world.map.GetTile(1, 1);
+    rShelf.SetElevation(actest::TestMapRules().oceanShelfMeters);
+    rShelf.SetMoisture(Moisture_t::Wet);
+    rShelf.SetRockiness(Rockiness_t::Rocky);
+    REQUIRE(rShelf.IsWater());
+    REQUIRE(rShelf.HasFeature("OceanShelf"));
+
+    {
+        const auto layers = ResolveTileLayers(rShelf);
+        const auto& rLandform = layers[static_cast<size_t>(TileLayerType_t::Landform)];
+        const auto& rMoisture = layers[static_cast<size_t>(TileLayerType_t::Moisture)];
+        const auto& rRockiness = layers[static_cast<size_t>(TileLayerType_t::Rockiness)];
+        REQUIRE(rLandform.contentId.has_value());
+        CHECK(*rLandform.contentId == "OceanShelf");
+        CHECK_FALSE(rMoisture.contentId.has_value());
+        CHECK_FALSE(rRockiness.contentId.has_value());
+    }
+
+    Tile& rDeep = *world.map.GetTile(2, 2);
+    rDeep.SetElevation(actest::TestMapRules().minElevationMeters);
+    rDeep.SetMoisture(Moisture_t::Moist);
+    REQUIRE(rDeep.IsWater());
+    REQUIRE(rDeep.HasFeature("Ocean"));
+
+    {
+        const auto layers = ResolveTileLayers(rDeep);
+        const auto& rLandform = layers[static_cast<size_t>(TileLayerType_t::Landform)];
+        REQUIRE(rLandform.contentId.has_value());
+        CHECK(*rLandform.contentId == "Ocean");
+        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId.has_value());
+    }
+}
+
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")
 {
     actest::WorldFixture world(5, 5);

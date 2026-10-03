@@ -19,6 +19,14 @@ constexpr float k_ScrollDirectionRight  = 1.0f;
 constexpr float k_ScrollDirectionUp     = -1.0f;
 constexpr float k_ScrollDirectionDown   = 1.0f;
 
+// Screen-space pan (right/down positive) → camera tile delta for the 2:1 iso grid:
+// screenX ∝ (relX - relY), screenY ∝ (relX + relY).
+void ScreenPanToCameraDelta_(int screenDeltaX, int screenDeltaY, int& rCamDeltaX, int& rCamDeltaY)
+{
+    rCamDeltaX = screenDeltaX + screenDeltaY;
+    rCamDeltaY = screenDeltaY - screenDeltaX;
+}
+
 } // namespace
 
 CameraInputController::CameraInputController(WorldDisplay& rWorldDisplay, const WorldMap& rWorldMap,
@@ -37,37 +45,57 @@ int CameraInputController::ComputeMaxCameraY_() const
     return std::max(initialOffset, m_rWorldMap.GetHeight() - m_rWorldDisplay.GetVisibleRows());
 }
 
-bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
+bool CameraInputController::ApplyCameraDelta_(int deltaCamX, int deltaCamY)
 {
+    if (deltaCamX == 0 && deltaCamY == 0)
+    {
+        return false;
+    }
     const auto& s = Style().cameraInput;
     const int maxCamY = ComputeMaxCameraY_();
     MapViewport& rViewport = m_rWorldDisplay.GetViewport();
+    const int newCamY =
+        std::clamp(rViewport.CameraY() + deltaCamY, s.initialCameraOffset, maxCamY);
+    return rViewport.SetCamera(rViewport.CameraX() + deltaCamX, newCamY);
+}
 
-    const int camX = rViewport.CameraX();
-    const int camY = rViewport.CameraY();
+bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
+{
+    const auto& s = Style().cameraInput;
+    const int step = s.cameraScrollStep;
 
     const auto pan = [&](HotkeyAction_t action) {
         const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
         return chord && chord->Matches(rEvent);
     };
+
+    int screenDx = 0;
+    int screenDy = 0;
     if (pan(HotkeyAction_t::PanLeft))
     {
-        return rViewport.ScrollBy(-s.cameraScrollStep, 0);
+        screenDx = -step;
     }
-    if (pan(HotkeyAction_t::PanRight))
+    else if (pan(HotkeyAction_t::PanRight))
     {
-        return rViewport.ScrollBy(s.cameraScrollStep, 0);
+        screenDx = step;
     }
-    if (pan(HotkeyAction_t::PanUp))
+    else if (pan(HotkeyAction_t::PanUp))
     {
-        return rViewport.SetCamera(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
+        screenDy = -step;
     }
-    if (pan(HotkeyAction_t::PanDown))
+    else if (pan(HotkeyAction_t::PanDown))
     {
-        return rViewport.SetCamera(camX, std::min(maxCamY, camY + s.cameraScrollStep));
+        screenDy = step;
+    }
+    else
+    {
+        return false;
     }
 
-    return false;
+    int camDx = 0;
+    int camDy = 0;
+    ScreenPanToCameraDelta_(screenDx, screenDy, camDx, camDy);
+    return ApplyCameraDelta_(camDx, camDy);
 }
 
 bool CameraInputController::CenterOnTile(int tileX, int tileY)
@@ -96,8 +124,6 @@ bool CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t>
 bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
 {
     const auto& s = Style().cameraInput;
-    const int maxCamY = ComputeMaxCameraY_();
-    MapViewport& rViewport = m_rWorldDisplay.GetViewport();
 
     const float relX = static_cast<float>(mouseX - m_mapLayout.x) / m_mapLayout.width;
     const float relY = static_cast<float>(mouseY - m_mapLayout.y) / m_mapLayout.height;
@@ -131,22 +157,25 @@ bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
         return false;
     }
 
+    // Accumulate screen-space pan, then convert to iso camera steps so edges move
+    // horizontally/vertically on screen rather than along tile axes.
     m_edgeScrollAccumulatorX += scrollDirX * m_edgeScrollSpeed;
     m_edgeScrollAccumulatorY += scrollDirY * m_edgeScrollSpeed;
 
-    const int deltaX = static_cast<int>(m_edgeScrollAccumulatorX);
-    const int deltaY = static_cast<int>(m_edgeScrollAccumulatorY);
-
-    if (deltaX == 0 && deltaY == 0)
+    const int screenDx = static_cast<int>(m_edgeScrollAccumulatorX);
+    const int screenDy = static_cast<int>(m_edgeScrollAccumulatorY);
+    if (screenDx == 0 && screenDy == 0)
     {
         return false;
     }
 
-    m_edgeScrollAccumulatorX -= static_cast<float>(deltaX);
-    m_edgeScrollAccumulatorY -= static_cast<float>(deltaY);
+    m_edgeScrollAccumulatorX -= static_cast<float>(screenDx);
+    m_edgeScrollAccumulatorY -= static_cast<float>(screenDy);
 
-    const int newCamY = std::clamp(rViewport.CameraY() + deltaY, s.initialCameraOffset, maxCamY);
-    return rViewport.SetCamera(rViewport.CameraX() + deltaX, newCamY);
+    int camDx = 0;
+    int camDy = 0;
+    ScreenPanToCameraDelta_(screenDx, screenDy, camDx, camDy);
+    return ApplyCameraDelta_(camDx, camDy);
 }
 
 } // namespace ac

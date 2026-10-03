@@ -268,7 +268,23 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
     }
     config.ownedByTerritory = rImprovementJson.value("owned_by_territory", false);
     config.frequency = rImprovementJson.value("frequency", 0);
-    config.spritePath = rImprovementJson.value("sprite_path", "");
+    if (rImprovementJson.contains("sprite_paths"))
+    {
+        if (!rImprovementJson.at("sprite_paths").is_array())
+        {
+            throw std::runtime_error("Improvement '" + config.id
+                                     + "': 'sprite_paths' must be an array of strings");
+        }
+        for (const nlohmann::json& rPath : rImprovementJson.at("sprite_paths"))
+        {
+            if (!rPath.is_string())
+            {
+                throw std::runtime_error("Improvement '" + config.id
+                                         + "': 'sprite_paths' entries must be strings");
+            }
+            config.spritePaths.push_back(rPath.get<std::string>());
+        }
+    }
     config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
     if (rImprovementJson.contains("domain") && !rImprovementJson.at("domain").is_null())
     {

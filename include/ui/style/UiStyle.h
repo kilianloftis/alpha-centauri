@@ -38,7 +38,7 @@ struct TileRendererStyle_t
     Color_t landHighColor{};
     Color_t forestColor{};
     Color_t fungusColor{};
-    // Procedural landform fallback when sprite_path is missing or the asset fails to load.
+    // Procedural landform fallback when sprite_paths is empty or the asset fails to load.
     Color_t moistCenterColor{};
     Color_t wetCenterColor{};
     Color_t rollingRingColor{};

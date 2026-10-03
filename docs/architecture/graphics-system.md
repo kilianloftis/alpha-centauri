@@ -125,10 +125,13 @@ UI components use the Graphics interface to render game information.
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
   - `GetViewport().SetCamera(tileX, tileY)`: Anchor tile for the isometric projection
 - **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
-  `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Missing
+  `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Occupants
+  may list several `sprite_paths`; `PickSpritePath` chooses one from a hash of tile
+  coordinates and content id (stable across save/load; no per-tile variant field). Missing
   PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
   `extract_terrain.py` against a local SMAC install to populate `assets/sprites/` (diamond
-  alpha mask applied by default). Elevation perspective / cliff skirts are a follow-on.
+  alpha mask applied by default; moist/wet emit 16-cell rainfall bands, rolling/rocky are
+  row-0 keyed overlays). Elevation perspective / cliff skirts are a follow-on.
 - **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel`. Orthogonal
   `TileHitTester::HitTestWorldGrid` remains for non-iso grids; base workable area stays orthogonal.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
@@ -140,6 +143,7 @@ UI components use the Graphics interface to render game information.
 - **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
 - **Footprint**: 2:1 diamond (`size` = width, height = size / 2)
 - **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
+- **Variants**: `sprite_paths` + `PickSpriteIndex` / `PickSpritePath` (coord + id hash)
 - **Layers**: fungus wins vegetation; cliff-edge compositing deferred
 
 ### BaseWorkableAreaDisplay

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -23,6 +24,14 @@ namespace
 {
 
 constexpr float k_IsoHeightRatio = 0.5f;
+constexpr std::uint64_t k_FnvOffset = 14695981039346656037ull;
+constexpr std::uint64_t k_FnvPrime  = 1099511628211ull;
+
+void MixHash_(std::uint64_t& rHash, std::uint64_t value)
+{
+    rHash ^= value;
+    rHash *= k_FnvPrime;
+}
 
 enum class SpriteCacheState_t
 {
@@ -159,7 +168,9 @@ bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::stri
     {
         return false;
     }
-    return TryDrawSprite_(rGraphics, pOccupant->spritePath, x, y, width, height, tint);
+    const std::string& path =
+        PickSpritePath(pOccupant->spritePaths, rTile.GetX(), rTile.GetY(), pOccupant->id);
+    return TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
 }
 
 void DrawInsetDiamond_(Graphics& rGraphics, float x, float y, float width, float height,
@@ -231,18 +242,42 @@ void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, fl
 
 } // namespace
 
+size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t count)
+{
+    if (count == 0)
+    {
+        return 0;
+    }
+    std::uint64_t hash = k_FnvOffset;
+    MixHash_(hash, static_cast<std::uint64_t>(static_cast<std::uint32_t>(tileX)));
+    MixHash_(hash, static_cast<std::uint64_t>(static_cast<std::uint32_t>(tileY)));
+    for (const unsigned char ch : contentId)
+    {
+        MixHash_(hash, ch);
+    }
+    return static_cast<size_t>(hash % count);
+}
+
+const std::string& PickSpritePath(const std::vector<std::string>& paths, int tileX, int tileY,
+                                  std::string_view contentId)
+{
+    static const std::string k_Empty;
+    if (paths.empty())
+    {
+        return k_Empty;
+    }
+    return paths[PickSpriteIndex(tileX, tileY, contentId, paths.size())];
+}
+
 Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
 {
     const auto& s = Style().tileRenderer;
     const int elevation = rTile.GetElevation();
     Color_t fill{};
 
-    // Feature overlays win over the elevation gradient (Forest excludes Fungus in config).
-    if (rTile.HasFeature(ImprovementIds::k_Fungus))
-    {
-        fill = s.fungusColor;
-    }
-    else if (rTile.HasImprovement(ImprovementIds::k_Forest))
+    // Fungus is a terrain overlay sprite, not a solid fill — keep elevation/forest under it.
+    if (rTile.HasImprovement(ImprovementIds::k_Forest)
+        && !rTile.HasFeature(ImprovementIds::k_Fungus))
     {
         fill = s.forestColor;
     }
@@ -280,6 +315,12 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
     const float height = size * k_IsoHeightRatio;
     const Color_t baseFill = FillColor(rTile, bFogged);
     const Color_t tint = SpriteTint_(rTile, bFogged);
+    // Fungus art is already pink-remapped; elevation tint would turn it into muddy splotches.
+    Color_t fungusTint = Color_t::White();
+    if (bFogged)
+    {
+        fungusTint = DimColor_(fungusTint, s.fogFillDimRatio);
+    }
 
     rGraphics.DrawFilledDiamond(x, y, width, height, baseFill);
 
@@ -289,14 +330,20 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, width, height, tint))
+        const bool bFungusLayer = rLayer.type == TileLayerType_t::Vegetation
+                                  && *rLayer.contentId == TileLayerContent::k_Fungus;
+        const Color_t& rLayerTint = bFungusLayer ? fungusTint : tint;
+        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, width, height,
+                                rLayerTint))
         {
             continue;
         }
         // Per-layer procedural cues when that layer's sprite is missing.
-        if (rLayer.type == TileLayerType_t::Rockiness
-            || (rLayer.type == TileLayerType_t::Landform
-                && *rLayer.contentId == TileLayerContent::k_Rolling))
+        if (bFungusLayer)
+        {
+            rGraphics.DrawFilledDiamond(x, y, width, height, s.fungusColor);
+        }
+        else if (rLayer.type == TileLayerType_t::Rockiness)
         {
             DrawProceduralRockiness_(rGraphics, rTile, x, y, width, height, bFogged, baseFill);
         }
@@ -310,7 +357,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
     // Also draw any remaining improvement sprites that carry art (e.g. tile bonuses on terrain).
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        if (!pImprovement || pImprovement->spritePath.empty())
+        if (!pImprovement || pImprovement->spritePaths.empty())
         {
             continue;
         }
@@ -319,13 +366,15 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y, width, height, tint);
+        const std::string& path = PickSpritePath(pImprovement->spritePaths, rTile.GetX(),
+                                                 rTile.GetY(), pImprovement->id);
+        (void)TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
     }
 
     // Optional terrain bonuses / monolith sit in GetTerrainFeatures, not improvements.
     for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
-        if (!pFeature || pFeature->spritePath.empty())
+        if (!pFeature || pFeature->spritePaths.empty())
         {
             continue;
         }
@@ -337,7 +386,9 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        (void)TryDrawSprite_(rGraphics, pFeature->spritePath, x, y, width, height, tint);
+        const std::string& path =
+            PickSpritePath(pFeature->spritePaths, rTile.GetX(), rTile.GetY(), pFeature->id);
+        (void)TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
     }
 
     rGraphics.DrawDiamond(x, y, width, height, s.tileBorderColor, s.tileBorderWidth);

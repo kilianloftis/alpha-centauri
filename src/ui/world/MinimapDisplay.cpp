@@ -4,6 +4,7 @@
 #include "game/GameState.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
@@ -219,7 +220,27 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
             }
 
             const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(*pTile);
-            WritePixel_(m_terrainPixels, index, TileRenderer::FillColor(*pTile, bFogged));
+            // World map draws fungus as an overlay sprite; the 1×1 minimap pixel uses the
+            // solid fungus cue so patches stay readable at thumbnail scale.
+            if (pTile->HasFeature(ImprovementIds::k_Fungus))
+            {
+                Color_t color = Style().tileRenderer.fungusColor;
+                if (bFogged)
+                {
+                    const float dim = Style().tileRenderer.fogFillDimRatio;
+                    color = Color_t{
+                        static_cast<uint8_t>(static_cast<float>(color.r) * dim),
+                        static_cast<uint8_t>(static_cast<float>(color.g) * dim),
+                        static_cast<uint8_t>(static_cast<float>(color.b) * dim),
+                        color.a,
+                    };
+                }
+                WritePixel_(m_terrainPixels, index, color);
+            }
+            else
+            {
+                WritePixel_(m_terrainPixels, index, TileRenderer::FillColor(*pTile, bFogged));
+            }
         }
     }
 

@@ -119,7 +119,7 @@
       "land_terraform"
     ],
     "domain": "land",
-    "sprite_path": "assets/sprites/landforms/forest.png",
+    "sprite_paths": ["assets/sprites/landforms/forest.png"],
     "excludes": [
       "Farm",
       "Mine",
