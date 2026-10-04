@@ -204,6 +204,15 @@ void Tile::BindOccupants(const ImprovementRegistry& rOccupants)
     RefreshTerrainFeatures_();
 }
 
+const ImprovementConfig_t* Tile::FindOccupantConfig(std::string_view id) const
+{
+    if (!m_pOccupants)
+    {
+        return nullptr;
+    }
+    return m_pOccupants->Find(std::string(id));
+}
+
 void Tile::BindAppearanceRevision(Revision& rRevision)
 {
     m_pAppearanceRevision = &rRevision;

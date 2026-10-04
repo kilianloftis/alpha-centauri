@@ -11,6 +11,7 @@ namespace ac
 {
 
 class Tile;
+class WorldMap;
 
 // Stable variant index for a tile cell. Depends only on coords, content id, and count
 // (config list order is the contract). Returns 0 when count is 0.
@@ -27,6 +28,7 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 // procedural moisture/rockiness cues (or a fungus fill if that sprite is absent).
 // Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
 // When sprite_paths lists multiple assets, PickSpritePath chooses one per tile.
+// When pMap is set, layer sprites inset from diamond edges that lack a matching neighbor.
 class TileRenderer
 {
 public:
@@ -36,8 +38,9 @@ public:
 
     // Fogged tiles use a dimmed fill and muted overlay colors (explored memory on the world map).
     // `size` is the diamond width in pixels; height is size / 2.
+    // pMap enables neighbor-aware edge insets; null insets every edge (location preview).
     static void Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                       bool bFogged = false);
+                       bool bFogged = false, const WorldMap* pMap = nullptr);
 };
 
 } // namespace ac

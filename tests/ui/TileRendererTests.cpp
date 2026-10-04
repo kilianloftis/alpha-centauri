@@ -5,6 +5,7 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
+#include "ui/TileSpriteEdgeInset.h"
 #include "ui/style/UiStyle.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -229,7 +230,12 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         rTile.SetRockiness(Rockiness_t::Flat);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, 10.0f, 20.0f, 100.0f, /*bFogged*/ false);
+        TileRenderer::Render(graphics, rTile, 10.0f, 20.0f, 100.0f, /*bFogged*/ false,
+                             &world.map);
+
+        const SpriteDestRect_t expected = DestRectForEdgeInsets(
+            10.0f, 20.0f, 100.0f, MatchMoistureTierEdges(rTile, &world.map, Moisture_t::Moist),
+            Style().tileRenderer.spriteEdgeInsetRatio);
 
         REQUIRE_FALSE(graphics.sprites.empty());
         bool bFound = false;
@@ -237,10 +243,10 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         {
             if (rSprite.textureId == spritePath && rSprite.bScaled)
             {
-                CHECK(rSprite.x == 10.0f);
-                CHECK(rSprite.y == 20.0f);
-                CHECK(rSprite.destWidth == 100.0f);
-                CHECK(rSprite.destHeight == 50.0f);
+                CHECK(rSprite.x == expected.x);
+                CHECK(rSprite.y == expected.y);
+                CHECK(rSprite.destWidth == expected.width);
+                CHECK(rSprite.destHeight == expected.height);
                 bFound = true;
             }
         }

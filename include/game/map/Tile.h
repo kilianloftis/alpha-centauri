@@ -100,6 +100,10 @@ public:
     // loaded. Terrain setters refresh the cached configs whenever the registry is bound.
     void BindOccupants(const ImprovementRegistry& rOccupants);
 
+    // Bound-registry lookup (not limited to occupants currently on this tile). Null when
+    // unbound or the id is absent — used by stacked moisture drawing to fetch Arid/Moist/Wet.
+    const ImprovementConfig_t* FindOccupantConfig(std::string_view id) const;
+
     // WorldMap appearance cache (minimap fill colours). Optional — unbound tiles used in unit
     // tests do not notify.
     void BindAppearanceRevision(Revision& rRevision);

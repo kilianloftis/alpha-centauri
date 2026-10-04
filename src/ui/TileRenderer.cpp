@@ -5,7 +5,9 @@
 #include "game/map/Tile.h"
 #include "game/map/TileLayer.h"
 #include "game/map/TileLayerResolver.h"
+#include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
+#include "ui/TileSpriteEdgeInset.h"
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
@@ -156,14 +158,14 @@ bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float
     return rGraphics.DrawSprite(path, x, y, width, height, tint);
 }
 
-bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::string& contentId,
-                         float x, float y, float width, float height, const Color_t& tint)
+bool TryDrawOccupantSprite_(Graphics& rGraphics, const Tile& rTile, std::string_view configId,
+                            float x, float y, float width, float height, const Color_t& tint)
 {
-    // Improvement layer already returns PascalCase config ids; other layers use TileLayerContent.
-    const bool bLooksLikeConfigId =
-        !contentId.empty() && std::isupper(static_cast<unsigned char>(contentId.front()));
-    const std::string configId = bLooksLikeConfigId ? contentId : ContentIdToConfigId_(contentId);
-    const ImprovementConfig_t* pOccupant = FindOccupantByConfigId_(rTile, configId);
+    const ImprovementConfig_t* pOccupant = rTile.FindOccupantConfig(configId);
+    if (!pOccupant)
+    {
+        pOccupant = FindOccupantByConfigId_(rTile, configId);
+    }
     if (!pOccupant)
     {
         return false;
@@ -171,6 +173,50 @@ bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::stri
     const std::string& path =
         PickSpritePath(pOccupant->spritePaths, rTile.GetX(), rTile.GetY(), pOccupant->id);
     return TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
+}
+
+bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::string& contentId,
+                         float x, float y, float width, float height, const Color_t& tint)
+{
+    // Improvement layer already returns PascalCase config ids; other layers use TileLayerContent.
+    const bool bLooksLikeConfigId =
+        !contentId.empty() && std::isupper(static_cast<unsigned char>(contentId.front()));
+    const std::string configId = bLooksLikeConfigId ? contentId : ContentIdToConfigId_(contentId);
+    return TryDrawOccupantSprite_(rGraphics, rTile, configId, x, y, width, height, tint);
+}
+
+// Land rainfall blends by stacking arid → moist → wet. Each tier insets where ortho neighbors
+// are below that tier, so drier bases show through at moisture boundaries.
+bool DrawMoistureStack_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                        const Color_t& tint, const WorldMap* pMap)
+{
+    if (!rTile.IsLand())
+    {
+        return false;
+    }
+
+    const float insetRatio = Style().tileRenderer.spriteEdgeInsetRatio;
+    const Moisture_t moisture = rTile.GetMoisture();
+    bool bDrewAny = false;
+
+    auto drawTier = [&](Moisture_t tier, std::string_view configId) {
+        if (static_cast<int>(moisture) < static_cast<int>(tier))
+        {
+            return;
+        }
+        const SpriteEdgeMatch_t match = MatchMoistureTierEdges(rTile, pMap, tier);
+        const SpriteDestRect_t dest = DestRectForEdgeInsets(x, y, size, match, insetRatio);
+        if (TryDrawOccupantSprite_(rGraphics, rTile, configId, dest.x, dest.y, dest.width,
+                                   dest.height, tint))
+        {
+            bDrewAny = true;
+        }
+    };
+
+    drawTier(Moisture_t::Arid, "Arid");
+    drawTier(Moisture_t::Moist, "Moist");
+    drawTier(Moisture_t::Wet, "Wet");
+    return bDrewAny;
 }
 
 void DrawInsetDiamond_(Graphics& rGraphics, float x, float y, float width, float height,
@@ -308,7 +354,7 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
 }
 
 void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                          bool bFogged)
+                          bool bFogged, const WorldMap* pMap)
 {
     const auto& s = Style().tileRenderer;
     const float width = size;
@@ -333,23 +379,55 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         const bool bFungusLayer = rLayer.type == TileLayerType_t::Vegetation
                                   && *rLayer.contentId == TileLayerContent::k_Fungus;
         const Color_t& rLayerTint = bFungusLayer ? fungusTint : tint;
-        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, x, y, width, height,
-                                rLayerTint))
+
+        if (rLayer.type == TileLayerType_t::Moisture)
+        {
+            if (!DrawMoistureStack_(rGraphics, rTile, x, y, size, rLayerTint, pMap))
+            {
+                DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
+            }
+            continue;
+        }
+
+        SpriteEdgeMatch_t edgeMatch{};
+        float edgeInsetRatio = s.spriteEdgeInsetRatio;
+        bool bApplyEdgeInset = false;
+        if (rLayer.type == TileLayerType_t::Rockiness)
+        {
+            edgeMatch = MatchRockinessEdges(rTile, pMap);
+            edgeInsetRatio = s.spriteOverlayEdgeInsetRatio;
+            bApplyEdgeInset = true;
+        }
+        else if (bFungusLayer)
+        {
+            edgeMatch = MatchFungusEdges(rTile, pMap);
+            edgeInsetRatio = s.spriteOverlayEdgeInsetRatio;
+            bApplyEdgeInset = true;
+        }
+        else if (rLayer.type == TileLayerType_t::Landform && rTile.IsWater())
+        {
+            edgeMatch = MatchSeaLandformEdges(rTile, pMap, *rLayer.contentId);
+            bApplyEdgeInset = true;
+        }
+
+        const SpriteDestRect_t dest =
+            bApplyEdgeInset ? DestRectForEdgeInsets(x, y, size, edgeMatch, edgeInsetRatio)
+                            : SpriteDestRect_t{x, y, width, height};
+
+        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, dest.x, dest.y, dest.width,
+                                dest.height, rLayerTint))
         {
             continue;
         }
         // Per-layer procedural cues when that layer's sprite is missing.
         if (bFungusLayer)
         {
-            rGraphics.DrawFilledDiamond(x, y, width, height, s.fungusColor);
+            rGraphics.DrawFilledDiamond(dest.x, dest.y, dest.width, dest.height, s.fungusColor);
         }
         else if (rLayer.type == TileLayerType_t::Rockiness)
         {
-            DrawProceduralRockiness_(rGraphics, rTile, x, y, width, height, bFogged, baseFill);
-        }
-        else if (rLayer.type == TileLayerType_t::Moisture)
-        {
-            DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
+            DrawProceduralRockiness_(rGraphics, rTile, dest.x, dest.y, dest.width, dest.height,
+                                     bFogged, baseFill);
         }
     }
 

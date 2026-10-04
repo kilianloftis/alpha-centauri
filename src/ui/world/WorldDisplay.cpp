@@ -336,7 +336,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
         }
 
         const bool bFogged = fog.visible && !fog.visible->IsVisible(rTile);
-        TileRenderer::Render(rGraphics, rTile, tileX, tileY, tileWidth, bFogged);
+        TileRenderer::Render(rGraphics, rTile, tileX, tileY, tileWidth, bFogged, &rWorldMap);
     });
 
     RenderBases_(rGraphics);

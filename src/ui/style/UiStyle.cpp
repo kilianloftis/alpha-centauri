@@ -88,6 +88,17 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.landformRingOuterInsetRatio = j.at("landform_ring_outer_inset_ratio").get<float>();
     s.landformRingInnerInsetRatio = j.at("landform_ring_inner_inset_ratio").get<float>();
+    s.spriteEdgeInsetRatio = j.at("sprite_edge_inset_ratio").get<float>();
+    s.spriteOverlayEdgeInsetRatio = j.at("sprite_overlay_edge_inset_ratio").get<float>();
+    if (s.spriteEdgeInsetRatio < 0.0f || s.spriteEdgeInsetRatio > 0.45f)
+    {
+        throw std::runtime_error("tile_renderer.sprite_edge_inset_ratio must be in [0, 0.45]");
+    }
+    if (s.spriteOverlayEdgeInsetRatio < 0.0f || s.spriteOverlayEdgeInsetRatio > 0.45f)
+    {
+        throw std::runtime_error(
+            "tile_renderer.sprite_overlay_edge_inset_ratio must be in [0, 0.45]");
+    }
     return s;
 }
 

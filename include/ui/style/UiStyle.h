@@ -49,6 +49,10 @@ struct TileRendererStyle_t
     // the center (same inner inset so it plugs the ring hole).
     float landformRingOuterInsetRatio{};
     float landformRingInnerInsetRatio{};
+    // Neighbor-aware sprite edge pull-in (fraction of diamond width). Matching ortho edges
+    // draw flush; mismatches inset. Overlay ratio is for rolling/rocky/fungus.
+    float spriteEdgeInsetRatio{};
+    float spriteOverlayEdgeInsetRatio{};
 };
 
 struct WorldDisplayStyle_t

@@ -332,6 +332,7 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 add_library(ac-ui STATIC
     ui/TileHitTester.cpp
     ui/TileRenderer.cpp
+    ui/TileSpriteEdgeInset.cpp
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp

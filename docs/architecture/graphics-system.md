@@ -127,8 +127,12 @@ UI components use the Graphics interface to render game information.
 - **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
   `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Occupants
   may list several `sprite_paths`; `PickSpritePath` chooses one from a hash of tile
-  coordinates and content id (stable across save/load; no per-tile variant field). Missing
-  PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
+  coordinates and content id (stable across save/load; no per-tile variant field). When a
+  `WorldMap` is passed (world view), layer sprites inset from diamond edges whose orthogonal
+  neighbor does not match that layer (`TileSpriteEdgeInset`; ratios in `tile_renderer` style).
+  Land moisture paints arid→moist→wet stacked; each tier insets where neighbors are drier so
+  lower tiers show through at rainfall boundaries.
+  Missing PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
   `extract_terrain.py` against a local SMAC install to populate `assets/sprites/` (diamond
   alpha mask applied by default; moist/wet emit 16-cell rainfall bands, rolling/rocky are
   row-0 keyed overlays). Elevation perspective / cliff skirts are a follow-on.
@@ -144,6 +148,9 @@ UI components use the Graphics interface to render game information.
 - **Footprint**: 2:1 diamond (`size` = width, height = size / 2)
 - **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
 - **Variants**: `sprite_paths` + `PickSpriteIndex` / `PickSpritePath` (coord + id hash)
+- **Edge insets**: `TileSpriteEdgeInset` match helpers + `DestRectForEdgeInsets`; style keys
+  `sprite_edge_inset_ratio` / `sprite_overlay_edge_inset_ratio`
+- **Moisture stack**: arid base, then moist, then wet (tier ≥); inset via `MatchMoistureTierEdges`
 - **Layers**: fungus wins vegetation; cliff-edge compositing deferred
 
 ### BaseWorkableAreaDisplay

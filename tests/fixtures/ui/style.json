@@ -75,7 +75,9 @@
     "fog_fill_dim_ratio": 0.55,
     "tile_border_width": -1.0,
     "landform_ring_outer_inset_ratio": 0.12,
-    "landform_ring_inner_inset_ratio": 0.32
+    "landform_ring_inner_inset_ratio": 0.32,
+    "sprite_edge_inset_ratio": 0.10,
+    "sprite_overlay_edge_inset_ratio": 0.12
   },
   "world_display": {
     "default_tile_scale": 0.1,
