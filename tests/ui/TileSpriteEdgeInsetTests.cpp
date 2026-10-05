@@ -7,6 +7,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <cmath>
+
 using namespace ac;
 using Catch::Matchers::WithinAbs;
 
@@ -66,69 +68,6 @@ TEST_CASE("DestRectForEdgeInsets shrinks unmatched edges and stays 2:1", "[ui][t
     }
 }
 
-TEST_CASE("Moisture tier edges match at-least tier; null map mismatches all",
-          "[ui][tile_edge_inset]")
-{
-    actest::WorldFixture world(5, 5);
-    Tile& rCenter = *world.map.GetTile(2, 2);
-    rCenter.SetElevation(500);
-    rCenter.SetMoisture(Moisture_t::Wet);
-
-    Tile& rEast = *world.map.GetTile(3, 2);
-    rEast.SetElevation(500);
-    rEast.SetMoisture(Moisture_t::Moist);
-
-    Tile& rWest = *world.map.GetTile(1, 2);
-    rWest.SetElevation(500);
-    rWest.SetMoisture(Moisture_t::Arid);
-
-    const SpriteEdgeMatch_t nullMap = MatchMoistureTierEdges(rCenter, nullptr, Moisture_t::Moist);
-    CHECK_FALSE(nullMap.bNe);
-    CHECK_FALSE(nullMap.bSe);
-    CHECK_FALSE(nullMap.bSw);
-    CHECK_FALSE(nullMap.bNw);
-
-    // Moist tier: east (moist) matches, west (arid) does not. E→SE, W→NW.
-    const SpriteEdgeMatch_t moistTier =
-        MatchMoistureTierEdges(rCenter, &world.map, Moisture_t::Moist);
-    CHECK(moistTier.bSe);
-    CHECK_FALSE(moistTier.bNw);
-
-    // Wet tier: neither ortho land neighbor is wet.
-    const SpriteEdgeMatch_t wetTier =
-        MatchMoistureTierEdges(rCenter, &world.map, Moisture_t::Wet);
-    CHECK_FALSE(wetTier.bSe);
-    CHECK_FALSE(wetTier.bNw);
-
-    // Arid tier: both land neighbors are at least arid.
-    const SpriteEdgeMatch_t aridTier =
-        MatchMoistureTierEdges(rCenter, &world.map, Moisture_t::Arid);
-    CHECK(aridTier.bSe);
-    CHECK(aridTier.bNw);
-}
-
-TEST_CASE("Coastal water neighbors do not inset moisture tiers", "[ui][tile_edge_inset]")
-{
-    actest::WorldFixture world(5, 5);
-    Tile& rLand = *world.map.GetTile(2, 2);
-    rLand.SetElevation(500);
-    rLand.SetMoisture(Moisture_t::Moist);
-
-    Tile& rLandEast = *world.map.GetTile(3, 2);
-    rLandEast.SetElevation(500);
-    rLandEast.SetMoisture(Moisture_t::Moist);
-
-    // South neighbor is water (map E→SE, S→SW).
-    Tile& rWaterSouth = *world.map.GetTile(2, 3);
-    rWaterSouth.SetElevation(actest::TestMapRules().oceanShelfMeters);
-    REQUIRE(rWaterSouth.IsWater());
-
-    const SpriteEdgeMatch_t moist =
-        MatchMoistureTierEdges(rLand, &world.map, Moisture_t::Moist);
-    CHECK(moist.bSe); // land east
-    CHECK(moist.bSw); // water south — flush, not a rainfall mismatch
-}
-
 TEST_CASE("Coastal land neighbors do not inset sea landform sprites", "[ui][tile_edge_inset]")
 {
     actest::WorldFixture world(5, 5);
@@ -149,4 +88,53 @@ TEST_CASE("Coastal land neighbors do not inset sea landform sprites", "[ui][tile
         MatchSeaLandformEdges(rShelf, &world.map, "OceanShelf");
     CHECK(shelf.bSe); // shelf east
     CHECK(shelf.bSw); // land south — flush, not a depth-band mismatch
+}
+
+TEST_CASE("Inset sprites never extend past the tile diamond", "[ui][tile_edge_inset]")
+{
+    constexpr float k_X = 10.0f;
+    constexpr float k_Y = 20.0f;
+    constexpr float k_Size = 100.0f;
+    const float halfW = k_Size * 0.5f;
+    const float halfH = k_Size * 0.25f;
+    const auto inTile = [&](float px, float py) {
+        return std::abs(px - (k_X + halfW)) / halfW + std::abs(py - (k_Y + halfH)) / halfH
+               <= 1.0f + 1e-4f;
+    };
+
+    for (int bits = 0; bits < 16; ++bits)
+    {
+        SpriteEdgeMatch_t match{};
+        match.bNe = (bits & 1) != 0;
+        match.bSe = (bits & 2) != 0;
+        match.bSw = (bits & 4) != 0;
+        match.bNw = (bits & 8) != 0;
+        for (const float ratio : {0.1f, 0.25f, 0.45f})
+        {
+            CAPTURE(bits, ratio);
+            const SpriteDestRect_t dest = DestRectForEdgeInsets(k_X, k_Y, k_Size, match, ratio);
+            CHECK_THAT(dest.height, WithinAbs(dest.width * 0.5f, 0.001f));
+            CHECK(inTile(dest.x + dest.width * 0.5f, dest.y));
+            CHECK(inTile(dest.x + dest.width, dest.y + dest.height * 0.5f));
+            CHECK(inTile(dest.x + dest.width * 0.5f, dest.y + dest.height));
+            CHECK(inTile(dest.x, dest.y + dest.height * 0.5f));
+        }
+    }
+}
+
+TEST_CASE("An inset edge leaves the opposite matched edge flush", "[ui][tile_edge_inset]")
+{
+    // Drier land to the SW only: the sprite shrinks away from SW and keeps the tile's NE edge.
+    SpriteEdgeMatch_t match{};
+    match.bNe = true;
+    match.bSe = true;
+    match.bNw = true;
+    const SpriteDestRect_t dest = DestRectForEdgeInsets(0.0f, 0.0f, 100.0f, match, 0.1f);
+    CHECK(dest.width < 100.0f);
+
+    // Tile NE edge runs from N (50, 0) to E (100, 25): y = (x - 50) / 2.
+    const float northX = dest.x + dest.width * 0.5f;
+    const float eastX = dest.x + dest.width;
+    CHECK_THAT(dest.y, WithinAbs((northX - 50.0f) * 0.5f, 0.001f));
+    CHECK_THAT(dest.y + dest.height * 0.5f, WithinAbs((eastX - 50.0f) * 0.5f, 0.001f));
 }

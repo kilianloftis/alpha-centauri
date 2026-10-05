@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -240,6 +241,40 @@ public:
                          destHeight / static_cast<float>(size.y)});
         sprite.setColor(sf::Color(tint.r, tint.g, tint.b, tint.a));
         m_window.draw(sprite);
+        return true;
+    }
+
+    bool DrawDiamondSprite(const std::string& textureId, float x, float y, float destWidth,
+                           float destHeight, const DiamondTint_t& rTint) override
+    {
+        auto it = m_textures.find(textureId);
+        if (it == m_textures.end())
+        {
+            std::cerr << "[Graphics] Texture '" << textureId << "' is not loaded.\n";
+            return false;
+        }
+
+        const sf::Vector2u size = it->second.getSize();
+        if (size.x == 0 || size.y == 0)
+        {
+            return false;
+        }
+
+        const float textureWidth = static_cast<float>(size.x);
+        const float textureHeight = static_cast<float>(size.y);
+        const auto vertex = [&](float u, float v, const Color_t& rColor) {
+            return sf::Vertex{{x + destWidth * u, y + destHeight * v},
+                              sf::Color(rColor.r, rColor.g, rColor.b, rColor.a),
+                              {textureWidth * u, textureHeight * v}};
+        };
+        const sf::Vertex fan[] = {
+            vertex(0.5f, 0.5f, rTint.center), vertex(0.0f, 0.5f, rTint.west),
+            vertex(0.5f, 0.0f, rTint.north),  vertex(1.0f, 0.5f, rTint.east),
+            vertex(0.5f, 1.0f, rTint.south),  vertex(0.0f, 0.5f, rTint.west),
+        };
+        sf::RenderStates states;
+        states.texture = &it->second;
+        m_window.draw(fan, std::size(fan), sf::PrimitiveType::TriangleFan, states);
         return true;
     }
 

@@ -68,7 +68,10 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": ["tests/fixtures/sprites/moist_0.png"],
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "tests/fixtures/sprites/moist/{mask}.png"
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -102,6 +105,10 @@
     {
       "id": "River",
       "name": "River",
+      "sprite_tiles": {
+        "layout": "edges",
+        "land": "tests/fixtures/sprites/river/{mask}.png"
+      },
       "excludes": [
         "Mine"
       ],
@@ -149,6 +156,7 @@
       "tags": [
         "landform"
       ],
+      "sprite_paths": {"sea": ["tests/fixtures/sprites/ocean_shelf.png"]},
       "effects": [
         {
           "type": "StatModifier",
@@ -165,7 +173,11 @@
       "id": "Fungus",
       "name": "Fungus",
       "move_cost": 3,
-      "sprite_paths": ["tests/fixtures/sprites/fungus.png"],
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "tests/fixtures/sprites/fungus_land/{mask}.png",
+        "sea": "tests/fixtures/sprites/fungus_sea/{mask}.png"
+      },
       "suppress_yield_sources": [
         "@landform",
         "River",
@@ -213,6 +225,11 @@
         "resource_bonus"
       ],
       "frequency": 10,
+      "sprite_paths": {
+        "land": ["tests/fixtures/sprites/nutrients_land.png"],
+        "sea": ["tests/fixtures/sprites/nutrients_sea.png"]
+      },
+      "sprite_overhang_ratio": 0.24,
       "effects": [
         {
           "type": "StatModifier",
@@ -294,6 +311,19 @@
           }
         }
       ]
+    },
+    {
+      "id": "MonsoonJungle",
+      "name": "Monsoon Jungle",
+      "tags": [
+        "landmark"
+      ],
+      "domain": "land",
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "tests/fixtures/sprites/jungle/{mask}.png"
+      },
+      "effects": []
     },
     {
       "id": "Aquifer",

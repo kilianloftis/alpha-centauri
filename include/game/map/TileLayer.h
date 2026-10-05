@@ -14,9 +14,11 @@ enum class TileLayerType_t
     Landform = 0,
     Moisture = 1,
     Rockiness = 2,
-    Vegetation = 3,
-    Road = 4,
-    Improvement = 5,
+    Landmark = 3,
+    Vegetation = 4,
+    River = 5,
+    Road = 6,
+    Improvement = 7,
     Count
 };
 
@@ -51,12 +53,15 @@ namespace TileLayerContent
     inline const std::string k_Rolling = "rolling";
     inline const std::string k_Rocky = "rocky";
 
-    // Vegetation layer (Layer 3) — fungus replaces farm/forest visually when present.
+    // Vegetation layer — fungus replaces farm/forest visually when present.
     inline const std::string k_Farm = "farm";
     inline const std::string k_Forest = "forest";
     inline const std::string k_Fungus = "fungus";
 
-    // Road layer (Layer 4)
+    // River layer — drawn over vegetation and the coast.
+    inline const std::string k_River = "river";
+
+    // Road layer
     inline const std::string k_Road = "road";
 } // namespace TileLayerContent
 

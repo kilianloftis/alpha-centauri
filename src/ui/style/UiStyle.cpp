@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace ac
 {
@@ -15,12 +17,11 @@ namespace
 UiStyle g_style{};
 bool g_loaded = false;
 
-Color_t ParseColor_(const nlohmann::json& j, const char* key)
+Color_t ParseColorValue_(const nlohmann::json& arr, const std::string& key)
 {
-    const auto& arr = j.at(key);
     if (!arr.is_array() || arr.size() < 3 || arr.size() > 4)
     {
-        throw std::runtime_error(std::string("Expected an RGB or RGBA array for '") + key
+        throw std::runtime_error("Expected an RGB or RGBA array for '" + key
                                  + "'; extra entries are a typo, not optional data");
     }
     const uint8_t a = arr.size() >= 4 ? arr.at(3).get<uint8_t>() : 255;
@@ -29,6 +30,11 @@ Color_t ParseColor_(const nlohmann::json& j, const char* key)
         arr.at(1).get<uint8_t>(),
         arr.at(2).get<uint8_t>(),
         a};
+}
+
+Color_t ParseColor_(const nlohmann::json& j, const char* key)
+{
+    return ParseColorValue_(j.at(key), key);
 }
 
 RatioLayout_t ParseLayout_(const nlohmann::json& j, const char* key)
@@ -70,6 +76,50 @@ ViewFactoryStyle_t ParseViewFactoryStyle_(const nlohmann::json& j)
     return s;
 }
 
+WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
+{
+    WaterShadingStyle_t s{};
+    s.depthShades = j.at("depth_shades").get<std::vector<int>>();
+    if (s.depthShades.empty())
+    {
+        throw std::runtime_error("tile_renderer.water_shading.depth_shades must not be empty");
+    }
+    for (const int shade : s.depthShades)
+    {
+        if (shade < 0)
+        {
+            throw std::runtime_error(
+                "tile_renderer.water_shading.depth_shades must not be negative");
+        }
+    }
+    const nlohmann::json& rTints = j.at("tints");
+    if (!rTints.is_object() || rTints.empty())
+    {
+        throw std::runtime_error(
+            "tile_renderer.water_shading.tints must name at least one landform");
+    }
+    for (const auto& [landform, rTable] : rTints.items())
+    {
+        const std::string key = "tile_renderer.water_shading.tints." + landform;
+        if (!rTable.is_array() || rTable.empty())
+        {
+            throw std::runtime_error(key + " must be a non-empty list of colours");
+        }
+        std::vector<Color_t>& rColors = s.tints[landform];
+        for (const nlohmann::json& rColor : rTable)
+        {
+            rColors.push_back(ParseColorValue_(rColor, key));
+        }
+    }
+    s.coastTints = j.at("coast_tints").get<std::string>();
+    if (!s.tints.contains(s.coastTints))
+    {
+        throw std::runtime_error("tile_renderer.water_shading.coast_tints '" + s.coastTints
+                                 + "' names no tints entry");
+    }
+    return s;
+}
+
 TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
 {
     TileRendererStyle_t s{};
@@ -85,20 +135,29 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.rollingRingColor = ParseColor_(j, "rolling_ring_color");
     s.rockyRingColor = ParseColor_(j, "rocky_ring_color");
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
+    s.fogTerrainDimRatio = j.at("fog_terrain_dim_ratio").get<float>();
+    if (s.fogTerrainDimRatio < 0.0f || s.fogTerrainDimRatio > 1.0f)
+    {
+        throw std::runtime_error("tile_renderer.fog_terrain_dim_ratio must be in [0, 1]");
+    }
+    s.fogHazeColor = ParseColor_(j, "fog_haze_color");
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.landformRingOuterInsetRatio = j.at("landform_ring_outer_inset_ratio").get<float>();
     s.landformRingInnerInsetRatio = j.at("landform_ring_inner_inset_ratio").get<float>();
-    s.spriteEdgeInsetRatio = j.at("sprite_edge_inset_ratio").get<float>();
     s.spriteOverlayEdgeInsetRatio = j.at("sprite_overlay_edge_inset_ratio").get<float>();
-    if (s.spriteEdgeInsetRatio < 0.0f || s.spriteEdgeInsetRatio > 0.45f)
-    {
-        throw std::runtime_error("tile_renderer.sprite_edge_inset_ratio must be in [0, 0.45]");
-    }
     if (s.spriteOverlayEdgeInsetRatio < 0.0f || s.spriteOverlayEdgeInsetRatio > 0.45f)
     {
         throw std::runtime_error(
             "tile_renderer.sprite_overlay_edge_inset_ratio must be in [0, 0.45]");
     }
+    s.coastSpriteDir = j.at("coast_sprite_dir").get<std::string>();
+    if (s.coastSpriteDir.empty())
+    {
+        throw std::runtime_error("tile_renderer.coast_sprite_dir must not be empty");
+    }
+    s.riverColor = ParseColor_(j, "river_color");
+    s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
+    s.waterShading = ParseWaterShadingStyle_(j.at("water_shading"));
     return s;
 }
 
@@ -123,8 +182,6 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
-    s.riverColor = ParseColor_(j, "river_color");
-    s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
     s.sensorLabelColor = ParseColor_(j, "sensor_label_color");
     s.monolithLabelColor = ParseColor_(j, "monolith_label_color");

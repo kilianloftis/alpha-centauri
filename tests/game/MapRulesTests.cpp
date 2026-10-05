@@ -118,6 +118,45 @@ TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock l
     }
 }
 
+TEST_CASE("Landmarks and rivers fill their own layers", "[map][layers]")
+{
+    actest::WorldFixture world(5, 5);
+    Tile& rTile = *world.map.GetTile(2, 2);
+    rTile.SetElevation(500);
+
+    SECTION("a plain tile has neither")
+    {
+        const auto layers = ResolveTileLayers(rTile);
+        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landmark)].contentId.has_value());
+        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::River)].contentId.has_value());
+    }
+
+    SECTION("a landmark feature resolves by config id")
+    {
+        rTile.AddTerrainFeature(world.improvements.Get("MonsoonJungle"));
+        const auto layers = ResolveTileLayers(rTile);
+        const auto& rLandmark = layers[static_cast<size_t>(TileLayerType_t::Landmark)];
+        REQUIRE(rLandmark.contentId.has_value());
+        CHECK(*rLandmark.contentId == "MonsoonJungle");
+    }
+
+    SECTION("a terrain feature without the landmark tag stays out of the layer")
+    {
+        rTile.AddTerrainFeature(world.improvements.Get("Nutrients"));
+        const auto layers = ResolveTileLayers(rTile);
+        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landmark)].contentId.has_value());
+    }
+
+    SECTION("a river tile fills the river layer")
+    {
+        rTile.SetHasRiver(true);
+        const auto layers = ResolveTileLayers(rTile);
+        const auto& rRiver = layers[static_cast<size_t>(TileLayerType_t::River)];
+        REQUIRE(rRiver.contentId.has_value());
+        CHECK(*rRiver.contentId == TileLayerContent::k_River);
+    }
+}
+
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")
 {
     actest::WorldFixture world(5, 5);

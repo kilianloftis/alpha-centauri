@@ -42,6 +42,31 @@ struct FormerProject_t
     std::string requiredTech;
 };
 
+// World-map art per tile surface: JSON "sprite_paths": {"land": [...], "sea": [...]}. A surface
+// left out has no art there.
+struct OccupantSpritePaths_t
+{
+    std::vector<std::string> land;
+    std::vector<std::string> sea;
+};
+
+// How a tile set picks its sprite from the tile's neighbors (see ui/TileAutotile.h). Edges and
+// Blob match the JSON names aside from case; parse with magic_enum.
+enum class SpriteTileLayout_t
+{
+    Edges,
+    Blob,
+};
+
+// World-map art drawn one sprite per neighbor mask: JSON "sprite_tiles": {"layout": "edges" |
+// "blob", "land": "...{mask}...", "sea": "..."}. An empty pattern means no art on that surface.
+struct OccupantSpriteTiles_t
+{
+    SpriteTileLayout_t layout = SpriteTileLayout_t::Edges;
+    std::string land;
+    std::string sea;
+};
+
 struct ImprovementConfig_t
 {
     std::string id;
@@ -70,7 +95,12 @@ struct ImprovementConfig_t
     // Optional world-map sprites. Empty → TileRenderer paints a procedural fallback
     // (landform rings/centers today; tile bonuses simply omit the overlay). When more than
     // one path is listed, TileRenderer picks one deterministically from the tile coords.
-    std::vector<std::string> spritePaths;
+    OccupantSpritePaths_t spritePaths;
+    // Neighbor-driven tile set instead of variants; never set together with spritePaths.
+    std::optional<OccupantSpriteTiles_t> spriteTiles;
+    // How far the sprite reaches above the tile, as a fraction of the tile's height. Object
+    // sprites (TER1.PCX: 100×62 over a 100×50 footprint) use 0.24; tile textures use 0.
+    float spriteOverhangRatio = 0.0f;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;

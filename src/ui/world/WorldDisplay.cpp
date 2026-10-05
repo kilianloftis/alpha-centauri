@@ -4,7 +4,6 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/map/RiverGeneration.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -190,86 +189,6 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
     });
 }
 
-void WorldDisplay::RenderRivers_(Graphics& rGraphics)
-{
-    const auto& s = Style().worldDisplay;
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const WorldMap& rWorldMap = m_viewport.GetWorldMap();
-    const float thickness = std::max(1.0f, m_viewport.TileSize() * s.riverLineThicknessRatio);
-    const float stub = m_viewport.TileSize() * 0.2f;
-
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float /*tileX*/, float /*tileY*/) {
-        // Rivers stay under shroud; only explored river tiles seed drawing.
-        if (fog.explored && !fog.explored->IsExplored(rTile))
-        {
-            return;
-        }
-        if (!rTile.GetHasRiver())
-        {
-            return;
-        }
-
-        const auto from = m_viewport.PixelCenterOf(rTile);
-        if (!from)
-        {
-            return;
-        }
-
-        const RiverConnection_t connections = GetRiverConnections(rTile, rWorldMap);
-
-        // Isolated river tile (source/sink with no river neighbor): short cross so it shows.
-        if (connections == RiverConnection_t::None)
-        {
-            rGraphics.DrawLine(from->first - stub, from->second, from->first + stub, from->second,
-                               s.riverColor, thickness);
-            rGraphics.DrawLine(from->first, from->second - stub, from->first, from->second + stub,
-                               s.riverColor, thickness);
-            return;
-        }
-
-        // East/South edges avoid double-drawing when both tiles are explored. North/West
-        // edges are drawn only into shrouded neighbors so a river can flow "off the map
-        // of knowledge" without waiting for the far tile to be explored.
-        static constexpr RiverConnection_t k_DrawDirs[4] = {
-            RiverConnection_t::North,
-            RiverConnection_t::East,
-            RiverConnection_t::South,
-            RiverConnection_t::West,
-        };
-        static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-
-        for (int i = 0; i < 4; ++i)
-        {
-            if (!HasRiverConnection(connections, k_DrawDirs[i]))
-            {
-                continue;
-            }
-            const Tile* pNeighbor =
-                rWorldMap.GetTile(rTile.GetX() + k_Deltas[i][0], rTile.GetY() + k_Deltas[i][1]);
-            if (!pNeighbor)
-            {
-                continue;
-            }
-            const bool bNeighborExplored =
-                !fog.explored || fog.explored->IsExplored(*pNeighbor);
-            const bool bEastOrSouth =
-                k_DrawDirs[i] == RiverConnection_t::East
-                || k_DrawDirs[i] == RiverConnection_t::South;
-            if (!bEastOrSouth && bNeighborExplored)
-            {
-                continue;
-            }
-            const auto to = m_viewport.PixelCenterOf(*pNeighbor);
-            if (!to)
-            {
-                continue;
-            }
-            rGraphics.DrawLine(from->first, from->second, to->first, to->second,
-                               s.riverColor, thickness);
-        }
-    });
-}
-
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
 {
     if (!m_pPathPreview || m_pPathPreview->tiles.empty())
@@ -340,7 +259,6 @@ void WorldDisplay::Render(Graphics& rGraphics)
     });
 
     RenderBases_(rGraphics);
-    RenderRivers_(rGraphics);
     RenderPathPreview_(rGraphics);
     RenderSensors_(rGraphics);
     RenderMonoliths_(rGraphics);

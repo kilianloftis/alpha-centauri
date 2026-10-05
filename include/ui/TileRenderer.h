@@ -38,7 +38,8 @@ public:
 
     // Fogged tiles use a dimmed fill and muted overlay colors (explored memory on the world map).
     // `size` is the diamond width in pixels; height is size / 2.
-    // pMap enables neighbor-aware edge insets; null insets every edge (location preview).
+    // pMap enables neighbor-aware edge insets and coast overlays; null insets every edge and
+    // draws no coast (location preview).
     static void Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
                        bool bFogged = false, const WorldMap* pMap = nullptr);
 };

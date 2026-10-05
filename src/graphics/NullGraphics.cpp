@@ -80,6 +80,12 @@ public:
         return true;
     }
 
+    bool DrawDiamondSprite(const std::string&, float, float, float, float,
+                           const DiamondTint_t&) override
+    {
+        return true;
+    }
+
     void DrawText(const std::string&, float, float, unsigned int, const Color_t&) override
     {
     }

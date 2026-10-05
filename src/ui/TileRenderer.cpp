@@ -2,11 +2,14 @@
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/TileLayer.h"
 #include "game/map/TileLayerResolver.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
+#include "ui/CoastOverlay.h"
+#include "ui/TileAutotile.h"
 #include "ui/TileSpriteEdgeInset.h"
 #include "ui/style/UiStyle.h"
 
@@ -15,9 +18,11 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace ac
 {
@@ -158,9 +163,138 @@ bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float
     return rGraphics.DrawSprite(path, x, y, width, height, tint);
 }
 
-bool TryDrawOccupantSprite_(Graphics& rGraphics, const Tile& rTile, std::string_view configId,
-                            float x, float y, float width, float height, const Color_t& tint)
+constexpr char k_CoastCornerNames[k_CoastCornerCount] = {'w', 'n', 'e', 's'};
+
+std::string CoastSpritePath_(std::string_view part, const CoastCornerArt_t& rArt)
 {
+    std::string path = Style().tileRenderer.coastSpriteDir;
+    path += '/';
+    path += part;
+    path += '_';
+    path += k_CoastCornerNames[static_cast<std::size_t>(rArt.corner)];
+    path += '_';
+    path += std::to_string(rArt.waterMask);
+    if (rArt.bAlternate)
+    {
+        path += "_alt";
+    }
+    path += ".png";
+    return path;
+}
+
+Color_t AverageSpriteTint_(const std::vector<std::reference_wrapper<const Tile>>& tiles,
+                           bool bFogged)
+{
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+    int alpha = 0;
+    for (const Tile& rTile : tiles)
+    {
+        const Color_t tint = SpriteTint_(rTile, bFogged);
+        red += tint.r;
+        green += tint.g;
+        blue += tint.b;
+        alpha += tint.a;
+    }
+    const int count = static_cast<int>(tiles.size());
+    const auto mean = [count](int sum) { return static_cast<uint8_t>((sum + count / 2) / count); };
+    return Color_t{mean(red), mean(green), mean(blue), mean(alpha)};
+}
+
+// Ocean and shore art baked per diamond corner (extract_terrain.py). Water matches the adjacent
+// water tiles; the shore takes the land tile's own tint.
+void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap, float x,
+                       float y, float width, float height, const Color_t& tint, bool bFogged)
+{
+    const CoastOverlay_t overlay = ResolveCoastOverlay(rTile, rMap);
+    if (overlay.waterNeighbors.empty())
+    {
+        return;
+    }
+    const Color_t waterTint = AverageSpriteTint_(overlay.waterNeighbors, bFogged);
+    for (const CoastCornerArt_t& rArt : overlay.corners)
+    {
+        if (rArt.waterMask != 0)
+        {
+            (void)TryDrawSprite_(rGraphics, CoastSpritePath_("water", rArt), x, y, width, height,
+                                 waterTint);
+        }
+    }
+    for (const CoastCornerArt_t& rArt : overlay.corners)
+    {
+        if (rArt.waterMask != 0)
+        {
+            (void)TryDrawSprite_(rGraphics, CoastSpritePath_("shore", rArt), x, y, width, height,
+                                 tint);
+        }
+    }
+}
+
+const std::vector<std::string>& SurfaceSpritePaths_(const ImprovementConfig_t& rOccupant,
+                                                    const Tile& rTile)
+{
+    return rTile.IsWater() ? rOccupant.spritePaths.sea : rOccupant.spritePaths.land;
+}
+
+// Object sprites stand on the tile's footprint and reach above it by their overhang ratio.
+bool TryDrawOccupantPath_(Graphics& rGraphics, const ImprovementConfig_t& rOccupant,
+                          const std::string& path, float x, float y, float width, float height,
+                          const Color_t& tint)
+{
+    const float overhang = height * rOccupant.spriteOverhangRatio;
+    return TryDrawSprite_(rGraphics, path, x, y - overhang, width, height + overhang, tint);
+}
+
+const std::string& VariantSpritePath_(const ImprovementConfig_t& rOccupant, const Tile& rTile)
+{
+    return PickSpritePath(SurfaceSpritePaths_(rOccupant, rTile), rTile.GetX(), rTile.GetY(),
+                          rOccupant.id);
+}
+
+using NeighborRule_t = std::function<bool(const Tile& rNeighbor)>;
+
+// Moisture tiles connect to water and to land at least as wet, fading out toward drier land;
+// every other tile set connects to neighbors with the same occupant.
+NeighborRule_t LayerNeighborRule_(TileLayerType_t layer, const Tile& rTile,
+                                  const ImprovementConfig_t& rOccupant)
+{
+    if (layer == TileLayerType_t::Moisture)
+    {
+        return [&rTile](const Tile& rNeighbor) {
+            return rNeighbor.IsWater()
+                   || static_cast<int>(rNeighbor.GetMoisture())
+                          >= static_cast<int>(rTile.GetMoisture());
+        };
+    }
+    return [&rOccupant](const Tile& rNeighbor) { return rNeighbor.HasFeature(rOccupant.id); };
+}
+
+constexpr std::string_view k_MaskToken = "{mask}";
+
+std::string TileSpritePath_(const OccupantSpriteTiles_t& rTiles, const Tile& rTile,
+                            const WorldMap* pMap, const NeighborRule_t& matches)
+{
+    std::string path = rTile.IsWater() ? rTiles.sea : rTiles.land;
+    if (path.empty())
+    {
+        return path;
+    }
+    const std::uint8_t mask = pMap ? ResolveTileMask(rTiles.layout, rTile, *pMap, matches) : 0;
+    path.replace(path.find(k_MaskToken), k_MaskToken.size(), std::to_string(mask));
+    return path;
+}
+
+bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const TileLayer_t& rLayer,
+                         const WorldMap* pMap, float x, float y, float width, float height,
+                         const Color_t& tint)
+{
+    // Landmark and Improvement layers return PascalCase config ids; other layers use
+    // TileLayerContent.
+    const std::string& contentId = *rLayer.contentId;
+    const bool bLooksLikeConfigId =
+        !contentId.empty() && std::isupper(static_cast<unsigned char>(contentId.front()));
+    const std::string configId = bLooksLikeConfigId ? contentId : ContentIdToConfigId_(contentId);
     const ImprovementConfig_t* pOccupant = rTile.FindOccupantConfig(configId);
     if (!pOccupant)
     {
@@ -170,53 +304,53 @@ bool TryDrawOccupantSprite_(Graphics& rGraphics, const Tile& rTile, std::string_
     {
         return false;
     }
-    const std::string& path =
-        PickSpritePath(pOccupant->spritePaths, rTile.GetX(), rTile.GetY(), pOccupant->id);
-    return TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
+    const std::string path =
+        pOccupant->spriteTiles
+            ? TileSpritePath_(*pOccupant->spriteTiles, rTile, pMap,
+                              LayerNeighborRule_(rLayer.type, rTile, *pOccupant))
+            : VariantSpritePath_(*pOccupant, rTile);
+    return TryDrawOccupantPath_(rGraphics, *pOccupant, path, x, y, width, height, tint);
 }
 
-bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const std::string& contentId,
-                         float x, float y, float width, float height, const Color_t& tint)
+// Missing river art: a line from the tile centre to each connected edge's midpoint, or a short
+// cross on a river tile with no river neighbor.
+void DrawProceduralRiver_(Graphics& rGraphics, const Tile& rTile, const WorldMap* pMap, float x,
+                          float y, float width, float height, bool bFogged)
 {
-    // Improvement layer already returns PascalCase config ids; other layers use TileLayerContent.
-    const bool bLooksLikeConfigId =
-        !contentId.empty() && std::isupper(static_cast<unsigned char>(contentId.front()));
-    const std::string configId = bLooksLikeConfigId ? contentId : ContentIdToConfigId_(contentId);
-    return TryDrawOccupantSprite_(rGraphics, rTile, configId, x, y, width, height, tint);
-}
-
-// Land rainfall blends by stacking arid → moist → wet. Each tier insets where ortho neighbors
-// are below that tier, so drier bases show through at moisture boundaries.
-bool DrawMoistureStack_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                        const Color_t& tint, const WorldMap* pMap)
-{
-    if (!rTile.IsLand())
+    const auto& s = Style().tileRenderer;
+    const Color_t color = bFogged ? DimColor_(s.riverColor, s.fogFillDimRatio) : s.riverColor;
+    const float thickness = std::max(1.0f, width * s.riverLineThicknessRatio);
+    const float centerX = x + width * 0.5f;
+    const float centerY = y + height * 0.5f;
+    const RiverConnection_t connections =
+        pMap ? GetRiverConnections(rTile, *pMap) : RiverConnection_t::None;
+    if (connections == RiverConnection_t::None)
     {
-        return false;
+        const float stub = width * 0.2f;
+        rGraphics.DrawLine(centerX - stub, centerY, centerX + stub, centerY, color, thickness);
+        rGraphics.DrawLine(centerX, centerY - stub, centerX, centerY + stub, color, thickness);
+        return;
     }
-
-    const float insetRatio = Style().tileRenderer.spriteEdgeInsetRatio;
-    const Moisture_t moisture = rTile.GetMoisture();
-    bool bDrewAny = false;
-
-    auto drawTier = [&](Moisture_t tier, std::string_view configId) {
-        if (static_cast<int>(moisture) < static_cast<int>(tier))
-        {
-            return;
-        }
-        const SpriteEdgeMatch_t match = MatchMoistureTierEdges(rTile, pMap, tier);
-        const SpriteDestRect_t dest = DestRectForEdgeInsets(x, y, size, match, insetRatio);
-        if (TryDrawOccupantSprite_(rGraphics, rTile, configId, dest.x, dest.y, dest.width,
-                                   dest.height, tint))
-        {
-            bDrewAny = true;
-        }
+    // North, East, South, West on the grid are the NE, SE, SW, NW diamond edges.
+    const struct
+    {
+        RiverConnection_t direction;
+        float edgeX;
+        float edgeY;
+    } k_Edges[] = {
+        {RiverConnection_t::North, 0.75f, 0.25f},
+        {RiverConnection_t::East, 0.75f, 0.75f},
+        {RiverConnection_t::South, 0.25f, 0.75f},
+        {RiverConnection_t::West, 0.25f, 0.25f},
     };
-
-    drawTier(Moisture_t::Arid, "Arid");
-    drawTier(Moisture_t::Moist, "Moist");
-    drawTier(Moisture_t::Wet, "Wet");
-    return bDrewAny;
+    for (const auto& rEdge : k_Edges)
+    {
+        if (HasRiverConnection(connections, rEdge.direction))
+        {
+            rGraphics.DrawLine(centerX, centerY, x + width * rEdge.edgeX, y + height * rEdge.edgeY,
+                               color, thickness);
+        }
+    }
 }
 
 void DrawInsetDiamond_(Graphics& rGraphics, float x, float y, float width, float height,
@@ -361,7 +495,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
     const float height = size * k_IsoHeightRatio;
     const Color_t baseFill = FillColor(rTile, bFogged);
     const Color_t tint = SpriteTint_(rTile, bFogged);
-    // Fungus art is already pink-remapped; elevation tint would turn it into muddy splotches.
+    // Fungus art keeps its sheet colours; the elevation tint would muddy them.
     Color_t fungusTint = Color_t::White();
     if (bFogged)
     {
@@ -370,8 +504,26 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
 
     rGraphics.DrawFilledDiamond(x, y, width, height, baseFill);
 
+    // The coast covers the terrain layers and sits under roads and improvements.
+    bool bCoastDrawn = false;
+    auto drawCoast = [&]() {
+        if (bCoastDrawn)
+        {
+            return;
+        }
+        bCoastDrawn = true;
+        if (pMap)
+        {
+            DrawCoastOverlay_(rGraphics, rTile, *pMap, x, y, width, height, tint, bFogged);
+        }
+    };
+
     for (const TileLayer_t& rLayer : ResolveTileLayers(rTile))
     {
+        if (rLayer.type > TileLayerType_t::Vegetation)
+        {
+            drawCoast();
+        }
         if (!rLayer.contentId.has_value())
         {
             continue;
@@ -380,27 +532,12 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
                                   && *rLayer.contentId == TileLayerContent::k_Fungus;
         const Color_t& rLayerTint = bFungusLayer ? fungusTint : tint;
 
-        if (rLayer.type == TileLayerType_t::Moisture)
-        {
-            if (!DrawMoistureStack_(rGraphics, rTile, x, y, size, rLayerTint, pMap))
-            {
-                DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
-            }
-            continue;
-        }
-
         SpriteEdgeMatch_t edgeMatch{};
         float edgeInsetRatio = s.spriteEdgeInsetRatio;
         bool bApplyEdgeInset = false;
         if (rLayer.type == TileLayerType_t::Rockiness)
         {
             edgeMatch = MatchRockinessEdges(rTile, pMap);
-            edgeInsetRatio = s.spriteOverlayEdgeInsetRatio;
-            bApplyEdgeInset = true;
-        }
-        else if (bFungusLayer)
-        {
-            edgeMatch = MatchFungusEdges(rTile, pMap);
             edgeInsetRatio = s.spriteOverlayEdgeInsetRatio;
             bApplyEdgeInset = true;
         }
@@ -414,13 +551,17 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
             bApplyEdgeInset ? DestRectForEdgeInsets(x, y, size, edgeMatch, edgeInsetRatio)
                             : SpriteDestRect_t{x, y, width, height};
 
-        if (TryDrawLayerSprite_(rGraphics, rTile, *rLayer.contentId, dest.x, dest.y, dest.width,
+        if (TryDrawLayerSprite_(rGraphics, rTile, rLayer, pMap, dest.x, dest.y, dest.width,
                                 dest.height, rLayerTint))
         {
             continue;
         }
         // Per-layer procedural cues when that layer's sprite is missing.
-        if (bFungusLayer)
+        if (rLayer.type == TileLayerType_t::Moisture)
+        {
+            DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
+        }
+        else if (bFungusLayer)
         {
             rGraphics.DrawFilledDiamond(dest.x, dest.y, dest.width, dest.height, s.fungusColor);
         }
@@ -429,13 +570,18 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
             DrawProceduralRockiness_(rGraphics, rTile, dest.x, dest.y, dest.width, dest.height,
                                      bFogged, baseFill);
         }
+        else if (rLayer.type == TileLayerType_t::River)
+        {
+            DrawProceduralRiver_(rGraphics, rTile, pMap, x, y, width, height, bFogged);
+        }
     }
+    drawCoast();
 
     // Improvements already drawn via the Improvement layer when they are the dominant occupant.
     // Also draw any remaining improvement sprites that carry art (e.g. tile bonuses on terrain).
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        if (!pImprovement || pImprovement->spritePaths.empty())
+        if (!pImprovement || SurfaceSpritePaths_(*pImprovement, rTile).empty())
         {
             continue;
         }
@@ -444,29 +590,29 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        const std::string& path = PickSpritePath(pImprovement->spritePaths, rTile.GetX(),
-                                                 rTile.GetY(), pImprovement->id);
-        (void)TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
+        (void)TryDrawOccupantPath_(rGraphics, *pImprovement,
+                                   VariantSpritePath_(*pImprovement, rTile), x, y, width, height,
+                                   tint);
     }
 
     // Optional terrain bonuses / monolith sit in GetTerrainFeatures, not improvements.
     for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
-        if (!pFeature || pFeature->spritePaths.empty())
+        if (!pFeature || SurfaceSpritePaths_(*pFeature, rTile).empty())
         {
             continue;
         }
-        // Axes (Flat/Moist/…) and water bands are drawn via layers; skip duplicates.
+        // Axes (Flat/Moist/…), water bands and landmarks are drawn via layers; skip duplicates.
         if (pFeature->id == "Flat" || pFeature->id == "Rolling" || pFeature->id == "Rocky"
             || pFeature->id == "Arid" || pFeature->id == "Moist" || pFeature->id == "Wet"
             || pFeature->id == "Water" || pFeature->id == "Ocean" || pFeature->id == "OceanShelf"
-            || pFeature->id == "Fungus" || pFeature->id == "River")
+            || pFeature->id == "Fungus" || pFeature->id == "River"
+            || std::ranges::find(pFeature->tags, "landmark") != pFeature->tags.end())
         {
             continue;
         }
-        const std::string& path =
-            PickSpritePath(pFeature->spritePaths, rTile.GetX(), rTile.GetY(), pFeature->id);
-        (void)TryDrawSprite_(rGraphics, path, x, y, width, height, tint);
+        (void)TryDrawOccupantPath_(rGraphics, *pFeature, VariantSpritePath_(*pFeature, rTile), x,
+                                   y, width, height, tint);
     }
 
     rGraphics.DrawDiamond(x, y, width, height, s.tileBorderColor, s.tileBorderWidth);

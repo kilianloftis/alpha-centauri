@@ -6,7 +6,6 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": [],
       "effects": []
     },
     {
@@ -15,10 +14,12 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": [
-        "assets/sprites/landforms/rolling_0.png",
-        "assets/sprites/landforms/rolling_1.png"
-      ],
+      "sprite_paths": {
+        "land": [
+          "assets/sprites/landforms/rolling_0.png",
+          "assets/sprites/landforms/rolling_1.png"
+        ]
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -38,10 +39,12 @@
         "landform"
       ],
       "move_cost": 2,
-      "sprite_paths": [
-        "assets/sprites/landforms/rocky_0.png",
-        "assets/sprites/landforms/rocky_1.png"
-      ],
+      "sprite_paths": {
+        "land": [
+          "assets/sprites/landforms/rocky_0.png",
+          "assets/sprites/landforms/rocky_1.png"
+        ]
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -69,7 +72,7 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": ["assets/sprites/landforms/arid.png"],
+      "sprite_paths": {"land": ["assets/sprites/landforms/arid.png"]},
       "effects": []
     },
     {
@@ -78,24 +81,10 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": [
-        "assets/sprites/landforms/moist_0.png",
-        "assets/sprites/landforms/moist_1.png",
-        "assets/sprites/landforms/moist_2.png",
-        "assets/sprites/landforms/moist_3.png",
-        "assets/sprites/landforms/moist_4.png",
-        "assets/sprites/landforms/moist_5.png",
-        "assets/sprites/landforms/moist_6.png",
-        "assets/sprites/landforms/moist_7.png",
-        "assets/sprites/landforms/moist_8.png",
-        "assets/sprites/landforms/moist_9.png",
-        "assets/sprites/landforms/moist_10.png",
-        "assets/sprites/landforms/moist_11.png",
-        "assets/sprites/landforms/moist_12.png",
-        "assets/sprites/landforms/moist_13.png",
-        "assets/sprites/landforms/moist_14.png",
-        "assets/sprites/landforms/moist_15.png"
-      ],
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "assets/sprites/landforms/moist/{mask}.png"
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -114,24 +103,10 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": [
-        "assets/sprites/landforms/wet_0.png",
-        "assets/sprites/landforms/wet_1.png",
-        "assets/sprites/landforms/wet_2.png",
-        "assets/sprites/landforms/wet_3.png",
-        "assets/sprites/landforms/wet_4.png",
-        "assets/sprites/landforms/wet_5.png",
-        "assets/sprites/landforms/wet_6.png",
-        "assets/sprites/landforms/wet_7.png",
-        "assets/sprites/landforms/wet_8.png",
-        "assets/sprites/landforms/wet_9.png",
-        "assets/sprites/landforms/wet_10.png",
-        "assets/sprites/landforms/wet_11.png",
-        "assets/sprites/landforms/wet_12.png",
-        "assets/sprites/landforms/wet_13.png",
-        "assets/sprites/landforms/wet_14.png",
-        "assets/sprites/landforms/wet_15.png"
-      ],
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "assets/sprites/landforms/wet/{mask}.png"
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -147,7 +122,10 @@
     {
       "id": "River",
       "name": "River",
-      "sprite_paths": ["assets/sprites/landforms/river.png"],
+      "sprite_tiles": {
+        "layout": "edges",
+        "land": "assets/sprites/landforms/river/{mask}.png"
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -175,7 +153,7 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": ["assets/sprites/landforms/water.png"],
+      "sprite_paths": {"sea": ["assets/sprites/landforms/water.png"]},
       "suppress_yield_sources": [
         "Flat",
         "Rolling",
@@ -193,7 +171,7 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": ["assets/sprites/landforms/ocean.png"],
+      "sprite_paths": {"sea": ["assets/sprites/landforms/ocean.png"]},
       "effects": []
     },
     {
@@ -202,7 +180,7 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": ["assets/sprites/landforms/ocean_shelf.png"],
+      "sprite_paths": {"sea": ["assets/sprites/landforms/ocean_shelf.png"]},
       "effects": [
         {
           "type": "StatModifier",
@@ -219,7 +197,11 @@
       "id": "Fungus",
       "name": "Fungus",
       "move_cost": 3,
-      "sprite_paths": ["assets/sprites/landforms/fungus.png"],
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "assets/sprites/landforms/fungus_land/{mask}.png",
+        "sea": "assets/sprites/landforms/fungus_sea/{mask}.png"
+      },
       "suppress_yield_sources": [
         "@landform",
         "@land_terraform",
@@ -271,6 +253,10 @@
         "landmark"
       ],
       "domain": "land",
+      "sprite_tiles": {
+        "layout": "blob",
+        "land": "assets/sprites/landforms/jungle/{mask}.png"
+      },
       "excludes": [
         "@landmark"
       ],
@@ -579,7 +565,17 @@
         "resource_bonus"
       ],
       "frequency": 10,
-      "sprite_paths": ["assets/sprites/tile_bonuses/nutrient_rich_soil.png"],
+      "sprite_paths": {
+        "land": [
+          "assets/sprites/tile_bonuses/nutrients_land_0.png",
+          "assets/sprites/tile_bonuses/nutrients_land_1.png"
+        ],
+        "sea": [
+          "assets/sprites/tile_bonuses/nutrients_sea_0.png",
+          "assets/sprites/tile_bonuses/nutrients_sea_1.png"
+        ]
+      },
+      "sprite_overhang_ratio": 0.24,
       "effects": [
         {
           "type": "StatModifier",
@@ -601,7 +597,17 @@
         "resource_bonus"
       ],
       "frequency": 10,
-      "sprite_paths": ["assets/sprites/tile_bonuses/mineral_deposit.png"],
+      "sprite_paths": {
+        "land": [
+          "assets/sprites/tile_bonuses/minerals_land_0.png",
+          "assets/sprites/tile_bonuses/minerals_land_1.png"
+        ],
+        "sea": [
+          "assets/sprites/tile_bonuses/minerals_sea_0.png",
+          "assets/sprites/tile_bonuses/minerals_sea_1.png"
+        ]
+      },
+      "sprite_overhang_ratio": 0.24,
       "effects": [
         {
           "type": "StatModifier",
@@ -623,7 +629,17 @@
         "resource_bonus"
       ],
       "frequency": 10,
-      "sprite_paths": ["assets/sprites/tile_bonuses/energy_vein.png"],
+      "sprite_paths": {
+        "land": [
+          "assets/sprites/tile_bonuses/energy_land_0.png",
+          "assets/sprites/tile_bonuses/energy_land_1.png"
+        ],
+        "sea": [
+          "assets/sprites/tile_bonuses/energy_sea_0.png",
+          "assets/sprites/tile_bonuses/energy_sea_1.png"
+        ]
+      },
+      "sprite_overhang_ratio": 0.24,
       "effects": [
         {
           "type": "StatModifier",
@@ -650,7 +666,8 @@
         "@resource_bonus",
         "Monolith"
       ],
-      "sprite_paths": ["assets/sprites/tile_bonuses/monolith.png"],
+      "sprite_paths": {"land": ["assets/sprites/tile_bonuses/monolith.png"]},
+      "sprite_overhang_ratio": 0.24,
       "suppress_yield_sources": [
         "@landform",
         "River",

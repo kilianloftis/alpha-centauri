@@ -73,11 +73,37 @@
       70, 70, 70, 255
     ],
     "fog_fill_dim_ratio": 0.55,
+    "fog_terrain_dim_ratio": 0.75,
+    "fog_haze_color": [
+      100, 150, 150, 128
+    ],
     "tile_border_width": -1.0,
     "landform_ring_outer_inset_ratio": 0.12,
     "landform_ring_inner_inset_ratio": 0.32,
-    "sprite_edge_inset_ratio": 0.10,
-    "sprite_overlay_edge_inset_ratio": 0.12
+    "sprite_overlay_edge_inset_ratio": 0.12,
+    "coast_sprite_dir": "tests/fixtures/sprites/coast",
+    "river_color": [
+      40, 120, 220, 220
+    ],
+    "river_line_thickness_ratio": 0.1,
+    "water_shading": {
+      "depth_shades": [3, 2, 1, 0],
+      "tints": {
+        "OceanShelf": [
+          [255, 255, 255, 255],
+          [200, 210, 220, 255],
+          [150, 160, 170, 255],
+          [100, 110, 120, 255]
+        ],
+        "Ocean": [
+          [250, 250, 250, 255],
+          [190, 190, 200, 255],
+          [130, 130, 140, 255],
+          [70, 70, 80, 255]
+        ]
+      },
+      "coast_tints": "OceanShelf"
+    }
   },
   "world_display": {
     "default_tile_scale": 0.1,
@@ -106,10 +132,6 @@
       255, 0, 0, 220
     ],
     "path_preview_line_thickness_ratio": 0.08,
-    "river_color": [
-      40, 120, 220, 220
-    ],
-    "river_line_thickness_ratio": 0.1,
     "base_name_color": [
       255, 255, 0, 255
     ],

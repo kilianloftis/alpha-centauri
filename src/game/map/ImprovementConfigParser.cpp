@@ -57,6 +57,94 @@ int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std
     }
 }
 
+OccupantSpritePaths_t ParseSpritePaths_(const nlohmann::json& rJson, const std::string& id)
+{
+    const auto fail = [&id](const std::string& rMessage) {
+        throw std::runtime_error("Improvement '" + id + "': 'sprite_paths' " + rMessage);
+    };
+    if (!rJson.is_object())
+    {
+        fail("must be an object of 'land' and/or 'sea' path lists");
+    }
+
+    OccupantSpritePaths_t paths;
+    for (const auto& [surface, rList] : rJson.items())
+    {
+        const auto domain =
+            magic_enum::enum_cast<ImprovementDomain_t>(surface, magic_enum::case_insensitive);
+        if (!domain)
+        {
+            fail("has unknown surface '" + surface + "'");
+        }
+        if (!rList.is_array())
+        {
+            fail("'" + surface + "' must be an array of strings");
+        }
+        std::vector<std::string>& rPaths =
+            *domain == ImprovementDomain_t::Land ? paths.land : paths.sea;
+        for (const nlohmann::json& rPath : rList)
+        {
+            if (!rPath.is_string())
+            {
+                fail("'" + surface + "' entries must be strings");
+            }
+            rPaths.push_back(rPath.get<std::string>());
+        }
+    }
+    return paths;
+}
+
+OccupantSpriteTiles_t ParseSpriteTiles_(const nlohmann::json& rJson, const std::string& id)
+{
+    const auto fail = [&id](const std::string& rMessage) {
+        throw std::runtime_error("Improvement '" + id + "': 'sprite_tiles' " + rMessage);
+    };
+    if (!rJson.is_object())
+    {
+        fail("must be an object with a 'layout' and 'land' and/or 'sea' patterns");
+    }
+
+    OccupantSpriteTiles_t tiles;
+    bool bHasLayout = false;
+    for (const auto& [key, rValue] : rJson.items())
+    {
+        if (key == "layout")
+        {
+            const auto layout =
+                rValue.is_string() ? magic_enum::enum_cast<SpriteTileLayout_t>(
+                                         rValue.get<std::string>(), magic_enum::case_insensitive)
+                                   : std::nullopt;
+            if (!layout)
+            {
+                fail("'layout' must be \"edges\" or \"blob\"");
+            }
+            tiles.layout = *layout;
+            bHasLayout = true;
+            continue;
+        }
+        const auto domain =
+            magic_enum::enum_cast<ImprovementDomain_t>(key, magic_enum::case_insensitive);
+        if (!domain)
+        {
+            fail("has unknown key '" + key + "'");
+        }
+        if (!rValue.is_string() || rValue.get<std::string>().find("{mask}") == std::string::npos)
+        {
+            fail("'" + key + "' must be a path pattern containing {mask}");
+        }
+        (*domain == ImprovementDomain_t::Land ? tiles.land : tiles.sea) = rValue.get<std::string>();
+    }
+    if (!bHasLayout)
+    {
+        fail("needs a 'layout'");
+    }
+    if (tiles.land.empty() && tiles.sea.empty())
+    {
+        fail("needs a 'land' or 'sea' pattern");
+    }
+    return tiles;
+}
+
 } // namespace
 
 bool IsBuildable(const ImprovementConfig_t& rConfig)
@@ -270,20 +358,22 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
     config.frequency = rImprovementJson.value("frequency", 0);
     if (rImprovementJson.contains("sprite_paths"))
     {
-        if (!rImprovementJson.at("sprite_paths").is_array())
+        config.spritePaths = ParseSpritePaths_(rImprovementJson.at("sprite_paths"), config.id);
+    }
+    if (rImprovementJson.contains("sprite_tiles"))
+    {
+        if (rImprovementJson.contains("sprite_paths"))
         {
             throw std::runtime_error("Improvement '" + config.id
-                                     + "': 'sprite_paths' must be an array of strings");
+                                     + "': has both 'sprite_paths' and 'sprite_tiles'");
         }
-        for (const nlohmann::json& rPath : rImprovementJson.at("sprite_paths"))
-        {
-            if (!rPath.is_string())
-            {
-                throw std::runtime_error("Improvement '" + config.id
-                                         + "': 'sprite_paths' entries must be strings");
-            }
-            config.spritePaths.push_back(rPath.get<std::string>());
-        }
+        config.spriteTiles = ParseSpriteTiles_(rImprovementJson.at("sprite_tiles"), config.id);
+    }
+    config.spriteOverhangRatio = rImprovementJson.value("sprite_overhang_ratio", 0.0f);
+    if (!(config.spriteOverhangRatio >= 0.0f))
+    {
+        throw std::runtime_error("Improvement '" + config.id
+                                 + "': 'sprite_overhang_ratio' must not be negative");
     }
     config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
     if (rImprovementJson.contains("domain") && !rImprovementJson.at("domain").is_null())

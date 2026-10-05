@@ -126,16 +126,23 @@ UI components use the Graphics interface to render game information.
   - `GetViewport().SetCamera(tileX, tileY)`: Anchor tile for the isometric projection
 - **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
   `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Occupants
-  may list several `sprite_paths`; `PickSpritePath` chooses one from a hash of tile
-  coordinates and content id (stable across save/load; no per-tile variant field). When a
-  `WorldMap` is passed (world view), layer sprites inset from diamond edges whose orthogonal
-  neighbor does not match that layer (`TileSpriteEdgeInset`; ratios in `tile_renderer` style).
-  Land moisture paints arid→moist→wet stacked; each tier insets where neighbors are drier so
-  lower tiers show through at rainfall boundaries.
-  Missing PNGs fall back to procedural moisture/rockiness cues. Art is not shipped; run
-  `extract_terrain.py` against a local SMAC install to populate `assets/sprites/` (diamond
-  alpha mask applied by default; moist/wet emit 16-cell rainfall bands, rolling/rocky are
-  row-0 keyed overlays). Elevation perspective / cliff skirts are a follow-on.
+  list `sprite_paths` per tile surface (`land` / `sea`), and the renderer's `PickSpritePath`
+  chooses one from a hash of tile coordinates and content id (stable across save/load; no
+  per-tile variant field). Or they name a `sprite_tiles` set, and the renderer draws the
+  cell for the tile's neighbor mask (moisture, forest, fungus, jungle, rivers). Object
+  sprites (tile bonuses, monolith: `ter1.pcx` 100×62 over a 100×50 footprint) set
+  `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. The
+  tile's single moisture cell fills the diamond and fades out toward drier land.
+  Land next to water then gets SMAC's coast: per diamond corner, ocean and a shore band
+  baked from `Rainfall.pcx`
+  ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Rivers are a tile
+  layer drawn above the coast. Missing PNGs fall back to procedural moisture, rockiness and
+  river cues. Art is not shipped; run `extract_terrain.py` against a local SMAC install to
+  populate `assets/sprites/`. Terrain cells are baked to 112×56 diamonds. Tile sets go to
+  `sprites/landforms/<set>/<mask>.png`: blob sets get 47 masks, edge sets 16.
+  Rolling/rocky are keyed overlays, and `sprites/coast/` holds the coast overlays.
+  `--contact-sheet` also writes `_tiles_contact_sheet.png` to check the tile sets.
+  Elevation perspective is a follow-on.
 - **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel`. Orthogonal
   `TileHitTester::HitTestWorldGrid` remains for non-iso grids; base workable area stays orthogonal.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
@@ -147,11 +154,31 @@ UI components use the Graphics interface to render game information.
 - **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
 - **Footprint**: 2:1 diamond (`size` = width, height = size / 2)
 - **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
-- **Variants**: `sprite_paths` + `PickSpriteIndex` / `PickSpritePath` (coord + id hash)
-- **Edge insets**: `TileSpriteEdgeInset` match helpers + `DestRectForEdgeInsets`; style keys
-  `sprite_edge_inset_ratio` / `sprite_overlay_edge_inset_ratio`
-- **Moisture stack**: arid base, then moist, then wet (tier ≥); inset via `MatchMoistureTierEdges`
-- **Layers**: fungus wins vegetation; cliff-edge compositing deferred
+- **Variants**: `sprite_paths.land` / `.sea` by tile surface + `PickSpriteIndex` /
+  `PickSpritePath` (coord + id hash); `sprite_overhang_ratio` lifts object sprites above
+  the footprint
+- **Tile sets**: `sprite_tiles` replaces `{mask}` in the surface's pattern with
+  `ResolveTileMask` (`ui/TileAutotile.h`): an `edges` set takes 4 edge-neighbor bits, a `blob`
+  set adds the corner neighbors between two matching edges (47 distinct masks). The Moisture
+  layer matches water and neighbors at least as wet, every other layer neighbors with the same
+  occupant.
+  Without a `WorldMap` every set draws mask 0
+- **Moisture**: one base cell per land tile at the full tile rect; no stacking or insets
+- **Edge insets**: rockiness overlays and water landforms only. `TileSpriteEdgeInset` match
+  helpers + `DestRectForEdgeInsets` (a scaled diamond that stays inside the tile, flush on
+  matched edges where it can); style keys `sprite_edge_inset_ratio` /
+  `sprite_overlay_edge_inset_ratio`
+- **Coast**: `CoastOverlay` gives each diamond corner of a land tile a 3-bit water mask (edge
+  neighbors are orthogonal, the corner neighbor diagonal) and SMAC's odd-row alternate for
+  all-water corners. Drawn after Vegetation and before River as
+  `<coast_sprite_dir>/{water,shore}_<w|n|e|s>_<mask>[_alt].png` at the tile rect: water tinted
+  as the average of the water neighbors' sprite tints, shore with the tile's own tint. Needs a
+  `WorldMap`; style key `coast_sprite_dir`
+- **Rivers**: the River layer draws its `edges` cell; without art, lines run from the tile
+  centre to each connected edge's midpoint (`GetRiverConnections`), or a short cross with no
+  connection. Style keys `river_color` / `river_line_thickness_ratio` under `tile_renderer`
+- **Layers**: fungus wins vegetation; a landmark (Monsoon Jungle) draws on its own layer and
+  is skipped by the feature-sprite pass
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)

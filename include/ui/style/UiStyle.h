@@ -4,6 +4,8 @@
 #include "ui/UIElement.h"
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace ac
 {
@@ -29,6 +31,17 @@ struct ViewFactoryStyle_t
     float fullscreenOriginY{};
 };
 
+// SMAC's water depth shading (docs/thinker/smac-palette-lighting.md).
+struct WaterShadingStyle_t
+{
+    // Shade for equal depth bands from the map's floor up to ocean level, deepest first.
+    std::vector<int> depthShades;
+    // Colour multiply of each water landform's art per shade, keyed by landform id.
+    std::unordered_map<std::string, std::vector<Color_t>> tints;
+    // The tints entry coast water uses.
+    std::string coastTints;
+};
+
 struct TileRendererStyle_t
 {
     Color_t tileBorderColor{};
@@ -44,15 +57,23 @@ struct TileRendererStyle_t
     Color_t rollingRingColor{};
     Color_t rockyRingColor{};
     float fogFillDimRatio{};
+    // Fogged land terrain art, and the haze drawn over a fogged tile's terrain layers.
+    float fogTerrainDimRatio{};
+    Color_t fogHazeColor{};
     float tileBorderWidth{};
     // Insets as a fraction of tile size: ring sits between outer and inner; moisture fills
     // the center (same inner inset so it plugs the ring hole).
     float landformRingOuterInsetRatio{};
     float landformRingInnerInsetRatio{};
-    // Neighbor-aware sprite edge pull-in (fraction of diamond width). Matching ortho edges
-    // draw flush; mismatches inset. Overlay ratio is for rolling/rocky/fungus.
-    float spriteEdgeInsetRatio{};
+    // Neighbor-aware rockiness overlay pull-in (fraction of diamond width). Matching ortho
+    // edges draw flush; mismatches inset.
     float spriteOverlayEdgeInsetRatio{};
+    // Directory of the {water,shore}_<corner>_<case>.png coast overlays (extract_terrain.py).
+    std::string coastSpriteDir{};
+    // River fallback lines when river art is missing.
+    Color_t riverColor{};
+    float riverLineThicknessRatio{};
+    WaterShadingStyle_t waterShading{};
 };
 
 struct WorldDisplayStyle_t
@@ -75,8 +96,6 @@ struct WorldDisplayStyle_t
     Color_t shroudColor{};
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
-    Color_t riverColor{};
-    float riverLineThicknessRatio{};
     Color_t baseNameColor{};
     Color_t sensorLabelColor{};
     Color_t monolithLabelColor{};

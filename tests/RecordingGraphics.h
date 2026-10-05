@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -31,6 +32,17 @@ public:
         float height = 0.0f;
         bool bFilled = false;
         ac::Color_t color{};
+        // Position among every sprite and rect drawn, so the two lists can be ordered.
+        std::size_t order = 0;
+    };
+
+    struct LineDraw_t
+    {
+        float x1 = 0.0f;
+        float y1 = 0.0f;
+        float x2 = 0.0f;
+        float y2 = 0.0f;
+        ac::Color_t color{};
     };
 
     struct SpriteDraw_t
@@ -42,6 +54,8 @@ public:
         float destHeight = 0.0f;
         ac::Color_t tint = ac::Color_t::White();
         bool bScaled = false;
+        std::optional<ac::DiamondTint_t> diamondTint;
+        std::size_t order = 0;
     };
 
     void PumpEvents() override {}
@@ -58,7 +72,8 @@ public:
     }
     bool DrawSprite(const std::string& textureId, float x, float y) override
     {
-        sprites.push_back(SpriteDraw_t{textureId, x, y, 0.0f, 0.0f, ac::Color_t::White(), false});
+        sprites.push_back(SpriteDraw_t{textureId, x, y, 0.0f, 0.0f, ac::Color_t::White(), false,
+                                       std::nullopt, drawCount++});
         ++spriteCount;
         return true;
     }
@@ -70,7 +85,16 @@ public:
     bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                     float destHeight, const ac::Color_t& tint) override
     {
-        sprites.push_back(SpriteDraw_t{textureId, x, y, destWidth, destHeight, tint, true});
+        sprites.push_back(SpriteDraw_t{textureId, x, y, destWidth, destHeight, tint, true,
+                                       std::nullopt, drawCount++});
+        ++spriteCount;
+        return true;
+    }
+    bool DrawDiamondSprite(const std::string& textureId, float x, float y, float destWidth,
+                           float destHeight, const ac::DiamondTint_t& rTint) override
+    {
+        sprites.push_back(SpriteDraw_t{textureId, x, y, destWidth, destHeight, rTint.center, true,
+                                       rTint, drawCount++});
         ++spriteCount;
         return true;
     }
@@ -84,29 +108,33 @@ public:
     void DrawRect(float x, float y, float width, float height, const ac::Color_t& rColor,
                   float) override
     {
-        rects.push_back(RectDraw_t{x, y, width, height, false, rColor});
+        rects.push_back(RectDraw_t{x, y, width, height, false, rColor, drawCount++});
     }
 
     void DrawFilledRect(float x, float y, float width, float height,
                         const ac::Color_t& rColor) override
     {
-        rects.push_back(RectDraw_t{x, y, width, height, true, rColor});
+        rects.push_back(RectDraw_t{x, y, width, height, true, rColor, drawCount++});
     }
 
     void DrawFilledDiamond(float x, float y, float width, float height,
                            const ac::Color_t& rColor) override
     {
         // Record as a filled rect of the diamond AABB so color-at helpers keep working.
-        rects.push_back(RectDraw_t{x, y, width, height, true, rColor});
+        rects.push_back(RectDraw_t{x, y, width, height, true, rColor, drawCount++});
     }
 
     void DrawDiamond(float x, float y, float width, float height, const ac::Color_t& rColor,
                      float) override
     {
-        rects.push_back(RectDraw_t{x, y, width, height, false, rColor});
+        rects.push_back(RectDraw_t{x, y, width, height, false, rColor, drawCount++});
     }
 
-    void DrawLine(float, float, float, float, const ac::Color_t&, float) override {}
+    void DrawLine(float x1, float y1, float x2, float y2, const ac::Color_t& rColor,
+                  float) override
+    {
+        lines.push_back(LineDraw_t{x1, y1, x2, y2, rColor});
+    }
 
     unsigned int GetWindowWidth() const override { return 1280; }
     unsigned int GetWindowHeight() const override { return 900; }
@@ -171,11 +199,13 @@ public:
     std::vector<TextDraw_t> texts;
     std::vector<RectDraw_t> rects;
     std::vector<SpriteDraw_t> sprites;
+    std::vector<LineDraw_t> lines;
     int clearCount = 0;
     int displayCount = 0;
     int paceCount = 0;
     int upsertTextureCount = 0;
     int spriteCount = 0;
+    std::size_t drawCount = 0;
 };
 
 } // namespace actest

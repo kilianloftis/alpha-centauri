@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 using namespace ac;
 
@@ -336,4 +337,138 @@ TEST_CASE("ImprovementConfigParser loads fixture improvements.json", "[improveme
     REQUIRE(pFarm->project);
     CHECK(pFarm->project->turnsRequired == 4);
     CHECK(IsBuildable(*pFarm));
+}
+
+TEST_CASE("sprite_paths lists art per tile surface", "[improvements][parser]")
+{
+    const auto path = WriteTempJson("ac_improvement_sprites.json", R"([
+        {
+            "id": "Kelp",
+            "name": "Kelp",
+            "sprite_paths": { "land": ["a.png"], "sea": ["b.png", "c.png"] },
+            "effects": []
+        },
+        {
+            "id": "Grove",
+            "name": "Grove",
+            "sprite_paths": { "land": ["d.png"] },
+            "effects": []
+        }
+    ])");
+
+    ImprovementConfigParser parser;
+    const auto configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 2);
+    CHECK(configs[0].spritePaths.land == std::vector<std::string>{"a.png"});
+    CHECK(configs[0].spritePaths.sea == std::vector<std::string>{"b.png", "c.png"});
+    CHECK(configs[1].spritePaths.land == std::vector<std::string>{"d.png"});
+    CHECK(configs[1].spritePaths.sea.empty());
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("sprite_paths rejects a surface that is not land or sea", "[improvements][parser]")
+{
+    const auto path = WriteTempJson("ac_improvement_sprite_surface.json", R"([
+        {
+            "id": "Grove",
+            "name": "Grove",
+            "sprite_paths": { "water": ["d.png"] },
+            "effects": []
+        }
+    ])");
+
+    ImprovementConfigParser parser;
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("Grove")
+                          && Catch::Matchers::ContainsSubstring("water"));
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("sprite_overhang_ratio defaults to zero and must not be negative",
+          "[improvements][parser]")
+{
+    const auto path = WriteTempJson("ac_improvement_overhang.json", R"([
+        { "id": "Tall", "name": "Tall", "sprite_overhang_ratio": 0.24, "effects": [] },
+        { "id": "Flat", "name": "Flat", "effects": [] }
+    ])");
+    ImprovementConfigParser parser;
+    const auto configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 2);
+    CHECK(configs[0].spriteOverhangRatio == 0.24f);
+    CHECK(configs[1].spriteOverhangRatio == 0.0f);
+    std::filesystem::remove(path);
+
+    const auto negative = WriteTempJson("ac_improvement_overhang_negative.json", R"([
+        { "id": "Sunken", "name": "Sunken", "sprite_overhang_ratio": -0.1, "effects": [] }
+    ])");
+    CHECK_THROWS_WITH(parser.ParseConfig(negative.string()),
+                      Catch::Matchers::ContainsSubstring("Sunken")
+                          && Catch::Matchers::ContainsSubstring("sprite_overhang_ratio"));
+    std::filesystem::remove(negative);
+}
+
+TEST_CASE("sprite_tiles names a tile set per surface", "[improvements][parser]")
+{
+    const auto path = WriteTempJson("ac_improvement_tiles.json", R"([
+        {
+            "id": "Grove",
+            "name": "Grove",
+            "sprite_tiles": { "layout": "edges", "land": "grove/{mask}.png" },
+            "effects": []
+        },
+        {
+            "id": "Bloom",
+            "name": "Bloom",
+            "sprite_tiles": { "layout": "blob", "land": "a/{mask}.png", "sea": "b/{mask}.png" },
+            "effects": []
+        },
+        { "id": "Plain", "name": "Plain", "effects": [] }
+    ])");
+
+    ImprovementConfigParser parser;
+    const auto configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 3);
+    REQUIRE(configs[0].spriteTiles.has_value());
+    CHECK(configs[0].spriteTiles->layout == SpriteTileLayout_t::Edges);
+    CHECK(configs[0].spriteTiles->land == "grove/{mask}.png");
+    CHECK(configs[0].spriteTiles->sea.empty());
+    REQUIRE(configs[1].spriteTiles.has_value());
+    CHECK(configs[1].spriteTiles->layout == SpriteTileLayout_t::Blob);
+    CHECK(configs[1].spriteTiles->sea == "b/{mask}.png");
+    CHECK_FALSE(configs[2].spriteTiles.has_value());
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("sprite_tiles rejects a pattern without {mask}, an unknown layout, or both art kinds",
+          "[improvements][parser]")
+{
+    ImprovementConfigParser parser;
+    const struct
+    {
+        const char* name;
+        const char* body;
+        const char* message;
+    } k_Cases[] = {
+        {"ac_tiles_no_mask.json",
+         R"([{ "id": "Grove", "name": "Grove",
+               "sprite_tiles": { "layout": "edges", "land": "grove.png" }, "effects": [] }])",
+         "{mask}"},
+        {"ac_tiles_layout.json",
+         R"([{ "id": "Grove", "name": "Grove",
+               "sprite_tiles": { "layout": "corners", "land": "g/{mask}.png" }, "effects": [] }])",
+         "layout"},
+        {"ac_tiles_both.json",
+         R"([{ "id": "Grove", "name": "Grove", "sprite_paths": { "land": ["g.png"] },
+               "sprite_tiles": { "layout": "edges", "land": "g/{mask}.png" }, "effects": [] }])",
+         "sprite_tiles"},
+    };
+    for (const auto& rCase : k_Cases)
+    {
+        CAPTURE(rCase.name);
+        const auto path = WriteTempJson(rCase.name, rCase.body);
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("Grove")
+                              && Catch::Matchers::ContainsSubstring(rCase.message));
+        std::filesystem::remove(path);
+    }
 }

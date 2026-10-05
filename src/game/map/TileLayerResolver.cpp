@@ -3,6 +3,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace ac
@@ -69,6 +70,29 @@ std::optional<std::string> ResolveRockinessLayer_(const Tile& rTile)
     throw std::runtime_error("ResolveRockinessLayer_: unhandled Rockiness_t");
 }
 
+// Landmarks exclude each other, so a tile has at most one. Like the Improvement layer, this
+// returns the config id.
+std::optional<std::string> ResolveLandmarkLayer_(const Tile& rTile)
+{
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
+    {
+        if (pFeature && std::ranges::find(pFeature->tags, "landmark") != pFeature->tags.end())
+        {
+            return pFeature->id;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> ResolveRiverLayer_(const Tile& rTile)
+{
+    if (rTile.GetHasRiver())
+    {
+        return TileLayerContent::k_River;
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 {
     // Fungus replaces farm/forest visually (Forest excludes Fungus in config; either may win).
@@ -129,7 +153,9 @@ std::array<TileLayer_t, k_TileLayerCount> ResolveTileLayers(const Tile& rTile)
         TileLayer_t(TileLayerType_t::Landform, ResolveLandformLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Moisture, ResolveMoistureLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Rockiness, ResolveRockinessLayer_(rTile)),
+        TileLayer_t(TileLayerType_t::Landmark, ResolveLandmarkLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Vegetation, ResolveVegetationLayer_(rTile)),
+        TileLayer_t(TileLayerType_t::River, ResolveRiverLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Road, ResolveRoadLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Improvement, ResolveImprovementLayer_(rTile))
     };

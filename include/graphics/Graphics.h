@@ -57,6 +57,16 @@ struct Color_t
     }
 };
 
+// Colour multiply at a tile diamond's centre and corners.
+struct DiamondTint_t
+{
+    Color_t center = Color_t::White();
+    Color_t west = Color_t::White();
+    Color_t north = Color_t::White();
+    Color_t east = Color_t::White();
+    Color_t south = Color_t::White();
+};
+
 class Graphics
 {
 public:
@@ -82,6 +92,12 @@ public:
     // texture unchanged. Used for elevation/fog shading on map tiles.
     virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                             float destHeight, const Color_t& tint) = 0;
+    // Draws the texture's inscribed diamond (corners at the midpoints of its edges) onto the
+    // diamond inscribed in the destination rect, as four triangles around the centre with
+    // rTint interpolated from the centre to each corner.
+    virtual bool DrawDiamondSprite(const std::string& textureId, float x, float y,
+                                   float destWidth, float destHeight,
+                                   const DiamondTint_t& rTint) = 0;
     virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;

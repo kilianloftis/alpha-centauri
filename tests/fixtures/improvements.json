@@ -117,6 +117,10 @@
       "land_terraform"
     ],
     "domain": "land",
+    "sprite_tiles": {
+      "layout": "edges",
+      "land": "tests/fixtures/sprites/forest/{mask}.png"
+    },
     "excludes": [
       "Fungus"
     ],
@@ -198,6 +202,7 @@
     "id": "Mine",
     "name": "Mine",
     "turns_required": 8,
+    "sprite_paths": {"land": ["tests/fixtures/sprites/mine.png"]},
     "tags": [
       "land_terraform"
     ],
