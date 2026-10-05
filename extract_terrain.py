@@ -28,8 +28,9 @@ Tile sets, one sprite per neighbor mask, in sprites/landforms/<set>/<mask>.png:
   edge sets (forest, river): 16 masks over the NE/SE/SW/NW edge neighbors (bits 0–3).
 
 ter1.pcx object sprites are 100×62: a 100×50 footprint diamond with 12 px of art above it.
-Purple 253 is the key and dark-purple 252 marks the footprint; SMAC drops both. Tile
-bonuses come in two sea and two land variants per resource.
+Purple 253 is the key and dark-purple 252 marks the footprint; SMAC drops both. Peach 246
+marks shadow pixels, which SMAC draws by darkening the terrain underneath; they become
+partly transparent black. Tile bonuses come in two sea and two land variants per resource.
 
 Coastlines are baked from Rainfall.pcx (see docs/thinker/smac-coastline-rainfall.md):
 sprites/coast/{water,shore}_<corner>_<case>.png, one pair per diamond corner (w/n/e/s)
@@ -65,6 +66,13 @@ TEXTURE_KEY_INDICES = frozenset({0, 255})
 TER1_KEY_INDICES = frozenset({0, 252, 253, 255})
 TER1_SPRITE_WIDTH = 100
 TER1_SPRITE_HEIGHT = 62
+# ter1.pcx shadow pixels. SMAC loads the sheet into palette slots shifted by 10, so 246 wraps to
+# 0, and Sprite_draw_dest darkens the terrain under a 0 through its shadow table (shadow.tmp).
+TER1_SHADOW_INDEX = 246
+# Black at these alphas darkens the painted terrain as much as that table does on average:
+# land to 0.79 of its luminance, water to 0.92.
+TER1_LAND_SHADOW_ALPHA = 54
+TER1_SEA_SHADOW_ALPHA = 21
 
 # Ocean cells right of the rainfall grid, between guide rows at y=78/135/192.
 OCEAN_SHELF_BOX = (280, 79, 280 + TEXTURE_CELL, 79 + TEXTURE_CELL)
@@ -144,6 +152,8 @@ class Region:
     key_indices: frozenset[int] = field(default_factory=lambda: TEXTURE_KEY_INDICES)
     # Texture cells are baked onto the diamond; ter1 objects keep their own canvas.
     diamond: bool = True
+    # Alpha of the black that replaces shadow pixels; None leaves the sheet as painted.
+    shadow_alpha: int | None = None
 
     @property
     def box(self) -> tuple[int, int, int, int]:
@@ -200,7 +210,7 @@ def _texture_regions() -> list[Region]:
     ]
 
 
-def _ter1_object(path: str, x0: int, y0: int) -> Region:
+def _ter1_object(path: str, x0: int, y0: int, surface: str) -> Region:
     return Region(
         path,
         x0,
@@ -210,11 +220,12 @@ def _ter1_object(path: str, x0: int, y0: int) -> Region:
         sheet="ter1",
         key_indices=TER1_KEY_INDICES,
         diamond=False,
+        shadow_alpha=TER1_SEA_SHADOW_ALPHA if surface == "sea" else TER1_LAND_SHADOW_ALPHA,
     )
 
 
 def _ter1_regions() -> list[Region]:
-    regions = [_ter1_object("sprites/tile_bonuses/monolith", 304, 1)]
+    regions = [_ter1_object("sprites/tile_bonuses/monolith", 304, 1, "land")]
     # Resource grid (guides every 63 px from y=252, 101 px from x=0): nutrients, minerals,
     # energy rows; columns are sea, sea, land, land.
     for row, resource in enumerate(("nutrients", "minerals", "energy")):
@@ -224,6 +235,7 @@ def _ter1_regions() -> list[Region]:
                     f"sprites/tile_bonuses/{resource}_{surface}_{column % 2}",
                     1 + column * 101,
                     253 + row * 63,
+                    surface,
                 )
             )
     return regions
@@ -318,6 +330,13 @@ def blend_corners(rotation: int) -> tuple[tuple[int, int], ...]:
     return tuple(BLEND_CORNERS[(k + rotation) & 3] for k in range(4))
 
 
+def apply_shadow(rgba: Image.Image, sprite: Image.Image, alpha: int) -> Image.Image:
+    """Turn shadow-index pixels into black at the given alpha."""
+    mask = sprite.point(lambda index: 255 if index == TER1_SHADOW_INDEX else 0, mode="L")
+    rgba.paste(Image.new("RGBA", rgba.size, (0, 0, 0, alpha)), (0, 0), mask)
+    return rgba
+
+
 def clear_transparent_rgb(rgba: Image.Image) -> Image.Image:
     """Zero RGB on alpha=0 pixels so chroma-key leftovers cannot leak when blending."""
     pixels = rgba.load()
@@ -342,7 +361,10 @@ def extract_regions(
         if region.diamond:
             sprite = bake_diamond(crop, blend_corners(0), region.key_indices, keyed=keyed)
         else:
-            sprite = clear_transparent_rgb(to_rgba(crop, region.key_indices, keyed=keyed))
+            sprite = to_rgba(crop, region.key_indices, keyed=keyed)
+            if keyed and region.shadow_alpha is not None:
+                sprite = apply_shadow(sprite, crop, region.shadow_alpha)
+            sprite = clear_transparent_rgb(sprite)
         destination = out_root / f"{region.path}.png"
         destination.parent.mkdir(parents=True, exist_ok=True)
         sprite.save(destination)

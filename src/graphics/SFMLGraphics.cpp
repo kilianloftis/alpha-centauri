@@ -5,6 +5,7 @@
 #include "input/PlatformEventQueue.h"
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Sleep.hpp>
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -260,12 +261,18 @@ public:
             return false;
         }
 
+        // Sample one texel inside the texture's diamond so edge pixels never land on the
+        // transparent staircase around a baked diamond; the geometry alone partitions tiles.
         const float textureWidth = static_cast<float>(size.x);
         const float textureHeight = static_cast<float>(size.y);
+        const float insetU = std::min(1.0f, textureWidth * 0.5f) / textureWidth;
+        const float insetV = std::min(1.0f, textureHeight * 0.5f) / textureHeight;
         const auto vertex = [&](float u, float v, const Color_t& rColor) {
+            const float sampleU = 0.5f + (u - 0.5f) * (1.0f - 2.0f * insetU);
+            const float sampleV = 0.5f + (v - 0.5f) * (1.0f - 2.0f * insetV);
             return sf::Vertex{{x + destWidth * u, y + destHeight * v},
                               sf::Color(rColor.r, rColor.g, rColor.b, rColor.a),
-                              {textureWidth * u, textureHeight * v}};
+                              {textureWidth * sampleU, textureHeight * sampleV}};
         };
         const sf::Vertex fan[] = {
             vertex(0.5f, 0.5f, rTint.center), vertex(0.0f, 0.5f, rTint.west),

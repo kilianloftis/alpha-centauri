@@ -48,27 +48,6 @@ SpriteEdgeMatch_t MatchRockinessEdges(const Tile& rTile, const WorldMap* pMap)
     });
 }
 
-SpriteEdgeMatch_t MatchSeaLandformEdges(const Tile& rTile, const WorldMap* pMap,
-                                        std::string_view contentId)
-{
-    return MatchOrthoEdges_(rTile, pMap, [contentId](const Tile&, const Tile& rNeighbor) {
-        // Land is not a depth band — keep flush so dest scaling does not nibble sea–sea seams.
-        if (!rNeighbor.IsWater())
-        {
-            return true;
-        }
-        if (contentId == "OceanShelf")
-        {
-            return rNeighbor.HasFeature("OceanShelf");
-        }
-        if (contentId == "Ocean")
-        {
-            return rNeighbor.HasFeature("Ocean");
-        }
-        return true;
-    });
-}
-
 SpriteDestRect_t DestRectForEdgeInsets(float x, float y, float size, const SpriteEdgeMatch_t& match,
                                        float insetRatio)
 {

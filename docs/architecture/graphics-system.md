@@ -4,7 +4,7 @@
 graph TB
     subgraph "Graphics Interface"
         Graphics[Graphics<br/>(abstract base class)]
-        Methods[Virtual Methods:<br/>PumpEvents()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawText()<br/>SetMouseCursor()<br/>ResetMouseCursor()]
+        Methods[Virtual Methods:<br/>PumpEvents()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawDiamondSprite()<br/>DrawText()<br/>SetMouseCursor()<br/>ResetMouseCursor()]
     end
 
     subgraph "SFML Implementation"
@@ -65,7 +65,8 @@ graph TB
   - `PaceFrame()`: Sleep to honor `framerateLimit` without presenting — used when UIManager skips a quiet frame
   - `LoadTexture(id, path)`: Load a texture from file
   - `UpsertTextureRGBA(id, width, height, rgba)`: Create or replace an RGBA8 texture from tightly packed pixels (minimap terrain cache)
-  - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)` / `DrawSprite(..., destWidth, destHeight, tint)`: Draw a sprite at position, optionally scaled and color-multiplied (elevation/fog on map tiles)
+  - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)` / `DrawSprite(..., destWidth, destHeight, tint)`: Draw a sprite at position, optionally scaled and color-multiplied (fog on map tiles)
+  - `DrawDiamondSprite(textureId, x, y, destWidth, destHeight, tint)`: Draw the texture's inscribed diamond onto the destination diamond as four triangles around the centre, with a `DiamondTint_t` color multiply at the centre and each corner interpolated across it. Edge pixels sample just inside the texture's diamond, so neighboring diamonds meet without gaps (terrain tiles, water depth shading)
   - `DrawText(text, x, y, size)`: Draw text at position
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
   - `DrawFilledDiamond` / `DrawDiamond`: Isometric tile footprint whose AABB is `(x, y, width, height)`
@@ -125,13 +126,18 @@ UI components use the Graphics interface to render game information.
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
   - `GetViewport().SetCamera(tileX, tileY)`: Anchor tile for the isometric projection
 - **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
-  `ResolveTileLayers` sprites scaled to the diamond AABB with an elevation/fog tint. Occupants
+  `ResolveTileLayers` sprites scaled to the diamond AABB. Land art keeps its sheet colors and
+  water art is shaded per vertex by depth, as in SMAC
+  ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md)). Occupants
   list `sprite_paths` per tile surface (`land` / `sea`), and the renderer's `PickSpritePath`
   chooses one from a hash of tile coordinates and content id (stable across save/load; no
   per-tile variant field). Or they name a `sprite_tiles` set, and the renderer draws the
   cell for the tile's neighbor mask (moisture, forest, fungus, jungle, rivers). Object
   sprites (tile bonuses, monolith: `ter1.pcx` 100×62 over a 100×50 footprint) set
-  `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. The
+  `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. Their
+  shadows are partly transparent black, so they darken the terrain underneath as SMAC's
+  shadow table does (`extract_terrain.py` turns ter1.pcx's shadow index 246 into black at
+  alpha 54 on land sprites, 21 on sea sprites). The
   tile's single moisture cell fills the diamond and fades out toward drier land.
   Land next to water then gets SMAC's coast: per diamond corner, ocean and a shore band
   baked from `Rainfall.pcx`
@@ -153,7 +159,20 @@ UI components use the Graphics interface to render game information.
 - **Purpose**: Shared map-cell paint for the world map, location preview, and similar views
 - **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
 - **Footprint**: 2:1 diamond (`size` = width, height = size / 2)
-- **Elevation**: continuous meters → fill gradient and sprite color multiply (not a `TileLayer`)
+- **Elevation**: continuous meters → fill gradient and water depth shading (not a `TileLayer`).
+  Land art draws untinted
+- **Water shading**: `WaterShading` (`ui/WaterShading.h`) gives a water tile's centre the
+  shade of its own depth and each corner the shade of the average depth of the tiles that
+  share it (land at ocean level, off-map rows left out, x wraps). `water_shading.depth_shades`
+  splits the map's floor up to ocean level into equal bands, deepest first (SMAC's table).
+  `water_shading.tints` maps each water landform id to a color multiply per shade, derived from
+  the `palette.pcx` water ramp. The Landform sprite is drawn with `DrawDiamondSprite` at the
+  full tile rect
+- **Fog**: fogged land multiplies its terrain art by `fog_terrain_dim_ratio` (SMAC's two
+  palette steps); water art is not dimmed. Before the Improvement layer a fogged tile gets a
+  `fog_haze_color` diamond (the average of SMAC's black scanlines). The Improvement layer and the
+  improvement and feature sprites draw untinted on top. Fills, procedural cues and the minimap
+  use `fog_fill_dim_ratio`
 - **Variants**: `sprite_paths.land` / `.sea` by tile surface + `PickSpriteIndex` /
   `PickSpritePath` (coord + id hash); `sprite_overhang_ratio` lifts object sprites above
   the footprint
@@ -164,16 +183,19 @@ UI components use the Graphics interface to render game information.
   occupant.
   Without a `WorldMap` every set draws mask 0
 - **Moisture**: one base cell per land tile at the full tile rect; no stacking or insets
-- **Edge insets**: rockiness overlays and water landforms only. `TileSpriteEdgeInset` match
-  helpers + `DestRectForEdgeInsets` (a scaled diamond that stays inside the tile, flush on
-  matched edges where it can); style keys `sprite_edge_inset_ratio` /
-  `sprite_overlay_edge_inset_ratio`
+- **Diamonds**: every terrain layer and the coast draw with `DrawDiamondSprite`, so tiles meet
+  edge to edge with no fill between them. Object sprites (the Improvement layer, improvement
+  and feature passes) draw as rects with their overhang
+- **Edge insets**: rockiness overlays only. `MatchRockinessEdges` + `DestRectForEdgeInsets`
+  (`TileSpriteEdgeInset`; a scaled diamond that stays inside the tile, flush on matched edges
+  where it can); style key `sprite_overlay_edge_inset_ratio`
 - **Coast**: `CoastOverlay` gives each diamond corner of a land tile a 3-bit water mask (edge
   neighbors are orthogonal, the corner neighbor diagonal) and SMAC's odd-row alternate for
   all-water corners. Drawn after Vegetation and before River as
-  `<coast_sprite_dir>/{water,shore}_<w|n|e|s>_<mask>[_alt].png` at the tile rect: water tinted
-  as the average of the water neighbors' sprite tints, shore with the tile's own tint. Needs a
-  `WorldMap`; style key `coast_sprite_dir`
+  `<coast_sprite_dir>/{water,shore}_<w|n|e|s>_<mask>[_alt].png` at the tile rect. Water is
+  drawn with `DrawDiamondSprite`, shaded from the land tile's own vertex depths with the
+  `water_shading.coast_tints` table, so it meets the neighboring water at their shared corners;
+  the shore takes the land's terrain tint. Needs a `WorldMap`; style key `coast_sprite_dir`
 - **Rivers**: the River layer draws its `edges` cell; without art, lines run from the tile
   centre to each connected edge's midpoint (`GetRiverConnections`), or a short cross with no
   connection. Style keys `river_color` / `river_line_thickness_ratio` under `tile_renderer`

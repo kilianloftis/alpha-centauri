@@ -523,3 +523,37 @@ TEST_CASE("A colour with too many components is a typo, not extra data", "[confi
     CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
                       Catch::Matchers::ContainsSubstring("background_color"));
 }
+
+TEST_CASE("Water shading must name the tints its coast uses and give at least one depth band",
+          "[config][ui]")
+{
+    std::ifstream in(actest::FixturePath("ui/style.json"));
+    REQUIRE(in.good());
+    const std::string style((std::istreambuf_iterator<char>(in)),
+                            std::istreambuf_iterator<char>());
+    const auto withReplaced = [&style](const std::string& from, const std::string& to) {
+        std::string mutated = style;
+        const size_t at = mutated.find(from);
+        REQUIRE(at != std::string::npos);
+        mutated.replace(at, from.size(), to);
+        return mutated;
+    };
+
+    SECTION("coast_tints names no tints entry")
+    {
+        TempConfigFile config("ac_style_coast_tints.json",
+                              withReplaced("\"coast_tints\": \"OceanShelf\"",
+                                           "\"coast_tints\": \"Lagoon\""));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("coast_tints"));
+    }
+
+    SECTION("depth_shades is empty")
+    {
+        TempConfigFile config("ac_style_depth_shades.json",
+                              withReplaced("\"depth_shades\": [3, 2, 1, 0]",
+                                           "\"depth_shades\": []"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("depth_shades"));
+    }
+}

@@ -5,20 +5,22 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
-#include "ui/TileSpriteEdgeInset.h"
 #include "ui/style/UiStyle.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <random>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace ac;
@@ -212,11 +214,6 @@ Color_t DrawnTint_(const Tile& rTile, const WorldMap& rMap, const std::string& p
     return Color_t::White();
 }
 
-bool WithinOne_(std::uint8_t a, std::uint8_t b)
-{
-    return (a > b ? a - b : b - a) <= 1;
-}
-
 } // namespace
 
 TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholders",
@@ -381,6 +378,25 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         CHECK(rSprite.y == 20.0f);
         CHECK(rSprite.destWidth == 100.0f);
         CHECK(rSprite.destHeight == 50.0f);
+        // Terrain cells are diamonds that meet their neighbors edge to edge.
+        CHECK(rSprite.diamondTint.has_value());
+    }
+
+    SECTION("land art keeps its sheet colours at any elevation")
+    {
+        actest::WorldFixture world(5, 5);
+        const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
+        WriteOccupantStubs_(rMoist);
+        Tile& rTile = *world.map.GetTile(2, 2);
+        SetMoisture_(rTile, Moisture_t::Moist);
+        for (const int elevation : {1, actest::TestMapRules().maxElevationMeters})
+        {
+            CAPTURE(elevation);
+            rTile.SetElevation(elevation);
+            CHECK(ColorEq_(DrawnTint_(rTile, world.map, TilePrefix_(rMoist.spriteTiles->land),
+                                      /*bFogged*/ false),
+                           Color_t::White()));
+        }
     }
 }
 
@@ -514,80 +530,132 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         CHECK(river < bonus);
     }
 
-    SECTION("coast water takes the adjacent water tile's tint")
+    SECTION("coast water is shaded by the depths around the land tile's own vertices")
     {
-        Tile& rWater = *world.map.GetTile(2, 1);
-        rWater.SetElevation(-500);
-        REQUIRE(rWater.HasFeature("OceanShelf"));
-        const Color_t waterTint = DrawnTint_(rWater, world.map, shelfPath, /*bFogged*/ false);
+        // Water across the NW edge, at the N corner, across the NE edge and at the E corner.
+        for (const auto& [wx, wy] :
+             {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}, std::pair{3, 1}})
+        {
+            world.map.GetTile(wx, wy)->SetElevation(shelfMeters);
+        }
 
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, rLand, k_X, k_Y, k_Size, /*bFogged*/ false, &world.map);
 
+        const std::vector<Color_t>& rShelf =
+            Style().tileRenderer.waterShading.tints.at("OceanShelf");
         const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
-        REQUIRE_FALSE(water.empty());
+        REQUIRE(water.size() == 3);
         for (const RecordingGraphics::SpriteDraw_t& rSprite : water)
         {
-            CHECK(ColorEq_(rSprite.tint, waterTint));
+            REQUIRE(rSprite.diamondTint.has_value());
+            // The land itself sits at ocean level, the fixture's shallowest band (shade 0).
+            CHECK(ColorEq_(rSprite.diamondTint->center, rShelf[0]));
+            // Three of the N corner's four tiles are at the shelf line: (3 · -2000 + 0) / 4 is
+            // the fixture's third band (shade 1).
+            CHECK(ColorEq_(rSprite.diamondTint->north, rShelf[1]));
+            CHECK(ColorEq_(rSprite.diamondTint->east, rShelf[0]));
+            CHECK(ColorEq_(rSprite.diamondTint->south, rShelf[0]));
         }
+
+        // The land's N and E corners are the W and S corners of the water across its NE edge.
+        RecordingGraphics waterGraphics;
+        TileRenderer::Render(waterGraphics, *world.map.GetTile(2, 1), k_X, k_Y, k_Size,
+                             /*bFogged*/ false, &world.map);
+        const std::ptrdiff_t shelf = FirstSpriteIndex_(waterGraphics, shelfPath);
+        REQUIRE(shelf >= 0);
+        const std::optional<DiamondTint_t>& rWaterTint =
+            waterGraphics.sprites[static_cast<std::size_t>(shelf)].diamondTint;
+        REQUIRE(rWaterTint.has_value());
+        CHECK(ColorEq_(rWaterTint->west, water.front().diamondTint->north));
+        CHECK(ColorEq_(rWaterTint->south, water.front().diamondTint->east));
     }
 
-    SECTION("coast water averages the tints of water neighbors at different depths")
-    {
-        Tile& rShallow = *world.map.GetTile(2, 1);
-        rShallow.SetElevation(-500);
-        Tile& rDeeper = *world.map.GetTile(3, 2);
-        rDeeper.SetElevation(shelfMeters);
-        REQUIRE(rShallow.HasFeature("OceanShelf"));
-        REQUIRE(rDeeper.HasFeature("OceanShelf"));
-        const Color_t shallowTint = DrawnTint_(rShallow, world.map, shelfPath, /*bFogged*/ false);
-        const Color_t deeperTint = DrawnTint_(rDeeper, world.map, shelfPath, /*bFogged*/ false);
-        REQUIRE_FALSE(ColorEq_(shallowTint, deeperTint));
-
-        RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, k_X, k_Y, k_Size, /*bFogged*/ false, &world.map);
-
-        const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
-        REQUIRE_FALSE(water.empty());
-        for (const RecordingGraphics::SpriteDraw_t& rSprite : water)
-        {
-            CHECK(WithinOne_(rSprite.tint.r, static_cast<std::uint8_t>((shallowTint.r + deeperTint.r) / 2)));
-            CHECK(WithinOne_(rSprite.tint.g, static_cast<std::uint8_t>((shallowTint.g + deeperTint.g) / 2)));
-            CHECK(WithinOne_(rSprite.tint.b, static_cast<std::uint8_t>((shallowTint.b + deeperTint.b) / 2)));
-        }
-    }
-
-    SECTION("shore takes the land tile's tint, and fog dims water and shore alike")
+    SECTION("fog dims land art, hazes the terrain, and leaves water shading and objects clear")
     {
         Tile& rWater = *world.map.GetTile(2, 1);
         rWater.SetElevation(shelfMeters);
-
-        for (const bool bFogged : {false, true})
-        {
-            CAPTURE(bFogged);
-            const Color_t landTint = DrawnTint_(rLand, world.map, moistPath, bFogged);
-            const Color_t waterTint = DrawnTint_(rWater, world.map, shelfPath, bFogged);
-
-            RecordingGraphics graphics;
-            TileRenderer::Render(graphics, rLand, k_X, k_Y, k_Size, bFogged, &world.map);
-
-            const std::vector<RecordingGraphics::SpriteDraw_t> shore =
-                CoastSprites_(graphics, "shore_");
-            const std::vector<RecordingGraphics::SpriteDraw_t> water =
-                CoastSprites_(graphics, "water_");
-            REQUIRE_FALSE(shore.empty());
-            REQUIRE_FALSE(water.empty());
-            for (const RecordingGraphics::SpriteDraw_t& rSprite : shore)
+        rLand.AddImprovement(world.improvements.Get("Mine"));
+        const auto& s = Style().tileRenderer;
+        const std::string& minePath = world.improvements.Get("Mine").spritePaths.land.front();
+        const auto dimmed = static_cast<std::uint8_t>(std::lround(255.0f * s.fogTerrainDimRatio));
+        const Color_t fogTint{dimmed, dimmed, dimmed, 255};
+        const auto hazes = [&s](const RecordingGraphics& rGraphics) {
+            std::vector<RecordingGraphics::RectDraw_t> haze;
+            for (const RecordingGraphics::RectDraw_t& rRect : rGraphics.rects)
             {
-                CHECK(ColorEq_(rSprite.tint, landTint));
+                if (rRect.bFilled && ColorEq_(rRect.color, s.fogHazeColor))
+                {
+                    haze.push_back(rRect);
+                }
             }
-            for (const RecordingGraphics::SpriteDraw_t& rSprite : water)
+            return haze;
+        };
+
+        RecordingGraphics lit;
+        TileRenderer::Render(lit, rLand, k_X, k_Y, k_Size, /*bFogged*/ false, &world.map);
+        RecordingGraphics fogged;
+        TileRenderer::Render(fogged, rLand, k_X, k_Y, k_Size, /*bFogged*/ true, &world.map);
+
+        const std::ptrdiff_t litMoist = FirstSpriteIndex_(lit, moistPath);
+        const std::ptrdiff_t foggedMoist = FirstSpriteIndex_(fogged, moistPath);
+        REQUIRE(litMoist >= 0);
+        REQUIRE(foggedMoist >= 0);
+        CHECK(ColorEq_(lit.sprites[static_cast<std::size_t>(litMoist)].tint, Color_t::White()));
+        CHECK(ColorEq_(fogged.sprites[static_cast<std::size_t>(foggedMoist)].tint, fogTint));
+        for (const RecordingGraphics::SpriteDraw_t& rSprite : CoastSprites_(fogged, "shore_"))
+        {
+            CHECK(ColorEq_(rSprite.tint, fogTint));
+        }
+
+        const std::vector<RecordingGraphics::SpriteDraw_t> litWater = CoastSprites_(lit, "water_");
+        const std::vector<RecordingGraphics::SpriteDraw_t> foggedWater =
+            CoastSprites_(fogged, "water_");
+        REQUIRE(litWater.size() == foggedWater.size());
+        for (std::size_t i = 0; i < litWater.size(); ++i)
+        {
+            REQUIRE(foggedWater[i].diamondTint.has_value());
+            CHECK(ColorEq_(foggedWater[i].diamondTint->center, litWater[i].diamondTint->center));
+            CHECK(ColorEq_(foggedWater[i].diamondTint->north, litWater[i].diamondTint->north));
+        }
+
+        CHECK(hazes(lit).empty());
+        const std::vector<RecordingGraphics::RectDraw_t> haze = hazes(fogged);
+        REQUIRE(haze.size() == 1);
+        CHECK(haze.front().x == k_X);
+        CHECK(haze.front().width == k_Size);
+        const std::ptrdiff_t lastCoast =
+            LastSpriteIndex_(fogged, Style().tileRenderer.coastSpriteDir + "/");
+        const std::ptrdiff_t mine = FirstSpriteIndex_(fogged, minePath);
+        REQUIRE(lastCoast >= 0);
+        REQUIRE(mine >= 0);
+        CHECK(fogged.sprites[static_cast<std::size_t>(foggedMoist)].order < haze.front().order);
+        CHECK(fogged.sprites[static_cast<std::size_t>(lastCoast)].order < haze.front().order);
+        CHECK(haze.front().order < fogged.sprites[static_cast<std::size_t>(mine)].order);
+        for (const RecordingGraphics::SpriteDraw_t& rSprite : fogged.sprites)
+        {
+            if (rSprite.textureId == minePath)
             {
-                CHECK(ColorEq_(rSprite.tint, waterTint));
+                CHECK(ColorEq_(rSprite.tint, Color_t::White()));
             }
         }
-        CHECK(DrawnTint_(rLand, world.map, moistPath, true).r
-              < DrawnTint_(rLand, world.map, moistPath, false).r);
+
+        RecordingGraphics litSea;
+        TileRenderer::Render(litSea, rWater, k_X, k_Y, k_Size, /*bFogged*/ false, &world.map);
+        RecordingGraphics foggedSea;
+        TileRenderer::Render(foggedSea, rWater, k_X, k_Y, k_Size, /*bFogged*/ true, &world.map);
+        const std::ptrdiff_t litShelf = FirstSpriteIndex_(litSea, shelfPath);
+        const std::ptrdiff_t foggedShelf = FirstSpriteIndex_(foggedSea, shelfPath);
+        REQUIRE(litShelf >= 0);
+        REQUIRE(foggedShelf >= 0);
+        const std::optional<DiamondTint_t>& rLitShelf =
+            litSea.sprites[static_cast<std::size_t>(litShelf)].diamondTint;
+        const std::optional<DiamondTint_t>& rFoggedShelf =
+            foggedSea.sprites[static_cast<std::size_t>(foggedShelf)].diamondTint;
+        REQUIRE(rLitShelf.has_value());
+        REQUIRE(rFoggedShelf.has_value());
+        CHECK(ColorEq_(rFoggedShelf->center, rLitShelf->center));
+        CHECK(hazes(foggedSea).size() == 1);
     }
 
     SECTION("a one-tile island on an even row uses the regular all-water art")
@@ -657,6 +725,76 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         TileRenderer::Render(inland, *world.map.GetTile(2, 3), k_X, k_Y, k_Size,
                              /*bFogged*/ false, &world.map);
         CHECK(CoastSprites_(inland).empty());
+    }
+}
+
+TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water]")
+{
+    EnsureStyleLoaded_();
+    actest::WorldFixture world(5, 5);
+    WriteOccupantStubs_(world.improvements.Get("OceanShelf"));
+    WriteOccupantStubs_(world.improvements.Get("Ocean"));
+    const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+    for (int y = 0; y < 5; ++y)
+    {
+        for (int x = 0; x < 5; ++x)
+        {
+            world.map.GetTile(x, y)->SetElevation(rRules.oceanShelfMeters);
+        }
+    }
+    const WaterShadingStyle_t& rShading = Style().tileRenderer.waterShading;
+    Tile& rTile = *world.map.GetTile(2, 2);
+
+    constexpr float k_X = 10.0f;
+    constexpr float k_Y = 20.0f;
+    constexpr float k_Size = 100.0f;
+
+    const auto waterTint = [&](const std::string& path) {
+        RecordingGraphics graphics;
+        TileRenderer::Render(graphics, rTile, k_X, k_Y, k_Size, /*bFogged*/ false, &world.map);
+        const std::ptrdiff_t index = FirstSpriteIndex_(graphics, path);
+        REQUIRE(index >= 0);
+        const RecordingGraphics::SpriteDraw_t& rSprite =
+            graphics.sprites[static_cast<std::size_t>(index)];
+        CHECK(rSprite.x == k_X);
+        CHECK(rSprite.y == k_Y);
+        CHECK(rSprite.destWidth == k_Size);
+        CHECK(rSprite.destHeight == k_Size * 0.5f);
+        REQUIRE(rSprite.diamondTint.has_value());
+        return *rSprite.diamondTint;
+    };
+
+    SECTION("the centre takes its own depth and each corner the depths of the tiles sharing it")
+    {
+        // Shallower water around the N corner.
+        for (const auto& [x, y] : {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}})
+        {
+            world.map.GetTile(x, y)->SetElevation(rRules.oceanLevelMeters - 500);
+        }
+        const DiamondTint_t tint =
+            waterTint(world.improvements.Get("OceanShelf").spritePaths.sea.front());
+        const std::vector<Color_t>& rTints = rShading.tints.at("OceanShelf");
+        // The shelf line is the fixture's third band (shade 1). The N corner averages one tile
+        // there and three in the last band, which lands in the last band (shade 0); the other
+        // corners average three or four at the shelf line.
+        CHECK(ColorEq_(tint.center, rTints[1]));
+        CHECK(ColorEq_(tint.north, rTints[0]));
+        CHECK(ColorEq_(tint.west, rTints[1]));
+        CHECK(ColorEq_(tint.east, rTints[1]));
+        CHECK(ColorEq_(tint.south, rTints[1]));
+    }
+
+    SECTION("ocean water takes the Ocean landform's tints")
+    {
+        rTile.SetElevation(rRules.minElevationMeters);
+        REQUIRE(rTile.HasFeature("Ocean"));
+        const DiamondTint_t tint =
+            waterTint(world.improvements.Get("Ocean").spritePaths.sea.front());
+        const std::vector<Color_t>& rTints = rShading.tints.at("Ocean");
+        // The floor is the first band (shade 3); a corner with three tiles at the shelf line
+        // averages into the second (shade 2).
+        CHECK(ColorEq_(tint.center, rTints[3]));
+        CHECK(ColorEq_(tint.north, rTints[2]));
     }
 }
 
@@ -735,6 +873,7 @@ TEST_CASE("Object sprites stand on the tile's footprint and reach above it", "[u
     CHECK_THAT(it->destWidth, WithinAbs(k_Size, 0.001f));
     CHECK_THAT(it->y, WithinAbs(k_Y - overhang, 0.001f));
     CHECK_THAT(it->y + it->destHeight, WithinAbs(k_Y + k_Height, 0.001f));
+    CHECK_FALSE(it->diamondTint.has_value());
 }
 
 TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui][tile][autotile]")

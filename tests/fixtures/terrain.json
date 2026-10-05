@@ -148,6 +148,7 @@
       "tags": [
         "landform"
       ],
+      "sprite_paths": {"sea": ["tests/fixtures/sprites/ocean.png"]},
       "effects": []
     },
     {

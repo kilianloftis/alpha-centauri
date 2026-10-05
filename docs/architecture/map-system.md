@@ -176,7 +176,7 @@ Two id domains meet here and must not be swapped: `TileLayerContent` holds lower
 
 The Landmark and Improvement layers are the exception: they return the config id verbatim, because there is no sprite-id mapping for the open-ended set of occupants that can fill them (Monsoon Jungle, Borehole, Monolith, …). The Improvement layer's rendering priority and exclusion rules are still a TODO in `ResolveImprovementLayer_`; whatever resolves them owes this layer a mapping too.
 
-**Elevation is not a layer.** Continuous meters stay on `Tile`; [`TileRenderer`](../../include/ui/TileRenderer.h) applies an elevation/fog color multiply when drawing layer sprites (SMAC used palette offsets), and land next to water gets SMAC's per-corner coast overlay ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Populate sprites with `extract_terrain.py`. An occupant's art is one of two kinds, per tile surface (`land` / `sea`):
+**Elevation is not a layer.** Continuous meters stay on `Tile`. [`TileRenderer`](../../include/ui/TileRenderer.h) draws land art in its sheet colors and shades water art per vertex by depth, SMAC's palette-ramp shading expressed as a color multiply ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md)). Land next to water gets SMAC's per-corner coast overlay ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Populate sprites with `extract_terrain.py`. An occupant's art is one of two kinds, per tile surface (`land` / `sea`):
 
 - `sprite_paths`: ordered variants; the renderer picks one from tile coordinates and content id.
 - `sprite_tiles`: a neighbor-aware tile set. `layout` is `edges` (16 cells, one bit per edge neighbor) or `blob` (47 cells, edges plus the corners between two matching edges), and the `land` / `sea` patterns name the cell file with a `{mask}` placeholder. `ResolveTileMask` ([`TileAutotile.h`](../../include/ui/TileAutotile.h)) computes the mask. Moisture cells match water and land at least as wet as the tile, so they fade out toward drier land; every other tile set matches neighbors holding the same occupant. Plan: [terrain-autotiles.md](../plans/terrain-autotiles.md).
@@ -220,7 +220,7 @@ graph TB
   - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture, Rockiness, Landmark, Vegetation, River, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
-  - `TileRenderer`: consumes `ResolveTileLayers`, draws the tile set cell for the tile's neighbor mask or picks from the surface's `sprite_paths` via coordinate hash, scales sprites to the isometric diamond AABB, tints by elevation/fog; procedural moisture/rockiness/river cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
+  - `TileRenderer`: consumes `ResolveTileLayers`, draws the tile set cell for the tile's neighbor mask or picks from the surface's `sprite_paths` via coordinate hash, scales sprites to the isometric diamond AABB, keeps land art untinted, shades water art per vertex by depth (`WaterShading`), and dims and hazes fogged terrain; procedural moisture/rockiness/river cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
   1. `Landform`: `OceanShelf` / `Ocean` / water on sea; empty on land (flat has no sheet art)
@@ -228,7 +228,7 @@ graph TB
   3. `Rockiness_t`: rolling / rocky keyed overlays above moisture (empty if flat or on water)
   4. `Landmark`: the tile's landmark terrain feature (tagged `landmark`), e.g. Monsoon Jungle
   5. `Vegetation`: fungus (if present), else farm or forest
-  6. `River`: river (empty if the tile has none); the coast overlay draws just below it
+  6. `River`: river on land (empty if the tile has none, and on the water tile a river ends in); the coast overlay draws just below it
   7. `Road`: road
   8. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
 - **Open Questions / TODOs**:

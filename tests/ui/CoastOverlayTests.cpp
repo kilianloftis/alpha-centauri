@@ -55,7 +55,6 @@ TEST_CASE("Land surrounded by land has no coast", "[ui][coast]")
     actest::WorldFixture world(5, 5);
     const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
     CHECK(NoCoast_(overlay));
-    CHECK(overlay.waterNeighbors.empty());
 }
 
 TEST_CASE("Water tiles never get a coast", "[ui][coast]")
@@ -66,7 +65,6 @@ TEST_CASE("Water tiles never get a coast", "[ui][coast]")
 
     const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
     CHECK(NoCoast_(overlay));
-    CHECK(overlay.waterNeighbors.empty());
 }
 
 TEST_CASE("Water across a diamond edge marks the two corners on that edge", "[ui][coast]")
@@ -106,7 +104,6 @@ TEST_CASE("Water across a diamond edge marks the two corners on that edge", "[ui
             }
             CHECK(rArt.waterMask == expected);
         }
-        CHECK(overlay.waterNeighbors.size() == 1);
     }
 }
 
@@ -136,7 +133,6 @@ TEST_CASE("Water touching a diamond corner marks only that corner", "[ui][coast]
             CAPTURE(static_cast<int>(rArt.corner));
             CHECK(rArt.waterMask == (rArt.corner == rCase.corner ? 2 : 0));
         }
-        CHECK(overlay.waterNeighbors.size() == 1);
     }
 }
 
@@ -150,7 +146,6 @@ TEST_CASE("A one-tile island is water on every side of every corner", "[ui][coas
     {
         CHECK(rArt.waterMask == 7);
     }
-    CHECK(overlay.waterNeighbors.size() == 8);
 }
 
 TEST_CASE("Rows beyond the map edge count as land", "[ui][coast]")

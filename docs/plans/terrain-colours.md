@@ -17,7 +17,7 @@ fog. How SMAC does it is in
   four tiles that share it. Shades of 16 and up draw the deep texture at `shade − 16`
   instead of the shelf texture. Shades are interpolated across the tile.
 - **Fog of war:** land vertices get offset +2, about ×0.8 on the land textures. Every other
-  scanline of each terrain layer is painted palette index 65 (137, 166, 166). Object sprites
+  scanline of each terrain layer is painted black. Object sprites
   (mines, bonuses, pods, the monolith) are drawn without fog.
 
 ### What we do today
@@ -53,6 +53,13 @@ fog. How SMAC does it is in
 - **Diamond draw.** Water art is drawn at the full tile rect as a diamond whose five vertex
   tints are interpolated across four triangles around the centre. Water landforms no longer
   inset their edges.
+  - Every terrain layer and the coast draw the same way, with a uniform tint. The tile
+    geometry then partitions the map exactly, and each edge pixel samples one texel inside
+    the baked diamond. No fill shows between tiles.
+  - Object sprites (the Improvement layer and the improvement and feature passes) keep their
+    rect draw with overhang.
+- **Rivers on land only.** SMAC skips river art on ocean tiles, so a river's last tile, which
+  is water, gets no River layer.
 - **Coast water** uses the land tile's own five vertex shades with the `OceanShelf` table
   (the coast art is baked from the shelf cell). So it meets the neighbouring water's shading
   at their shared corners.
@@ -60,7 +67,7 @@ fog. How SMAC does it is in
   - Fogged land multiplies its terrain art (moisture, rockiness, landmark, vegetation, coast
     shore, river, road) by `fog_terrain_dim_ratio`. Water art is not dimmed.
   - After the Road layer, a fogged tile gets a `fog_haze_color` diamond over the whole tile:
-    palette 65 at alpha 128, the average of SMAC's alternate scanlines.
+    black at alpha 128, the average of SMAC's alternate black scanlines.
   - The Improvement layer and the improvement and feature sprite passes draw untinted on top.
   - Procedural fills, fallback cues and the minimap keep `fog_fill_dim_ratio`.
 
@@ -87,8 +94,9 @@ fog. How SMAC does it is in
   texture's inscribed diamond (corners at the midpoints of its edges) onto the diamond
   inscribed in the destination rect, with the tints interpolated from the centre to each
   corner.
-- `SFMLGraphics`: an `sf::VertexArray` triangle fan of six vertices (centre, W, N, E, S, W)
-  with pixel texture coordinates and the vertex colours, drawn with the texture.
+- `SFMLGraphics`: a triangle fan of six vertices (centre, W, N, E, S, W) with the vertex
+  colours, drawn with the texture. Texture coordinates sit one texel inside the texture's
+  diamond.
 - `NullGraphics`: returns true.
 - `tests/RecordingGraphics.h`:
   - Diamond sprites go into `sprites`, with an `std::optional<ac::DiamondTint_t>
@@ -167,19 +175,25 @@ DiamondTint_t WaterShadeTint(const DiamondShades_t& shades, const std::vector<Co
   - "No coast" is now all corner masks being 0.
 - **Haze:** a fogged tile draws the `fog_haze_color` diamond once, before the Improvement
   layer.
+- **Terrain diamonds:** every layer except Improvement, and the coast shore, draw with
+  `DrawDiamondSprite` and a uniform tint.
 - **Objects:** the Improvement layer and the improvement and feature passes draw untinted.
 - **Header:** update `include/ui/TileRenderer.h`'s comments to match.
 
-### 5. Retire the old paths
+### 5. `TileLayerResolver`
+
+`ResolveRiverLayer_` returns the river only for land tiles.
+
+### 6. Retire the old paths
 
 - `TileSpriteEdgeInset`: remove `MatchSeaLandformEdges`. `MatchRockinessEdges` and
   `DestRectForEdgeInsets` stay.
 - `CoastOverlay_t`: drop `waterNeighbors`.
 
-### 6. Configs
+### 7. Configs
 
 - `config/ui/style.json` (`tile_renderer`):
-  - `fog_terrain_dim_ratio: 0.8` and `fog_haze_color: [137, 166, 166, 128]`.
+  - `fog_terrain_dim_ratio: 0.8` and `fog_haze_color: [0, 0, 0, 128]`.
   - `water_shading`: `depth_shades` is SMAC's table for details 0–59. `tints` holds
     `OceanShelf` and `Ocean` tables of 38 entries (shades 0–37) computed as described above.
     `coast_tints` is `"OceanShelf"`.
@@ -189,7 +203,7 @@ DiamondTint_t WaterShadeTint(const DiamondShades_t& shades, const std::vector<Co
     (1000 m bands on the fixture's −4000 m floor) and distinct 4-entry tables.
   - Remove `sprite_edge_inset_ratio`.
 
-### 7. Tests
+### 8. Tests
 
 - **`tests/ui/WaterShadingTests.cpp` (new):**
   - The centre takes the band of the tile's own depth: the floor gives the first entry, just
@@ -210,13 +224,15 @@ DiamondTint_t WaterShadeTint(const DiamondShades_t& shades, const std::vector<Co
     diamond comes after the last terrain sprite and before object sprites, and object
     sprites stay untinted. This replaces "fog dims water and shore alike".
   - Coast sprites are found by texture id through the shared `sprites` list.
+  - The moisture base is a diamond draw; an object sprite is not.
+- **`tests/game/MapRulesTests.cpp`:** a river's water tile has no River layer.
 - **`tests/ui/TileSpriteEdgeInsetTests.cpp`:** remove "Coastal land neighbors do not inset
   sea landform sprites".
 - **`tests/ui/CoastOverlayTests.cpp`:** remove the `waterNeighbors` checks.
 - **`tests/game/ConfigStrictnessTests.cpp`:** style loading rejects a `coast_tints` that
   names no table and an empty `depth_shades`.
 
-### 8. Docs
+### 9. Docs
 
 - `docs/architecture/graphics-system.md`:
   - Add `DrawDiamondSprite` to the Graphics interface diagram and method list.

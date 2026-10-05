@@ -76,7 +76,10 @@ texture corner of `(k + r) & 3`.
 
 Sprites are 100×62: a 100×50 footprint diamond on the bottom 50 rows and 12 rows of art
 above it. Purple 253 is the key; dark purple 252 outlines the footprint for the artist,
-and `load_terrain` turns both into the transparent index after loading.
+and `load_terrain` turns both into the transparent index after loading. Peach 246 marks
+shadow pixels: the loader's +10 slot shift wraps it to 0, and `Sprite_draw_dest` darkens the
+terrain under those pixels through the shadow table instead of drawing them
+([smac-palette-lighting.md](smac-palette-lighting.md)).
 
 - **Tile bonuses** (`0x75B230`, 3 rows × 4 columns from (1, 253), 101 × 63 px steps):
   rows are nutrients, minerals, energy; columns are sea, sea, land, land. The draw at

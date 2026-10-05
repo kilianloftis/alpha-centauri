@@ -23,14 +23,10 @@ constexpr std::array<std::array<GridDelta_t, 3>, k_CoastCornerCount> k_CornerNei
     {{{1, 0}, {1, 1}, {0, 1}}},     // South: SE edge, S corner, SW edge
 }};
 
-constexpr std::array<GridDelta_t, 8> k_Neighbors = {{
-    {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1},
-}};
-
-const Tile* WaterNeighbor_(const Tile& rTile, const WorldMap& rMap, const GridDelta_t& delta)
+bool IsWaterNeighbor_(const Tile& rTile, const WorldMap& rMap, const GridDelta_t& delta)
 {
     const Tile* pNeighbor = rMap.GetTile(rTile.GetX() + delta.dx, rTile.GetY() + delta.dy);
-    return pNeighbor && pNeighbor->IsWater() ? pNeighbor : nullptr;
+    return pNeighbor && pNeighbor->IsWater();
 }
 
 } // namespace
@@ -53,21 +49,13 @@ CoastOverlay_t ResolveCoastOverlay(const Tile& rTile, const WorldMap& rMap)
         std::uint8_t bit = 1;
         for (const GridDelta_t& delta : k_CornerNeighbors[static_cast<std::size_t>(rArt.corner)])
         {
-            if (WaterNeighbor_(rTile, rMap, delta))
+            if (IsWaterNeighbor_(rTile, rMap, delta))
             {
                 rArt.waterMask = static_cast<std::uint8_t>(rArt.waterMask | bit);
             }
             bit = static_cast<std::uint8_t>(bit << 1);
         }
         rArt.bAlternate = bOddRow && rArt.waterMask == k_AllWater;
-    }
-
-    for (const GridDelta_t& delta : k_Neighbors)
-    {
-        if (const Tile* pWater = WaterNeighbor_(rTile, rMap, delta))
-        {
-            overlay.waterNeighbors.emplace_back(*pWater);
-        }
     }
     return overlay;
 }

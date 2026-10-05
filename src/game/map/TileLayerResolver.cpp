@@ -84,9 +84,10 @@ std::optional<std::string> ResolveLandmarkLayer_(const Tile& rTile)
     return std::nullopt;
 }
 
+// A river's last tile can be water; like SMAC, river art draws on land only.
 std::optional<std::string> ResolveRiverLayer_(const Tile& rTile)
 {
-    if (rTile.GetHasRiver())
+    if (rTile.IsLand() && rTile.GetHasRiver())
     {
         return TileLayerContent::k_River;
     }

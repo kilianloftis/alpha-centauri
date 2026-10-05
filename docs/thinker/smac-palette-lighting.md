@@ -19,7 +19,9 @@ is described in [graphics-system.md](../architecture/graphics-system.md). Sheet 
 - **Water:** per-vertex depth shade from 0 to 37 along the blue ramp. Shades of 16 and up
   switch from the shelf texture to the deep texture.
 - **Fog of war:** tiles outside current sight get shade +2, and every other scanline is
-  painted palette index 65, a pale grey-teal (137, 166, 166).
+  painted black.
+- **Object shadows:** ter1.pcx sprites mark shadows with index 246. SMAC draws them by
+  darkening the terrain underneath through its shadow table.
 
 ## palette.pcx
 
@@ -30,6 +32,13 @@ stock `Alpha Centauri.ini` has no gamma key.
 
 Only the file's palette is read. Its pixels are the artist's chart: an index grid, the
 palette laid out as 16-colour ramps, ramps added later, and the player/border colour slots.
+
+Art loads the same way, shifted into palette slots 10 and up, so a pixel's value in memory
+is its PCX index + 10 (mod 256). Index numbers in this note are `palette.pcx` indices. A raw
+value written by code is the slot, 10 above: the fog's 65 is `palette.pcx` entry 55. PCX
+indices 246–255 wrap to 0–9, which the loaders use as markers. 252 and 253 (the purple
+keys) become 6 and 7 and are rewritten to the transparent 9; 246 becomes the shadow marker
+0.
 
 `texture.pcx` carries its own palette. It matches `palette.pcx` at every index the terrain
 cells use (4–11, 20–27, 36–51, 60–70, 84–95, 104–107, 116–122, 132–134, 148–184); its
@@ -72,6 +81,36 @@ Shades are clamped to ±256 (`0x6972CC` / `0x6972D0`).
   vertex on screen by its altitude (`MapWin_get_alt`), which is where the map's relief
   comes from.
 
+## Relief
+
+`MapWin_get_alt` (`0x46FE70`) gives each tile vertex a screen lift. `MapWin_gen_terrain_poly`
+subtracts it from the vertex's y, and draws every land tile as four triangles around its
+centre, so tiles lean with the terrain.
+
+- **Centre:** `(level − 3) × lift`, where `level` is the tile's altitude (`climate >> 5`; 3 is
+  the shore line, one level is about 1000 m) and `lift = (zoom + 16) × 25 / 16` pixels. At
+  zoom 0 a tile is 96 × 48 px and `lift` is 25, about a quarter of the tile's width at every
+  zoom. A preference (`GameMorePreferences` bit `0x10000`) uses 8 instead of 25. Landmarks
+  (volcano, crater, mesa, …) add their own percentages of `lift`.
+- **Corner:** the mean of the centres of the four tiles that share it. A corner that touches
+  water or the map's top or bottom edge sits at sea level, so coasts meet the waterline.
+- **Water tiles** stay flat at sea level.
+- Heights are clamped to ±127 px and cached per tile until the zoom changes.
+
+The same pass stores, per corner, `Σ levels of the four tiles − 4 × own level` (quarter
+levels, flat = 0), which is what the lighting tables read. Corner `k` of the lighting tables
+runs W, N, E, S; facet `k` lies between corners `k` and `k + 1`. A facet's shade is
+`3√2 · cos θ`, where θ is the angle between its uphill direction and the screen's lower right:
+a facet rising toward the upper left (facing the lower right) is up to four steps lighter, the
+opposite up to four darker, and only the direction counts.
+
+### Grid
+
+Each tile draws lines along its raised edges to its neighbors (`Buffer_line_2`, `0x464CB3`).
+An edge between two land tiles is slot 37 (`palette.pcx` 27, dark green); an edge that
+touches water is slot 190 (`palette.pcx` 180, dark blue) and is drawn only when the ocean-grid
+preference (`GameMorePreferences` bit `0x800000`) is on.
+
 ## Water depth
 
 Each water vertex looks up the tile's altitude-detail byte (`alt_get_ocean_detail`,
@@ -91,8 +130,10 @@ SMAC map, water pixels average index 172, against 162 for the raw textures.
 Lighting is on for tiles in current sight. It is also on for every tile when the fog
 preference (`GameMorePreferences` bit 0) is off or the map is zoomed far out. A tile outside
 sight has every vertex at shade 2 and is drawn by `Texture_draw_2` in mode `0x41`: alternate
-scanlines are painted solid palette 65 (137, 166, 166) wherever the texel is not the key.
-Remembered terrain therefore looks slightly darker and hazed with pale lines, not dimmed.
+scanlines are painted solid slot 65 wherever the texel is not the key. Slot 65 is
+`palette.pcx` entry 55, black. Every terrain texture pass uses this mode on unlit tiles (base,
+water, fungus, coast, river), so remembered terrain shows darkened with black lines. Object
+sprites are drawn as usual.
 
 ## Colour tables
 
@@ -101,6 +142,14 @@ Remembered terrain therefore looks slightly darker and hazed with pale lines, no
 They are cached as `*.tmp` in the game folder. It also builds the faction colour tables
 (`colortables_init_faction`, `0x6F077C`) that the territory-border pass paints with. The
 terrain and water passes use neither remap table.
+
+The shadow table (`0x6F107C`, brightness −43) moves a colour two to four steps down its own
+ramp. Measured over the painted terrain, it leaves land at 0.79 of its luminance and water at
+0.92. `Sprite_draw_dest` (`0x5E5833`) uses it for object shadows: a sprite pixel of 0 (PCX
+246) replaces the screen pixel with `shadow[screen pixel]`, a key pixel is skipped, and
+anything else is drawn. The monolith, tile bonuses and sensor are drawn this way. Every
+ter1.pcx sprite with 246 pixels is a shadowed object: the bonuses (not energy), monolith,
+sensor, echelon mirror, borehole cluster and the Manifold Nexus pieces.
 
 ## Key addresses
 
@@ -115,4 +164,8 @@ terrain and water passes use neither remap table.
 | `0x7F6680` | Corner lighting tables, 4 × 49 bytes |
 | `0x6861F0` | Water depth → shade table |
 | `0x686354` | Shade for unlit tiles (2) |
+| `0x46FE70` | `MapWin_get_alt` (vertex lift) |
+| `0x462980` | Zoom: tile size and lift scale |
 | `0x423570` | `colortables_init` |
+| `0x6F107C` | Shadow table (`shadow.tmp`) |
+| `0x5E5833` | `Sprite_draw_dest` (object shadows) |

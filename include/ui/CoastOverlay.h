@@ -6,8 +6,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <vector>
 
 namespace ac
 {
@@ -37,7 +35,6 @@ struct CoastCornerArt_t
 struct CoastOverlay_t
 {
     std::array<CoastCornerArt_t, k_CoastCornerCount> corners{};
-    std::vector<std::reference_wrapper<const Tile>> waterNeighbors;
 };
 
 // Water tiles get no coast. Rows off the map count as land; x wraps.

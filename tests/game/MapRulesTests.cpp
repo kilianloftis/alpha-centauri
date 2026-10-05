@@ -155,6 +155,15 @@ TEST_CASE("Landmarks and rivers fill their own layers", "[map][layers]")
         REQUIRE(rRiver.contentId.has_value());
         CHECK(*rRiver.contentId == TileLayerContent::k_River);
     }
+
+    SECTION("a river's water tile draws no river")
+    {
+        rTile.SetElevation(-500);
+        rTile.SetHasRiver(true);
+        REQUIRE(rTile.IsWater());
+        const auto layers = ResolveTileLayers(rTile);
+        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::River)].contentId.has_value());
+    }
 }
 
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")

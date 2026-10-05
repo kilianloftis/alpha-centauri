@@ -1,7 +1,3 @@
-#include "GameFixtures.h"
-#include "TestHelpers.h"
-
-#include "game/map/Tile.h"
 #include "ui/TileSpriteEdgeInset.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -66,28 +62,6 @@ TEST_CASE("DestRectForEdgeInsets shrinks unmatched edges and stays 2:1", "[ui][t
         CHECK(dest.y + dest.height < k_Y + k_Size * 0.5f - 0.001f);
         CHECK_THAT(dest.height, WithinAbs(dest.width * 0.5f, 0.001f));
     }
-}
-
-TEST_CASE("Coastal land neighbors do not inset sea landform sprites", "[ui][tile_edge_inset]")
-{
-    actest::WorldFixture world(5, 5);
-    Tile& rShelf = *world.map.GetTile(2, 2);
-    rShelf.SetElevation(actest::TestMapRules().oceanShelfMeters);
-    REQUIRE(rShelf.IsWater());
-    REQUIRE(rShelf.HasFeature("OceanShelf"));
-
-    Tile& rShelfEast = *world.map.GetTile(3, 2);
-    rShelfEast.SetElevation(actest::TestMapRules().oceanShelfMeters);
-    REQUIRE(rShelfEast.HasFeature("OceanShelf"));
-
-    Tile& rLandSouth = *world.map.GetTile(2, 3);
-    rLandSouth.SetElevation(500);
-    REQUIRE(rLandSouth.IsLand());
-
-    const SpriteEdgeMatch_t shelf =
-        MatchSeaLandformEdges(rShelf, &world.map, "OceanShelf");
-    CHECK(shelf.bSe); // shelf east
-    CHECK(shelf.bSw); // land south — flush, not a depth-band mismatch
 }
 
 TEST_CASE("Inset sprites never extend past the tile diamond", "[ui][tile_edge_inset]")

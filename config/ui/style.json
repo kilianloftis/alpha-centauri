@@ -75,7 +75,7 @@
     "fog_fill_dim_ratio": 0.55,
     "fog_terrain_dim_ratio": 0.8,
     "fog_haze_color": [
-      137, 166, 166, 128
+      0, 0, 0, 128
     ],
     "tile_border_width": -1.0,
     "landform_ring_outer_inset_ratio": 0.12,

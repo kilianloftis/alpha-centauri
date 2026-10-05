@@ -3,8 +3,6 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 
-#include <string_view>
-
 namespace ac
 {
 
@@ -30,10 +28,6 @@ struct SpriteDestRect_t
 // Rockiness: inset against land with different rockiness. Water/missing neighbors stay flush —
 // insetting those edges would uniformly scale the diamond and pull land–land edges inward too.
 SpriteEdgeMatch_t MatchRockinessEdges(const Tile& rTile, const WorldMap* pMap);
-// contentId is the landform layer id: "OceanShelf", "Ocean", or "water".
-// Insets only against a different sea band; land neighbors stay flush (same scale trap).
-SpriteEdgeMatch_t MatchSeaLandformEdges(const Tile& rTile, const WorldMap* pMap,
-                                        std::string_view contentId);
 
 // AABB of a scaled diamond-masked sprite inside the tile diamond. size is diamond width; height
 // is size/2. Each unmatched edge moves in by insetRatio of the diamond's side; a matched edge

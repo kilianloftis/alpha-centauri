@@ -335,6 +335,7 @@ add_library(ac-ui STATIC
     ui/TileSpriteEdgeInset.cpp
     ui/CoastOverlay.cpp
     ui/TileAutotile.cpp
+    ui/WaterShading.cpp
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp

@@ -94,7 +94,8 @@ public:
                             float destHeight, const Color_t& tint) = 0;
     // Draws the texture's inscribed diamond (corners at the midpoints of its edges) onto the
     // diamond inscribed in the destination rect, as four triangles around the centre with
-    // rTint interpolated from the centre to each corner.
+    // rTint interpolated from the centre to each corner. Neighboring diamonds meet edge to edge,
+    // and edge pixels sample just inside the texture's diamond.
     virtual bool DrawDiamondSprite(const std::string& textureId, float x, float y,
                                    float destWidth, float destHeight,
                                    const DiamondTint_t& rTint) = 0;

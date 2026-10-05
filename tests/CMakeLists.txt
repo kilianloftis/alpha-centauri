@@ -132,6 +132,7 @@ add_executable(effects-tests
     ui/TileSpriteEdgeInsetTests.cpp
     ui/CoastOverlayTests.cpp
     ui/TileAutotileTests.cpp
+    ui/WaterShadingTests.cpp
     ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
     lib/SignalTests.cpp
