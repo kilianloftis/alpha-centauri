@@ -8,6 +8,7 @@
 #include "game/map/LandmarkGeneration.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldGenPresetConfigParser.h"
 #include "game/map/WorldGenerator.h"
 #include "game/map/WorldMap.h"
 
@@ -324,4 +325,56 @@ TEST_CASE("An empty footprint reaching placement is an error, not a skip",
     std::mt19937 rng(1);
     CHECK_THROWS_AS(PlaceLandmarks(world.map, {landmark}, world.improvements, rng),
                     std::runtime_error);
+}
+
+TEST_CASE("A lower ocean depth exponent deepens the sea without moving the coast",
+          "[worldgen][ocean]")
+{
+    actest::WorldFixture world;
+    MapGenerationConfig_t config = SmallMapConfig_();
+    config.oceanCoverage = 0.6f;
+    const auto generate = [&](float exponent) {
+        WorldGenPresetConfig_t preset;
+        preset.oceanDepthExponent = exponent;
+        WorldGenerator generator;
+        return generator.Generate(config, preset, WorldGenDecorationConfig_t{}, {},
+                                  world.improvements, world.dataContext.elevationRules, 7u);
+    };
+    const std::unique_ptr<WorldMap> pLinear = generate(1.0f);
+    const std::unique_ptr<WorldMap> pSteep = generate(0.5f);
+
+    bool bDeeper = false;
+    const auto linear = pLinear->GetTiles();
+    const auto steep = pSteep->GetTiles();
+    REQUIRE(linear.size() == steep.size());
+    for (std::size_t i = 0; i < linear.size(); ++i)
+    {
+        REQUIRE(linear[i]->IsWater() == steep[i]->IsWater());
+        if (linear[i]->IsWater())
+        {
+            CHECK(steep[i]->GetElevation() <= linear[i]->GetElevation());
+            bDeeper = bDeeper || steep[i]->GetElevation() < linear[i]->GetElevation();
+        }
+        else
+        {
+            CHECK(steep[i]->GetElevation() == linear[i]->GetElevation());
+        }
+    }
+    CHECK(bDeeper);
+}
+
+TEST_CASE("A preset's ocean depth exponent must be positive", "[worldgen][ocean][config]")
+{
+    const std::filesystem::path path = TempPath_("ac_presets_depth_exponent.json");
+    {
+        std::ofstream file(path);
+        file << R"([{
+            "id": "flat_sea", "name": "Flat Sea", "type": "Islands",
+            "ocean_depth_exponent": 0, "min_elevation": -4000, "max_elevation": 4000
+        }])" << '\n';
+    }
+
+    CHECK_THROWS_WITH(WorldGenPresetConfigParser{}.ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("ocean_depth_exponent"));
+    std::filesystem::remove(path);
 }

@@ -33,6 +33,9 @@ struct WorldGenPresetConfig_t
     float continentScale = 1.0f;
     float centerBias = 0.0f;
     float edgeFalloff = 0.0f;
+    // Water depth follows (how far below the waterline the noise sits, 0..1) raised to this
+    // power: 1 is linear, below 1 deepens water quickly away from the coast.
+    float oceanDepthExponent = 1.0f;
 
     // Inclusive storage range for a world generated from this preset, in meters.
     // Min is below ocean level; max is at or above it, and the range covers the

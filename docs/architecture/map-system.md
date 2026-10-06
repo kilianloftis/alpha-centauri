@@ -162,6 +162,7 @@ graph LR
     Rivers --> Bonuses[Tile bonuses]
 ```
 
+- **Ocean depth**: water takes how far below the waterline its noise sits (0–1), raised to the preset's `ocean_depth_exponent`, as a share of `min_elevation`. Below 1 the sea deepens quickly off the coast, so the shelf (above `ocean_shelf_meters`) stays a coastal band and the open sea renders as SMAC's deep blue; the shipping presets use 0.6.
 - **Landmarks before rivers**: landmark placement is the last stage that changes elevation (the Mount Planet sculpt raises peaks and roughens slopes) or stamps a `terminates_river` feature (BoreholeCluster). River tracing walks strictly downhill and stops at terminators, so it has to see the finished terrain. Run the other way round, rivers flowed down pre-sculpt slopes and straight through boreholes.
 - **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks.
 - **Orographic moisture**: elevation weight is local meters divided by the preset's `max_elevation`, clamped to [0, 1], so a tile at that ceiling takes the full `orographic_strength`. Slope saturation stays `orographic_elev_scale` in `decoration.json`.

@@ -48,6 +48,13 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
     config.continentScale = presetJson.value("continent_scale", config.continentScale);
     config.centerBias = presetJson.value("center_bias", config.centerBias);
     config.edgeFalloff = presetJson.value("edge_falloff", config.edgeFalloff);
+    config.oceanDepthExponent =
+        presetJson.value("ocean_depth_exponent", config.oceanDepthExponent);
+    if (config.oceanDepthExponent <= 0.0f)
+    {
+        throw std::runtime_error("World gen preset '" + config.id
+                                 + "' ocean_depth_exponent must be positive");
+    }
 
     config.minElevation = RequirePresetMeters_(presetJson, "min_elevation", config.id);
     config.maxElevation = RequirePresetMeters_(presetJson, "max_elevation", config.id);

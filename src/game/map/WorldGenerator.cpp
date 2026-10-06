@@ -155,9 +155,11 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
             int elevation = 0;
             if (value < threshold)
             {
+                const float belowWaterline =
+                    Remap_(value, minValue, threshold, 1.0f, 0.0f);
+                const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
                 elevation = static_cast<int>(std::lround(
-                    Remap_(value, minValue, threshold,
-                           static_cast<float>(rPreset.minElevation), -1.0f)));
+                    -1.0f + depth * static_cast<float>(rPreset.minElevation + 1)));
             }
             else
             {
