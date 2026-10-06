@@ -271,6 +271,25 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
         pConfig->excludes = expand(pConfig->excludes, "excludes", pConfig->id);
         pConfig->suppressYieldSources =
             expand(pConfig->suppressYieldSources, "suppress_yield_sources", pConfig->id);
+        pConfig->suppressTerrain =
+            expand(pConfig->suppressTerrain, "suppress_terrain", pConfig->id);
+    }
+    std::unordered_set<std::string> ids;
+    for (const ImprovementConfig_t* pConfig : configs)
+    {
+        ids.insert(pConfig->id);
+    }
+    for (const ImprovementConfig_t* pConfig : configs)
+    {
+        for (const std::string& rSuppressed : pConfig->suppressTerrain)
+        {
+            if (!ids.contains(rSuppressed))
+            {
+                throw std::runtime_error("Improvement '" + pConfig->id
+                                         + "' field 'suppress_terrain': unknown id '"
+                                         + rSuppressed + "'");
+            }
+        }
     }
 }
 
@@ -395,6 +414,7 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
     config.excludes = ConfigFields::ParseStringArray(rImprovementJson, "excludes");
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(rImprovementJson, "suppress_yield_sources");
+    config.suppressTerrain = ConfigFields::ParseStringArray(rImprovementJson, "suppress_terrain");
     config.terminatesRiver = rImprovementJson.value("terminates_river", false);
     if (rImprovementJson.contains("move_cost"))
     {

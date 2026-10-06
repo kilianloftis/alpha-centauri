@@ -104,6 +104,10 @@ struct ImprovementConfig_t
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
+    // Optional terrain ids that lie dormant on a tile carrying this terrain: kept on the tile
+    // but absent to effects, mechanics and rendering until the terrain changes (Ocean keeps
+    // Fungus dormant, so raising the sea floor to the shelf wakes it).
+    std::vector<std::string> suppressTerrain;
     // When true, downhill river flow marks this tile then stops (ThermalBorehole).
     bool terminatesRiver = false;
     // Optional move cost in fragments (JSON still uses move-points; conversion happens at
@@ -125,7 +129,7 @@ struct ImprovementConfig_t
 // True when a former can build this occupant.
 bool IsBuildable(const ImprovementConfig_t& rConfig);
 
-// Expand @tag references in excludes and suppress_yield_sources. A tag no entry declares
+// Expand @tag references in excludes, suppress_yield_sources and suppress_terrain. A tag no entry declares
 // throws. Self-references are skipped. Call on the full occupant list, so an improvement
 // may name a tag that only terrain entries carry.
 void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);

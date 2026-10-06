@@ -21,6 +21,7 @@
 #include <random>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -989,6 +990,29 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
         }
         // NE edge (bit 1) + E corner (bit 2) + SE edge (bit 3).
         CHECK(countDrawn(render(), tilePath("Fungus", 14)) == 1);
+    }
+
+    SECTION("sea fungus shows on the shelf and joins only fungus that shows")
+    {
+        const ImprovementConfig_t& rFungus = world.improvements.Get("Fungus");
+        const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+        // The tile and its NE neighbor (2, 1) on the shelf; its SE neighbor (3, 2) deeper.
+        for (const auto& [x, y, elevation] : {std::tuple{2, 2, rRules.oceanShelfMeters},
+                                              std::tuple{2, 1, rRules.oceanShelfMeters},
+                                              std::tuple{3, 2, rRules.minElevationMeters}})
+        {
+            world.map.GetTile(x, y)->SetElevation(elevation);
+            world.map.GetTile(x, y)->AddTerrainFeature(rFungus);
+        }
+        const std::string seaPrefix = TilePrefix_(rFungus.spriteTiles->sea);
+        // Only the NE edge (bit 1) connects.
+        CHECK(countDrawn(render(), TilePath_(rFungus.spriteTiles->sea, 2)) == 1);
+
+        RecordingGraphics deep;
+        TileRenderer::Render(deep, *world.map.GetTile(3, 2),
+                             TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
+                             &world.map);
+        CHECK(countDrawn(deep, seaPrefix) == 0);
     }
 
     SECTION("jungle draws once, through the landmark layer")

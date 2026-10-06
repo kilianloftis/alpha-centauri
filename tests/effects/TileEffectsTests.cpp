@@ -645,6 +645,31 @@ TEST_CASE("Fungus overrides tile yield to 1 nutrient",
     CHECK(yield.energy == 0);
 }
 
+TEST_CASE("Fungus in deeper ocean has no effect until the floor reaches the shelf",
+          "[effects][tile][yield][fungus]")
+{
+    actest::WorldFixture world;
+    Tile& rFungus = world.At(4, 4);
+    Tile& rBare = world.At(2, 2);
+    const int deep = rFungus.MapRules().oceanShelfMeters - 1;
+    rFungus.SetElevation(deep);
+    rBare.SetElevation(deep);
+    world.ctx->AddOccupantWithEffects(rFungus, "Fungus");
+
+    const TileResources_t dormant = world.ctx->ResolveTileYield(rFungus).effective;
+    const TileResources_t bare = world.ctx->ResolveTileYield(rBare).effective;
+    CHECK(dormant.nutrients == bare.nutrients);
+    CHECK(dormant.minerals == bare.minerals);
+    CHECK(dormant.energy == bare.energy);
+
+    // On the shelf the fungus takes over the tile's yield again.
+    rFungus.SetElevation(rFungus.MapRules().oceanShelfMeters);
+    const TileResources_t awake = world.ctx->ResolveTileYield(rFungus).effective;
+    CHECK(awake.nutrients == 1);
+    CHECK(awake.minerals == 0);
+    CHECK(awake.energy == 0);
+}
+
 TEST_CASE("Fungus yield can be boosted by base-effect selectors",
           "[effects][tile][yield][fungus][selector]")
 {

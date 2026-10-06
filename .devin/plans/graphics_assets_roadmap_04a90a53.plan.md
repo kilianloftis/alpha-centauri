@@ -8,6 +8,9 @@ todos:
   - id: phase1b-isometric
     content: "Phase 1b: isometric MapViewport (diamond project/unproject, hit-test, draw order, art)"
     status: completed
+  - id: phase1c-world-followups
+    content: "Phase 1c: remaining world-map art and SMAC rules (terraform improvements, landmark cells and vertex offsets, unit/base seating)"
+    status: pending
   - id: phase2-bases
     content: "Phase 2: harden extract_faction.py + draw base sprites on WorldDisplay"
     status: pending
@@ -36,7 +39,17 @@ isProject: false
 - **No shipped art**: the game binary and repo never redistribute SMAC assets. A player (or developer) with a legal install runs Python extractors that write PNGs/media into the paths configs already expect under `assets/`. Same model as [`extract_faction.py`](extract_faction.py).
 - **Source of truth**: local SMAC install at `/home/martok/.PlayOnLinux/wineprefix/AlphaCentauri_gog/drive_c/GOG Games/Sid Meier's Alpha Centauri/`.
 - **Every phase ships an extractor**: renderer/config work is incomplete without a script that recreates that phase’s assets from the install into their expected paths. Detailed plans must list the script name, inputs, and output tree.
-- **Runtime format**: PNG (RGBA, magenta keyed where needed). Keep the existing 2D path: `Graphics::LoadTexture` / `DrawSprite` — no atlas UV work until profiling says we need it.
+- **Runtime format**: PNG; no atlas UV work until profiling says we need it.
+  - Art SMAC shades (terrain and coast cells from `texture.pcx`) is **palette-index art**:
+    grey = `palette.pcx` index, alpha = coverage, drawn through `assets/sprites/palette.png` by
+    `Graphics::DrawTileSprite`'s palette shader. SMAC shades by adding to the palette index, so a
+    colour multiply cannot reproduce its ramps.
+  - Art SMAC draws unshaded (`ter1.pcx` objects; later bases, units, UI) stays RGBA through
+    `DrawSprite`.
+- **Replicate SMAC's mechanics**: port the rule from `terranx.exe` (shading, relief, sprite
+  anchoring, cell selection) instead of approximating its output. Record each finding in
+  `docs/thinker/`, then verify against the running game side by side: measure exact-palette
+  pixel share, ramp usage and sprite offsets rather than judging by eye.
 - **Config hook**: continue the optional `sprite_path` string pattern already used by terrain/improvements ([`ImprovementConfig_t::spritePath`](include/game/map/ImprovementConfigParser.h)).
 - **Units**: workshop units are Caviar `.cvr` voxels, not PCX. **Bake offline to facing PNG sheets** (option 1). `Units.pcx` covers static natives only.
 - **Video**: secret projects are `.wve` (not AVI) under `movies/`. Separate later phase.
@@ -57,10 +70,10 @@ flowchart LR
 
 | Piece | State |
 |---|---|
-| [`Graphics`](include/graphics/Graphics.h) / SFML | Texture + sprite draw ready |
-| [`TileRenderer`](src/ui/TileRenderer.cpp) | Elevation fills + optional PNG overlays; falls back when files missing |
-| [`terrain.json`](config/terrain.json) / [`improvements.json`](config/improvements.json) | Already point at `assets/sprites/...` paths that do not exist yet |
-| [`TileLayerResolver`](src/game/map/TileLayerResolver.cpp) | Layer model exists; **not** used by live `TileRenderer` |
+| [`Graphics`](include/graphics/Graphics.h) / SFML | Sprite draw, palette-shaded tile draw (`DrawTileSprite`), shape fills |
+| [`TileRenderer`](src/ui/TileRenderer.cpp) | SMAC terrain: autotiled land/fungus/forest/river cells, coasts, depth-shaded sea, relief and slope shading, fog; procedural fallback when art is missing |
+| [`extract_terrain.py`](extract_terrain.py) | `texture.pcx` cells as index art, coasts, `palette.pcx`, `ter1.pcx` bonuses and Monolith |
+| [`improvements.json`](config/improvements.json) | Terraform improvements and bases have no art yet |
 | [`extract_faction.py`](extract_faction.py) | Faction sheet slicer only |
 
 ## Asset pipeline (shared across phases)
@@ -92,9 +105,15 @@ Document layout discoveries next to each extractor (region tables are reverse-en
 
 **Source sheets:** `texture.pcx` (base land/sea/fungus/river/road/cliffs), then `ter1.pcx` / `ter1wreck.pcx` (improvements, bonuses, monolith). `S#L#C#.pcx` are orbital planet art, not map tiles — out of Phase 1.
 
-**Elevation (settled for Phase 1):** not a `TileLayer`. SMAC shades height/depth by palette offset at draw time and uses cliff-edge sprites for neighbor slopes. We keep continuous meters and apply an elevation/fog **tint** when drawing terrain sprites; cliff-edge compositing is deferred (needs slope rules on our square viewport). Details in the Phase 1 plan.
+**Elevation (settled):** not a `TileLayer`. Tile corners rise with the terrain and slopes are
+shaded by palette offset, as SMAC does; the map display setting picks smooth heights, SMAC's
+whole-level steps, or flat. Water is shaded by depth on SMAC's 50 m detail scale, and its deep
+or shelf art follows the corners' depth. Detailed plans:
+[terrain-relief.md](../../docs/plans/terrain-relief.md),
+[terrain-palette-shading.md](../../docs/plans/terrain-palette-shading.md),
+[sea-depth-shading.md](../../docs/plans/sea-depth-shading.md).
 
-**Extractor + renderer:** see Phase 1 detailed plan (`extract_terrain.py`, `TileLayerResolver` draw path, scaled+tinted sprites).
+**Extractor + renderer:** see the Phase 1 detailed plans (`extract_terrain.py`, `TileLayerResolver` draw path, palette-shaded terrain cells).
 
 Phase 1 deliberately skips bases, units, and UI chrome.
 
@@ -102,9 +121,27 @@ Phase 1 deliberately skips bases, units, and UI chrome.
 
 **Goal:** SMAC-style diamond presentation; gameplay grid stays square.
 
-See detailed plan: [isometric_map_viewport.plan.md](isometric_map_viewport.plan.md) — `MapViewport` project/unproject, hit-test, back-to-front draw, diamond `TileRenderer` footprint, art mask/crops; elevation skirts deferred inside that plan.
+See detailed plan: [isometric_map_viewport.plan.md](isometric_map_viewport.plan.md) — `MapViewport` project/unproject, hit-test, back-to-front draw, diamond `TileRenderer` footprint, art mask/crops. Relief (raised corners) landed separately in
+[terrain-relief.md](../../docs/plans/terrain-relief.md).
 
 Land this before Phase 2 so faction bases sit on the diamond grid.
+
+### Phase 1c — Remaining world-map art and rules
+
+**Goal:** finish the world map before bases.
+
+- **Terraform improvements:** extend `extract_terrain.py` to the `texture.pcx` road, mag tube
+  and farm cells and the `ter1.pcx` mine, solar collector, condenser, mirror, borehole, bunker,
+  airbase, sensor, kelp, platform and harness sprites
+  ([smac-terrain-textures.md](../../docs/thinker/smac-terrain-textures.md) lists the crops), and
+  wire them into `improvements.json`.
+- **Landmarks:** extract the volcano, crater, mesa and dunes cells, and port SMAC's per-vertex
+  brightness offsets and lift percentages for those landmarks
+  ([smac-palette-lighting.md](../../docs/thinker/smac-palette-lighting.md)).
+- **Unit and base seating:** units, base labels and markers still sit on the raised tile centre;
+  confirm SMAC's anchor for them (terrain objects use the corners' mean) and match it.
+- **Map content:** SMAC maps carry more fungus, rivers and supply pods than ours; tune
+  `decoration.json` and the generator against a SMAC map.
 
 ### Phase 2 — Faction bases on the map
 
@@ -163,6 +200,19 @@ Land this before Phase 2 so faction bases sit on the diamond grid.
 - Each phase gets its own detailed plan before implementation (and that plan must name the extractor).
 - Architecture docs update when the live draw path changes (Phase 1+).
 
+## SMAC rules every phase reuses
+
+- **Palette:** art loads into palette slots 10 and up (slot = `palette.pcx` index + 10); PCX
+  246 marks shadow pixels, 252/253 are keys.
+- **Object anchor:** a `ter1.pcx` cell (100 × 62) draws from the tile's top corner down, seated
+  at the mean of the tile's four corner heights. A tile draws terrain, then its grid edges,
+  then its objects.
+- **Fog:** terrain under fog is shaded 2 palette steps darker with a black haze; objects draw
+  clear on top.
+- **Map content shapes the look:** sea depth, shelf width and fungus cover come from world
+  generation, so compare palette usage before blaming the renderer (`ocean_depth_exponent`
+  brought our sea in line).
+
 ## Immediate next step
 
-Write the **Phase 1 detailed plan**: reverse-engineer `texture.pcx` / `S#L#C#` layouts against our landform/moisture/rockiness/vegetation model, define exact PNG output paths for `extract_terrain.py`, and list the concrete `TileRenderer` + config edits.
+Write the **Phase 1c detailed plan**, starting with terraform improvement art.

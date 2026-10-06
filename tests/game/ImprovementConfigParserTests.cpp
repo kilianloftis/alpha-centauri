@@ -163,6 +163,28 @@ TEST_CASE("@buildable cannot be authored by hand", "[improvements][parser]")
                           && Catch::Matchers::ContainsSubstring("turns_required"));
 }
 
+TEST_CASE("suppress_terrain expands tags and rejects ids no occupant has",
+          "[improvements][parser]")
+{
+    std::vector<ImprovementConfig_t> occupants;
+    ImprovementConfig_t fungus;
+    fungus.id = "Fungus";
+    fungus.tags = {"bloom"};
+    ImprovementConfig_t ocean;
+    ocean.id = "Ocean";
+    ocean.suppressTerrain = {"@bloom"};
+    occupants.push_back(fungus);
+    occupants.push_back(ocean);
+
+    ExpandFeatureTagReferences(occupants);
+    CHECK(occupants[1].suppressTerrain == std::vector<std::string>{"Fungus"});
+
+    occupants[1].suppressTerrain = {"Kraken"};
+    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+                      Catch::Matchers::ContainsSubstring("suppress_terrain")
+                          && Catch::Matchers::ContainsSubstring("Kraken"));
+}
+
 TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][parser]")
 {
     const auto path = WriteTempJson("ac_improvement_suppress.json", R"([

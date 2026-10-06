@@ -1102,7 +1102,10 @@ band rather than replacing it: a submerged tile carries `Water` plus exactly one
 tiles on `Water` — including `suppress_yield_sources` for rockiness, moisture, river, and
 `@resource_bonus` (sea tiles still carry those landform features, but they must not contribute
 yield). Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing and is
-excluded by sea terraform. Do not suppress `@landform` from `Water`: that tag includes
+excluded by sea terraform. `Ocean` lists `Fungus` in `suppress_terrain`: as in SMAC, fungus in
+deeper ocean lies dormant. The tile keeps it (`HasTerrainFeature`), but `HasFeature`,
+`GetTerrainFeatures` and `ForEachOccupant` leave it out, so its effects, its move cost, every
+rule and the renderer see an empty tile until terraforming raises the floor to the shelf. Do not suppress `@landform` from `Water`: that tag includes
 `OceanShelf` and would erase the shelf nutrient. `AttackerIsEmbarked` is available for
 mod-scoped override conditions.
 

@@ -237,8 +237,9 @@ UI components use the Graphics interface to render game information.
 - **Rivers**: the River layer draws its `edges` cell; without art, lines run from the tile
   centre to each connected edge's midpoint (`GetRiverConnections`), or a short cross with no
   connection. Style keys `river_color` / `river_line_thickness_ratio` under `tile_renderer`
-- **Layers**: fungus wins vegetation; a landmark (Monsoon Jungle) draws on its own layer and
-  is skipped by the feature-sprite pass
+- **Layers**: fungus wins vegetation (fungus in deeper ocean is dormant and draws nothing, see
+  `suppress_terrain` in effects-system.md); a landmark (Monsoon Jungle) draws on its own layer
+  and is skipped by the feature-sprite pass
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)

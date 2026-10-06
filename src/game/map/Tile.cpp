@@ -423,7 +423,13 @@ bool Tile::HasFeature(std::string_view featureId) const
     }
     if (magic_enum::enum_name(m_rockiness) == featureId) return true;
     if (magic_enum::enum_name(m_moisture)  == featureId) return true;
-    if (HasTerrainFeature(featureId)) return true;
+    // Bound tiles answer from the active list, which leaves out dormant terrain.
+    const bool bActiveTerrain =
+        m_pOccupants ? std::any_of(m_terrainFeatures.begin(), m_terrainFeatures.end(),
+                                   [&](const ImprovementConfig_t* pConfig)
+                                   { return pConfig->id == featureId; })
+                     : HasTerrainFeature(featureId);
+    if (bActiveTerrain) return true;
     return HasImprovement(featureId);
 }
 
@@ -462,9 +468,19 @@ void Tile::RefreshTerrainFeatures_()
     {
         pushFeature(magic_enum::enum_name(TerrainFeature_t::Aquifer));
     }
+    // Optional terrain the intrinsic terrain suppresses stays stored but dormant.
+    const std::size_t intrinsicCount = m_terrainFeatures.size();
+    const auto dormant = [&](const ImprovementConfig_t& rFeature) {
+        return std::any_of(m_terrainFeatures.begin(),
+                           m_terrainFeatures.begin() + static_cast<std::ptrdiff_t>(intrinsicCount),
+                           [&rFeature](const ImprovementConfig_t* pTerrain) {
+                               return std::ranges::find(pTerrain->suppressTerrain, rFeature.id)
+                                      != pTerrain->suppressTerrain.end();
+                           });
+    };
     for (const ImprovementConfig_t* pFeature : m_optionalTerrain)
     {
-        if (pFeature)
+        if (pFeature && !dormant(*pFeature))
         {
             m_terrainFeatures.push_back(pFeature);
         }

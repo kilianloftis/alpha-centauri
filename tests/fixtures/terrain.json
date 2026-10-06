@@ -149,6 +149,7 @@
         "landform"
       ],
       "sprite_paths": {"sea": ["tests/fixtures/sprites/ocean.png"]},
+      "suppress_terrain": ["Fungus"],
       "effects": []
     },
     {

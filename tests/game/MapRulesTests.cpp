@@ -4,6 +4,7 @@
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
 
+#include <algorithm>
 #include <span>
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
@@ -59,6 +60,37 @@ TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
     const auto& rVegetation = layers[static_cast<size_t>(TileLayerType_t::Vegetation)];
     REQUIRE(rVegetation.contentId.has_value());
     CHECK(*rVegetation.contentId == TileLayerContent::k_Fungus);
+}
+
+TEST_CASE("Fungus in deeper ocean lies dormant until the floor reaches the shelf",
+          "[map][layers][fungus]")
+{
+    actest::WorldFixture world(5, 5);
+    Tile& rTile = *world.map.GetTile(1, 1);
+    rTile.SetElevation(actest::TestMapRules().oceanShelfMeters - 1);
+    rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
+    REQUIRE(rTile.HasFeature("Ocean"));
+    const auto vegetation = [&rTile]() {
+        return ResolveTileLayers(rTile)[static_cast<size_t>(TileLayerType_t::Vegetation)];
+    };
+    const auto activeFungus = [&rTile]() {
+        return std::ranges::any_of(rTile.GetTerrainFeatures(), [](const auto* pConfig) {
+            return pConfig->id == ImprovementIds::k_Fungus;
+        });
+    };
+
+    // Stored, but absent to every rule and to rendering.
+    CHECK(rTile.HasTerrainFeature(ImprovementIds::k_Fungus));
+    CHECK_FALSE(rTile.HasFeature(ImprovementIds::k_Fungus));
+    CHECK_FALSE(activeFungus());
+    CHECK_FALSE(vegetation().contentId.has_value());
+
+    // Raised to the shelf, the same fungus wakes.
+    rTile.SetElevation(actest::TestMapRules().oceanShelfMeters);
+    CHECK(rTile.HasFeature(ImprovementIds::k_Fungus));
+    CHECK(activeFungus());
+    REQUIRE(vegetation().contentId.has_value());
+    CHECK(*vegetation().contentId == TileLayerContent::k_Fungus);
 }
 
 TEST_CASE("Land rockiness overlays resolve above moisture; flat landform is empty",

@@ -124,6 +124,8 @@ public:
 
     // Optional terrain occupants (fungus, landmarks, resource bonuses, Monolith). Axes,
     // rivers, and aquifers stay on their own fields and are mirrored alongside these.
+    // HasTerrainFeature reports what is stored, including terrain the tile's intrinsic terrain
+    // keeps dormant (suppress_terrain); HasFeature and GetTerrainFeatures see active terrain only.
     void AddTerrainFeature(const ImprovementConfig_t& rConfig);
     void RemoveTerrainFeature(std::string_view featureId);
     bool HasTerrainFeature(std::string_view featureId) const;
@@ -142,7 +144,7 @@ public:
     const std::vector<std::pair<std::string, std::string>>& GetCoexistenceWaivers() const;
 
     // Terrain configs: rockiness, moisture, every active TerrainFeature_t, then optional
-    // terrain. Intrinsic properties are mirrored as registry pointers after BindOccupants,
+    // terrain that is not dormant. Intrinsic properties are mirrored as registry pointers after BindOccupants,
     // ordered general-to-specific (Water before its depth band).
     // Improvements are NOT included — effect collectors iterate GetImprovements().
     const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
