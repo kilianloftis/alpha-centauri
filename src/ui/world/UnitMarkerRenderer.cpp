@@ -34,7 +34,8 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
     const float spacing = tileWidth * s.spacingRatio;
     const Faction* pPlayer = rGameState.GetPlayerFaction();
 
-    rViewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+    rViewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
+        const auto [tileX, tileY] = rViewport.FootprintOrigin(rShape);
         const std::vector<Unit*> units = rWorldMap.GetAllUnitsOnTile(rTile);
         if (units.empty())
         {
@@ -69,7 +70,7 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
             m_markerRects[pUnit->GetUnitId()] = marker;
             DrawMarker(rGraphics, *pUnit, marker, pUnit == m_pSelectedUnit);
         }
-    });
+    }, /*bShaded*/ false);
 }
 
 std::optional<Rectangle_t> UnitMarkerRenderer::GetCachedMarkerRect(UnitId_t unitId) const

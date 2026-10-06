@@ -162,6 +162,7 @@ TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
     CHECK(contents.find("new_facility_built") != std::string::npos);
     CHECK(contents.find("build_orders_out_of_date") != std::string::npos);
     CHECK(contents.find("map_generation") != std::string::npos);
+    CHECK(contents.find("map_display") != std::string::npos);
     CHECK(contents.find("graphics") != std::string::npos);
     CHECK(contents.find("debug_options") == std::string::npos);
 
@@ -398,4 +399,60 @@ TEST_CASE("GameSettings SetVisibility emits OnVisibilityChanged only on change",
     visibility.removeFog = false;
     settings.SetVisibility(visibility);
     CHECK(emissions == 2);
+}
+
+TEST_CASE("GameSettings Save and Load round-trip map_display", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_map_display.json");
+    std::filesystem::remove(path);
+
+    {
+        GameSettings settings;
+        settings.SetMapDisplay(MapDisplayConfig_t{ReliefMode_t::Stepped, /*bOceanGrid*/ true});
+        settings.Save(path.string());
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    CHECK(loaded.GetMapDisplay().relief == ReliefMode_t::Stepped);
+    CHECK(loaded.GetMapDisplay().bOceanGrid);
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings defaults to smooth relief without an ocean grid", "[GameSettings]")
+{
+    const GameSettings settings;
+    CHECK(settings.GetMapDisplay().relief == ReliefMode_t::Smooth);
+    CHECK_FALSE(settings.GetMapDisplay().bOceanGrid);
+}
+
+TEST_CASE("GameSettings rejects an unknown relief mode", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_bad_relief.json");
+    {
+        std::ofstream file(path);
+        file << R"({"map_display": {"relief": "bumpy"}})";
+    }
+
+    GameSettings settings;
+    CHECK_THROWS_WITH(settings.Load(path.string()),
+                      Catch::Matchers::ContainsSubstring("map_display.relief"));
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings SetMapDisplay emits OnMapDisplayChanged only on change", "[GameSettings]")
+{
+    GameSettings settings;
+    int emissions = 0;
+    auto connection = settings.OnMapDisplayChanged.ConnectScoped([&]() { ++emissions; });
+
+    MapDisplayConfig_t display;
+    display.relief = ReliefMode_t::Flat;
+    settings.SetMapDisplay(display);
+    CHECK(emissions == 1);
+
+    settings.SetMapDisplay(display);
+    CHECK(emissions == 1);
 }

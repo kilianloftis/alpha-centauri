@@ -524,7 +524,7 @@ TEST_CASE("A colour with too many components is a typo, not extra data", "[confi
                       Catch::Matchers::ContainsSubstring("background_color"));
 }
 
-TEST_CASE("Water shading must name the tints its coast uses and give at least one depth band",
+TEST_CASE("Tile renderer style rejects unusable water shading and relief values",
           "[config][ui]")
 {
     std::ifstream in(actest::FixturePath("ui/style.json"));
@@ -539,13 +539,74 @@ TEST_CASE("Water shading must name the tints its coast uses and give at least on
         return mutated;
     };
 
-    SECTION("coast_tints names no tints entry")
+    SECTION("coast_shades names no shades entry")
     {
-        TempConfigFile config("ac_style_coast_tints.json",
-                              withReplaced("\"coast_tints\": \"OceanShelf\"",
-                                           "\"coast_tints\": \"Lagoon\""));
+        TempConfigFile config("ac_style_coast_shades.json",
+                              withReplaced("\"coast_shades\": \"OceanShelf\"",
+                                           "\"coast_shades\": \"Lagoon\""));
         CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("coast_tints"));
+                          Catch::Matchers::ContainsSubstring("coast_shades"));
+    }
+
+    SECTION("the depth detail step is not positive")
+    {
+        TempConfigFile config("ac_style_detail.json",
+                              withReplaced("\"detail_meters\": 1000", "\"detail_meters\": 0"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("detail_meters"));
+    }
+
+    SECTION("deep_landform names no shades entry")
+    {
+        TempConfigFile config("ac_style_deep_landform.json",
+                              withReplaced("\"deep_landform\": \"Ocean\"",
+                                           "\"deep_landform\": \"Trench\""));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("deep_landform"));
+    }
+
+    SECTION("a water shade range has a negative cap")
+    {
+        TempConfigFile config("ac_style_shade_cap.json",
+                              withReplaced("\"OceanShelf\": {\"offset\": 0, \"max\": 2}",
+                                           "\"OceanShelf\": {\"offset\": 0, \"max\": -1}"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("OceanShelf.max"));
+    }
+
+    SECTION("fogged land is shaded lighter")
+    {
+        TempConfigFile config("ac_style_fog_shade.json",
+                              withReplaced("\"fog_land_shade\": 3", "\"fog_land_shade\": -1"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("fog_land_shade"));
+    }
+
+    SECTION("a relief ratio is not positive")
+    {
+        TempConfigFile config("ac_style_relief.json",
+                              withReplaced("\"lift_per_level_ratio\": 0.25",
+                                           "\"lift_per_level_ratio\": 0"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("relief"));
+    }
+
+    SECTION("the full-shade rise is not positive")
+    {
+        TempConfigFile config("ac_style_full_shade.json",
+                              withReplaced("\"full_shade_rise_meters\": 250",
+                                           "\"full_shade_rise_meters\": 0"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("full_shade_rise_meters"));
+    }
+
+    SECTION("altitude light is negative")
+    {
+        TempConfigFile config("ac_style_altitude_light.json",
+                              withReplaced("\"altitude_light_steps\": 0",
+                                           "\"altitude_light_steps\": -1"));
+        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("altitude_light_steps"));
     }
 
     SECTION("depth_shades is empty")

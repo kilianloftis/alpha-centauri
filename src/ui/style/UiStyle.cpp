@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -92,30 +93,64 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
                 "tile_renderer.water_shading.depth_shades must not be negative");
         }
     }
-    const nlohmann::json& rTints = j.at("tints");
-    if (!rTints.is_object() || rTints.empty())
+    const nlohmann::json& rShades = j.at("shades");
+    if (!rShades.is_object() || rShades.empty())
     {
         throw std::runtime_error(
-            "tile_renderer.water_shading.tints must name at least one landform");
+            "tile_renderer.water_shading.shades must name at least one landform");
     }
-    for (const auto& [landform, rTable] : rTints.items())
+    for (const auto& [landform, rRange] : rShades.items())
     {
-        const std::string key = "tile_renderer.water_shading.tints." + landform;
-        if (!rTable.is_array() || rTable.empty())
+        WaterShadeRange_t range{rRange.at("offset").get<int>(), rRange.at("max").get<int>()};
+        if (range.max < 0)
         {
-            throw std::runtime_error(key + " must be a non-empty list of colours");
+            throw std::runtime_error("tile_renderer.water_shading.shades." + landform
+                                     + ".max must not be negative");
         }
-        std::vector<Color_t>& rColors = s.tints[landform];
-        for (const nlohmann::json& rColor : rTable)
+        s.shades.emplace(landform, range);
+    }
+    s.coastShades = j.at("coast_shades").get<std::string>();
+    s.detailMeters = j.at("detail_meters").get<float>();
+    if (s.detailMeters <= 0.0f)
+    {
+        throw std::runtime_error("tile_renderer.water_shading.detail_meters must be positive");
+    }
+    s.deepLandform = j.at("deep_landform").get<std::string>();
+    s.shelfLandform = j.at("shelf_landform").get<std::string>();
+    for (const auto& [key, rLandform] : {std::pair{"coast_shades", &s.coastShades},
+                                         std::pair{"deep_landform", &s.deepLandform},
+                                         std::pair{"shelf_landform", &s.shelfLandform}})
+    {
+        if (!s.shades.contains(*rLandform))
         {
-            rColors.push_back(ParseColorValue_(rColor, key));
+            throw std::runtime_error(std::string("tile_renderer.water_shading.") + key + " '"
+                                     + *rLandform + "' names no shades entry");
         }
     }
-    s.coastTints = j.at("coast_tints").get<std::string>();
-    if (!s.tints.contains(s.coastTints))
+    s.deepFromShade = j.at("deep_from_shade").get<int>();
+    if (s.deepFromShade < 0)
     {
-        throw std::runtime_error("tile_renderer.water_shading.coast_tints '" + s.coastTints
-                                 + "' names no tints entry");
+        throw std::runtime_error("tile_renderer.water_shading.deep_from_shade must not be negative");
+    }
+    return s;
+}
+
+ReliefStyle_t ParseReliefStyle_(const nlohmann::json& j)
+{
+    ReliefStyle_t s{};
+    s.liftPerLevelRatio = j.at("lift_per_level_ratio").get<float>();
+    s.levelMeters = j.at("level_meters").get<float>();
+    s.fullShadeRiseMeters = j.at("full_shade_rise_meters").get<float>();
+    s.altitudeLightSteps = j.at("altitude_light_steps").get<float>();
+    if (s.liftPerLevelRatio <= 0.0f || s.levelMeters <= 0.0f || s.fullShadeRiseMeters <= 0.0f)
+    {
+        throw std::runtime_error(
+            "tile_renderer.relief: lift_per_level_ratio, level_meters and full_shade_rise_meters "
+            "must be positive");
+    }
+    if (s.altitudeLightSteps < 0.0f)
+    {
+        throw std::runtime_error("tile_renderer.relief: altitude_light_steps must not be negative");
     }
     return s;
 }
@@ -123,7 +158,6 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
 TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
 {
     TileRendererStyle_t s{};
-    s.tileBorderColor = ParseColor_(j, "tile_border_color");
     s.waterLowColor = ParseColor_(j, "water_low_color");
     s.waterHighColor = ParseColor_(j, "water_high_color");
     s.landLowColor = ParseColor_(j, "land_low_color");
@@ -135,13 +169,12 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.rollingRingColor = ParseColor_(j, "rolling_ring_color");
     s.rockyRingColor = ParseColor_(j, "rocky_ring_color");
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
-    s.fogTerrainDimRatio = j.at("fog_terrain_dim_ratio").get<float>();
-    if (s.fogTerrainDimRatio < 0.0f || s.fogTerrainDimRatio > 1.0f)
+    s.fogLandShade = j.at("fog_land_shade").get<float>();
+    if (s.fogLandShade < 0.0f)
     {
-        throw std::runtime_error("tile_renderer.fog_terrain_dim_ratio must be in [0, 1]");
+        throw std::runtime_error("tile_renderer.fog_land_shade must not be negative");
     }
     s.fogHazeColor = ParseColor_(j, "fog_haze_color");
-    s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.landformRingOuterInsetRatio = j.at("landform_ring_outer_inset_ratio").get<float>();
     s.landformRingInnerInsetRatio = j.at("landform_ring_inner_inset_ratio").get<float>();
     s.spriteOverlayEdgeInsetRatio = j.at("sprite_overlay_edge_inset_ratio").get<float>();
@@ -155,9 +188,22 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     {
         throw std::runtime_error("tile_renderer.coast_sprite_dir must not be empty");
     }
+    s.palettePath = j.at("palette_path").get<std::string>();
+    if (s.palettePath.empty())
+    {
+        throw std::runtime_error("tile_renderer.palette_path must not be empty");
+    }
     s.riverColor = ParseColor_(j, "river_color");
     s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.waterShading = ParseWaterShadingStyle_(j.at("water_shading"));
+    s.relief = ParseReliefStyle_(j.at("relief"));
+    s.gridLandColor = ParseColor_(j, "grid_land_color");
+    s.gridWaterColor = ParseColor_(j, "grid_water_color");
+    s.gridLineWidth = j.at("grid_line_width").get<float>();
+    if (s.gridLineWidth <= 0.0f)
+    {
+        throw std::runtime_error("tile_renderer.grid_line_width must be positive");
+    }
     return s;
 }
 

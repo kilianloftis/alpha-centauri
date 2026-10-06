@@ -2,8 +2,13 @@
 
 #include "lib/config/ConfigFields.h"
 
+#include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
+
+#include <algorithm>
+#include <cctype>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 
 namespace ac
@@ -106,6 +111,41 @@ void LoadGraphics_(const nlohmann::json& rJson, GraphicsConfig_t& rConfig,
         throw std::runtime_error("Game settings '" + rPath
                                  + "': graphics.font_paths must name at least one font");
     }
+}
+
+void LoadMapDisplay_(const nlohmann::json& rJson, MapDisplayConfig_t& rConfig,
+                     const std::string& rPath)
+{
+    const nlohmann::json* pSection = FindSection_(rJson, "map_display", rPath);
+    if (!pSection)
+    {
+        return;
+    }
+
+    if (pSection->contains("relief"))
+    {
+        const nlohmann::json& rRelief = pSection->at("relief");
+        const auto relief =
+            rRelief.is_string()
+                ? magic_enum::enum_cast<ReliefMode_t>(rRelief.get<std::string>(),
+                                                      magic_enum::case_insensitive)
+                : std::nullopt;
+        if (!relief)
+        {
+            throw std::runtime_error("Game settings '" + rPath
+                                     + "': map_display.relief must be flat, smooth or stepped");
+        }
+        rConfig.relief = *relief;
+    }
+    rConfig.bOceanGrid = pSection->value("ocean_grid", rConfig.bOceanGrid);
+}
+
+std::string ReliefName_(ReliefMode_t relief)
+{
+    std::string name(magic_enum::enum_name(relief));
+    std::ranges::transform(name, name.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name;
 }
 
 void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
@@ -249,6 +289,16 @@ void GameSettings::SetMapGeneration(const MapGenerationConfig_t& rConfig)
     OnMapGenerationChanged.Emit();
 }
 
+void GameSettings::SetMapDisplay(const MapDisplayConfig_t& rConfig)
+{
+    if (m_mapDisplay == rConfig)
+    {
+        return;
+    }
+    m_mapDisplay = rConfig;
+    OnMapDisplayChanged.Emit();
+}
+
 void GameSettings::Load(const std::string& path)
 {
     m_path = path;
@@ -265,16 +315,19 @@ void GameSettings::Load(const std::string& path)
     VisibilityConfig_t visibility;
     PauseOnEventsConfig_t pauseOnEvents;
     MapGenerationConfig_t mapGeneration;
+    MapDisplayConfig_t mapDisplay;
     LoadGameRules_(json, gameRules, path);
     LoadVisibility_(json, visibility, path);
     LoadPauseOnEvents_(json, pauseOnEvents, path);
     LoadMapGeneration_(json, mapGeneration, path);
     ValidateMapGeneration_(mapGeneration, path);
+    LoadMapDisplay_(json, mapDisplay, path);
     LoadGraphics_(json, m_graphics, path);
     SetGameRules(gameRules);
     SetVisibility(visibility);
     SetPauseOnEvents(pauseOnEvents);
     SetMapGeneration(mapGeneration);
+    SetMapDisplay(mapDisplay);
 }
 
 void GameSettings::Save() const
@@ -314,6 +367,10 @@ void GameSettings::Save(const std::string& path) const
         {"fungal_bloom", m_pauseOnEvents.fungalBloom},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
+    json["map_display"] = {
+        {"relief", ReliefName_(m_mapDisplay.relief)},
+        {"ocean_grid", m_mapDisplay.bOceanGrid},
+    };
     json["graphics"] = {
         {"window_width", m_graphics.windowWidth},
         {"window_height", m_graphics.windowHeight},

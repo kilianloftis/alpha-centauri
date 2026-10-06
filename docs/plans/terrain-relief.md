@@ -46,14 +46,20 @@ Tiles are flat diamonds at their grid position. Nothing shows elevation, and the
   - Unexplored tiles keep their real lift, so the map has no seams at the shroud's edge.
 - **Lighting** applies to land in sight, with relief on.
   - The corners are W, N, E, S, and facet `k` lies between corners `k` and `k + 1`.
-  - A facet's shade is `−3·(s + t) / max(√(s² + t²), 1)`. Here `(s, t)` is
+  - A facet's shade is `−3·(s + t) / max(√(s² + t²), r)`. Here `(s, t)` is
     `(a_k, a_{k+1})` turned a quarter turn per facet (`(a, b)`, `(−b, a)`, `(−a, −b)`,
-    `(b, −a)`), and `a_c` is corner `c`'s height above the centre in quarter levels.
-  - Stepped heights give SMAC's integer inputs, so the result matches SMAC exactly. Smooth
-    heights scale the shade down on slopes gentler than a quarter level.
+    `(b, −a)`), `a_c` is corner `c`'s height above the centre in quarter levels, and `r` is
+    `full_shade_rise_meters` in quarter levels.
+  - A slope gets full shade once a corner rises `r` above the centre, and gentler slopes shade
+    in proportion. SMAC's `r` is one quarter level. Stepped heights give SMAC's whole quarter
+    levels, so any `r` up to one quarter level matches SMAC exactly. Smooth heights rise mostly
+    100–300 m between neighbors, so a smaller `r` (100 m) lets their slopes show.
   - A vertex shade is the mean of the facets that meet at it: four at the centre, and at a
-    corner the two facets of each of the four tiles sharing it, water counting as 0. Light is
-    `light_step_ratio ^ shade`.
+    corner the two facets of each of the four tiles sharing it, water counting as 0.
+  - Altitude lightens the vertex by `altitude_light_steps` steps per level of its height above
+    sea level (its corner height at a corner), so higher ground reads brighter. SMAC has no
+    such term; 0 turns it off.
+  - Light is `light_step_ratio ^ shade`.
   - Water, fogged tiles and flat mode get light 1.
 - **One geometry.** `MapViewport` owns relief:
   - Every visible tile comes with its raised shape (centre and four corners).
@@ -106,14 +112,19 @@ Tiles are flat diamonds at their grid position. Nothing shows elevation, and the
 
 ### 2. Style (`tile_renderer`)
 
-- Add `relief` with `lift_per_level_ratio` (0.26: SMAC's 25 px per level on a 96 px tile),
-  `level_meters` (1000) and `light_step_ratio` (0.9, one palette step on the terrain ramps).
+- Add `relief`:
+  - `lift_per_level_ratio` (0.26: SMAC's 25 px per level on a 96 px tile);
+  - `level_meters` (1000);
+  - `light_step_ratio` (0.9, one palette step on the terrain ramps);
+  - `full_shade_rise_meters` (100);
+  - `altitude_light_steps` (1.0).
 - Add `grid_land_color` (`[21, 41, 24, 255]`, `palette.pcx` 27), `grid_water_color`
   (`[14, 37, 75, 255]`, `palette.pcx` 180) and `grid_line_width` (1.0).
 - Remove `tile_border_color` and `tile_border_width` from `tile_renderer`. The base screen's
   own keys stay.
-- The parser requires all of these: the ratios positive and `level_meters` above 0.
-  `tests/fixtures/ui/style.json` gets fixture values.
+- The parser requires all of these: the ratios, `level_meters` and `full_shade_rise_meters`
+  positive, and `altitude_light_steps` at least 0. `tests/fixtures/ui/style.json` gets fixture
+  values.
 
 ### 3. `TileRelief` (new: `include/ui/TileRelief.h`, `src/ui/TileRelief.cpp`)
 
@@ -149,7 +160,8 @@ of the tiles around each corner.
 - `NullGraphics` returns true or does nothing.
 - `RecordingGraphics` records the shape on `SpriteDraw_t`, and records fills as rects of the
   shape's bounding box, also carrying the shape.
-- `WaterShadeTint` writes its five tints into a `TileShape_t`'s vertices.
+- `WaterShadeTint` becomes `ApplyWaterShadeTint`, which writes its five tints into a
+  `TileShape_t`'s vertices.
 
 ### 5. `MapViewport`
 
@@ -191,8 +203,11 @@ of the tiles around each corner.
   - Lights:
     - flat land and water are 1;
     - a facet rising toward the upper left is lighter and the opposite darker;
-    - stepped results match SMAC's integer formula;
-    - in smooth mode a slope gentler than a quarter level shades less than a steeper one;
+    - stepped results match SMAC's integer formula, for any full-shade rise up to a quarter
+      level;
+    - in smooth mode a slope gentler than the full-shade rise shades less than a steeper one,
+      and slopes at or above it shade the same;
+    - level land lightens by the altitude light per level, and water stays 1;
     - flat mode gives 1.
 - **`tests/ui/MapViewportTests.cpp`:**
   - A raised tile's centre is above its flat centre.
@@ -212,7 +227,8 @@ of the tiles around each corner.
 - **`GameSettings`:** `map_display` loads, saves and round-trips, and rejects an unknown
   relief value.
 - **`SettingsPanel`:** a click on the Choice row cycles Smooth → Stepped → Flat and saves.
-- **Style:** loading rejects a non-positive relief ratio.
+- **Style:** loading rejects a non-positive relief ratio or full-shade rise, and a negative
+  altitude light.
 
 ### 9. Docs
 
@@ -223,7 +239,8 @@ of the tiles around each corner.
   - `TileRenderer` drawing on shapes, `TileRelief`, and the grid.
 - `docs/architecture/map-system.md`: "Elevation is not a layer" describes the relief and
   lighting.
-- `docs/architecture/high-level.md`: `map_display` among the player settings.
+- The Map Display setting and its settings-panel rows are described with the relief in
+  `graphics-system.md`.
 
 ## Verification
 

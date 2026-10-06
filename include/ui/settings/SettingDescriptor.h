@@ -19,6 +19,8 @@ enum class SettingRowKind_t
     Header,
     Bool,
     ReadOnlyValue,
+    // Shows getValueText; a click calls cycle to move to the next value.
+    Choice,
 };
 
 struct SettingDescriptor_t
@@ -29,6 +31,7 @@ struct SettingDescriptor_t
     bool (*getBool)(const GameSettings&) = nullptr;
     void (*setBool)(GameSettings&, bool) = nullptr;
     std::string (*getValueText)(const GameSettings&) = nullptr;
+    void (*cycle)(GameSettings&) = nullptr;
 };
 
 } // namespace ac

@@ -1,4 +1,5 @@
 #include "ui/world/WorldDisplay.h"
+#include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
@@ -135,7 +136,8 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
     const float markerHeight = tileSize * s.sensorMarkerHeightRatio;
     const float inset = tileSize * s.sensorMarkerInsetRatio;
 
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
+        const auto [tileX, tileY] = m_viewport.FootprintOrigin(rShape);
         if (!rTile.HasImprovement(ImprovementIds::k_Sensor))
         {
             return;
@@ -153,7 +155,7 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
 
         rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.sensorMarkerColor);
         rGraphics.DrawText("S", markerX + inset, markerY + inset, fontSize, s.sensorLabelColor);
-    });
+    }, /*bShaded*/ false);
 }
 
 void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
@@ -167,7 +169,8 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
     const float markerHeight = tileSize * s.monolithMarkerHeightRatio;
     const float inset = tileSize * s.monolithMarkerInsetRatio;
 
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
+        const auto [tileX, tileY] = m_viewport.FootprintOrigin(rShape);
         if (!rTile.HasImprovement(ImprovementIds::k_Monolith))
         {
             return;
@@ -186,7 +189,7 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
 
         rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.monolithMarkerColor);
         rGraphics.DrawText("M", markerX + inset, markerY + inset, fontSize, s.monolithLabelColor);
-    });
+    }, /*bShaded*/ false);
 }
 
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
@@ -234,6 +237,47 @@ void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
     }
 }
 
+// Grid lines along the tile's NW and NE edges, so every edge is drawn once and raised tiles in
+// front cover the lines behind them. Edges touching water need the ocean grid; anything next to
+// unexplored ground uses the land colour so the grid does not reveal coastlines.
+void WorldDisplay::RenderGridEdges_(Graphics& rGraphics, const Tile& rTile,
+                                    const TileShape_t& rShape, bool bOceanGrid) const
+{
+    const auto& s = Style().tileRenderer;
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const auto explored = [&fog](const Tile& rAny) {
+        return !fog.explored || fog.explored->IsExplored(rAny);
+    };
+    const WorldMap& rWorldMap = m_viewport.GetWorldMap();
+    const struct
+    {
+        int dx;
+        int dy;
+        const TileVertex_t* pFrom;
+        const TileVertex_t* pTo;
+    } k_Edges[] = {
+        {-1, 0, &rShape.west, &rShape.north},
+        {0, -1, &rShape.north, &rShape.east},
+    };
+    for (const auto& rEdge : k_Edges)
+    {
+        const Tile* pNeighbor = rWorldMap.GetTile(rTile.GetX() + rEdge.dx, rTile.GetY() + rEdge.dy);
+        if (!pNeighbor)
+        {
+            continue;
+        }
+        const bool bHidden = !explored(rTile) || !explored(*pNeighbor);
+        const bool bLand = rTile.IsLand() && pNeighbor->IsLand();
+        if (!bHidden && !bLand && !bOceanGrid)
+        {
+            continue;
+        }
+        const Color_t& rColor = bHidden || bLand ? s.gridLandColor : s.gridWaterColor;
+        rGraphics.DrawLine(rEdge.pFrom->x, rEdge.pFrom->y, rEdge.pTo->x, rEdge.pTo->y, rColor,
+                           s.gridLineWidth);
+    }
+}
+
 void WorldDisplay::Render(Graphics& rGraphics)
 {
     const WorldMap& rWorldMap = m_viewport.GetWorldMap();
@@ -242,20 +286,22 @@ void WorldDisplay::Render(Graphics& rGraphics)
         return;
     }
 
+    const MapDisplayConfig_t& rDisplay = m_rGameState.GetSettings().GetMapDisplay();
+    m_viewport.SetRelief(rDisplay.relief, Style().tileRenderer.relief);
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const float tileWidth = m_viewport.TileWidth();
-    const float tileHeight = m_viewport.TileHeight();
 
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
         if (fog.explored && !fog.explored->IsExplored(rTile))
         {
-            rGraphics.DrawFilledDiamond(tileX, tileY, tileWidth, tileHeight,
-                                        Style().worldDisplay.shroudColor);
+            rGraphics.FillTileShape(rShape, Style().worldDisplay.shroudColor);
+            RenderGridEdges_(rGraphics, rTile, rShape, rDisplay.bOceanGrid);
             return;
         }
-
+        // SMAC draws a tile's grid lines over its terrain and under its objects.
         const bool bFogged = fog.visible && !fog.visible->IsVisible(rTile);
-        TileRenderer::Render(rGraphics, rTile, tileX, tileY, tileWidth, bFogged, &rWorldMap);
+        TileRenderer::RenderTerrain(rGraphics, rTile, rShape, bFogged, &rWorldMap);
+        RenderGridEdges_(rGraphics, rTile, rShape, rDisplay.bOceanGrid);
+        TileRenderer::RenderObjects(rGraphics, rTile, rShape, &rWorldMap);
     });
 
     RenderBases_(rGraphics);

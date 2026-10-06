@@ -4,6 +4,8 @@
 #include "ui/settings/SettingDescriptor.h"
 #include "ui/style/UiStyle.h"
 
+#include <magic_enum.hpp>
+
 #include <cstddef>
 #include <cstdio>
 #include <stdexcept>
@@ -88,6 +90,41 @@ PAUSE_BOOL(FungalBloom, fungalBloom)
 
 #undef PAUSE_BOOL
 
+std::string GetReliefText_(const GameSettings& rSettings)
+{
+    return std::string(magic_enum::enum_name(rSettings.GetMapDisplay().relief));
+}
+
+void CycleRelief_(GameSettings& rSettings)
+{
+    MapDisplayConfig_t config = rSettings.GetMapDisplay();
+    switch (config.relief)
+    {
+    case ReliefMode_t::Smooth:
+        config.relief = ReliefMode_t::Stepped;
+        break;
+    case ReliefMode_t::Stepped:
+        config.relief = ReliefMode_t::Flat;
+        break;
+    case ReliefMode_t::Flat:
+        config.relief = ReliefMode_t::Smooth;
+        break;
+    }
+    rSettings.SetMapDisplay(config);
+}
+
+bool GetOceanGrid_(const GameSettings& rSettings)
+{
+    return rSettings.GetMapDisplay().bOceanGrid;
+}
+
+void SetOceanGrid_(GameSettings& rSettings, bool value)
+{
+    MapDisplayConfig_t config = rSettings.GetMapDisplay();
+    config.bOceanGrid = value;
+    rSettings.SetMapDisplay(config);
+}
+
 std::string GetMapWidthText_(const GameSettings& rSettings)
 {
     return std::to_string(rSettings.GetMapGeneration().width);
@@ -137,6 +174,11 @@ const SettingDescriptor_t k_SettingDescriptors[] = {
      GetRemoveShroud_, SetRemoveShroud_},
     {"Remove Fog", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetRemoveFog_, SetRemoveFog_},
+    {"Map Display", SettingRowKind_t::Header},
+    {"Elevation", SettingRowKind_t::Choice, SettingScope_t::Always, nullptr, nullptr,
+     GetReliefText_, CycleRelief_},
+    {"Ocean Grid", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetOceanGrid_, SetOceanGrid_},
     {"Pause on Events", SettingRowKind_t::Header},
     {"New Facility Built", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetNewFacilityBuilt_, SetNewFacilityBuilt_},
@@ -237,6 +279,18 @@ void RequireCallbacks_(const SettingDescriptor_t& rRow)
                                      + "' is ReadOnlyValue but has no getValueText");
         }
         return;
+    case SettingRowKind_t::Choice:
+        if (!rRow.getValueText || !rRow.cycle)
+        {
+            throw std::runtime_error("Setting row '" + label
+                                     + "' is Choice but has no getValueText/cycle");
+        }
+        if (rRow.scope == SettingScope_t::NewGameOnly)
+        {
+            throw std::runtime_error("Setting row '" + label
+                                     + "' is a NewGameOnly Choice, which nothing can ever cycle");
+        }
+        return;
     }
     throw std::runtime_error("Setting row '" + label + "' has an unhandled kind");
 }
@@ -280,6 +334,10 @@ void SettingsPanel::Render(Graphics& rGraphics)
                                rStyle.rowFontSize, rStyle.rowColor);
             return;
         }
+        case SettingRowKind_t::Choice:
+            rGraphics.DrawText(std::string(rRow.label) + ": " + rRow.getValueText(m_rSettings),
+                               rArea.x, rArea.y, rStyle.rowFontSize, rStyle.rowColor);
+            return;
         case SettingRowKind_t::ReadOnlyValue:
         {
             std::string text = std::string(rRow.label) + ": " + rRow.getValueText(m_rSettings);
@@ -309,13 +367,21 @@ void SettingsPanel::HandleMouseClick(const MouseEvent_t& rEvent)
     bool bHandled = false;
     ForEachRow_(rowArea, [&](const SettingDescriptor_t& rRow, const WindowLayout_t& rArea)
     {
-        if (bHandled || rRow.kind != SettingRowKind_t::Bool
-            || !ContainsMouseCoord(rArea, rEvent))
+        const bool bEditable =
+            rRow.kind == SettingRowKind_t::Bool || rRow.kind == SettingRowKind_t::Choice;
+        if (bHandled || !bEditable || !ContainsMouseCoord(rArea, rEvent))
         {
             return;
         }
         RequireCallbacks_(rRow);
-        rRow.setBool(m_rSettings, !rRow.getBool(m_rSettings));
+        if (rRow.kind == SettingRowKind_t::Bool)
+        {
+            rRow.setBool(m_rSettings, !rRow.getBool(m_rSettings));
+        }
+        else
+        {
+            rRow.cycle(m_rSettings);
+        }
         m_rSettings.Save();
         bHandled = true;
     });

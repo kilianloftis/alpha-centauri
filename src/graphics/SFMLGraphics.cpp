@@ -6,6 +6,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Sleep.hpp>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -80,6 +81,37 @@ void MaximizeNativeWindow_(sf::WindowBase& rWindow)
 #endif
 }
 
+// A tile vertex's shade rides in its colour's red channel as (shade + bias) × scale: quarter
+// steps over −16…47.75 palette steps.
+constexpr float k_ShadeBias  = 16.0f;
+constexpr float k_ShadeScale = 4.0f;
+// SMAC loads art into palette slots 10–245, i.e. palette.pcx entries 0–235.
+constexpr float k_LastArtIndex = 235.0f;
+
+// SMAC's terrain draw: the texel's palette index plus the shade, rounded to a whole step, picks
+// the palette entry (docs/thinker/smac-palette-lighting.md).
+constexpr const char* k_TileFragmentShader = R"(
+uniform sampler2D art;
+uniform sampler2D palette;
+uniform float shadeBias;
+uniform float shadeScale;
+uniform float lastIndex;
+
+void main()
+{
+    vec4 texel = texture2D(art, gl_TexCoord[0].xy);
+    float shade = gl_Color.r * 255.0 / shadeScale - shadeBias;
+    float index = clamp(floor(texel.r * 255.0 + 0.5) + floor(shade + 0.5), 0.0, lastIndex);
+    gl_FragColor = vec4(texture2D(palette, vec2((index + 0.5) / 256.0, 0.5)).rgb, texel.a);
+}
+)";
+
+sf::Color ShadeColor_(float shade)
+{
+    const long encoded = std::lround((shade + k_ShadeBias) * k_ShadeScale);
+    return sf::Color(static_cast<std::uint8_t>(std::clamp(encoded, 0L, 255L)), 0, 0, 255);
+}
+
 class SFMLGraphics : public Graphics
 {
 public:
@@ -114,6 +146,7 @@ public:
         std::cout << "[SFMLGraphics] Window created.\n";
 
         LoadFont_(rConfig.fontPaths);
+        LoadTileShader_();
     }
 
     void PumpEvents() override
@@ -245,13 +278,15 @@ public:
         return true;
     }
 
-    bool DrawDiamondSprite(const std::string& textureId, float x, float y, float destWidth,
-                           float destHeight, const DiamondTint_t& rTint) override
+    bool DrawTileSprite(const std::string& textureId, const std::string& paletteId,
+                        const TileShape_t& rShape) override
     {
-        auto it = m_textures.find(textureId);
-        if (it == m_textures.end())
+        const auto it = m_textures.find(textureId);
+        const auto paletteIt = m_textures.find(paletteId);
+        if (it == m_textures.end() || paletteIt == m_textures.end())
         {
-            std::cerr << "[Graphics] Texture '" << textureId << "' is not loaded.\n";
+            std::cerr << "[Graphics] Texture '"
+                      << (it == m_textures.end() ? textureId : paletteId) << "' is not loaded.\n";
             return false;
         }
 
@@ -267,22 +302,36 @@ public:
         const float textureHeight = static_cast<float>(size.y);
         const float insetU = std::min(1.0f, textureWidth * 0.5f) / textureWidth;
         const float insetV = std::min(1.0f, textureHeight * 0.5f) / textureHeight;
-        const auto vertex = [&](float u, float v, const Color_t& rColor) {
+        const auto vertex = [&](const TileVertex_t& rVertex, float u, float v) {
             const float sampleU = 0.5f + (u - 0.5f) * (1.0f - 2.0f * insetU);
             const float sampleV = 0.5f + (v - 0.5f) * (1.0f - 2.0f * insetV);
-            return sf::Vertex{{x + destWidth * u, y + destHeight * v},
-                              sf::Color(rColor.r, rColor.g, rColor.b, rColor.a),
+            return sf::Vertex{{rVertex.x, rVertex.y},
+                              ShadeColor_(rVertex.shade),
                               {textureWidth * sampleU, textureHeight * sampleV}};
         };
-        const sf::Vertex fan[] = {
-            vertex(0.5f, 0.5f, rTint.center), vertex(0.0f, 0.5f, rTint.west),
-            vertex(0.5f, 0.0f, rTint.north),  vertex(1.0f, 0.5f, rTint.east),
-            vertex(0.5f, 1.0f, rTint.south),  vertex(0.0f, 0.5f, rTint.west),
+        const std::array<sf::Vertex, 6> fan{
+            vertex(rShape.center, 0.5f, 0.5f), vertex(rShape.west, 0.0f, 0.5f),
+            vertex(rShape.north, 0.5f, 0.0f),  vertex(rShape.east, 1.0f, 0.5f),
+            vertex(rShape.south, 0.5f, 1.0f),  vertex(rShape.west, 0.0f, 0.5f),
         };
+
+        m_tileShader.setUniform("palette", paletteIt->second);
         sf::RenderStates states;
         states.texture = &it->second;
-        m_window.draw(fan, std::size(fan), sf::PrimitiveType::TriangleFan, states);
+        states.shader = &m_tileShader;
+        m_window.draw(fan.data(), fan.size(), sf::PrimitiveType::TriangleFan, states);
         return true;
+    }
+
+    void FillTileShape(const TileShape_t& rShape, const Color_t& color) override
+    {
+        const sf::Color fill(color.r, color.g, color.b, color.a);
+        const sf::Vertex fan[] = {
+            {{rShape.center.x, rShape.center.y}, fill}, {{rShape.west.x, rShape.west.y}, fill},
+            {{rShape.north.x, rShape.north.y}, fill},   {{rShape.east.x, rShape.east.y}, fill},
+            {{rShape.south.x, rShape.south.y}, fill},   {{rShape.west.x, rShape.west.y}, fill},
+        };
+        m_window.draw(fan, std::size(fan), sf::PrimitiveType::TriangleFan);
     }
 
     void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) override
@@ -442,6 +491,24 @@ private:
                                  + (tried.empty() ? std::string(" (none configured)") : tried));
     }
 
+    // Map tiles are palette-index art, so without the palette shader there is no map to draw.
+    void LoadTileShader_()
+    {
+        if (!sf::Shader::isAvailable())
+        {
+            throw std::runtime_error("[SFMLGraphics] This system has no shader support; the map "
+                                     "tiles need it");
+        }
+        if (!m_tileShader.loadFromMemory(k_TileFragmentShader, sf::Shader::Type::Fragment))
+        {
+            throw std::runtime_error("[SFMLGraphics] Failed to compile the tile palette shader");
+        }
+        m_tileShader.setUniform("art", sf::Shader::CurrentTexture);
+        m_tileShader.setUniform("shadeBias", k_ShadeBias);
+        m_tileShader.setUniform("shadeScale", k_ShadeScale);
+        m_tileShader.setUniform("lastIndex", k_LastArtIndex);
+    }
+
     void DispatchEvent_(const sf::Event& rEvent)
     {
         if (rEvent.is<sf::Event::Closed>())
@@ -503,6 +570,7 @@ private:
     sf::RenderWindow m_window;
     sf::Font m_font;
     std::unordered_map<std::string, sf::Texture> m_textures;
+    sf::Shader m_tileShader;
     // Kept alive while applied — SFML requires the Cursor object to outlive setMouseCursor.
     std::optional<sf::Cursor> m_customCursor;
     std::chrono::steady_clock::time_point m_lastPace = std::chrono::steady_clock::now();

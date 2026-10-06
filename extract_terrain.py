@@ -17,6 +17,10 @@ Every texture.pcx cell is baked onto a 112×56 diamond the way terranx.exe maps 
 square is turned 45° so its corners land on the diamond's corners (orientation table in
 docs/thinker/smac-terrain-textures.md). Neighboring diamonds partition the plane exactly.
 
+Terrain and coast sprites are palette-index art, as SMAC draws them: a grey+alpha PNG whose grey
+is the palette.pcx index and whose alpha is coverage. The game shades them along the palette's
+ramps through sprites/palette.png (palette.pcx, 256×1). ter1.pcx objects stay RGBA.
+
 Rainfall-grid layout (col, row) — left 4×N block:
   (0,0)/(2,0) rolling overlays; (1,0)/(3,0) rocky overlays; (0,1) arid base;
   rows 2–5 moist, rows 6–9 wet blend cells. Flat has no dedicated art.
@@ -81,6 +85,8 @@ OCEAN_DEEP_BOX = (280, 136, 280 + TEXTURE_CELL, 136 + TEXTURE_CELL)
 RAINFALL_SIZE = (640, 480)
 
 TILE_SPRITE_SIZE = (112, 56)
+
+PALETTE_SPRITE = "sprites/palette"
 
 # Cell corners (u, v) on the 56-unit square.
 TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT = (0, 0), (56, 0), (56, 56), (0, 56)
@@ -266,6 +272,38 @@ def load_sheet(pcx_path: Path, expected_size: tuple[int, int] = (1024, 768)) -> 
     return image
 
 
+def load_palette(pcx_path: Path) -> list[int]:
+    """palette.pcx's 256 colours as a flat RGB list; its pixels are only the artist's chart."""
+    with Image.open(pcx_path) as image:
+        palette = image.getpalette() if image.mode == "P" else None
+    if not palette or len(palette) < 256 * 3:
+        raise ValueError(f"{pcx_path.name}: expected a 256-colour palette")
+    return palette[: 256 * 3]
+
+
+def write_palette(palette: list[int], out_root: Path) -> Path:
+    image = Image.new("RGBA", (256, 1))
+    image.putdata([(palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2], 255) for i in range(256)])
+    destination = out_root / f"{PALETTE_SPRITE}.png"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    image.save(destination)
+    return destination
+
+
+def index_to_rgba(sprite: Image.Image, palette: list[int]) -> Image.Image:
+    """Colour a grey+alpha index sprite through the palette, for contact sheets."""
+    rgba = Image.new("RGBA", sprite.size, (0, 0, 0, 0))
+    source = sprite.load()
+    pixels = rgba.load()
+    width, height = sprite.size
+    for y in range(height):
+        for x in range(width):
+            index, alpha = source[x, y]
+            if alpha:
+                pixels[x, y] = (palette[index * 3], palette[index * 3 + 1], palette[index * 3 + 2], 255)
+    return rgba
+
+
 def to_rgba(sprite: Image.Image, key_indices: frozenset[int], *, keyed: bool) -> Image.Image:
     if not keyed:
         return sprite.convert("RGBA")
@@ -311,18 +349,15 @@ def bake_diamond(
     *,
     keyed: bool,
 ) -> Image.Image:
-    """Map a 56×56 paletted cell onto the tile diamond."""
-    palette = cell.getpalette()
-    if not palette or len(palette) < 256 * 3:
-        raise ValueError("expected a 256-colour palette")
+    """Map a 56×56 paletted cell onto the tile diamond as grey+alpha index art."""
     source = cell.load()
-    sprite = Image.new("RGBA", TILE_SPRITE_SIZE, (0, 0, 0, 0))
+    sprite = Image.new("LA", TILE_SPRITE_SIZE, (0, 0))
     pixels = sprite.load()
     for x, y, u, v in _diamond_texels(corners):
         index = source[u, v]
         if keyed and index in key_indices:
             continue
-        pixels[x, y] = (palette[index * 3], palette[index * 3 + 1], palette[index * 3 + 2], 255)
+        pixels[x, y] = (index, 255)
     return sprite
 
 
@@ -453,21 +488,14 @@ def _coast_corner_texels(corner: str) -> list[tuple[int, int, int, int]]:
 
 
 def bake_coast_sprites(texture: Image.Image, rainfall: Image.Image, out_root: Path) -> list[Path]:
-    """Write the water and shore overlays for every corner and water case."""
-    palette = texture.getpalette()
-    if not palette or len(palette) < 256 * 3:
-        raise ValueError("texture.pcx: expected a 256-colour palette")
-
-    def rgb(index: int) -> tuple[int, int, int]:
-        return (palette[index * 3], palette[index * 3 + 1], palette[index * 3 + 2])
-
+    """Write the water and shore overlays for every corner and water case as index art."""
     left, top = COAST_TEMPLATE_ORIGIN
     template = rainfall.crop(
         (left, top, left + COAST_TEMPLATE_SIZE, top + COAST_TEMPLATE_SIZE)
     ).load()
     shelf = texture.crop(OCEAN_SHELF_BOX).load()
-    code_colors = {
-        code: rgb(rainfall.getpixel(pixel)) for code, pixel in COAST_CODE_COLOR_PIXELS.items()
+    code_indices = {
+        code: rainfall.getpixel(pixel) for code, pixel in COAST_CODE_COLOR_PIXELS.items()
     }
 
     out_dir = out_root / "sprites/coast"
@@ -478,16 +506,16 @@ def bake_coast_sprites(texture: Image.Image, rainfall: Image.Image, out_root: Pa
         for case in COAST_CASES:
             mask = int(case[0])
             alternate = case.endswith("_alt")
-            water = Image.new("RGBA", COAST_SPRITE_SIZE, (0, 0, 0, 0))
-            shore = Image.new("RGBA", COAST_SPRITE_SIZE, (0, 0, 0, 0))
+            water = Image.new("LA", COAST_SPRITE_SIZE, (0, 0))
+            shore = Image.new("LA", COAST_SPRITE_SIZE, (0, 0))
             water_pixels = water.load()
             shore_pixels = shore.load()
             for x, y, u, v in texels:
                 code = coast_code(template[u, v], mask, alternate)
                 if code == 1:
-                    water_pixels[x, y] = (*rgb(shelf[u, v]), 255)
+                    water_pixels[x, y] = (shelf[u, v], 255)
                 elif code >= 2:
-                    shore_pixels[x, y] = (*code_colors[code], 255)
+                    shore_pixels[x, y] = (code_indices[code], 255)
             for part, sprite in (("water", water), ("shore", shore)):
                 destination = out_dir / f"{part}_{corner}_{case}.png"
                 sprite.save(destination)
@@ -495,7 +523,7 @@ def bake_coast_sprites(texture: Image.Image, rainfall: Image.Image, out_root: Pa
     return written
 
 
-def write_coast_contact_sheet(out_root: Path) -> Path:
+def write_coast_contact_sheet(out_root: Path, palette: list[int]) -> Path:
     """One row per corner, one column per case: water + shore over a flat land diamond."""
     width, height = COAST_SPRITE_SIZE
     gap = 8
@@ -526,7 +554,7 @@ def write_coast_contact_sheet(out_root: Path) -> Path:
             sheet.alpha_composite(land, (x, y))
             for part in ("water", "shore"):
                 with Image.open(coast_dir / f"{part}_{corner}_{case}.png") as overlay:
-                    sheet.alpha_composite(overlay.convert("RGBA"), (x, y))
+                    sheet.alpha_composite(index_to_rgba(overlay.convert("LA"), palette), (x, y))
     destination = out_root / "sprites/_coast_contact_sheet.png"
     sheet.resize((sheet.width * 2, sheet.height * 2), Image.NEAREST).convert("RGB").save(
         destination
@@ -534,7 +562,7 @@ def write_coast_contact_sheet(out_root: Path) -> Path:
     return destination
 
 
-def write_tiles_contact_sheet(out_root: Path) -> Path:
+def write_tiles_contact_sheet(out_root: Path, palette: list[int]) -> Path:
     """One row per tile set, sprites in mask order, each labelled with its mask."""
     width, height = TILE_SPRITE_SIZE
     gap = 4
@@ -555,7 +583,7 @@ def write_tiles_contact_sheet(out_root: Path) -> Path:
             draw.text((x + 2, y), str(mask), fill=(200, 200, 200))
             path = out_root / "sprites/landforms" / tile_set.name / f"{mask}.png"
             with Image.open(path) as sprite:
-                sheet.alpha_composite(sprite.convert("RGBA"), (x, y + label))
+                sheet.alpha_composite(index_to_rgba(sprite.convert("LA"), palette), (x, y + label))
     destination = out_root / "sprites/_tiles_contact_sheet.png"
     sheet.convert("RGB").save(destination)
     return destination
@@ -606,14 +634,16 @@ def main(argv: list[str] | None = None) -> int:
         "ter1": load_sheet(find_pcx(args.game_dir, "ter1")),
         "rainfall": load_sheet(find_pcx(args.game_dir, "rainfall"), RAINFALL_SIZE),
     }
+    palette = load_palette(find_pcx(args.game_dir, "palette"))
     keyed = not args.no_transparency
-    written = extract_regions(sheets, args.out, keyed=keyed)
+    written = [write_palette(palette, args.out)]
+    written += extract_regions(sheets, args.out, keyed=keyed)
     written += bake_tile_sets(sheets["texture"], args.out, keyed=keyed)
     written += bake_coast_sprites(sheets["texture"], sheets["rainfall"], args.out)
     if args.contact_sheet:
         write_contact_sheet(sheets, args.out)
-        write_tiles_contact_sheet(args.out)
-        write_coast_contact_sheet(args.out)
+        write_tiles_contact_sheet(args.out, palette)
+        write_coast_contact_sheet(args.out, palette)
     print(f"terrain: {len(written)} sprites -> {args.out}")
     return 0
 

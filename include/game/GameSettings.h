@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/GameRulesConfig.h"
+#include "game/MapDisplayConfig.h"
 #include "game/PauseOnEventsConfig.h"
 #include "game/VisibilityConfig.h"
 #include "game/map/MapGenerationConfig.h"
@@ -43,6 +44,9 @@ public:
     const MapGenerationConfig_t& GetMapGeneration() const { return m_mapGeneration; }
     void SetMapGeneration(const MapGenerationConfig_t& rConfig);
 
+    const MapDisplayConfig_t& GetMapDisplay() const { return m_mapDisplay; }
+    void SetMapDisplay(const MapDisplayConfig_t& rConfig);
+
     // Read once, when Engine builds the graphics backend; there is no runtime re-apply.
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
@@ -68,6 +72,7 @@ public:
     Signal<> OnVisibilityChanged;
     Signal<> OnPauseOnEventsChanged;
     Signal<> OnMapGenerationChanged;
+    Signal<> OnMapDisplayChanged;
 
 private:
     GameRulesConfig_t m_gameRules;
@@ -75,6 +80,7 @@ private:
     VisibilityConfig_t m_visibility;
     PauseOnEventsConfig_t m_pauseOnEvents;
     MapGenerationConfig_t m_mapGeneration;
+    MapDisplayConfig_t m_mapDisplay;
     GraphicsConfig_t m_graphics;
     // Where Save() writes. Set by Load / SetSavePath; kDefaultPath until then.
     std::string m_path = kDefaultPath;

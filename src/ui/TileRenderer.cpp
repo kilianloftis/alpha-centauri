@@ -123,17 +123,6 @@ const ImprovementConfig_t* FindOccupantByConfigId_(const Tile& rTile, std::strin
     return nullptr;
 }
 
-// Terrain art keeps its sheet colours. Fogged land is dimmed, as SMAC shades remembered land
-// two palette steps darker; water keeps its depth shading.
-Color_t TerrainTint_(const Tile& rTile, bool bFogged)
-{
-    if (bFogged && rTile.IsLand())
-    {
-        return DimColor_(Color_t::White(), Style().tileRenderer.fogTerrainDimRatio);
-    }
-    return Color_t::White();
-}
-
 // Empty path or missing file → false, so the caller can paint the procedural fallback.
 bool EnsureSpriteLoaded_(Graphics& rGraphics, const std::string& path)
 {
@@ -159,16 +148,102 @@ bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float
            && rGraphics.DrawSprite(path, x, y, width, height, tint);
 }
 
-bool TryDrawDiamondSprite_(Graphics& rGraphics, const std::string& path, float x, float y,
-                           float width, float height, const DiamondTint_t& rTint)
+// Tile art is palette indices, so it draws only when the palette loads too.
+bool TryDrawTileSprite_(Graphics& rGraphics, const std::string& path, const TileShape_t& rShape)
 {
-    return EnsureSpriteLoaded_(rGraphics, path)
-           && rGraphics.DrawDiamondSprite(path, x, y, width, height, rTint);
+    const std::string& palette = Style().tileRenderer.palettePath;
+    return EnsureSpriteLoaded_(rGraphics, path) && EnsureSpriteLoaded_(rGraphics, palette)
+           && rGraphics.DrawTileSprite(path, palette, rShape);
 }
 
-DiamondTint_t UniformTint_(const Color_t& tint)
+// The shape with every vertex at one shade.
+TileShape_t UniformShade_(const TileShape_t& rShape, float shade)
 {
-    return DiamondTint_t{tint, tint, tint, tint, tint};
+    TileShape_t shape = rShape;
+    for (TileVertex_t* pVertex : {&shape.center, &shape.west, &shape.north, &shape.east,
+                                  &shape.south})
+    {
+        pVertex->shade = shade;
+    }
+    return shape;
+}
+
+// Land in sight keeps the relief's shades; out of sight SMAC shades land a flat
+// fog_land_shade instead of lighting its slopes. Terrain layers on water draw as painted.
+TileShape_t TerrainShape_(const TileShape_t& rShape, const Tile& rTile, bool bFogged)
+{
+    if (!rTile.IsLand())
+    {
+        return UniformShade_(rShape, 0.0f);
+    }
+    return bFogged ? UniformShade_(rShape, Style().tileRenderer.fogLandShade) : rShape;
+}
+
+// The point (u, v) of the flat tile (0..1 across its box, 0..1 down) carried through the
+// shape's four triangles. Each triangle is the centre and two corners; the weights are the
+// point's offsets toward those corners.
+TileVertex_t PointInShape_(const TileShape_t& rShape, float u, float v)
+{
+    const float dx = u - 0.5f;
+    const float dy = v - 0.5f;
+    const auto blend = [&rShape](const TileVertex_t& rA, float wa, const TileVertex_t& rB,
+                                 float wb) {
+        const TileVertex_t& rC = rShape.center;
+        TileVertex_t point = rC;
+        point.x = rC.x + wa * (rA.x - rC.x) + wb * (rB.x - rC.x);
+        point.y = rC.y + wa * (rA.y - rC.y) + wb * (rB.y - rC.y);
+        point.shade = rC.shade + wa * (rA.shade - rC.shade) + wb * (rB.shade - rC.shade);
+        return point;
+    };
+    if (dx <= 0.0f && dy <= 0.0f)
+    {
+        return blend(rShape.west, -2.0f * dx, rShape.north, -2.0f * dy);
+    }
+    if (dx >= 0.0f && dy <= 0.0f)
+    {
+        return blend(rShape.north, -2.0f * dy, rShape.east, 2.0f * dx);
+    }
+    if (dx >= 0.0f && dy >= 0.0f)
+    {
+        return blend(rShape.east, 2.0f * dx, rShape.south, 2.0f * dy);
+    }
+    return blend(rShape.south, 2.0f * dy, rShape.west, -2.0f * dx);
+}
+
+// The diamond inscribed in a flat sub-box of the tile (fractions of its box), carried through
+// the shape.
+TileShape_t SubShape_(const TileShape_t& rShape, float u0, float v0, float uSpan, float vSpan)
+{
+    const float uMid = u0 + uSpan * 0.5f;
+    const float vMid = v0 + vSpan * 0.5f;
+    return TileShape_t{
+        PointInShape_(rShape, uMid, vMid),
+        PointInShape_(rShape, u0, vMid),
+        PointInShape_(rShape, uMid, v0),
+        PointInShape_(rShape, u0 + uSpan, vMid),
+        PointInShape_(rShape, uMid, v0 + vSpan),
+    };
+}
+
+// The rockiness overlay's inset diamond (DestRectForEdgeInsets in tile fractions).
+TileShape_t RockinessShape_(const TileShape_t& rShape, const Tile& rTile, const WorldMap* pMap)
+{
+    const SpriteDestRect_t dest = DestRectForEdgeInsets(
+        0.0f, 0.0f, 1.0f, MatchRockinessEdges(rTile, pMap),
+        Style().tileRenderer.spriteOverlayEdgeInsetRatio);
+    return SubShape_(rShape, dest.x, dest.y / k_IsoHeightRatio, dest.width,
+                     dest.height / k_IsoHeightRatio);
+}
+
+void FillInsetShape_(Graphics& rGraphics, const TileShape_t& rShape, float insetRatio,
+                     const Color_t& color)
+{
+    const float span = 1.0f - 2.0f * insetRatio;
+    if (span <= 0.0f)
+    {
+        return;
+    }
+    rGraphics.FillTileShape(SubShape_(rShape, insetRatio, insetRatio, span, span), color);
 }
 
 constexpr char k_CoastCornerNames[k_CoastCornerCount] = {'w', 'n', 'e', 's'};
@@ -192,9 +267,9 @@ std::string CoastSpritePath_(std::string_view part, const CoastCornerArt_t& rArt
 
 // Ocean and shore art baked per diamond corner (extract_terrain.py). The water is shaded by the
 // depths around the land tile's own vertices, so it meets the neighboring water's shading at
-// their shared corners; the shore takes the land's terrain tint.
-void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap, float x,
-                       float y, float width, float height, const Color_t& shoreTint)
+// their shared corners; the shore draws at shoreShade.
+void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
+                       const TileShape_t& rShape, float shoreShade)
 {
     const CoastOverlay_t overlay = ResolveCoastOverlay(rTile, rMap);
     if (std::ranges::none_of(overlay.corners,
@@ -203,22 +278,22 @@ void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& r
         return;
     }
     const WaterShadingStyle_t& rShading = Style().tileRenderer.waterShading;
-    const DiamondTint_t waterTint = WaterShadeTint(
-        ResolveWaterShades(rTile, &rMap, rShading.depthShades), rShading.tints.at(rShading.coastTints));
+    TileShape_t water = UniformShade_(rShape, 0.0f);
+    ApplyWaterShades(water, ResolveWaterShades(rTile, &rMap, rShading),
+                     rShading.shades.at(rShading.coastShades));
     for (const CoastCornerArt_t& rArt : overlay.corners)
     {
         if (rArt.waterMask != 0)
         {
-            (void)TryDrawDiamondSprite_(rGraphics, CoastSpritePath_("water", rArt), x, y, width,
-                                        height, waterTint);
+            (void)TryDrawTileSprite_(rGraphics, CoastSpritePath_("water", rArt), water);
         }
     }
+    const TileShape_t shore = UniformShade_(rShape, shoreShade);
     for (const CoastCornerArt_t& rArt : overlay.corners)
     {
         if (rArt.waterMask != 0)
         {
-            (void)TryDrawDiamondSprite_(rGraphics, CoastSpritePath_("shore", rArt), x, y, width,
-                                        height, UniformTint_(shoreTint));
+            (void)TryDrawTileSprite_(rGraphics, CoastSpritePath_("shore", rArt), shore);
         }
     }
 }
@@ -229,13 +304,19 @@ const std::vector<std::string>& SurfaceSpritePaths_(const ImprovementConfig_t& r
     return rTile.IsWater() ? rOccupant.spritePaths.sea : rOccupant.spritePaths.land;
 }
 
-// Object sprites stand on the tile's footprint and reach above it by their overhang ratio.
+// Object sprites are a ter1.pcx cell: a tile-high footprint plus their overhang ratio. SMAC draws
+// the cell from the tile's top corner down, seated at the mean of the tile's four corners rather
+// than its raised centre; the art sits high in its cells, so a tile bonus lands mid-tile.
 bool TryDrawOccupantPath_(Graphics& rGraphics, const ImprovementConfig_t& rOccupant,
-                          const std::string& path, float x, float y, float width, float height,
-                          const Color_t& tint)
+                          const std::string& path, const TileShape_t& rShape, const Color_t& tint)
 {
+    const float width = rShape.east.x - rShape.west.x;
+    const float height = width * k_IsoHeightRatio;
     const float overhang = height * rOccupant.spriteOverhangRatio;
-    return TryDrawSprite_(rGraphics, path, x, y - overhang, width, height + overhang, tint);
+    const float seatX = (rShape.west.x + rShape.north.x + rShape.east.x + rShape.south.x) * 0.25f;
+    const float seatY = (rShape.west.y + rShape.north.y + rShape.east.y + rShape.south.y) * 0.25f;
+    return TryDrawSprite_(rGraphics, path, seatX - width * 0.5f, seatY - height * 0.5f, width,
+                          height + overhang, tint);
 }
 
 const std::string& VariantSpritePath_(const ImprovementConfig_t& rOccupant, const Tile& rTile)
@@ -299,10 +380,9 @@ std::string LayerSpritePath_(const Tile& rTile, const TileLayer_t& rLayer,
 }
 
 // The Improvement layer holds object sprites that stand on the footprint; every other layer is
-// a baked terrain diamond that meets its neighbors edge to edge.
+// a baked terrain diamond drawn on the shape.
 bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const TileLayer_t& rLayer,
-                         const WorldMap* pMap, float x, float y, float width, float height,
-                         const Color_t& tint)
+                         const WorldMap* pMap, const TileShape_t& rShape)
 {
     const ImprovementConfig_t* pOccupant = FindLayerOccupant_(rTile, rLayer);
     if (!pOccupant)
@@ -312,15 +392,16 @@ bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const TileLayer
     const std::string path = LayerSpritePath_(rTile, rLayer, *pOccupant, pMap);
     if (rLayer.type == TileLayerType_t::Improvement)
     {
-        return TryDrawOccupantPath_(rGraphics, *pOccupant, path, x, y, width, height, tint);
+        return TryDrawOccupantPath_(rGraphics, *pOccupant, path, rShape, Color_t::White());
     }
-    return TryDrawDiamondSprite_(rGraphics, path, x, y, width, height, UniformTint_(tint));
+    return TryDrawTileSprite_(rGraphics, path, rShape);
 }
 
-// Water art shaded per vertex by depth with the tints table named by the landform's id; a
-// landform without one draws untinted.
+// Water art shaded per vertex by depth within the shade range named by the landform's id; a
+// landform without one draws as painted. The deep and shelf landforms trade art by depth, as SMAC
+// picks its deep or shelf texture per tile.
 bool TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile, const TileLayer_t& rLayer,
-                           const WorldMap* pMap, float x, float y, float width, float height)
+                           const WorldMap* pMap, const TileShape_t& rShape)
 {
     const ImprovementConfig_t* pOccupant = FindLayerOccupant_(rTile, rLayer);
     if (!pOccupant)
@@ -328,25 +409,38 @@ bool TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile, const TileLay
         return false;
     }
     const WaterShadingStyle_t& rShading = Style().tileRenderer.waterShading;
-    const auto it = rShading.tints.find(pOccupant->id);
-    const DiamondTint_t tint =
-        it == rShading.tints.end()
-            ? DiamondTint_t{}
-            : WaterShadeTint(ResolveWaterShades(rTile, pMap, rShading.depthShades), it->second);
-    return TryDrawDiamondSprite_(rGraphics, LayerSpritePath_(rTile, rLayer, *pOccupant, pMap), x,
-                                 y, width, height, tint);
+    TileShape_t water = UniformShade_(rShape, 0.0f);
+    const auto range = rShading.shades.find(pOccupant->id);
+    if (range == rShading.shades.end())
+    {
+        return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rLayer, *pOccupant, pMap),
+                                  water);
+    }
+    const DiamondShades_t shades = ResolveWaterShades(rTile, pMap, rShading);
+    const ImprovementConfig_t* pArt = pOccupant;
+    if (pOccupant->id == rShading.deepLandform || pOccupant->id == rShading.shelfLandform)
+    {
+        pArt = rTile.FindOccupantConfig(SeaArtLandform(shades, rShading));
+        if (!pArt)
+        {
+            return false;
+        }
+    }
+    ApplyWaterShades(water, shades, rShading.shades.at(pArt->id));
+    return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rLayer, *pArt, pMap), water);
 }
 
 // Missing river art: a line from the tile centre to each connected edge's midpoint, or a short
 // cross on a river tile with no river neighbor.
-void DrawProceduralRiver_(Graphics& rGraphics, const Tile& rTile, const WorldMap* pMap, float x,
-                          float y, float width, float height, bool bFogged)
+void DrawProceduralRiver_(Graphics& rGraphics, const Tile& rTile, const WorldMap* pMap,
+                          const TileShape_t& rShape, bool bFogged)
 {
     const auto& s = Style().tileRenderer;
     const Color_t color = bFogged ? DimColor_(s.riverColor, s.fogFillDimRatio) : s.riverColor;
+    const float width = rShape.east.x - rShape.west.x;
     const float thickness = std::max(1.0f, width * s.riverLineThicknessRatio);
-    const float centerX = x + width * 0.5f;
-    const float centerY = y + height * 0.5f;
+    const float centerX = rShape.center.x;
+    const float centerY = rShape.center.y;
     const RiverConnection_t connections =
         pMap ? GetRiverConnections(rTile, *pMap) : RiverConnection_t::None;
     if (connections == RiverConnection_t::None)
@@ -360,44 +454,22 @@ void DrawProceduralRiver_(Graphics& rGraphics, const Tile& rTile, const WorldMap
     const struct
     {
         RiverConnection_t direction;
-        float edgeX;
-        float edgeY;
+        const TileVertex_t* pFrom;
+        const TileVertex_t* pTo;
     } k_Edges[] = {
-        {RiverConnection_t::North, 0.75f, 0.25f},
-        {RiverConnection_t::East, 0.75f, 0.75f},
-        {RiverConnection_t::South, 0.25f, 0.75f},
-        {RiverConnection_t::West, 0.25f, 0.25f},
+        {RiverConnection_t::North, &rShape.north, &rShape.east},
+        {RiverConnection_t::East, &rShape.east, &rShape.south},
+        {RiverConnection_t::South, &rShape.south, &rShape.west},
+        {RiverConnection_t::West, &rShape.west, &rShape.north},
     };
     for (const auto& rEdge : k_Edges)
     {
         if (HasRiverConnection(connections, rEdge.direction))
         {
-            rGraphics.DrawLine(centerX, centerY, x + width * rEdge.edgeX, y + height * rEdge.edgeY,
-                               color, thickness);
+            rGraphics.DrawLine(centerX, centerY, (rEdge.pFrom->x + rEdge.pTo->x) * 0.5f,
+                               (rEdge.pFrom->y + rEdge.pTo->y) * 0.5f, color, thickness);
         }
     }
-}
-
-void DrawInsetDiamond_(Graphics& rGraphics, float x, float y, float width, float height,
-                       float insetRatio, const Color_t& color)
-{
-    const float insetX = width * insetRatio;
-    const float insetY = height * insetRatio;
-    const float spanW = width - 2.0f * insetX;
-    const float spanH = height - 2.0f * insetY;
-    if (spanW <= 0.0f || spanH <= 0.0f)
-    {
-        return;
-    }
-    rGraphics.DrawFilledDiamond(x + insetX, y + insetY, spanW, spanH, color);
-}
-
-void DrawRockinessRing_(Graphics& rGraphics, float x, float y, float width, float height,
-                        const Color_t& ringColor, const Color_t& holeColor, float outerInsetRatio,
-                        float innerInsetRatio)
-{
-    DrawInsetDiamond_(rGraphics, x, y, width, height, outerInsetRatio, ringColor);
-    DrawInsetDiamond_(rGraphics, x, y, width, height, innerInsetRatio, holeColor);
 }
 
 bool ShouldSkipLandProceduralOverlays_(const Tile& rTile)
@@ -406,8 +478,8 @@ bool ShouldSkipLandProceduralOverlays_(const Tile& rTile)
            || rTile.HasImprovement(ImprovementIds::k_Forest);
 }
 
-void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, float y, float width,
-                              float height, bool bFogged, const Color_t& baseFill)
+void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                              bool bFogged, const Color_t& baseFill)
 {
     if (ShouldSkipLandProceduralOverlays_(rTile))
     {
@@ -422,12 +494,12 @@ void DrawProceduralRockiness_(Graphics& rGraphics, const Tile& rTile, float x, f
     }
     const Color_t ring =
         DimColor_(rockiness == Rockiness_t::Rocky ? s.rockyRingColor : s.rollingRingColor, dim);
-    DrawRockinessRing_(rGraphics, x, y, width, height, ring, baseFill, s.landformRingOuterInsetRatio,
-                       s.landformRingInnerInsetRatio);
+    FillInsetShape_(rGraphics, rShape, s.landformRingOuterInsetRatio, ring);
+    FillInsetShape_(rGraphics, rShape, s.landformRingInnerInsetRatio, baseFill);
 }
 
-void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, float y, float width,
-                             float height, bool bFogged)
+void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                             bool bFogged)
 {
     if (ShouldSkipLandProceduralOverlays_(rTile))
     {
@@ -442,7 +514,7 @@ void DrawProceduralMoisture_(Graphics& rGraphics, const Tile& rTile, float x, fl
     }
     const Color_t center =
         DimColor_(moisture == Moisture_t::Wet ? s.wetCenterColor : s.moistCenterColor, dim);
-    DrawInsetDiamond_(rGraphics, x, y, width, height, s.landformRingInnerInsetRatio, center);
+    FillInsetShape_(rGraphics, rShape, s.landformRingInnerInsetRatio, center);
 }
 
 } // namespace
@@ -512,16 +584,32 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     return fill;
 }
 
-void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                          bool bFogged, const WorldMap* pMap)
+TileShape_t TileRenderer::FlatTileShape(float x, float y, float size)
 {
-    const auto& s = Style().tileRenderer;
     const float width = size;
     const float height = size * k_IsoHeightRatio;
-    const Color_t baseFill = FillColor(rTile, bFogged);
-    const Color_t terrainTint = TerrainTint_(rTile, bFogged);
+    const auto vertex = [&](float u, float v) {
+        return TileVertex_t{x + width * u, y + height * v};
+    };
+    return TileShape_t{vertex(0.5f, 0.5f), vertex(0.0f, 0.5f), vertex(0.5f, 0.0f),
+                       vertex(1.0f, 0.5f), vertex(0.5f, 1.0f)};
+}
 
-    rGraphics.DrawFilledDiamond(x, y, width, height, baseFill);
+void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                          bool bFogged, const WorldMap* pMap)
+{
+    RenderTerrain(rGraphics, rTile, rShape, bFogged, pMap);
+    RenderObjects(rGraphics, rTile, rShape, pMap);
+}
+
+void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                                 bool bFogged, const WorldMap* pMap)
+{
+    const auto& s = Style().tileRenderer;
+    const Color_t baseFill = FillColor(rTile, bFogged);
+    const TileShape_t terrain = TerrainShape_(rShape, rTile, bFogged);
+
+    rGraphics.FillTileShape(rShape, baseFill);
 
     // The coast covers the terrain layers and sits under rivers, roads and improvements.
     bool bCoastDrawn = false;
@@ -533,20 +621,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         bCoastDrawn = true;
         if (pMap)
         {
-            DrawCoastOverlay_(rGraphics, rTile, *pMap, x, y, width, height, terrainTint);
-        }
-    };
-    // Fog hazes the terrain layers; objects draw clear on top of it, as in SMAC.
-    bool bHazeDrawn = false;
-    auto drawHaze = [&]() {
-        if (bHazeDrawn)
-        {
-            return;
-        }
-        bHazeDrawn = true;
-        if (bFogged)
-        {
-            rGraphics.DrawFilledDiamond(x, y, width, height, s.fogHazeColor);
+            DrawCoastOverlay_(rGraphics, rTile, *pMap, rShape, bFogged ? s.fogLandShade : 0.0f);
         }
     };
 
@@ -556,56 +631,61 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             drawCoast();
         }
-        if (rLayer.type == TileLayerType_t::Improvement)
-        {
-            drawHaze();
-        }
-        if (!rLayer.contentId.has_value())
+        if (rLayer.type == TileLayerType_t::Improvement || !rLayer.contentId.has_value())
         {
             continue;
         }
         if (rLayer.type == TileLayerType_t::Landform && rTile.IsWater())
         {
-            (void)TryDrawWaterLandform_(rGraphics, rTile, rLayer, pMap, x, y, width, height);
+            (void)TryDrawWaterLandform_(rGraphics, rTile, rLayer, pMap, rShape);
             continue;
         }
         const bool bFungusLayer = rLayer.type == TileLayerType_t::Vegetation
                                   && *rLayer.contentId == TileLayerContent::k_Fungus;
-        const Color_t layerTint =
-            rLayer.type == TileLayerType_t::Improvement ? Color_t::White() : terrainTint;
+        const TileShape_t layerShape = rLayer.type == TileLayerType_t::Rockiness
+                                           ? RockinessShape_(terrain, rTile, pMap)
+                                           : terrain;
 
-        const SpriteDestRect_t dest =
-            rLayer.type == TileLayerType_t::Rockiness
-                ? DestRectForEdgeInsets(x, y, size, MatchRockinessEdges(rTile, pMap),
-                                        s.spriteOverlayEdgeInsetRatio)
-                : SpriteDestRect_t{x, y, width, height};
-
-        if (TryDrawLayerSprite_(rGraphics, rTile, rLayer, pMap, dest.x, dest.y, dest.width,
-                                dest.height, layerTint))
+        if (TryDrawLayerSprite_(rGraphics, rTile, rLayer, pMap, layerShape))
         {
             continue;
         }
         // Per-layer procedural cues when that layer's sprite is missing.
         if (rLayer.type == TileLayerType_t::Moisture)
         {
-            DrawProceduralMoisture_(rGraphics, rTile, x, y, width, height, bFogged);
+            DrawProceduralMoisture_(rGraphics, rTile, rShape, bFogged);
         }
         else if (bFungusLayer)
         {
-            rGraphics.DrawFilledDiamond(dest.x, dest.y, dest.width, dest.height, s.fungusColor);
+            rGraphics.FillTileShape(layerShape, s.fungusColor);
         }
         else if (rLayer.type == TileLayerType_t::Rockiness)
         {
-            DrawProceduralRockiness_(rGraphics, rTile, dest.x, dest.y, dest.width, dest.height,
-                                     bFogged, baseFill);
+            DrawProceduralRockiness_(rGraphics, rTile, layerShape, bFogged, baseFill);
         }
         else if (rLayer.type == TileLayerType_t::River)
         {
-            DrawProceduralRiver_(rGraphics, rTile, pMap, x, y, width, height, bFogged);
+            DrawProceduralRiver_(rGraphics, rTile, pMap, rShape, bFogged);
         }
     }
     drawCoast();
-    drawHaze();
+    // Fog hazes the terrain layers; objects draw clear on top of it, as in SMAC.
+    if (bFogged)
+    {
+        rGraphics.FillTileShape(rShape, s.fogHazeColor);
+    }
+}
+
+void TileRenderer::RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                                 const WorldMap* pMap)
+{
+    const auto layers = ResolveTileLayers(rTile);
+    const TileLayer_t& rImprovementLayer =
+        layers[static_cast<std::size_t>(TileLayerType_t::Improvement)];
+    if (rImprovementLayer.contentId.has_value())
+    {
+        (void)TryDrawLayerSprite_(rGraphics, rTile, rImprovementLayer, pMap, rShape);
+    }
 
     // Improvements already drawn via the Improvement layer when they are the dominant occupant.
     // Also draw any remaining improvement sprites that carry art (e.g. tile bonuses on terrain).
@@ -621,7 +701,7 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
             continue;
         }
         (void)TryDrawOccupantPath_(rGraphics, *pImprovement,
-                                   VariantSpritePath_(*pImprovement, rTile), x, y, width, height,
+                                   VariantSpritePath_(*pImprovement, rTile), rShape,
                                    Color_t::White());
     }
 
@@ -641,11 +721,9 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
         {
             continue;
         }
-        (void)TryDrawOccupantPath_(rGraphics, *pFeature, VariantSpritePath_(*pFeature, rTile), x,
-                                   y, width, height, Color_t::White());
+        (void)TryDrawOccupantPath_(rGraphics, *pFeature, VariantSpritePath_(*pFeature, rTile),
+                                   rShape, Color_t::White());
     }
-
-    rGraphics.DrawDiamond(x, y, width, height, s.tileBorderColor, s.tileBorderWidth);
 }
 
 } // namespace ac

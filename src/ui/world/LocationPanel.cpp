@@ -36,7 +36,8 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float previewY = m_layout.y + padding;
     const float textX = m_layout.x + padding;
 
-    TileRenderer::Render(rGraphics, *m_pSelectedTile, previewX, previewY, previewSize);
+    TileRenderer::Render(rGraphics, *m_pSelectedTile,
+                         TileRenderer::FlatTileShape(previewX, previewY, previewSize));
 
     float textY = previewY + previewSize + textGap;
     textY = DrawCoordinates_(rGraphics, textX, textY, fontSize) + textGap;

@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -32,8 +33,10 @@ public:
         float height = 0.0f;
         bool bFilled = false;
         ac::Color_t color{};
-        // Position among every sprite and rect drawn, so the two lists can be ordered.
+        // Position among every sprite, rect and line drawn, so the lists can be ordered.
         std::size_t order = 0;
+        // Set for FillTileShape; x/y/width/height are then its bounding box.
+        std::optional<ac::TileShape_t> shape;
     };
 
     struct LineDraw_t
@@ -43,6 +46,7 @@ public:
         float x2 = 0.0f;
         float y2 = 0.0f;
         ac::Color_t color{};
+        std::size_t order = 0;
     };
 
     struct SpriteDraw_t
@@ -54,8 +58,11 @@ public:
         float destHeight = 0.0f;
         ac::Color_t tint = ac::Color_t::White();
         bool bScaled = false;
-        std::optional<ac::DiamondTint_t> diamondTint;
+        // Set for DrawTileSprite; x/y/destWidth/destHeight are then its bounding box.
+        std::optional<ac::TileShape_t> shape;
         std::size_t order = 0;
+        // The palette a DrawTileSprite drew through; empty for DrawSprite.
+        std::string paletteId;
     };
 
     void PumpEvents() override {}
@@ -90,13 +97,21 @@ public:
         ++spriteCount;
         return true;
     }
-    bool DrawDiamondSprite(const std::string& textureId, float x, float y, float destWidth,
-                           float destHeight, const ac::DiamondTint_t& rTint) override
+    bool DrawTileSprite(const std::string& textureId, const std::string& paletteId,
+                        const ac::TileShape_t& rShape) override
     {
-        sprites.push_back(SpriteDraw_t{textureId, x, y, destWidth, destHeight, rTint.center, true,
-                                       rTint, drawCount++});
+        const Bounds_t bounds = BoundsOf_(rShape);
+        sprites.push_back(SpriteDraw_t{textureId, bounds.x, bounds.y, bounds.width, bounds.height,
+                                       ac::Color_t::White(), true, rShape, drawCount++,
+                                       paletteId});
         ++spriteCount;
         return true;
+    }
+    void FillTileShape(const ac::TileShape_t& rShape, const ac::Color_t& rColor) override
+    {
+        const Bounds_t bounds = BoundsOf_(rShape);
+        rects.push_back(RectDraw_t{bounds.x, bounds.y, bounds.width, bounds.height, true, rColor,
+                                   drawCount++, rShape});
     }
 
     void DrawText(const std::string& rText, float x, float y, unsigned int size,
@@ -133,7 +148,7 @@ public:
     void DrawLine(float x1, float y1, float x2, float y2, const ac::Color_t& rColor,
                   float) override
     {
-        lines.push_back(LineDraw_t{x1, y1, x2, y2, rColor});
+        lines.push_back(LineDraw_t{x1, y1, x2, y2, rColor, drawCount++});
     }
 
     unsigned int GetWindowWidth() const override { return 1280; }
@@ -206,6 +221,34 @@ public:
     int upsertTextureCount = 0;
     int spriteCount = 0;
     std::size_t drawCount = 0;
+
+private:
+    struct Bounds_t
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float width = 0.0f;
+        float height = 0.0f;
+    };
+
+    static Bounds_t BoundsOf_(const ac::TileShape_t& rShape)
+    {
+        const ac::TileVertex_t* const vertices[] = {&rShape.center, &rShape.west, &rShape.north,
+                                                    &rShape.east, &rShape.south};
+        Bounds_t bounds{vertices[0]->x, vertices[0]->y, 0.0f, 0.0f};
+        float right = bounds.x;
+        float bottom = bounds.y;
+        for (const ac::TileVertex_t* pVertex : vertices)
+        {
+            bounds.x = std::min(bounds.x, pVertex->x);
+            bounds.y = std::min(bounds.y, pVertex->y);
+            right = std::max(right, pVertex->x);
+            bottom = std::max(bottom, pVertex->y);
+        }
+        bounds.width = right - bounds.x;
+        bounds.height = bottom - bounds.y;
+        return bounds;
+    }
 };
 
 } // namespace actest

@@ -31,20 +31,51 @@ struct ViewFactoryStyle_t
     float fullscreenOriginY{};
 };
 
+// SMAC's raised tiles and slope shading (docs/thinker/smac-palette-lighting.md).
+struct ReliefStyle_t
+{
+    // Lift of one level, as a fraction of the tile's width.
+    float liftPerLevelRatio{};
+    // Elevation of one level.
+    float levelMeters{};
+    // How far a corner rises above the tile's centre before its slope gets full shade; gentler
+    // slopes shade in proportion. A quarter level matches SMAC.
+    float fullShadeRiseMeters{};
+    // Palette steps lighter that land gets per level above sea level; 0 leaves altitude
+    // unshaded.
+    float altitudeLightSteps{};
+};
+
+// The palette steps a water art takes: its depth shade plus offset, kept within 0..max so the
+// art stays on the water ramp.
+struct WaterShadeRange_t
+{
+    int offset = 0;
+    int max = 0;
+};
+
 // SMAC's water depth shading (docs/thinker/smac-palette-lighting.md).
 struct WaterShadingStyle_t
 {
-    // Shade for equal depth bands from the map's floor up to ocean level, deepest first.
+    // Shade per step of SMAC's depth detail, deepest first; the last entry is just below ocean
+    // level and anything deeper than the table takes the first.
     std::vector<int> depthShades;
-    // Colour multiply of each water landform's art per shade, keyed by landform id.
-    std::unordered_map<std::string, std::vector<Color_t>> tints;
-    // The tints entry coast water uses.
-    std::string coastTints;
+    // Depth of one detail step.
+    float detailMeters{};
+    // Water tiles of these two landforms draw the deep landform's art when any corner's shade
+    // reaches deepFromShade, and the shelf landform's otherwise, as SMAC does.
+    std::string deepLandform;
+    std::string shelfLandform;
+    int deepFromShade = 0;
+    // Each water landform's shade range, keyed by landform id; a landform without one draws as
+    // painted.
+    std::unordered_map<std::string, WaterShadeRange_t> shades;
+    // The shades entry coast water uses.
+    std::string coastShades;
 };
 
 struct TileRendererStyle_t
 {
-    Color_t tileBorderColor{};
     Color_t waterLowColor{};
     Color_t waterHighColor{};
     Color_t landLowColor{};
@@ -57,10 +88,10 @@ struct TileRendererStyle_t
     Color_t rollingRingColor{};
     Color_t rockyRingColor{};
     float fogFillDimRatio{};
-    // Fogged land terrain art, and the haze drawn over a fogged tile's terrain layers.
-    float fogTerrainDimRatio{};
+    // Palette steps darker that fogged land art draws, as SMAC shades remembered land.
+    float fogLandShade{};
+    // Haze drawn over a fogged tile's terrain layers.
     Color_t fogHazeColor{};
-    float tileBorderWidth{};
     // Insets as a fraction of tile size: ring sits between outer and inner; moisture fills
     // the center (same inner inset so it plugs the ring hole).
     float landformRingOuterInsetRatio{};
@@ -70,10 +101,18 @@ struct TileRendererStyle_t
     float spriteOverlayEdgeInsetRatio{};
     // Directory of the {water,shore}_<corner>_<case>.png coast overlays (extract_terrain.py).
     std::string coastSpriteDir{};
+    // palette.pcx as a 256 × 1 texture; terrain and coast art are indices into it
+    // (extract_terrain.py).
+    std::string palettePath{};
     // River fallback lines when river art is missing.
     Color_t riverColor{};
     float riverLineThicknessRatio{};
     WaterShadingStyle_t waterShading{};
+    ReliefStyle_t relief{};
+    // Grid lines along tile edges: between two land tiles, and touching water.
+    Color_t gridLandColor{};
+    Color_t gridWaterColor{};
+    float gridLineWidth{};
 };
 
 struct WorldDisplayStyle_t

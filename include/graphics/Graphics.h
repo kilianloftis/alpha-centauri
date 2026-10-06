@@ -57,14 +57,24 @@ struct Color_t
     }
 };
 
-// Colour multiply at a tile diamond's centre and corners.
-struct DiamondTint_t
+// A map tile's on-screen vertex. shade moves the tile art along its palette ramps, in palette
+// steps (positive is darker); 0 draws the art as painted.
+struct TileVertex_t
 {
-    Color_t center = Color_t::White();
-    Color_t west = Color_t::White();
-    Color_t north = Color_t::White();
-    Color_t east = Color_t::White();
-    Color_t south = Color_t::White();
+    float x = 0.0f;
+    float y = 0.0f;
+    float shade = 0.0f;
+};
+
+// A map tile as four triangles around its centre. Corners W, N, E, S may sit anywhere, so a
+// raised tile leans with the terrain.
+struct TileShape_t
+{
+    TileVertex_t center;
+    TileVertex_t west;
+    TileVertex_t north;
+    TileVertex_t east;
+    TileVertex_t south;
 };
 
 class Graphics
@@ -89,16 +99,19 @@ public:
     virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                             float destHeight) = 0;
     // Color multiply (RGB/A channels of the sprite are scaled by tint). White leaves the
-    // texture unchanged. Used for elevation/fog shading on map tiles.
+    // texture unchanged.
     virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                             float destHeight, const Color_t& tint) = 0;
-    // Draws the texture's inscribed diamond (corners at the midpoints of its edges) onto the
-    // diamond inscribed in the destination rect, as four triangles around the centre with
-    // rTint interpolated from the centre to each corner. Neighboring diamonds meet edge to edge,
-    // and edge pixels sample just inside the texture's diamond.
-    virtual bool DrawDiamondSprite(const std::string& textureId, float x, float y,
-                                   float destWidth, float destHeight,
-                                   const DiamondTint_t& rTint) = 0;
+    // Draws palette-index art (grey is the palette index, alpha is coverage) as SMAC does: maps
+    // the texture's inscribed diamond (corners at the midpoints of its edges) onto the shape's
+    // four triangles, interpolates each vertex's shade, and colours each pixel with the entry
+    // of the palette texture (256 × 1) at its index plus the shade rounded to a whole step,
+    // within the art range 0–235. Shapes that share vertices meet edge to edge, and edge
+    // pixels sample just inside the texture's diamond.
+    virtual bool DrawTileSprite(const std::string& textureId, const std::string& paletteId,
+                                const TileShape_t& rShape) = 0;
+    // Fills the shape's four triangles with one colour.
+    virtual void FillTileShape(const TileShape_t& rShape, const Color_t& color) = 0;
     virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;

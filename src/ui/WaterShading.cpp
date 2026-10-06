@@ -30,20 +30,21 @@ double DepthElevation_(const Tile& rTile)
     return std::clamp(rTile.GetElevation(), rRules.minElevationMeters, rRules.oceanLevelMeters);
 }
 
+// SMAC's depth detail: one step per detailMeters below ocean level, counted down from the end of
+// the table.
 int ShadeAt_(double elevation, const ElevationRulesConfig_t& rRules,
-             const std::vector<int>& depthShades)
+             const WaterShadingStyle_t& rShading)
 {
-    const double span =
-        static_cast<double>(rRules.oceanLevelMeters - rRules.minElevationMeters);
-    const double band = std::floor(static_cast<double>(depthShades.size())
-                                   * (elevation - rRules.minElevationMeters) / span);
+    const std::vector<int>& rTable = rShading.depthShades;
+    const double detail = std::floor(static_cast<double>(rTable.size())
+                                     + (elevation - rRules.oceanLevelMeters) / rShading.detailMeters);
     const std::size_t index =
-        std::min(static_cast<std::size_t>(std::max(band, 0.0)), depthShades.size() - 1);
-    return depthShades[index];
+        std::min(static_cast<std::size_t>(std::max(detail, 0.0)), rTable.size() - 1);
+    return rTable[index];
 }
 
 int CornerShade_(const Tile& rTile, const WorldMap& rMap,
-                 const std::array<GridDelta_t, 3>& neighbors, const std::vector<int>& depthShades)
+                 const std::array<GridDelta_t, 3>& neighbors, const WaterShadingStyle_t& rShading)
 {
     double sum = DepthElevation_(rTile);
     int count = 1;
@@ -56,52 +57,60 @@ int CornerShade_(const Tile& rTile, const WorldMap& rMap,
             ++count;
         }
     }
-    return ShadeAt_(sum / count, rTile.MapRules(), depthShades);
+    return ShadeAt_(sum / count, rTile.MapRules(), rShading);
 }
 
-const Color_t& TintAt_(int shade, const std::vector<Color_t>& tints)
+float ShadeIn_(int shade, const WaterShadeRange_t& range)
 {
-    return tints[std::min(static_cast<std::size_t>(shade), tints.size() - 1)];
+    return static_cast<float>(std::clamp(shade + range.offset, 0, range.max));
 }
 
 } // namespace
 
 DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap* pMap,
-                                   const std::vector<int>& depthShades)
+                                   const WaterShadingStyle_t& rShading)
 {
-    if (depthShades.empty())
+    if (rShading.depthShades.empty())
     {
         throw std::invalid_argument("ResolveWaterShades: depthShades is empty");
     }
-    const ElevationRulesConfig_t& rRules = rTile.MapRules();
-    if (rRules.oceanLevelMeters <= rRules.minElevationMeters)
+    if (rShading.detailMeters <= 0.0f)
     {
-        throw std::invalid_argument("ResolveWaterShades: the map's floor is not below ocean level");
+        throw std::invalid_argument("ResolveWaterShades: detailMeters is not positive");
     }
-    const int own = ShadeAt_(DepthElevation_(rTile), rRules, depthShades);
+    const int own = ShadeAt_(DepthElevation_(rTile), rTile.MapRules(), rShading);
     if (!pMap)
     {
         return DiamondShades_t{own, own, own, own, own};
     }
     return DiamondShades_t{
         own,
-        CornerShade_(rTile, *pMap, k_WestCorner, depthShades),
-        CornerShade_(rTile, *pMap, k_NorthCorner, depthShades),
-        CornerShade_(rTile, *pMap, k_EastCorner, depthShades),
-        CornerShade_(rTile, *pMap, k_SouthCorner, depthShades),
+        CornerShade_(rTile, *pMap, k_WestCorner, rShading),
+        CornerShade_(rTile, *pMap, k_NorthCorner, rShading),
+        CornerShade_(rTile, *pMap, k_EastCorner, rShading),
+        CornerShade_(rTile, *pMap, k_SouthCorner, rShading),
     };
 }
 
-DiamondTint_t WaterShadeTint(const DiamondShades_t& shades, const std::vector<Color_t>& tints)
+const std::string& SeaArtLandform(const DiamondShades_t& shades, const WaterShadingStyle_t& rShading)
 {
-    if (tints.empty())
+    const bool bDeep = std::max({shades.west, shades.north, shades.east, shades.south})
+                       >= rShading.deepFromShade;
+    return bDeep ? rShading.deepLandform : rShading.shelfLandform;
+}
+
+void ApplyWaterShades(TileShape_t& rShape, const DiamondShades_t& shades,
+                      const WaterShadeRange_t& range)
+{
+    if (range.max < 0)
     {
-        throw std::invalid_argument("WaterShadeTint: tints is empty");
+        throw std::invalid_argument("ApplyWaterShades: range.max is negative");
     }
-    return DiamondTint_t{
-        TintAt_(shades.center, tints), TintAt_(shades.west, tints), TintAt_(shades.north, tints),
-        TintAt_(shades.east, tints),   TintAt_(shades.south, tints),
-    };
+    rShape.center.shade = ShadeIn_(shades.center, range);
+    rShape.west.shade = ShadeIn_(shades.west, range);
+    rShape.north.shade = ShadeIn_(shades.north, range);
+    rShape.east.shade = ShadeIn_(shades.east, range);
+    rShape.south.shade = ShadeIn_(shades.south, range);
 }
 
 } // namespace ac

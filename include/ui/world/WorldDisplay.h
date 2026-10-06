@@ -67,6 +67,9 @@ private:
 
     // Render path preview as a line through tile centers
     void RenderPathPreview_(Graphics& rGraphics);
+    // Grid lines along the tile's NW and NE edges through its raised corners.
+    void RenderGridEdges_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                          bool bOceanGrid) const;
 };
 
 } // namespace ac

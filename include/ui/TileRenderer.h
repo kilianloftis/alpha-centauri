@@ -23,10 +23,10 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 
 // Shared terrain-tile cell drawing for the world map and location panel preview.
 // Fills by forest overlay or elevation (blue water / brown land), then draws
-// ResolveTileLayers bottom-to-top. Land art keeps its sheet colours; water art is shaded per
-// vertex by depth, as SMAC does. Fungus is an overlay sprite (not a solid fill). Missing
-// assets fall back to procedural moisture/rockiness cues (or a fungus fill if that sprite is
-// absent). Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
+// ResolveTileLayers bottom-to-top. Terrain art is palette indices shaded as SMAC does: land by
+// its relief shades, water per vertex by depth. Fungus is an overlay sprite (not a solid
+// fill). Missing assets fall back to procedural moisture/rockiness cues (or a fungus fill if
+// that sprite is absent). Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
 // When sprite_paths lists multiple assets, PickSpritePath chooses one per tile.
 class TileRenderer
 {
@@ -35,13 +35,25 @@ public:
     // Forest overrides the elevation gradient when present; fungus does not.
     static Color_t FillColor(const Tile& rTile, bool bFogged = false);
 
-    // Fogged tiles (explored memory on the world map) dim their land art and get a haze over
-    // the terrain layers; object sprites stay clear on top.
-    // `size` is the diamond width in pixels; height is size / 2.
-    // pMap enables neighbor-aware tile sets, rockiness insets, coast overlays and water corner
-    // shading; null draws no coast and shades water from the tile alone (location preview).
-    static void Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+    // The flat diamond inscribed in (x, y, size, size / 2), at shade 0.
+    static TileShape_t FlatTileShape(float x, float y, float size);
+
+    // Draws the tile on rShape: terrain on its four triangles (land at its vertex shades),
+    // object sprites on a flat footprint seated at the mean of its corners. Fogged tiles
+    // (explored memory on the world map) draw their land art fog_land_shade steps darker and get
+    // a haze over the terrain layers; object sprites stay clear on top. pMap enables
+    // neighbor-aware tile sets, rockiness insets, coast overlays and water corner shading; null
+    // draws no coast and shades water from the tile alone.
+    static void Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                        bool bFogged = false, const WorldMap* pMap = nullptr);
+
+    // Render's two halves, so the world map can draw a tile's grid lines between them as SMAC
+    // does. RenderTerrain draws the fill, terrain layers, coast and fog haze; RenderObjects the
+    // improvement layer and object sprites, seated at the mean of the shape's four corners.
+    static void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                              bool bFogged, const WorldMap* pMap);
+    static void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                              const WorldMap* pMap);
 };
 
 } // namespace ac
