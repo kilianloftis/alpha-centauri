@@ -8,9 +8,11 @@
 #include "ui/world/WorldDisplay.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace ac;
 using actest::ViewFixture;
+using Catch::Matchers::WithinRel;
 
 namespace
 {
@@ -29,7 +31,10 @@ struct CameraRig_t
     {
         return k_TallMapHeight - display.GetVisibleRows();
     }
-    bool Press(Key_t key) { return controller.HandleKey(KeyEvent_t{key, ModifierState_t{}}); }
+    bool Press(Key_t key, ModifierState_t mods = {})
+    {
+        return controller.HandleKey(KeyEvent_t{key, mods});
+    }
 };
 
 } // namespace
@@ -108,5 +113,52 @@ TEST_CASE("Camera vertical clamp stops at the poles", "[ui][camera]")
 
         CHECK(rig.controller.CenterOnTile(20, k_TallMapHeight - 1));
         CHECK(rig.Viewport().CameraY() == maxCameraY);
+    }
+}
+
+TEST_CASE("Camera zoom scales tile size with Ctrl+Z / Ctrl+X", "[ui][camera]")
+{
+    CameraRig_t rig;
+    const auto& s = Style().cameraInput;
+    const ModifierState_t ctrl{/*bCtrl=*/true, false, false};
+    const float startSize = rig.Viewport().TileSize();
+    rig.Viewport().SetCamera(10, 20);
+    const int centerX = 10 + rig.Viewport().VisibleCols() / 2;
+    const int centerY = 20 + rig.Viewport().VisibleRows() / 2;
+
+    SECTION("Ctrl+Z zooms in and recenters")
+    {
+        CHECK(rig.Press(Key_t::Z, ctrl));
+        CHECK_THAT(rig.Viewport().TileSize(), WithinRel(startSize * s.zoomFactor, 1e-5f));
+        CHECK(rig.Viewport().CameraX() == centerX - rig.Viewport().VisibleCols() / 2);
+        CHECK(rig.Viewport().CameraY() == centerY - rig.Viewport().VisibleRows() / 2);
+    }
+
+    SECTION("Ctrl+X zooms out and recenters")
+    {
+        CHECK(rig.Press(Key_t::X, ctrl));
+        CHECK_THAT(rig.Viewport().TileSize(), WithinRel(startSize / s.zoomFactor, 1e-5f));
+        CHECK(rig.Viewport().CameraX() == centerX - rig.Viewport().VisibleCols() / 2);
+        CHECK(rig.Viewport().CameraY() == centerY - rig.Viewport().VisibleRows() / 2);
+    }
+
+    SECTION("plain Z / X do not zoom")
+    {
+        CHECK_FALSE(rig.Press(Key_t::Z));
+        CHECK_FALSE(rig.Press(Key_t::X));
+        CHECK_THAT(rig.Viewport().TileSize(), WithinRel(startSize, 1e-5f));
+    }
+
+    SECTION("zoom stops at the configured scale bounds")
+    {
+        const float maxSize = ViewFixture::FullScreen().height * s.maxTileScale;
+        const float minSize = ViewFixture::FullScreen().height * s.minTileScale;
+        REQUIRE(rig.Viewport().SetTileSize(maxSize));
+        CHECK_FALSE(rig.Press(Key_t::Z, ctrl));
+        CHECK_THAT(rig.Viewport().TileSize(), WithinRel(maxSize, 1e-5f));
+
+        REQUIRE(rig.Viewport().SetTileSize(minSize));
+        CHECK_FALSE(rig.Press(Key_t::X, ctrl));
+        CHECK_THAT(rig.Viewport().TileSize(), WithinRel(minSize, 1e-5f));
     }
 }

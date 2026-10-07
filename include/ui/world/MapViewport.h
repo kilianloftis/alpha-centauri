@@ -32,6 +32,10 @@ public:
     bool SetCamera(int tileX, int tileY);
     bool ScrollBy(int deltaX, int deltaY);
 
+    // Diamond width in pixels; height stays width / 2. Recalculates VisibleCols / VisibleRows.
+    // Returns true when the size actually changed.
+    bool SetTileSize(float tileSize);
+
     int CameraX() const { return m_cameraX; }
     int CameraY() const { return m_cameraY; }
     // Layout size in whole map units (½ tile width / height each).

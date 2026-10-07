@@ -108,6 +108,8 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
     case HotkeyAction_t::PanRight:
     case HotkeyAction_t::PanUp:
     case HotkeyAction_t::PanDown:
+    case HotkeyAction_t::ZoomIn:
+    case HotkeyAction_t::ZoomOut:
     case HotkeyAction_t::Cancel:
     case HotkeyAction_t::EndTurn:
     case HotkeyAction_t::NextUnit:

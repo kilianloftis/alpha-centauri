@@ -279,6 +279,11 @@ struct CameraInputStyle_t
     int cameraScrollStep{};
     int initialCameraOffset{};
     float edgeScrollSpeed{};
+    // Multiplicative step; ZoomIn multiplies tile size, ZoomOut divides. Bounds are
+    // layout.height × scale (same units as world_display.default_tile_scale).
+    float zoomFactor{};
+    float minTileScale{};
+    float maxTileScale{};
 };
 
 struct UnitOrderInputStyle_t
@@ -463,8 +468,6 @@ struct BuildingsDisplayStyle_t
 
 struct BaseWorkableAreaDisplayStyle_t
 {
-    int gridDimension{};
-    float gridCenterOffset{};
     Color_t backgroundColor{};
     Color_t tileBorderColor{};
     float tileBorderWidth{};

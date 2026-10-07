@@ -3,6 +3,7 @@
 #include "ui/UIElement.h"
 #include "input/Input.h"
 #include "game/map/Tile.h"
+#include "graphics/Graphics.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 
 #include <functional>
@@ -12,9 +13,9 @@
 namespace ac
 {
 
-// Displays the workable area of a base: the 20-tile ring in a 5x5 pattern with the corners
-// removed. The center is the base's own tile and is drawn separately.
-// Each tile shows: nutrients minerals energy. Worked tiles are shown in green.
+// Displays the workable area of a base as a brick of 2:1 diamonds matching the world map:
+// lattice neighbors land at map (p − q, p + q). The center diamond is the base tile.
+// Each surrounding tile shows: nutrients minerals energy. Worked tiles are shown in green.
 class BaseManager;
 
 class BaseWorkableAreaDisplay : public UIElement
@@ -33,26 +34,26 @@ public:
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
-    struct TileRect_t
+    struct TileDiamond_t
     {
-        Rectangle_t rect;
-        const Tile* pTile;
+        TileShape_t shape;
+        const Tile* pTile = nullptr;
+        // Map delta from the base; higher mapDy is drawn/hit in front.
+        int mapDx = 0;
+        int mapDy = 0;
+        bool bIsBase = false;
     };
 
-    void CacheTileRects_();
+    void CacheTileDiamonds_();
     const BaseManager& m_rBase;
     const BaseDisplaySnapshot_t& m_rSnapshot;
     TileClickCallback_t m_onTileClicked;
     BaseClickCallback_t m_onBaseClicked;
 
-    float m_tileSize = 0.f;
-    float m_startX = 0.f;
-    float m_startY = 0.f;
-    std::vector<TileRect_t> m_tileRects;
+    float m_tileWidth = 0.f;
+    std::vector<TileDiamond_t> m_tileDiamonds;
 
-    // Render a single workable tile
-    void RenderTile_(Graphics& rGraphics, float x, float y, float size,
-                     const TileDisplay_t& rTile);
+    void RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const;
 };
 
 } // namespace ac

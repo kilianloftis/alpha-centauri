@@ -53,6 +53,8 @@ HotkeyStage_t StageFor(HotkeyAction_t action)
     case HotkeyAction_t::PanRight:
     case HotkeyAction_t::PanUp:
     case HotkeyAction_t::PanDown:
+    case HotkeyAction_t::ZoomIn:
+    case HotkeyAction_t::ZoomOut:
         return HotkeyStage_t::Camera;
     case HotkeyAction_t::Cancel:
     case HotkeyAction_t::EndTurn:

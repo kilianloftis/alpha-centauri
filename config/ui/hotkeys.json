@@ -39,6 +39,8 @@
     { "action": "PanRight", "key": "ArrowRight" },
     { "action": "PanUp", "key": "ArrowUp" },
     { "action": "PanDown", "key": "ArrowDown" },
+    { "action": "ZoomIn", "key": "Z", "ctrl": true },
+    { "action": "ZoomOut", "key": "X", "ctrl": true },
     { "action": "Cancel", "key": "Escape" },
     { "action": "EndTurn", "key": "Enter" },
     { "action": "NextUnit", "key": "V" },

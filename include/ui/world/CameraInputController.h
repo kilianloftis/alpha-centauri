@@ -29,6 +29,7 @@ private:
     // Vertical only — X wraps continuously around the map width.
     int ComputeMaxCameraY_() const;
     bool ApplyCameraDelta_(int deltaCamX, int deltaCamY);
+    bool ApplyZoom_(float factor);
     bool ApplyEdgeScroll_(int mouseX, int mouseY);
 
     WorldDisplay& m_rWorldDisplay;

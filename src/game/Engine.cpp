@@ -21,8 +21,10 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include <random>
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -53,6 +55,7 @@
 #include "ui/ViewFactory.h"
 #include "ui/InteractionPresenter.h"
 #include "ui/style/UiStyle.h"
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -101,6 +104,98 @@ Tile* PickStartingBaseTile_(WorldMap& rMap,
 
     return nullptr;
 }
+
+#ifdef AC_PLACE_TEST_IMPROVEMENTS
+// Temporary test setup: one of each buildable improvement around every starting base so
+// sprites, coexistence, and tile-effect auras are easy to eyeball in a new game.
+void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTileEffects,
+                                       const ImprovementRegistry& rImprovements,
+                                       GameState& rGameState)
+{
+    const int searchRadius =
+        std::max(rMap.GetWidth(), rMap.GetHeight());
+
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        for (BaseManager& rBase : rFaction.Bases())
+        {
+            const Tile& rBaseTile = rBase.GetTile();
+            for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+            {
+                if (rConfig.placement != OccupantPlacement_t::Improvement
+                    || rConfig.id == ImprovementIds::k_Base)
+                {
+                    continue;
+                }
+
+                Tile* pHost = nullptr;
+                int bestDistance = searchRadius + 1;
+                ForEachTileInChebyshevRadius(
+                    rBaseTile, rMap, searchRadius, /*includeOrigin=*/false,
+                    [&](Tile* pTile, int distance) {
+                        if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
+                            || !CanBuildImprovement(*pTile, rConfig) || distance >= bestDistance)
+                        {
+                            return;
+                        }
+                        pHost = pTile;
+                        bestDistance = distance;
+                    });
+
+                if (!pHost)
+                {
+                    throw std::runtime_error(
+                        "Engine setup: no tile near base for improvement '" + rConfig.id + "'");
+                }
+
+                rTileEffects.AddOccupantWithEffects(*pHost, rConfig.id);
+                std::cout << "Placed " << rConfig.id << " for faction " << rFaction.GetFactionId()
+                          << " at (" << pHost->GetX() << ", " << pHost->GetY() << ")\n";
+            }
+
+            // Extra Farms keyed by moisture so arid/moist/wet ground sprites are all visible.
+            const ImprovementConfig_t& rFarm = rImprovements.Get(std::string(ImprovementIds::k_Farm));
+            for (const Moisture_t moisture :
+                 {Moisture_t::Arid, Moisture_t::Moist, Moisture_t::Wet})
+            {
+                Tile* pHost = nullptr;
+                int bestDistance = searchRadius + 1;
+                ForEachTileInChebyshevRadius(
+                    rBaseTile, rMap, searchRadius, /*includeOrigin=*/false,
+                    [&](Tile* pTile, int distance) {
+                        if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
+                            || pTile->HasImprovement(ImprovementIds::k_Farm)
+                            || pTile->GetMoisture() != moisture
+                            || !CanBuildImprovement(*pTile, rFarm) || distance >= bestDistance)
+                        {
+                            return;
+                        }
+                        pHost = pTile;
+                        bestDistance = distance;
+                    });
+
+                if (!pHost)
+                {
+                    throw std::runtime_error(
+                        "Engine setup: no " + ToString(moisture)
+                        + " tile near base for Farm");
+                }
+
+                rTileEffects.AddOccupantWithEffects(*pHost, rFarm.id);
+                std::cout << "Placed Farm (" << ToString(moisture) << ") for faction "
+                          << rFaction.GetFactionId() << " at (" << pHost->GetX() << ", "
+                          << pHost->GetY() << ")\n";
+            }
+            break; // one base per faction is enough for the temporary showcase
+        }
+    }
+
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        rFaction.RebuildVisibility();
+    }
+}
+#endif // AC_PLACE_TEST_IMPROVEMENTS
 
 } // namespace
 
@@ -500,59 +595,11 @@ void Engine::StartNewGame_()
             }
         });
 
-    // Temporary test Sensors: one in each faction's territory (south of their starting base).
-    {
-        WorldMap& rMap = m_pGameState->GetWorldMap();
-        TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
-        for (Faction& rFaction : m_pGameState->Factions())
-        {
-            for (BaseManager& rBase : rFaction.Bases())
-            {
-                const Tile& rBaseTile = rBase.GetTile();
-                Tile* pSensorTile = rMap.GetTile(rBaseTile.GetX(), rBaseTile.GetY() + 2);
-                if (!pSensorTile)
-                {
-                    throw std::runtime_error("Engine setup: Sensor tile out of bounds");
-                }
-                rTileEffects.AddOccupantWithEffects(*pSensorTile, "Sensor");
-                std::cout << "Placed Sensor for faction " << rFaction.GetFactionId()
-                          << " at (" << pSensorTile->GetX() << ", " << pSensorTile->GetY()
-                          << "), territory owner "
-                          << rMap.GetTerritory().GetOwner(*pSensorTile) << "\n";
-                break;
-            }
-        }
-        // Sensors are vision sources; rebuild fog after placing them.
-        for (Faction& rFaction : m_pGameState->Factions())
-        {
-            rFaction.RebuildVisibility();
-        }
-    }
-
-    // Temporary: forests on the base's corner neighbors so vegetation fills are easy to see.
-    if (Faction* pPlayer = m_pGameState->GetPlayerFaction())
-    {
-        WorldMap& rMap = m_pGameState->GetWorldMap();
-        TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
-        for (BaseManager& rBase : pPlayer->Bases())
-        {
-            const Tile& rBaseTile = rBase.GetTile();
-            const int bx = rBaseTile.GetX();
-            const int by = rBaseTile.GetY();
-            for (const auto [x, y] : {std::pair{bx + 2, by}, {bx - 2, by}, {bx, by + 2},
-                                      {bx, by - 2}})
-            {
-                Tile* pTile = rMap.GetTile(x, y);
-                if (pTile && pTile->IsLand() && !pTile->HasImprovement(ImprovementIds::k_Base)
-                    && !pTile->HasFeature(ImprovementIds::k_Fungus))
-                {
-                    rTileEffects.AddOccupantWithEffects(
-                        *pTile, std::string(ImprovementIds::k_Forest));
-                }
-            }
-            break;
-        }
-    }
+#ifdef AC_PLACE_TEST_IMPROVEMENTS
+    PlaceTestImprovementsAroundBases_(
+        m_pGameState->GetWorldMap(), m_pGameState->GetTileEffects(),
+        *m_gameDataContext->improvementRegistry, *m_pGameState);
+#endif
 
     std::cout << "Test setup complete. " << m_pGameState->GetNumFactions() << " faction(s), "
               << m_pGameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";

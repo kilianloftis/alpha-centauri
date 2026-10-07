@@ -339,7 +339,10 @@
     "relative_max": 1.0,
     "camera_scroll_step": 1,
     "initial_camera_offset": 0,
-    "edge_scroll_speed": 0.02
+    "edge_scroll_speed": 0.02,
+    "zoom_factor": 1.25,
+    "min_tile_scale": 0.04,
+    "max_tile_scale": 0.3
   },
   "unit_order_input": {
     "hold_threshold_ms": 500
@@ -625,8 +628,6 @@
     "icon_gap_ratio": 0.015
   },
   "base_workable_area_display": {
-    "grid_dimension": 5,
-    "grid_center_offset": 2.0,
     "background_color": [
       20, 20, 20, 255
     ],

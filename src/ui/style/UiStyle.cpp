@@ -408,6 +408,18 @@ CameraInputStyle_t ParseCameraInputStyle_(const nlohmann::json& j)
     s.cameraScrollStep = j.at("camera_scroll_step").get<int>();
     s.initialCameraOffset = j.at("initial_camera_offset").get<int>();
     s.edgeScrollSpeed = j.at("edge_scroll_speed").get<float>();
+    s.zoomFactor = j.at("zoom_factor").get<float>();
+    s.minTileScale = j.at("min_tile_scale").get<float>();
+    s.maxTileScale = j.at("max_tile_scale").get<float>();
+    if (!(s.zoomFactor > 1.0f))
+    {
+        throw std::runtime_error("camera_input.zoom_factor must be greater than 1");
+    }
+    if (!(s.minTileScale > 0.0f) || !(s.maxTileScale > s.minTileScale))
+    {
+        throw std::runtime_error(
+            "camera_input requires 0 < min_tile_scale < max_tile_scale");
+    }
     return s;
 }
 
@@ -614,8 +626,6 @@ BuildingsDisplayStyle_t ParseBuildingsDisplayStyle_(const nlohmann::json& j)
 BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann::json& j)
 {
     BaseWorkableAreaDisplayStyle_t s{};
-    s.gridDimension = j.at("grid_dimension").get<int>();
-    s.gridCenterOffset = j.at("grid_center_offset").get<float>();
     s.backgroundColor = ParseColor_(j, "background_color");
     s.tileBorderColor = ParseColor_(j, "tile_border_color");
     s.tileBorderWidth = j.at("tile_border_width").get<float>();

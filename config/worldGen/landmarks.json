@@ -108,15 +108,9 @@
     "shape": {
       "kind": "mask",
       "rows": [
-        "  X X X  ",
-        "         ",
-        "X       X",
-        "         ",
-        "X   X   X",
-        "         ",
-        "X       X",
-        "         ",
-        "  X X X  "
+        "XXX",
+        "X X",
+        "XXX"
       ]
     }
   },

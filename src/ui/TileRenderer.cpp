@@ -788,6 +788,36 @@ TileShape_t TileRenderer::FlatTileShape(float x, float y, float size)
                        vertex(1.0f, 0.5f), vertex(0.5f, 1.0f)};
 }
 
+namespace
+{
+
+float ShapeCross_(const TileVertex_t& rA, const TileVertex_t& rB, float px, float py)
+{
+    return (rB.x - rA.x) * (py - rA.y) - (rB.y - rA.y) * (px - rA.x);
+}
+
+bool ShapeTriangleContains_(const TileVertex_t& rA, const TileVertex_t& rB, const TileVertex_t& rC,
+                            float px, float py)
+{
+    const float d1 = ShapeCross_(rA, rB, px, py);
+    const float d2 = ShapeCross_(rB, rC, px, py);
+    const float d3 = ShapeCross_(rC, rA, px, py);
+    const bool bNegative = d1 < 0.0f || d2 < 0.0f || d3 < 0.0f;
+    const bool bPositive = d1 > 0.0f || d2 > 0.0f || d3 > 0.0f;
+    return !(bNegative && bPositive);
+}
+
+} // namespace
+
+bool TileRenderer::ShapeContains(const TileShape_t& rShape, float px, float py)
+{
+    const TileVertex_t& rC = rShape.center;
+    return ShapeTriangleContains_(rC, rShape.west, rShape.north, px, py)
+           || ShapeTriangleContains_(rC, rShape.north, rShape.east, px, py)
+           || ShapeTriangleContains_(rC, rShape.east, rShape.south, px, py)
+           || ShapeTriangleContains_(rC, rShape.south, rShape.west, px, py);
+}
+
 void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                           bool bFogged, const WorldMap* pMap, const YieldLookup_t& rYieldOf)
 {

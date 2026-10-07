@@ -15,6 +15,10 @@
     "window_title": "Alpha Centauri",
     "window_width": 1280
   },
+  "map_display": {
+    "ocean_grid": false,
+    "relief": "smooth"
+  },
   "map_generation": {
     "erosive_forces": "Average",
     "height": 300,

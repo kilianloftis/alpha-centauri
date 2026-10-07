@@ -1,9 +1,11 @@
 #include "ui/world/MapViewport.h"
 
 #include "game/map/MapUtils.h"
+#include "ui/TileRenderer.h"
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace ac
 {
@@ -12,31 +14,6 @@ namespace
 {
 
 constexpr float k_IsoHeightRatio = 0.5f;
-
-float Cross_(const TileVertex_t& rA, const TileVertex_t& rB, float px, float py)
-{
-    return (rB.x - rA.x) * (py - rA.y) - (rB.y - rA.y) * (px - rA.x);
-}
-
-bool TriangleContains_(const TileVertex_t& rA, const TileVertex_t& rB, const TileVertex_t& rC,
-                       float px, float py)
-{
-    const float d1 = Cross_(rA, rB, px, py);
-    const float d2 = Cross_(rB, rC, px, py);
-    const float d3 = Cross_(rC, rA, px, py);
-    const bool bNegative = d1 < 0.0f || d2 < 0.0f || d3 < 0.0f;
-    const bool bPositive = d1 > 0.0f || d2 > 0.0f || d3 > 0.0f;
-    return !(bNegative && bPositive);
-}
-
-bool ShapeContains_(const TileShape_t& rShape, float px, float py)
-{
-    const TileVertex_t& rC = rShape.center;
-    return TriangleContains_(rC, rShape.west, rShape.north, px, py)
-           || TriangleContains_(rC, rShape.north, rShape.east, px, py)
-           || TriangleContains_(rC, rShape.east, rShape.south, px, py)
-           || TriangleContains_(rC, rShape.south, rShape.west, px, py);
-}
 
 // Flat diamond under map units (u, v): centre (x+1, y+1) with |u-x-1|+|v-y-1| ≤ 1.
 std::optional<std::pair<int, int>> FlatTileAtMapUnits_(float u, float v, int mapWidth,
@@ -97,6 +74,24 @@ bool MapViewport::SetCamera(int tileX, int tileY)
     }
     m_cameraX = newX;
     m_cameraY = newY;
+    return true;
+}
+
+bool MapViewport::SetTileSize(float tileSize)
+{
+    if (!(tileSize > 0.0f))
+    {
+        throw std::runtime_error("MapViewport::SetTileSize: tileSize must be positive");
+    }
+    if (tileSize == m_tileWidth)
+    {
+        return false;
+    }
+    m_tileWidth = tileSize;
+    m_tileHeight = tileSize * k_IsoHeightRatio;
+    m_visibleCols = std::max(1, static_cast<int>(m_layout.width / (tileSize * 0.5f)));
+    m_visibleRows =
+        std::max(1, static_cast<int>(m_layout.height / (tileSize * k_IsoHeightRatio * 0.5f)));
     return true;
 }
 
@@ -289,7 +284,8 @@ std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX,
             float aabbX = 0.0f;
             float aabbY = 0.0f;
             AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
-            if (ShapeContains_(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false), pixelX, pixelY))
+            if (TileRenderer::ShapeContains(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false),
+                                            pixelX, pixelY))
             {
                 return std::pair{worldX, worldY};
             }

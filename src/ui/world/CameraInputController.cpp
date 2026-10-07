@@ -54,31 +54,58 @@ bool CameraInputController::ApplyCameraDelta_(int deltaCamX, int deltaCamY)
     return rViewport.SetCamera(rViewport.CameraX() + deltaCamX, newCamY);
 }
 
+bool CameraInputController::ApplyZoom_(float factor)
+{
+    const auto& s = Style().cameraInput;
+    MapViewport& rViewport = m_rWorldDisplay.GetViewport();
+    const float minSize = m_mapLayout.height * s.minTileScale;
+    const float maxSize = m_mapLayout.height * s.maxTileScale;
+    const float newSize = std::clamp(rViewport.TileSize() * factor, minSize, maxSize);
+
+    const int centerX = rViewport.CameraX() + rViewport.VisibleCols() / 2;
+    const int centerY = rViewport.CameraY() + rViewport.VisibleRows() / 2;
+    if (!rViewport.SetTileSize(newSize))
+    {
+        return false;
+    }
+    CenterOnTile(centerX, centerY);
+    return true;
+}
+
 bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
 {
     const auto& s = Style().cameraInput;
     const int step = s.cameraScrollStep * k_MapUnitsPerScreenTile;
 
-    const auto pan = [&](HotkeyAction_t action) {
+    const auto match = [&](HotkeyAction_t action) {
         const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
         return chord && chord->Matches(rEvent);
     };
 
+    if (match(HotkeyAction_t::ZoomIn))
+    {
+        return ApplyZoom_(s.zoomFactor);
+    }
+    if (match(HotkeyAction_t::ZoomOut))
+    {
+        return ApplyZoom_(1.0f / s.zoomFactor);
+    }
+
     int camDx = 0;
     int camDy = 0;
-    if (pan(HotkeyAction_t::PanLeft))
+    if (match(HotkeyAction_t::PanLeft))
     {
         camDx = -step;
     }
-    else if (pan(HotkeyAction_t::PanRight))
+    else if (match(HotkeyAction_t::PanRight))
     {
         camDx = step;
     }
-    else if (pan(HotkeyAction_t::PanUp))
+    else if (match(HotkeyAction_t::PanUp))
     {
         camDy = -step;
     }
-    else if (pan(HotkeyAction_t::PanDown))
+    else if (match(HotkeyAction_t::PanDown))
     {
         camDy = step;
     }

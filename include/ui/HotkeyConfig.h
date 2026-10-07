@@ -33,6 +33,8 @@ enum class HotkeyAction_t
     PanRight,
     PanUp,
     PanDown,
+    ZoomIn,
+    ZoomOut,
     Cancel,
     EndTurn,
     NextUnit,

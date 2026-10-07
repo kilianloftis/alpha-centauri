@@ -5,12 +5,44 @@
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
+#include "ui/TileRenderer.h"
 #include "ui/style/UiStyle.h"
+#include <algorithm>
 #include <sstream>
 #include <stdexcept>
 
 namespace ac
 {
+
+namespace
+{
+
+// Workable disk (lattice radius 2) reaches |map dx|, |map dy| ≤ 3; plus the tile's 2 map-unit
+// footprint → 8 half-steps = 4 tile-widths by 2 tile-heights.
+constexpr float k_ClusterWidthInTiles = 4.0f;
+constexpr float k_ClusterHeightInTiles = 2.0f;
+
+float ShapeAabbLeft_(const TileShape_t& rShape)
+{
+    return rShape.west.x;
+}
+
+float ShapeAabbTop_(const TileShape_t& rShape)
+{
+    return rShape.north.y;
+}
+
+float ShapeAabbWidth_(const TileShape_t& rShape)
+{
+    return rShape.east.x - rShape.west.x;
+}
+
+float ShapeAabbHeight_(const TileShape_t& rShape)
+{
+    return rShape.south.y - rShape.north.y;
+}
+
+} // namespace
 
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
                                                  const BaseDisplaySnapshot_t& rSnapshot,
@@ -23,21 +55,34 @@ BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
 {
-    CacheTileRects_();
+    CacheTileDiamonds_();
 }
 
-void BaseWorkableAreaDisplay::CacheTileRects_()
+void BaseWorkableAreaDisplay::CacheTileDiamonds_()
 {
-    const auto& style = Style().baseWorkableAreaDisplay;
-
-    m_tileSize = std::min(m_layout.width, m_layout.height) / static_cast<float>(style.gridDimension);
-    const float gridWidth  = static_cast<float>(style.gridDimension) * m_tileSize;
-    const float gridHeight = static_cast<float>(style.gridDimension) * m_tileSize;
-    m_startX = m_layout.x + (m_layout.width  - gridWidth)  / style.gridCenterOffset;
-    m_startY = m_layout.y + (m_layout.height - gridHeight) / style.gridCenterOffset;
+    m_tileWidth =
+        std::min(m_layout.width / k_ClusterWidthInTiles, m_layout.height / k_ClusterHeightInTiles);
+    const float tileHeight = m_tileWidth * 0.5f;
+    const float halfW = m_tileWidth * 0.5f;
+    const float halfH = tileHeight * 0.5f;
+    const float clusterW = k_ClusterWidthInTiles * m_tileWidth;
+    // 2 tile-heights = 1 tile-width when height = width / 2.
+    const float clusterH = k_ClusterHeightInTiles * m_tileWidth;
+    // Cluster is 8 half-steps; base footprint origin is inset by 3 (max |map delta|).
+    const float originX = m_layout.x + (m_layout.width - clusterW) * 0.5f + 3.0f * halfW;
+    const float originY = m_layout.y + (m_layout.height - clusterH) * 0.5f + 3.0f * halfH;
 
     const Tile& rBaseTile = m_rBase.GetTile();
     const int mapWidth = m_rBase.GetTileEffects().GetWorldMap().GetWidth();
+
+    m_tileDiamonds.clear();
+    m_tileDiamonds.push_back(TileDiamond_t{
+        TileRenderer::FlatTileShape(originX, originY, m_tileWidth),
+        &rBaseTile,
+        0,
+        0,
+        true,
+    });
 
     for (const Tile* pTile : m_rBase.GetWorkerAssignments().GetWorkableTiles())
     {
@@ -47,61 +92,76 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
         }
 
         const LatticeDelta_t d = LatticeDelta(rBaseTile, *pTile, mapWidth);
-        const float screenX =
-            m_startX + (static_cast<float>(d.p) + style.gridCenterOffset) * m_tileSize;
-        const float screenY =
-            m_startY + (static_cast<float>(d.q) + style.gridCenterOffset) * m_tileSize;
-
-        m_tileRects.push_back(TileRect_t{
-            Rectangle_t{screenX, screenY, m_tileSize, m_tileSize},
-            pTile
+        const int mapDx = d.p - d.q;
+        const int mapDy = d.p + d.q;
+        const float aabbX = originX + static_cast<float>(mapDx) * halfW;
+        const float aabbY = originY + static_cast<float>(mapDy) * halfH;
+        m_tileDiamonds.push_back(TileDiamond_t{
+            TileRenderer::FlatTileShape(aabbX, aabbY, m_tileWidth),
+            pTile,
+            mapDx,
+            mapDy,
+            false,
         });
     }
+
+    std::sort(m_tileDiamonds.begin(), m_tileDiamonds.end(),
+              [](const TileDiamond_t& a, const TileDiamond_t& b) {
+                  if (a.mapDy != b.mapDy)
+                  {
+                      return a.mapDy < b.mapDy;
+                  }
+                  return a.mapDx < b.mapDx;
+              });
 }
 
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 {
     const auto& style = Style().baseWorkableAreaDisplay;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+                             style.backgroundColor);
 
-    for (const TileRect_t& entry : m_tileRects)
+    for (const TileDiamond_t& rEntry : m_tileDiamonds)
     {
-        const auto it = m_rSnapshot.tiles.find(entry.pTile);
-        if (it == m_rSnapshot.tiles.end())
-        {
-            // The snapshot walks the same workable-tile list this panel cached, so a miss means
-            // the two disagree about the base's radius.
-            throw std::runtime_error("BaseWorkableAreaDisplay: workable tile missing from snapshot");
-        }
-        RenderTile_(rGraphics, entry.rect.x, entry.rect.y, m_tileSize, it->second);
+        RenderTile_(rGraphics, rEntry);
     }
-
-    const float centerX = m_startX + style.gridCenterOffset * m_tileSize;
-    const float centerY = m_startY + style.gridCenterOffset * m_tileSize;
-    rGraphics.DrawRect(centerX, centerY, m_tileSize, m_tileSize, style.tileBorderColor, style.tileBorderWidth);
-    rGraphics.DrawText("BASE", centerX, centerY, style.baseLabelFontSize, style.baseLabelColor);
 }
 
-void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, float x, float y, float size,
-                                          const TileDisplay_t& rTile)
+void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const
 {
     const auto& style = Style().baseWorkableAreaDisplay;
+    const float x = ShapeAabbLeft_(rEntry.shape);
+    const float y = ShapeAabbTop_(rEntry.shape);
+    const float w = ShapeAabbWidth_(rEntry.shape);
+    const float h = ShapeAabbHeight_(rEntry.shape);
 
-    rGraphics.DrawRect(x, y, size, size, style.tileBorderColor, style.tileBorderWidth);
+    rGraphics.DrawDiamond(x, y, w, h, style.tileBorderColor, style.tileBorderWidth);
 
+    if (rEntry.bIsBase)
+    {
+        rGraphics.DrawText("BASE", x + w * style.tileTextOffsetXRatio,
+                           y + h * style.tileTextOffsetYRatio, style.baseLabelFontSize,
+                           style.baseLabelColor);
+        return;
+    }
+
+    const auto it = m_rSnapshot.tiles.find(rEntry.pTile);
+    if (it == m_rSnapshot.tiles.end())
+    {
+        // The snapshot walks the same workable-tile list this panel cached, so a miss means
+        // the two disagree about the base's radius.
+        throw std::runtime_error("BaseWorkableAreaDisplay: workable tile missing from snapshot");
+    }
+
+    const TileDisplay_t& rTile = it->second;
     const bool bIsWorked = rTile.workState == TileWorkState_t::WorkedByThisBase;
-    // Display the collectable (capped) totals; potential remains available on the view for
-    // restriction callouts / tooltips.
     const int nutrients = rTile.yield.effective.nutrients;
     const int minerals = rTile.yield.effective.minerals;
     const int energy = rTile.yield.effective.energy;
 
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;
-
-    float textOffsetX = size * style.tileTextOffsetXRatio;
-    float textOffsetY = size * style.tileTextOffsetYRatio;
 
     // Three states, not two. A tile held by a neighbouring base, another faction, or a supply
     // crawler is workable-in-principle but not available to this base: showing it in the
@@ -116,38 +176,35 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, float x, float y,
     {
         textColor = style.unavailableTileTextColor;
     }
-    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, style.tileFontSize, textColor);
+    rGraphics.DrawText(oss.str(), x + w * style.tileTextOffsetXRatio,
+                       y + h * style.tileTextOffsetYRatio, style.tileFontSize, textColor);
 }
 
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    const auto& style = Style().baseWorkableAreaDisplay;
-
     const float mouseX = static_cast<float>(rEvent.x);
     const float mouseY = static_cast<float>(rEvent.y);
 
-    const float baseTileX = m_startX + style.gridCenterOffset * m_tileSize;
-    const float baseTileY = m_startY + style.gridCenterOffset * m_tileSize;
-
-    if (ContainsMouseCoord(Rectangle_t{baseTileX, baseTileY, m_tileSize, m_tileSize}, mouseX, mouseY))
+    // Front first (higher mapDy), matching the world map's raised-tile pick order.
+    for (auto it = m_tileDiamonds.rbegin(); it != m_tileDiamonds.rend(); ++it)
     {
-        if (m_onBaseClicked)
+        if (!TileRenderer::ShapeContains(it->shape, mouseX, mouseY))
         {
-            m_onBaseClicked();
+            continue;
         }
-        return;
-    }
-
-    for (const TileRect_t& entry : m_tileRects)
-    {
-        if (ContainsMouseCoord(entry.rect, mouseX, mouseY))
+        if (it->bIsBase)
         {
-            if (m_onTileClicked)
+            if (m_onBaseClicked)
             {
-                m_onTileClicked(entry.pTile);
+                m_onBaseClicked();
             }
             return;
         }
+        if (m_onTileClicked)
+        {
+            m_onTileClicked(it->pTile);
+        }
+        return;
     }
 }
 

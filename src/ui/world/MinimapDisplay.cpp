@@ -4,7 +4,6 @@
 #include "game/GameState.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
-#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -47,26 +46,6 @@ void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t
     rPixels[offset + 1] = rColor.g;
     rPixels[offset + 2] = rColor.b;
     rPixels[offset + 3] = rColor.a;
-}
-
-Color_t TileMinimapColor_(const Tile& rTile, bool bFogged)
-{
-    if (rTile.HasFeature(ImprovementIds::k_Fungus))
-    {
-        Color_t color = Style().tileRenderer.fungusColor;
-        if (bFogged)
-        {
-            const float dim = Style().tileRenderer.fogFillDimRatio;
-            color = Color_t{
-                static_cast<uint8_t>(static_cast<float>(color.r) * dim),
-                static_cast<uint8_t>(static_cast<float>(color.g) * dim),
-                static_cast<uint8_t>(static_cast<float>(color.b) * dim),
-                color.a,
-            };
-        }
-        return color;
-    }
-    return TileRenderer::FillColor(rTile, bFogged);
 }
 
 } // namespace
@@ -245,7 +224,7 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
         if (!fog.pExplored || fog.pExplored->IsExplored(rTile))
         {
             const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(rTile);
-            color = TileMinimapColor_(rTile, bFogged);
+            color = TileRenderer::FillColor(rTile, bFogged);
         }
 
         for (int dx = 0; dx < 2; ++dx)

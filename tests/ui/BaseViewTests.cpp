@@ -16,18 +16,24 @@
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
+#include "input/Input.h"
 #include "ui/base/BaseDisplaySnapshot.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/BuildingsDisplay.h"
 #include "ui/style/UiStyle.h"
 #include "ui/UIElement.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace ac;
 using actest::RecordingGraphics;
@@ -736,4 +742,91 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
     CHECK(DrawnText_(fixture.graphics,
                      "Pact (They get " + std::to_string(lines[0].theirEnergy) + ")")
           != nullptr);
+}
+
+TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][base][workable]")
+{
+    ViewFixture fixture;
+    // Even parity tile so SMAC neighbors exist around it.
+    BaseManager& rBase = fixture.MakeBase(8, 8);
+    const Tile& rBaseTile = rBase.GetTile();
+    WorldMap& rMap = fixture.pState->GetWorldMap();
+    const Tile* pSe = GetTileAtLatticeOffset(rMap, rBaseTile, 1, 0);
+    const Tile* pNw = GetTileAtLatticeOffset(rMap, rBaseTile, -1, 0);
+    REQUIRE(pSe);
+    REQUIRE(pNw);
+
+    const WindowLayout_t layout{0.0f, 0.0f, 400.0f, 200.0f};
+    const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
+
+    const Tile* pClickedTile = nullptr;
+    bool bBaseClicked = false;
+    BaseWorkableAreaDisplay panel(
+        rBase, snapshot, layout,
+        [&](const Tile* pTile) { pClickedTile = pTile; },
+        [&]() { bBaseClicked = true; });
+
+    panel.Render(fixture.graphics);
+
+    // tileWidth = min(400/4, 200/2) = 100; base origin inset 3 half-steps from cluster TL.
+    constexpr float k_TileWidth = 100.0f;
+    constexpr float k_HalfW = 50.0f;
+    constexpr float k_HalfH = 25.0f;
+    constexpr float k_BaseX = 150.0f;
+    constexpr float k_BaseY = 75.0f;
+
+    const RecordingGraphics::RectDraw_t* pBaseDiamond = nullptr;
+    const RecordingGraphics::RectDraw_t* pSeDiamond = nullptr;
+    const RecordingGraphics::RectDraw_t* pNwDiamond = nullptr;
+    for (const RecordingGraphics::RectDraw_t& rRect : fixture.graphics.rects)
+    {
+        if (rRect.bFilled || rRect.width != k_TileWidth)
+        {
+            continue;
+        }
+        if (std::abs(rRect.x - k_BaseX) < 0.01f && std::abs(rRect.y - k_BaseY) < 0.01f)
+        {
+            pBaseDiamond = &rRect;
+        }
+        // SE lattice (1,0) → map (+1,+1): down-right of base.
+        if (std::abs(rRect.x - (k_BaseX + k_HalfW)) < 0.01f
+            && std::abs(rRect.y - (k_BaseY + k_HalfH)) < 0.01f)
+        {
+            pSeDiamond = &rRect;
+        }
+        // NW lattice (-1,0) → map (−1,−1): up-left of base.
+        if (std::abs(rRect.x - (k_BaseX - k_HalfW)) < 0.01f
+            && std::abs(rRect.y - (k_BaseY - k_HalfH)) < 0.01f)
+        {
+            pNwDiamond = &rRect;
+        }
+    }
+    REQUIRE(pBaseDiamond);
+    REQUIRE(pSeDiamond);
+    REQUIRE(pNwDiamond);
+    CHECK(pSeDiamond->x > pBaseDiamond->x);
+    CHECK(pSeDiamond->y > pBaseDiamond->y);
+    CHECK(pNwDiamond->x < pBaseDiamond->x);
+    CHECK(pNwDiamond->y < pBaseDiamond->y);
+
+    auto click = [&](float x, float y) {
+        MouseEvent_t event{};
+        event.x = static_cast<int>(x);
+        event.y = static_cast<int>(y);
+        event.button = MouseButton_t::Left;
+        panel.HandleMouseClick(event);
+    };
+
+    click(k_BaseX + k_HalfW, k_BaseY + k_HalfH);
+    CHECK(bBaseClicked);
+    CHECK(pClickedTile == nullptr);
+
+    bBaseClicked = false;
+    click(k_BaseX + k_HalfW + k_HalfW, k_BaseY + k_HalfH + k_HalfH);
+    CHECK_FALSE(bBaseClicked);
+    CHECK(pClickedTile == pSe);
+
+    pClickedTile = nullptr;
+    click(k_BaseX - k_HalfW + k_HalfW, k_BaseY - k_HalfH + k_HalfH);
+    CHECK(pClickedTile == pNw);
 }

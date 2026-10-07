@@ -175,7 +175,8 @@ UI components use the Graphics interface to render game information.
   Rolling/rocky are keyed overlays, and `sprites/coast/` holds the coast overlays.
   `--contact-sheet` also writes `_tiles_contact_sheet.png` to check the tile sets.
 - **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under
-  the pixel, then raised tiles in front). `BaseWorkableAreaDisplay` hit-tests its own tile rects.
+  the pixel, then raised tiles in front). `BaseWorkableAreaDisplay` hit-tests its own diamonds
+  with `TileRenderer::ShapeContains` (shared with the viewport).
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
   render (no per-frame base-info DTO). Base-at-tile clicks go through
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
@@ -259,14 +260,14 @@ UI components use the Graphics interface to render game information.
   and is skipped by the feature-sprite pass
 
 ### BaseWorkableAreaDisplay
-- **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)
-- **File**: `ui/BaseWorkableAreaDisplay.h`, `ui/BaseWorkableAreaDisplay.cpp`
-- **Dependencies**: Graphics, WorldMap, Base, WorkerAssignmentManager
-- **Methods**:
-  - `Render(x, y, tileSize)`: Render the workable area centered at position
-  - `SetBase()`: Set the base to display workable area for
-- **Tile Display Format**: Each tile shows `nutrients minerals energy`
-- **Visual Indicators**: 
+- **Purpose**: Displays the workable area of a base as a brick of 2:1 diamonds matching the
+  world map (lattice `(p, q)` → map `(p − q, p + q)`), using `FlatTileShape` / `DrawDiamond`
+- **File**: `ui/base/BaseWorkableAreaDisplay.h`, `ui/base/BaseWorkableAreaDisplay.cpp`
+- **Dependencies**: Graphics, WorldMap, Base, WorkerAssignmentManager, TileRenderer
+- **Layout**: Cluster sized to the Euclidean radius-2 disk; base diamond at the centre; clicks
+  use `TileRenderer::ShapeContains` (front-most diamond wins)
+- **Tile Display Format**: Each surrounding tile shows `nutrients minerals energy`
+- **Visual Indicators**:
   - Worked tiles: Green text
   - Unworked tiles: White text
   - Base center: Yellow "BASE" label
