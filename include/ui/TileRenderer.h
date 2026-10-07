@@ -23,7 +23,8 @@ size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t 
 const std::string& PickSpritePath(const std::vector<std::string>& paths, int tileX, int tileY,
                                   std::string_view contentId);
 
-// Shared terrain-tile cell drawing for the world map and location panel preview.
+// Shared terrain-tile cell drawing for the world map, location panel preview, and base
+// workable-area ring.
 // Fills by forest overlay or elevation (blue water / brown land), then draws
 // ResolveTileLayers bottom-to-top. Terrain art is palette indices shaded as SMAC does: land by
 // its relief shades, water per vertex by depth. Fungus is an overlay sprite (not a solid

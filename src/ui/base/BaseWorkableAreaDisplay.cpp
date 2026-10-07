@@ -42,6 +42,16 @@ float ShapeAabbHeight_(const TileShape_t& rShape)
     return rShape.south.y - rShape.north.y;
 }
 
+void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const std::string& rText,
+                           unsigned int fontSize, const Color_t& rColor, float charWidthRatio)
+{
+    const float centerX = (rShape.west.x + rShape.east.x) * 0.5f;
+    const float centerY = (rShape.north.y + rShape.south.y) * 0.5f;
+    const float size = static_cast<float>(fontSize);
+    const float textWidth = static_cast<float>(rText.size()) * size * charWidthRatio;
+    rGraphics.DrawText(rText, centerX - textWidth * 0.5f, centerY - size * 0.5f, fontSize, rColor);
+}
+
 } // namespace
 
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
@@ -128,6 +138,30 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     }
 }
 
+void BaseWorkableAreaDisplay::RenderGridEdges_(Graphics& rGraphics, const Tile& rTile,
+                                               const TileShape_t& rShape) const
+{
+    // Full diamond: the workable ring is sparse, so NW/NE-only (world map) would leave the
+    // cluster perimeter open. Land and water use the same colours as the map grid.
+    const auto& s = Style().tileRenderer;
+    const Color_t& rColor = rTile.IsLand() ? s.gridLandColor : s.gridWaterColor;
+    const struct
+    {
+        const TileVertex_t* pFrom;
+        const TileVertex_t* pTo;
+    } k_Edges[] = {
+        {&rShape.west, &rShape.north},
+        {&rShape.north, &rShape.east},
+        {&rShape.east, &rShape.south},
+        {&rShape.south, &rShape.west},
+    };
+    for (const auto& rEdge : k_Edges)
+    {
+        rGraphics.DrawLine(rEdge.pFrom->x, rEdge.pFrom->y, rEdge.pTo->x, rEdge.pTo->y, rColor,
+                           s.gridLineWidth);
+    }
+}
+
 void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const
 {
     const auto& style = Style().baseWorkableAreaDisplay;
@@ -136,13 +170,27 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond
     const float w = ShapeAabbWidth_(rEntry.shape);
     const float h = ShapeAabbHeight_(rEntry.shape);
 
+    const WorldMap& rWorldMap = m_rBase.GetTileEffects().GetWorldMap();
+    const TileRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
+        const auto it = m_rSnapshot.tiles.find(&rTile);
+        if (it == m_rSnapshot.tiles.end())
+        {
+            return TileResources_t{};
+        }
+        return it->second.yield.effective;
+    };
+    // SMAC draws grid over terrain and under objects.
+    TileRenderer::RenderTerrain(rGraphics, *rEntry.pTile, rEntry.shape, /*bFogged*/ false,
+                                &rWorldMap);
+    RenderGridEdges_(rGraphics, *rEntry.pTile, rEntry.shape);
+    TileRenderer::RenderObjects(rGraphics, *rEntry.pTile, rEntry.shape, yieldOf);
+
     rGraphics.DrawDiamond(x, y, w, h, style.tileBorderColor, style.tileBorderWidth);
 
     if (rEntry.bIsBase)
     {
-        rGraphics.DrawText("BASE", x + w * style.tileTextOffsetXRatio,
-                           y + h * style.tileTextOffsetYRatio, style.baseLabelFontSize,
-                           style.baseLabelColor);
+        DrawCenteredTileText_(rGraphics, rEntry.shape, "BASE", style.baseLabelFontSize,
+                              style.baseLabelColor, style.tileTextCharWidthRatio);
         return;
     }
 
@@ -176,8 +224,8 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond
     {
         textColor = style.unavailableTileTextColor;
     }
-    rGraphics.DrawText(oss.str(), x + w * style.tileTextOffsetXRatio,
-                       y + h * style.tileTextOffsetYRatio, style.tileFontSize, textColor);
+    DrawCenteredTileText_(rGraphics, rEntry.shape, oss.str(), style.tileFontSize, textColor,
+                          style.tileTextCharWidthRatio);
 }
 
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)

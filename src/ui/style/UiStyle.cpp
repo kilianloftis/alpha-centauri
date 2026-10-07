@@ -631,8 +631,7 @@ BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.baseLabelFontSize = j.at("base_label_font_size").get<unsigned int>();
     s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
-    s.tileTextOffsetXRatio = j.at("tile_text_offset_x_ratio").get<float>();
-    s.tileTextOffsetYRatio = j.at("tile_text_offset_y_ratio").get<float>();
+    s.tileTextCharWidthRatio = j.at("tile_text_char_width_ratio").get<float>();
     s.baseLabelColor = ParseColor_(j, "base_label_color");
     s.workedTileTextColor = ParseColor_(j, "worked_tile_text_color");
     s.unworkedTileTextColor = ParseColor_(j, "unworked_tile_text_color");

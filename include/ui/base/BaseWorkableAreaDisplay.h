@@ -15,7 +15,8 @@ namespace ac
 
 // Displays the workable area of a base as a brick of 2:1 diamonds matching the world map:
 // lattice neighbors land at map (p − q, p + q). The center diamond is the base tile.
-// Each surrounding tile shows: nutrients minerals energy. Worked tiles are shown in green.
+// Each diamond paints terrain, grid edges, then objects via TileRenderer; surrounding tiles
+// overlay nutrients minerals energy (worked tiles in green), and the center overlays BASE.
 class BaseManager;
 
 class BaseWorkableAreaDisplay : public UIElement
@@ -54,6 +55,7 @@ private:
     std::vector<TileDiamond_t> m_tileDiamonds;
 
     void RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const;
+    void RenderGridEdges_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape) const;
 };
 
 } // namespace ac

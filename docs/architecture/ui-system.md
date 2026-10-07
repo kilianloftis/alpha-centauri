@@ -202,7 +202,10 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Base-screen workable ring as the same brick of 2:1 diamonds as the world map
-  (`FlatTileShape`, lattice → map deltas, `TileRenderer::ShapeContains` for clicks).
+  (`FlatTileShape`, lattice → map deltas, `TileRenderer::ShapeContains` for clicks). Each
+  diamond paints terrain, then land/water grid edges (`tileRenderer` colours, full diamond —
+  the ring is sparse), then objects (snapshot yields for farm sprites); yield triples / `BASE`
+  text and the style border draw on top.
 
 ### WorldDisplay Viewport
 - **Purpose**: Controls which portion of the world map is visible as a rectangular brick of 2:1 diamonds (`MapViewport`). Gameplay topology stays the square lattice; poles are the top and bottom rows and the wrap seam is vertical.

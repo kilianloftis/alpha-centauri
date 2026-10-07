@@ -775,6 +775,52 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     constexpr float k_BaseX = 150.0f;
     constexpr float k_BaseY = 75.0f;
 
+    // Terrain under the yield labels: TileRenderer fills each diamond shape.
+    int terrainFillCount = 0;
+    for (const RecordingGraphics::RectDraw_t& rRect : fixture.graphics.rects)
+    {
+        if (rRect.bFilled && rRect.shape.has_value())
+        {
+            ++terrainFillCount;
+        }
+    }
+    CHECK(terrainFillCount >= 3);
+
+    // Grid edges: four lines per tile in the tileRenderer land/water colours.
+    const auto& gridStyle = Style().tileRenderer;
+    int gridLineCount = 0;
+    for (const RecordingGraphics::LineDraw_t& rLine : fixture.graphics.lines)
+    {
+        if (SameColor_(rLine.color, gridStyle.gridLandColor)
+            || SameColor_(rLine.color, gridStyle.gridWaterColor))
+        {
+            ++gridLineCount;
+        }
+    }
+    CHECK(gridLineCount >= 12);
+
+    // Yield / BASE labels are centered on the diamond, not parked in the NW corner.
+    const float baseCenterX = k_BaseX + k_HalfW;
+    const float baseCenterY = k_BaseY + k_HalfH;
+    const auto& workableStyle = Style().baseWorkableAreaDisplay;
+    const RecordingGraphics::TextDraw_t* pBaseLabel = nullptr;
+    for (const RecordingGraphics::TextDraw_t& rText : fixture.graphics.texts)
+    {
+        if (rText.text == "BASE")
+        {
+            pBaseLabel = &rText;
+            break;
+        }
+    }
+    REQUIRE(pBaseLabel);
+    const float baseLabelWidth = static_cast<float>(pBaseLabel->text.size())
+                                 * static_cast<float>(workableStyle.baseLabelFontSize)
+                                 * workableStyle.tileTextCharWidthRatio;
+    CHECK(std::abs((pBaseLabel->x + baseLabelWidth * 0.5f) - baseCenterX) < 0.01f);
+    CHECK(std::abs((pBaseLabel->y + static_cast<float>(workableStyle.baseLabelFontSize) * 0.5f)
+                   - baseCenterY)
+          < 0.01f);
+
     const RecordingGraphics::RectDraw_t* pBaseDiamond = nullptr;
     const RecordingGraphics::RectDraw_t* pSeDiamond = nullptr;
     const RecordingGraphics::RectDraw_t* pNwDiamond = nullptr;

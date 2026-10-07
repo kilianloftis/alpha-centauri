@@ -473,8 +473,8 @@ struct BaseWorkableAreaDisplayStyle_t
     float tileBorderWidth{};
     unsigned int baseLabelFontSize{};
     unsigned int tileFontSize{};
-    float tileTextOffsetXRatio{};
-    float tileTextOffsetYRatio{};
+    // Estimated glyph width as a fraction of font size (same idea as world-map base names).
+    float tileTextCharWidthRatio{};
     Color_t baseLabelColor{};
     Color_t workedTileTextColor{};
     Color_t unworkedTileTextColor{};
