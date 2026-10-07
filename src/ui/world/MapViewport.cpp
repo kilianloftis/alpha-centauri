@@ -180,8 +180,10 @@ std::optional<std::pair<float, float>> MapViewport::PixelOriginOf(int worldX, in
     float aabbX = 0.0f;
     float aabbY = 0.0f;
     AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
-    const float lift = ResolveTileLifts(*pTile, m_rWorldMap, m_relief, m_reliefStyle).center;
-    const float originY = aabbY - lift * m_tileWidth;
+    // SMAC seats a tile's contents at the mean of its four corner lifts (MapWin_tile_to_pixel).
+    const TileLifts_t lifts = ResolveTileLifts(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
+    const float seatLift = (lifts.west + lifts.north + lifts.east + lifts.south) * 0.25f;
+    const float originY = aabbY - seatLift * m_tileWidth;
     if (!BoxIntersectsLayout_(aabbX, originY, m_tileHeight))
     {
         return std::nullopt;

@@ -59,11 +59,7 @@ private:
     // Render base markers with owner color and population info
     void RenderBases_(Graphics& rGraphics);
 
-    // Render Sensor tower markers on explored tiles
-    void RenderSensors_(Graphics& rGraphics);
 
-    // Render Monolith markers on explored tiles
-    void RenderMonoliths_(Graphics& rGraphics);
 
     // Render path preview as a line through tile centers
     void RenderPathPreview_(Graphics& rGraphics);

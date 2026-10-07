@@ -494,3 +494,60 @@ TEST_CASE("sprite_tiles rejects a pattern without {mask}, an unknown layout, or 
         std::filesystem::remove(path);
     }
 }
+
+TEST_CASE("Improvement art fields reject what the renderer cannot use", "[improvements][parser]")
+{
+    const auto parseOne = [](const char* json) {
+        const auto path = WriteTempJson("ac_improvement_art.json", json);
+        ImprovementConfigParser parser;
+        const auto configs = parser.ParseConfig(path.string());
+        std::filesystem::remove(path);
+        return configs;
+    };
+
+    SECTION("links need link occupants")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Road", "name": "Road",
+            "sprite_tiles": {"layout": "links", "land": "r/{mask}.png"}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("link_occupants"));
+    }
+
+    SECTION("link occupants need layout links")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Forest", "name": "Forest",
+            "sprite_tiles": {"layout": "edges", "land": "f/{mask}.png",
+                             "link_occupants": ["Forest"]}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("links"));
+    }
+
+    SECTION("a yield row stat must be a yield")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Farm", "name": "Farm",
+            "sprite_yield_rows": {"stat": "morale", "land": ["f.png"]}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("stat"));
+    }
+
+    SECTION("ground sprites are keyed by moisture")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Farm", "name": "Farm",
+            "ground_sprites": {"Soggy": ["g.png"]}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("Soggy"));
+    }
+
+    SECTION("hidden and linked ids must name occupants")
+    {
+        std::vector<ImprovementConfig_t> occupants(2);
+        occupants[0].id = "Road";
+        occupants[0].spriteTiles =
+            OccupantSpriteTiles_t{SpriteTileLayout_t::Links, "r/{mask}.png", "", {"Road", "Base"}, ""};
+        occupants[1].id = "Enricher";
+        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+                          Catch::Matchers::ContainsSubstring("link_occupants")
+                              && Catch::Matchers::ContainsSubstring("Base"));
+
+        occupants[0].spriteTiles->linkOccupants = {"Road"};
+        occupants[1].hidesSpritesOf = {"Farm"};
+        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+                          Catch::Matchers::ContainsSubstring("hides_sprites_of"));
+    }
+}

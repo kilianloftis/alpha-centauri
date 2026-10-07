@@ -109,6 +109,11 @@ struct TileRendererStyle_t
     float riverLineThicknessRatio{};
     WaterShadingStyle_t waterShading{};
     ReliefStyle_t relief{};
+    // Checker drawn where an object's configured art is missing: two colours, two cells a side,
+    // this fraction of the tile's width.
+    Color_t missingArtColor{};
+    Color_t missingArtAltColor{};
+    float missingArtSizeRatio{};
     // Grid lines along tile edges: between two land tiles, and touching water.
     Color_t gridLandColor{};
     Color_t gridWaterColor{};
@@ -122,22 +127,10 @@ struct WorldDisplayStyle_t
     float baseTextOffsetRatio{};
     float baseNameWidthRatio{};
     float baseNameCharWidthRatio{};
-    Color_t sensorMarkerColor{};
-    float sensorMarkerFontSizeRatio{};
-    float sensorMarkerWidthRatio{};
-    float sensorMarkerHeightRatio{};
-    float sensorMarkerInsetRatio{};
-    Color_t monolithMarkerColor{};
-    float monolithMarkerFontSizeRatio{};
-    float monolithMarkerWidthRatio{};
-    float monolithMarkerHeightRatio{};
-    float monolithMarkerInsetRatio{};
     Color_t shroudColor{};
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
     Color_t baseNameColor{};
-    Color_t sensorLabelColor{};
-    Color_t monolithLabelColor{};
     // Empty path: airdrop targeting does not change the mouse cursor.
     std::string airdropCursorPath{};
     unsigned int airdropCursorHotspotX = 0;

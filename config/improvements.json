@@ -2,6 +2,11 @@
   {
     "id": "Road",
     "name": "Road",
+    "sprite_tiles": {
+      "layout": "links",
+      "land": "assets/sprites/landforms/road/{mask}.png",
+      "link_occupants": ["Road", "Base"]
+    },
     "turns_required": 1,
     "effects": [
       {
@@ -36,6 +41,12 @@
   {
     "id": "MagTube",
     "name": "Mag Tube",
+    "sprite_tiles": {
+      "layout": "links",
+      "land": "assets/sprites/landforms/mag_tube/{mask}.png",
+      "link_occupants": ["MagTube", "Base"],
+      "replaces_links_of": "Road"
+    },
     "turns_required": 3,
     "required_tech": "monopole_magnets",
     "effects": [
@@ -71,6 +82,16 @@
   {
     "id": "Farm",
     "name": "Farm",
+    "ground_sprites": {
+      "Arid": ["assets/sprites/landforms/farm/arid_0.png", "assets/sprites/landforms/farm/arid_1.png", "assets/sprites/landforms/farm/arid_2.png"],
+      "Moist": ["assets/sprites/landforms/farm/moist_0.png", "assets/sprites/landforms/farm/moist_1.png", "assets/sprites/landforms/farm/moist_2.png"],
+      "Wet": ["assets/sprites/landforms/farm/wet_0.png", "assets/sprites/landforms/farm/wet_1.png", "assets/sprites/landforms/farm/wet_2.png"]
+    },
+    "sprite_yield_rows": {
+      "stat": "nutrients",
+      "land": ["assets/sprites/improvements/farm_0.png", "assets/sprites/improvements/farm_1.png", "assets/sprites/improvements/farm_2.png", "assets/sprites/improvements/farm_3.png"]
+    },
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "land_terraform"
@@ -177,6 +198,8 @@
   {
     "id": "Mine",
     "name": "Mine",
+    "sprite_paths": {"land": ["assets/sprites/improvements/mine.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 8,
     "tags": [
       "land_terraform"
@@ -258,6 +281,8 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
+    "sprite_paths": {"land": ["assets/sprites/improvements/solar_collector.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "land_terraform"
@@ -303,6 +328,12 @@
   {
     "id": "SoilEnricher",
     "name": "Soil Enricher",
+    "sprite_yield_rows": {
+      "stat": "nutrients",
+      "land": ["assets/sprites/improvements/soil_enricher_0.png", "assets/sprites/improvements/soil_enricher_1.png", "assets/sprites/improvements/soil_enricher_2.png", "assets/sprites/improvements/soil_enricher_3.png"]
+    },
+    "sprite_overhang_ratio": 0.24,
+    "hides_sprites_of": ["Farm"],
     "turns_required": 8,
     "required_tech": "advanced_ecological_engineering",
     "tags": [
@@ -346,6 +377,8 @@
   {
     "id": "Bunker",
     "name": "Bunker",
+    "sprite_paths": {"land": ["assets/sprites/improvements/bunker.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 5,
     "required_tech": "advanced_military_algorithms",
     "effects": [
@@ -388,6 +421,8 @@
   {
     "id": "Airbase",
     "name": "Airbase",
+    "sprite_paths": {"land": ["assets/sprites/improvements/airbase.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 10,
     "required_tech": "doctrine_air_power",
     "effects": [
@@ -426,6 +461,8 @@
   {
     "id": "Sensor",
     "name": "Sensor",
+    "sprite_paths": {"land": ["assets/sprites/improvements/sensor.png"], "sea": ["assets/sprites/improvements/sensor.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "owned_by_territory": true,
     "effects": [
@@ -461,6 +498,8 @@
   {
     "id": "Mirror",
     "name": "Echelon Mirror",
+    "sprite_paths": {"land": ["assets/sprites/improvements/echelon_mirror.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 12,
     "required_tech": "ecological_engineering",
     "tags": [
@@ -535,6 +574,8 @@
   {
     "id": "Condenser",
     "name": "Condenser",
+    "sprite_paths": {"land": ["assets/sprites/improvements/condenser.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 12,
     "required_tech": "ecological_engineering",
     "tags": [
@@ -587,6 +628,8 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
+    "sprite_paths": {"land": ["assets/sprites/improvements/thermal_borehole.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 24,
     "required_tech": "ecological_engineering",
     "tags": [
@@ -644,6 +687,8 @@
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
+    "sprite_paths": {"sea": ["assets/sprites/improvements/kelp_farm.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "sea_terraform"
@@ -679,6 +724,8 @@
   {
     "id": "MiningPlatform",
     "name": "Mining Platform",
+    "sprite_paths": {"sea": ["assets/sprites/improvements/mining_platform.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 8,
     "tags": [
       "sea_terraform"
@@ -714,6 +761,8 @@
   {
     "id": "TidalHarness",
     "name": "Tidal Harness",
+    "sprite_paths": {"sea": ["assets/sprites/improvements/tidal_harness.png"]},
+    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "sea_terraform"

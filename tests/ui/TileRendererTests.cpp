@@ -1165,7 +1165,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         CHECK(FirstSpriteIndex_(terrain, bonusPath) < 0);
 
         RecordingGraphics objects;
-        TileRenderer::RenderObjects(objects, rLand, shape, &world.map);
+        TileRenderer::RenderObjects(objects, rLand, shape);
         CHECK(FirstSpriteIndex_(objects, bonusPath) >= 0);
         CHECK(FirstSpriteIndex_(objects, moistPrefix) < 0);
         CHECK(objects.rects.empty());
@@ -1188,5 +1188,249 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         // The shelf line is the fixture's shade 1; the relief's shades do not reach water.
         CHECK(water.center.shade == 1.0f);
         CHECK(water.center.y == shape.center.y);
+    }
+}
+
+TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile][roads]")
+{
+    EnsureStyleLoaded_();
+    actest::WorldFixture world(5, 5);
+    const ImprovementConfig_t& rRoad = world.improvements.Get("Road");
+    const ImprovementConfig_t& rTube = world.improvements.Get("MagTube");
+    WriteOccupantStubs_(rRoad);
+    WriteOccupantStubs_(rTube);
+    for (int y = 0; y < 5; ++y)
+    {
+        for (int x = 0; x < 5; ++x)
+        {
+            world.map.GetTile(x, y)->SetElevation(500);
+        }
+    }
+    const auto roadCell = [&rRoad](unsigned cell) { return TilePath_(rRoad.spriteTiles->land, cell); };
+    const auto tubeCell = [&rTube](unsigned cell) { return TilePath_(rTube.spriteTiles->land, cell); };
+    const auto drawn = [&world](int x, int y) {
+        RecordingGraphics graphics;
+        TileRenderer::Render(graphics, *world.map.GetTile(x, y),
+                             TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
+                             &world.map);
+        std::vector<std::string> paths;
+        for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
+        {
+            paths.push_back(rSprite.textureId);
+        }
+        return paths;
+    };
+    const auto has = [](const std::vector<std::string>& rPaths, const std::string& rPath) {
+        return std::ranges::find(rPaths, rPath) != rPaths.end();
+    };
+    Tile& rTile = *world.map.GetTile(2, 2);
+    rTile.AddImprovement(rRoad);
+
+    SECTION("a lone road draws its hub")
+    {
+        const auto paths = drawn(2, 2);
+        CHECK(has(paths, roadCell(0)));
+    }
+
+    SECTION("each neighbor with a road draws one link cell and no hub")
+    {
+        // NE edge (0, -1) is SMAC direction 0, cell 3; the N corner (-1, -1) is direction 7,
+        // cell 2.
+        world.map.GetTile(2, 1)->AddImprovement(rRoad);
+        world.map.GetTile(1, 1)->AddImprovement(rRoad);
+        const auto paths = drawn(2, 2);
+        CHECK(has(paths, roadCell(3)));
+        CHECK(has(paths, roadCell(2)));
+        CHECK_FALSE(has(paths, roadCell(0)));
+    }
+
+    SECTION("a base carries roads and never draws a hub")
+    {
+        // (3, 2) lies across the SE edge: direction 2, cell 5; seen from it, (2, 2) is across
+        // its NW edge: direction 6, cell 1.
+        world.map.GetTile(3, 2)->AddImprovement(world.improvements.Get("Base"));
+        CHECK(has(drawn(2, 2), roadCell(5)));
+        const auto basePaths = drawn(3, 2);
+        CHECK(has(basePaths, roadCell(1)));
+        CHECK_FALSE(has(basePaths, roadCell(0)));
+    }
+
+    SECTION("a mag tube link replaces the road link where both tiles carry tubes")
+    {
+        Tile& rNeighbor = *world.map.GetTile(2, 1);
+        rNeighbor.AddImprovement(rRoad);
+        rNeighbor.AddImprovement(rTube);
+        rTile.AddImprovement(rTube);
+        const auto paths = drawn(2, 2);
+        CHECK(has(paths, tubeCell(3)));
+        CHECK_FALSE(has(paths, roadCell(3)));
+        CHECK_FALSE(has(paths, tubeCell(0)));
+        CHECK_FALSE(has(paths, roadCell(0)));
+    }
+
+    SECTION("a tube with only road links draws its hub over the road links")
+    {
+        world.map.GetTile(2, 1)->AddImprovement(rRoad);
+        rTile.AddImprovement(rTube);
+        const auto paths = drawn(2, 2);
+        CHECK(has(paths, roadCell(3)));
+        CHECK(has(paths, tubeCell(0)));
+    }
+
+    SECTION("water neighbors carry no link")
+    {
+        Tile& rSea = *world.map.GetTile(2, 1);
+        rSea.SetElevation(actest::TestMapRules().oceanShelfMeters);
+        rSea.AddImprovement(world.improvements.Get("Base"));
+        const auto paths = drawn(2, 2);
+        CHECK_FALSE(has(paths, roadCell(3)));
+        CHECK(has(paths, roadCell(0)));
+    }
+}
+
+TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and hidden structures",
+          "[ui][tile][farm]")
+{
+    EnsureStyleLoaded_();
+    actest::WorldFixture world(5, 5);
+    const ImprovementConfig_t& rFarm = world.improvements.Get("Farm");
+    const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
+    WriteOccupantStubs_(rMoist);
+    WriteOccupantStubs_(world.improvements.Get("Condenser"));
+    for (const auto& [rMoisture, rPaths] : rFarm.groundSprites)
+    {
+        WriteStubPngs_(rPaths);
+    }
+    WriteStubPngs_(rFarm.spriteYieldRows->paths.land);
+
+    Tile& rTile = *world.map.GetTile(2, 2);
+    rTile.SetElevation(500);
+    SetMoisture_(rTile, Moisture_t::Moist);
+    rTile.AddImprovement(rFarm);
+    const auto render = [&](const TileRenderer::YieldLookup_t& rYieldOf) {
+        RecordingGraphics graphics;
+        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f),
+                             /*bFogged*/ false, &world.map, rYieldOf);
+        return graphics;
+    };
+    const auto nutrients = [](int amount) {
+        return TileRenderer::YieldLookup_t([amount](const Tile&) {
+            return TileResources_t{amount, 0, 0};
+        });
+    };
+    const std::vector<std::string>& rRows = rFarm.spriteYieldRows->paths.land;
+
+    SECTION("the farm ground replaces the moisture base")
+    {
+        const RecordingGraphics graphics = render(nutrients(1));
+        const std::vector<std::string>& rGround = rFarm.groundSprites.at("Moist");
+        CHECK(FirstSpriteIndex_(graphics, TilePrefix_(rMoist.spriteTiles->land)) < 0);
+        const bool bGround = std::ranges::any_of(graphics.sprites, [&](const auto& rSprite) {
+            return std::ranges::find(rGround, rSprite.textureId) != rGround.end()
+                   && rSprite.shape.has_value();
+        });
+        CHECK(bGround);
+    }
+
+    SECTION("structures follow the nutrient yield, clamped to the rows there are")
+    {
+        CHECK(FirstSpriteIndex_(render(nutrients(0)), rRows[0]) >= 0);
+        CHECK(FirstSpriteIndex_(render(nutrients(2)), rRows[1]) >= 0);
+        CHECK(FirstSpriteIndex_(render(nutrients(9)), rRows[2]) >= 0);
+        CHECK(FirstSpriteIndex_(render({}), rRows[0]) >= 0);
+    }
+
+    SECTION("an occupant that hides the farm structures draws in their place")
+    {
+        const ImprovementConfig_t& rCondenser = world.improvements.Get("Condenser");
+        rTile.AddImprovement(rCondenser);
+        const RecordingGraphics graphics = render(nutrients(2));
+        CHECK(FirstSpriteIndex_(graphics, rRows[1]) < 0);
+        CHECK(FirstSpriteIndex_(graphics, rCondenser.spritePaths.land.front()) >= 0);
+    }
+}
+
+TEST_CASE("Improvements draw their sea art at sea", "[ui][tile]")
+{
+    EnsureStyleLoaded_();
+    actest::WorldFixture world(5, 5);
+    const ImprovementConfig_t& rKelp = world.improvements.Get("KelpFarm");
+    WriteOccupantStubs_(rKelp);
+    Tile& rSea = *world.map.GetTile(2, 2);
+    rSea.SetElevation(actest::TestMapRules().oceanShelfMeters);
+    rSea.AddImprovement(rKelp);
+
+    RecordingGraphics graphics;
+    TileRenderer::Render(graphics, rSea, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f),
+                         /*bFogged*/ false, &world.map);
+    const std::ptrdiff_t index = FirstSpriteIndex_(graphics, rKelp.spritePaths.sea.front());
+    REQUIRE(index >= 0);
+    CHECK_FALSE(graphics.sprites[static_cast<std::size_t>(index)].shape.has_value());
+}
+
+TEST_CASE("Object art that fails to load shows a magenta and black checker", "[ui][tile]")
+{
+    EnsureStyleLoaded_();
+    const auto& s = Style().tileRenderer;
+    actest::WorldFixture world(5, 5);
+    Tile& rLand = *world.map.GetTile(2, 2);
+    rLand.SetElevation(500);
+    const TileShape_t shape = TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f);
+    const auto checkerCells = [&](const RecordingGraphics& rGraphics) {
+        std::vector<RecordingGraphics::RectDraw_t> cells;
+        std::ranges::copy_if(rGraphics.rects, std::back_inserter(cells), [&](const auto& rRect) {
+            return rRect.bFilled
+                   && (ColorEq_(rRect.color, s.missingArtColor)
+                       || ColorEq_(rRect.color, s.missingArtAltColor));
+        });
+        return cells;
+    };
+
+    SECTION("configured art that is not on disk")
+    {
+        ImprovementConfig_t missing = world.improvements.Get("Condenser");
+        missing.spritePaths.land = {"tests/fixtures/sprites/missing/no_such_art.png"};
+        std::filesystem::remove(missing.spritePaths.land.front());
+        rLand.AddImprovement(missing);
+        RecordingGraphics graphics;
+        TileRenderer::RenderObjects(graphics, rLand, shape);
+
+        const auto cells = checkerCells(graphics);
+        REQUIRE(cells.size() == 4);
+        const float side = 100.0f * s.missingArtSizeRatio;
+        const float left = std::ranges::min(cells, {}, &RecordingGraphics::RectDraw_t::x).x;
+        const float top = std::ranges::min(cells, {}, &RecordingGraphics::RectDraw_t::y).y;
+        CHECK_THAT(left, Catch::Matchers::WithinAbs(50.0f - side * 0.5f, 1e-3));
+        CHECK_THAT(top, Catch::Matchers::WithinAbs(25.0f - side * 0.5f, 1e-3));
+        const auto colorAt = [&](float x, float y) {
+            return std::ranges::find_if(cells, [&](const auto& rCell) {
+                       return std::abs(rCell.x - x) < 1e-3f && std::abs(rCell.y - y) < 1e-3f;
+                   })->color;
+        };
+        CHECK(ColorEq_(colorAt(left, top), s.missingArtColor));
+        CHECK(ColorEq_(colorAt(left + side * 0.5f, top), s.missingArtAltColor));
+        CHECK(ColorEq_(colorAt(left, top + side * 0.5f), s.missingArtAltColor));
+        CHECK(ColorEq_(colorAt(left + side * 0.5f, top + side * 0.5f), s.missingArtColor));
+    }
+
+    SECTION("art that loads draws no checker")
+    {
+        const ImprovementConfig_t& rCondenser = world.improvements.Get("Condenser");
+        WriteOccupantStubs_(rCondenser);
+        rLand.AddImprovement(rCondenser);
+        RecordingGraphics graphics;
+        TileRenderer::RenderObjects(graphics, rLand, shape);
+        CHECK(checkerCells(graphics).empty());
+    }
+
+    SECTION("an occupant with no art configured draws nothing")
+    {
+        ImprovementConfig_t artless = world.improvements.Get("Condenser");
+        artless.spritePaths = {};
+        rLand.AddImprovement(artless);
+        RecordingGraphics graphics;
+        TileRenderer::RenderObjects(graphics, rLand, shape);
+        CHECK(checkerCells(graphics).empty());
+        CHECK(graphics.sprites.empty());
     }
 }

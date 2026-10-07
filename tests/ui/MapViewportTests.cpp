@@ -112,14 +112,15 @@ TEST_CASE("MapViewport raises tiles with the relief and hit-tests the raised sha
         CHECK_THAT(center->second, WithinAbs(90.0f, 0.01f));
     }
 
-    SECTION("a raised tile's centre sits above its flat centre by its lift")
+    SECTION("a raised tile's contents sit at the mean of its corner lifts")
     {
         MapViewport viewport(world.map, WindowLayout_t{0.0f, 0.0f, 400.0f, 300.0f}, 40.0f);
         viewport.SetRelief(ReliefMode_t::Smooth, k_Style);
         const auto center = viewport.PixelCenterOf(rHill);
         REQUIRE(center);
+        // Each corner averages the hill's 3 levels with three tiles at 1: 1.5 levels, 15 px.
         CHECK_THAT(center->first, WithinAbs(20.0f, 0.01f));
-        CHECK_THAT(center->second, WithinAbs(90.0f - 30.0f, 0.01f));
+        CHECK_THAT(center->second, WithinAbs(90.0f - 15.0f, 0.01f));
     }
 
     SECTION("a click on the raised tile picks it over the tile behind")

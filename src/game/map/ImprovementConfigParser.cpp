@@ -1,5 +1,6 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
+#include "game/map/Tile.h"
 #include "game/units/MovementConstants.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -116,10 +117,24 @@ OccupantSpriteTiles_t ParseSpriteTiles_(const nlohmann::json& rJson, const std::
                                    : std::nullopt;
             if (!layout)
             {
-                fail("'layout' must be \"edges\" or \"blob\"");
+                fail("'layout' must be \"edges\", \"blob\" or \"links\"");
             }
             tiles.layout = *layout;
             bHasLayout = true;
+            continue;
+        }
+        if (key == "link_occupants")
+        {
+            tiles.linkOccupants = ConfigFields::ParseStringArray(rJson, "link_occupants");
+            continue;
+        }
+        if (key == "replaces_links_of")
+        {
+            if (!rValue.is_string())
+            {
+                fail("'replaces_links_of' must be an occupant id");
+            }
+            tiles.replacesLinksOf = rValue.get<std::string>();
             continue;
         }
         const auto domain =
@@ -142,7 +157,75 @@ OccupantSpriteTiles_t ParseSpriteTiles_(const nlohmann::json& rJson, const std::
     {
         fail("needs a 'land' or 'sea' pattern");
     }
+    const bool bLinks = tiles.layout == SpriteTileLayout_t::Links;
+    if (bLinks && tiles.linkOccupants.empty())
+    {
+        fail("with layout \"links\" needs 'link_occupants'");
+    }
+    if (!bLinks && (!tiles.linkOccupants.empty() || !tiles.replacesLinksOf.empty()))
+    {
+        fail("names link occupants without layout \"links\"");
+    }
     return tiles;
+}
+
+OccupantYieldRowSprites_t ParseYieldRowSprites_(const nlohmann::json& rJson, const std::string& id)
+{
+    const auto fail = [&id](const std::string& rMessage) {
+        throw std::runtime_error("Improvement '" + id + "': 'sprite_yield_rows' " + rMessage);
+    };
+    if (!rJson.is_object() || !rJson.contains("stat") || !rJson.at("stat").is_string())
+    {
+        fail("must be an object with a 'stat' and 'land' and/or 'sea' path lists");
+    }
+    const auto stat = magic_enum::enum_cast<YieldStat_t>(rJson.at("stat").get<std::string>(),
+                                                         magic_enum::case_insensitive);
+    if (!stat)
+    {
+        fail("'stat' must be \"nutrients\", \"minerals\" or \"energy\"");
+    }
+    nlohmann::json paths = rJson;
+    paths.erase("stat");
+    OccupantYieldRowSprites_t rows{*stat, ParseSpritePaths_(paths, id)};
+    if (rows.paths.land.empty() && rows.paths.sea.empty())
+    {
+        fail("needs a 'land' or 'sea' path list");
+    }
+    return rows;
+}
+
+std::unordered_map<std::string, std::vector<std::string>> ParseGroundSprites_(
+    const nlohmann::json& rJson, const std::string& id)
+{
+    const auto fail = [&id](const std::string& rMessage) {
+        throw std::runtime_error("Improvement '" + id + "': 'ground_sprites' " + rMessage);
+    };
+    if (!rJson.is_object())
+    {
+        fail("must be an object of moisture names to path lists");
+    }
+    std::unordered_map<std::string, std::vector<std::string>> ground;
+    for (const auto& [moisture, rList] : rJson.items())
+    {
+        if (moisture != ToString(Moisture_t::Arid) && moisture != ToString(Moisture_t::Moist)
+            && moisture != ToString(Moisture_t::Wet))
+        {
+            fail("has unknown moisture '" + moisture + "'");
+        }
+        if (!rList.is_array() || rList.empty())
+        {
+            fail("'" + moisture + "' must be a non-empty array of paths");
+        }
+        for (const nlohmann::json& rPath : rList)
+        {
+            if (!rPath.is_string())
+            {
+                fail("'" + moisture + "' entries must be strings");
+            }
+            ground[moisture].push_back(rPath.get<std::string>());
+        }
+    }
+    return ground;
 }
 
 } // namespace
@@ -273,22 +356,33 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
             expand(pConfig->suppressYieldSources, "suppress_yield_sources", pConfig->id);
         pConfig->suppressTerrain =
             expand(pConfig->suppressTerrain, "suppress_terrain", pConfig->id);
+        pConfig->hidesSpritesOf =
+            expand(pConfig->hidesSpritesOf, "hides_sprites_of", pConfig->id);
     }
     std::unordered_set<std::string> ids;
     for (const ImprovementConfig_t* pConfig : configs)
     {
         ids.insert(pConfig->id);
     }
+    const auto requireKnown = [&ids](const ImprovementConfig_t& rConfig, std::string_view field,
+                                     const std::vector<std::string>& rIds) {
+        for (const std::string& rId : rIds)
+        {
+            if (!rId.empty() && !ids.contains(rId))
+            {
+                throw std::runtime_error("Improvement '" + rConfig.id + "' field '"
+                                         + std::string(field) + "': unknown id '" + rId + "'");
+            }
+        }
+    };
     for (const ImprovementConfig_t* pConfig : configs)
     {
-        for (const std::string& rSuppressed : pConfig->suppressTerrain)
+        requireKnown(*pConfig, "suppress_terrain", pConfig->suppressTerrain);
+        requireKnown(*pConfig, "hides_sprites_of", pConfig->hidesSpritesOf);
+        if (pConfig->spriteTiles)
         {
-            if (!ids.contains(rSuppressed))
-            {
-                throw std::runtime_error("Improvement '" + pConfig->id
-                                         + "' field 'suppress_terrain': unknown id '"
-                                         + rSuppressed + "'");
-            }
+            requireKnown(*pConfig, "link_occupants", pConfig->spriteTiles->linkOccupants);
+            requireKnown(*pConfig, "replaces_links_of", {pConfig->spriteTiles->replacesLinksOf});
         }
     }
 }
@@ -387,6 +481,16 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
                                      + "': has both 'sprite_paths' and 'sprite_tiles'");
         }
         config.spriteTiles = ParseSpriteTiles_(rImprovementJson.at("sprite_tiles"), config.id);
+    }
+    if (rImprovementJson.contains("sprite_yield_rows"))
+    {
+        config.spriteYieldRows =
+            ParseYieldRowSprites_(rImprovementJson.at("sprite_yield_rows"), config.id);
+    }
+    config.hidesSpritesOf = ConfigFields::ParseStringArray(rImprovementJson, "hides_sprites_of");
+    if (rImprovementJson.contains("ground_sprites"))
+    {
+        config.groundSprites = ParseGroundSprites_(rImprovementJson.at("ground_sprites"), config.id);
     }
     config.spriteOverhangRatio = rImprovementJson.value("sprite_overhang_ratio", 0.0f);
     if (!(config.spriteOverhangRatio >= 0.0f))

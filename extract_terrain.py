@@ -160,6 +160,8 @@ class Region:
     diamond: bool = True
     # Alpha of the black that replaces shadow pixels; None leaves the sheet as painted.
     shadow_alpha: int | None = None
+    # Diamond cells map like forest/river cells (EDGE_CORNERS) instead of base cells.
+    edge_oriented: bool = False
 
     @property
     def box(self) -> tuple[int, int, int, int]:
@@ -202,8 +204,43 @@ TILE_SETS: tuple[TileSet, ...] = (
 )
 
 
-def _texture_regions() -> list[Region]:
+# Farm ground, roads and mag tubes: 3-wide grids of 56 px cells on a 57 px pitch.
+FARM_ORIGIN = (775, 219)
+ROAD_ORIGIN = (775, 395)
+MAG_TUBE_ORIGIN = (775, 566)
+RAINFALL_NAMES = ("arid", "moist", "wet")
+
+
+def _three_wide_cell(origin: tuple[int, int], index: int) -> tuple[int, int, int, int]:
+    x0 = origin[0] + (index % 3) * TEXTURE_STRIDE
+    y0 = origin[1] + (index // 3) * TEXTURE_STRIDE
+    return (x0, y0, x0 + TEXTURE_CELL, y0 + TEXTURE_CELL)
+
+
+def _network_regions() -> list[Region]:
+    """Road and mag tube cells: 0 is the hub, 1–8 the links NW edge, N corner, … W corner."""
+    regions = []
+    for name, origin in (("road", ROAD_ORIGIN), ("mag_tube", MAG_TUBE_ORIGIN)):
+        for index in range(9):
+            regions.append(
+                Region(f"sprites/landforms/{name}/{index}", *_three_wide_cell(origin, index),
+                       edge_oriented=True)
+            )
+    return regions
+
+
+def _farm_regions() -> list[Region]:
+    """Farm ground: column = rainfall, row = variant."""
     return [
+        Region(f"sprites/landforms/farm/{RAINFALL_NAMES[column]}_{row}",
+               *_three_wide_cell(FARM_ORIGIN, row * 3 + column))
+        for column in range(3)
+        for row in range(3)
+    ]
+
+
+def _texture_regions() -> list[Region]:
+    return _network_regions() + _farm_regions() + [
         Region("sprites/landforms/arid", *_grid_cell(0, 1)),
         # Rockiness overlays on row 0 (magenta-keyed, not full bases).
         Region("sprites/landforms/rolling_0", *_grid_cell(0, 0)),
@@ -232,6 +269,26 @@ def _ter1_object(path: str, x0: int, y0: int, surface: str) -> Region:
 
 def _ter1_regions() -> list[Region]:
     regions = [_ter1_object("sprites/tile_bonuses/monolith", 304, 1, "land")]
+    for name, x0, y0, surface in (
+        ("kelp_farm", 607, 190, "sea"),
+        ("mine", 607, 64, "land"),
+        ("mining_platform", 506, 64, "sea"),
+        ("solar_collector", 607, 127, "land"),
+        ("tidal_harness", 506, 127, "sea"),
+        ("condenser", 506, 253, "land"),
+        ("echelon_mirror", 607, 253, "land"),
+        ("thermal_borehole", 708, 253, "land"),
+        ("bunker", 506, 316, "land"),
+        ("airbase", 607, 316, "land"),
+        ("sensor", 708, 316, "land"),
+    ):
+        regions.append(_ter1_object(f"sprites/improvements/{name}", x0, y0, surface))
+    # Farm structures and soil enricher: four rows by nutrient yield.
+    for row in range(4):
+        regions.append(_ter1_object(f"sprites/improvements/farm_{row}", 923, 453 + 63 * row, "land"))
+        regions.append(
+            _ter1_object(f"sprites/improvements/soil_enricher_{row}", 822, 453 + 63 * row, "land")
+        )
     # Resource grid (guides every 63 px from y=252, 101 px from x=0): nutrients, minerals,
     # energy rows; columns are sea, sea, land, land.
     for row, resource in enumerate(("nutrients", "minerals", "energy")):
@@ -394,7 +451,8 @@ def extract_regions(
     for region in REGIONS:
         crop = sheets[region.sheet].crop(region.box)
         if region.diamond:
-            sprite = bake_diamond(crop, blend_corners(0), region.key_indices, keyed=keyed)
+            corners = EDGE_CORNERS if region.edge_oriented else blend_corners(0)
+            sprite = bake_diamond(crop, corners, region.key_indices, keyed=keyed)
         else:
             sprite = to_rgba(crop, region.key_indices, keyed=keyed)
             if keyed and region.shadow_alpha is not None:

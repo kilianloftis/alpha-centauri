@@ -47,20 +47,24 @@ public:
     int RowStart() const;
     int RowEnd() const;
 
-    // Top-left of the tile's footprint (the diamond's bounding box at its raised centre), if
-    // the camera-relative wrap instance nearest the camera intersects the layout.
+    // Top-left of the tile's footprint (the diamond's bounding box seated at the mean of its
+    // four corner lifts), if the camera-relative wrap instance nearest the camera intersects the
+    // layout.
     std::optional<std::pair<float, float>> PixelOriginOf(int worldX, int worldY) const;
-    // The tile's raised centre.
+    // The centre of that footprint.
     std::optional<std::pair<float, float>> PixelCenterOf(const Tile& rTile) const;
 
     // Inverse projection: the frontmost tile whose raised shape contains the pixel (wrap-X
     // applied).
     std::optional<std::pair<int, int>> WorldCoordsAtPixel(float pixelX, float pixelY) const;
 
-    // Top-left of the tile's flat footprint (diamond bounding box) at the shape's raised centre.
+    // Top-left of the tile's flat footprint (diamond bounding box), seated at the mean of the
+    // shape's four corners as SMAC seats everything on a tile.
     std::pair<float, float> FootprintOrigin(const TileShape_t& rShape) const
     {
-        return {rShape.west.x, rShape.center.y - m_tileHeight * 0.5f};
+        const float seatY =
+            (rShape.west.y + rShape.north.y + rShape.east.y + rShape.south.y) * 0.25f;
+        return {rShape.west.x, seatY - m_tileHeight * 0.5f};
     }
 
     // fn(const Tile& tile, const TileShape_t& shape) for every tile whose raised shape reaches

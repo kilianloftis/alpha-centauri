@@ -131,8 +131,9 @@ UI components use the Graphics interface to render game information.
     the map. Water does not lift.
   - `ForEachVisibleTile` hands out each tile's raised `TileShape_t` (with slope shades unless
     asked not to), reaching far enough down to include tiles raised into view.
-    `PixelOriginOf` / `PixelCenterOf` report the raised footprint, so units, bases and markers
-    sit on it, and `WorldCoordsAtPixel` picks the frontmost raised shape under the pixel.
+    `PixelOriginOf` / `PixelCenterOf` report the footprint seated at the mean of its four
+    corner lifts, as SMAC's `MapWin_tile_to_pixel` seats everything on a tile, so units, bases
+    and markers sit where the tile's objects do, and `WorldCoordsAtPixel` picks the frontmost raised shape under the pixel.
   - Slope shades follow SMAC's facet shading in palette steps (lighter facing the screen's
     lower right). A slope gets full shade once a corner rises
     `full_shade_rise_meters` above the centre and gentler ones shade in proportion. Stepped
@@ -157,7 +158,7 @@ UI components use the Graphics interface to render game information.
   chooses one from a hash of tile coordinates and content id (stable across save/load; no
   per-tile variant field). Or they name a `sprite_tiles` set, and the renderer draws the
   cell for the tile's neighbor mask (moisture, forest, fungus, jungle, rivers). Object
-  sprites (tile bonuses, monolith: `ter1.pcx` 100×62 over a 100×50 footprint) set
+  sprites (tile bonuses, monolith, improvements: `ter1.pcx` 100×62 over a 100×50 footprint) set
   `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. Their
   shadows are partly transparent black, so they darken the terrain underneath as SMAC's
   shadow table does (`extract_terrain.py` turns ter1.pcx's shadow index 246 into black at
@@ -204,10 +205,9 @@ UI components use the Graphics interface to render game information.
   `deep_from_shade` (16, about 1450 m down), the shelf art otherwise. The Landform sprite is
   drawn with `DrawTileSprite` on the whole tile
 - **Fog**: fogged land draws its terrain art and coast shore `fog_land_shade` palette steps
-  darker (SMAC's 2) instead of its slope shades; water keeps its depth shades. Before the
-  Improvement layer a fogged tile gets a
-  `fog_haze_color` diamond (the average of SMAC's black scanlines). The Improvement layer and the
-  improvement and feature sprites draw untinted on top. Fills, procedural cues and the minimap
+  darker (SMAC's 2) instead of its slope shades; water keeps its depth shades. After its
+  terrain a fogged tile gets a `fog_haze_color` diamond (the average of SMAC's black
+  scanlines). Object sprites draw untinted on top. Fills, procedural cues and the minimap
   use `fog_fill_dim_ratio`
 - **Variants**: `sprite_paths.land` / `.sea` by tile surface + `PickSpriteIndex` /
   `PickSpritePath` (coord + id hash); `sprite_overhang_ratio` lifts object sprites above
@@ -220,8 +220,7 @@ UI components use the Graphics interface to render game information.
   Without a `WorldMap` every set draws mask 0
 - **Moisture**: one base cell per land tile at the full tile rect; no stacking or insets
 - **Shapes**: every terrain layer and the coast draw with `DrawTileSprite`, so tiles meet edge
-  to edge with no fill between them. Object sprites (the Improvement layer, improvement and
-  feature passes) draw as rects, anchored as SMAC anchors ter1 objects: the cell starts at the
+  to edge with no fill between them. Object sprites (`RenderObjects`) draw as rects, anchored as SMAC anchors ter1 objects: the cell starts at the
   tile's top corner, seated at the mean of the shape's four corners (not the raised centre),
   and its overhang hangs below. The art sits high in its cells, so a tile bonus lands mid-tile
 - **Edge insets**: rockiness overlays only. `MatchRockinessEdges` + `DestRectForEdgeInsets`
@@ -237,6 +236,23 @@ UI components use the Graphics interface to render game information.
 - **Rivers**: the River layer draws its `edges` cell; without art, lines run from the tile
   centre to each connected edge's midpoint (`GetRiverConnections`), or a short cross with no
   connection. Style keys `river_color` / `river_line_thickness_ratio` under `tile_renderer`
+- **Improvements** (`improvements.json`; SMAC's rules in
+  [smac-terrain-textures.md](../thinker/smac-terrain-textures.md), "Improvements"):
+  - `ground_sprites` (Farm) replace the Moisture layer's cell with the variant for the tile's
+    moisture (Arid, Moist, Wet).
+  - A `links` tile set (Road, MagTube) draws on the Road layer: one cell per land neighbor
+    carrying the network (its `link_occupants`; a base carries every network), and the hub
+    when no link is drawn and the tile is not a base. `replaces_links_of` draws the mag tube's
+    link over the road's where both tiles carry tubes.
+  - `RenderObjects` draws the terrain objects (tile bonuses, Monolith), then every improvement's
+    object sprite in `improvements.json` order, skipping those a present occupant names in
+    `hides_sprites_of` (a soil enricher replaces the farm structures).
+  - `sprite_yield_rows` pick the object sprite by the tile's yield (`YieldLookup_t`, from
+    `TileEffectsContext` on the world map): row `clamp(yield - 1, 0, rows - 1)`. Without a
+    lookup (location preview) the first row draws.
+  - Object art that is configured but fails to load draws a 2 × 2 checker of
+    `missing_art_color` and `missing_art_alt_color` (magenta and black), `missing_art_size_ratio`
+    of the tile width, at the seat.
 - **Layers**: fungus wins vegetation (fungus in deeper ocean is dormant and draws nothing, see
   `suppress_terrain` in effects-system.md); a landmark (Monsoon Jungle) draws on its own layer
   and is skipped by the feature-sprite pass

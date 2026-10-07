@@ -1,6 +1,7 @@
 #include "ui/world/WorldDisplay.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
@@ -125,73 +126,6 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics)
     }
 }
 
-void WorldDisplay::RenderSensors_(Graphics& rGraphics)
-{
-    const auto& s = Style().worldDisplay;
-    const float tileSize = m_viewport.TileSize();
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.sensorMarkerFontSizeRatio);
-    const float markerWidth = tileSize * s.sensorMarkerWidthRatio;
-    const float markerHeight = tileSize * s.sensorMarkerHeightRatio;
-    const float inset = tileSize * s.sensorMarkerInsetRatio;
-
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-        const auto [tileX, tileY] = m_viewport.FootprintOrigin(rShape);
-        if (!rTile.HasImprovement(ImprovementIds::k_Sensor))
-        {
-            return;
-        }
-
-        // Shroud hides sensors; fog still shows last-known towers (same as bases).
-        if (fog.explored && !fog.explored->IsExplored(rTile))
-        {
-            return;
-        }
-
-        // Near the top vertex so the marker stays clear of base names and unit chips.
-        const float markerX = tileX + (tileSize - markerWidth) * 0.5f;
-        const float markerY = tileY + inset;
-
-        rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.sensorMarkerColor);
-        rGraphics.DrawText("S", markerX + inset, markerY + inset, fontSize, s.sensorLabelColor);
-    }, /*bShaded*/ false);
-}
-
-void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
-{
-    const auto& s = Style().worldDisplay;
-    const float tileSize = m_viewport.TileSize();
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.monolithMarkerFontSizeRatio);
-    const float markerWidth = tileSize * s.monolithMarkerWidthRatio;
-    const float markerHeight = tileSize * s.monolithMarkerHeightRatio;
-    const float inset = tileSize * s.monolithMarkerInsetRatio;
-
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-        const auto [tileX, tileY] = m_viewport.FootprintOrigin(rShape);
-        if (!rTile.HasImprovement(ImprovementIds::k_Monolith))
-        {
-            return;
-        }
-
-        // Shroud hides monoliths; fog still shows last-known markers (same as bases/sensors).
-        if (fog.explored && !fog.explored->IsExplored(rTile))
-        {
-            return;
-        }
-
-        // Centered on the diamond so the marker reads as a tile landmark.
-        const float tileHeight = m_viewport.TileHeight();
-        const float markerX = tileX + (tileSize - markerWidth) * 0.5f;
-        const float markerY = tileY + (tileHeight - markerHeight) * 0.5f;
-
-        rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.monolithMarkerColor);
-        rGraphics.DrawText("M", markerX + inset, markerY + inset, fontSize, s.monolithLabelColor);
-    }, /*bShaded*/ false);
-}
-
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
 {
     if (!m_pPathPreview || m_pPathPreview->tiles.empty())
@@ -289,6 +223,9 @@ void WorldDisplay::Render(Graphics& rGraphics)
     const MapDisplayConfig_t& rDisplay = m_rGameState.GetSettings().GetMapDisplay();
     m_viewport.SetRelief(rDisplay.relief, Style().tileRenderer.relief);
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const TileRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
+        return m_rGameState.GetTileEffects().ResolveTileYield(rTile).effective;
+    };
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
         if (fog.explored && !fog.explored->IsExplored(rTile))
@@ -301,13 +238,11 @@ void WorldDisplay::Render(Graphics& rGraphics)
         const bool bFogged = fog.visible && !fog.visible->IsVisible(rTile);
         TileRenderer::RenderTerrain(rGraphics, rTile, rShape, bFogged, &rWorldMap);
         RenderGridEdges_(rGraphics, rTile, rShape, rDisplay.bOceanGrid);
-        TileRenderer::RenderObjects(rGraphics, rTile, rShape, &rWorldMap);
+        TileRenderer::RenderObjects(rGraphics, rTile, rShape, yieldOf);
     });
 
     RenderBases_(rGraphics);
     RenderPathPreview_(rGraphics);
-    RenderSensors_(rGraphics);
-    RenderMonoliths_(rGraphics);
     m_unitMarkers.Render(rGraphics, m_rGameState, m_viewport);
 }
 

@@ -29,10 +29,10 @@
     }
   },
   "aquifers": {
-    "fraction": 0.002
+    "fraction": 0.02
   },
   "fungus": {
-    "fraction": 0.08,
+    "fraction": 0.29,
     "min_patch_tiles": 1,
     "max_patch_tiles": 16,
     "patch_size_skew": 4.0

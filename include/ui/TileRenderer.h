@@ -1,8 +1,10 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
 #include "graphics/Graphics.h"
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,6 +33,10 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 class TileRenderer
 {
 public:
+    // The tile's yield, for object sprites picked by yield (farm structures). Without one they
+    // take their first row.
+    using YieldLookup_t = std::function<TileResources_t(const Tile&)>;
+
     // Fill used by the world map, location preview, and minimap (fog dims the fill).
     // Forest overrides the elevation gradient when present; fungus does not.
     static Color_t FillColor(const Tile& rTile, bool bFogged = false);
@@ -45,15 +51,19 @@ public:
     // neighbor-aware tile sets, rockiness insets, coast overlays and water corner shading; null
     // draws no coast and shades water from the tile alone.
     static void Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                       bool bFogged = false, const WorldMap* pMap = nullptr);
+                       bool bFogged = false, const WorldMap* pMap = nullptr,
+                       const YieldLookup_t& rYieldOf = {});
 
     // Render's two halves, so the world map can draw a tile's grid lines between them as SMAC
-    // does. RenderTerrain draws the fill, terrain layers, coast and fog haze; RenderObjects the
-    // improvement layer and object sprites, seated at the mean of the shape's four corners.
+    // does. RenderTerrain draws the fill, terrain layers (farm ground in place of the moisture
+    // base), road networks, coast and fog haze; RenderObjects the tile bonuses and then every
+    // improvement's object sprite (skipping those another occupant hides), seated at the mean of
+    // the shape's four corners. An object whose configured art is missing draws a magenta and
+    // black checker in its place.
     static void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                               bool bFogged, const WorldMap* pMap);
     static void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                              const WorldMap* pMap);
+                              const YieldLookup_t& rYieldOf = {});
 };
 
 } // namespace ac

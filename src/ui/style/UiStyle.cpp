@@ -197,6 +197,13 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.waterShading = ParseWaterShadingStyle_(j.at("water_shading"));
     s.relief = ParseReliefStyle_(j.at("relief"));
+    s.missingArtColor = ParseColor_(j, "missing_art_color");
+    s.missingArtAltColor = ParseColor_(j, "missing_art_alt_color");
+    s.missingArtSizeRatio = j.at("missing_art_size_ratio").get<float>();
+    if (s.missingArtSizeRatio <= 0.0f)
+    {
+        throw std::runtime_error("tile_renderer.missing_art_size_ratio must be positive");
+    }
     s.gridLandColor = ParseColor_(j, "grid_land_color");
     s.gridWaterColor = ParseColor_(j, "grid_water_color");
     s.gridLineWidth = j.at("grid_line_width").get<float>();
@@ -215,22 +222,10 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
     s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
     s.baseNameCharWidthRatio = j.at("base_name_char_width_ratio").get<float>();
-    s.sensorMarkerColor = ParseColor_(j, "sensor_marker_color");
-    s.sensorMarkerFontSizeRatio = j.at("sensor_marker_font_size_ratio").get<float>();
-    s.sensorMarkerWidthRatio = j.at("sensor_marker_width_ratio").get<float>();
-    s.sensorMarkerHeightRatio = j.at("sensor_marker_height_ratio").get<float>();
-    s.sensorMarkerInsetRatio = j.at("sensor_marker_inset_ratio").get<float>();
-    s.monolithMarkerColor = ParseColor_(j, "monolith_marker_color");
-    s.monolithMarkerFontSizeRatio = j.at("monolith_marker_font_size_ratio").get<float>();
-    s.monolithMarkerWidthRatio = j.at("monolith_marker_width_ratio").get<float>();
-    s.monolithMarkerHeightRatio = j.at("monolith_marker_height_ratio").get<float>();
-    s.monolithMarkerInsetRatio = j.at("monolith_marker_inset_ratio").get<float>();
     s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
-    s.sensorLabelColor = ParseColor_(j, "sensor_label_color");
-    s.monolithLabelColor = ParseColor_(j, "monolith_label_color");
     s.airdropCursorPath = j.at("airdrop_cursor_path").get<std::string>();
     const auto& hotspot = j.at("airdrop_cursor_hotspot");
     if (!hotspot.is_array() || hotspot.size() != 2)

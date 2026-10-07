@@ -109,6 +109,35 @@ The farm structures sit on the `texture.pcx` farm ground. Column (620, 453) and
 (220, 447) shows how the Nexus pieces assemble. The textured diamonds at the top right
 and the labels are artist reference and are not loaded.
 
+## Improvements
+
+Each tile draws, in order:
+
+1. Base: the farm ground (`BIT_FARM` on land) replaces the moisture base.
+2. Rockiness, landmarks, jungle, forest, then fungus (only at altitude level 2 and up).
+3. Grid lines, territory border, coast, river.
+4. Kelp, then roads and mag tubes.
+5. Tile bonuses, bunker (`0x800`, land), airbase (`0x40000`, land), sensor (`0x80000000`,
+   either surface).
+6. Farm structures (or the soil enricher), mine or mining platform (`0x10`), solar
+   collector or tidal harness (`0x40`), condenser (`0x400000`), echelon mirror (`0x800000`),
+   thermal borehole (`0x1000000`; the borehole cluster when the landmark code is `0x1000`).
+7. The Monolith.
+
+Every object draws from `MapWin_tile_to_pixel` (`0x462F00`): the tile's flat bounding-box
+top-left raised by the mean of its four corner lifts (`MapWin_get_alt` indices 1–4; index 0
+is the centre). Units and bases draw from the same point.
+
+**Roads and mag tubes** (`0x465B41`), land tiles only. A tile carries a road if it has one
+or is a base, and a tube likewise. For each direction `dir` (0 NE, 1 E, 2 SE, 3 S, 4 SW,
+5 W, 6 NW, 7 N) whose neighbor is land and carries a road, the tile draws cell
+`1 + ((dir + 2) & 7)`: the tube cell when both tiles carry tubes, the road cell otherwise.
+Cells run hub, NW edge, N corner, NE edge, E corner, SE edge, S corner, SW edge, W corner,
+oriented like the forest and river cells. A tile that is not a base draws the road hub when it
+drew no link, and the tube hub when it carries a tube but drew no tube link.
+
+**Farm ground**: column = rainfall (arid, moist, wet), row = a per-tile random 0–2.
+
 ## ter1wreck.pcx and glow.pcx
 
 `ter1wreck.pcx` uses the same 100×62 layout:
