@@ -27,7 +27,7 @@ TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently 
     config.nutrientsPerPop = 10;
 
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     actest::EffectPool pool;
     // -100% on the 100 baseline → GrowthRate 0.
     BaseEffects_t effects{base, {
@@ -43,7 +43,7 @@ TEST_CASE("ApplyGrowth halves full tanks at max size then deposits net", "[popul
     actest::BaseFixture fixture;
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 3);
 
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     PopulationManager& rPopulation = base.GetPopulation();
 
     REQUIRE(rPopulation.GetSize() == 3);
@@ -63,7 +63,7 @@ TEST_CASE("AddPop throws at max size instead of silently no-oping", "[population
     actest::BaseFixture fixture;
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 3);
 
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     CHECK_THROWS_AS(base.GetPopulation().AddPop(), std::runtime_error);
 }
 
@@ -72,7 +72,7 @@ TEST_CASE("Max base size comes from resolved MaxBaseSize effects", "[population]
     actest::BaseFixture fixture;
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 5);
 
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     CHECK(base.GetPopulation().GetMaxSize() == 5);
 }
 
@@ -87,7 +87,7 @@ TEST_CASE("MaxBaseSize Adds stack with the pop_growth baseline", "[population][g
         /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
         fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     CHECK(base.GetPopulation().GetMaxSize() == 127);
     CHECK(base.GetPopulation().CanGrow());
 }
@@ -99,7 +99,7 @@ TEST_CASE("ApplyGrowth grows from a full tank then deposits adjusted net", "[pop
     fixture.dataContext.growthConfig->nutrientsPerPop = 10;
     fixture.dataContext.growthConfig->nutrientIntakePerCitizen = 2;
 
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     PopulationManager& rPopulation = base.GetPopulation();
     REQUIRE(rPopulation.GetSize() == 3);
 
@@ -114,7 +114,7 @@ TEST_CASE("ApplyGrowth grows from a full tank then deposits adjusted net", "[pop
 TEST_CASE("ApplyGrowth does not grow in the same pass that fills the tank", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     PopulationManager& rPopulation = base.GetPopulation();
     REQUIRE(rPopulation.GetSize() == 3);
 
@@ -127,7 +127,7 @@ TEST_CASE("ApplyGrowth does not grow in the same pass that fills the tank", "[po
 TEST_CASE("Full tank with negative net does not grow", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     PopulationManager& rPopulation = base.GetPopulation();
     rPopulation.SetNutrientStockpile(40);
     // Gross that yields net -5 after size-3 intake.
@@ -139,7 +139,7 @@ TEST_CASE("Full tank with negative net does not grow", "[population][growth]")
 TEST_CASE("Threshold at size 3 uses size+1 rows", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     GrowthConfig_t config;
     config.nutrientsPerPop = 10;
     CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 3, BaseEffects_t{base}) == 40);
@@ -151,7 +151,7 @@ TEST_CASE("Losing a pop announces it while it is still valid", "[population][gro
     // pop went and had no point at which the reference was still good. UnitManager has provided
     // that guarantee for units since the lifetime work; this is the same contract for pops.
     actest::BaseFixture fixture;
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
     const ac::Pop* pAnnounced = nullptr;
@@ -182,7 +182,7 @@ TEST_CASE("Removing a pop from an empty base is a caller bug, not a no-op",
           "[population][growth]")
 {
     actest::BaseFixture fixture;
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
     while (rPopulation.GetSize() > 0)
@@ -199,7 +199,7 @@ TEST_CASE("Losing the last pop razes the base so it is not starved again",
     // so a starved-out base never receives another OnStarvation. See docs/game-rules-decisions.md.
     actest::FactionFixture fixture;
     ac::Faction& rFaction = fixture.MakeFaction();
-    ac::BaseManager& rBase = fixture.MakeFactionBase(rFaction, 4, 4);
+    ac::BaseManager& rBase = fixture.MakeFactionBase(rFaction, 8, 8);
     const ac::BaseId_t baseId = rBase.GetBaseId();
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
@@ -220,14 +220,14 @@ TEST_CASE("A shrinking base loses its least productive pop", "[population][growt
     // See docs/game-rules-decisions.md. Previously it was always the most recently added,
     // which could take a talent working a good tile while an idle worker sat beside it.
     actest::BaseFixture fixture;
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
     rBase.GetWorkerAssignments().UnassignAll();
     REQUIRE(rPopulation.GetSize() >= 2);
 
     // The tile has to be worth something, or "productive" ties with "idle" at zero.
-    fixture.At(3, 3).SetMoisture(ac::Moisture_t::Wet);
+    fixture.At(8, 6).SetMoisture(ac::Moisture_t::Wet);
 
     // One pop works a tile; the rest are idle and therefore worth nothing. It must be the
     // *last* pop: the rule this replaced always took the most recently added, so making the
@@ -241,7 +241,7 @@ TEST_CASE("A shrinking base loses its least productive pop", "[population][growt
         }
     }
     REQUIRE(pProductive != nullptr);
-    REQUIRE(rBase.GetWorkerAssignments().AssignWorker(*pProductive, &fixture.At(3, 3)));
+    REQUIRE(rBase.GetWorkerAssignments().AssignWorker(*pProductive, &fixture.At(8, 6)));
     REQUIRE(pProductive->GetTile() != nullptr);
 
     // Every idle pop goes before the one that is actually producing.
@@ -257,7 +257,7 @@ TEST_CASE("A shrinking base loses its least productive pop", "[population][growt
 TEST_CASE("Specialists are the last pops lost", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
     rBase.GetWorkerAssignments().UnassignAll();
@@ -301,7 +301,7 @@ TEST_CASE("Falling max size does not trim existing pops", "[population][growth]"
 {
     actest::BaseFixture fixture;
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     REQUIRE(base.GetPopulation().GetSize() == 3);
 
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 2);
@@ -313,7 +313,7 @@ TEST_CASE("Falling max size does not trim existing pops", "[population][growth]"
 TEST_CASE("Growing never leaves a negative tank", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     PopulationManager& rPopulation = base.GetPopulation();
     REQUIRE(rPopulation.GetSize() == 3);
 
@@ -333,7 +333,7 @@ TEST_CASE("Founding without an explicit size resolves StartingSize", "[populatio
         /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
         fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
-    BaseManager& base = fixture.MakeBase(2, 2, std::nullopt);
+    BaseManager& base = fixture.MakeBase(8, 4, std::nullopt);
     CHECK(base.GetPopulation().GetSize() == 2);
 }
 
@@ -346,5 +346,5 @@ TEST_CASE("A StartingSize that resolves to zero fails loudly at founding",
         /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
         fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
-    CHECK_THROWS_AS(fixture.MakeBase(2, 2, std::nullopt), std::runtime_error);
+    CHECK_THROWS_AS(fixture.MakeBase(8, 4, std::nullopt), std::runtime_error);
 }

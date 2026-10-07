@@ -76,21 +76,21 @@ TEST_CASE("Unit creation and destruction maintain the position index", "[unit][i
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
-    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).size() == 1);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).front() == &unit);
+    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).size() == 1);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).front() == &unit);
 
     // No manual index bookkeeping: the unit unregisters itself when destroyed.
     faction.GetUnitManager().DestroyUnit(unit);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).empty());
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).empty());
 }
 
 TEST_CASE("DestroyUnit emits OnUnitDestroyed before the unit is removed", "[unit][signal]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     Unit* pDestroyed = nullptr;
     faction.GetUnitManager().OnUnitDestroyed.Connect([&pDestroyed](Unit& rUnit) {
@@ -107,9 +107,9 @@ TEST_CASE("Deferred destruction keeps unit iteration safe", "[unit][lifetime]")
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     UnitManager& rUnits = faction.GetUnitManager();
-    fixture.MakeUnit(faction, 3, 4, {"test_chassis"});
-    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
+    fixture.MakeUnit(faction, 7, 7, {"test_chassis"});
+    fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
 
     std::vector<UnitId_t> visitedIds;
     {
@@ -145,7 +145,7 @@ TEST_CASE("MoveUnit emits OnUnitMoved after updating occupancy", "[unit][signal]
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     Unit* pMoved = nullptr;
     const Tile* pTileAtEmit = nullptr;
@@ -154,14 +154,14 @@ TEST_CASE("MoveUnit emits OnUnitMoved after updating occupancy", "[unit][signal]
         pTileAtEmit = &rUnit.GetTile();
     });
 
-    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(5, 4));
+    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(9, 9));
 
     CHECK(pMoved == &unit);
-    CHECK(pTileAtEmit == &fixture.At(5, 4));
+    CHECK(pTileAtEmit == &fixture.At(9, 9));
 
     // Same-tile move is a no-op and must not re-emit.
     pMoved = nullptr;
-    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(5, 4));
+    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(9, 9));
     CHECK(pMoved == nullptr);
 }
 
@@ -169,14 +169,14 @@ TEST_CASE("Moving a unit keeps its tile pointer and the index in sync", "[unit][
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
-    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(5, 4));
+    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(9, 9));
 
-    CHECK(&unit.GetTile() == &fixture.At(5, 4));
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).empty());
-    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).size() == 1);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).front() == &unit);
+    CHECK(&unit.GetTile() == &fixture.At(9, 9));
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).empty());
+    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).size() == 1);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).front() == &unit);
 }
 
 TEST_CASE("GetUnitsOnTile is occupants-only; cargo needs GetCargoOnTile", "[unit][index][harbors]")
@@ -184,17 +184,17 @@ TEST_CASE("GetUnitsOnTile is occupants-only; cargo needs GetCargoOnTile", "[unit
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    MakeWater_(fixture.At(5, 4));
+    MakeWater_(fixture.At(9, 9));
     Unit& carrier = fixture.MakeUnit(
-        faction, 5, 4, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
-    Unit& jet = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+        faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
+    Unit& jet = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     REQUIRE(TryAttachToTransport(jet, fixture.map));
 
-    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).size() == 1);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).front() == &carrier);
-    REQUIRE(fixture.map.GetCargoOnTile(fixture.At(5, 4)).size() == 1);
-    CHECK(fixture.map.GetCargoOnTile(fixture.At(5, 4)).front() == &jet);
-    REQUIRE(fixture.map.GetAllUnitsOnTile(fixture.At(5, 4)).size() == 2);
+    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).size() == 1);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).front() == &carrier);
+    REQUIRE(fixture.map.GetCargoOnTile(fixture.At(9, 9)).size() == 1);
+    CHECK(fixture.map.GetCargoOnTile(fixture.At(9, 9)).front() == &jet);
+    REQUIRE(fixture.map.GetAllUnitsOnTile(fixture.At(9, 9)).size() == 2);
 }
 
 TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied tiles",
@@ -210,32 +210,32 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
         pTile->SetElevation(100);
     }
 
-    Unit& blocker = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    CHECK_THROWS_AS(fixture.MakeUnit(faction, 4, 4, {"test_chassis"}), std::runtime_error);
-    CHECK_FALSE(CanPlaceUnitOnTile(fixture.At(4, 4), fixture.map.GetUnitPositions()));
+    Unit& blocker = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    CHECK_THROWS_AS(fixture.MakeUnit(faction, 8, 8, {"test_chassis"}), std::runtime_error);
+    CHECK_FALSE(CanPlaceUnitOnTile(fixture.At(8, 8), fixture.map.GetUnitPositions()));
 
-    Unit& mover = fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
-    CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(4, 4)));
-    CHECK(&mover.GetTile() == &fixture.At(5, 4));
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).size() == 1);
+    Unit& mover = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
+    CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(8, 8)));
+    CHECK(&mover.GetTile() == &fixture.At(9, 9));
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).size() == 1);
 
     // Moving onto the tile the unit already occupies is a no-op.
-    fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(5, 4));
-    CHECK(&mover.GetTile() == &fixture.At(5, 4));
+    fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(9, 9));
+    CHECK(&mover.GetTile() == &fixture.At(9, 9));
 
     // The index refuses the illegal move itself, not just the planner. A caller that skips the
     // step check can no longer overstack behind its back — which is what made the old
     // file-scope flag an incomplete fix.
-    CHECK_THROWS_AS(fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(4, 4)),
+    CHECK_THROWS_AS(fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(8, 8)),
                     std::logic_error);
-    CHECK(&mover.GetTile() == &fixture.At(5, 4));
+    CHECK(&mover.GetTile() == &fixture.At(9, 9));
 
     // Destroying the blocker frees the tile.
     faction.GetUnitManager().DestroyUnit(blocker);
-    CHECK(CanPlaceUnitOnTile(fixture.At(4, 4), fixture.map.GetUnitPositions()));
-    MoveOrder_t stepOrder{&fixture.At(4, 4)};
-    REQUIRE(move.orders.TryStep(mover, fixture.At(4, 4), stepOrder).bEntered);
-    CHECK(&mover.GetTile() == &fixture.At(4, 4));
+    CHECK(CanPlaceUnitOnTile(fixture.At(8, 8), fixture.map.GetUnitPositions()));
+    MoveOrder_t stepOrder{&fixture.At(8, 8)};
+    REQUIRE(move.orders.TryStep(mover, fixture.At(8, 8), stepOrder).bEntered);
+    CHECK(&mover.GetTile() == &fixture.At(8, 8));
 }
 
 TEST_CASE("A loaded carrier moves under the stacking rule", "[unit][index][transport]")
@@ -253,21 +253,21 @@ TEST_CASE("A loaded carrier moves under the stacking rule", "[unit][index][trans
     // Load first: under the strict rule the passenger could not be *created* beside the
     // carrier, since it is not cargo yet. (That tension is inherent to the rule, not to this
     // change — boarding in the shipped game happens by stepping onto the carrier's tile.)
-    Unit& transport = fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis", "test_transport"});
-    Unit& cargo = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& transport = fixture.MakeUnit(faction, 8, 8, {"test_sea_chassis", "test_transport"});
+    Unit& cargo = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     cargo.EmbarkInto(transport);
     REQUIRE(cargo.IsEmbarked());
 
     fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
 
     // Two units share (4,4) legally — the passenger is not an independent occupant.
-    CHECK_NOTHROW(fixture.map.GetUnitPositions().MoveUnit(transport, fixture.At(5, 4)));
-    CHECK(&transport.GetTile() == &fixture.At(5, 4));
-    CHECK(&cargo.GetTile() == &fixture.At(5, 4));
+    CHECK_NOTHROW(fixture.map.GetUnitPositions().MoveUnit(transport, fixture.At(9, 9)));
+    CHECK(&transport.GetTile() == &fixture.At(9, 9));
+    CHECK(&cargo.GetTile() == &fixture.At(9, 9));
 
     // ...and the tile they left is free again, while the one they took is not.
-    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(4, 4)));
-    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(5, 4)));
+    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
+    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(9, 9)));
 }
 
 TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transport]")
@@ -282,9 +282,9 @@ TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transp
         pTile->SetElevation(-10);
     }
 
-    Unit& transport = fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis", "test_transport"});
-    Unit& farAway = fixture.MakeUnit(faction, 7, 7, {"test_chassis"});
-    Unit& sameTile = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& transport = fixture.MakeUnit(faction, 8, 8, {"test_sea_chassis", "test_transport"});
+    Unit& farAway = fixture.MakeUnit(faction, 8, 14, {"test_chassis"});
+    Unit& sameTile = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     // Different tiles.
     CHECK_THROWS_AS(farAway.EmbarkInto(transport), std::invalid_argument);
@@ -316,10 +316,10 @@ TEST_CASE("The stacking rule is per world, not per process", "[unit][index]")
 
     // The loose world still stacks freely while the strict one refuses.
     Faction& rLooseFaction = loose.MakeFaction();
-    loose.MakeUnit(rLooseFaction, 4, 4, {"test_chassis"});
-    CHECK_NOTHROW(loose.MakeUnit(rLooseFaction, 4, 4, {"test_chassis"}));
+    loose.MakeUnit(rLooseFaction, 8, 8, {"test_chassis"});
+    CHECK_NOTHROW(loose.MakeUnit(rLooseFaction, 8, 8, {"test_chassis"}));
 
     Faction& rStrictFaction = strict.MakeFaction();
-    strict.MakeUnit(rStrictFaction, 4, 4, {"test_chassis"});
-    CHECK_THROWS(strict.MakeUnit(rStrictFaction, 4, 4, {"test_chassis"}));
+    strict.MakeUnit(rStrictFaction, 8, 8, {"test_chassis"});
+    CHECK_THROWS(strict.MakeUnit(rStrictFaction, 8, 8, {"test_chassis"}));
 }

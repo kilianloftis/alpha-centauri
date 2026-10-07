@@ -45,7 +45,6 @@
 #include "game/map/TerrainOperationRegistry.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/IGameView.h"
-#include "ui/TileHitTester.h"
 #include "game/map/MapGenerationConfig.h"
 #include "game/map/WorldGenPresetRegistry.h"
 #include "game/map/WorldGenerator.h"
@@ -269,7 +268,7 @@ void Engine::StartNewGame_()
     const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
     const int mapWidth = m_pGameState->GetWorldMap().GetWidth();
     std::vector<std::pair<int, int>> preferredStartPositions;
-    for (int x = 0; x < mapWidth; x += 10)
+    for (int x = (centerY & 1); x < mapWidth; x += 10)
     {
         preferredStartPositions.push_back({x, centerY});
     }
@@ -416,38 +415,36 @@ void Engine::StartNewGame_()
                     std::make_unique<UnitDesign>(rSlots, missileParts), "missile");
 
                 // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
-                const int startX = pStartTile->GetX();
-                const int startY = pStartTile->GetY();
+                const Tile& rStart = *pStartTile;
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 1, 0), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY + 1), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 1, 1), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY + 1), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 2, 1), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY - 1), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 1, -1), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rNeedlejetDesign, rPositions,
-                    *rMap.GetTile(startX, startY), pBase);
+                    rStart, pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rMissileDesign, rPositions,
-                    *rMap.GetTile(startX, startY), pBase);
+                    rStart, pBase);
             }
             else
             {
                 // Enemy scout / probe beside the AI base for multi-faction checks.
-                const int startX = pStartTile->GetX();
-                const int startY = pStartTile->GetY();
+                const Tile& rStart = *pStartTile;
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 1, 0), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY - 1), pBase);
+                    *GetTileAtLatticeOffset(rMap, rStart, 1, -1), pBase);
             }
         }
 
@@ -532,29 +529,27 @@ void Engine::StartNewGame_()
         }
     }
 
-    // Temporary: fungus around the player base (and a couple forests) so vegetation fills
-    // are easy to see while sprites are not yet in place.
+    // Temporary: forests on the base's corner neighbors so vegetation fills are easy to see.
     if (Faction* pPlayer = m_pGameState->GetPlayerFaction())
     {
         WorldMap& rMap = m_pGameState->GetWorldMap();
         TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
         for (BaseManager& rBase : pPlayer->Bases())
         {
-            ForEachTileInChebyshevRadius(rBase.GetTile(), rMap, 2, /*includeOrigin=*/false,
-                [&](Tile* pTile, int distance)
+            const Tile& rBaseTile = rBase.GetTile();
+            const int bx = rBaseTile.GetX();
+            const int by = rBaseTile.GetY();
+            for (const auto [x, y] : {std::pair{bx + 2, by}, {bx - 2, by}, {bx, by + 2},
+                                      {bx, by - 2}})
+            {
+                Tile* pTile = rMap.GetTile(x, y);
+                if (pTile && pTile->IsLand() && !pTile->HasImprovement(ImprovementIds::k_Base)
+                    && !pTile->HasFeature(ImprovementIds::k_Fungus))
                 {
-                    if (!pTile || !pTile->IsLand() || pTile->HasImprovement(ImprovementIds::k_Base))
-                    {
-                        return;
-                    }
-                    else if (distance == 1
-                             && (pTile->GetX() + pTile->GetY()) % 2 == 0
-                             && !pTile->HasFeature(ImprovementIds::k_Fungus))
-                    {
-                        rTileEffects.AddOccupantWithEffects(
-                            *pTile, std::string(ImprovementIds::k_Forest));
-                    }
-                });
+                    rTileEffects.AddOccupantWithEffects(
+                        *pTile, std::string(ImprovementIds::k_Forest));
+                }
+            }
             break;
         }
     }

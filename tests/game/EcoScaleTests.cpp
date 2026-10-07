@@ -48,7 +48,7 @@ TEST_CASE("A faction at PLANET 0 carries the neutral row's x3", "[ecology][scale
     FactionFixture fixtures;
     SelectNativeLife_(fixtures, "rare");
     Faction& rFaction = fixtures.MakeFaction();
-    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 4, 4);
+    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 8, 8);
     CHECK(EcoScale_(rBase) == Approx(3.0));
 }
 
@@ -58,7 +58,7 @@ TEST_CASE("Higher PLANET lowers the multiplier to a floor of x1", "[ecology][sca
         FactionFixture fixtures;
         SelectNativeLife_(fixtures, "rare");
         Faction& rFaction = fixtures.MakeFaction();
-        BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 4, 4);
+        BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 8, 8);
         RaisePlanet_(rBase, planet);
         return EcoScale_(rBase);
     };
@@ -73,7 +73,7 @@ TEST_CASE("Native life abundance scales the multiplier x1 / x2 / x3", "[ecology]
 {
     FactionFixture fixtures;
     Faction& rFaction = fixtures.MakeFaction();
-    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 4, 4);
+    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 8, 8);
 
     SelectNativeLife_(fixtures, "rare");
     const double rare = EcoScale_(rBase);
@@ -90,7 +90,7 @@ TEST_CASE("An active Perihelion doubles the multiplier until it ends", "[ecology
 {
     FactionFixture fixtures;
     Faction& rFaction = fixtures.MakeFaction();
-    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 4, 4);
+    BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 8, 8);
     fixtures.pBindState->CreateWorldEvents();
     WorldEventTracker& rEvents = *fixtures.pBindState->GetWorldEvents();
 

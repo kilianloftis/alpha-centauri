@@ -41,7 +41,7 @@ struct OrbitalGame_
 
     OrbitalGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -114,18 +114,18 @@ TEST_CASE("Orbital domain can enter any terrain", "[movement][orbital]")
         pTile->SetElevation(100);
     }
     Faction& faction = fixture.MakeFaction();
-    Unit& missile = fixture.MakeUnit(faction, 4, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& missile = fixture.MakeUnit(faction, 8, 8, {"test_orbital_chassis", "test_weapon"});
     CHECK(missile.GetDomain() == UnitDomain_t::Orbital);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(4, 4), fixture.dataContext.interactionGrids));
-    fixture.At(5, 5).SetElevation(-100);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(5, 5), fixture.dataContext.interactionGrids));
+    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 8), fixture.dataContext.interactionGrids));
+    fixture.At(8, 10).SetElevation(-100);
+    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 10), fixture.dataContext.interactionGrids));
 }
 
 TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbital][census]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);
 
     playerBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     playerBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
@@ -166,8 +166,8 @@ TEST_CASE("Sky Hydroponics stacks nutrients on owner bases", "[orbital][effects]
         pTile->SetElevation(100);
     }
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     const int beforeA = baseA.GetNutrientProduction();
     const int beforeB = baseB.GetNutrientProduction();
@@ -181,8 +181,8 @@ TEST_CASE("Sky Hydroponics stacks nutrients on owner bases", "[orbital][effects]
 TEST_CASE("TryAttackSatellite hit destroys one orbital and deploys the pod", "[orbital][asat]")
 {
     OrbitalGame_ game;
-    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
@@ -205,8 +205,8 @@ TEST_CASE("TryAttackSatellite hit destroys one orbital and deploys the pod", "[o
 TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
 {
     OrbitalGame_ game;
-    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
@@ -224,8 +224,8 @@ TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
 TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbital][asat]")
 {
     OrbitalGame_ game;
-    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     attackerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
@@ -241,8 +241,8 @@ TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbit
 TEST_CASE("TryAttackSatellite fails without ready pods or non-orbital target", "[orbital][asat]")
 {
     OrbitalGame_ game;
-    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("granted_hall");
 
@@ -263,8 +263,8 @@ TEST_CASE("TryAttackSatellite fails without ready pods or non-orbital target", "
 TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital][deploy]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
-    BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
@@ -273,8 +273,8 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
                                      "Sky_Hydroponics_Lab")
                 .bAttempted);
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
     garrison.SetMoveFragmentsRemaining(garrison.GetMovementPoints() * k_point);
 
@@ -291,11 +291,11 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
 TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -311,11 +311,11 @@ TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital]
 TEST_CASE("An attack ended by interception is still a hostile act", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
@@ -328,11 +328,11 @@ TEST_CASE("An attack ended by interception is still a hostile act", "[orbital][i
 TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -347,11 +347,11 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
 TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -370,16 +370,16 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
     // survivor stays suppressed for the whole cooldown by a record nothing can erase.
     OrbitalGame_ game;
     // firstBase is created first, so FindBaseWithBuilding would return it.
-    BaseManager& firstBase = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& defendingBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& firstBase = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& defendingBase = game.MakeBase(*game.pPlayer, 8, 8);
     // ThisBase scope: the charge belongs to one base, which is the case pBaseSource exists for.
     firstBase.GetBuildingManager().AddBuilding("test_odp_thisbase_miss_destroy");
     defendingBase.GetBuildingManager().AddBuilding("test_odp_thisbase_miss_destroy");
     REQUIRE(game.pPlayer->CountBuildings("test_odp_thisbase_miss_destroy") == 2);
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
     Unit& garrison =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &defendingBase);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &defendingBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
@@ -403,8 +403,8 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
 TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][deploy]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
-    BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
@@ -427,8 +427,8 @@ TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][d
 TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", "[orbital][asat]")
 {
     OrbitalGame_ game;
-    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     CHECK(game.pState->ListReadyOrbitalAttackers(*game.pPlayer).empty());
 
@@ -476,11 +476,11 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
 TEST_CASE("ThisUnit Intercept fires for the defending unit only", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
     Unit& samGarrison =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor", "test_sam_escort"},
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor", "test_sam_escort"},
                       &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
@@ -494,12 +494,12 @@ TEST_CASE("ThisUnit Intercept fires for the defending unit only", "[orbital][int
 TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]")
 {
     OrbitalGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     game.pState->GetTileEffects().AddOccupantWithEffects(
-        *game.pState->GetWorldMap().GetTile(4, 4), "test_sam_battery");
+        *game.pState->GetWorldMap().GetTile(8, 8), "test_sam_battery");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
-    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -565,13 +565,13 @@ TEST_CASE("WorldGlobal building intercept fires for another faction and charges 
           "[orbital][intercept][world]")
 {
     OrbitalGame_ game;
-    BaseManager& grantorBase = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& grantorBase = game.MakeBase(*game.pPlayer, 8, 2);
     grantorBase.GetBuildingManager().AddBuilding("world_intercept_always_hit");
     CHECK(game.pPlayer->CountReadyBuildings("world_intercept_always_hit",
                                             game.pState->GetMissionYear()) == 1);
 
-    Unit& defender = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "test_armor"});
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_armor"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
@@ -590,8 +590,8 @@ TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
     InstallCouncil(game.fixtures.dataContext, "council/world_intercept.json");
     game.pState->CreatePlanetaryCouncil();
 
-    Unit& defender = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "test_armor"});
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_armor"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());

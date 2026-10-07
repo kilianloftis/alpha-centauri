@@ -1,6 +1,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "ui/CoastOverlay.h"
 
@@ -15,22 +16,32 @@ using namespace ac;
 namespace
 {
 
-void MakeWater_(actest::WorldFixture& rWorld, int x, int y)
+void MakeWater_(Tile& rTile)
 {
-    Tile& rTile = *rWorld.map.GetTile(x, y);
     rTile.SetElevation(actest::TestMapRules().oceanShelfMeters);
     REQUIRE(rTile.IsWater());
 }
 
+void MakeWater_(actest::WorldFixture& rWorld, int x, int y)
+{
+    MakeWater_(*rWorld.map.GetTile(x, y));
+}
+
+void MakeWaterAtOffset_(actest::WorldFixture& rWorld, const Tile& rOrigin, int p, int q)
+{
+    MakeWater_(*GetTileAtLatticeOffset(rWorld.map, rOrigin, p, q));
+}
+
 void MakeIsland_(actest::WorldFixture& rWorld, int x, int y)
 {
-    for (int dy = -1; dy <= 1; ++dy)
+    const Tile& rCentre = *rWorld.map.GetTile(x, y);
+    for (int q = -1; q <= 1; ++q)
     {
-        for (int dx = -1; dx <= 1; ++dx)
+        for (int p = -1; p <= 1; ++p)
         {
-            if (dx != 0 || dy != 0)
+            if (p != 0 || q != 0)
             {
-                MakeWater_(rWorld, x + dx, y + dy);
+                MakeWaterAtOffset_(rWorld, rCentre, p, q);
             }
         }
     }
@@ -52,18 +63,18 @@ bool NoCoast_(const CoastOverlay_t& rOverlay)
 
 TEST_CASE("Land surrounded by land has no coast", "[ui][coast]")
 {
-    actest::WorldFixture world(5, 5);
-    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+    actest::WorldFixture world;
+    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
     CHECK(NoCoast_(overlay));
 }
 
 TEST_CASE("Water tiles never get a coast", "[ui][coast]")
 {
-    actest::WorldFixture world(5, 5);
-    MakeWater_(world, 2, 2);
-    MakeWater_(world, 3, 2);
+    actest::WorldFixture world;
+    MakeWater_(world, 8, 4);
+    MakeWater_(world, 9, 5);
 
-    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
     CHECK(NoCoast_(overlay));
 }
 
@@ -71,8 +82,8 @@ TEST_CASE("Water across a diamond edge marks the two corners on that edge", "[ui
 {
     struct Case_t
     {
-        int dx;
-        int dy;
+        int p;
+        int q;
         // The edge is clockwise of one corner (bit 4) and counter-clockwise of the next (bit 1).
         CoastCorner_t bit4Corner;
         CoastCorner_t bit1Corner;
@@ -85,11 +96,11 @@ TEST_CASE("Water across a diamond edge marks the two corners on that edge", "[ui
     };
     for (const Case_t& rCase : cases)
     {
-        CAPTURE(rCase.dx, rCase.dy);
-        actest::WorldFixture world(5, 5);
-        MakeWater_(world, 2 + rCase.dx, 2 + rCase.dy);
+        CAPTURE(rCase.p, rCase.q);
+        actest::WorldFixture world;
+        MakeWaterAtOffset_(world, *world.map.GetTile(8, 4), rCase.p, rCase.q);
 
-        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
         for (const CoastCornerArt_t& rArt : overlay.corners)
         {
             CAPTURE(static_cast<int>(rArt.corner));
@@ -111,8 +122,8 @@ TEST_CASE("Water touching a diamond corner marks only that corner", "[ui][coast]
 {
     struct Case_t
     {
-        int dx;
-        int dy;
+        int p;
+        int q;
         CoastCorner_t corner;
     };
     const Case_t cases[] = {
@@ -123,11 +134,11 @@ TEST_CASE("Water touching a diamond corner marks only that corner", "[ui][coast]
     };
     for (const Case_t& rCase : cases)
     {
-        CAPTURE(rCase.dx, rCase.dy);
-        actest::WorldFixture world(5, 5);
-        MakeWater_(world, 2 + rCase.dx, 2 + rCase.dy);
+        CAPTURE(rCase.p, rCase.q);
+        actest::WorldFixture world;
+        MakeWaterAtOffset_(world, *world.map.GetTile(8, 4), rCase.p, rCase.q);
 
-        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
         for (const CoastCornerArt_t& rArt : overlay.corners)
         {
             CAPTURE(static_cast<int>(rArt.corner));
@@ -138,10 +149,10 @@ TEST_CASE("Water touching a diamond corner marks only that corner", "[ui][coast]
 
 TEST_CASE("A one-tile island is water on every side of every corner", "[ui][coast]")
 {
-    actest::WorldFixture world(5, 5);
-    MakeIsland_(world, 2, 2);
+    actest::WorldFixture world;
+    MakeIsland_(world, 8, 4);
 
-    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
     for (const CoastCornerArt_t& rArt : overlay.corners)
     {
         CHECK(rArt.waterMask == 7);
@@ -150,19 +161,20 @@ TEST_CASE("A one-tile island is water on every side of every corner", "[ui][coas
 
 TEST_CASE("Rows beyond the map edge count as land", "[ui][coast]")
 {
-    actest::WorldFixture world(5, 5);
-    const CoastOverlay_t top = ResolveCoastOverlay(*world.map.GetTile(2, 0), world.map);
+    actest::WorldFixture world;
+    const CoastOverlay_t top = ResolveCoastOverlay(*world.map.GetTile(8, 0), world.map);
     CHECK(NoCoast_(top));
-    const CoastOverlay_t bottom = ResolveCoastOverlay(*world.map.GetTile(2, 4), world.map);
+    const CoastOverlay_t bottom =
+        ResolveCoastOverlay(*world.map.GetTile(8, world.map.GetHeight() - 1), world.map);
     CHECK(NoCoast_(bottom));
 }
 
 TEST_CASE("Coast neighbors wrap across the map's x seam", "[ui][coast]")
 {
-    actest::WorldFixture world(5, 5);
-    MakeWater_(world, 4, 2);
+    actest::WorldFixture world;
+    MakeWater_(world, -1, 3);
 
-    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(0, 2), world.map);
+    const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(0, 4), world.map);
     CHECK(Corner_(overlay, CoastCorner_t::West).waterMask == 4);
     CHECK(Corner_(overlay, CoastCorner_t::North).waterMask == 1);
     CHECK(Corner_(overlay, CoastCorner_t::East).waterMask == 0);
@@ -173,9 +185,9 @@ TEST_CASE("Only all-water corners on odd rows use the alternate island shape", "
 {
     SECTION("island on an odd row")
     {
-        actest::WorldFixture world(5, 5);
-        MakeIsland_(world, 2, 1);
-        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 1), world.map);
+        actest::WorldFixture world;
+        MakeIsland_(world, 9, 3);
+        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(9, 3), world.map);
         for (const CoastCornerArt_t& rArt : overlay.corners)
         {
             CHECK(rArt.bAlternate);
@@ -184,9 +196,9 @@ TEST_CASE("Only all-water corners on odd rows use the alternate island shape", "
 
     SECTION("island on an even row")
     {
-        actest::WorldFixture world(5, 5);
-        MakeIsland_(world, 2, 2);
-        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 2), world.map);
+        actest::WorldFixture world;
+        MakeIsland_(world, 8, 4);
+        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(8, 4), world.map);
         for (const CoastCornerArt_t& rArt : overlay.corners)
         {
             CHECK_FALSE(rArt.bAlternate);
@@ -195,11 +207,11 @@ TEST_CASE("Only all-water corners on odd rows use the alternate island shape", "
 
     SECTION("partial coast on an odd row")
     {
-        actest::WorldFixture world(5, 5);
-        MakeWater_(world, 1, 1);
-        MakeWater_(world, 1, 0);
-        MakeWater_(world, 2, 0);
-        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(2, 1), world.map);
+        actest::WorldFixture world;
+        MakeWater_(world, 8, 2);
+        MakeWater_(world, 9, 1);
+        MakeWater_(world, 10, 2);
+        const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(9, 3), world.map);
         REQUIRE(Corner_(overlay, CoastCorner_t::North).waterMask == 7);
         CHECK(Corner_(overlay, CoastCorner_t::North).bAlternate);
         for (const CoastCornerArt_t& rArt : overlay.corners)

@@ -47,7 +47,7 @@ TEST_CASE("Opening a base needs the player faction too", "[ui][factory]")
         fixture.factionDefinition, fixture.dataContext, fixture.pState->GetWorldMap(),
         fixture.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rOwner.CreateBase(
-        fixture.pState->AllocateBaseId(), "Rival", fixture.pState->GetWorldMap().GetTile(4, 4),
+        fixture.pState->AllocateBaseId(), "Rival", fixture.pState->GetWorldMap().GetTile(8, 8),
         fixture.pState->GetTileEffects(),
         fixture.pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
@@ -300,7 +300,7 @@ TEST_CASE("The social-engineering panel reports turns remaining, not full durati
     // ignores accumulated progress — so the figure only ever read too high.
     ViewFixture fixture;
     // Needs a base *and* energy: with no labs production the panel legitimately reports N/A.
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
     for (const ac::Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
     {
         fixture.pState->GetTileEffects().AddOccupantWithEffects(

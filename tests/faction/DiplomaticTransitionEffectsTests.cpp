@@ -9,6 +9,7 @@
 
 #include <optional>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 using namespace ac;
@@ -60,10 +61,10 @@ TEST_CASE("Signing a Treaty moves each side's units out of the other's territory
           "[diplomacy][status][evacuate]")
 {
     DiplomacyFixture game;
-    REQUIRE(game.Owner(6, 4) == game.pB->GetFactionId());
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rGuest = game.MakeUnit(*game.pA, 6, 4);
-    Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
+    REQUIRE(game.Owner(10, 10) == game.pB->GetFactionId());
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pA, 10, 10);
+    Unit& rVisitor = game.MakeUnit(*game.pB, 6, 6);
 
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
 
@@ -78,30 +79,30 @@ TEST_CASE("A Pact ending in Vendetta clears shared tiles and bases but not terri
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
-    Unit& rInBase = game.MakeUnit(*game.pA, 7, 4);
-    Unit& rStacked = game.MakeUnit(*game.pA, 4, 0);
-    Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
-    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+    Unit& rInBase = game.MakeUnit(*game.pA, 11, 11);
+    Unit& rStacked = game.MakeUnit(*game.pA, 12, 4);
+    Unit& rPartner = game.MakeUnit(*game.pB, 12, 4);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 11, 9);
 
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
 
     CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
     CHECK(&rStacked.GetTile() != &rPartner.GetTile());
-    CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
+    CHECK(&rInTerritory.GetTile() == &game.At(11, 9));
 }
 
 TEST_CASE("An evacuated unit is not set down among units it may not share a tile with",
           "[diplomacy][status][evacuate]")
 {
     DiplomacyFixture game;
-    REQUIRE(game.Owner(4, 4) == game.pA->GetFactionId());
-    Unit& rGuest = game.MakeUnit(*game.pB, 4, 4);
+    REQUIRE(game.Owner(8, 8) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pB, 8, 8);
     // Occupy every tile of B's on the ring nearest the guest.
-    for (int y = 3; y <= 5; ++y)
+    for (const auto& [x, y] : {std::pair{10, 8}, std::pair{9, 9}, std::pair{8, 10}})
     {
-        REQUIRE(game.Owner(5, y) == game.pB->GetFactionId());
-        game.MakeUnit(*game.pA, 5, y);
+        REQUIRE(game.Owner(x, y) == game.pB->GetFactionId());
+        game.MakeUnit(*game.pA, x, y);
     }
 
     EvacuateUnitsFromTerritory(*game.pB, game.pA->GetFactionId(), game.Map(), game.Grids());
@@ -114,10 +115,10 @@ TEST_CASE("Declaring Vendetta moves each side's units out of the other's territo
           "[diplomacy][status][evacuate][declaration]")
 {
     DiplomacyFixture game;
-    REQUIRE(game.Owner(6, 4) == game.pB->GetFactionId());
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rGuest = game.MakeUnit(*game.pA, 6, 4);
-    Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
+    REQUIRE(game.Owner(10, 10) == game.pB->GetFactionId());
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pA, 10, 10);
+    Unit& rVisitor = game.MakeUnit(*game.pB, 6, 6);
 
     DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
@@ -133,11 +134,11 @@ TEST_CASE("Declaring Vendetta on a Pact partner clears territory, shared tiles a
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
-    Unit& rInBase = game.MakeUnit(*game.pA, 7, 4);
-    Unit& rStacked = game.MakeUnit(*game.pA, 4, 0);
-    Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
-    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+    Unit& rInBase = game.MakeUnit(*game.pA, 11, 11);
+    Unit& rStacked = game.MakeUnit(*game.pA, 12, 4);
+    Unit& rPartner = game.MakeUnit(*game.pB, 12, 4);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 11, 9);
 
     DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
@@ -150,18 +151,18 @@ TEST_CASE("A sneak attack leaves each side's units in the other's territory",
           "[diplomacy][status][evacuate][sneak]")
 {
     DiplomacyFixture game;
-    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rGuest = game.MakeUnit(*game.pA, 6, 3);
-    Unit& rVisitor = game.MakeUnit(*game.pB, 2, 4);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
-    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rGuest = game.MakeUnit(*game.pA, 11, 9);
+    Unit& rVisitor = game.MakeUnit(*game.pB, 6, 6);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
-    CHECK(&rGuest.GetTile() == &game.At(6, 3));
-    CHECK(&rVisitor.GetTile() == &game.At(2, 4));
+    CHECK(&rGuest.GetTile() == &game.At(11, 9));
+    CHECK(&rVisitor.GetTile() == &game.At(6, 6));
 }
 
 TEST_CASE("A sneak attack on a Pact partner clears shared tiles and bases but not territory",
@@ -171,18 +172,18 @@ TEST_CASE("A sneak attack on a Pact partner clears shared tiles and bases but no
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
-    Unit& rInBase = game.MakeUnit(*game.pA, 7, 4);
-    Unit& rStacked = game.MakeUnit(*game.pA, 4, 0);
-    Unit& rPartner = game.MakeUnit(*game.pB, 4, 0);
-    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+    Unit& rInBase = game.MakeUnit(*game.pA, 11, 11);
+    Unit& rStacked = game.MakeUnit(*game.pA, 12, 4);
+    Unit& rPartner = game.MakeUnit(*game.pB, 12, 4);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 11, 9);
 
     ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(&rInBase.GetTile() != &game.pBaseB->GetTile());
     CHECK(&rStacked.GetTile() != &rPartner.GetTile());
-    CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
+    CHECK(&rInTerritory.GetTile() == &game.At(11, 9));
 }
 
 TEST_CASE("A sneak attack out of a shared stack resolves, then separates the two factions",
@@ -192,17 +193,17 @@ TEST_CASE("A sneak attack out of a shared stack resolves, then separates the two
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
 
-    REQUIRE(game.Owner(6, 3) == game.pB->GetFactionId());
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
-    game.MakeUnit(*game.pB, 4, 0);
-    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
-    game.MakeUnit(*game.pA, 5, 0);
-    Unit& rInTerritory = game.MakeUnit(*game.pA, 6, 3);
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pB, 12, 4);
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
+    game.MakeUnit(*game.pA, 13, 5);
+    Unit& rInTerritory = game.MakeUnit(*game.pA, 11, 9);
     const UnitId_t attackerId = rAttacker.GetUnitId();
     const UnitId_t defenderId = rDefender.GetUnitId();
 
     const std::optional<CombatResult_t> result =
-        game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, game.At(5, 0));
+        game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, game.At(13, 5));
 
     REQUIRE(result);
     CHECK(result->attackerId == attackerId);
@@ -210,7 +211,7 @@ TEST_CASE("A sneak attack out of a shared stack resolves, then separates the two
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK_FALSE(game.SharesAnyTile(*game.pA, *game.pB));
-    CHECK(&rInTerritory.GetTile() == &game.At(6, 3));
+    CHECK(&rInTerritory.GetTile() == &game.At(11, 9));
 }
 
 TEST_CASE("Attacking a faction you are not at Vendetta with declares Vendetta",
@@ -218,8 +219,8 @@ TEST_CASE("Attacking a faction you are not at Vendetta with declares Vendetta",
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
-    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
@@ -228,10 +229,10 @@ TEST_CASE("Attacking a faction you are not at Vendetta with declares Vendetta",
 TEST_CASE("Bombarding a faction declares Vendetta", "[diplomacy][status][hostile]")
 {
     DiplomacyFixture game;
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "bombard"});
-    game.MakeUnit(*game.pB, 5, 0);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "bombard"});
+    game.MakeUnit(*game.pB, 13, 5);
 
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(5, 0)));
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(13, 5)));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
 }
 
@@ -251,8 +252,8 @@ TEST_CASE("Attacking a covert unit keeps the Treaty", "[diplomacy][status][hosti
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon"});
-    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5, {"test_chassis", "covert"});
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
@@ -262,8 +263,8 @@ TEST_CASE("A covert attacker keeps the Treaty", "[diplomacy][status][hostile][co
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "test_weapon", "covert"});
-    Unit& rDefender = game.MakeUnit(*game.pB, 5, 0);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon", "covert"});
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAttack(rAttacker, rDefender.GetTile()));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
@@ -273,10 +274,10 @@ TEST_CASE("Bombarding only covert units keeps the Treaty", "[diplomacy][status][
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "bombard"});
-    game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "bombard"});
+    game.MakeUnit(*game.pB, 13, 5, {"test_chassis", "covert"});
 
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(5, 0)));
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(13, 5)));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
@@ -285,11 +286,11 @@ TEST_CASE("Bombarding a covert unit stacked with an ordinary one declares Vendet
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rAttacker = game.MakeUnit(*game.pA, 4, 0, {"test_chassis", "bombard"});
-    game.MakeUnit(*game.pB, 5, 0, {"test_chassis", "covert"});
-    game.MakeUnit(*game.pB, 5, 0);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "bombard"});
+    game.MakeUnit(*game.pB, 13, 5, {"test_chassis", "covert"});
+    game.MakeUnit(*game.pB, 13, 5);
 
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(5, 0)));
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryBombard(rAttacker, game.At(13, 5)));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
 }
 
@@ -311,9 +312,9 @@ TEST_CASE("A Pact partner defending against a declaration leaves the aggressor's
 {
     DiplomacyFixture game;
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
-    MakeSessionBase(game.fixtures, *game.pState, *game.pC, 4, 8);
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
+    MakeSessionBase(game.fixtures, *game.pState, *game.pC, 4, 12);
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 6, 6);
 
     DeclareVendetta(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId());
 
@@ -327,13 +328,13 @@ TEST_CASE("A Pact partner defending against a sneak attack stays in the aggresso
 {
     DiplomacyFixture game;
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 2, 4);
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rDefenderGuest = game.MakeUnit(*game.pC, 6, 6);
 
     ApplyHostileAct(*game.pState, AttributedAct_(game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Vendetta);
-    CHECK(&rDefenderGuest.GetTile() == &game.At(2, 4));
+    CHECK(&rDefenderGuest.GetTile() == &game.At(6, 6));
 }
 
 TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack",
@@ -341,8 +342,8 @@ TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack"
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Pact);
-    REQUIRE(game.Owner(2, 4) == game.pA->GetFactionId());
-    Unit& rAggressorGuest = game.MakeUnit(*game.pC, 2, 4);
+    REQUIRE(game.Owner(6, 6) == game.pA->GetFactionId());
+    Unit& rAggressorGuest = game.MakeUnit(*game.pC, 6, 6);
 
     ApplyHostileAct(*game.pState, AttributedAct_(game.pC->GetFactionId(), game.pB->GetFactionId()));
 
@@ -355,7 +356,7 @@ TEST_CASE("The player's obligation after a sneak attack keeps it a sneak attack"
                              obligations.front().kind);
 
     CHECK(game.Status(*game.pA, *game.pC) == DiplomaticStatus_t::Vendetta);
-    CHECK(&rAggressorGuest.GetTile() == &game.At(2, 4));
+    CHECK(&rAggressorGuest.GetTile() == &game.At(6, 6));
 }
 
 TEST_CASE("Factions without a defensive obligation stay out of it",

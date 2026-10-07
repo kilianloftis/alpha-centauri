@@ -26,27 +26,27 @@ TEST_CASE("CollectAreaEffects: Sensor reaches Chebyshev radius for its territory
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
     // Base off the Sensor tile so Base's +100% defense does not stack into these checks.
-    fixture.MakeFactionBase(owner, 1, 1);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(4, 4), "Sensor");
+    fixture.MakeFactionBase(owner, 8, 2);
+    fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
     const FactionId_t id = owner.GetFactionId();
 
     SECTION("distance 1 and 2 are covered, including diagonals")
     {
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), id) == Approx(1.25));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), id) == Approx(1.25));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 5), id) == Approx(1.25));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 9), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 10), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 12), id) == Approx(1.25));
     }
 
     SECTION("distance 3 is not covered")
     {
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4), id) == Approx(1.0));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 7), id) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(11, 11), id) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 14), id) == Approx(1.0));
     }
 
     SECTION("the sensor's own tile is covered")
     {
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), id) == Approx(1.25));
     }
 }
 
@@ -56,11 +56,11 @@ TEST_CASE("Sensor aura only benefits the faction that owns its territory",
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
     Faction& other = fixture.MakeFaction();
-    fixture.MakeFactionBase(owner, 1, 1);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(4, 4), "Sensor");
+    fixture.MakeFactionBase(owner, 8, 2);
+    fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), owner.GetFactionId()) == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), other.GetFactionId()) == Approx(1.0));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), owner.GetFactionId()) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), other.GetFactionId()) == Approx(1.0));
 }
 
 TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
@@ -71,29 +71,29 @@ TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
     Faction& foreign = fixture.MakeFaction();
 
     // Unit auras are attributed to the unit's faction, not to territory — no base needed.
-    fixture.MakeUnit(owner, 4, 4, {"sensor_pod"});
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), owner.GetFactionId())
+    fixture.MakeUnit(owner, 8, 8, {"sensor_pod"});
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 9), owner.GetFactionId())
           == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), foreign.GetFactionId())
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 9), foreign.GetFactionId())
           == Approx(1.0));
 }
 
 TEST_CASE("Sensor on unowned territory benefits nobody", "[effects][tile][aura][territory]")
 {
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "Sensor");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "Sensor");
     // No bases -> territory unowned -> ownerFaction is k_NoFactionOwner.
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4), /*forFaction*/ 1) == Approx(1.0));
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 4), /*forFaction*/ 1) == Approx(1.0));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(8, 8), /*forFaction*/ 1) == Approx(1.0));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(10, 10), /*forFaction*/ 1) == Approx(1.0));
 }
 
 TEST_CASE("CollectAreaEffects: radius-0 improvements never reach neighbors", "[effects][tile][aura]")
 {
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "Bunker");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "Bunker");
 
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4), /*forFaction*/ 1) == Approx(1.5));
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 4), /*forFaction*/ 1) == Approx(1.0));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(8, 8), /*forFaction*/ 1) == Approx(1.5));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(9, 9), /*forFaction*/ 1) == Approx(1.0));
 }
 
 TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine arithmetically",
@@ -101,8 +101,8 @@ TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
-    fixture.MakeFactionBase(owner, 1, 1); // owns Sensor territory without stacking Base on (4,4)
-    Tile& tile = fixture.At(4, 4);
+    fixture.MakeFactionBase(owner, 8, 2); // owns Sensor territory without stacking Base on (4,4)
+    Tile& tile = fixture.At(8, 8);
     const FactionId_t id = owner.GetFactionId();
 
     // Base multiplier for a featureless tile is 1.0.
@@ -115,7 +115,7 @@ TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine
     // Arithmetic combination: 1 + 0.25 + 0.50, not 1.25 * 1.5.
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(1.75));
 
-    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Sensor"); // +25% aura
+    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Sensor"); // +25% aura
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(2.0));
 }
 
@@ -123,7 +123,7 @@ TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies el
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
 
     SECTION("featureless tile at sea level yields nothing")
     {
@@ -164,7 +164,7 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
 
     tile.SetElevation(1000); // one elevation band
     // River excludes Mine, so a river here would remove the mine.
@@ -183,7 +183,7 @@ TEST_CASE("ResolveTileYield: terrain classification contributes through the same
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
     tile.SetRockiness(Rockiness_t::Rolling); // +1 mineral
 
@@ -196,16 +196,16 @@ TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
           "[effects][tile][yield][aura]")
 {
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "Mirror");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "Mirror");
 
     SECTION("a bare neighbour gets nothing — the aura is not a blanket +1")
     {
-        CHECK(world.ctx->ResolveTileYield(world.At(5, 4)).effective.energy == 0);
+        CHECK(world.ctx->ResolveTileYield(world.At(9, 9)).effective.energy == 0);
     }
 
     SECTION("an adjacent solar collector gets +1 on top of its own elevation")
     {
-        Tile& neighbour = world.At(5, 4);
+        Tile& neighbour = world.At(9, 9);
         neighbour.SetElevation(2000);
         world.ctx->AddOccupantWithEffects(neighbour, "SolarCollector");
         CHECK(world.ctx->ResolveTileYield(neighbour).effective.energy == 3); // 2 bands + mirror 1
@@ -213,7 +213,7 @@ TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
 
     SECTION("out of range gets nothing")
     {
-        Tile& far = world.At(6, 4); // distance 2
+        Tile& far = world.At(10, 10); // distance 2
         far.SetElevation(1000);
         world.ctx->AddOccupantWithEffects(far, "SolarCollector");
         CHECK(world.ctx->ResolveTileYield(far).effective.energy == 1); // its own band only
@@ -224,7 +224,7 @@ TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but not its own
           "[effects][tile][yield][aura]")
 {
     actest::WorldFixture world;
-    Tile& host = world.At(4, 4);
+    Tile& host = world.At(8, 8);
     host.SetElevation(2000);
     world.ctx->AddOccupantWithEffects(host, "Mirror");
 
@@ -233,7 +233,7 @@ TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but not its own
 
     // A second mirror adjacent to the first: each is a collector the other can see, so both
     // gain exactly one +1 — from the neighbour, never from themselves.
-    Tile& second = world.At(5, 4);
+    Tile& second = world.At(9, 9);
     second.SetElevation(1000);
     world.ctx->AddOccupantWithEffects(second, "Mirror");
     CHECK(world.ctx->ResolveTileYield(host).effective.energy == 3);   // 2 bands + 1 from second
@@ -245,9 +245,9 @@ TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply
 {
     actest::BaseFixture fixture;
     // Subject for BaseEffects_t only — keep yield tiles free of a Base improvement.
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& farmTile = fixture.At(4, 4);
-    Tile& plainTile = fixture.At(5, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& farmTile = fixture.At(8, 8);
+    Tile& plainTile = fixture.At(9, 9);
     fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
 
     actest::EffectPool pool;
@@ -265,8 +265,8 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
           "[effects][tile][yield][selector]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
@@ -282,9 +282,9 @@ TEST_CASE("ResolveTileYield with base effects: AnyTile selector applies to every
           "[effects][tile][yield][selector]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& center = fixture.At(4, 4);
-    Tile& outer = fixture.At(5, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& center = fixture.At(8, 8);
+    Tile& outer = fixture.At(9, 9);
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
@@ -302,8 +302,8 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
     // Flat base bonuses resolve once at the base level (FilterBaseLevelByStatId); applying them
     // per worked tile would multiply them by the number of workers.
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
@@ -318,8 +318,8 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
 TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[effects][tile][yield]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
     // Base moisture must be set too: AddOccupantWithEffects triggers RecomputeMoisture,
     // which re-derives the effective value from the base value (world-gen sets both).
     tile.SetBaseMoisture(Moisture_t::Wet);
@@ -342,12 +342,12 @@ TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived 
           "[effects][tile][moisture]")
 {
     actest::WorldFixture world;
-    Tile& dryTile = world.At(4, 4);
+    Tile& dryTile = world.At(8, 8);
     dryTile.SetBaseMoisture(Moisture_t::Arid);
     dryTile.SetMoisture(Moisture_t::Arid);
 
     // Condenser (radius 1) next door.
-    world.ctx->AddOccupantWithEffects(world.At(5, 4), "Condenser");
+    world.ctx->AddOccupantWithEffects(world.At(9, 9), "Condenser");
 
     CHECK(dryTile.GetMoisture() == Moisture_t::Moist);     // effective value shifted
     CHECK(dryTile.GetBaseMoisture() == Moisture_t::Arid);  // terrain truth untouched
@@ -361,23 +361,23 @@ TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived 
 
     SECTION("overlapping condensers stack and clamp at Wet")
     {
-        world.ctx->AddOccupantWithEffects(world.At(3, 4), "Condenser");
+        world.ctx->AddOccupantWithEffects(world.At(7, 7), "Condenser");
         CHECK(dryTile.GetMoisture() == Moisture_t::Wet); // Arid + 2
 
-        world.ctx->AddOccupantWithEffects(world.At(4, 5), "Condenser");
+        world.ctx->AddOccupantWithEffects(world.At(7, 9), "Condenser");
         CHECK(dryTile.GetMoisture() == Moisture_t::Wet); // clamped, no overflow
     }
 
     SECTION("removal reverts cleanly")
     {
-        world.ctx->RemoveOccupantWithEffects(world.At(5, 4), "Condenser");
+        world.ctx->RemoveOccupantWithEffects(world.At(9, 9), "Condenser");
         CHECK(dryTile.GetMoisture() == Moisture_t::Arid);
     }
 
     SECTION("removal with another condenser still in range keeps the remaining bonus")
     {
-        world.ctx->AddOccupantWithEffects(world.At(3, 4), "Condenser");
-        world.ctx->RemoveOccupantWithEffects(world.At(5, 4), "Condenser");
+        world.ctx->AddOccupantWithEffects(world.At(7, 7), "Condenser");
+        world.ctx->RemoveOccupantWithEffects(world.At(9, 9), "Condenser");
         CHECK(dryTile.GetMoisture() == Moisture_t::Moist);
     }
 }
@@ -385,7 +385,7 @@ TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived 
 TEST_CASE("RecomputeMoisture: the moisture shift feeds back into tile yield", "[effects][tile][moisture]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     tile.SetBaseMoisture(Moisture_t::Arid);
     tile.SetMoisture(Moisture_t::Arid);
     CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 0);
@@ -399,7 +399,7 @@ TEST_CASE("AddOccupantWithEffects: unknown improvement ids throw",
           "[effects][tile]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     CHECK_THROWS_AS(world.ctx->AddOccupantWithEffects(tile, "OrbitalLaser"), std::runtime_error);
     CHECK(tile.GetImprovements().empty());
     world.ctx->RemoveOccupantWithEffects(tile, "OrbitalLaser"); // safe no-op for absent id
@@ -409,19 +409,19 @@ TEST_CASE("Aura effects at the map edge are collected without crashing", "[effec
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
-    fixture.MakeFactionBase(owner, 0, 0);
+    fixture.MakeFactionBase(owner, 8, 0);
     // Sensor beside the base so Base's +100% does not stack into the Sensor checks.
-    fixture.ctx->AddOccupantWithEffects(fixture.At(2, 0), "Sensor");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(10, 2), "Sensor");
     const FactionId_t id = owner.GetFactionId();
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(2, 0), id) == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 0), id) == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileYield(fixture.At(0, 1)).effective.nutrients == 0);
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 2), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 1), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileYield(fixture.At(7, 1)).effective.nutrients == 0);
 }
 
 TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[effects][tile]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     const ImprovementConfig_t* pFarm = world.improvements.Find("Farm");
     REQUIRE(pFarm != nullptr);
 
@@ -436,7 +436,7 @@ TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     // Rockiness/moisture remain bound on sea tiles; Water must suppress their yield.
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
@@ -466,7 +466,7 @@ TEST_CASE("Terrain features: Water stacks with its depth band, general before sp
           "[effects][tile][terrain]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
 
     // Index of a feature id within GetTerrainFeatures(), or -1 when absent.
     auto indexOf = [&](std::string_view id)
@@ -515,11 +515,11 @@ TEST_CASE("CanBuildImprovement: sea terraform excludes Ocean but allows OceanShe
     const ImprovementConfig_t* pKelp = world.improvements.Find("KelpFarm");
     REQUIRE(pKelp != nullptr);
 
-    Tile& shelf = world.At(4, 4);
+    Tile& shelf = world.At(8, 8);
     shelf.SetElevation(-100);
     CHECK(CanBuildImprovement(shelf, *pKelp));
 
-    Tile& ocean = world.At(5, 4);
+    Tile& ocean = world.At(9, 9);
     ocean.SetElevation(ocean.MapRules().oceanShelfMeters - 1);
     CHECK_FALSE(CanBuildImprovement(ocean, *pKelp));
 }
@@ -529,10 +529,10 @@ TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the hos
 {
     // EffectRadiusBeacon: energy effect declares radius 2.
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "EffectRadiusBeacon");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "EffectRadiusBeacon");
 
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 1); // distance 2
-    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).effective.energy == 0); // distance 3
+    CHECK(world.ctx->ResolveTileYield(world.At(10, 10)).effective.energy == 1); // distance 2
+    CHECK(world.ctx->ResolveTileYield(world.At(11, 11)).effective.energy == 0); // distance 3
 }
 
 TEST_CASE("Per-effect radius: sibling effects may declare different radii",
@@ -540,13 +540,13 @@ TEST_CASE("Per-effect radius: sibling effects may declare different radii",
 {
     // MixedRadius: energy reaches 2; minerals reaches 1.
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "MixedRadius");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "MixedRadius");
 
-    const TileResources_t atOne = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
+    const TileResources_t atOne = world.ctx->ResolveTileYield(world.At(9, 9)).effective;
     CHECK(atOne.energy == 1);
     CHECK(atOne.minerals == 1);
 
-    const TileResources_t atTwo = world.ctx->ResolveTileYield(world.At(6, 4)).effective;
+    const TileResources_t atTwo = world.ctx->ResolveTileYield(world.At(10, 10)).effective;
     CHECK(atTwo.energy == 1);
     CHECK(atTwo.minerals == 0);
 
@@ -567,9 +567,9 @@ TEST_CASE("Aura collection: non-ThisTile effects do not leak into neighbors",
     // only. WeirdAura (radius 1) carries a FactionGlobal +5 nutrients alongside its legitimate
     // ThisTile +1 energy; only the energy may reach the neighbor.
     actest::WorldFixture world;
-    world.ctx->AddOccupantWithEffects(world.At(4, 4), "WeirdAura");
+    world.ctx->AddOccupantWithEffects(world.At(8, 8), "WeirdAura");
 
-    const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
+    const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(9, 9)).effective;
     CHECK(neighborYield.energy == 1);    // the legitimate ThisTile aura effect
     CHECK(neighborYield.nutrients == 0); // FactionGlobal-scoped effect must not apply here
 }
@@ -580,14 +580,14 @@ TEST_CASE("Sensor aura wraps horizontally across the map seam",
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
     const int width = fixture.map.GetWidth();
-    fixture.MakeFactionBase(owner, 4, 4);
+    fixture.MakeFactionBase(owner, 4, 8);
     fixture.ctx->AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
     const FactionId_t id = owner.GetFactionId();
 
     REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == id);
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 1, 4), id) == Approx(1.25));
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), id) == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 3, 4), id) == Approx(1.0));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), id) == Approx(1.0));
 }
 
 TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",
@@ -595,11 +595,11 @@ TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",
 {
     actest::WorldFixture world;
     const int width = world.map.GetWidth();
-    Tile& dryAcrossSeam = world.At(width - 1, 4);
+    Tile& dryAcrossSeam = world.At(width - 2, 4);
     dryAcrossSeam.SetBaseMoisture(Moisture_t::Arid);
     dryAcrossSeam.SetMoisture(Moisture_t::Arid);
 
-    Tile& dryTooFar = world.At(width - 2, 4);
+    Tile& dryTooFar = world.At(width - 4, 4);
     dryTooFar.SetBaseMoisture(Moisture_t::Arid);
     dryTooFar.SetMoisture(Moisture_t::Arid);
 
@@ -615,7 +615,7 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
           "[effects][tile][yield][forest]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
     world.ctx->AddOccupantWithEffects(tile, "Forest");
@@ -631,7 +631,7 @@ TEST_CASE("Fungus overrides tile yield to 1 nutrient",
           "[effects][tile][yield][fungus]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
     tile.SetHasRiver(true);
@@ -649,8 +649,8 @@ TEST_CASE("Fungus in deeper ocean has no effect until the floor reaches the shel
           "[effects][tile][yield][fungus]")
 {
     actest::WorldFixture world;
-    Tile& rFungus = world.At(4, 4);
-    Tile& rBare = world.At(2, 2);
+    Tile& rFungus = world.At(8, 8);
+    Tile& rBare = world.At(8, 4);
     const int deep = rFungus.MapRules().oceanShelfMeters - 1;
     rFungus.SetElevation(deep);
     rBare.SetElevation(deep);
@@ -674,8 +674,8 @@ TEST_CASE("Fungus yield can be boosted by base-effect selectors",
           "[effects][tile][yield][fungus][selector]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(tile, "Fungus");
@@ -696,7 +696,7 @@ TEST_CASE("Monolith replaces tile yield with 2-2-2",
           "[effects][tile][yield][monolith]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    Tile& tile = world.At(8, 8);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
     tile.SetHasRiver(true);
@@ -722,7 +722,7 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves f
           "[terraform][spread]")
 {
     actest::WorldFixture world;
-    Tile& origin = world.At(4, 4);
+    Tile& origin = world.At(8, 8);
     origin.SetElevation(100);
     origin.SetRockiness(Rockiness_t::Flat);
     world.ctx->AddOccupantWithEffects(origin, "Forest");
@@ -734,13 +734,13 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves f
             pNeighbor->SetElevation(-1000); // sea: ineligible for Forest
         });
 
-    Tile& arid = world.At(5, 4);
+    Tile& arid = world.At(9, 9);
     arid.SetElevation(100);
     arid.SetRockiness(Rockiness_t::Flat);
     arid.SetMoisture(Moisture_t::Arid);
     world.ctx->AddOccupantWithEffects(arid, "Fungus");
 
-    Tile& wet = world.At(3, 4);
+    Tile& wet = world.At(7, 7);
     wet.SetElevation(100);
     wet.SetRockiness(Rockiness_t::Flat);
     wet.SetMoisture(Moisture_t::Wet);
@@ -755,7 +755,7 @@ TEST_CASE("TrySpreadTerraformFromTile does not spread Forest onto Rocky tiles",
           "[terraform][spread]")
 {
     actest::WorldFixture world;
-    Tile& origin = world.At(4, 4);
+    Tile& origin = world.At(8, 8);
     origin.SetElevation(100);
     world.ctx->AddOccupantWithEffects(origin, "Forest");
 
@@ -779,12 +779,12 @@ TEST_CASE("SpreadTerraformImprovements eventually spreads from a sampled Forest"
           "[terraform][spread]")
 {
     actest::WorldFixture world;
-    Tile& origin = world.At(4, 4);
+    Tile& origin = world.At(8, 8);
     origin.SetElevation(100);
     origin.SetRockiness(Rockiness_t::Flat);
     world.ctx->AddOccupantWithEffects(origin, "Forest");
 
-    Tile& neighbor = world.At(5, 4);
+    Tile& neighbor = world.At(9, 9);
     neighbor.SetElevation(100);
     neighbor.SetRockiness(Rockiness_t::Flat);
     neighbor.SetMoisture(Moisture_t::Arid);

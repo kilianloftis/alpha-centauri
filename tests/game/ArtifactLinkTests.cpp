@@ -51,7 +51,7 @@ struct LinkGame_
         fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
         fixtures.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -125,9 +125,9 @@ TEST_CASE("SubjectDesign matches the unit's design id and fails closed without a
           "[effects][condition][native]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
-    Unit& scout = game.MakeScout(*game.pFaction, *game.pState->GetWorldMap().GetTile(2, 2));
+    Unit& scout = game.MakeScout(*game.pFaction, *game.pState->GetWorldMap().GetTile(8, 4));
 
     EffectContext_t artifactCtx;
     artifactCtx.pUnit = &artifact;
@@ -144,7 +144,7 @@ TEST_CASE("BaseHasBuilding matches a facility on the context base",
           "[effects][condition][native]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     EffectContext_t ctx;
     ctx.pBase = &base;
     CHECK_FALSE(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, ctx));
@@ -158,7 +158,7 @@ TEST_CASE("Holding an Alien Artifact at a Network Node prompts; Link grants a te
           "[native][artifact][hold]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
@@ -181,7 +181,7 @@ TEST_CASE("Declining the artifact link leaves the artifact Holding",
           "[native][artifact][hold]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
@@ -203,13 +203,13 @@ TEST_CASE("Hold does not offer a link without a Network Node or without an Alien
           "[native][artifact][hold]")
 {
     LinkGame_ game;
-    BaseManager& bare = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& bare = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, bare.GetTile(), &bare);
     artifact.SetOrder(HoldOrder_t{});
     game.pState->ConsiderHoldLink(artifact);
     CHECK(game.pState->GetPlayerInteractions().Empty());
 
-    BaseManager& nodeBase = game.MakeBase(*game.pFaction, 6, 6);
+    BaseManager& nodeBase = game.MakeBase(*game.pFaction, 8, 12);
     nodeBase.GetBuildingManager().AddBuilding("Network_Node");
     Unit& scout = game.MakeScout(*game.pFaction, nodeBase.GetTile());
     scout.SetOrder(HoldOrder_t{});
@@ -231,7 +231,7 @@ TEST_CASE("An artifact Holding at a foreign base is not offered a link",
     Faction& ai = game.pState->AddFaction(std::make_unique<Faction>(
         game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
         game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed + 1));
-    BaseManager& aiBase = game.MakeBase(ai, 3, 3);
+    BaseManager& aiBase = game.MakeBase(ai, 8, 6);
     aiBase.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, aiBase.GetTile(), nullptr);
     artifact.SetOrder(HoldOrder_t{});
@@ -243,7 +243,7 @@ TEST_CASE("Completing a Network Node under a Holding artifact prompts to link",
           "[native][artifact][hold]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
     game.pState->ConsiderHoldLink(artifact);
@@ -265,7 +265,7 @@ TEST_CASE("Linking an artifact spends it even when the research pool is empty",
           "[native][artifact][hold]")
 {
     LinkGame_ game;
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
@@ -286,7 +286,7 @@ TEST_CASE("An AI artifact Holding at a Network Node is linked without a prompt",
     Faction& ai = game.pState->AddFaction(std::make_unique<Faction>(
         game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
         game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed + 1));
-    BaseManager& base = game.MakeBase(ai, 5, 5);
+    BaseManager& base = game.MakeBase(ai, 8, 10);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(ai, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
@@ -330,7 +330,7 @@ TEST_CASE("A GrantTech hold entry prompts and leaves the unit alive",
     };
     game.designs.emplace_back(std::vector<UnitSlotConfig_t>{chassisSlot, abilitySlot}, assigned);
 
-    BaseManager& base = game.MakeBase(*game.pFaction, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& holder = game.pFaction->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), game.designs.back(),

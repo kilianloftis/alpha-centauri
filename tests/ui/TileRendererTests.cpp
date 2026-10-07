@@ -3,6 +3,7 @@
 #include "StubSprites.h"
 #include "TestHelpers.h"
 
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
@@ -193,6 +194,21 @@ TileShape_t DrawnShape_(const Tile& rTile, const WorldMap& rMap, const std::stri
     return TileShape_t{};
 }
 
+// Every tile one lattice step from rCentre, at the given elevation.
+void SurroundWith_(actest::WorldFixture& rWorld, const Tile& rCentre, int elevation)
+{
+    for (int q = -1; q <= 1; ++q)
+    {
+        for (int p = -1; p <= 1; ++p)
+        {
+            if (p != 0 || q != 0)
+            {
+                GetTileAtLatticeOffset(rWorld.map, rCentre, p, q)->SetElevation(elevation);
+            }
+        }
+    }
+}
+
 } // namespace
 
 TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholders",
@@ -295,7 +311,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
 
     SECTION("fungus overlays terrain instead of replacing it with a solid fill")
     {
-        actest::WorldFixture world(3, 3);
+        actest::WorldFixture world;
         // Moist/Rocky layers are also resolved on this tile — stub them before Render so a
         // Missing SpriteCache_ entry cannot poison later sections in this process.
         WriteOccupantStubs_(world.improvements.Get("Moist"));
@@ -306,7 +322,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         const std::string fungusPath =
             TilePath_(world.improvements.Get("Fungus").spriteTiles->land, 0);
 
-        Tile& rTile = *world.map.GetTile(1, 1);
+        Tile& rTile = *world.map.GetTile(8, 2);
         rTile.SetElevation(500);
         rTile.SetMoisture(Moisture_t::Moist);
         rTile.SetRockiness(Rockiness_t::Rocky);
@@ -335,12 +351,12 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     {
         // Bound tiles resolve Moist via the registry; ensure the configured PNGs exist so CI
         // without a prior extract_terrain.py run still exercises the sprite path.
-        actest::WorldFixture world(5, 5);
+        actest::WorldFixture world;
         const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
         WriteOccupantStubs_(rMoist);
         const std::string moistPrefix = TilePrefix_(rMoist.spriteTiles->land);
 
-        Tile& rTile = *world.map.GetTile(2, 2);
+        Tile& rTile = *world.map.GetTile(8, 4);
         rTile.SetElevation(500);
         rTile.SetMoisture(Moisture_t::Moist);
         rTile.SetRockiness(Rockiness_t::Flat);
@@ -364,10 +380,10 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
 
     SECTION("land art draws as painted at any elevation")
     {
-        actest::WorldFixture world(5, 5);
+        actest::WorldFixture world;
         const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
         WriteOccupantStubs_(rMoist);
-        Tile& rTile = *world.map.GetTile(2, 2);
+        Tile& rTile = *world.map.GetTile(8, 4);
         SetMoisture_(rTile, Moisture_t::Moist);
         for (const int elevation : {1, actest::TestMapRules().maxElevationMeters})
         {
@@ -411,7 +427,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
     EnsureStyleLoaded_();
     WriteCoastStubs_();
 
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     for (const char* id :
          {"Moist", "Fungus", "MonsoonJungle", "River", "OceanShelf", "Nutrients", "Mine"})
     {
@@ -424,7 +440,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
     const std::string& shelfPath = world.improvements.Get("OceanShelf").spritePaths.sea.front();
     const int shelfMeters = actest::TestMapRules().oceanShelfMeters;
 
-    Tile& rLand = *world.map.GetTile(2, 2);
+    Tile& rLand = *world.map.GetTile(8, 4);
     rLand.SetElevation(500);
     SetMoisture_(rLand, Moisture_t::Moist);
 
@@ -434,7 +450,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("water across the NE edge draws the north and east corners at the tile rect")
     {
-        world.map.GetTile(2, 1)->SetElevation(shelfMeters);
+        world.map.GetTile(9, 3)->SetElevation(shelfMeters);
 
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
@@ -457,7 +473,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("coast covers the terrain layers and sits under improvements")
     {
-        world.map.GetTile(2, 1)->SetElevation(shelfMeters);
+        world.map.GetTile(9, 3)->SetElevation(shelfMeters);
         rLand.AddTerrainFeature(world.improvements.Get("Fungus"));
         rLand.AddImprovement(world.improvements.Get("Mine"));
 
@@ -482,7 +498,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("landmarks draw between the base and vegetation, rivers between coast and bonuses")
     {
-        world.map.GetTile(2, 1)->SetElevation(shelfMeters);
+        world.map.GetTile(9, 3)->SetElevation(shelfMeters);
         rLand.AddTerrainFeature(world.improvements.Get("MonsoonJungle"));
         rLand.AddTerrainFeature(world.improvements.Get("Fungus"));
         rLand.AddTerrainFeature(world.improvements.Get("Nutrients"));
@@ -515,7 +531,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
     {
         // Water across the NW edge, at the N corner, across the NE edge and at the E corner.
         for (const auto& [wx, wy] :
-             {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}, std::pair{3, 1}})
+             {std::pair{7, 3}, std::pair{8, 2}, std::pair{9, 3}, std::pair{10, 4}})
         {
             world.map.GetTile(wx, wy)->SetElevation(shelfMeters);
         }
@@ -539,7 +555,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
         // The land's N and E corners are the W and S corners of the water across its NE edge.
         RecordingGraphics waterGraphics;
-        TileRenderer::Render(waterGraphics, *world.map.GetTile(2, 1), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
+        TileRenderer::Render(waterGraphics, *world.map.GetTile(9, 3), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
                              /*bFogged*/ false, &world.map);
         const std::ptrdiff_t shelf = FirstSpriteIndex_(waterGraphics, shelfPath);
         REQUIRE(shelf >= 0);
@@ -552,7 +568,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("fog shades land art, hazes the terrain, and leaves water shading and objects clear")
     {
-        Tile& rWater = *world.map.GetTile(2, 1);
+        Tile& rWater = *world.map.GetTile(9, 3);
         rWater.SetElevation(shelfMeters);
         rLand.AddImprovement(world.improvements.Get("Mine"));
         const auto& s = Style().tileRenderer;
@@ -650,16 +666,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("a one-tile island on an even row uses the regular all-water art")
     {
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-            for (int dx = -1; dx <= 1; ++dx)
-            {
-                if (dx != 0 || dy != 0)
-                {
-                    world.map.GetTile(2 + dx, 2 + dy)->SetElevation(shelfMeters);
-                }
-            }
-        }
+        SurroundWith_(world, rLand, shelfMeters);
 
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
@@ -674,18 +681,9 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("a one-tile island on an odd row uses the alternate all-water art")
     {
-        Tile& rIsland = *world.map.GetTile(2, 1);
+        Tile& rIsland = *world.map.GetTile(9, 3);
         rIsland.SetElevation(500);
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-            for (int dx = -1; dx <= 1; ++dx)
-            {
-                if (dx != 0 || dy != 0)
-                {
-                    world.map.GetTile(2 + dx, 1 + dy)->SetElevation(shelfMeters);
-                }
-            }
-        }
+        SurroundWith_(world, rIsland, shelfMeters);
 
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, rIsland, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
@@ -700,7 +698,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     SECTION("no coast without a map, on water tiles, or inland")
     {
-        Tile& rWater = *world.map.GetTile(2, 1);
+        Tile& rWater = *world.map.GetTile(9, 3);
         rWater.SetElevation(shelfMeters);
 
         RecordingGraphics noMap;
@@ -712,7 +710,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         CHECK(CoastSprites_(waterTile).empty());
 
         RecordingGraphics inland;
-        TileRenderer::Render(inland, *world.map.GetTile(2, 3), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
+        TileRenderer::Render(inland, *world.map.GetTile(7, 5), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
                              /*bFogged*/ false, &world.map);
         CHECK(CoastSprites_(inland).empty());
     }
@@ -721,19 +719,16 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     WriteOccupantStubs_(world.improvements.Get("OceanShelf"));
     WriteOccupantStubs_(world.improvements.Get("Ocean"));
     const ElevationRulesConfig_t& rRules = actest::TestMapRules();
-    for (int y = 0; y < 5; ++y)
+    for (const auto& pTile : world.map.GetTiles())
     {
-        for (int x = 0; x < 5; ++x)
-        {
-            world.map.GetTile(x, y)->SetElevation(rRules.oceanShelfMeters);
-        }
+        pTile->SetElevation(rRules.oceanShelfMeters);
     }
     const WaterShadingStyle_t& rShading = Style().tileRenderer.waterShading;
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
 
     constexpr float k_X = 10.0f;
     constexpr float k_Y = 20.0f;
@@ -757,7 +752,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
     SECTION("the centre takes its own depth and each corner the depths of the tiles sharing it")
     {
         // Shallower water around the N corner.
-        for (const auto& [x, y] : {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}})
+        for (const auto& [x, y] : {std::pair{7, 3}, std::pair{8, 2}, std::pair{9, 3}})
         {
             world.map.GetTile(x, y)->SetElevation(rRules.oceanLevelMeters - 500);
         }
@@ -790,7 +785,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
     {
         REQUIRE(rTile.HasFeature("OceanShelf"));
         // The N corner averages the shelf line with three tiles on the floor: the first band.
-        for (const auto& [x, y] : {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}})
+        for (const auto& [x, y] : {std::pair{7, 3}, std::pair{8, 2}, std::pair{9, 3}})
         {
             world.map.GetTile(x, y)->SetElevation(rRules.minElevationMeters);
         }
@@ -803,12 +798,9 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
 
     SECTION("an ocean tile whose corners are all shallow draws the shelf art")
     {
-        for (int y = 0; y < 5; ++y)
+        for (const auto& pTile : world.map.GetTiles())
         {
-            for (int x = 0; x < 5; ++x)
-            {
-                world.map.GetTile(x, y)->SetElevation(rRules.oceanLevelMeters - 500);
-            }
+            pTile->SetElevation(rRules.oceanLevelMeters - 500);
         }
         rTile.SetElevation(rRules.oceanShelfMeters - 1);
         REQUIRE(rTile.HasFeature("Ocean"));
@@ -823,7 +815,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
 TEST_CASE("TileRenderer draws an occupant's art for the tile's surface", "[ui][tile]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     for (const char* id : {"Moist", "Fungus", "OceanShelf", "Nutrients"})
     {
         WriteOccupantStubs_(world.improvements.Get(id));
@@ -839,9 +831,9 @@ TEST_CASE("TileRenderer draws an occupant's art for the tile's surface", "[ui][t
                                    });
     };
 
-    Tile& rLand = *world.map.GetTile(2, 3);
+    Tile& rLand = *world.map.GetTile(7, 5);
     rLand.SetElevation(500);
-    Tile& rSea = *world.map.GetTile(2, 1);
+    Tile& rSea = *world.map.GetTile(9, 3);
     rSea.SetElevation(actest::TestMapRules().oceanShelfMeters);
     for (Tile* pTile : {&rLand, &rSea})
     {
@@ -867,12 +859,12 @@ TEST_CASE("TileRenderer draws an occupant's art for the tile's surface", "[ui][t
 TEST_CASE("Object sprites hang from the tile's seat as SMAC anchors them", "[ui][tile]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     const ImprovementConfig_t& rNutrients = world.improvements.Get("Nutrients");
     WriteOccupantStubs_(rNutrients);
     REQUIRE(rNutrients.spriteOverhangRatio > 0.0f);
 
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
     rTile.AddTerrainFeature(rNutrients);
 
@@ -901,7 +893,7 @@ TEST_CASE("Object sprites hang from the tile's seat as SMAC anchors them", "[ui]
 TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui][tile][autotile]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     for (const char* id : {"Moist", "Fungus", "Forest", "River", "MonsoonJungle"})
     {
         WriteOccupantStubs_(world.improvements.Get(id));
@@ -919,15 +911,20 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
                                      });
     };
 
-    for (int y = 1; y <= 3; ++y)
-    {
-        for (int x = 1; x <= 3; ++x)
+    Tile& rTile = *world.map.GetTile(8, 4);
+    const auto forEachInBlock = [&](auto&& fn) {
+        for (int q = -1; q <= 1; ++q)
         {
-            world.map.GetTile(x, y)->SetElevation(500);
-            SetMoisture_(*world.map.GetTile(x, y), Moisture_t::Moist);
+            for (int p = -1; p <= 1; ++p)
+            {
+                fn(*GetTileAtLatticeOffset(world.map, rTile, p, q));
+            }
         }
-    }
-    Tile& rTile = *world.map.GetTile(2, 2);
+    };
+    forEachInBlock([](Tile& rBlockTile) {
+        rBlockTile.SetElevation(500);
+        SetMoisture_(rBlockTile, Moisture_t::Moist);
+    });
     const auto render = [&world, &rTile]() {
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
@@ -941,27 +938,21 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
 
     SECTION("water and wetter land connect like moist land")
     {
-        SetMoisture_(*world.map.GetTile(2, 1), Moisture_t::Wet);
-        world.map.GetTile(3, 2)->SetElevation(-500);
+        SetMoisture_(*world.map.GetTile(9, 3), Moisture_t::Wet);
+        world.map.GetTile(9, 5)->SetElevation(-500);
         CHECK(countDrawn(render(), tilePath("Moist", 255)) == 1);
     }
 
     SECTION("moisture fades out toward drier land across an edge")
     {
         // The NE edge (blob bit 1) drops, and with it the N and E corners (bits 0 and 2).
-        SetMoisture_(*world.map.GetTile(2, 1), Moisture_t::Arid);
+        SetMoisture_(*world.map.GetTile(9, 3), Moisture_t::Arid);
         CHECK(countDrawn(render(), tilePath("Moist", 248)) == 1);
     }
 
     SECTION("a moist tile among drier land is an isolated patch")
     {
-        for (int y = 1; y <= 3; ++y)
-        {
-            for (int x = 1; x <= 3; ++x)
-            {
-                SetMoisture_(*world.map.GetTile(x, y), Moisture_t::Arid);
-            }
-        }
+        forEachInBlock([](Tile& rBlockTile) { SetMoisture_(rBlockTile, Moisture_t::Arid); });
         SetMoisture_(rTile, Moisture_t::Moist);
         CHECK(countDrawn(render(), tilePath("Moist", 0)) == 1);
     }
@@ -974,17 +965,18 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
 
     SECTION("forest connects across edges, not corners")
     {
-        for (const auto& [x, y] : {std::pair{2, 2}, std::pair{3, 2}, std::pair{3, 3}})
+        for (const auto& [x, y] : {std::pair{8, 4}, std::pair{9, 5}, std::pair{8, 6}})
         {
             world.map.GetTile(x, y)->AddImprovement(world.improvements.Get("Forest"));
         }
-        // (3, 2) is the SE edge (edge bit 1); (3, 3) only touches the S corner.
+        // (9, 5) is the SE edge (edge bit 1); (8, 6) only touches the S corner.
         CHECK(countDrawn(render(), tilePath("Forest", 2)) == 1);
     }
 
     SECTION("fungus counts a corner between two fungus edges")
     {
-        for (const auto& [x, y] : {std::pair{2, 2}, std::pair{2, 1}, std::pair{3, 1}, std::pair{3, 2}})
+        for (const auto& [x, y] :
+             {std::pair{8, 4}, std::pair{9, 3}, std::pair{10, 4}, std::pair{9, 5}})
         {
             world.map.GetTile(x, y)->AddTerrainFeature(world.improvements.Get("Fungus"));
         }
@@ -996,10 +988,10 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     {
         const ImprovementConfig_t& rFungus = world.improvements.Get("Fungus");
         const ElevationRulesConfig_t& rRules = actest::TestMapRules();
-        // The tile and its NE neighbor (2, 1) on the shelf; its SE neighbor (3, 2) deeper.
-        for (const auto& [x, y, elevation] : {std::tuple{2, 2, rRules.oceanShelfMeters},
-                                              std::tuple{2, 1, rRules.oceanShelfMeters},
-                                              std::tuple{3, 2, rRules.minElevationMeters}})
+        // The tile and its NE neighbor (9, 3) on the shelf; its SE neighbor (9, 5) deeper.
+        for (const auto& [x, y, elevation] : {std::tuple{8, 4, rRules.oceanShelfMeters},
+                                              std::tuple{9, 3, rRules.oceanShelfMeters},
+                                              std::tuple{9, 5, rRules.minElevationMeters}})
         {
             world.map.GetTile(x, y)->SetElevation(elevation);
             world.map.GetTile(x, y)->AddTerrainFeature(rFungus);
@@ -1009,7 +1001,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
         CHECK(countDrawn(render(), TilePath_(rFungus.spriteTiles->sea, 2)) == 1);
 
         RecordingGraphics deep;
-        TileRenderer::Render(deep, *world.map.GetTile(3, 2),
+        TileRenderer::Render(deep, *world.map.GetTile(9, 5),
                              TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
                              &world.map);
         CHECK(countDrawn(deep, seaPrefix) == 0);
@@ -1026,8 +1018,8 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     SECTION("a river draws the cell for its connections")
     {
         rTile.SetHasRiver(true);
-        world.map.GetTile(2, 1)->SetHasRiver(true); // north: edge bit 0
-        world.map.GetTile(1, 2)->SetHasRiver(true); // west: edge bit 3
+        world.map.GetTile(9, 3)->SetHasRiver(true); // north: edge bit 0
+        world.map.GetTile(7, 3)->SetHasRiver(true); // west: edge bit 3
         const RecordingGraphics graphics = render();
         CHECK(countDrawn(graphics, tilePath("River", 9)) == 1);
         CHECK(graphics.lines.empty());
@@ -1037,11 +1029,11 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
 TEST_CASE("A river without art falls back to lines toward its connections", "[ui][tile]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
-    world.map.GetTile(2, 1)->SetHasRiver(true);
+    actest::WorldFixture world;
+    world.map.GetTile(9, 3)->SetHasRiver(true);
 
     // Not bound to the occupant registry, so no river art resolves.
-    Tile tile(2, 2);
+    Tile tile(8, 4);
     tile.BindMapRules(actest::TestMapRules());
     tile.SetElevation(500);
     tile.SetHasRiver(true);
@@ -1074,7 +1066,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
           "[ui][tile][relief]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     for (const char* id : {"Moist", "OceanShelf", "Nutrients"})
     {
         WriteOccupantStubs_(world.improvements.Get(id));
@@ -1091,7 +1083,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     shape.east.shade = 0.25f;
     shape.south.shade = -0.5f;
 
-    Tile& rLand = *world.map.GetTile(2, 2);
+    Tile& rLand = *world.map.GetTile(8, 4);
     rLand.SetElevation(500);
     SetMoisture_(rLand, Moisture_t::Moist);
 
@@ -1179,7 +1171,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         CHECK(foggedLand.center.shade == Style().tileRenderer.fogLandShade);
         CHECK(foggedLand.north.shade == Style().tileRenderer.fogLandShade);
 
-        Tile& rWater = *world.map.GetTile(2, 1);
+        Tile& rWater = *world.map.GetTile(9, 3);
         rWater.SetElevation(actest::TestMapRules().oceanShelfMeters);
         RecordingGraphics sea;
         TileRenderer::Render(sea, rWater, shape, /*bFogged*/ false, &world.map);
@@ -1194,17 +1186,14 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
 TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile][roads]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     const ImprovementConfig_t& rRoad = world.improvements.Get("Road");
     const ImprovementConfig_t& rTube = world.improvements.Get("MagTube");
     WriteOccupantStubs_(rRoad);
     WriteOccupantStubs_(rTube);
-    for (int y = 0; y < 5; ++y)
+    for (const auto& pTile : world.map.GetTiles())
     {
-        for (int x = 0; x < 5; ++x)
-        {
-            world.map.GetTile(x, y)->SetElevation(500);
-        }
+        pTile->SetElevation(500);
     }
     const auto roadCell = [&rRoad](unsigned cell) { return TilePath_(rRoad.spriteTiles->land, cell); };
     const auto tubeCell = [&rTube](unsigned cell) { return TilePath_(rTube.spriteTiles->land, cell); };
@@ -1223,12 +1212,12 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
     const auto has = [](const std::vector<std::string>& rPaths, const std::string& rPath) {
         return std::ranges::find(rPaths, rPath) != rPaths.end();
     };
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.AddImprovement(rRoad);
 
     SECTION("a lone road draws its hub")
     {
-        const auto paths = drawn(2, 2);
+        const auto paths = drawn(8, 4);
         CHECK(has(paths, roadCell(0)));
     }
 
@@ -1236,9 +1225,9 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
     {
         // NE edge (0, -1) is SMAC direction 0, cell 3; the N corner (-1, -1) is direction 7,
         // cell 2.
-        world.map.GetTile(2, 1)->AddImprovement(rRoad);
-        world.map.GetTile(1, 1)->AddImprovement(rRoad);
-        const auto paths = drawn(2, 2);
+        world.map.GetTile(9, 3)->AddImprovement(rRoad);
+        world.map.GetTile(8, 2)->AddImprovement(rRoad);
+        const auto paths = drawn(8, 4);
         CHECK(has(paths, roadCell(3)));
         CHECK(has(paths, roadCell(2)));
         CHECK_FALSE(has(paths, roadCell(0)));
@@ -1246,22 +1235,22 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
 
     SECTION("a base carries roads and never draws a hub")
     {
-        // (3, 2) lies across the SE edge: direction 2, cell 5; seen from it, (2, 2) is across
+        // (9, 5) lies across the SE edge: direction 2, cell 5; seen from it, (8, 4) is across
         // its NW edge: direction 6, cell 1.
-        world.map.GetTile(3, 2)->AddImprovement(world.improvements.Get("Base"));
-        CHECK(has(drawn(2, 2), roadCell(5)));
-        const auto basePaths = drawn(3, 2);
+        world.map.GetTile(9, 5)->AddImprovement(world.improvements.Get("Base"));
+        CHECK(has(drawn(8, 4), roadCell(5)));
+        const auto basePaths = drawn(9, 5);
         CHECK(has(basePaths, roadCell(1)));
         CHECK_FALSE(has(basePaths, roadCell(0)));
     }
 
     SECTION("a mag tube link replaces the road link where both tiles carry tubes")
     {
-        Tile& rNeighbor = *world.map.GetTile(2, 1);
+        Tile& rNeighbor = *world.map.GetTile(9, 3);
         rNeighbor.AddImprovement(rRoad);
         rNeighbor.AddImprovement(rTube);
         rTile.AddImprovement(rTube);
-        const auto paths = drawn(2, 2);
+        const auto paths = drawn(8, 4);
         CHECK(has(paths, tubeCell(3)));
         CHECK_FALSE(has(paths, roadCell(3)));
         CHECK_FALSE(has(paths, tubeCell(0)));
@@ -1270,19 +1259,19 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
 
     SECTION("a tube with only road links draws its hub over the road links")
     {
-        world.map.GetTile(2, 1)->AddImprovement(rRoad);
+        world.map.GetTile(9, 3)->AddImprovement(rRoad);
         rTile.AddImprovement(rTube);
-        const auto paths = drawn(2, 2);
+        const auto paths = drawn(8, 4);
         CHECK(has(paths, roadCell(3)));
         CHECK(has(paths, tubeCell(0)));
     }
 
     SECTION("water neighbors carry no link")
     {
-        Tile& rSea = *world.map.GetTile(2, 1);
+        Tile& rSea = *world.map.GetTile(9, 3);
         rSea.SetElevation(actest::TestMapRules().oceanShelfMeters);
         rSea.AddImprovement(world.improvements.Get("Base"));
-        const auto paths = drawn(2, 2);
+        const auto paths = drawn(8, 4);
         CHECK_FALSE(has(paths, roadCell(3)));
         CHECK(has(paths, roadCell(0)));
     }
@@ -1292,7 +1281,7 @@ TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and 
           "[ui][tile][farm]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     const ImprovementConfig_t& rFarm = world.improvements.Get("Farm");
     const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
     WriteOccupantStubs_(rMoist);
@@ -1303,7 +1292,7 @@ TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and 
     }
     WriteStubPngs_(rFarm.spriteYieldRows->paths.land);
 
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
     SetMoisture_(rTile, Moisture_t::Moist);
     rTile.AddImprovement(rFarm);
@@ -1353,10 +1342,10 @@ TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and 
 TEST_CASE("Improvements draw their sea art at sea", "[ui][tile]")
 {
     EnsureStyleLoaded_();
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     const ImprovementConfig_t& rKelp = world.improvements.Get("KelpFarm");
     WriteOccupantStubs_(rKelp);
-    Tile& rSea = *world.map.GetTile(2, 2);
+    Tile& rSea = *world.map.GetTile(8, 4);
     rSea.SetElevation(actest::TestMapRules().oceanShelfMeters);
     rSea.AddImprovement(rKelp);
 
@@ -1372,8 +1361,8 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
 {
     EnsureStyleLoaded_();
     const auto& s = Style().tileRenderer;
-    actest::WorldFixture world(5, 5);
-    Tile& rLand = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rLand = *world.map.GetTile(8, 4);
     rLand.SetElevation(500);
     const TileShape_t shape = TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f);
     const auto checkerCells = [&](const RecordingGraphics& rGraphics) {

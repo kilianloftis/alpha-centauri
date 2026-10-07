@@ -77,7 +77,7 @@ BaseEffects_t WithCostAndSurchargeScale(const BaseManager& rBase, actest::Effect
 TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[production][cost]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     actest::EffectPool pool;
 
     SECTION("no CostMultiplier effects is normal rate (base_cost)")
@@ -125,7 +125,7 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
 TEST_CASE("ProductionManager resolves cost from base effects", "[production][cost]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     ProductionManager production(k_TestConfig, nullptr, base);
     StubConstructable item;
     production.SetProduction(&item, BaseEffects_t{base});
@@ -152,7 +152,7 @@ TEST_CASE("A stockpile item has no mineral cost and is never ready",
           "[production][stockpile]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     struct StockpileItem : StubConstructable
     {
         ConstructableKind_t GetConstructableKind() const override
@@ -194,7 +194,7 @@ StubConstructable RetoolItem(std::string id, std::string name)
 TEST_CASE("Retooling forfeits half the minerals spent past the threshold", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
@@ -210,7 +210,7 @@ TEST_CASE("Retooling forfeits half the minerals spent past the threshold", "[pro
 TEST_CASE("RetoolPenaltyScale 0 cancels the forfeit", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
     actest::EffectPool pool;
@@ -231,7 +231,7 @@ TEST_CASE("RetoolPenaltyScale 0 cancels the forfeit", "[production][retool]")
 TEST_CASE("Retooling is free at or below the threshold", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
@@ -247,7 +247,7 @@ TEST_CASE("Retooling is free at or below the threshold", "[production][retool]")
 TEST_CASE("Switching back to the turn's original item is free", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
@@ -267,7 +267,7 @@ TEST_CASE("Switching back to the turn's original item is free", "[production][re
 TEST_CASE("Switching on to a third item pays again", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
     const StubConstructable itemC = RetoolItem("c", "C");
@@ -286,7 +286,7 @@ TEST_CASE("Switching on to a third item pays again", "[production][retool]")
 TEST_CASE("The turn's original item follows production, turn by turn", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     // A switch made last turn becomes this turn's baseline: going back to what you built the
     // turn before is a retool like any other.
     const StubConstructable itemA = RetoolItem("a", "A");
@@ -310,7 +310,7 @@ TEST_CASE("Null turn original skips retool until BankProduction stamps one",
           "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     // Fresh manager (and founding mineral banks) have no turn original — queue/switch free
     // until BankProduction banks with something queued.
     const StubConstructable itemA = RetoolItem("a", "A");
@@ -336,7 +336,7 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
           "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     StubConstructable item;
     item.baseCost = 10;
     StubConstructable nextDefault{"next", "Next"};
@@ -381,7 +381,7 @@ TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     // Policy: +2 Industry → CostMultiplier -20% → effective cost 8.
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("industry_policy"));
 
@@ -401,7 +401,7 @@ TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent
 TEST_CASE("Completion leftover on the next item is a free retool", "[production][retool]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     StubConstructable item;
     item.baseCost = 10;
     StubConstructable nextDefault{"stockpile", "Stockpile"};

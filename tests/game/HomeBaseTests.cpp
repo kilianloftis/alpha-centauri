@@ -19,9 +19,9 @@ TEST_CASE("Unit creation registers in the home base index", "[unit][home]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
 
     CHECK(unit.GetHomeBase() == &base);
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 1);
@@ -32,10 +32,10 @@ TEST_CASE("Multiple units may share one home base", "[unit][home]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& a = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    Unit& b = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
+    Unit& a = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    Unit& b = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
 
     CHECK(a.GetHomeBase() == &base);
     CHECK(b.GetHomeBase() == &base);
@@ -46,9 +46,9 @@ TEST_CASE("Destroying a unit releases its home-base claim", "[unit][home]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 1);
 
     faction.GetUnitManager().DestroyUnit(unit);
@@ -59,10 +59,10 @@ TEST_CASE("SetHomeBase transfers the claim between bases", "[unit][home]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
-    Unit& unit = fixture.MakeUnit(faction, 3, 2, {"test_chassis"}, &baseA);
+    Unit& unit = fixture.MakeUnit(faction, 9, 5, {"test_chassis"}, &baseA);
     REQUIRE(baseA.GetHomeUnits().GetUnits().size() == 1);
     REQUIRE(baseB.GetHomeUnits().GetUnits().empty());
 
@@ -81,10 +81,10 @@ TEST_CASE("Destroying a base orphans home-base claims", "[unit][home]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     const BaseId_t baseId = base.GetBaseId();
 
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     REQUIRE(unit.GetHomeBase() == &base);
 
     REQUIRE(faction.ExtractBase(baseId).has_value());
@@ -96,9 +96,9 @@ TEST_CASE("Transferring a base drops the previous owner's home claims", "[unit][
     FactionFixture fixture;
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
 
-    Unit& unit = fixture.MakeUnit(giver, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(giver, 9, 9, {"test_chassis"}, &base);
     REQUIRE(unit.GetHomeBase() == &base);
 
     // Ownership change ≠ destroy — the HomeBaseIndex moves with the BaseManager object rather
@@ -121,13 +121,13 @@ TEST_CASE("Transferring a base keeps home claims held by the receiver's own unit
     FactionFixture fixture;
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
     BaseManager* pBaseAddress = &base;
 
     // A receiver-owned unit already homed at the base being handed over: not foreign, so the
     // claim must survive the transfer (the foreign-claim rule is about ownership, not about
     // transfer clearing the index wholesale).
-    Unit& receiverUnit = fixture.MakeUnit(receiver, 5, 4, {"test_chassis"}, nullptr);
+    Unit& receiverUnit = fixture.MakeUnit(receiver, 9, 9, {"test_chassis"}, nullptr);
     receiverUnit.SetHomeBase(&base);
     REQUIRE(receiverUnit.GetHomeBase() == &base);
 

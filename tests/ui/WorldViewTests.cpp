@@ -147,8 +147,8 @@ MouseEvent_t ReleaseAt_(int x, int y)
     return MouseEvent_t{MouseButton_t::Left, x, y, {}, /*bPressed*/ false};
 }
 
-// Pixel center of an isometric diamond. Camera starts at (0,0); FullScreen + style map
-// layout put world tile (tileX, tileY) on that diamond for the 9×9 fixture map.
+// Pixel center of a tile's diamond in the brick layout. Camera starts at (0,0); FullScreen +
+// style map layout put SMAC tile (tileX, tileY) at ((tileX)·½w, (tileY)·½h) from the map origin.
 std::pair<int, int> MapTileClick_(const WindowLayout_t& rFullscreen, int tileX, int tileY)
 {
     const WindowLayout_t mapLayout = ResolveLayout(rFullscreen, Style().layouts.map);
@@ -156,8 +156,8 @@ std::pair<int, int> MapTileClick_(const WindowLayout_t& rFullscreen, int tileX, 
     const float tileHeight = tileWidth * 0.5f;
     const float halfW = tileWidth * 0.5f;
     const float halfH = tileHeight * 0.5f;
-    const float x = mapLayout.x + static_cast<float>(tileX - tileY) * halfW + halfW;
-    const float y = mapLayout.y + static_cast<float>(tileX + tileY) * halfH + halfH;
+    const float x = mapLayout.x + static_cast<float>(tileX) * halfW + halfW;
+    const float y = mapLayout.y + static_cast<float>(tileY) * halfH + halfH;
     return {static_cast<int>(x), static_cast<int>(y)};
 }
 
@@ -167,11 +167,11 @@ TEST_CASE("Clicking a garrisoned base opens the base view", "[ui][world]")
 {
     ViewFixture fixture;
     const WindowLayout_t layout = ViewFixture::FullScreen();
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     fixture.pPlayer->GetExploredMap().MarkAll();
 
     std::deque<UnitDesign> designs;
-    MakeGarrison_(fixture, 4, 4, &rBase, designs);
+    MakeGarrison_(fixture, 8, 8, &rBase, designs);
 
     BaseManager* pOpened = nullptr;
     auto pView = fixture.pFactory->CreateWorldView(
@@ -179,7 +179,7 @@ TEST_CASE("Clicking a garrisoned base opens the base view", "[ui][world]")
         [&](BaseManager& rOpened) { pOpened = &rOpened; },
         [](auto&&...) {}, [] {});
 
-    const auto [x, y] = MapTileClick_(layout, 4, 4);
+    const auto [x, y] = MapTileClick_(layout, 8, 8);
     pView->HandleMouse(ReleaseAt_(x, y));
 
     REQUIRE(pOpened == &rBase);
@@ -189,11 +189,11 @@ TEST_CASE("Clicking a unit off a base selects it without opening a base", "[ui][
 {
     ViewFixture fixture;
     const WindowLayout_t layout = ViewFixture::FullScreen();
-    fixture.MakeBase(1, 1);
+    fixture.MakeBase(8, 2);
     fixture.pPlayer->GetExploredMap().MarkAll();
 
     std::deque<UnitDesign> designs;
-    MakeGarrison_(fixture, 4, 4, nullptr, designs);
+    MakeGarrison_(fixture, 8, 8, nullptr, designs);
 
     bool bOpenedBase = false;
     auto pView = fixture.pFactory->CreateWorldView(
@@ -201,7 +201,7 @@ TEST_CASE("Clicking a unit off a base selects it without opening a base", "[ui][
         [&](BaseManager&) { bOpenedBase = true; },
         [](auto&&...) {}, [] {});
 
-    const auto [x, y] = MapTileClick_(layout, 4, 4);
+    const auto [x, y] = MapTileClick_(layout, 8, 8);
     pView->HandleMouse(ReleaseAt_(x, y));
 
     CHECK_FALSE(bOpenedBase);
@@ -211,9 +211,9 @@ TEST_CASE("Shift+D on a selected unit opens Disband, Self Destruct, and Cancel",
           "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
-    MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+    MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
 
     auto pView = MakeWorldView_(fixture);
     PrimeWorldView_(*pView, fixture.graphics);
@@ -240,9 +240,9 @@ TEST_CASE("Shift+D does nothing when no unit is selected", "[ui][world][disband]
 TEST_CASE("Plain D does not open the disband menu", "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
-    MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+    MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
 
     auto pView = MakeWorldView_(fixture);
     PrimeWorldView_(*pView, fixture.graphics);
@@ -253,10 +253,10 @@ TEST_CASE("Plain D does not open the disband menu", "[ui][world][disband]")
 TEST_CASE("Confirming Disband quotes the refund and then grants it", "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
     Unit& rUnit =
-        MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+        MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
     const UnitId_t unitId = rUnit.GetUnitId();
     const auto payout = fixture.pPlayer->QuoteScrapUnit(rUnit);
     REQUIRE(payout.has_value());
@@ -286,10 +286,10 @@ TEST_CASE("Confirming Disband quotes the refund and then grants it", "[ui][world
 TEST_CASE("Cancel on the disband menu leaves the unit in place", "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
     Unit& rUnit =
-        MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+        MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
@@ -306,10 +306,10 @@ TEST_CASE("Cancel on the disband menu leaves the unit in place", "[ui][world][di
 TEST_CASE("Cancel on the disband confirm leaves the unit in place", "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
     Unit& rUnit =
-        MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+        MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
@@ -330,10 +330,10 @@ TEST_CASE("Self Destruct explains that it is not implemented and leaves the unit
           "[ui][world][disband]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     std::deque<UnitDesign> designs;
     Unit& rUnit =
-        MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
+        MakeUnit_(fixture, 8, 8, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
@@ -357,7 +357,7 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     FactionConfig_t enemyDefinition;
     ViewFixture fixture;
     std::deque<UnitDesign> designs;
-    MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis"}, designs);
+    MakeUnit_(fixture, 8, 0, nullptr, {"test_chassis"}, designs);
 
     enemyDefinition = fixture.factionDefinition;
     enemyDefinition.id = "enemy_faction";
@@ -365,7 +365,7 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     Faction& enemy = fixture.pState->AddFaction(std::make_unique<Faction>(
         fixture.pState->AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
         fixture.pState->GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
-    Unit& shrouded = MakeUnit_(fixture, enemy, 2, 0, nullptr, {"test_chassis"}, designs);
+    Unit& shrouded = MakeUnit_(fixture, enemy, 10, 2, nullptr, {"test_chassis"}, designs);
     fixture.pPlayer->RebuildVisibility();
     CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.pState->GetTileEffects()));
 
@@ -390,13 +390,13 @@ TEST_CASE("F builds a Farm for a former", "[ui][world][bombard]")
 {
     ViewFixture fixture;
     fixture.pPlayer->GetEconomy().AddEnergy(100);
-    Tile* pTile = fixture.pState->GetWorldMap().GetTile(4, 4);
+    Tile* pTile = fixture.pState->GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);
     pTile->SetElevation(100);
     pTile->SetRockiness(Rockiness_t::Flat);
 
     std::deque<UnitDesign> designs;
-    Unit& former = MakeUnit_(fixture, 4, 4, nullptr, {"test_chassis", "test_terraformer"}, designs);
+    Unit& former = MakeUnit_(fixture, 8, 8, nullptr, {"test_chassis", "test_terraformer"}, designs);
     auto pView = MakeWorldView_(fixture);
     PrimeWorldView_(*pView, fixture.graphics);
 
@@ -411,7 +411,7 @@ TEST_CASE("F arms bombard when the unit can fire, and the next click shoots", "[
     ViewFixture fixture;
     const WindowLayout_t layout = ViewFixture::FullScreen();
     std::deque<UnitDesign> designs;
-    Unit& artillery = MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis", "bombard"}, designs);
+    Unit& artillery = MakeUnit_(fixture, 8, 0, nullptr, {"test_chassis", "bombard"}, designs);
     const int fragmentsBefore = artillery.GetMoveFragmentsRemaining();
     REQUIRE(fragmentsBefore > 0);
 
@@ -420,18 +420,18 @@ TEST_CASE("F arms bombard when the unit can fire, and the next click shoots", "[
         layout, [] {}, [] {}, [](BaseManager&) {},
         [&](auto&&...) { bOpened = true; }, [] {});
     fixture.pPlayer->GetExploredMap().MarkAll();
-    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));
 
     REQUIRE(pView->HandleKey(PlainKey_(Key_t::F)));
     CHECK_FALSE(artillery.GetOrder().has_value());
 
-    const auto [farX, farY] = MapTileClick_(layout, 4, 0);
+    const auto [farX, farY] = MapTileClick_(layout, 12, 4);
     pView->HandleMouse(PressAt_(farX, farY));
     CHECK_FALSE(bOpened);
     CHECK(artillery.GetMoveFragmentsRemaining() == fragmentsBefore);
 
-    const auto [nearX, nearY] = MapTileClick_(layout, 1, 0);
+    const auto [nearX, nearY] = MapTileClick_(layout, 9, 1);
     pView->HandleMouse(PressAt_(nearX, nearY));
     CHECK(bOpened);
     CHECK(artillery.GetMoveFragmentsRemaining() == 0);
@@ -441,7 +441,7 @@ TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]
 {
     ViewFixture fixture;
     fixture.pPlayer->GetEconomy().AddEnergy(100);
-    Tile* pTile = fixture.pState->GetWorldMap().GetTile(0, 0);
+    Tile* pTile = fixture.pState->GetWorldMap().GetTile(8, 0);
     REQUIRE(pTile);
     pTile->SetElevation(100);
     pTile->SetRockiness(Rockiness_t::Flat);
@@ -449,12 +449,12 @@ TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]
     const WindowLayout_t layout = ViewFixture::FullScreen();
     std::deque<UnitDesign> designs;
     Unit& unit = MakeUnit_(
-        fixture, 0, 0, nullptr, {"test_chassis", "test_terraformer", "bombard"}, designs);
+        fixture, 8, 0, nullptr, {"test_chassis", "test_terraformer", "bombard"}, designs);
 
     auto pView = fixture.pFactory->CreateWorldView(
         layout, [] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {});
     fixture.pPlayer->GetExploredMap().MarkAll();
-    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));
 
     CHECK_THROWS_WITH(pView->HandleKey(PlainKey_(Key_t::F)),
@@ -468,7 +468,7 @@ TEST_CASE("F with no moves left does not arm bombard", "[ui][world][bombard]")
     ViewFixture fixture;
     const WindowLayout_t layout = ViewFixture::FullScreen();
     std::deque<UnitDesign> designs;
-    Unit& artillery = MakeUnit_(fixture, 0, 0, nullptr, {"test_chassis", "bombard"}, designs);
+    Unit& artillery = MakeUnit_(fixture, 8, 0, nullptr, {"test_chassis", "bombard"}, designs);
     artillery.SetMoveFragmentsRemaining(0);
 
     bool bOpened = false;
@@ -476,11 +476,11 @@ TEST_CASE("F with no moves left does not arm bombard", "[ui][world][bombard]")
         layout, [] {}, [] {}, [](BaseManager&) {},
         [&](auto&&...) { bOpened = true; }, [] {});
     fixture.pPlayer->GetExploredMap().MarkAll();
-    const auto [unitX, unitY] = MapTileClick_(layout, 0, 0);
+    const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));
 
     pView->HandleKey(PlainKey_(Key_t::F));
-    const auto [x, y] = MapTileClick_(layout, 1, 0);
+    const auto [x, y] = MapTileClick_(layout, 9, 1);
     pView->HandleMouse(PressAt_(x, y));
     CHECK_FALSE(bOpened);
     CHECK_FALSE(artillery.GetOrder().has_value());

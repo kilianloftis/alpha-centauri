@@ -133,7 +133,7 @@ TEST_CASE("Scrapping a building grants half its mineral cost as energy and remov
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     REQUIRE(faction.GetEconomy().GetEnergy() == 0);
 
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
@@ -150,7 +150,7 @@ TEST_CASE("Destroying a building without scrap grants no energy", "[building][sc
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     base.GetBuildingManager().DestroyBuilding("test_hurry_facility");
@@ -164,7 +164,7 @@ TEST_CASE("Scrapping one allow-multiple copy leaves the others and refunds once"
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
 
@@ -183,8 +183,8 @@ TEST_CASE("Scrapping a building type removes it from every base and refunds each
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 5, 5);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 10);
     baseA.GetBuildingManager().AddBuilding("test_hurry_facility");
     baseB.GetBuildingManager().AddBuilding("test_hurry_facility");
     baseB.GetBuildingManager().AddBuilding("test_facility_b");
@@ -205,7 +205,7 @@ TEST_CASE("Scrap of a building this base does not hold is an error", "[building]
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     CHECK_FALSE(faction.QuoteScrapBuilding(base, "test_hurry_facility").has_value());
     CHECK_FALSE(faction.QuoteScrapBuildings("test_hurry_facility").has_value());
@@ -221,7 +221,7 @@ TEST_CASE("Scrap of a building at another faction's base is an error", "[buildin
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Faction& other = fixture.MakeFaction();
-    BaseManager& foreign = fixture.MakeFactionBase(other, 5, 5);
+    BaseManager& foreign = fixture.MakeFactionBase(other, 8, 10);
     foreign.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     CHECK_THROWS_WITH(faction.QuoteScrapBuilding(foreign, "test_hurry_facility"),
@@ -237,7 +237,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -248,7 +248,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(2, 2),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
         pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
@@ -270,7 +270,7 @@ TEST_CASE("Headquarters cannot be scrapped", "[building][scrap][hq]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("Headquarters");
     REQUIRE(base.GetBuildingManager().HasBuilding("Headquarters"));
     const BuildingConfig_t* pHq = fixture.buildings().Find("Headquarters");

@@ -263,7 +263,7 @@ TEST_CASE("Sculpt knobs come from landmark config", "[worldgen][landmarks][confi
     CHECK(rSculpt.baseElevation == 500);
     CHECK(rSculpt.rockyCoreRadius == 0.0f);
 
-    actest::WorldFixture world(15, 15);
+    actest::WorldFixture world;
     for (const auto& pTile : world.map.GetTiles())
     {
         pTile->SetElevation(100);
@@ -308,7 +308,7 @@ TEST_CASE("A landmark that can never be placed is rejected at load", "[worldgen]
 TEST_CASE("An empty footprint reaching placement is an error, not a skip",
           "[worldgen][landmarks]")
 {
-    actest::WorldFixture world(11, 11);
+    actest::WorldFixture world;
     for (const auto& pTile : world.map.GetTiles())
     {
         pTile->SetElevation(100);

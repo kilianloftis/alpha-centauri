@@ -182,14 +182,14 @@ TEST_CASE("World map trade merges explored tiles", "[diplomacy][executor]")
 {
     DiplomacyFixture game;
     game.MeetAll();
-    game.pA->GetExploredMap().Mark(game.At(3, 3));
-    REQUIRE(game.pA->GetExploredMap().IsExplored(3, 3));
-    REQUIRE_FALSE(game.pB->GetExploredMap().IsExplored(3, 3));
+    game.pA->GetExploredMap().Mark(game.At(8, 6));
+    REQUIRE(game.pA->GetExploredMap().IsExplored(8, 6));
+    REQUIRE_FALSE(game.pB->GetExploredMap().IsExplored(8, 6));
     DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeWorldMap_t{});
 
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pB->GetExploredMap().IsExplored(3, 3));
+    CHECK(game.pB->GetExploredMap().IsExplored(8, 6));
 }
 
 TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")

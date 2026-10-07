@@ -47,7 +47,7 @@ struct ViewFixture : WorldFixture
         (void)bLoaded;
     }
 
-    explicit ViewFixture(bool bWithPlayerFaction = true)
+    explicit ViewFixture(bool bWithPlayerFaction = true, int mapHeight = k_TestMapHeight)
     {
         EnsureStyleLoaded();
 
@@ -63,15 +63,13 @@ struct ViewFixture : WorldFixture
         dataContext.unitSlotRegistry = std::make_unique<ac::UnitSlotRegistry>();
         dataContext.unitSlotRegistry->Load(FixturePath("unit_slots.json"));
 
-        auto pMap = std::make_unique<ac::WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<ac::WorldMap>(k_TestMapWidth, mapHeight,
+                                                   TestMapRules());
         // Moist tiles so worked tiles actually yield something: a default WorldMap produces
         // zero nutrients everywhere, which makes every yield assertion vacuously true.
-        for (int y = 0; y < pMap->GetHeight(); ++y)
+        for (const auto& pTile : pMap->GetTiles())
         {
-            for (int x = 0; x < pMap->GetWidth(); ++x)
-            {
-                pMap->GetTile(x, y)->SetMoisture(ac::Moisture_t::Wet);
-            }
+            pTile->SetMoisture(ac::Moisture_t::Wet);
         }
 
         pState = std::make_unique<ac::GameState>(std::move(pMap), dataContext, settings,

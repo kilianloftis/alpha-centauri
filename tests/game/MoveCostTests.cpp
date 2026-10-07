@@ -105,31 +105,31 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     MoveCostCalculator calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     const auto costs = calc.ForUnit(unit, fixture.map);
 
-    Tile& flat = fixture.At(3, 4);
+    Tile& flat = fixture.At(7, 7);
     CHECK(costs.EntryTerms(flat).costFragments == k_point);
 
-    Tile& rocky = fixture.At(5, 4);
+    Tile& rocky = fixture.At(9, 9);
     rocky.SetRockiness(Rockiness_t::Rocky);
     CHECK(costs.EntryTerms(rocky).costFragments == 2 * k_point);
 
-    Tile& fungus = fixture.At(6, 4);
+    Tile& fungus = fixture.At(10, 10);
     fungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     CHECK(costs.EntryTerms(fungus).costFragments == 3 * k_point);
 
-    Tile& rockyFungus = fixture.At(7, 4);
+    Tile& rockyFungus = fixture.At(11, 11);
     rockyFungus.SetRockiness(Rockiness_t::Rocky);
     rockyFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     CHECK(costs.EntryTerms(rockyFungus).costFragments == 3 * k_point);
 
-    Tile& road = fixture.At(4, 5);
+    Tile& road = fixture.At(7, 9);
     road.SetRockiness(Rockiness_t::Rocky);
     road.AddImprovement(fixture.improvements.Get("Road"));
     CHECK(costs.EntryTerms(road).costFragments == k_point / 3);
 
-    Tile& tube = fixture.At(5, 5);
+    Tile& tube = fixture.At(8, 10);
     tube.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     tube.AddImprovement(fixture.improvements.Get("MagTube"));
     CHECK(costs.EntryTerms(tube).costFragments == 0);
@@ -145,7 +145,7 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     highMod.amount = 5 * k_point;
     highEffect.effect = highMod;
     highCeiling.effects.push_back(highEffect);
-    Tile& highTile = fixture.At(6, 5);
+    Tile& highTile = fixture.At(9, 11);
     highTile.SetRockiness(Rockiness_t::Rocky); // move_cost 2
     highTile.AddImprovement(highCeiling);
     CHECK(costs.EntryTerms(highTile).costFragments == 2 * k_point);
@@ -160,7 +160,7 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     lowMod.amount = k_point;
     lowEffect.effect = lowMod;
     lowCeiling.effects.push_back(lowEffect);
-    Tile& lowTile = fixture.At(7, 5);
+    Tile& lowTile = fixture.At(10, 12);
     lowTile.SetRockiness(Rockiness_t::Rocky);
     lowTile.AddImprovement(lowCeiling);
     CHECK(costs.EntryTerms(lowTile).costFragments == k_point);
@@ -178,27 +178,27 @@ TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
 
-    Unit& hoverUnit = fixture.MakeUnit(faction, 4, 4,
+    Unit& hoverUnit = fixture.MakeUnit(faction, 8, 8,
                                        {"test_chassis", "ignores_difficult_terrain"});
     const auto hoverCosts = calc.ForUnit(hoverUnit, fixture.map);
-    Tile& rocky = fixture.At(5, 4);
+    Tile& rocky = fixture.At(9, 9);
     rocky.SetRockiness(Rockiness_t::Rocky);
     CHECK(hoverCosts.EntryTerms(rocky).costFragments == k_point);
 
-    Tile& fungus = fixture.At(6, 4);
+    Tile& fungus = fixture.At(10, 10);
     fungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     // Fungus is not difficult terrain — full price still applies unless treatFungusAsRoad.
     CHECK(hoverCosts.EntryTerms(fungus).costFragments == 3 * k_point);
     CHECK(hoverCosts.EntryTerms(fungus).bRequiresFullCost);
 
-    Unit& nativeUnit = fixture.MakeUnit(faction, 4, 5, {"test_chassis", "treat_fungus_as_road"});
+    Unit& nativeUnit = fixture.MakeUnit(faction, 7, 9, {"test_chassis", "treat_fungus_as_road"});
     const auto nativeCosts = calc.ForUnit(nativeUnit, fixture.map);
     CHECK(nativeCosts.EntryTerms(fungus).costFragments == k_point / 3);
 
-    Tile& rockyFungus = fixture.At(7, 4);
+    Tile& rockyFungus = fixture.At(11, 11);
     rockyFungus.SetRockiness(Rockiness_t::Rocky);
     rockyFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
-    Unit& bothUnit = fixture.MakeUnit(faction, 4, 6,
+    Unit& bothUnit = fixture.MakeUnit(faction, 6, 10,
                                       {"test_chassis", "ignores_difficult_terrain",
                                        "treat_fungus_as_road"});
     const auto bothCosts = calc.ForUnit(bothUnit, fixture.map);
@@ -216,15 +216,15 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
     MoveCostCalculator calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     const auto costs = calc.ForUnit(unit, fixture.map);
 
-    Tile& flat = fixture.At(3, 4);
+    Tile& flat = fixture.At(7, 7);
     const EntryTerms_t flatTerms = costs.EntryTerms(flat);
     CHECK_FALSE(flatTerms.bRequiresFullCost);
     CHECK_FALSE(flatTerms.bEndsTurn);
 
-    Tile& emptyFungus = fixture.At(5, 4);
+    Tile& emptyFungus = fixture.At(9, 9);
     emptyFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     const EntryTerms_t emptyTerms = costs.EntryTerms(emptyFungus);
     CHECK(emptyTerms.costFragments == 3 * k_point);
@@ -232,15 +232,15 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
     CHECK(emptyTerms.bEndsTurn);
 
     // A friendly occupant waives the banking requirement but not the forced end of turn.
-    Tile& friendFungus = fixture.At(6, 4);
+    Tile& friendFungus = fixture.At(10, 10);
     friendFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
-    fixture.MakeUnit(faction, 6, 4, {"test_chassis"});
+    fixture.MakeUnit(faction, 10, 10, {"test_chassis"});
     const EntryTerms_t friendTerms = costs.EntryTerms(friendFungus);
     CHECK_FALSE(friendTerms.bRequiresFullCost);
     CHECK(friendTerms.bEndsTurn);
 
     // Road built on fungus negates the entry rules and overrides the cost.
-    Tile& roadFungus = fixture.At(7, 4);
+    Tile& roadFungus = fixture.At(11, 11);
     roadFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     roadFungus.AddImprovement(fixture.improvements.Get("Road"));
     const EntryTerms_t roadTerms = costs.EntryTerms(roadFungus);
@@ -249,7 +249,7 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
     CHECK_FALSE(roadTerms.bEndsTurn);
 
     // A fungus move_cost MaxClamp of 1/3 behaves as if the tile had a Road.
-    Unit& native = fixture.MakeUnit(faction, 4, 6, {"test_chassis", "treat_fungus_as_road"});
+    Unit& native = fixture.MakeUnit(faction, 6, 10, {"test_chassis", "treat_fungus_as_road"});
     const auto nativeCosts = calc.ForUnit(native, fixture.map);
     const EntryTerms_t nativeTerms = nativeCosts.EntryTerms(emptyFungus);
     CHECK(nativeTerms.costFragments == k_point / 3);
@@ -273,28 +273,28 @@ TEST_CASE("PlannedCostFragments values end-turn entries in whole turns", "[move-
         faction.GetExploredMap().Mark(*pTile);
     }
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     REQUIRE(unit.GetMovementPoints() == 2);
     const auto costs = calc.ForUnit(unit, fixture.map);
 
-    Tile& emptyFungus = fixture.At(5, 4);
+    Tile& emptyFungus = fixture.At(9, 9);
     emptyFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     // M=2 banking cost 3: two whole turns of movement.
     CHECK(costs.PlannedCostFragments(emptyFungus) == 4 * k_point);
 
-    Tile& friendFungus = fixture.At(6, 4);
+    Tile& friendFungus = fixture.At(10, 10);
     friendFungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
-    fixture.MakeUnit(faction, 6, 4, {"test_chassis"});
+    fixture.MakeUnit(faction, 10, 10, {"test_chassis"});
     // Immediate entry still ends the turn: exactly one allotment.
     CHECK(costs.PlannedCostFragments(friendFungus) == 2 * k_point);
 
-    Unit& slow = fixture.MakeUnit(faction, 4, 5, {"test_slow_chassis"});
+    Unit& slow = fixture.MakeUnit(faction, 7, 9, {"test_slow_chassis"});
     REQUIRE(slow.GetMovementPoints() == 1);
     const auto slowCosts = calc.ForUnit(slow, fixture.map);
     CHECK(slowCosts.PlannedCostFragments(emptyFungus) == 3 * k_point);
 
     // Non-end-turn entries plan at their entry cost.
-    Unit& native = fixture.MakeUnit(faction, 4, 6, {"test_chassis", "treat_fungus_as_road"});
+    Unit& native = fixture.MakeUnit(faction, 6, 10, {"test_chassis", "treat_fungus_as_road"});
     const auto nativeCosts = calc.ForUnit(native, fixture.map);
     CHECK(nativeCosts.PlannedCostFragments(emptyFungus) == k_point / 3);
 }
@@ -310,10 +310,10 @@ TEST_CASE("PlannedCostFragments hides tile detail under shroud", "[move-cost]")
     MoveCostCalculator calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     const auto costs = calc.ForUnit(unit, fixture.map);
 
-    Tile& fungus = fixture.At(6, 4);
+    Tile& fungus = fixture.At(10, 10);
     fungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     REQUIRE_FALSE(faction.GetExploredMap().IsExplored(fungus));
     CHECK(costs.PlannedCostFragments(fungus) == k_point);

@@ -34,7 +34,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetPauseOnEvents().newFacilityBuilt);
     CHECK(settings.GetPauseOnEvents().buildOrdersOutOfDate);
     CHECK(settings.GetMapGeneration().width == 200);
-    CHECK(settings.GetMapGeneration().height == 150);
+    CHECK(settings.GetMapGeneration().height == 300);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
     CHECK(settings.GetMapGeneration().erosiveForces == ErosiveForces_t::Average);
     CHECK(settings.GetMapGeneration().presetId == "islands");
@@ -291,6 +291,14 @@ TEST_CASE("GameSettings rejects an unusable map_generation block", "[GameSetting
         GameSettings loaded;
         CHECK_THROWS_WITH(loaded.Load(path.string()),
                           Catch::Matchers::ContainsSubstring("width"));
+    }
+
+    SECTION("odd width")
+    {
+        writeMapGen(R"({"width": 201, "height": 40})");
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("width must be even"));
     }
 
     SECTION("ocean coverage outside [0, 1]")

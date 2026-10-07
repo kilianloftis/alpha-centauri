@@ -365,7 +365,7 @@ TEST_CASE("Growth threshold saturates instead of overflowing", "[population][gro
     // (baseSize+1) * nutrientsPerPop was multiplied as int before the rate was applied, so a
     // large modded base size wrapped before the division could bring it back into range.
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const BaseEffects_t noEffects{base};
 
     GrowthConfig_t config;
@@ -386,7 +386,7 @@ PopCompositionConfig_t BureaucracyConfig_()
 {
     PopCompositionConfig_t config;
     config.bureaucracyLimitFormula =
-        "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
+        "math.floor(bureaucracy * math.sqrt(map_width * map_height / 2) / math.sqrt(12800) + 0.5)";
     config.bureaucracyDroneFormula =
         "max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit))";
     config.sizeDroneFormula = "max(0, base_size - size_free_drones)";
@@ -460,7 +460,7 @@ DroneInputs_t StandardMapInputs_()
     DroneInputs_t inputs;
     inputs.bureaucracy = 32; // Citizen × Efficiency 0 → 8 * 4
     inputs.mapWidth = 80;
-    inputs.mapHeight = 40;
+    inputs.mapHeight = 80;
     inputs.baseSize = 8;
     // High enough that size drones do not interfere with bureaucracy-only cases.
     inputs.sizeFreeDrones = 100;
@@ -509,20 +509,20 @@ TEST_CASE("Bureaucracy limit rounds to nearest after the full product",
     inputs.sizeFreeDrones = 100;
 
     inputs.mapWidth = 110;
-    inputs.mapHeight = 70;
+    inputs.mapHeight = 140;
     CHECK(LimitOf_(calculator, inputs) == 9);
 
     inputs.mapWidth = 70;
-    inputs.mapHeight = 45;
+    inputs.mapHeight = 90;
     CHECK(LimitOf_(calculator, inputs) == 6);
 
     inputs.bureaucracy = 20; // Librarian × Efficiency 0
     inputs.mapWidth = 110;
-    inputs.mapHeight = 70;
+    inputs.mapHeight = 140;
     CHECK(LimitOf_(calculator, inputs) == 16);
 
     inputs.mapWidth = 70;
-    inputs.mapHeight = 45;
+    inputs.mapHeight = 90;
     CHECK(LimitOf_(calculator, inputs) == 10);
 }
 

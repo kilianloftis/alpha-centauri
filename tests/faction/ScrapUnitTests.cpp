@@ -50,8 +50,8 @@ TEST_CASE("Scrapping a unit in faction territory refunds half its minerals to th
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_costly_weapon"}, &base);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_costly_weapon"}, &base);
     REQUIRE(unit.GetDesign().GetBaseCost() == 20);
     REQUIRE(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == faction.GetFactionId());
     REQUIRE(base.GetProduction().GetMineralStockpile() == 0);
@@ -68,8 +68,8 @@ TEST_CASE("Scrapping a unit outside faction territory grants no minerals", "[uni
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 0);
-    Unit& unit = fixture.MakeUnit(faction, 6, 7, {"test_chassis", "test_costly_weapon"}, &base);
+    BaseManager& base = fixture.MakeFactionBase(faction, 12, 4);
+    Unit& unit = fixture.MakeUnit(faction, 7, 13, {"test_chassis", "test_costly_weapon"}, &base);
     REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(unit.GetTile()));
     REQUIRE(faction.QuoteScrapUnit(unit)->amount == 0);
 
@@ -83,9 +83,9 @@ TEST_CASE("Unit scrap minerals go to the closer of two friendly bases", "[unit][
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& near = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& far = fixture.MakeFactionBase(faction, 6, 6);
-    Unit& unit = fixture.MakeUnit(faction, 3, 2, {"test_chassis", "test_costly_weapon"}, &near);
+    BaseManager& near = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& far = fixture.MakeFactionBase(faction, 8, 12);
+    Unit& unit = fixture.MakeUnit(faction, 9, 5, {"test_chassis", "test_costly_weapon"}, &near);
     const int width = fixture.map.GetWidth();
     REQUIRE(TabletopDiagonalDistance(unit.GetTile(), near.GetTile(), width) == 1);
     REQUIRE(TabletopDiagonalDistance(unit.GetTile(), far.GetTile(), width) == 5);
@@ -100,10 +100,10 @@ TEST_CASE("Equal tabletop-distance unit scrap prefers the lower base id", "[unit
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& first = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& second = fixture.MakeFactionBase(faction, 6, 2);
+    BaseManager& first = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& second = fixture.MakeFactionBase(faction, 12, 8);
     REQUIRE(first.GetBaseId() < second.GetBaseId());
-    Unit& unit = fixture.MakeUnit(faction, 4, 2, {"test_chassis", "test_costly_weapon"}, &first);
+    Unit& unit = fixture.MakeUnit(faction, 10, 6, {"test_chassis", "test_costly_weapon"}, &first);
     const int width = fixture.map.GetWidth();
     REQUIRE(TabletopDiagonalDistance(unit.GetTile(), first.GetTile(), width) == 2);
     REQUIRE(TabletopDiagonalDistance(unit.GetTile(), second.GetTile(), width) == 2);
@@ -119,10 +119,10 @@ TEST_CASE("Unit scrap closest base uses tabletop distance, not Euclidean", "[uni
     Faction& faction = fixture.MakeFaction();
     // From (4,4): (7,7) and (8,4) are both tabletop 4; Euclidean squared is 18 vs 16
     // (would prefer (8,4)). Tabletop tie → lower BaseId.
-    BaseManager& diagonal = fixture.MakeFactionBase(faction, 7, 7);
-    BaseManager& orthogonal = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& diagonal = fixture.MakeFactionBase(faction, 8, 14);
+    BaseManager& orthogonal = fixture.MakeFactionBase(faction, 12, 12);
     REQUIRE(diagonal.GetBaseId() < orthogonal.GetBaseId());
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_costly_weapon"},
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_costly_weapon"},
                                   &diagonal);
     const int width = fixture.map.GetWidth();
     REQUIRE(TabletopDiagonalDistance(unit.GetTile(), diagonal.GetTile(), width) == 4);
@@ -138,8 +138,8 @@ TEST_CASE("Destroying a unit without scrap grants no minerals", "[unit][scrap]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_costly_weapon"}, &base);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_costly_weapon"}, &base);
     REQUIRE(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == faction.GetFactionId());
 
     faction.GetUnitManager().DestroyUnit(unit);
@@ -174,8 +174,8 @@ TEST_CASE("Scrapping a supply crawler refunds its full mineral cost", "[unit][sc
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
-    Unit& crawler = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_supply_crawler"}, &base);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Unit& crawler = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_supply_crawler"}, &base);
     REQUIRE(crawler.GetDesign().GetBaseCost() == 5);
     REQUIRE(fixture.map.GetTerritory().GetOwner(crawler.GetTile()) == faction.GetFactionId());
     REQUIRE(faction.QuoteScrapUnit(crawler)->amount == 5);
@@ -188,7 +188,7 @@ TEST_CASE("CreditScrapRefund pays treasury, production, and resource banks", "[u
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     const BaseId_t baseId = base.GetBaseId();
 
     const auto pay = [&](int amount, StatId_t refundType, std::optional<BaseId_t> destBaseId) {
@@ -238,7 +238,7 @@ TEST_CASE("Crediting a scrap refund to a base the faction does not hold throws",
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeFactionBase(faction, 4, 4);
+    fixture.MakeFactionBase(faction, 8, 8);
 
     const ScrapPayout_t payout =
         PlanScrapPayout(ScrapQuote_t{true, 3, StatId_t::Minerals}, 9999);

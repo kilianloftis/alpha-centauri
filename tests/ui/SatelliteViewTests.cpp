@@ -31,7 +31,7 @@ TEST_CASE("The summary grid is cached, and Refresh is what updates it", "[ui][sa
     // Render rebuilt the orbital-type vector, the faction list and a string-keyed census map on
     // every paint, and BuildOrbitalCensus walks every faction's bases and buildings.
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     SatelliteSummaryPanel panel(*fixture.pState, *fixture.dataContext.buildingRegistry,
                                 ViewFixture::FullScreen());

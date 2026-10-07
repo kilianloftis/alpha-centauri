@@ -18,10 +18,9 @@ class MapViewport;
 
 // Full-map terrain overview in the world dashboard right panel. Same elevation /
 // fog / shroud colours as WorldDisplay, without per-tile labels or overlays.
-// Left-click centers the world camera on the corresponding tile. Draws the current
-// MapViewport as a border (split across the east/west seam when the camera wraps).
-// Terrain+fog is cached as one RGBA texture (1 texel per tile) and only rebuilt when
-// appearance/fog revisions or map size change; the viewport frame is always live.
+// Brick layout matching the main view: width×height image, tile (x,y) fills pixels
+// x and x+1 of row y, drawn with 2:1 pixel aspect. Left-click centers the camera.
+// Viewport frame is in map units (split at the seam when it wraps).
 class MinimapDisplay : public UIElement
 {
 public:
@@ -39,7 +38,8 @@ private:
     {
         float originX;
         float originY;
-        float tileSize;
+        float pixelW;
+        float pixelH;
         int mapWidth;
         int mapHeight;
     };

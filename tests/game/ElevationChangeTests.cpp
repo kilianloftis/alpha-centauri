@@ -193,86 +193,86 @@ TEST_CASE("A preset's elevation range is the world storage range", "[map][elevat
 TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][elevation]")
 {
     const ElevationRulesConfig_t rules = ShippingRules_();
-    WorldMap map(9, 9, rules);
+    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
 
     SECTION("a neighbor already within the limit stays")
     {
-        At_(map, 4, 4).SetElevation(0);
-        At_(map, 4, 5).SetElevation(0);
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, 1000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(0);
+        At_(map, 7, 9).SetElevation(0);
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == 1000);
-        CHECK(At_(map, 4, 5).GetElevation() == 0);
+        CHECK(At_(map, 8, 8).GetElevation() == 1000);
+        CHECK(At_(map, 7, 9).GetElevation() == 0);
     }
 
     SECTION("a neighbor too low is raised to origin minus the limit")
     {
-        At_(map, 4, 4).SetElevation(0);
-        At_(map, 4, 5).SetElevation(-2000);
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, 1000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(0);
+        At_(map, 7, 9).SetElevation(-2000);
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == 1000);
-        CHECK(At_(map, 4, 5).GetElevation() == 1000 - rules.maxAdjacentDifferenceMeters);
+        CHECK(At_(map, 8, 8).GetElevation() == 1000);
+        CHECK(At_(map, 7, 9).GetElevation() == 1000 - rules.maxAdjacentDifferenceMeters);
     }
 
     SECTION("a neighbor too high is lowered to origin plus the limit")
     {
-        At_(map, 4, 4).SetElevation(3000);
-        At_(map, 4, 5).SetElevation(3000);
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, -2000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(3000);
+        At_(map, 7, 9).SetElevation(3000);
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, -2000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == 1000);
-        CHECK(At_(map, 4, 5).GetElevation() == 1000 + rules.maxAdjacentDifferenceMeters);
+        CHECK(At_(map, 8, 8).GetElevation() == 1000);
+        CHECK(At_(map, 7, 9).GetElevation() == 1000 + rules.maxAdjacentDifferenceMeters);
     }
 
     SECTION("the next ring moves when the first correction still breaks the limit")
     {
-        At_(map, 4, 4).SetElevation(0);
-        At_(map, 4, 5).SetElevation(0);
-        At_(map, 4, 6).SetElevation(0);
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, 4500, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(0);
+        At_(map, 7, 9).SetElevation(0);
+        At_(map, 6, 10).SetElevation(0);
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 4500, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == rules.maxElevationMeters);
-        CHECK(At_(map, 4, 5).GetElevation()
+        CHECK(At_(map, 8, 8).GetElevation() == rules.maxElevationMeters);
+        CHECK(At_(map, 7, 9).GetElevation()
               == rules.maxElevationMeters - rules.maxAdjacentDifferenceMeters);
-        CHECK(At_(map, 4, 6).GetElevation()
-              == At_(map, 4, 5).GetElevation() - rules.maxAdjacentDifferenceMeters);
+        CHECK(At_(map, 6, 10).GetElevation()
+              == At_(map, 7, 9).GetElevation() - rules.maxAdjacentDifferenceMeters);
     }
 
     SECTION("relaxation can pull a land neighbor under ocean level")
     {
-        At_(map, 4, 4).SetElevation(-1000);
-        At_(map, 4, 5).SetElevation(1000);
-        REQUIRE(At_(map, 4, 5).IsLand());
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, -2000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(-1000);
+        At_(map, 7, 9).SetElevation(1000);
+        REQUIRE(At_(map, 7, 9).IsLand());
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, -2000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == -3000);
-        CHECK(At_(map, 4, 5).GetElevation()
+        CHECK(At_(map, 8, 8).GetElevation() == -3000);
+        CHECK(At_(map, 7, 9).GetElevation()
               == -3000 + rules.maxAdjacentDifferenceMeters);
         // The pull crossed ocean level, so the tile is sea now and its depth band followed.
-        CHECK(At_(map, 4, 5).IsWater());
-        CHECK(At_(map, 4, 5).HasFeature("OceanShelf"));
+        CHECK(At_(map, 7, 9).IsWater());
+        CHECK(At_(map, 7, 9).HasFeature("OceanShelf"));
     }
 
     SECTION("relaxation can lift a sea neighbor above ocean level")
     {
-        At_(map, 4, 4).SetElevation(0);
-        At_(map, 4, 5).SetElevation(-3000);
-        REQUIRE(At_(map, 4, 5).IsWater());
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, 2000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(0);
+        At_(map, 7, 9).SetElevation(-3000);
+        REQUIRE(At_(map, 7, 9).IsWater());
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 2000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 5).GetElevation() == 2000 - rules.maxAdjacentDifferenceMeters);
-        CHECK(At_(map, 4, 5).IsLand());
+        CHECK(At_(map, 7, 9).GetElevation() == 2000 - rules.maxAdjacentDifferenceMeters);
+        CHECK(At_(map, 7, 9).IsLand());
     }
 
     SECTION("a cliff the walk never reaches stays")
     {
-        At_(map, 4, 4).SetElevation(0);
-        At_(map, 0, 0).SetElevation(3000);
-        REQUIRE(ApplyElevationDelta(At_(map, 4, 4), map, 1000, rules, rules.minElevationMeters,
+        At_(map, 8, 8).SetElevation(0);
+        At_(map, 8, 0).SetElevation(3000);
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
                                     rules.maxElevationMeters));
-        CHECK(At_(map, 4, 4).GetElevation() == 1000);
-        CHECK(At_(map, 0, 0).GetElevation() == 3000);
+        CHECK(At_(map, 8, 8).GetElevation() == 1000);
+        CHECK(At_(map, 8, 0).GetElevation() == 3000);
     }
 }
 
@@ -282,21 +282,21 @@ TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
     ElevationRulesConfig_t rules = ShippingRules_();
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
-    WorldMap map(5, 5, rules);
+    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
 
-    At_(map, 2, 2).SetElevation(3000);
-    REQUIRE(ApplyElevationDelta(At_(map, 2, 2), map, 2000, rules, rules.minElevationMeters,
+    At_(map, 8, 4).SetElevation(3000);
+    REQUIRE(ApplyElevationDelta(At_(map, 8, 4), map, 2000, rules, rules.minElevationMeters,
                                 rules.maxElevationMeters));
-    CHECK(At_(map, 2, 2).GetElevation() == rules.maxElevationMeters);
+    CHECK(At_(map, 8, 4).GetElevation() == rules.maxElevationMeters);
 
-    At_(map, 2, 2).SetElevation(3000);
+    At_(map, 8, 4).SetElevation(3000);
     std::mt19937 rng(1);
-    REQUIRE(ApplyEarthquake(At_(map, 2, 2), map, 4, rng, rules));
-    CHECK(At_(map, 2, 2).GetElevation() == rules.maxElevationMeters);
+    REQUIRE(ApplyEarthquake(At_(map, 8, 4), map, 4, rng, rules));
+    CHECK(At_(map, 8, 4).GetElevation() == rules.maxElevationMeters);
 
-    At_(map, 2, 3).SetElevation(0);
-    CHECK_FALSE(ApplyEarthquake(At_(map, 2, 3), map, 0, rng, rules));
-    CHECK(At_(map, 2, 3).GetElevation() == 0);
+    At_(map, 7, 5).SetElevation(0);
+    CHECK_FALSE(ApplyEarthquake(At_(map, 7, 5), map, 0, rng, rules));
+    CHECK(At_(map, 7, 5).GetElevation() == 0);
 }
 
 TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
@@ -385,15 +385,15 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     fixture.designs.emplace_back(slots, assigned);
     Unit& attacker = player.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, fixture.designs.back(), fixture.map.GetUnitPositions(),
-        fixture.At(4, 4));
+        fixture.At(8, 8));
 
-    fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    const int targetElevation = fixture.At(5, 4).GetElevation();
+    fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    const int targetElevation = fixture.At(9, 9).GetElevation();
 
     OrderHarness_ harness(fixture);
-    const auto result = harness.orders.TryAttack(attacker, fixture.At(5, 4));
+    const auto result = harness.orders.TryAttack(attacker, fixture.At(9, 9));
     REQUIRE(result.has_value());
-    CHECK(fixture.At(5, 4).GetElevation() == targetElevation);
+    CHECK(fixture.At(9, 9).GetElevation() == targetElevation);
 }
 
 namespace
@@ -415,7 +415,7 @@ struct DetonateGame_
 
     DetonateGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -471,19 +471,19 @@ TEST_CASE("Detonating a warhead raises its own tile and spends the carrier",
           "[unit][elevation][detonate]")
 {
     DetonateGame_ game;
-    Unit& warhead = game.MakeWarhead(4, 4, /*reactorLevels=*/2);
+    Unit& warhead = game.MakeWarhead(8, 8, /*reactorLevels=*/2);
     REQUIRE(UnitCount_(*game.pFaction) == 1);
     REQUIRE(UnitCanDetonate(warhead));
     REQUIRE(warhead.GetStat(StatId_t::EarthquakeLevels) == 2);
 
-    const int before = At_(game.pState->GetWorldMap(), 4, 4).GetElevation();
+    const int before = At_(game.pState->GetWorldMap(), 8, 8).GetElevation();
     REQUIRE(ApplyDetonation(*game.pState, warhead));
 
     // Two levels of [500, 1500] each, so the origin rises by at least 1000m.
-    CHECK(At_(game.pState->GetWorldMap(), 4, 4).GetElevation() >= before + 1000);
+    CHECK(At_(game.pState->GetWorldMap(), 8, 8).GetElevation() >= before + 1000);
     // The neighbor relaxation kept the slope inside the configured limit.
-    const int origin = At_(game.pState->GetWorldMap(), 4, 4).GetElevation();
-    CHECK(origin - At_(game.pState->GetWorldMap(), 4, 5).GetElevation()
+    const int origin = At_(game.pState->GetWorldMap(), 8, 8).GetElevation();
+    CHECK(origin - At_(game.pState->GetWorldMap(), 7, 9).GetElevation()
           <= actest::TestMapRules().maxAdjacentDifferenceMeters);
     // The DestroyUnit entry spent the missile.
     CHECK(UnitCount_(*game.pFaction) == 0);
@@ -493,13 +493,13 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
           "[unit][elevation][surface]")
 {
     DetonateGame_ game;
-    Tile& tile = At_(game.pState->GetWorldMap(), 4, 4);
+    Tile& tile = At_(game.pState->GetWorldMap(), 8, 8);
     tile.SetElevation(-100);
     REQUIRE(tile.IsWater());
     game.pState->GetTileEffects().AddOccupantWithEffects(tile, "KelpFarm");
     game.pState->GetTileEffects().AddOccupantWithEffects(tile, "Road");
 
-    Unit& warhead = game.MakeWarhead(4, 4, /*reactorLevels=*/1);
+    Unit& warhead = game.MakeWarhead(8, 8, /*reactorLevels=*/1);
     REQUIRE(ApplyDetonation(*game.pState, warhead));
 
     CHECK(tile.IsLand());
@@ -510,7 +510,7 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
 TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation][detonate]")
 {
     DetonateGame_ game;
-    Tile* pTile = game.pState->GetWorldMap().GetTile(2, 2);
+    Tile* pTile = game.pState->GetWorldMap().GetTile(8, 4);
     REQUIRE(pTile);
 
     const UnitComponentConfig_t* pChassis = game.fixtures.unitComponents.Find("test_chassis");

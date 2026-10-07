@@ -34,14 +34,14 @@ TEST_CASE("Evacuate moves guest unit to nearest own territory without spending m
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
 
-    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == host.GetFactionId());
-    REQUIRE(fixture.map.GetTerritory().GetOwner(1, 4) == guest.GetFactionId());
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == host.GetFactionId());
+    REQUIRE(fixture.map.GetTerritory().GetOwner(5, 5) == guest.GetFactionId());
 
-    Unit& unit = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
-    unit.SetOrder(MoveOrder_t{&fixture.At(7, 4)});
+    Unit& unit = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
+    unit.SetOrder(MoveOrder_t{&fixture.At(11, 11)});
     const int movesBefore = unit.GetMoveFragmentsRemaining();
     REQUIRE(movesBefore > 0);
 
@@ -51,7 +51,7 @@ TEST_CASE("Evacuate moves guest unit to nearest own territory without spending m
     CHECK_FALSE(unit.GetOrder().has_value());
     CHECK(unit.GetMoveFragmentsRemaining() == movesBefore);
     CHECK(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == guest.GetFactionId());
-    CHECK(&unit.GetTile() != &fixture.At(6, 4));
+    CHECK(&unit.GetTile() != &fixture.At(10, 10));
 }
 
 TEST_CASE("Evacuate leaves a covert unit in the host's territory", "[evacuate][covert]")
@@ -60,16 +60,16 @@ TEST_CASE("Evacuate leaves a covert unit in the host's territory", "[evacuate][c
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
-    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == host.GetFactionId());
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == host.GetFactionId());
 
-    Unit& covert = fixture.MakeUnit(guest, 6, 4, {"test_chassis", "covert"});
-    covert.SetOrder(MoveOrder_t{&fixture.At(7, 4)});
+    Unit& covert = fixture.MakeUnit(guest, 10, 10, {"test_chassis", "covert"});
+    covert.SetOrder(MoveOrder_t{&fixture.At(11, 11)});
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 0);
-    CHECK(&covert.GetTile() == &fixture.At(6, 4));
+    CHECK(&covert.GetTile() == &fixture.At(10, 10));
     CHECK(covert.GetOrder().has_value());
 }
 
@@ -79,27 +79,31 @@ TEST_CASE("Evacuate leaves units on own or unowned tiles alone", "[evacuate]")
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    // Water row isolates (4,0) from both land bases so it stays unowned.
-    for (int x = 0; x < fixture.map.GetWidth(); ++x)
+    // A two-row water band isolates the north rows from both land bases so (12, 0) stays
+    // unowned.
+    for (const auto& pTile : fixture.map.GetTiles())
     {
-        fixture.At(x, 1).SetElevation(-100);
+        if (pTile->GetY() == 2 || pTile->GetY() == 3)
+        {
+            pTile->SetElevation(-100);
+        }
     }
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
-    REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(4, 0));
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+    REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(12, 0));
 
-    Unit& onOwn = fixture.MakeUnit(guest, 1, 4, {"test_chassis"});
+    Unit& onOwn = fixture.MakeUnit(guest, 5, 5, {"test_chassis"});
     onOwn.SetOrder(HoldOrder_t{});
 
-    Unit& onUnowned = fixture.MakeUnit(guest, 4, 0, {"test_chassis"});
+    Unit& onUnowned = fixture.MakeUnit(guest, 12, 0, {"test_chassis"});
     onUnowned.SetOrder(HoldOrder_t{});
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 0);
     CHECK(result.unitsLeftInPlace == 0);
-    CHECK(&onOwn.GetTile() == &fixture.At(1, 4));
-    CHECK(&onUnowned.GetTile() == &fixture.At(4, 0));
+    CHECK(&onOwn.GetTile() == &fixture.At(5, 5));
+    CHECK(&onUnowned.GetTile() == &fixture.At(12, 0));
     CHECK(onOwn.GetOrder().has_value());
     CHECK(onUnowned.GetOrder().has_value());
 }
@@ -110,22 +114,22 @@ TEST_CASE("Evacuate skips unholdable own land for a sea unit", "[evacuate][domai
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
 
-    Unit& ship = fixture.MakeUnit(guest, 6, 4, {"test_sea_chassis"});
-    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == host.GetFactionId());
+    Unit& ship = fixture.MakeUnit(guest, 10, 10, {"test_sea_chassis"});
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == host.GetFactionId());
 
     // Plain guest land nearer than the base must not be chosen; the own base harbors sea.
-    REQUIRE(fixture.map.GetTerritory().GetOwner(3, 4) == guest.GetFactionId());
-    REQUIRE_FALSE(CanHoldTileWithoutCarrier(ship, fixture.At(3, 4), fixture.map,
+    REQUIRE(fixture.map.GetTerritory().GetOwner(7, 7) == guest.GetFactionId());
+    REQUIRE_FALSE(CanHoldTileWithoutCarrier(ship, fixture.At(7, 7), fixture.map,
                                             fixture.dataContext.interactionGrids));
-    REQUIRE(CanHoldTileWithoutCarrier(ship, fixture.At(1, 4), fixture.map,
+    REQUIRE(CanHoldTileWithoutCarrier(ship, fixture.At(5, 5), fixture.map,
                                       fixture.dataContext.interactionGrids));
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 1);
-    CHECK(&ship.GetTile() == &fixture.At(1, 4));
+    CHECK(&ship.GetTile() == &fixture.At(5, 5));
 }
 
 TEST_CASE("Evacuate takes the next tile when the nearest own tile is full", "[evacuate]")
@@ -135,12 +139,12 @@ TEST_CASE("Evacuate takes the next tile when the nearest own tile is full", "[ev
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
 
     const Tile* pNearest = nullptr;
     {
-        Unit& probe = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
+        Unit& probe = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
         pNearest = FindNearestOwnTerritoryTile(probe, fixture.map,
                                                fixture.dataContext.interactionGrids);
         REQUIRE(pNearest);
@@ -149,7 +153,7 @@ TEST_CASE("Evacuate takes the next tile when the nearest own tile is full", "[ev
 
     Unit& blocker = fixture.MakeUnit(guest, pNearest->GetX(), pNearest->GetY(),
                                      {"test_chassis"});
-    Unit& mover = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 1);
@@ -165,12 +169,12 @@ TEST_CASE("Evacuate moves co-stacked units on one host tile to the same own tile
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
-    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == host.GetFactionId());
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == host.GetFactionId());
 
-    Unit& a = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
-    Unit& b = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
+    Unit& a = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
+    Unit& b = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
     const Tile* pDest =
         FindNearestOwnTerritoryTile(a, fixture.map, fixture.dataContext.interactionGrids);
     REQUIRE(pDest);
@@ -188,23 +192,20 @@ TEST_CASE("Evacuate leaves unit in place and clears order when no own territory 
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
-    fixture.MakeFactionBase(host, 4, 4);
-    REQUIRE(fixture.map.GetTerritory().GetOwner(5, 4) == host.GetFactionId());
+    fixture.MakeFactionBase(host, 8, 8);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(9, 9) == host.GetFactionId());
     // Guest founded no bases — no own territory anywhere.
-    for (int y = 0; y < fixture.map.GetHeight(); ++y)
+    for (const auto& pTile : fixture.map.GetTiles())
     {
-        for (int x = 0; x < fixture.map.GetWidth(); ++x)
-        {
-            REQUIRE(fixture.map.GetTerritory().GetOwner(x, y) != guest.GetFactionId());
-        }
+        REQUIRE(fixture.map.GetTerritory().GetOwner(*pTile) != guest.GetFactionId());
     }
-    Unit& unit = fixture.MakeUnit(guest, 5, 4, {"test_chassis"});
-    unit.SetOrder(MoveOrder_t{&fixture.At(4, 4)});
+    Unit& unit = fixture.MakeUnit(guest, 9, 9, {"test_chassis"});
+    unit.SetOrder(MoveOrder_t{&fixture.At(8, 8)});
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 0);
     CHECK(result.unitsLeftInPlace == 1);
-    CHECK(&unit.GetTile() == &fixture.At(5, 4));
+    CHECK(&unit.GetTile() == &fixture.At(9, 9));
     CHECK_FALSE(unit.GetOrder().has_value());
 }
 
@@ -219,12 +220,12 @@ TEST_CASE("Evacuate tows embarked cargo with the carrier and clears both orders"
     {
         pTile->SetElevation(-100);
     }
-    fixture.MakeFactionBase(guest, 1, 4);
-    fixture.MakeFactionBase(host, 7, 4);
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
 
     Unit& transport =
-        fixture.MakeUnit(guest, 6, 4, {"test_sea_chassis", "test_transport"});
-    Unit& cargo = fixture.MakeUnit(guest, 6, 4, {"test_chassis"});
+        fixture.MakeUnit(guest, 10, 10, {"test_sea_chassis", "test_transport"});
+    Unit& cargo = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
     cargo.EmbarkInto(transport);
     REQUIRE(cargo.IsEmbarked());
 
@@ -243,18 +244,18 @@ TEST_CASE("Evacuate tows embarked cargo with the carrier and clears both orders"
 
 TEST_CASE("Evacuate prefers the wrap-short path to own territory", "[evacuate][wrap]")
 {
-    FactionFixture fixture;
+    FactionFixture fixture(16, actest::k_TestMapHeight);
     Faction& guest = fixture.MakeFaction();
     Faction& host = fixture.MakeFaction();
 
     fixture.MakeFactionBase(guest, 0, 4);
-    fixture.MakeFactionBase(host, 4, 4);
+    fixture.MakeFactionBase(host, 8, 4);
 
-    REQUIRE(fixture.map.GetTerritory().GetOwner(8, 4) == guest.GetFactionId());
-    REQUIRE(fixture.map.GetTerritory().GetOwner(5, 4) == host.GetFactionId());
+    REQUIRE(fixture.map.GetTerritory().GetOwner(14, 4) == guest.GetFactionId());
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 4) == host.GetFactionId());
 
-    Unit& unit = fixture.MakeUnit(guest, 5, 4, {"test_chassis"});
-    const Tile& rOrigin = fixture.At(5, 4);
+    Unit& unit = fixture.MakeUnit(guest, 10, 4, {"test_chassis"});
+    const Tile& rOrigin = fixture.At(10, 4);
     const int longDistToBase =
         ChebyshevDistance(rOrigin, fixture.At(0, 4), fixture.map.GetWidth());
     const Tile* pDest = FindNearestOwnTerritoryTile(unit, fixture.map,

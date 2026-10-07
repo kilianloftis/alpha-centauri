@@ -1,5 +1,7 @@
 #include "ui/TileAutotile.h"
 
+#include "game/map/MapUtils.h"
+
 #include <array>
 #include <stdexcept>
 
@@ -32,7 +34,7 @@ std::uint8_t MatchMask_(const std::array<GridDelta_t, N>& deltas, const Tile& rT
     for (std::size_t bit = 0; bit < N; ++bit)
     {
         const Tile* pNeighbor =
-            rMap.GetTile(rTile.GetX() + deltas[bit].dx, rTile.GetY() + deltas[bit].dy);
+            GetTileAtLatticeOffset(rMap, rTile, deltas[bit].dx, deltas[bit].dy);
         if (pNeighbor && matches(*pNeighbor))
         {
             mask = static_cast<std::uint8_t>(mask | (1u << bit));

@@ -72,7 +72,7 @@ struct ModHarness_
 
     ModHarness_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (const auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -131,7 +131,7 @@ TEST_CASE("A turn-stage hook is handed the game it is supposed to act on", "[mod
         seenFactions.push_back(rArgs.pFaction->GetFactionId());
     };
 
-    harness.MakeBase(4, 4);
+    harness.MakeBase(8, 8);
 
     HookContext hookContext("Population");
     hookContext.AddPreHook(preHook);
@@ -191,7 +191,7 @@ TEST_CASE("A mod observing the EventBus sees tech, base and riot events", "[mod]
     harness.pFaction->GetResearch().AddDiscoveredTech("build_tech");
     CHECK(discovered == std::vector<TechId>{"build_tech"});
 
-    BaseManager& rBase = harness.MakeBase(4, 4);
+    BaseManager& rBase = harness.MakeBase(8, 8);
     CHECK(built == std::vector<BaseId_t>{rBase.GetBaseId()});
 
     // Riots reach the bus through the base wiring, which OnBaseAdded drives in the engine; the
@@ -229,7 +229,7 @@ TEST_CASE("A mod can replace the tile-scoring policy", "[mod][hooks]")
     // seams in this package came to be half-built. Exercising it here means a change that
     // breaks it fails the suite.
     ModHarness_ harness;
-    BaseManager& rBase = harness.MakeBase(4, 4);
+    BaseManager& rBase = harness.MakeBase(8, 8);
 
     int scored = 0;
     const Tile* pPreferred = rBase.GetWorkerAssignments().GetWorkableTiles().front();

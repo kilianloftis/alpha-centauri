@@ -18,11 +18,15 @@ WorldMap::WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRule
         throw std::invalid_argument("WorldMap dimensions must be positive, got "
                                     + std::to_string(width) + "x" + std::to_string(height));
     }
+    if (width % 2 != 0)
+    {
+        throw std::invalid_argument("WorldMap width must be even, got " + std::to_string(width));
+    }
 
-    m_tiles.reserve(static_cast<size_t>(width) * static_cast<size_t>(height));
+    m_tiles.reserve(static_cast<size_t>(width) * static_cast<size_t>(height) / 2);
     for (int y = 0; y < height; ++y)
     {
-        for (int x = 0; x < width; ++x)
+        for (int x = (y & 1); x < width; x += 2)
         {
             auto pTile = std::make_unique<Tile>(x, y);
             pTile->BindMapRules(m_mapRules);
@@ -74,7 +78,7 @@ std::span<const std::unique_ptr<Tile>> WorldMap::GetTiles() const
 
 int WorldMap::GetTileIndex(int x, int y) const
 {
-    return y * m_width + x;
+    return TileIndex(x, y, m_width);
 }
 
 int WorldMap::GetTileIndex(const Tile& rTile) const

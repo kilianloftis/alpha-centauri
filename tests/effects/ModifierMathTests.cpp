@@ -301,7 +301,7 @@ TEST_CASE("ResolveStatModifiers: amount_source BaseSize scales by population",
           "[effects][math][amount_source]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     const int size = base.GetPopulation().GetSize();
     REQUIRE(size > 0);
 

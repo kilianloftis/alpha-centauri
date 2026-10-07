@@ -222,7 +222,7 @@ TEST_CASE("TryPromoteProbeMission bumps XP up to max", "[probe][morale]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& probe = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "Probe_Team"});
+    Unit& probe = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "Probe_Team"});
     REQUIRE(ResolveFlag(probe, RuleFlagId_t::ProbeTeam));
 
     const MoraleCalculator& morale = fixture.morale();

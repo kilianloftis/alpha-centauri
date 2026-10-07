@@ -6,6 +6,7 @@
 #include "game/map/Tile.h"
 #include "game/map/TileLayer.h"
 #include "game/map/TileLayerResolver.h"
+#include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
 #include "ui/CoastOverlay.h"
@@ -533,7 +534,7 @@ std::string GroundSpritePath_(const Tile& rTile)
     return {};
 }
 
-// SMAC's eight directions, NE first and clockwise, on our square grid.
+// SMAC's eight directions, NE first and clockwise, as lattice offsets.
 constexpr int k_LinkDirections = 8;
 constexpr std::array<std::pair<int, int>, k_LinkDirections> k_LinkDeltas = {{
     {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1},
@@ -573,8 +574,8 @@ void DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, const WorldMap& r
     std::array<const Tile*, k_LinkDirections> neighbors{};
     for (int dir = 0; dir < k_LinkDirections; ++dir)
     {
-        const auto [dx, dy] = k_LinkDeltas[static_cast<std::size_t>(dir)];
-        neighbors[static_cast<std::size_t>(dir)] = rMap.GetTile(rTile.GetX() + dx, rTile.GetY() + dy);
+        const auto [p, q] = k_LinkDeltas[static_cast<std::size_t>(dir)];
+        neighbors[static_cast<std::size_t>(dir)] = GetTileAtLatticeOffset(rMap, rTile, p, q);
         if (neighbors[static_cast<std::size_t>(dir)])
         {
             collect(*neighbors[static_cast<std::size_t>(dir)]);

@@ -52,7 +52,7 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
         return result;
     }
 
-    const int tileCount = m_rWorldMap.GetWidth() * m_rWorldMap.GetHeight();
+    const int tileCount = static_cast<int>(m_rWorldMap.GetTiles().size());
     constexpr int k_inf = std::numeric_limits<int>::max();
 
     // Cost is (forbidden-territory tiles entered, move fragments), compared in that order: a

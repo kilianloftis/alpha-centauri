@@ -1,5 +1,7 @@
 #include "ui/CoastOverlay.h"
 
+#include "game/map/MapUtils.h"
+
 namespace ac
 {
 
@@ -14,8 +16,8 @@ struct GridDelta_t
 
 constexpr std::uint8_t k_AllWater = 7;
 
-// Neighbors behind mask bits 1, 2 and 4 of each corner. On the iso projection (screenX ∝ x − y,
-// screenY ∝ x + y) orthogonal neighbors share a diamond edge and diagonal ones touch a corner.
+// Neighbors behind mask bits 1, 2 and 4 of each corner (lattice offsets). Orthogonal neighbors
+// share a diamond edge and diagonal ones touch a corner.
 constexpr std::array<std::array<GridDelta_t, 3>, k_CoastCornerCount> k_CornerNeighbors = {{
     {{{0, 1}, {-1, 1}, {-1, 0}}},   // West: SW edge, W corner, NW edge
     {{{-1, 0}, {-1, -1}, {0, -1}}}, // North: NW edge, N corner, NE edge
@@ -25,7 +27,7 @@ constexpr std::array<std::array<GridDelta_t, 3>, k_CoastCornerCount> k_CornerNei
 
 bool IsWaterNeighbor_(const Tile& rTile, const WorldMap& rMap, const GridDelta_t& delta)
 {
-    const Tile* pNeighbor = rMap.GetTile(rTile.GetX() + delta.dx, rTile.GetY() + delta.dy);
+    const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, delta.dx, delta.dy);
     return pNeighbor && pNeighbor->IsWater();
 }
 

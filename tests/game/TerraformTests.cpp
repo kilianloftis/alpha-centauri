@@ -42,9 +42,9 @@ struct TerraformGame_
     Faction* pPlayer = nullptr;
 
     explicit TerraformGame_(bool bExcludes = false, const ElevationRulesConfig_t* pRules = nullptr)
-        : fixtures(9, 9, {}, bExcludes ? k_ExcludesOccupantFiles : OccupantFiles_t{})
+        : fixtures(actest::k_TestMapWidth, actest::k_TestMapHeight, {}, bExcludes ? k_ExcludesOccupantFiles : OccupantFiles_t{})
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, pRules ? *pRules : actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, pRules ? *pRules : actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -118,11 +118,11 @@ struct TerraformGame_
 TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terraform]")
 {
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
     REQUIRE(former.GetFlag(RuleFlagId_t::Terraform));
 
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     REQUIRE_FALSE(tile.HasImprovement("Road"));
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Road", *game.pState));
@@ -138,7 +138,7 @@ TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terrafor
 TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraform]")
 {
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
+    BaseManager& home = game.MakeBase(8, 8);
 
     std::vector<UnitSlotConfig_t> slots;
     std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
@@ -151,7 +151,7 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
     slots.push_back(slot);
     assigned[slot.id] = pChassis;
     game.fixtures.designs.emplace_back(slots, assigned);
-    Tile* pTile = game.pState->GetWorldMap().GetTile(6, 4);
+    Tile* pTile = game.pState->GetWorldMap().GetTile(10, 10);
     Unit& scout = game.pPlayer->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), game.fixtures.designs.back(),
         game.pState->GetWorldMap().GetUnitPositions(), *pTile,
@@ -159,8 +159,8 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
 
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(scout, "Farm", *game.pState));
 
-    Unit& former = game.MakeFormer(7, 4, &home);
-    Tile& rocky = *game.pState->GetWorldMap().GetTile(7, 4);
+    Unit& former = game.MakeFormer(11, 11, &home);
+    Tile& rocky = *game.pState->GetWorldMap().GetTile(11, 11);
     rocky.SetRockiness(Rockiness_t::Rocky);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
     CHECK(rocky.GetRockiness() == Rockiness_t::Rocky);
@@ -170,9 +170,9 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
 TEST_CASE("Terraform mutations: level, fungus, aquifer", "[unit][terraform][mutate]")
 {
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     tile.SetRockiness(Rockiness_t::Rocky);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
@@ -215,9 +215,9 @@ TEST_CASE("A terrain operation the code has never heard of runs end to end",
     operations.push_back(std::move(rockify));
     rOperations.Assign(std::move(operations));
 
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     REQUIRE(tile.GetRockiness() == Rockiness_t::Flat);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Rockify",
@@ -232,9 +232,9 @@ TEST_CASE("A project whose effects would all no-op is refused before it is paid 
     // Each effect's own condition is what says whether the project may start, so a Former is
     // never charged for an order that would complete having changed nothing.
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     REQUIRE(tile.GetRockiness() == Rockiness_t::Flat);
 
     // Nothing to level on flat ground, and no fungus to remove.
@@ -255,9 +255,9 @@ TEST_CASE("A project whose effects would all no-op is refused before it is paid 
 TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
 {
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     tile.SetElevation(1000);
 
     const int energyBefore = game.pPlayer->GetEconomy().GetEnergy();
@@ -291,9 +291,9 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     rules.levelMinMeters = 1000;
     rules.levelMaxMeters = 1000;
     TerraformGame_ game(/*bExcludes=*/false, &rules);
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& seaFormer = game.MakeFormer(6, 4, &home, nullptr, "test_sea_chassis");
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     const int floor = rules.minElevationMeters;
     tile.SetElevation(floor + 500);
 
@@ -324,9 +324,9 @@ TEST_CASE("A land Former's lower stops at ocean level instead of failing the ord
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
     TerraformGame_ game(/*bExcludes=*/false, &rules);
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     tile.SetElevation(rules.referenceLevelMeters);
 
     std::mt19937 rng(1);
@@ -342,9 +342,9 @@ TEST_CASE("A land Former's lower stops at ocean level instead of failing the ord
 TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform]")
 {
     TerraformGame_ game;
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
 
     const std::optional<TerraformProject_t> farm =
         FindTerraformProject("Farm", game.pState->GetTileEffects().GetImprovements(),
@@ -358,10 +358,10 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
 TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][terraform]")
 {
     TerraformGame_ game(/*bExcludes=*/true);
-    BaseManager& home = game.MakeBase(4, 4);
+    BaseManager& home = game.MakeBase(8, 8);
     const ImprovementRegistry& rImprovements = game.fixtures.improvements;
 
-    Tile& rDirect = *game.pState->GetWorldMap().GetTile(5, 4);
+    Tile& rDirect = *game.pState->GetWorldMap().GetTile(9, 9);
     game.pState->GetTileEffects().AddOccupantWithEffects(rDirect, "Forest");
     game.pState->GetTileEffects().AddOccupantWithEffects(rDirect, "Road");
     game.pState->GetTileEffects().AddOccupantWithEffects(rDirect, "Mine");
@@ -369,7 +369,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK(rDirect.HasImprovement("Road"));
     CHECK(rDirect.HasImprovement("Mine"));
 
-    Tile& rFarmTile = *game.pState->GetWorldMap().GetTile(6, 4);
+    Tile& rFarmTile = *game.pState->GetWorldMap().GetTile(10, 10);
     game.pState->GetTileEffects().AddOccupantWithEffects(rFarmTile, "Forest");
     game.pState->GetTileEffects().AddOccupantWithEffects(rFarmTile, "Road");
     game.pState->GetTileEffects().AddOccupantWithEffects(rFarmTile, "Nutrients");
@@ -384,7 +384,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Road") == farmRemoves.end());
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Nutrients") == farmRemoves.end());
 
-    Unit& former = game.MakeFormer(6, 4, &home);
+    Unit& former = game.MakeFormer(10, 10, &home);
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
     game.FinishTerraform(former);
     CHECK(rFarmTile.HasImprovement("Farm"));
@@ -392,23 +392,23 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK(rFarmTile.HasImprovement("Road"));
     CHECK(rFarmTile.HasFeature("Nutrients"));
 
-    Unit& rockyFormer = game.MakeFormer(7, 4, &home);
-    Tile& rRocky = *game.pState->GetWorldMap().GetTile(7, 4);
+    Unit& rockyFormer = game.MakeFormer(11, 11, &home);
+    Tile& rRocky = *game.pState->GetWorldMap().GetTile(11, 11);
     rRocky.SetRockiness(Rockiness_t::Rocky);
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(rockyFormer, "Farm",
                                                                       *game.pState));
     CHECK(rRocky.GetRockiness() == Rockiness_t::Rocky);
     CHECK_FALSE(rRocky.HasImprovement("Farm"));
 
-    Unit& fungusFormer = game.MakeFormer(8, 4, &home);
-    Tile& rBlockedFungus = *game.pState->GetWorldMap().GetTile(8, 4);
+    Unit& fungusFormer = game.MakeFormer(12, 12, &home);
+    Tile& rBlockedFungus = *game.pState->GetWorldMap().GetTile(12, 12);
     game.pState->GetTileEffects().AddOccupantWithEffects(rBlockedFungus, "Fungus");
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(fungusFormer, "Farm",
                                                                       *game.pState));
     CHECK_FALSE(rBlockedFungus.HasImprovement("Farm"));
     CHECK(rBlockedFungus.HasFeature("Fungus"));
 
-    Tile& rFungusTile = *game.pState->GetWorldMap().GetTile(3, 4);
+    Tile& rFungusTile = *game.pState->GetWorldMap().GetTile(7, 7);
     game.pState->GetTileEffects().AddOccupantWithEffects(rFungusTile, "Farm");
     game.pState->GetTileEffects().AddOccupantWithEffects(rFungusTile, "Road");
     game.pState->GetTileEffects().AddOccupantWithEffects(rFungusTile, "Nutrients");
@@ -441,9 +441,9 @@ TEST_CASE("A coexistence override lets Farm share a rocky tile", "[unit][terrafo
     effect.effect = overrideFx;
     waiver.effects.push_back(effect);
 
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home, &waiver);
-    Tile& rocky = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home, &waiver);
+    Tile& rocky = *game.pState->GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
@@ -467,9 +467,9 @@ TEST_CASE("A coexistence waiver outlives the former that earned it", "[unit][ter
     effect.effect = overrideFx;
     waiver.effects.push_back(effect);
 
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home, &waiver);
-    Tile& rocky = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home, &waiver);
+    Tile& rocky = *game.pState->GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
@@ -502,9 +502,9 @@ TEST_CASE("A coexistence waiver dies with the occupant it was granted for",
     effect.effect = overrideFx;
     waiver.effects.push_back(effect);
 
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home, &waiver);
-    Tile& rocky = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home, &waiver);
+    Tile& rocky = *game.pState->GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(former, "Farm", *game.pState));
@@ -526,7 +526,7 @@ TEST_CASE("An improvement with no waiver still loses to terrain it cannot share"
           "[unit][terraform]")
 {
     TerraformGame_ game;
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
     game.pState->GetTileEffects().AddOccupantWithEffects(tile, "Farm");
     REQUIRE(tile.HasImprovement("Farm"));
 
@@ -539,9 +539,9 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
     // The order has already been paid for. If terrain shifted while it ran, the tile keeps
     // what it had rather than losing the incumbent to a placement that then refuses.
     TerraformGame_ game(/*bExcludes=*/true);
-    BaseManager& home = game.MakeBase(4, 4);
-    Unit& former = game.MakeFormer(6, 4, &home);
-    Tile& tile = *game.pState->GetWorldMap().GetTile(6, 4);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.pState->GetWorldMap().GetTile(10, 10);
 
     // Road is the incumbent because it shares a tile with Rocky quite happily; Farm is the
     // project because it excludes Rocky, so the placement refuses on terrain it cannot clear.

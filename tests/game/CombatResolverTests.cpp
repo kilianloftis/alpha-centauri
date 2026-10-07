@@ -13,6 +13,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/map/Tile.h"
+#include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
 
@@ -88,8 +89,8 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
     // Disciplined = 0% morale so ResolveCombatUnitStat matches weapon/armour only.
     attacker.SetXp(2);
     defender.SetXp(2);
@@ -119,8 +120,8 @@ TEST_CASE("Partial movement scales attack strength by the leftover fraction of a
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
     attacker.SetXp(2);
     defender.SetXp(2);
 
@@ -170,13 +171,13 @@ TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat]
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& landAttacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& landAttacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& airAttacker =
-        fixture.MakeUnit(player, 4, 5, {"test_flight_chassis", "test_weapon"});
+        fixture.MakeUnit(player, 7, 9, {"test_flight_chassis", "test_weapon"});
     Unit& orbitalAttacker =
-        fixture.MakeUnit(player, 4, 3, {"test_orbital_chassis", "test_weapon"});
+        fixture.MakeUnit(player, 9, 7, {"test_orbital_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor", "aaa_tracking"});
+        fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor", "aaa_tracking"});
     landAttacker.SetXp(2);
     airAttacker.SetXp(2);
     orbitalAttacker.SetXp(2);
@@ -211,14 +212,14 @@ TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea"
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4, {"test_chassis", "test_weapon", "air_superiority"});
+        player, 8, 8, {"test_chassis", "test_weapon", "air_superiority"});
     Unit& baseline =
-        fixture.MakeUnit(player, 3, 4, {"test_chassis", "test_weapon"});
-    Unit& landDefender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+        fixture.MakeUnit(player, 7, 7, {"test_chassis", "test_weapon"});
+    Unit& landDefender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
     Unit& airDefender =
-        fixture.MakeUnit(enemy, 5, 5, {"test_flight_chassis", "test_armor"});
+        fixture.MakeUnit(enemy, 8, 10, {"test_flight_chassis", "test_armor"});
     Unit& seaDefender =
-        fixture.MakeUnit(enemy, 5, 3, {"test_sea_chassis", "test_armor"});
+        fixture.MakeUnit(enemy, 10, 8, {"test_sea_chassis", "test_armor"});
     attacker.SetXp(2);
     baseline.SetXp(2);
     landDefender.SetXp(2);
@@ -257,8 +258,8 @@ TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
 
     // Attack 4 vs Defense 0 → defender strength 0 always rolls 0; attacker wins unless it
     // also rolls 0 (tie → defender).
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const UnitId_t defenderId = defender.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
@@ -282,7 +283,7 @@ TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
     CHECK_FALSE(result.bAttackerDestroyed);
     CHECK(result.victor == CombatSide_t::Attacker);
     CHECK(result.defenderId == defenderId);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).empty());
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).empty());
 }
 
 TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat][single-use]")
@@ -292,8 +293,8 @@ TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat]
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_single_use_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_single_use_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     REQUIRE(attacker.GetFlag(RuleFlagId_t::SingleUse));
 
     // Expenditure is on UnitOrderExecutor::TryAttack, not CombatResolver::Resolve.
@@ -304,8 +305,8 @@ TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat]
     CHECK(result->bDefenderDestroyed);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->victor == CombatSide_t::Attacker);
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).empty());
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).empty());
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).empty());
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).empty());
 }
 
 TEST_CASE("Zero vs zero combat: ties favour the defender until attacker dies", "[combat]")
@@ -315,8 +316,8 @@ TEST_CASE("Zero vs zero combat: ties favour the defender until attacker dies", "
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const int attackerHp = attacker.GetCurrentHp();
 
     CombatHarness_ harness(fixture, /*seed*/ 7);
@@ -343,8 +344,8 @@ TEST_CASE("Each round deals 1 damage and records HP snapshots", "[combat]")
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const int startAtkHp = attacker.GetCurrentHp();
     const int startDefHp = defender.GetCurrentHp();
 
@@ -380,12 +381,12 @@ TEST_CASE("Tile defense multiplier scales defender strength", "[combat]")
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
 
-    fixture.At(5, 4).SetRockiness(Rockiness_t::Rocky);
+    fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
     const double mult =
-        fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), enemy.GetFactionId());
+        fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 9), enemy.GetFactionId());
     REQUIRE(mult == Catch::Approx(1.25));
 
     const int defenseRating = ResolveStat(defender, StatId_t::Defense);
@@ -406,10 +407,10 @@ TEST_CASE("Psi combat ignores additive ratings and applies multipliers to one", 
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4,
+        player, 8, 8,
         {"test_chassis", "test_weapon", "test_psi", "test_psi_attack_modifiers"});
     Unit& defender = fixture.MakeUnit(
-        enemy, 5, 4,
+        enemy, 9, 9,
         {"test_chassis", "test_armor", "test_psi_defense_modifiers"});
     // Disciplined = 0% morale so psi percents are unmodified by rank.
     attacker.SetXp(2);
@@ -437,10 +438,10 @@ TEST_CASE("Partial movement scales psi attack strength by the leftover fraction"
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4,
+        player, 8, 8,
         {"test_chassis", "test_weapon", "test_psi", "test_psi_attack_modifiers"});
     Unit& defender = fixture.MakeUnit(
-        enemy, 5, 4,
+        enemy, 9, 9,
         {"test_chassis", "test_armor", "test_psi_defense_modifiers"});
     attacker.SetXp(2);
     defender.SetXp(2);
@@ -476,9 +477,9 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         Faction& player = fixture.MakeFaction();
         Faction& enemy = fixture.MakeFaction();
         Unit& attacker =
-            fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_psi"});
+            fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
         Unit& defender =
-            fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
         attacker.SetXp(2);
         defender.SetXp(2);
 
@@ -496,9 +497,9 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         Faction& player = fixture.MakeFaction();
         Faction& enemy = fixture.MakeFaction();
         Unit& attacker =
-            fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+            fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
         Unit& defender =
-            fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor", "test_psi"});
+            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor", "test_psi"});
         attacker.SetXp(2);
         defender.SetXp(2);
 
@@ -518,8 +519,8 @@ TEST_CASE("Psi round damage equals the receiving unit's reactor tier", "[combat]
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4, {"test_chassis", "test_weapon", "test_psi", "test_psi_tier_2"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+        player, 8, 8, {"test_chassis", "test_weapon", "test_psi", "test_psi_tier_2"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
 
     CombatHarness_ harness(fixture, /*seed*/ 17);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -543,8 +544,8 @@ TEST_CASE("Conventional combat keeps fixed one damage despite psi tier", "[comba
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4, {"test_chassis", "test_weapon", "test_psi_tier_2"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        player, 8, 8, {"test_chassis", "test_weapon", "test_psi_tier_2"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
     CombatHarness_ harness(fixture, /*seed*/ 9);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -591,8 +592,8 @@ struct DisengageSetup_
         FillLand_(fixture);
         pPlayer = &fixture.MakeFaction();
         pEnemy = &fixture.MakeFaction();
-        pAttacker = &fixture.MakeUnit(*pPlayer, 5, 4, attackerParts);
-        pDefender = &fixture.MakeUnit(*pEnemy, 4, 4, defenderParts);
+        pAttacker = &fixture.MakeUnit(*pPlayer, 9, 9, attackerParts);
+        pDefender = &fixture.MakeUnit(*pEnemy, 8, 8, defenderParts);
     }
 };
 
@@ -620,7 +621,9 @@ TEST_CASE("Eligible defender disengages at half HP to an adjacent tile", "[comba
     // (those tiles are ZOC→ZOC violations from the defender's position).
     REQUIRE(result.pRetreatTile != nullptr);
     CHECK(&setup.pDefender->GetTile() == result.pRetreatTile);
-    CHECK(result.pRetreatTile->GetX() == 3);
+    const int width = setup.fixture.map.GetWidth();
+    CHECK(ChebyshevDistance(*result.pRetreatTile, setup.fixture.At(8, 8), width) == 1);
+    CHECK(ChebyshevDistance(*result.pRetreatTile, setup.fixture.At(9, 9), width) > 1);
 }
 
 TEST_CASE("Eligible attacker disengages at half HP to an adjacent tile", "[combat][disengage]")
@@ -685,7 +688,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("non-combat defender (attack 0)")
     {
         DisengageSetup_ setup;
-        Unit& scout = setup.fixture.MakeUnit(*setup.pEnemy, 4, 5, {"test_chassis"});
+        Unit& scout = setup.fixture.MakeUnit(*setup.pEnemy, 7, 9, {"test_chassis"});
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, scout);
         CHECK_FALSE(result.bDefenderDisengaged);
@@ -694,7 +697,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender stacked with another unit")
     {
         DisengageSetup_ setup;
-        setup.fixture.MakeUnit(*setup.pEnemy, 4, 4, {"test_chassis"});
+        setup.fixture.MakeUnit(*setup.pEnemy, 8, 8, {"test_chassis"});
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -748,7 +751,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender on a tile with a prevents_disengage feature (Bunker)")
     {
         DisengageSetup_ setup;
-        setup.fixture.ctx->AddOccupantWithEffects(setup.fixture.At(4, 4), "Bunker");
+        setup.fixture.ctx->AddOccupantWithEffects(setup.fixture.At(8, 8), "Bunker");
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -764,8 +767,8 @@ TEST_CASE("Air units never take part in disengage", "[combat][disengage]")
     Faction& enemy = fixture.MakeFaction();
 
     // A fast air defender over a slow land attacker still refuses to disengage.
-    Unit& attacker = fixture.MakeUnit(player, 5, 4, {"test_slow_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 4, 4, {"test_flight_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 9, 9, {"test_slow_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 8, 8, {"test_flight_chassis", "test_weapon"});
 
     CombatHarness_ harness(fixture, /*seed*/ 11);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -778,8 +781,8 @@ TEST_CASE("No valid retreat square means fighting on", "[combat][disengage]")
     DisengageSetup_ setup;
     // Water everywhere except the two combat tiles: a land defender has nowhere to go.
     FillWater_(setup.fixture);
-    setup.fixture.At(4, 4).SetElevation(100);
-    setup.fixture.At(5, 4).SetElevation(100);
+    setup.fixture.At(8, 8).SetElevation(100);
+    setup.fixture.At(9, 9).SetElevation(100);
 
     CombatHarness_ harness(setup.fixture, /*seed*/ 11);
     const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -824,10 +827,10 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
     {
         DisengageSetup_ setup;
         FillWater_(setup.fixture);
-        setup.fixture.At(4, 4).SetElevation(100);
-        setup.fixture.At(5, 4).SetElevation(100);
-        setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
+        setup.fixture.At(8, 8).SetElevation(100);
+        setup.fixture.At(9, 9).SetElevation(100);
+        setup.fixture.At(7, 7).SetElevation(100);
+        setup.fixture.At(7, 7).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
@@ -839,18 +842,18 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
     {
         DisengageSetup_ setup;
         FillWater_(setup.fixture);
-        setup.fixture.At(4, 4).SetElevation(100);
-        setup.fixture.At(5, 4).SetElevation(100);
-        setup.fixture.At(3, 4).SetElevation(100);
-        setup.fixture.At(3, 4).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
-        setup.fixture.At(3, 4).AddImprovement(setup.fixture.improvements.Get("Road"));
+        setup.fixture.At(8, 8).SetElevation(100);
+        setup.fixture.At(9, 9).SetElevation(100);
+        setup.fixture.At(7, 7).SetElevation(100);
+        setup.fixture.At(7, 7).AddTerrainFeature(setup.fixture.improvements.Get("Fungus"));
+        setup.fixture.At(7, 7).AddImprovement(setup.fixture.improvements.Get("Road"));
 
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
         REQUIRE(result.bDefenderDisengaged);
-        CHECK(result.pRetreatTile == &setup.fixture.At(3, 4));
-        CHECK(&setup.pDefender->GetTile() == &setup.fixture.At(3, 4));
+        CHECK(result.pRetreatTile == &setup.fixture.At(7, 7));
+        CHECK(&setup.pDefender->GetTile() == &setup.fixture.At(7, 7));
     }
 }
 
@@ -887,16 +890,16 @@ TEST_CASE("Killing a defender in the open damages the rest of the stack", "[comb
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
     CHECK(stackmate.GetCurrentHp() == 9);
 }
 
@@ -908,9 +911,9 @@ TEST_CASE("Collateral damage follows the attacker's reactor tier", "[combat][col
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_2"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_2"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
@@ -929,12 +932,12 @@ TEST_CASE("Base and bunker clamp collateral susceptibility to zero; an airbase d
         FillLand_(fixture);
         Faction& player = fixture.MakeFaction();
         Faction& enemy = fixture.MakeFaction();
-        fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), improvementId);
+        fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), improvementId);
 
         Unit& attacker =
-            fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_2"});
-        Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-        Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+            fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_2"});
+        Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+        Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
         defender.SetCurrentHp(1);
 
         CombatHarness_ harness(fixture, /*seed*/ 42);
@@ -955,9 +958,9 @@ TEST_CASE("A surviving defender leaves the stack untouched", "[combat][collatera
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
     CombatHarness_ harness(fixture, /*seed*/ 7);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -975,9 +978,9 @@ TEST_CASE("Collateral that reaches zero hit points destroys the stackmate", "[co
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     defender.SetCurrentHp(1);
     stackmate.SetCurrentHp(1);
     const UnitId_t stackmateId = stackmate.GetUnitId();
@@ -986,7 +989,7 @@ TEST_CASE("Collateral that reaches zero hit points destroys the stackmate", "[co
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    CHECK(FindOnTile_(fixture, 5, 4, stackmateId) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, stackmateId) == nullptr);
 }
 
 TEST_CASE("A wild native stack is wiped when one of them dies in the open", "[combat][collateral]")
@@ -1000,11 +1003,11 @@ TEST_CASE("A wild native stack is wiped when one of them dies in the open", "[co
     Faction& wild = fixture.MakeFaction(wildDefinition);
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     Unit& stackmate =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     const UnitId_t stackmateId = stackmate.GetUnitId();
 
@@ -1012,7 +1015,7 @@ TEST_CASE("A wild native stack is wiped when one of them dies in the open", "[co
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    CHECK(FindOnTile_(fixture, 5, 4, stackmateId) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, stackmateId) == nullptr);
 }
 
 TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][collateral]")
@@ -1024,21 +1027,21 @@ TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][co
     wildDefinition.id = "wild_life";
     wildDefinition.identity.species = FactionSpecies_t::NativeLife;
     Faction& wild = fixture.MakeFaction(wildDefinition);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     Unit& stackmate =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
     CHECK(stackmate.GetCurrentHp() == 10);
 }
 
@@ -1050,10 +1053,10 @@ TEST_CASE("A faction-owned native takes collateral damage and stays alive", "[co
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     Unit& native =
-        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     REQUIRE(native.GetDesign().IsNativeLife());
 
@@ -1061,7 +1064,7 @@ TEST_CASE("A faction-owned native takes collateral damage and stays alive", "[co
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, native.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, native.GetUnitId()) != nullptr);
     CHECK(native.GetCurrentHp() == 9);
 }
 
@@ -1073,9 +1076,9 @@ TEST_CASE("A native-life attacker deals one collateral damage", "[combat][collat
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker = fixture.MakeUnit(
-        player, 4, 4, {"test_chassis", "native_life_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        player, 8, 8, {"test_chassis", "native_life_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     defender.SetCurrentHp(1);
     REQUIRE(attacker.GetDesign().IsNativeLife());
 
@@ -1093,9 +1096,9 @@ TEST_CASE("Killing a wild native pays planet pearls for its lifecycle stage", "[
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(0);
 
@@ -1113,9 +1116,9 @@ TEST_CASE("A later lifecycle stage pays another multiple of the pearl base", "[c
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(2);
 
@@ -1133,11 +1136,11 @@ TEST_CASE("Every wild native destroyed in the stack pays pearls", "[combat][pear
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     Unit& stackmate =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(0);
     stackmate.SetXp(1);
@@ -1146,7 +1149,7 @@ TEST_CASE("Every wild native destroyed in the stack pays pearls", "[combat][pear
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    CHECK(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) == nullptr);
     CHECK(player.GetEconomy().GetEnergy() == 30);
 }
 
@@ -1157,9 +1160,9 @@ TEST_CASE("A faction-owned native pays no planet pearls", "[combat][pearls]")
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(0);
 
@@ -1176,13 +1179,13 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     Unit& stackmate =
-        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+        fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(0);
     stackmate.SetXp(3);
@@ -1191,7 +1194,7 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
     CHECK(player.GetEconomy().GetEnergy() == 10);
 }
 
@@ -1209,10 +1212,10 @@ TEST_CASE("A unit with susceptibility zero takes no splash while a stackmate doe
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& immune = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_susceptibility_0"});
-    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& immune = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_susceptibility_0"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
@@ -1226,18 +1229,18 @@ TEST_CASE("A unit with susceptibility zero takes no splash while a stackmate doe
 TEST_CASE("An air unit takes no splash and a wild locust in the open is still wiped",
           "[combat][collateral]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& air = fixture.MakeUnit(enemy, 5, 4, {"test_flight_chassis"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& air = fixture.MakeUnit(enemy, 9, 9, {"test_flight_chassis"});
     Unit& locust =
-        fixture.MakeUnit(wild, 5, 4, {"test_flight_chassis", "test_native_life"});
+        fixture.MakeUnit(wild, 9, 9, {"test_flight_chassis", "test_native_life"});
     defender.SetCurrentHp(1);
     const UnitId_t locustId = locust.GetUnitId();
 
@@ -1245,22 +1248,22 @@ TEST_CASE("An air unit takes no splash and a wild locust in the open is still wi
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, air.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, air.GetUnitId()) != nullptr);
     CHECK(air.GetCurrentHp() == 10);
-    CHECK(FindOnTile_(fixture, 5, 4, locustId) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, locustId) == nullptr);
 }
 
 TEST_CASE("A non-combatant is destroyed when no combatant remains", "[combat][collateral]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
     defender.SetCurrentHp(1);
     const UnitId_t probeId = probe.GetUnitId();
 
@@ -1268,20 +1271,20 @@ TEST_CASE("A non-combatant is destroyed when no combatant remains", "[combat][co
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    CHECK(FindOnTile_(fixture, 5, 4, probeId) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, probeId) == nullptr);
 }
 
 TEST_CASE("A stack of only non-combatants is wiped", "[combat][collateral]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
-    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
     defender.SetCurrentHp(1);
     const UnitId_t probeId = probe.GetUnitId();
 
@@ -1289,29 +1292,29 @@ TEST_CASE("A stack of only non-combatants is wiped", "[combat][collateral]")
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    CHECK(FindOnTile_(fixture, 5, 4, probeId) == nullptr);
+    CHECK(FindOnTile_(fixture, 9, 9, probeId) == nullptr);
 }
 
 TEST_CASE("A non-combatant stacked with a surviving combatant takes only the splash",
           "[combat][collateral]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& combatant = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& combatant = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);
     CHECK(combatant.GetCurrentHp() == 9);
     CHECK(probe.GetCurrentHp() == 9);
 }
@@ -1325,37 +1328,37 @@ TEST_CASE("Without the world rule a lone non-combatant takes only the splash",
     Faction& enemy = fixture.MakeFaction();
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);
     CHECK(probe.GetCurrentHp() == 9);
 }
 
 TEST_CASE("A non-combatant in a base survives the defender's death", "[combat][collateral]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    fixture.ctx->AddOccupantWithEffects(fixture.At(5, 4), "Base");
+    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
     Unit& attacker =
-        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
-    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);
     CHECK(probe.GetCurrentHp() == 10);
 }

@@ -83,6 +83,8 @@ add_executable(effects-tests
     game/FungusGenerationTests.cpp
     game/TileBonusGenerationTests.cpp
     game/MapRulesTests.cpp
+    game/WorldMapTests.cpp
+    game/MapUtilsTests.cpp
     game/WorldGenPipelineTests.cpp
     game/ConfigStrictnessTests.cpp
     game/PopulationCalculatorTests.cpp
@@ -119,6 +121,8 @@ add_executable(effects-tests
     game/PlanetaryCouncilTests.cpp
     game/AtrocityTests.cpp
     ui/ModalContractTests.cpp
+    ui/CameraInputControllerTests.cpp
+    ui/MinimapDisplayTests.cpp
     ui/ListSelectorPopupTests.cpp
     ui/HurryProductionPopupTests.cpp
     ui/BaseViewTests.cpp

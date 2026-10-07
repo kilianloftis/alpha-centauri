@@ -55,7 +55,7 @@ struct BuildingGame_
 
     BuildingGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -92,9 +92,9 @@ TEST_CASE("A secret project cannot be built twice, in any base of any faction",
     // BaseProduction pass — would both complete it, because the path that actually grants a
     // building (ProductionManager -> OnProductionCompleted -> AddBuilding) checked nothing.
     BuildingGame_ game;
-    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& playerSecond = game.MakeBase(*game.pPlayer, 6, 2);
-    BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& playerSecond = game.MakeBase(*game.pPlayer, 12, 8);
+    BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);
 
     playerBase.GetBuildingManager().AddBuilding("test_secret_project");
 
@@ -117,7 +117,7 @@ TEST_CASE("A non-allowMultiple building cannot be duplicated in one base", "[bui
     // allowMultiple is the config field that says whether stacking is legal; nothing enforced
     // it at the point that adds a building.
     BuildingGame_ game;
-    BaseManager& base = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& base = game.MakeBase(*game.pPlayer, 8, 4);
 
     base.GetBuildingManager().AddBuilding("Command_Center");
     CHECK_THROWS_AS(base.GetBuildingManager().AddBuilding("Command_Center"), std::runtime_error);
@@ -135,7 +135,7 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
     // IsCompleted answered both questions with one method, so a razed project read as somebody's
     // — wrong for any caller that wants ownership (a UI label, a victory check, diplomacy).
     BuildingGame_ game;
-    BaseManager& base = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& base = game.MakeBase(*game.pPlayer, 8, 4);
     const SecretProjectAvailabilityCalculator& rAvailability =
         game.pState->GetSecretProjectAvailability();
 
@@ -152,7 +152,7 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
     CHECK_FALSE(rAvailability.IsOwnedByAnyFaction("test_secret_project"));
 
     // And it cannot be rebuilt, by anyone.
-    BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
+    BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);
     CHECK_THROWS_AS(aiBase.GetBuildingManager().AddBuilding("test_secret_project"),
                     std::runtime_error);
 }
@@ -164,8 +164,8 @@ TEST_CASE("Losing a secret-project race drops the item instead of killing the tu
     // and nothing revokes an already-queued item when one completes. Completing the second must
     // not throw: nothing catches between here and main().
     BuildingGame_ game;
-    BaseManager& winner = game.MakeBase(*game.pPlayer, 2, 2);
-    BaseManager& loser = game.MakeBase(*game.pPlayer, 6, 2);
+    BaseManager& winner = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& loser = game.MakeBase(*game.pPlayer, 12, 8);
 
     winner.GetBuildingManager().AddBuilding("test_secret_project");
     REQUIRE_FALSE(loser.GetBuildingManager().CanAddBuilding("test_secret_project"));

@@ -67,33 +67,30 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
     // only grant sight to the territory owner.
     const FactionId_t factionId = rFaction.GetFactionId();
     const TerritoryMap& rTerritory = rWorldMap.GetTerritory();
-    for (int y = 0; y < rWorldMap.GetHeight(); ++y)
+    for (const auto& pOwnedTile : rWorldMap.GetTiles())
     {
-        for (int x = 0; x < rWorldMap.GetWidth(); ++x)
+        const Tile* pTile = pOwnedTile.get();
+        if (!pTile)
         {
-            const Tile* pTile = rWorldMap.GetTile(x, y);
-            if (!pTile)
+            continue;
+        }
+        for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
+        {
+            if (!pImprovement)
             {
                 continue;
             }
-            for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
+            const int sight = pImprovement->visionRadius;
+            if (sight <= 0)
             {
-                if (!pImprovement)
-                {
-                    continue;
-                }
-                const int sight = pImprovement->visionRadius;
-                if (sight <= 0)
-                {
-                    continue;
-                }
-                if (pImprovement->ownedByTerritory
-                    && rTerritory.GetOwner(*pTile) != factionId)
-                {
-                    continue;
-                }
-                RevealAround_(*pTile, sight, rWorldMap, rExplored);
+                continue;
             }
+            if (pImprovement->ownedByTerritory
+                && rTerritory.GetOwner(*pTile) != factionId)
+            {
+                continue;
+            }
+            RevealAround_(*pTile, sight, rWorldMap, rExplored);
         }
     }
 }

@@ -43,20 +43,16 @@ TEST_CASE("CoastalMoistureBonus is higher near water than inland",
 {
     const MoistureDecorationConfig_t cfg = DefaultMoisture_();
     // Wide enough that mid-map is outside coastal radius even with X-wrap.
-    WorldMap world(11, 7, actest::TestMapRules());
+    WorldMap world(24, 13, actest::TestMapRules());
 
-    // Fill with land, then a water column on the left.
+    // Fill with land, then a water band on the west seam.
     for (auto& pTile : world.GetTiles())
     {
-        pTile->SetElevation(100);
-    }
-    for (int y = 0; y < world.GetHeight(); ++y)
-    {
-        world.GetTile(0, y)->SetElevation(-100);
+        pTile->SetElevation(pTile->GetX() <= 1 ? -100 : 100);
     }
 
-    Tile& coast = *world.GetTile(1, 3);
-    Tile& inland = *world.GetTile(5, 3);
+    Tile& coast = *world.GetTile(2, 6);
+    Tile& inland = *world.GetTile(12, 6);
 
     const float coastalBonus = CoastalMoistureBonus(coast, world, cfg);
     const float inlandBonus = CoastalMoistureBonus(inland, world, cfg);
@@ -66,7 +62,7 @@ TEST_CASE("CoastalMoistureBonus is higher near water than inland",
     CHECK(coastalBonus > inlandBonus);
 
     // Water itself gets no coastal bonus.
-    CHECK(CoastalMoistureBonus(*world.GetTile(0, 3), world, cfg) == Catch::Approx(0.0f));
+    CHECK(CoastalMoistureBonus(*world.GetTile(0, 4), world, cfg) == Catch::Approx(0.0f));
 }
 
 TEST_CASE("OrographicMoistureBias: western face wetter than eastern face of a ridge",

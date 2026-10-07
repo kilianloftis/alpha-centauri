@@ -5,6 +5,7 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
@@ -48,6 +49,26 @@ void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t
     rPixels[offset + 3] = rColor.a;
 }
 
+Color_t TileMinimapColor_(const Tile& rTile, bool bFogged)
+{
+    if (rTile.HasFeature(ImprovementIds::k_Fungus))
+    {
+        Color_t color = Style().tileRenderer.fungusColor;
+        if (bFogged)
+        {
+            const float dim = Style().tileRenderer.fogFillDimRatio;
+            color = Color_t{
+                static_cast<uint8_t>(static_cast<float>(color.r) * dim),
+                static_cast<uint8_t>(static_cast<float>(color.g) * dim),
+                static_cast<uint8_t>(static_cast<float>(color.b) * dim),
+                color.a,
+            };
+        }
+        return color;
+    }
+    return TileRenderer::FillColor(rTile, bFogged);
+}
+
 } // namespace
 
 MinimapDisplay::MinimapDisplay(const GameState& rGameState, WindowLayout_t layout,
@@ -75,15 +96,17 @@ MinimapDisplay::MapContentLayout_t MinimapDisplay::ComputeMapContentLayout_() co
         throw std::runtime_error("MinimapDisplay: world map has zero size");
     }
 
-    // Fit the whole map into the panel while preserving aspect ratio (letterbox).
-    const float tileSize = std::min(m_layout.width / static_cast<float>(mapWidth),
-                                    m_layout.height / static_cast<float>(mapHeight));
-    const float mapPixelW = tileSize * static_cast<float>(mapWidth);
-    const float mapPixelH = tileSize * static_cast<float>(mapHeight);
+    // width×height image; each texel is twice as wide as tall on screen (brick layout).
+    const float pixelH = std::min(m_layout.height / static_cast<float>(mapHeight),
+                                  m_layout.width / (2.0f * static_cast<float>(mapWidth)));
+    const float pixelW = 2.0f * pixelH;
+    const float mapPixelW = pixelW * static_cast<float>(mapWidth);
+    const float mapPixelH = pixelH * static_cast<float>(mapHeight);
     return MapContentLayout_t{
         m_layout.x + (m_layout.width - mapPixelW) * 0.5f,
         m_layout.y + (m_layout.height - mapPixelH) * 0.5f,
-        tileSize,
+        pixelW,
+        pixelH,
         mapWidth,
         mapHeight,
     };
@@ -100,13 +123,25 @@ std::optional<std::pair<int, int>> MinimapDisplay::HitTestTile_(float x, float y
         return std::nullopt;
     }
 
-    const int tileX = static_cast<int>(localX / layout.tileSize);
-    const int tileY = static_cast<int>(localY / layout.tileSize);
-    if (tileX < 0 || tileX >= layout.mapWidth || tileY < 0 || tileY >= layout.mapHeight)
+    const int px = static_cast<int>(localX / layout.pixelW);
+    const int py = static_cast<int>(localY / layout.pixelH);
+    if (px < 0 || px >= layout.mapWidth || py < 0 || py >= layout.mapHeight)
     {
         return std::nullopt;
     }
-    return std::make_pair(tileX, tileY);
+
+    // Tile (x, y) fills pixels x and x+1 of row y.
+    int tileX = ((px + py) & 1) ? px - 1 : px;
+    if (tileX < 0)
+    {
+        tileX += layout.mapWidth;
+    }
+    tileX = WrapX(tileX, layout.mapWidth);
+    if (!m_rGameState.GetWorldMap().GetTile(tileX, py))
+    {
+        return std::nullopt;
+    }
+    return std::make_pair(tileX, py);
 }
 
 void MinimapDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
@@ -137,15 +172,15 @@ void MinimapDisplay::RenderViewportFrame_(Graphics& rGraphics,
     const auto& style = Style().minimapDisplay;
     const int camX = m_rViewport.CameraX();
 
-    auto drawBox = [&](int tileX, int cols) {
+    auto drawBox = [&](int mapX, int cols) {
         if (cols <= 0)
         {
             return;
         }
-        const float x = rLayout.originX + static_cast<float>(tileX) * rLayout.tileSize;
-        const float y = rLayout.originY + static_cast<float>(rowStart) * rLayout.tileSize;
-        const float w = static_cast<float>(cols) * rLayout.tileSize;
-        const float h = static_cast<float>(viewRows) * rLayout.tileSize;
+        const float x = rLayout.originX + static_cast<float>(mapX) * rLayout.pixelW;
+        const float y = rLayout.originY + static_cast<float>(rowStart) * rLayout.pixelH;
+        const float w = static_cast<float>(cols) * rLayout.pixelW;
+        const float h = static_cast<float>(viewRows) * rLayout.pixelH;
         rGraphics.DrawRect(x, y, w, h, style.viewportBorderColor, style.viewportBorderWidth);
     };
 
@@ -199,48 +234,27 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
         static_cast<size_t>(rLayout.mapWidth) * static_cast<size_t>(rLayout.mapHeight);
     m_terrainPixels.assign(pixelCount * 4, 0);
 
-    for (int row = 0; row < rLayout.mapHeight; ++row)
+    // Unexplored pixels stay shroud (already filled). Paint each tile into x and x+1 of row y.
+    for (const auto& pOwnedTile : rWorldMap.GetTiles())
     {
-        for (int col = 0; col < rLayout.mapWidth; ++col)
+        const Tile& rTile = *pOwnedTile;
+        const int x = rTile.GetX();
+        const int y = rTile.GetY();
+
+        Color_t color = shroud;
+        if (!fog.pExplored || fog.pExplored->IsExplored(rTile))
         {
-            const Tile* pTile = rWorldMap.GetTile(col, row);
-            if (!pTile)
-            {
-                throw std::runtime_error("MinimapDisplay: missing tile in world map");
-            }
+            const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(rTile);
+            color = TileMinimapColor_(rTile, bFogged);
+        }
 
+        for (int dx = 0; dx < 2; ++dx)
+        {
+            const int px = WrapX(x + dx, rLayout.mapWidth);
             const size_t index =
-                static_cast<size_t>(row) * static_cast<size_t>(rLayout.mapWidth)
-                + static_cast<size_t>(col);
-
-            if (fog.pExplored && !fog.pExplored->IsExplored(*pTile))
-            {
-                WritePixel_(m_terrainPixels, index, shroud);
-                continue;
-            }
-
-            const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(*pTile);
-            // World map draws fungus as an overlay sprite; the 1×1 minimap pixel uses the
-            // solid fungus cue so patches stay readable at thumbnail scale.
-            if (pTile->HasFeature(ImprovementIds::k_Fungus))
-            {
-                Color_t color = Style().tileRenderer.fungusColor;
-                if (bFogged)
-                {
-                    const float dim = Style().tileRenderer.fogFillDimRatio;
-                    color = Color_t{
-                        static_cast<uint8_t>(static_cast<float>(color.r) * dim),
-                        static_cast<uint8_t>(static_cast<float>(color.g) * dim),
-                        static_cast<uint8_t>(static_cast<float>(color.b) * dim),
-                        color.a,
-                    };
-                }
-                WritePixel_(m_terrainPixels, index, color);
-            }
-            else
-            {
-                WritePixel_(m_terrainPixels, index, TileRenderer::FillColor(*pTile, bFogged));
-            }
+                static_cast<size_t>(y) * static_cast<size_t>(rLayout.mapWidth)
+                + static_cast<size_t>(px);
+            WritePixel_(m_terrainPixels, index, color);
         }
     }
 
@@ -264,8 +278,8 @@ void MinimapDisplay::Render(Graphics& rGraphics)
 
     EnsureTerrainCache_(rGraphics, layout);
 
-    const float mapPixelW = layout.tileSize * static_cast<float>(layout.mapWidth);
-    const float mapPixelH = layout.tileSize * static_cast<float>(layout.mapHeight);
+    const float mapPixelW = layout.pixelW * static_cast<float>(layout.mapWidth);
+    const float mapPixelH = layout.pixelH * static_cast<float>(layout.mapHeight);
     if (!rGraphics.DrawSprite(m_textureId, layout.originX, layout.originY, mapPixelW, mapPixelH))
     {
         throw std::runtime_error("MinimapDisplay: failed to draw terrain cache texture");

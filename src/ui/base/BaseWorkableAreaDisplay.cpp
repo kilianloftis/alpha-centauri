@@ -46,10 +46,11 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
             continue;
         }
 
-        const int relX = DeltaX(rBaseTile.GetX(), pTile->GetX(), mapWidth);
-        const int relY = pTile->GetY() - rBaseTile.GetY();
-        const float screenX = m_startX + (static_cast<float>(relX) + style.gridCenterOffset) * m_tileSize;
-        const float screenY = m_startY + (static_cast<float>(relY) + style.gridCenterOffset) * m_tileSize;
+        const LatticeDelta_t d = LatticeDelta(rBaseTile, *pTile, mapWidth);
+        const float screenX =
+            m_startX + (static_cast<float>(d.p) + style.gridCenterOffset) * m_tileSize;
+        const float screenY =
+            m_startY + (static_cast<float>(d.q) + style.gridCenterOffset) * m_tileSize;
 
         m_tileRects.push_back(TileRect_t{
             Rectangle_t{screenX, screenY, m_tileSize, m_tileSize},

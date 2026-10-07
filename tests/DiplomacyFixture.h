@@ -40,8 +40,8 @@ struct DiplomacyFixture
         pA = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, true);
         pB = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, false);
         pC = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, false);
-        pBaseA = &MakeSessionBase(fixtures, *pState, *pA, 1, 4);
-        pBaseB = &MakeSessionBase(fixtures, *pState, *pB, 7, 4);
+        pBaseA = &MakeSessionBase(fixtures, *pState, *pA, 5, 5);
+        pBaseB = &MakeSessionBase(fixtures, *pState, *pB, 11, 11);
     }
 
     ac::DiplomacyLedger& Ledger() { return pState->GetDiplomacyLedger(); }

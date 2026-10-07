@@ -330,7 +330,6 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 # it and drive views against a recording Graphics.
 # ---------------------------------------------------------------------------
 add_library(ac-ui STATIC
-    ui/TileHitTester.cpp
     ui/TileRenderer.cpp
     ui/TileSpriteEdgeInset.cpp
     ui/CoastOverlay.cpp

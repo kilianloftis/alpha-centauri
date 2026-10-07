@@ -95,7 +95,7 @@ struct UnitProductionGame_
 
     UnitProductionGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -164,7 +164,7 @@ void CheckQueuedStockpileEnergy_(const BaseManager& rBase, UnitProductionGame_& 
 TEST_CASE("All unit designs appear in the base constructable list", "[production][unit]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(2, 2);
+    BaseManager& base = game.MakeBase(8, 4);
 
     const UnitDesign& rScout = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
     const UnitDesign& rSlow = game.AddDesign({"test_slow_chassis", "test_weapon", "test_armor"});
@@ -183,7 +183,7 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
           "[production][unit][population]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     REQUIRE(base.GetPopulation().GetSize() == 3);
 
     const UnitDesign& rPod =
@@ -206,7 +206,7 @@ TEST_CASE("Colony pod that would abandon the base asks for confirmation",
           "[production][unit][population][abandon]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -234,7 +234,7 @@ TEST_CASE("CompletePendingProduction completes the unit and empties the base",
           "[production][unit][population][abandon]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -263,7 +263,7 @@ TEST_CASE("Deferring completion keeps the base and does not disable production",
     // Deferring answers for one item for one turn. It is not riot: no DisableProduction flag,
     // and the base is otherwise working normally. See docs/game-rules-decisions.md.
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -316,7 +316,7 @@ TEST_CASE("A deferred item completes on its own once the base has grown",
     // The deferral does not latch: the question is re-derived each turn, so a base that grows
     // finishes the item with no further player action and no rule about lifting a flag.
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -347,7 +347,7 @@ TEST_CASE("Size-1 colony pod with pending growth completes without abandon or ra
           "[production][unit][population][abandon][growth]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -376,7 +376,7 @@ TEST_CASE("Size-2 colony pod that starves down to nothing asks for confirmation"
           "[production][unit][population][abandon][growth]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     base.GetPopulation().RemovePop();
     REQUIRE(base.GetPopulation().GetSize() == 2);
 
@@ -400,7 +400,7 @@ TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
           "[production][unit][population][abandon][growth]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -422,7 +422,7 @@ TEST_CASE("CreateUnit without production does not apply on-complete component ef
           "[production][unit][population]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     REQUIRE(base.GetPopulation().GetSize() == 3);
 
     const UnitDesign& rPod =
@@ -438,7 +438,7 @@ TEST_CASE("BaseProduction yields for the player's answer and resumes after a def
           "[production][BaseProduction][abandon]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -480,7 +480,7 @@ TEST_CASE("BaseProduction AI defers an abandoning completion without yielding",
 {
     UnitProductionGame_ game;
     // pOther is not player-controlled.
-    BaseManager& base = game.MakeBase(*game.pOther, 4, 4);
+    BaseManager& base = game.MakeBase(*game.pOther, 8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();
@@ -504,7 +504,7 @@ TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues St
           "[production][BaseProduction][PlayerInteraction]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
@@ -545,7 +545,7 @@ TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues St
 TEST_CASE("Completing unit production places the unit on the base tile", "[production][unit]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
 
     REQUIRE(game.pFaction->GetUnitManager().Units().empty());
@@ -572,7 +572,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
 TEST_CASE("CreateBaseFromSnapshot restores a queued unit design", "[production][unit][snapshot]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(3, 3);
+    BaseManager& base = game.MakeBase(8, 6);
     const UnitDesign& rDesign = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
@@ -597,7 +597,7 @@ TEST_CASE("Transfer clears queued building when the new owner lacks its required
           "[production][transfer][tech-gate]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(2, 2);
+    BaseManager& base = game.MakeBase(8, 4);
     const BuildingConfig_t* pGated = game.fixtures.buildings().Find("test_gated_facility");
     REQUIRE(pGated != nullptr);
     REQUIRE_FALSE(pGated->IsAvailable(game.pOther->GetResearch().GetDiscoveredTechs()));
@@ -616,7 +616,7 @@ TEST_CASE("Transfer keeps queued building when the new owner has its required te
           "[production][transfer][tech-gate]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(2, 2);
+    BaseManager& base = game.MakeBase(8, 4);
     const BuildingConfig_t* pGated = game.fixtures.buildings().Find("test_gated_facility");
     REQUIRE(pGated != nullptr);
 
@@ -636,7 +636,7 @@ TEST_CASE("Transfer clears queued unit design when the new owner lacks component
           "[production][unit][transfer][tech-gate]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(5, 5);
+    BaseManager& base = game.MakeBase(8, 10);
     const std::vector<std::string> parts = {
         "test_chassis", "test_weapon", "test_armor", "test_gated_ability"};
     const UnitDesign& rGiverDesign = game.AddDesign(*game.pFaction, parts);
@@ -660,7 +660,7 @@ TEST_CASE("Transfer rebinds queued unit design when the new owner has it and its
           "[production][unit][transfer][tech-gate]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(5, 5);
+    BaseManager& base = game.MakeBase(8, 10);
     const std::vector<std::string> parts = {
         "test_chassis", "test_weapon", "test_armor", "test_gated_ability"};
     const UnitDesign& rGiverDesign = game.AddDesign(*game.pFaction, parts);
@@ -683,7 +683,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
@@ -711,7 +711,7 @@ TEST_CASE("Completion leftover uses the effective cost including prototype surch
           "[production][retool][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
     REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
@@ -732,8 +732,8 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& withSkunk = game.MakeBase(2, 2);
-    BaseManager& without = game.MakeBase(6, 6);
+    BaseManager& withSkunk = game.MakeBase(8, 4);
+    BaseManager& without = game.MakeBase(8, 12);
     withSkunk.GetBuildingManager().AddBuilding("Skunkworks");
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
@@ -764,7 +764,7 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
 TEST_CASE("Skunkworks cancels retool penalty", "[production][retool][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     base.GetBuildingManager().AddBuilding("Skunkworks");
     const UnitDesign& rFirst =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
@@ -783,7 +783,7 @@ TEST_CASE("Prototype GrantXp stacks with on_unit_produced train bonuses",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     base.GetBuildingManager().AddBuilding("Aerospace_Complex");
     const UnitDesign& rDesign =
         game.AddDesign({"test_flight_chassis", "test_costly_weapon", "test_costly_armor"});
@@ -802,7 +802,7 @@ TEST_CASE("Several new components still apply a single prototype surcharge",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
@@ -817,8 +817,8 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& first = game.MakeBase(2, 2);
-    BaseManager& second = game.MakeBase(6, 6);
+    BaseManager& first = game.MakeBase(8, 4);
+    BaseManager& second = game.MakeBase(8, 12);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
@@ -852,7 +852,7 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rFirst =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
     const UnitDesign& rSecond =
@@ -865,7 +865,7 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rFirst));
     REQUIRE(game.pFaction->GetMilitary().IsPrototype(rSecond));
 
-    BaseManager& other = game.MakeBase(6, 6);
+    BaseManager& other = game.MakeBase(8, 12);
     other.GetProduction().SetProduction(&rSecond, other.GetBaseEffects());
     CHECK(other.GetMineralCost()
           == ProductionCostCalculator::ComputeCost(rSecond.GetBaseCost(), BaseEffects_t{other}, 50));
@@ -874,8 +874,8 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
 TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& playerBase = game.MakeBase(2, 2);
-    BaseManager& aiBase = game.MakeBase(*game.pOther, 6, 6);
+    BaseManager& playerBase = game.MakeBase(8, 4);
+    BaseManager& aiBase = game.MakeBase(*game.pOther, 8, 12);
     const UnitDesign& rPlayer =
         game.AddDesign(*game.pFaction, {"test_chassis", "test_costly_weapon", "test_costly_armor"});
     const UnitDesign& rAi =
@@ -895,13 +895,13 @@ TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
     Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
-        *game.pState->GetWorldMap().GetTile(0, 0), &base, &base);
+        *game.pState->GetWorldMap().GetTile(8, 0), &base, &base);
     CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
@@ -915,7 +915,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
     REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
@@ -923,7 +923,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
     // Home only — Engine starting units / gift path. Not "built".
     Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
-        *game.pState->GetWorldMap().GetTile(0, 0), &base);
+        *game.pState->GetWorldMap().GetTile(8, 0), &base);
     CHECK_FALSE(gifted.IsPrototype());
     CHECK(gifted.GetXp() == 1);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
@@ -937,8 +937,8 @@ TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
           "[production][unit][prototype][BaseProduction]")
 {
     UnitProductionGame_ game;
-    BaseManager& first = game.MakeBase(2, 2);
-    BaseManager& second = game.MakeBase(6, 6);
+    BaseManager& first = game.MakeBase(8, 4);
+    BaseManager& second = game.MakeBase(8, 12);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
@@ -974,8 +974,8 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
     // Creation order is iteration order. The laggard ticks first and stalls on the surcharge;
     // the finisher then completes the prototype, which drops the laggard's cost and makes
     // ReevaluateProcessedBases_ complete it — yielding from inside the finisher's own tick.
-    BaseManager& laggard = game.MakeBase(2, 2);
-    BaseManager& finisher = game.MakeBase(6, 6);
+    BaseManager& laggard = game.MakeBase(8, 4);
+    BaseManager& finisher = game.MakeBase(8, 12);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
@@ -1031,7 +1031,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
@@ -1050,7 +1050,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     CHECK(rPrototype.IsPrototype());
     CHECK(rPrototype.GetXp() == 2);
 
-    BaseManager& second = game.MakeBase(6, 6);
+    BaseManager& second = game.MakeBase(8, 12);
     second.GetProduction().SetProduction(&rDesign, second.GetBaseEffects());
     second.GetProduction().SetMineralStockpile(second.GetMineralCost());
     REQUIRE(second.ApplyProduction().kind == ProductionApplyKind_t::Completed);
@@ -1065,7 +1065,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
 TEST_CASE("A facility never takes the prototype surcharge", "[production][prototype]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const BuildingConfig_t* pFacility = game.fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
@@ -1078,7 +1078,7 @@ TEST_CASE("PostActionsProduction completes a funded queue without banking leftov
           "[production][PostActionsProduction]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     const BuildingConfig_t* pFacility = game.fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
@@ -1113,7 +1113,7 @@ TEST_CASE("PostActionsProduction keeps a same-turn abandon deferral deferred",
           "[production][PostActionsProduction][abandon]")
 {
     UnitProductionGame_ game;
-    BaseManager& base = game.MakeBase(4, 4);
+    BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
         base.GetPopulation().RemovePop();

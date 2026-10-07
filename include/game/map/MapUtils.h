@@ -3,6 +3,8 @@
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <cstdlib>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace ac
@@ -37,21 +39,54 @@ inline int DeltaX(int xFrom, int xTo, int mapWidth)
     return dx;
 }
 
-// Discrete Euclidean disk shared by base territory and the workable area:
-// dx^2 + dy^2 <= radius^2 + 1. Radius 2 yields the classic SMAC 5x5-minus-corners
-// workable cross (20 tiles around the base).
-inline bool InEuclideanRadius(int dx, int dy, int radius)
+// Row-major index into a SMAC-coordinate tile array of size width*height/2.
+// width is the x wrap period (even). Throws when x+y is odd.
+inline int TileIndex(int x, int y, int width)
 {
-    return dx * dx + dy * dy <= radius * radius + 1;
+    if ((x + y) & 1)
+    {
+        throw std::invalid_argument("TileIndex: (" + std::to_string(x) + ", " + std::to_string(y)
+                                    + ") has odd parity");
+    }
+    return y * (width / 2) + x / 2;
 }
 
-// King-move / square distance on a horizontally wrapping map (Y does not wrap):
-// max(|DeltaX|, |dy|). Used by vision, aura radii, ZOC, and adjacent unit steps
-// (see ForEachTileInChebyshevRadius).
+// Lattice step (p, q): p toward screen SE, q toward screen SW. A lattice offset maps to
+// map coordinates as (p - q, p + q).
+struct LatticeDelta_t
+{
+    int p = 0;
+    int q = 0;
+};
+
+inline LatticeDelta_t LatticeDelta(const Tile& rFrom, const Tile& rTo, int width)
+{
+    const int dx = DeltaX(rFrom.GetX(), rTo.GetX(), width);
+    const int dy = rTo.GetY() - rFrom.GetY();
+    return {(dx + dy) / 2, (dy - dx) / 2};
+}
+
+// Map offset of one lattice step from the origin, or null off the map / odd parity.
+template<typename WorldMapT>
+auto GetTileAtLatticeOffset(WorldMapT& rMap, const Tile& rOrigin, int p, int q)
+    -> decltype(rMap.GetTile(0, 0))
+{
+    return rMap.GetTile(rOrigin.GetX() + p - q, rOrigin.GetY() + p + q);
+}
+
+// Discrete Euclidean disk on the square lattice: p^2 + q^2 <= radius^2 + 1.
+// Radius 2 yields the classic SMAC 5x5-minus-corners workable cross (20 tiles around the base).
+inline bool InEuclideanRadius(int p, int q, int radius)
+{
+    return p * p + q * q <= radius * radius + 1;
+}
+
+// King-move / square distance on the lattice: max(|p|, |q|) = (|dx| + |dy|) / 2.
+// Used by vision, aura radii, ZOC, and adjacent unit steps.
 inline int ChebyshevDistance(const Tile& rA, const Tile& rB, int mapWidth)
 {
-    return std::max(std::abs(DeltaX(rA.GetX(), rB.GetX(), mapWidth)),
-                    std::abs(rA.GetY() - rB.GetY()));
+    const LatticeDelta_t d = LatticeDelta(rA, rB, mapWidth);
+    return std::max(std::abs(d.p), std::abs(d.q));
 }
 
 inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
@@ -59,28 +94,27 @@ inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
     return ChebyshevDistance(rA, rB, mapWidth) == 1;
 }
 
-// SMAC tabletop / "two-diagonal" distance on a horizontally wrapping map (Y does not wrap):
-// longer + shorter/2, where longer/shorter are |DeltaX| and |dy|. Used by energy
-// inefficiency (HQ distance) and unit-scrap closest-base. Integer half of the shorter
-// leg (floor).
+// SMAC tabletop / "two-diagonal" distance on the lattice: longer + shorter/2 of |p| and |q|.
+// Used by energy inefficiency (HQ distance) and unit-scrap closest-base.
 inline int TabletopDiagonalDistance(const Tile& rA, const Tile& rB, int mapWidth)
 {
-    const int dx = std::abs(DeltaX(rA.GetX(), rB.GetX(), mapWidth));
-    const int dy = std::abs(rA.GetY() - rB.GetY());
-    const int longer = std::max(dx, dy);
-    const int shorter = std::min(dx, dy);
+    const LatticeDelta_t d = LatticeDelta(rA, rB, mapWidth);
+    const int ap = std::abs(d.p);
+    const int aq = std::abs(d.q);
+    const int longer = std::max(ap, aq);
+    const int shorter = std::min(ap, aq);
     return longer + shorter / 2;
 }
 
-// Orthogonal (4-way) neighbors in fixed order N, E, S, W. X wraps; Y may be null (skipped).
-// Used by river downhill flow — not Chebyshev/diagonal.
+// Orthogonal (4-way) neighbors across diamond edges, in fixed order N, E, S, W on screen.
+// Lattice offsets keep today's screen directions. X wraps; Y may be null (skipped).
 template<typename WorldMapT, typename Fn>
 void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
 {
     static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
     for (const auto& delta : k_Deltas)
     {
-        auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + delta[0], rOrigin.GetY() + delta[1]);
+        auto* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, delta[0], delta[1]);
         if (pTile)
         {
             fn(pTile);
@@ -88,27 +122,18 @@ void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& f
     }
 }
 
-// Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
-// (square / king-move distance: max(|dx|, |dy|)). This is the metric for vision and for
-// all effect/improvement aura radii (Sensor, Condenser, unit auras, …).
-// `distance` is the Chebyshev distance from rOrigin (>= 0).
-// When includeOrigin is false (the common case for aura scans), rOrigin itself is skipped.
-// When includeOrigin is true (e.g. RecomputeMoistureInRadius needs to cover the changed tile
-// itself), rOrigin is included at distance 0.
-//
-// WorldMapT can be WorldMap or const WorldMap — the tile pointer type in the callback matches
-// automatically (Tile* from WorldMap&, const Tile* from const WorldMap&).
-//
-// X wraps via WorldMap::GetTile; null tiles (Y out of bounds) are skipped before fn is invoked.
+// Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` lattice steps of
+// rOrigin. When includeOrigin is false, rOrigin itself is skipped.
+// X wraps via GetTileAtLatticeOffset; null tiles (Y out of bounds) are skipped.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                                    int radius, bool includeOrigin, Fn&& fn)
 {
-    for (int dy = -radius; dy <= radius; ++dy)
+    for (int q = -radius; q <= radius; ++q)
     {
-        for (int dx = -radius; dx <= radius; ++dx)
+        for (int p = -radius; p <= radius; ++p)
         {
-            const int distance = std::max(std::abs(dx), std::abs(dy));
+            const int distance = std::max(std::abs(p), std::abs(q));
             if (distance > radius)
             {
                 continue;
@@ -118,7 +143,7 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                 continue;
             }
 
-            auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
+            auto* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, p, q);
             if (pTile)
             {
                 fn(pTile, distance);
@@ -127,38 +152,36 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     }
 }
 
-// Calls fn(tile_ptr, distSq) for every tile in the discrete Euclidean disk
-// dx^2 + dy^2 <= radius^2 + 1 (see InEuclideanRadius). `distSq` is dx^2 + dy^2.
-// X wraps via WorldMap::GetTile.
+// Calls fn(tile_ptr, distSq) for every tile in the discrete Euclidean disk on the lattice
+// p^2 + q^2 <= radius^2 + 1 (see InEuclideanRadius). `distSq` is p^2 + q^2.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInEuclideanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                                   const int radius, bool includeOrigin, Fn&& fn)
 {
-    for (int dy = -radius; dy <= radius; ++dy)
+    for (int q = -radius; q <= radius; ++q)
     {
-        for (int dx = -radius; dx <= radius; ++dx)
+        for (int p = -radius; p <= radius; ++p)
         {
-            if (!InEuclideanRadius(dx, dy, radius))
+            if (!InEuclideanRadius(p, q, radius))
             {
                 continue;
             }
-            if (!includeOrigin && dx == 0 && dy == 0)
+            if (!includeOrigin && p == 0 && q == 0)
             {
                 continue;
             }
 
-            auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
+            auto* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, p, q);
             if (pTile)
             {
-                fn(pTile, dx * dx + dy * dy);
+                fn(pTile, p * p + q * q);
             }
         }
     }
 }
 
-// The SMAC base workable area: Euclidean radius 2 (dx^2 + dy^2 <= 5), which is a 5x5
-// square with the four corners removed. Skips rOrigin itself (20 surrounding tiles).
-// WorldMapT can be WorldMap or const WorldMap. X wraps.
+// The SMAC base workable area: Euclidean radius 2 on the lattice (p^2 + q^2 <= 5).
+// Skips rOrigin itself (20 surrounding tiles).
 template<typename WorldMapT, typename Fn>
 void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
 {

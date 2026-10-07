@@ -75,49 +75,42 @@ bool HasOrthogonalFungusNeighbor_(const Tile& rTile, const WorldMap& rWorld)
 // Orthogonal connected-component sizes for fungus tiles.
 std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
 {
-    const int w = rWorld.GetWidth();
-    const int h = rWorld.GetHeight();
-    std::vector<char> visited(static_cast<size_t>(w * h), 0);
+    std::vector<char> visited(rWorld.GetTiles().size(), 0);
     std::vector<int> sizes;
 
-    auto idx = [w](int x, int y) { return y * w + x; };
-
-    for (int y = 0; y < h; ++y)
+    for (const auto& pOwned : rWorld.GetTiles())
     {
-        for (int x = 0; x < w; ++x)
+        Tile* pStart = pOwned.get();
+        if (!pStart->HasFeature("Fungus") || visited[static_cast<size_t>(rWorld.GetTileIndex(*pStart))])
         {
-            Tile* pStart = rWorld.GetTile(x, y);
-            if (!pStart || !pStart->HasFeature("Fungus") || visited[static_cast<size_t>(idx(x, y))])
-            {
-                continue;
-            }
-
-            int size = 0;
-            std::queue<Tile*> q;
-            q.push(pStart);
-            visited[static_cast<size_t>(idx(x, y))] = 1;
-            while (!q.empty())
-            {
-                Tile* pTile = q.front();
-                q.pop();
-                ++size;
-                ForEachOrthogonalNeighbor(*pTile, rWorld, [&](Tile* pNeighbor)
-                {
-                    if (!pNeighbor || !pNeighbor->HasFeature("Fungus"))
-                    {
-                        return;
-                    }
-                    const size_t n = static_cast<size_t>(idx(pNeighbor->GetX(), pNeighbor->GetY()));
-                    if (visited[n])
-                    {
-                        return;
-                    }
-                    visited[n] = 1;
-                    q.push(pNeighbor);
-                });
-            }
-            sizes.push_back(size);
+            continue;
         }
+
+        int size = 0;
+        std::queue<Tile*> q;
+        q.push(pStart);
+        visited[static_cast<size_t>(rWorld.GetTileIndex(*pStart))] = 1;
+        while (!q.empty())
+        {
+            Tile* pTile = q.front();
+            q.pop();
+            ++size;
+            ForEachOrthogonalNeighbor(*pTile, rWorld, [&](Tile* pNeighbor)
+            {
+                if (!pNeighbor || !pNeighbor->HasFeature("Fungus"))
+                {
+                    return;
+                }
+                const size_t n = static_cast<size_t>(rWorld.GetTileIndex(*pNeighbor));
+                if (visited[n])
+                {
+                    return;
+                }
+                visited[n] = 1;
+                q.push(pNeighbor);
+            });
+        }
+        sizes.push_back(size);
     }
     return sizes;
 }
@@ -149,7 +142,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
 TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
           "[worldgen][fungus]")
 {
-    WorldMap world(40, 40, actest::TestMapRules());
+    WorldMap world(40, 80, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -161,7 +154,7 @@ TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
     PlaceFungus(world, cfg, TestFungus_(), rng);
 
     const int fungus = CountFungus_(world);
-    const int land = world.GetWidth() * world.GetHeight();
+    const int land = static_cast<int>(world.GetTiles().size());
     // Allow slack: patch growth can undershoot when frontiers die out.
     CHECK(fungus >= static_cast<int>(0.05f * land));
     CHECK(fungus <= static_cast<int>(0.15f * land));
@@ -170,7 +163,7 @@ TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
 TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
           "[worldgen][fungus]")
 {
-    WorldMap world(8, 8, actest::TestMapRules());
+    WorldMap world(8, 16, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -195,7 +188,7 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
 
 TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]")
 {
-    WorldMap world(20, 20, actest::TestMapRules());
+    WorldMap world(20, 40, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -229,7 +222,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
 TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
           "[worldgen][fungus]")
 {
-    WorldMap world(40, 40, actest::TestMapRules());
+    WorldMap world(40, 80, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -266,7 +259,7 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
 TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
           "[worldgen][fungus]")
 {
-    WorldMap world(16, 16, actest::TestMapRules());
+    WorldMap world(16, 32, actest::TestMapRules());
     for (auto& pTile : world.GetTiles())
     {
         pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);
@@ -300,7 +293,7 @@ TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
     CHECK(landFungus > 0);
     CHECK(waterFungus > 0);
 
-    const int tiles = world.GetWidth() * world.GetHeight();
+    const int tiles = static_cast<int>(world.GetTiles().size());
     const int fungus = landFungus + waterFungus;
     CHECK(fungus >= static_cast<int>(0.1f * static_cast<float>(tiles)));
     CHECK(fungus <= static_cast<int>(0.4f * static_cast<float>(tiles)));
@@ -308,11 +301,11 @@ TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
 
 TEST_CASE("PlaceFungus counts only tiles the fungus entry can occupy", "[worldgen][fungus]")
 {
-    WorldMap world(20, 20, actest::TestMapRules());
+    WorldMap world(20, 40, actest::TestMapRules());
     int land = 0;
     for (auto& pTile : world.GetTiles())
     {
-        const bool bLand = pTile->GetY() < 10;
+        const bool bLand = pTile->GetY() < 20;
         pTile->SetElevation(bLand ? 1000 : -500);
         if (bLand)
         {

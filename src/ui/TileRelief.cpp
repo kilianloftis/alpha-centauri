@@ -1,5 +1,7 @@
 #include "ui/TileRelief.h"
 
+#include "game/map/MapUtils.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -63,7 +65,7 @@ float CornerLevels_(const Tile& rTile, const WorldMap& rMap, std::size_t corner,
     float sum = CenterLevels_(rTile, mode, rStyle);
     for (const GridDelta_t& rDelta : k_CornerNeighbors[corner])
     {
-        const Tile* pNeighbor = rMap.GetTile(rTile.GetX() + rDelta.dx, rTile.GetY() + rDelta.dy);
+        const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rDelta.dx, rDelta.dy);
         if (!pNeighbor || !pNeighbor->IsLand())
         {
             return 0.0f;
@@ -134,8 +136,7 @@ float CornerShade_(const Tile& rTile, const WorldMap& rMap, std::size_t corner,
     for (std::size_t i = 0; i < k_CornerNeighbors[corner].size(); ++i)
     {
         const GridDelta_t& rDelta = k_CornerNeighbors[corner][i];
-        if (const Tile* pNeighbor =
-                rMap.GetTile(rTile.GetX() + rDelta.dx, rTile.GetY() + rDelta.dy))
+        if (const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rDelta.dx, rDelta.dy))
         {
             sum += touching(
                 FacetShades_(*pNeighbor, Levels_(*pNeighbor, rMap, mode, rStyle), rStyle),

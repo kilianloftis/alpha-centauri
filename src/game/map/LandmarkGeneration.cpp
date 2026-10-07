@@ -96,25 +96,25 @@ std::vector<std::pair<int, int>> ExpandMask_(const std::vector<std::string>& rRo
     return cells;
 }
 
-void ApplyRadialPeakSculpt_(WorldMap& rWorld, int anchorX, int anchorY, int radius,
+void ApplyRadialPeakSculpt_(WorldMap& rWorld, const Tile& rAnchor, int radius,
                             const LandmarkSculpt_t& rSculpt)
 {
     const float rise = static_cast<float>(rSculpt.peakElevation - rSculpt.baseElevation);
 
-    for (int dy = -radius; dy <= radius; ++dy)
+    for (int q = -radius; q <= radius; ++q)
     {
-        for (int dx = -radius; dx <= radius; ++dx)
+        for (int p = -radius; p <= radius; ++p)
         {
-            if (!InEuclideanRadius(dx, dy, radius))
+            if (!InEuclideanRadius(p, q, radius))
             {
                 continue;
             }
-            Tile* pTile = rWorld.GetTile(anchorX + dx, anchorY + dy);
+            Tile* pTile = GetTileAtLatticeOffset(rWorld, rAnchor, p, q);
             if (!pTile || !pTile->IsLand())
             {
                 continue;
             }
-            const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+            const float dist = std::sqrt(static_cast<float>(p * p + q * q));
             const float t = 1.0f - dist / static_cast<float>(radius + 1);
             const int elev = std::min(
                 rSculpt.peakElevation,
@@ -135,13 +135,12 @@ void ApplyRadialPeakSculpt_(WorldMap& rWorld, int anchorX, int anchorY, int radi
     }
 }
 
-bool FarEnough_(int x, int y, const std::vector<std::pair<int, int>>& rAnchors,
+bool FarEnough_(const Tile& rCandidate, const std::vector<const Tile*>& rAnchors,
                 int minSpacing, int mapWidth)
 {
-    for (const auto& [ax, ay] : rAnchors)
+    for (const Tile* pAnchor : rAnchors)
     {
-        const int dist = std::max(std::abs(DeltaX(x, ax, mapWidth)), std::abs(y - ay));
-        if (dist < minSpacing)
+        if (ChebyshevDistance(rCandidate, *pAnchor, mapWidth) < minSpacing)
         {
             return false;
         }
@@ -160,9 +159,15 @@ bool TryStamp_(WorldMap& rWorld,
     std::vector<Tile*> footprint;
     footprint.reserve(rOffsets.size());
 
-    for (const auto& [dx, dy] : rOffsets)
+    const Tile* pAnchor = rWorld.GetTile(anchorX, anchorY);
+    if (!pAnchor)
     {
-        Tile* pTile = rWorld.GetTile(anchorX + dx, anchorY + dy);
+        return false;
+    }
+
+    for (const auto& [p, q] : rOffsets)
+    {
+        Tile* pTile = GetTileAtLatticeOffset(rWorld, *pAnchor, p, q);
         if (!pTile || !DomainMatches_(*pTile, rLandmark.domain))
         {
             return false;
@@ -182,7 +187,7 @@ bool TryStamp_(WorldMap& rWorld,
     if (rLandmark.shape.kind == LandmarkShapeKind_t::Sculptor
         && rLandmark.shape.sculptorId == k_MountPlanetSculptor)
     {
-        ApplyRadialPeakSculpt_(rWorld, anchorX, anchorY, rLandmark.shape.radius,
+        ApplyRadialPeakSculpt_(rWorld, *pAnchor, rLandmark.shape.radius,
                                rLandmark.shape.sculpt);
     }
 
@@ -224,7 +229,7 @@ int PlaceLandmarks(WorldMap& rWorld,
                    const ImprovementRegistry& rOccupants,
                    std::mt19937& rRng)
 {
-    std::vector<std::pair<int, int>> placedAnchors;
+    std::vector<const Tile*> placedAnchors;
     int placedCount = 0;
 
     for (const LandmarkConfig_t& rLandmark : rLandmarks)
@@ -273,15 +278,14 @@ int PlaceLandmarks(WorldMap& rWorld,
             {
                 break;
             }
-            if (!FarEnough_(pAnchor->GetX(), pAnchor->GetY(), placedAnchors,
-                            rLandmark.minSpacing, rWorld.GetWidth()))
+            if (!FarEnough_(*pAnchor, placedAnchors, rLandmark.minSpacing, rWorld.GetWidth()))
             {
                 continue;
             }
             if (TryStamp_(rWorld, pAnchor->GetX(), pAnchor->GetY(), rLandmark, offsets,
                           *pOccupant, pFungus))
             {
-                placedAnchors.emplace_back(pAnchor->GetX(), pAnchor->GetY());
+                placedAnchors.push_back(pAnchor);
                 ++placedThis;
                 ++placedCount;
             }

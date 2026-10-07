@@ -19,13 +19,8 @@ constexpr float k_ScrollDirectionRight  = 1.0f;
 constexpr float k_ScrollDirectionUp     = -1.0f;
 constexpr float k_ScrollDirectionDown   = 1.0f;
 
-// Screen-space pan (right/down positive) → camera tile delta for the 2:1 iso grid:
-// screenX ∝ (relX - relY), screenY ∝ (relX + relY).
-void ScreenPanToCameraDelta_(int screenDeltaX, int screenDeltaY, int& rCamDeltaX, int& rCamDeltaY)
-{
-    rCamDeltaX = screenDeltaX + screenDeltaY;
-    rCamDeltaY = screenDeltaY - screenDeltaX;
-}
+// One screen-tile pan step is two map units (SMAC brick columns/rows).
+constexpr int k_MapUnitsPerScreenTile = 2;
 
 } // namespace
 
@@ -62,39 +57,36 @@ bool CameraInputController::ApplyCameraDelta_(int deltaCamX, int deltaCamY)
 bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
 {
     const auto& s = Style().cameraInput;
-    const int step = s.cameraScrollStep;
+    const int step = s.cameraScrollStep * k_MapUnitsPerScreenTile;
 
     const auto pan = [&](HotkeyAction_t action) {
         const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
         return chord && chord->Matches(rEvent);
     };
 
-    int screenDx = 0;
-    int screenDy = 0;
+    int camDx = 0;
+    int camDy = 0;
     if (pan(HotkeyAction_t::PanLeft))
     {
-        screenDx = -step;
+        camDx = -step;
     }
     else if (pan(HotkeyAction_t::PanRight))
     {
-        screenDx = step;
+        camDx = step;
     }
     else if (pan(HotkeyAction_t::PanUp))
     {
-        screenDy = -step;
+        camDy = -step;
     }
     else if (pan(HotkeyAction_t::PanDown))
     {
-        screenDy = step;
+        camDy = step;
     }
     else
     {
         return false;
     }
 
-    int camDx = 0;
-    int camDy = 0;
-    ScreenPanToCameraDelta_(screenDx, screenDy, camDx, camDy);
     return ApplyCameraDelta_(camDx, camDy);
 }
 
@@ -157,8 +149,7 @@ bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
         return false;
     }
 
-    // Accumulate screen-space pan, then convert to iso camera steps so edges move
-    // horizontally/vertically on screen rather than along tile axes.
+    // Accumulate in screen-tile units, then convert to map units (2 per screen tile).
     m_edgeScrollAccumulatorX += scrollDirX * m_edgeScrollSpeed;
     m_edgeScrollAccumulatorY += scrollDirY * m_edgeScrollSpeed;
 
@@ -172,10 +163,8 @@ bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
     m_edgeScrollAccumulatorX -= static_cast<float>(screenDx);
     m_edgeScrollAccumulatorY -= static_cast<float>(screenDy);
 
-    int camDx = 0;
-    int camDy = 0;
-    ScreenPanToCameraDelta_(screenDx, screenDy, camDx, camDy);
-    return ApplyCameraDelta_(camDx, camDy);
+    return ApplyCameraDelta_(screenDx * k_MapUnitsPerScreenTile,
+                             screenDy * k_MapUnitsPerScreenTile);
 }
 
 } // namespace ac

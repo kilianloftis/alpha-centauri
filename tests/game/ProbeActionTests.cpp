@@ -67,7 +67,7 @@ struct ProbeGame_
                 *pTechCostConfig, *fixtures.dataContext.luaRuntime);
         }
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -146,8 +146,8 @@ void ForceMissionFailure_(ProbeGame_& rGame, ProbeActionId_t actionId)
 // first, away from the target.
 BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
 {
-    rGame.MakeBase(*rGame.pAi, 7, 7);
-    BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 4, 4);
+    rGame.MakeBase(*rGame.pAi, 8, 14);
+    BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 8, 8);
     REQUIRE_FALSE(IsHeadquarters(rTarget));
     return rTarget;
 }
@@ -171,9 +171,9 @@ void SignTreaty_(ProbeGame_& rGame)
 TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][action]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     REQUIRE(probe.GetFlag(RuleFlagId_t::ProbeTeam));
 
     const int xpBefore = probe.GetXp();
@@ -194,7 +194,7 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
 TEST_CASE("ForceRiot sets pending riot until CommitRiot", "[probe][riot]")
 {
     BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     CHECK_FALSE(base.GetPopulation().IsRioting());
     base.GetPopulation().ForceRiot(/*turns=*/1);
     CHECK(base.GetPopulation().IsPendingRiot());
@@ -206,10 +206,10 @@ TEST_CASE("ForceRiot sets pending riot until CommitRiot", "[probe][riot]")
 TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     game.pAi->GetEconomy().AddEnergy(1000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const int playerBefore = game.pPlayer->GetEconomy().GetEnergy();
     const int aiBefore = game.pAi->GetEconomy().GetEnergy();
@@ -228,9 +228,9 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
           "[probe][action][steal]")
 {
     ProbeGame_ game(/*bWithTechs=*/true);
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     // Target knows a root tech and a gated tech; actor has neither.
     game.pAi->GetResearch().AddDiscoveredTech("build_tech");
@@ -254,9 +254,9 @@ TEST_CASE("TryProbeAction steal_tech skips techs whose prerequisites the actor l
           "[probe][action][steal]")
 {
     ProbeGame_ game(/*bWithTechs=*/true);
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     // Target only has the gated tech; actor lacks build_tech so nothing is stealable.
     game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
@@ -279,9 +279,9 @@ TEST_CASE("steal_tech effect picks randomly among eligible techs", "[probe][acti
     for (uint32_t seed = 0; seed < 64 && seen.size() < 2; ++seed)
     {
         ProbeGame_ game(/*bWithTechs=*/true);
-        BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-        BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-        Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+        BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+        BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+        Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
         game.pAi->GetResearch().AddDiscoveredTech("build_tech");
         game.pAi->GetResearch().AddDiscoveredTech("grow_tech");
@@ -311,8 +311,8 @@ TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][acti
     // risk_repeat was parsed and stored but unreachable: TryProbeAction took a bRepeatAtBase
     // flag defaulting to false that no caller ever set. The executor owns the history now.
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
 
     // steal_tech is the fixture action that declares risk_repeat (1) distinct from risk (0).
     const ProbeActionConfig_t* pAction =
@@ -322,12 +322,12 @@ TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][acti
     REQUIRE(*pAction->riskRepeat != pAction->risk);
 
     // Two probes, so whether the first survives does not decide the second attempt.
-    Unit& first = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& first = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t firstResult = game.pState->GetProbeActions().TryProbeAction(
         first, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
     CHECK(firstResult.chances.risk == pAction->risk);
 
-    Unit& second = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "Probe_Team"}, &home);
+    Unit& second = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t secondResult = game.pState->GetProbeActions().TryProbeAction(
         second, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
     CHECK(secondResult.chances.risk == *pAction->riskRepeat);
@@ -339,13 +339,13 @@ TEST_CASE("Sabotage retires the destroyed copy's deploy record", "[probe][action
     // faction so a cooling ASAT/interceptor record is retired. Sabotage did not, so
     // CountReadyBuildings kept subtracting a charge for a building that no longer existed.
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     // Two copies, one of them cooling: the sabotaged base's, so the *other* base's copy is what
     // exposes a stale record. Without the notification the phantom charge keeps suppressing it.
-    BaseManager& enemySecond = game.MakeBase(*game.pAi, 7, 7);
+    BaseManager& enemySecond = game.MakeBase(*game.pAi, 8, 14);
     enemy.GetBuildingManager().AddBuilding("test_facility_a");
     enemySecond.GetBuildingManager().AddBuilding("test_facility_a");
     game.pAi->DeployBuilding(enemy.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
@@ -376,9 +376,9 @@ TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][actio
     // non-empty missing id still reported ProbeDestroyedFacility_t after DestroyBuilding's
     // documented no-op — claiming a kill that never happened.
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     enemy.GetBuildingManager().AddBuilding("Command_Center");
 
@@ -412,9 +412,9 @@ TEST_CASE("sabotage_random effect picks randomly among non-HQ buildings",
     for (uint32_t seed = 0; seed < 64 && seen.size() < 2; ++seed)
     {
         ProbeGame_ game;
-        BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-        BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-        Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+        BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+        BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+        Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
         enemy.GetBuildingManager().AddBuilding("flat_nutrient");
         enemy.GetBuildingManager().AddBuilding("Command_Center");
@@ -444,15 +444,15 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
           "[probe][action][plague]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     while (enemy.GetPopulation().GetSize() < 5)
     {
         enemy.GetPopulation().AddPop();
     }
     REQUIRE(enemy.GetPopulation().GetSize() == 5);
 
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::GeneticPlague);
     REQUIRE(pAction);
@@ -482,15 +482,15 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
 TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][plague]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     while (enemy.GetPopulation().GetSize() > 1)
     {
         enemy.GetPopulation().RemovePop();
     }
     REQUIRE(enemy.GetPopulation().GetSize() == 1);
 
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::GeneticPlague);
     REQUIRE(pAction);
@@ -517,9 +517,9 @@ TEST_CASE("Probe cannot target a concealed unit until contact reveals it",
           "[probe][target][visibility]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
-    Unit& cloaked = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "Cloaking_Device"});
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& cloaked = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "Cloaking_Device"});
     const Tile& rTargetTile = cloaked.GetTile();
 
     REQUIRE_FALSE(IsUnitVisibleTo(*game.pPlayer, cloaked, game.pState->GetTileEffects()));
@@ -540,13 +540,13 @@ TEST_CASE("Probe cannot target a base on a tile its faction has not explored",
           "[probe][target][visibility]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const Tile& rTargetTile = enemy.GetTile();
 
     FactionExploredMap& rExplored = game.pPlayer->GetExploredMap();
-    rExplored.Reset(9, 9);
+    rExplored.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
     REQUIRE_FALSE(rExplored.IsExplored(rTargetTile));
     CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, *game.pState)
                     .has_value());
@@ -560,10 +560,10 @@ TEST_CASE("Mind Control adds 4 to the actor's mind-control total, not the former
           "[probe][action][mind-control]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& target = MakeMindControlTarget_(game);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState);
@@ -578,10 +578,10 @@ TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
           "[probe][action][mind-control]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& target = MakeMindControlTarget_(game);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), *game.pState);
@@ -596,10 +596,10 @@ TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total"
 {
     ProbeGame_ game;
     ForceMissionFailure_(game, ProbeActionId_t::MindControlBase);
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& target = MakeMindControlTarget_(game);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState);
@@ -612,10 +612,10 @@ TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total"
 TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][action][mind-control]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
-    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
@@ -631,10 +631,10 @@ TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total"
 {
     ProbeGame_ game;
     ForceMissionFailure_(game, ProbeActionId_t::SubvertUnit);
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
-    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
@@ -649,7 +649,7 @@ TEST_CASE("The mind-control quote adds the actor's total over the divisor to its
 {
     ProbeGame_ game;
     BaseManager& targetBase = MakeMindControlTarget_(game);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
     REQUIRE(pAction);
@@ -683,7 +683,7 @@ TEST_CASE("The mind-control quote ignores the target faction's total", "[probe][
 {
     ProbeGame_ game;
     BaseManager& targetBase = MakeMindControlTarget_(game);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
     REQUIRE(pAction);
@@ -703,8 +703,8 @@ TEST_CASE("The mind-control quote ignores the target faction's total", "[probe][
 TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][cost][mind-control]")
 {
     ProbeGame_ game;
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"});
-    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SubvertUnit);
     REQUIRE(pAction);
@@ -726,10 +726,10 @@ TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta
           "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     SignTreaty_(game);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
@@ -741,11 +741,11 @@ TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta
 TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     SignTreaty_(game);
     Unit& probe =
-        game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team", "covert"}, &home);
+        game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
@@ -757,11 +757,11 @@ TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy
 TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     SignTreaty_(game);
     game.pPlayer->GetEconomy().AddEnergy(10000);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
-    Unit& victim = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "covert"});
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "covert"});
 
     const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);

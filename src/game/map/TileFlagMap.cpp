@@ -1,5 +1,6 @@
 #include "game/map/TileFlagMap.h"
 
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <stdexcept>
@@ -13,7 +14,7 @@ void TileFlagMap::Reset(int width, int height)
     m_width = width;
     m_height = height;
     const size_t count = (width > 0 && height > 0)
-        ? static_cast<size_t>(width) * static_cast<size_t>(height)
+        ? static_cast<size_t>(width) * static_cast<size_t>(height) / 2
         : 0;
     m_flags.assign(count, 0);
     m_revision.Bump();
@@ -57,7 +58,7 @@ bool TileFlagMap::InBounds_(int x, int y) const
 
 size_t TileFlagMap::Index_(int x, int y) const
 {
-    return static_cast<size_t>(y) * static_cast<size_t>(m_width) + static_cast<size_t>(x);
+    return static_cast<size_t>(TileIndex(x, y, m_width));
 }
 
 bool TileFlagMap::Test(int x, int y) const

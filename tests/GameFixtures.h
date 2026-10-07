@@ -190,7 +190,8 @@ struct WorldFixture
     // bases used to be built with a null rating registry and null research manager, so they
     // resolved social ratings to nothing while the real game resolved them, with no
     // diagnostic. A fixture that diverges from Engine is not a fixture.
-    explicit WorldFixture(int width = 9, int height = 9, const OccupantFiles_t& rOccupants = {})
+    explicit WorldFixture(int width = k_TestMapWidth, int height = k_TestMapHeight,
+                          const OccupantFiles_t& rOccupants = {})
         : map(width, height, TestMapRules())
         , improvements(CreateInContext(dataContext.improvementRegistry))
         , unitComponents(CreateInContext(dataContext.unitComponentRegistry))
@@ -310,7 +311,7 @@ struct BaseFixture : WorldFixture
     int nextBaseId = 1;
 
     BaseFixture()
-        : BaseFixture(9, 9)
+        : BaseFixture(k_TestMapWidth, k_TestMapHeight)
     {
     }
 
@@ -367,7 +368,7 @@ struct FactionFixture : BaseFixture
     int nextUnitId = 1;
 
     FactionFixture()
-        : FactionFixture(9, 9)
+        : FactionFixture(k_TestMapWidth, k_TestMapHeight)
     {
     }
 
@@ -388,7 +389,7 @@ struct FactionFixture : BaseFixture
             rMoved.GetFaction().RebuildVisibility();
         });
         dataContext.worldRules = std::move(worldRules);
-        pBindMap = std::make_unique<ac::WorldMap>(1, 1, actest::TestMapRules());
+        pBindMap = std::make_unique<ac::WorldMap>(2, 1, actest::TestMapRules());
         pBindState = std::make_unique<ac::GameState>(std::move(pBindMap), dataContext, settings,
                                                      k_TestRngSeed);
     }
@@ -542,11 +543,12 @@ inline void InstallCouncil(ac::GameDataContext& rData,
         ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
 }
 
-// A live GameState on its own 9x9 all-land map over rFixtures' data, for tests that need
-// session factions rather than FactionFixture's bind state.
+// A live GameState on its own all-land default-size map over rFixtures' data, for tests that
+// need session factions rather than FactionFixture's bind state.
 inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures)
 {
-    auto pMap = std::make_unique<ac::WorldMap>(9, 9, TestMapRules());
+    auto pMap = std::make_unique<ac::WorldMap>(k_TestMapWidth, k_TestMapHeight,
+                                                 TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);

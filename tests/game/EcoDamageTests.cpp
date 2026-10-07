@@ -40,10 +40,10 @@ struct EcoFixture_
     BaseManager* pBase = nullptr;
 
     explicit EcoFixture_(std::vector<EffectConfig_t> worldRules = {})
-        : fixtures(9, 9, std::move(worldRules))
+        : fixtures(actest::k_TestMapWidth, actest::k_TestMapHeight, std::move(worldRules))
     {
         pFaction = &fixtures.MakeFaction();
-        pBase = &MakeBase(4, 4);
+        pBase = &MakeBase(8, 8);
     }
 
     BaseManager& MakeBase(int x, int y)
@@ -95,15 +95,15 @@ TEST_CASE("A worked borehole contributes 18, an idle one 9", "[ecology][terrafor
     {
         EcoFixture_ eco;
         eco.Formula("terraform_raw");
-        eco.Improve(5, 4, "ThermalBorehole");
+        eco.Improve(9, 9, "ThermalBorehole");
         CHECK(eco.pBase->GetEcologicalDamage() == 9);
     }
     SECTION("worked")
     {
         EcoFixture_ eco;
         eco.Formula("terraform_raw");
-        eco.Improve(5, 4, "ThermalBorehole");
-        eco.Work(*eco.pBase, 5, 4);
+        eco.Improve(9, 9, "ThermalBorehole");
+        eco.Work(*eco.pBase, 9, 9);
         CHECK(eco.pBase->GetEcologicalDamage() == 18);
     }
 }
@@ -112,9 +112,9 @@ TEST_CASE("Reassigning a worker onto a borehole invalidates the score", "[ecolog
 {
     EcoFixture_ eco;
     eco.Formula("terraform_raw");
-    eco.Improve(5, 4, "ThermalBorehole");
+    eco.Improve(9, 9, "ThermalBorehole");
     CHECK(eco.pBase->GetEcologicalDamage() == 9);
-    eco.Work(*eco.pBase, 5, 4);
+    eco.Work(*eco.pBase, 9, 9);
     CHECK(eco.pBase->GetEcologicalDamage() == 18);
 }
 
@@ -122,10 +122,10 @@ TEST_CASE("A kelp farm contributes 1 whether or not it is worked", "[ecology][te
 {
     EcoFixture_ eco;
     eco.Formula("terraform_raw");
-    eco.fixtures.At(5, 4).SetElevation(-100);
-    eco.Improve(5, 4, "KelpFarm");
+    eco.fixtures.At(9, 9).SetElevation(-100);
+    eco.Improve(9, 9, "KelpFarm");
     CHECK(eco.pBase->GetEcologicalDamage() == 1);
-    eco.Work(*eco.pBase, 5, 4);
+    eco.Work(*eco.pBase, 9, 9);
     CHECK(eco.pBase->GetEcologicalDamage() == 1);
 }
 
@@ -133,8 +133,8 @@ TEST_CASE("A forest subtracts 1", "[ecology][terraform]")
 {
     EcoFixture_ eco;
     eco.Formula("terraform_raw");
-    eco.Improve(5, 4, "ThermalBorehole");
-    eco.Improve(3, 4, "Forest");
+    eco.Improve(9, 9, "ThermalBorehole");
+    eco.Improve(7, 7, "Forest");
     CHECK(eco.pBase->GetEcologicalDamage() == 8);
 }
 
@@ -144,8 +144,8 @@ TEST_CASE("A crawled borehole counts its unworked weight only", "[ecology][terra
     {
         EcoFixture_ eco;
         eco.Formula("terraform_raw");
-        eco.Improve(5, 4, "ThermalBorehole");
-        Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 5, 4,
+        eco.Improve(9, 9, "ThermalBorehole");
+        Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 9, 9,
                                               {"test_chassis", "test_supply_crawler"},
                                               eco.pBase);
         REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
@@ -155,9 +155,9 @@ TEST_CASE("A crawled borehole counts its unworked weight only", "[ecology][terra
     {
         EcoFixture_ eco;
         eco.Formula("terraform_raw");
-        BaseManager& rNeighbour = eco.MakeBase(8, 4);
-        eco.Improve(6, 4, "ThermalBorehole");
-        Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 6, 4,
+        BaseManager& rNeighbour = eco.MakeBase(12, 12);
+        eco.Improve(10, 10, "ThermalBorehole");
+        Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 10, 10,
                                               {"test_chassis", "test_supply_crawler"},
                                               &rNeighbour);
         REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
@@ -169,12 +169,12 @@ TEST_CASE("Improvements on one tile stack their weights", "[ecology][terraform]"
 {
     EcoFixture_ eco;
     eco.Formula("terraform_raw");
-    eco.Improve(5, 4, "Road");
-    eco.Improve(5, 4, "Mine");
-    eco.Work(*eco.pBase, 5, 4);
+    eco.Improve(9, 9, "Road");
+    eco.Improve(9, 9, "Mine");
+    eco.Work(*eco.pBase, 9, 9);
     CHECK(eco.pBase->GetEcologicalDamage() == 4);
 
-    eco.Improve(5, 4, "MagTube");
+    eco.Improve(9, 9, "MagTube");
     CHECK(eco.pBase->GetEcologicalDamage() == 6);
 }
 
@@ -182,10 +182,10 @@ TEST_CASE("Sensors, bunkers and airbases contribute nothing", "[ecology][terrafo
 {
     EcoFixture_ eco;
     eco.Formula("terraform_raw");
-    eco.Improve(5, 4, "Sensor");
-    eco.Improve(3, 4, "Bunker");
-    eco.Improve(4, 5, "Airbase");
-    eco.Work(*eco.pBase, 5, 4);
+    eco.Improve(9, 9, "Sensor");
+    eco.Improve(7, 7, "Bunker");
+    eco.Improve(7, 9, "Airbase");
+    eco.Work(*eco.pBase, 9, 9);
     CHECK(eco.pBase->GetEcologicalDamage() == 0);
 }
 
@@ -195,8 +195,8 @@ TEST_CASE("A sea base adds 1 from its own tile", "[ecology][terraform]")
     eco.Formula("terraform_raw");
     CHECK(eco.pBase->GetEcologicalDamage() == 0);
 
-    eco.fixtures.At(2, 2).SetElevation(-100);
-    BaseManager& rSeaBase = eco.MakeBase(2, 2);
+    eco.fixtures.At(8, 4).SetElevation(-100);
+    BaseManager& rSeaBase = eco.MakeBase(8, 4);
     CHECK(rSeaBase.GetEcologicalDamage() == 1);
 }
 
@@ -222,7 +222,7 @@ TEST_CASE("Good facilities raise EcoDamageReduction at their base only", "[ecolo
 {
     EcoFixture_ eco;
     eco.Formula("damage_reduction");
-    BaseManager& rOther = eco.MakeBase(8, 8);
+    BaseManager& rOther = eco.MakeBase(8, 16);
     eco.pBase->GetBuildingManager().AddBuilding("test_eco_preserve");
     eco.pBase->GetBuildingManager().AddBuilding("test_nanoreplicator");
     CHECK(eco.pBase->GetEcologicalDamage() == 2);
@@ -233,7 +233,7 @@ TEST_CASE("The faction-wide clean-minerals cap applies in full at every base", "
 {
     EcoFixture_ eco;
     eco.Formula("clean_minerals + fungal_blooms + clean_mineral_grants");
-    BaseManager& rOther = eco.MakeBase(8, 8);
+    BaseManager& rOther = eco.MakeBase(8, 16);
     CHECK(eco.pBase->GetEcologicalDamage() == 16);
     CHECK(rOther.GetEcologicalDamage() == 16);
 
@@ -249,7 +249,7 @@ TEST_CASE("Orbital minerals raise production but not the minerals ecology charge
 {
     EcoFixture_ eco;
     eco.Formula("minerals + mineral_offset");
-    BaseManager& rOther = eco.MakeBase(8, 8);
+    BaseManager& rOther = eco.MakeBase(8, 16);
     const int mineralsBefore = eco.pBase->GetMineralProduction();
     const int chargedBefore = eco.pBase->GetEcologicalDamage();
     CHECK(chargedBefore == mineralsBefore);
@@ -329,7 +329,7 @@ TEST_CASE("AddVirtualMinerals is ungated by the Charter and records no atrocity"
 TEST_CASE("The score needs the faction bound to a session", "[ecology]")
 {
     BaseFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     CHECK_THROWS_AS(rBase.GetEcologicalDamage(), std::logic_error);
 }
 

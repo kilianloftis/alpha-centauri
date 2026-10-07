@@ -27,8 +27,8 @@ TEST_CASE("Tile layers resolve improvements by config id, not by sprite content 
     // The probe used TileLayerContent ("farm"/"forest"/"road"), which is the sprite domain;
     // improvements.json declares "Farm"/"Forest"/"Road". Every probe failed, so Vegetation and
     // Road stayed empty and their improvements fell through into the Improvement layer.
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
     rTile.AddImprovement(world.improvements.Get("Farm"));
     rTile.AddImprovement(world.improvements.Get("Road"));
@@ -50,8 +50,8 @@ TEST_CASE("Tile layers resolve improvements by config id, not by sprite content 
 
 TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(1, 1);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 2);
     rTile.SetElevation(500);
     rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
     rTile.AddImprovement(world.improvements.Get("Farm"));
@@ -65,8 +65,8 @@ TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
 TEST_CASE("Fungus in deeper ocean lies dormant until the floor reaches the shelf",
           "[map][layers][fungus]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(1, 1);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 2);
     rTile.SetElevation(actest::TestMapRules().oceanShelfMeters - 1);
     rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
     REQUIRE(rTile.HasFeature("Ocean"));
@@ -96,8 +96,8 @@ TEST_CASE("Fungus in deeper ocean lies dormant until the floor reaches the shelf
 TEST_CASE("Land rockiness overlays resolve above moisture; flat landform is empty",
           "[map][layers]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
     rTile.SetMoisture(Moisture_t::Moist);
     rTile.SetRockiness(Rockiness_t::Rolling);
@@ -115,9 +115,9 @@ TEST_CASE("Land rockiness overlays resolve above moisture; flat landform is empt
 TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock layers",
           "[map][layers]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
 
-    Tile& rShelf = *world.map.GetTile(1, 1);
+    Tile& rShelf = *world.map.GetTile(8, 2);
     rShelf.SetElevation(actest::TestMapRules().oceanShelfMeters);
     rShelf.SetMoisture(Moisture_t::Wet);
     rShelf.SetRockiness(Rockiness_t::Rocky);
@@ -135,7 +135,7 @@ TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock l
         CHECK_FALSE(rRockiness.contentId.has_value());
     }
 
-    Tile& rDeep = *world.map.GetTile(2, 2);
+    Tile& rDeep = *world.map.GetTile(8, 4);
     rDeep.SetElevation(actest::TestMapRules().minElevationMeters);
     rDeep.SetMoisture(Moisture_t::Moist);
     REQUIRE(rDeep.IsWater());
@@ -152,8 +152,8 @@ TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock l
 
 TEST_CASE("Landmarks and rivers fill their own layers", "[map][layers]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
 
     SECTION("a plain tile has neither")
@@ -200,8 +200,8 @@ TEST_CASE("Landmarks and rivers fill their own layers", "[map][layers]")
 
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
 
     const ImprovementConfig_t& rMonolith = world.improvements.Get("Monolith");
@@ -225,8 +225,8 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
 TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclude it back",
           "[map][improvements]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
 
     const ImprovementConfig_t& rMine = world.improvements.Get("Mine");
@@ -242,8 +242,8 @@ TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclu
 
 TEST_CASE("A feature the caller is clearing does not block the placement", "[map][improvements]")
 {
-    actest::WorldFixture world(5, 5);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
     rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
 
@@ -263,12 +263,12 @@ TEST_CASE("WorldMap rejects non-positive dimensions", "[map]")
     CHECK_THROWS_AS(WorldMap(0, 10, actest::TestMapRules()), std::invalid_argument);
     CHECK_THROWS_AS(WorldMap(10, 0, actest::TestMapRules()), std::invalid_argument);
     CHECK_THROWS_AS(WorldMap(-4, -4, actest::TestMapRules()), std::invalid_argument);
-    CHECK_NOTHROW(WorldMap(1, 1, actest::TestMapRules()));
+    CHECK_NOTHROW(WorldMap(2, 1, actest::TestMapRules()));
 }
 
 TEST_CASE("TerritoryMap::Rebuild refuses to run against a mismatched grid", "[map][territory]")
 {
-    actest::WorldFixture world(9, 9);
+    actest::WorldFixture world;
 
     SECTION("unsized")
     {
@@ -282,15 +282,17 @@ TEST_CASE("TerritoryMap::Rebuild refuses to run against a mismatched grid", "[ma
     {
         TerritoryMap territory;
         territory.Reset(4, 4);
-        CHECK_THROWS_WITH(territory.Rebuild(world.map, {}),
-                          Catch::Matchers::ContainsSubstring("4x4")
-                              && Catch::Matchers::ContainsSubstring("9x9"));
+        CHECK_THROWS_WITH(
+            territory.Rebuild(world.map, {}),
+            Catch::Matchers::ContainsSubstring("4x4")
+                && Catch::Matchers::ContainsSubstring(std::to_string(world.map.GetWidth()) + "x"
+                                                      + std::to_string(world.map.GetHeight())));
     }
 
     SECTION("matching dimensions rebuild normally")
     {
         TerritoryMap territory;
-        territory.Reset(9, 9);
+        territory.Reset(world.map.GetWidth(), world.map.GetHeight());
         CHECK_NOTHROW(territory.Rebuild(world.map, {}));
     }
 }

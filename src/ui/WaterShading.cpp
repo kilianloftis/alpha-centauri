@@ -1,5 +1,7 @@
 #include "ui/WaterShading.h"
 
+#include "game/map/MapUtils.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -50,8 +52,7 @@ int CornerShade_(const Tile& rTile, const WorldMap& rMap,
     int count = 1;
     for (const GridDelta_t& rDelta : neighbors)
     {
-        if (const Tile* pNeighbor =
-                rMap.GetTile(rTile.GetX() + rDelta.dx, rTile.GetY() + rDelta.dy))
+        if (const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rDelta.dx, rDelta.dy))
         {
             sum += DepthElevation_(*pNeighbor);
             ++count;

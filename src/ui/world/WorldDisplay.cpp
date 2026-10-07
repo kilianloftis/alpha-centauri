@@ -7,6 +7,7 @@
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Pathfinder.h"
@@ -195,7 +196,7 @@ void WorldDisplay::RenderGridEdges_(Graphics& rGraphics, const Tile& rTile,
     };
     for (const auto& rEdge : k_Edges)
     {
-        const Tile* pNeighbor = rWorldMap.GetTile(rTile.GetX() + rEdge.dx, rTile.GetY() + rEdge.dy);
+        const Tile* pNeighbor = GetTileAtLatticeOffset(rWorldMap, rTile, rEdge.dx, rEdge.dy);
         if (!pNeighbor)
         {
             continue;

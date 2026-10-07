@@ -35,7 +35,7 @@ TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     // A Networker pop carries "+1 labs, FactionGlobal".
     base.GetPopulation().AddPop("Networker");
@@ -59,7 +59,7 @@ TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while t
           == Approx(0.0));
 
     // energy_siphon: "+1 energy, FactionGlobal" on a component.
-    Unit& unit = fixture.MakeUnit(faction, 0, 0, {"energy_siphon"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 0, {"energy_siphon"});
     CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId_t::Energy), 0.0).total
           == Approx(1.0));
 
@@ -74,9 +74,9 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_weapon"}, &base); // 4 attack intrinsic
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_weapon"}, &base); // 4 attack intrinsic
     CHECK(unit.GetStat(StatId_t::Attack) == 4);
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
@@ -94,11 +94,11 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride appl
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& home = fixture.MakeFactionBase(faction, 2, 2);
-    fixture.At(5, 4).SetElevation(-100);
-    BaseManager& seaBase = fixture.MakeFactionBase(faction, 5, 4);
+    BaseManager& home = fixture.MakeFactionBase(faction, 8, 4);
+    fixture.At(9, 9).SetElevation(-100);
+    BaseManager& seaBase = fixture.MakeFactionBase(faction, 9, 9);
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &home);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &home);
     InteractionQuery_t enterWater;
     enterWater.grid = InteractionGridId_t::Enter;
     enterWater.actorDomain = UnitDomain_t::Land;
@@ -133,7 +133,7 @@ TEST_CASE("ResolveFlag: context-free resolution skips condition-carrying RuleFla
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_conditional_psi_flag"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_conditional_psi_flag"});
     CHECK_FALSE(unit.GetFlag(RuleFlagId_t::ForcesPsiCombat));
     CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::ForcesPsiCombat));
 }
@@ -143,12 +143,12 @@ TEST_CASE("on_unit_produced GrantXp: Aerospace Complex only boosts air starting 
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
     // Explicit producedAt: prototypes are "first one you built", not free fieldings.
-    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base, &base);
-    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base, &base);
+    Unit& land = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base, &base);
+    Unit& air = fixture.MakeUnit(faction, 9, 9, {"test_flight_chassis"}, &base, &base);
 
     // Both are the first built of their components, so both are prototypes.
     CHECK(land.GetXp() == 2); // base_intrinsic + prototype GrantXp
@@ -160,17 +160,17 @@ TEST_CASE("on_unit_produced GrantXp applies at the production base only",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& withComplex = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& otherBase = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& withComplex = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& otherBase = fixture.MakeFactionBase(faction, 8, 12);
     withComplex.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
     Unit& airBuiltThere =
-        fixture.MakeUnit(faction, 3, 3, {"test_flight_chassis"}, &withComplex, &withComplex);
+        fixture.MakeUnit(faction, 8, 6, {"test_flight_chassis"}, &withComplex, &withComplex);
     Unit& airBuiltElsewhere =
-        fixture.MakeUnit(faction, 5, 5, {"test_flight_chassis"}, &otherBase, &otherBase);
-    Unit& airNoBase = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
+        fixture.MakeUnit(faction, 8, 10, {"test_flight_chassis"}, &otherBase, &otherBase);
+    Unit& airNoBase = fixture.MakeUnit(faction, 8, 8, {"test_flight_chassis"});
     // Home reassigned away from the production base must not strip train XP already granted.
-    Unit& airRehomed = fixture.MakeUnit(faction, 7, 7, {"test_flight_chassis"}, &withComplex,
+    Unit& airRehomed = fixture.MakeUnit(faction, 8, 14, {"test_flight_chassis"}, &withComplex,
                                         &withComplex);
     airRehomed.SetHomeBase(&otherBase);
 
@@ -186,10 +186,10 @@ TEST_CASE("FactionUnits condition HasComponent: only matching designs receive th
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
-    Unit& armed = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"}, &base);
-    Unit& unarmed = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& armed = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
+    Unit& unarmed = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     CHECK(armed.GetStat(StatId_t::Attack) == 4);
     CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
 
@@ -203,7 +203,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.dataContext,
+    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
@@ -217,8 +217,8 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
                                                state.GetWorldMap(), fixture.settings,
                                                actest::k_TestFactionSeed));
 
-    BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(factionB, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(factionB, 8, 12);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, WorldGlobal
     // HQ on each base so inefficiency does not mask the WorldGlobal energy under test.
@@ -263,7 +263,7 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.dataContext,
+    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
@@ -273,8 +273,8 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
         2, false, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
         fixture.settings, actest::k_TestFactionSeed));
 
-    BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
-    Unit& unitB = fixture.MakeUnit(factionB, 6, 6, {"test_weapon"});
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
+    Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_weapon"});
     const int attackBefore = unitB.GetStat(StatId_t::Attack);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, base domain
@@ -289,15 +289,15 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.dataContext,
+    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
         1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
         fixture.settings, actest::k_TestFactionSeed));
-    BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
 
-    Tile& tile = *state.GetWorldMap().GetTile(4, 4);
+    Tile& tile = *state.GetWorldMap().GetTile(8, 8);
     const TileResources_t yieldBefore =
         state.GetTileEffects().ResolveTileYield(tile).effective;
     CHECK(state.GetTileEffects().ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
@@ -325,12 +325,12 @@ TEST_CASE("WorldGlobal lane: a move_cost clamp applies when entering a tile",
     }
 
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     MoveCostCalculator calc(fixture.improvements);
     const auto costs = calc.ForUnit(unit, fixture.map);
 
-    Tile& rocky = fixture.At(5, 4);
+    Tile& rocky = fixture.At(9, 9);
     rocky.SetRockiness(Rockiness_t::Rocky);
     const int rockyCost = 2 * MovementConstants_t::k_moveFragmentsPerPoint;
     CHECK(costs.EntryTerms(rocky).costFragments == rockyCost);
@@ -344,7 +344,7 @@ TEST_CASE("Social policy stat effects flow through the standard pool (no special
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeFactionBase(faction, 2, 2);
+    fixture.MakeFactionBase(faction, 8, 4);
 
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("wealth_policy"));
 
@@ -358,24 +358,24 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"sensor_pod"}); // +25% defense, radius 2
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"sensor_pod"}); // +25% defense, radius 2
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.25)); // own tile
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.25)); // own tile
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 12), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(11, 11), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {
         fixture.MoveUnit(unit, 0, 8);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), faction.GetFactionId()) == Approx(1.0));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 8), faction.GetFactionId()) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 9), faction.GetFactionId()) == Approx(1.25));
     }
 
     SECTION("the aura disappears with the unit")
     {
             faction.GetUnitManager().DestroyUnit(unit);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
     }
 }
 
@@ -385,10 +385,10 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    fixture.MakeUnit(faction, 4, 4, {"test_weapon", "test_chassis"});
+    fixture.MakeUnit(faction, 8, 8, {"test_weapon", "test_chassis"});
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.0));
-    const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(4, 4)).effective;
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
+    const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(8, 8)).effective;
     CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);
@@ -403,10 +403,10 @@ TEST_CASE("Unit aura wraps horizontally across the map seam",
 
     fixture.MakeUnit(faction, 0, 4, {"sensor_pod"}); // +25% defense, radius 2
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 1, 4), faction.GetFactionId())
-          == Approx(1.25));
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
           == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 3, 4), faction.GetFactionId())
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), faction.GetFactionId())
+          == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), faction.GetFactionId())
           == Approx(1.0));
 }

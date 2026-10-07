@@ -17,7 +17,7 @@
   },
   "map_generation": {
     "erosive_forces": "Average",
-    "height": 150,
+    "height": 300,
     "ocean_coverage": 0.6000000238418579,
     "preset_id": "pangea",
     "seed": 0,

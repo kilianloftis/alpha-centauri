@@ -79,7 +79,7 @@ TEST_CASE("Max fuel equals turns_of_fuel times movement", "[fuel]")
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
 
     REQUIRE(jet.GetMovementPoints() == 4);
     REQUIRE(jet.GetStat(StatId_t::TurnsOfFuel) == 2);
@@ -94,7 +94,7 @@ TEST_CASE("Away turns burn a full movement of fuel and destroy at zero with 100%
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
     REQUIRE(jet.GetCurrentFuel() == 8);
 
     ProcessFuelAtTurnEnd(jet, fixture.map);
@@ -111,12 +111,12 @@ TEST_CASE("Partial move then end turn burns the same net fuel as a full away tur
     FillLand_(fixture);
     FuelHarness_ harness(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
     REQUIRE(jet.GetCurrentFuel() == 8);
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
-    MoveOrder_t stepOrder{&fixture.At(5, 4)};
-    REQUIRE(harness.orders.TryStep(jet, fixture.At(5, 4), stepOrder).bEntered);
+    MoveOrder_t stepOrder{&fixture.At(9, 9)};
+    REQUIRE(harness.orders.TryStep(jet, fixture.At(9, 9), stepOrder).bEntered);
     CHECK(jet.GetCurrentFuel() == 7);
     CHECK(jet.GetMoveFragmentsRemaining() == 3 * k_point);
 
@@ -131,16 +131,16 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     FuelHarness_ harness(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& jet = fixture.MakeUnit(player, 4, 4, {"test_fuel_flight_chassis", "test_weapon"});
-    fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_weapon"});
+    Unit& jet = fixture.MakeUnit(player, 8, 8, {"test_fuel_flight_chassis", "test_weapon"});
+    fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
     REQUIRE(jet.GetFlag(RuleFlagId_t::AttackingEndsTurn));
     REQUIRE(jet.GetCurrentFuel() == 8);
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
-    REQUIRE(harness.orders.TryAttack(jet, fixture.At(5, 4)).has_value());
+    REQUIRE(harness.orders.TryAttack(jet, fixture.At(9, 9)).has_value());
     CHECK(jet.GetMoveFragmentsRemaining() == 0);
     CHECK(jet.GetCurrentFuel() == 4);
-    CHECK_FALSE(CanDeclareAttack(jet, fixture.At(5, 4), fixture.map, *fixture.ctx));
+    CHECK_FALSE(CanDeclareAttack(jet, fixture.At(9, 9), fixture.map, *fixture.ctx));
 }
 
 TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage", "[fuel]")
@@ -151,8 +151,8 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
 
     SECTION("Base")
     {
-        fixture.MakeFactionBase(faction, 4, 4);
-        Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+        fixture.MakeFactionBase(faction, 8, 8);
+        Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
         jet.SetCurrentFuel(1);
         ProcessFuelAtTurnEnd(jet, fixture.map);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
@@ -162,9 +162,9 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
     SECTION("Airbase")
     {
         // Territory comes from a nearby base; the Airbase on this tile supplies harbors(air).
-        fixture.MakeFactionBase(faction, 1, 4);
-        fixture.ctx->AddOccupantWithEffects(fixture.At(4, 4), "Airbase");
-        Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+        fixture.MakeFactionBase(faction, 5, 5);
+        fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Airbase");
+        Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet, fixture.map);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
@@ -173,10 +173,10 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
 
     SECTION("friendly carrier deck — already embarked")
     {
-        MakeWater_(fixture.At(5, 4));
+        MakeWater_(fixture.At(9, 9));
         Unit& carrier = fixture.MakeUnit(
-            faction, 5, 4, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
-        Unit& jet = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+            faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
+        Unit& jet = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
         REQUIRE(TryAttachToTransport(jet, fixture.map));
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet, fixture.map);
@@ -187,10 +187,10 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
 
     SECTION("friendly carrier deck — auto-lands at turn end")
     {
-        MakeWater_(fixture.At(5, 4));
+        MakeWater_(fixture.At(9, 9));
         Unit& carrier = fixture.MakeUnit(
-            faction, 5, 4, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
-        Unit& jet = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+            faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
+        Unit& jet = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
         CHECK_FALSE(jet.IsEmbarked());
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet, fixture.map);
@@ -206,10 +206,10 @@ TEST_CASE("Refuel is owner-scoped: enemy air on your base does not refuel", "[fu
     FillLand_(fixture);
     Faction& owner = fixture.MakeFaction();
     Faction& intruder = fixture.MakeFaction();
-    fixture.MakeFactionBase(owner, 4, 4);
+    fixture.MakeFactionBase(owner, 8, 8);
 
-    Unit& ownJet = fixture.MakeUnit(owner, 4, 4, {"test_fuel_flight_chassis"});
-    Unit& enemyJet = fixture.MakeUnit(intruder, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& ownJet = fixture.MakeUnit(owner, 8, 8, {"test_fuel_flight_chassis"});
+    Unit& enemyJet = fixture.MakeUnit(intruder, 8, 8, {"test_fuel_flight_chassis"});
     ownJet.SetCurrentFuel(0);
     enemyJet.SetCurrentFuel(0);
 
@@ -227,17 +227,17 @@ TEST_CASE("Carrier deck does not refuel air that could not land (no cargo slot)"
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    MakeWater_(fixture.At(5, 4));
+    MakeWater_(fixture.At(9, 9));
 
     // test_transport cargo_capacity 1: first jet lands, second shares the tile but stays aloft.
     Unit& carrier = fixture.MakeUnit(
-        faction, 5, 4, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
-    Unit& landed = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+        faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
+    Unit& landed = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     REQUIRE(TryAttachToTransport(landed, fixture.map));
     REQUIRE(landed.IsEmbarked());
     REQUIRE(FreeCargoSlots(carrier) == 0);
 
-    Unit& stranded = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+    Unit& stranded = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     CHECK_FALSE(stranded.IsEmbarked());
     CHECK_FALSE(TryAttachToTransport(stranded, fixture.map));
     stranded.SetCurrentFuel(0);
@@ -252,7 +252,7 @@ TEST_CASE("Copter takes 30% damage per away turn at zero fuel and survives", "[f
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& copter = fixture.MakeUnit(faction, 4, 4, {"test_copter_chassis"});
+    Unit& copter = fixture.MakeUnit(faction, 8, 8, {"test_copter_chassis"});
     REQUIRE(copter.GetMaxFuel() == 4);
     REQUIRE(copter.GetCurrentFuel() == 4);
     REQUIRE(copter.GetCurrentHp() == 10);
@@ -274,7 +274,7 @@ TEST_CASE("Chassis without turns_of_fuel ignores turn-end fuel processing", "[fu
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& grav = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
+    Unit& grav = fixture.MakeUnit(faction, 8, 8, {"test_flight_chassis"});
     CHECK_FALSE(grav.GetDesign().UsesFuel());
     CHECK(grav.GetMaxFuel() == 0);
     CHECK(grav.GetCurrentFuel() == 0);
@@ -290,8 +290,8 @@ TEST_CASE("NeedsAutoReturnToFuel when this turn's out-of-fuel damage would destr
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
-    Unit& copter = fixture.MakeUnit(faction, 5, 4, {"test_copter_chassis"});
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
+    Unit& copter = fixture.MakeUnit(faction, 9, 9, {"test_copter_chassis"});
 
     REQUIRE(jet.GetMaxFuel() == 8);
     REQUIRE(jet.GetMovementPoints() == 4);
@@ -314,7 +314,7 @@ TEST_CASE("NeedsAutoReturnToFuel when this turn's out-of-fuel damage would destr
     CHECK(NeedsAutoReturnToFuel(copter, fixture.map));
 
     jet.SetCurrentFuel(4);
-    fixture.MakeFactionBase(faction, 4, 4);
+    fixture.MakeFactionBase(faction, 8, 8);
     CHECK(IsRefuelSite(jet, fixture.map));
     CHECK_FALSE(NeedsAutoReturnToFuel(jet, fixture.map));
 }
@@ -324,9 +324,9 @@ TEST_CASE("TryAssignAutoReturnToFuel paths to nearest friendly base", "[fuel]")
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeFactionBase(faction, 1, 4);
-    fixture.MakeFactionBase(faction, 8, 4);
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    fixture.MakeFactionBase(faction, 5, 5);
+    fixture.MakeFactionBase(faction, 12, 12);
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
     jet.SetCurrentFuel(jet.GetMovementPoints());
 
     FuelHarness_ harness(fixture);
@@ -336,7 +336,7 @@ TEST_CASE("TryAssignAutoReturnToFuel paths to nearest friendly base", "[fuel]")
     const MoveOrder_t* pMove = std::get_if<MoveOrder_t>(&*jet.GetOrder());
     REQUIRE(pMove);
     REQUIRE(pMove->pDestination);
-    CHECK(pMove->pDestination == &fixture.At(1, 4));
+    CHECK(pMove->pDestination == &fixture.At(5, 5));
 }
 
 TEST_CASE("TryAssignAutoReturnToFuel does not fire when this turn would not be lethal", "[fuel]")
@@ -344,8 +344,8 @@ TEST_CASE("TryAssignAutoReturnToFuel does not fire when this turn would not be l
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeFactionBase(faction, 1, 4);
-    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    fixture.MakeFactionBase(faction, 5, 5);
+    Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
     REQUIRE(jet.GetCurrentFuel() == 8);
 
     FuelHarness_ harness(fixture);
@@ -359,8 +359,8 @@ TEST_CASE("TryAssignAutoReturnToFuel ignores refuel sites beyond remaining moves
     FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
     // Chebyshev distance 5 on Y (no wrap); jet has 4 move points.
-    fixture.MakeFactionBase(faction, 0, 5);
-    Unit& jet = fixture.MakeUnit(faction, 0, 0, {"test_fuel_flight_chassis"});
+    fixture.MakeFactionBase(faction, 3, 5);
+    Unit& jet = fixture.MakeUnit(faction, 8, 0, {"test_fuel_flight_chassis"});
     jet.SetCurrentFuel(jet.GetMovementPoints());
 
     FuelHarness_ harness(fixture);

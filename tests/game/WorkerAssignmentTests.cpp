@@ -62,9 +62,9 @@ TEST_CASE("A tile worked by one base cannot be worked by another base", "[worker
 {
     actest::BaseFixture fixture;
     // Workable areas of bases at (2,2) and (4,4) overlap; (3,3) is workable by both.
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(4, 4);
-    Tile& shared = fixture.At(3, 3);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 8);
+    Tile& shared = fixture.At(8, 6);
 
     baseA.GetWorkerAssignments().UnassignAll();
     baseB.GetWorkerAssignments().UnassignAll();
@@ -89,9 +89,9 @@ TEST_CASE("IsTileWorkedByThisBase distinguishes my worker from anyone's", "[work
     // the base screen: it painted a neighbour's tile as worked and then showed 0 0 0, because
     // GetWorkedTileYield only resolves against this base's pops. The two must agree.
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(4, 4);
-    Tile& shared = fixture.At(3, 3);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 8);
+    Tile& shared = fixture.At(8, 6);
 
     baseA.GetWorkerAssignments().UnassignAll();
     baseB.GetWorkerAssignments().UnassignAll();
@@ -104,8 +104,8 @@ TEST_CASE("IsTileWorkedByThisBase distinguishes my worker from anyone's", "[work
 
     // A base's own centre tile is claimed for its whole life but worked by no pop, so it is
     // "assigned" and not "worked by this base" — the case that produced the 0 0 0 display.
-    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&fixture.At(2, 2)));
-    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(2, 2)));
+    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&fixture.At(8, 4)));
+    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(8, 4)));
 }
 
 TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavailable",
@@ -115,9 +115,9 @@ TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavai
     // attempting the assignment, and the result was discarded — so a doomed request destroyed
     // a specialist's role or left a worker idle for nothing.
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(4, 4);
-    Tile& shared = fixture.At(3, 3);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 8);
+    Tile& shared = fixture.At(8, 6);
 
     baseB.GetWorkerAssignments().UnassignAll();
     REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
@@ -129,11 +129,11 @@ TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavai
     CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
 
     // A tile outside the base's workable set is refused the same way.
-    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&fixture.At(8, 8)));
+    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&fixture.At(8, 16)));
 
     // A genuinely free tile in range still works.
-    CHECK(baseB.UserAssignBestAvailableWorker(&fixture.At(5, 4)));
-    CHECK(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(5, 4)));
+    CHECK(baseB.UserAssignBestAvailableWorker(&fixture.At(9, 9)));
+    CHECK(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(9, 9)));
 }
 
 TEST_CASE("A refused assignment does not demote a specialist", "[worker][index]")
@@ -142,9 +142,9 @@ TEST_CASE("A refused assignment does not demote a specialist", "[worker][index]"
     // converted a specialist back to a plain worker and *then* attempted the assignment,
     // discarding the result — so a doomed request destroyed the specialist's role for nothing.
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(4, 4);
-    Tile& shared = fixture.At(3, 3);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 8);
+    Tile& shared = fixture.At(8, 6);
 
     // A takes the contested tile.
     baseA.GetWorkerAssignments().UnassignAll();
@@ -170,9 +170,9 @@ TEST_CASE("A refused assignment does not pull a worker off a productive tile", "
     // The other paying branch: with no idle worker and no specialist, the old code unassigned
     // the lowest-yield worker and then failed to place it, leaving it idle for nothing.
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(4, 4);
-    Tile& shared = fixture.At(3, 3);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 8);
+    Tile& shared = fixture.At(8, 6);
 
     baseA.GetWorkerAssignments().UnassignAll();
     REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
@@ -191,52 +191,52 @@ TEST_CASE("A refused assignment does not pull a worker off a productive tile", "
 TEST_CASE("A base can never work another base's own tile", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
     // Free A's auto-assigned workers so B's founding tile cannot already be worked.
     baseA.GetWorkerAssignments().UnassignAll();
-    BaseManager& baseB = fixture.MakeBase(3, 3);
+    BaseManager& baseB = fixture.MakeBase(8, 6);
     baseB.GetWorkerAssignments().UnassignAll();
 
     // Each base holds its own tile's claim for its whole life.
-    CHECK(fixture.map.GetWorkedTiles().IsWorked(fixture.At(2, 2)));
-    CHECK(fixture.map.GetWorkedTiles().IsWorked(fixture.At(3, 3)));
+    CHECK(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 4)));
+    CHECK(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 6)));
 
     // A's center is inside B's workable area, but B can neither assign onto it nor see it
     // as free — and vice versa.
-    CHECK_FALSE(baseB.GetWorkerAssignments().AssignWorker(FirstPop(baseB), &fixture.At(2, 2)));
-    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&fixture.At(2, 2)));
-    CHECK_FALSE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &fixture.At(3, 3)));
+    CHECK_FALSE(baseB.GetWorkerAssignments().AssignWorker(FirstPop(baseB), &fixture.At(8, 4)));
+    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&fixture.At(8, 4)));
+    CHECK_FALSE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &fixture.At(8, 6)));
 }
 
 TEST_CASE("A destroyed base releases its own tile", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    fixture.MakeBase(4, 4);
-    REQUIRE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(4, 4)));
+    fixture.MakeBase(8, 8);
+    REQUIRE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 8)));
 
     fixture.bases.pop_back();
 
-    CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(4, 4)));
+    CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 8)));
 }
 
 TEST_CASE("Founding a base displaces the tile's worker onto its base's best free tile",
           "[worker][index]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
     baseA.GetWorkerAssignments().UnassignAll();
 
     // The only tile in A's radius with a non-zero yield — where the displaced worker
     // must end up (Wet grants +2 nutrients; every other tile is barren).
-    Tile& bestTile = fixture.At(1, 2);
+    Tile& bestTile = fixture.At(7, 3);
     bestTile.SetBaseMoisture(Moisture_t::Wet);
     bestTile.SetMoisture(Moisture_t::Wet);
 
     Pop& rWorker = FirstPop(baseA);
-    Tile& target = fixture.At(4, 3);
+    Tile& target = fixture.At(9, 7);
     REQUIRE(baseA.GetWorkerAssignments().UserAssignWorker(rWorker, &target));
 
-    fixture.MakeBase(4, 3);
+    fixture.MakeBase(9, 7);
 
     // The founding base owns the tile; the displaced worker lost the assignment and its
     // user flag, and A's auto-reassignment moved it to the best free tile in A's radius.
@@ -248,16 +248,16 @@ TEST_CASE("Founding a base displaces the tile's worker onto its base's best free
 TEST_CASE("Founding a base on another base's own tile throws", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    fixture.MakeBase(2, 2);
+    fixture.MakeBase(8, 4);
 
-    CHECK_THROWS_AS(fixture.MakeBase(2, 2), std::runtime_error);
+    CHECK_THROWS_AS(fixture.MakeBase(8, 4), std::runtime_error);
 }
 
 TEST_CASE("Destroying a pop releases its worked tile", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
-    Tile& tile = fixture.At(3, 3);
+    BaseManager& base = fixture.MakeBase(8, 4);
+    Tile& tile = fixture.At(8, 6);
 
     base.GetWorkerAssignments().UnassignAll();
     REQUIRE(base.GetWorkerAssignments().AssignWorker(LastPop(base), &tile));
@@ -277,8 +277,8 @@ TEST_CASE("Destroying a pop releases its worked tile", "[worker][index]")
 TEST_CASE("Converting a worker to a non-worker type releases its tile", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
-    Tile& tile = fixture.At(3, 3);
+    BaseManager& base = fixture.MakeBase(8, 4);
+    Tile& tile = fixture.At(8, 6);
 
     base.GetWorkerAssignments().UnassignAll();
     Pop& rPop = FirstPop(base);
@@ -295,8 +295,8 @@ TEST_CASE("Converting a worker to a non-worker type releases its tile", "[worker
 TEST_CASE("User-assigned flag lives and dies with the tile claim", "[worker]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
-    Tile& tile = fixture.At(3, 3);
+    BaseManager& base = fixture.MakeBase(8, 4);
+    Tile& tile = fixture.At(8, 6);
 
     base.GetWorkerAssignments().UnassignAll();
     Pop& rPop = FirstPop(base);
@@ -315,16 +315,16 @@ TEST_CASE("User-assigned flag lives and dies with the tile claim", "[worker]")
 TEST_CASE("Assignment is refused outside the workable set and for non-workers", "[worker]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
 
     base.GetWorkerAssignments().UnassignAll();
     Pop& rPop = FirstPop(base);
     // (8,8) is far outside the 5x5 workable area of a base at (2,2).
-    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, fixture.map.GetTile(8, 8)));
+    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, fixture.map.GetTile(8, 16)));
 
     // A non-empty claim handed to a pop that cannot work tiles is a hard error.
     Pop doctor(*fixture.popTypes().Find("Doctor"));
-    WorkedTileClaim claim = fixture.map.GetWorkedTiles().TryClaim(fixture.At(1, 1), false);
+    WorkedTileClaim claim = fixture.map.GetWorkedTiles().TryClaim(fixture.At(8, 2), false);
     REQUIRE(claim.GetTile() != nullptr);
     CHECK_THROWS_AS(doctor.SetTileClaim(std::move(claim)), std::logic_error);
 }
@@ -332,19 +332,19 @@ TEST_CASE("Assignment is refused outside the workable set and for non-workers", 
 TEST_CASE("WorkedTileIndex bumps its revision on claim and release", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     WorkedTileIndex& rIndex = fixture.map.GetWorkedTiles();
 
     base.GetWorkerAssignments().UnassignAll();
     const uint64_t before = rIndex.GetRevision();
 
     Pop& rPop = FirstPop(base);
-    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(3, 3)));
+    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(8, 6)));
     const uint64_t afterClaim = rIndex.GetRevision();
     CHECK(afterClaim > before);
 
     // A failed claim (tile already worked) must not invalidate caches.
-    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(LastPop(base), &fixture.At(3, 3)));
+    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(LastPop(base), &fixture.At(8, 6)));
     CHECK(rIndex.GetRevision() == afterClaim);
 
     base.GetWorkerAssignments().UnassignWorker(rPop);
@@ -354,7 +354,7 @@ TEST_CASE("WorkedTileIndex bumps its revision on claim and release", "[worker][i
 TEST_CASE("ResetAllAssignments demotes specialists and fills free tiles", "[worker]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     auto& rAssignments = base.GetWorkerAssignments();
 
     // Leave tiles empty and convert every pop to a specialist — the state a player reaches
@@ -393,12 +393,12 @@ TEST_CASE("ResetAllAssignments demotes specialists and fills free tiles", "[work
 TEST_CASE("ResetAllAssignments clears user locks and reassigns by yield", "[worker]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(2, 2);
+    BaseManager& base = fixture.MakeBase(8, 4);
     auto& rAssignments = base.GetWorkerAssignments();
     rAssignments.UnassignAll();
 
-    Tile& poorTile = fixture.At(1, 2);
-    Tile& richTile = fixture.At(3, 2);
+    Tile& poorTile = fixture.At(7, 3);
+    Tile& richTile = fixture.At(9, 5);
     richTile.SetBaseMoisture(Moisture_t::Wet);
     richTile.SetMoisture(Moisture_t::Wet);
 
@@ -423,11 +423,11 @@ TEST_CASE("Workable area wraps horizontally across the map seam", "[worker][work
     Pop& rPop = FirstPop(base);
     Pop& rPop2 = LastPop(base);
 
-    // Euclidean radius 2 across the wrap: (width-1,4) and (width-1,5) are workable.
-    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 1, 4)));
-    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop2, &fixture.At(width - 1, 5)));
+    // Euclidean radius 2 across the wrap: (width-1,3) and (width-2,4) are workable.
+    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 1, 3)));
+    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop2, &fixture.At(width - 2, 4)));
 
-    // (width-2,6): dx=2, dy=2 — outside the workable disk (corners cut).
+    // (width-4,4): lattice offset (-2, 2) — outside the workable disk (corners cut).
     base.GetWorkerAssignments().UnassignWorker(rPop);
-    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 2, 6)));
+    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 4, 4)));
 }

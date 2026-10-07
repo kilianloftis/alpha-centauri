@@ -47,7 +47,7 @@ TEST_CASE("ExpandGrantBuildingEffects: a ThisBase-scoped grant expands the grant
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     baseA.GetBuildingManager().AddBuilding("grantor_local");
     const auto expanded = ExpandGrantBuildingEffects(
@@ -66,7 +66,7 @@ TEST_CASE("ExpandGrantBuildingEffects: the granted building's triggered effects 
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // granted_hall declares a GrantTech in on_complete_effects. A continuous GrantBuilding
     // expands the target's `effects` only — it does not construct the facility, so nothing
@@ -86,7 +86,7 @@ TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id throws",
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     baseA.GetBuildingManager().AddBuilding("grantor_unknown");
     const auto collected = baseA.CollectBuildingEffects();
@@ -98,7 +98,7 @@ TEST_CASE("ExpandGrantBuildingEffects: the same building granted twice in one ba
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // Both grantor_local and nested_middle grant granted_hall.
     baseA.GetBuildingManager().AddBuilding("grantor_local");
@@ -114,8 +114,8 @@ TEST_CASE("ExpandGrantBuildingEffects: two bases granting the same building expa
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(6, 6);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 12);
 
     baseA.GetBuildingManager().AddBuilding("grantor_local");
     baseB.GetBuildingManager().AddBuilding("grantor_local");
@@ -135,8 +135,8 @@ TEST_CASE("ExpandGrantBuildingEffects: a faction-global grant clones ThisBase su
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(6, 6);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 12);
 
     // grantor_global grants granted_hall at FactionGlobal scope (no origin base).
     baseA.GetBuildingManager().AddBuilding("grantor_global");
@@ -159,7 +159,7 @@ TEST_CASE("ExpandGrantBuildingEffects: nested grants expand recursively with a c
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // nested_outer grants nested_middle (+4 energy), which grants granted_hall (+3 minerals).
     baseA.GetBuildingManager().AddBuilding("nested_outer");
@@ -175,7 +175,7 @@ TEST_CASE("ExpandGrantBuildingEffects: nested grants expand recursively with a c
 TEST_CASE("ExpandGrantBuildingEffects: mutually-granting buildings terminate", "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // cycle_a grants cycle_b; cycle_b grants cycle_a. The expansion must not loop forever.
     baseA.GetBuildingManager().AddBuilding("cycle_a");
@@ -202,7 +202,7 @@ TEST_CASE("ExpandGrantBuildingEffects: a cycle does not duplicate the originatin
     // the base; the b -> a back-grant targets a building already in its own grant chain and
     // must be skipped, giving 11 minerals (1 + 10) rather than 12.
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     baseA.GetBuildingManager().AddBuilding("cycle_a");
     const auto expanded = ExpandGrantBuildingEffects(
@@ -215,7 +215,7 @@ TEST_CASE("A triggered AddBuilding never enters the active pool, so it does not 
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // instant_grantor declares only an on_complete AddBuilding(flat_nutrient), which fires at
     // completion against a live session — it is not an EffectConfig_t and cannot be collected.
@@ -232,7 +232,7 @@ TEST_CASE("ExpandGrantBuildingEffects: grant of an already-constructed building 
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
 
     // SMAC Command Nexus / Perimeter Defense: hall is built, and a local grantor also grants it.
     baseA.GetBuildingManager().AddBuilding("granted_hall");
@@ -249,8 +249,8 @@ TEST_CASE("ExpandGrantBuildingEffects: global grant skips ThisBase clone where h
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(6, 6);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 12);
 
     baseA.GetBuildingManager().AddBuilding("granted_hall");
     baseA.GetBuildingManager().AddBuilding("grantor_global");

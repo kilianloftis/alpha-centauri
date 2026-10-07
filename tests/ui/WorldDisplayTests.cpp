@@ -49,7 +49,7 @@ TEST_CASE("The map grid draws land edges and adds water edges with the ocean gri
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    fixture.pState->GetWorldMap().GetTile(4, 4)->SetElevation(-500);
+    fixture.pState->GetWorldMap().GetTile(8, 8)->SetElevation(-500);
     const auto& s = Style().tileRenderer;
 
     const RecordingGraphics withoutOcean = Render_(fixture, ReliefMode_t::Flat, false);
@@ -65,15 +65,13 @@ TEST_CASE("Grid edges next to unexplored ground use the land colour", "[ui][worl
 {
     ViewFixture fixture;
     WorldMap& rMap = fixture.pState->GetWorldMap();
-    rMap.GetTile(4, 4)->SetElevation(-500);
-    for (int y = 0; y < rMap.GetHeight(); ++y)
+    Tile& rWater = *rMap.GetTile(8, 8);
+    rWater.SetElevation(-500);
+    for (const auto& pTile : rMap.GetTiles())
     {
-        for (int x = 0; x < rMap.GetWidth(); ++x)
+        if (pTile.get() != &rWater)
         {
-            if (x != 4 || y != 4)
-            {
-                fixture.pPlayer->GetExploredMap().Mark(*rMap.GetTile(x, y));
-            }
+            fixture.pPlayer->GetExploredMap().Mark(*pTile);
         }
     }
 
@@ -86,12 +84,9 @@ TEST_CASE("Grid lines run through the raised corners", "[ui][world][grid][relief
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
     WorldMap& rMap = fixture.pState->GetWorldMap();
-    for (int y = 0; y < rMap.GetHeight(); ++y)
+    for (const auto& pTile : rMap.GetTiles())
     {
-        for (int x = 0; x < rMap.GetWidth(); ++x)
-        {
-            rMap.GetTile(x, y)->SetElevation(2000);
-        }
+        pTile->SetElevation(2000);
     }
     const auto& s = Style().tileRenderer;
 
@@ -118,7 +113,7 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(3, 3);
+    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 6);
     REQUIRE(rTile.IsLand());
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus != nullptr);

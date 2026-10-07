@@ -56,7 +56,7 @@ TEST_CASE("AppendActiveEffects: tags every entry with its source", "[effects][co
 TEST_CASE("AppendActiveEffects: originBase follows TagsOriginBase", "[effects][collect]")
 {
     actest::BaseFixture fixture;
-    const BaseManager& base = fixture.MakeBase(4, 4);
+    const BaseManager& base = fixture.MakeBase(8, 8);
 
     actest::EffectPool pool;
     std::vector<EffectConfig_t> configs = {
@@ -144,7 +144,7 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
           "[effects][collect][pop]")
 {
     actest::BaseFixture fixture;
-    ac::BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 0);
+    ac::BaseManager& base = fixture.MakeBase(8, 8, /*initialPopulation*/ 0);
     ac::PopulationManager& pops = base.GetPopulation();
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
@@ -173,7 +173,7 @@ TEST_CASE("CollectTileEffects: terrain features contribute from cached configs",
           "[effects][collect][tile]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(2, 2);
+    Tile& tile = world.At(8, 4);
 
     SECTION("featureless terrain (Flat/Arid) yields no effects")
     {
@@ -206,7 +206,7 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
           "[effects][collect][tile]")
 {
     actest::WorldFixture world;
-    Tile& tile = world.At(2, 2);
+    Tile& tile = world.At(8, 4);
 
     const ImprovementConfig_t* pFarm = world.improvements.Find("Farm");
     const ImprovementConfig_t* pMine = world.improvements.Find("Mine");
@@ -229,7 +229,7 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     // WeirdAura carries a FactionGlobal-scoped effect (legal-but-inert on improvements);
     // that must never enter tile-local resolution.
     actest::WorldFixture world;
-    Tile& tile = world.At(2, 2);
+    Tile& tile = world.At(8, 4);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile);
@@ -245,7 +245,7 @@ TEST_CASE("CollectTileEffects: only a tile's own ThisTile effects enter the pool
 {
     // WeirdAura's FactionGlobal nutrients entry belongs to the faction lane, not the tile.
     actest::WorldFixture world;
-    Tile& tile = world.At(2, 2);
+    Tile& tile = world.At(8, 4);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile);

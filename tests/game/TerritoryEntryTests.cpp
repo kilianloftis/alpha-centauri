@@ -18,21 +18,21 @@ TEST_CASE("A player's move stops at the border of Treaty territory and asks",
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    REQUIRE(game.Owner(4, 4) == game.pA->GetFactionId());
-    REQUIRE(game.Owner(5, 4) == game.pB->GetFactionId());
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4);
+    REQUIRE(game.Owner(8, 8) == game.pA->GetFactionId());
+    REQUIRE(game.Owner(9, 9) == game.pB->GetFactionId());
+    Unit& rScout = game.MakeUnit(*game.pA, 8, 8);
 
     // Planning routes into the territory; only the step itself is refused.
-    REQUIRE(game.pState->GetPathfinder().FindPath(rScout, game.At(6, 4)).bReachable);
+    REQUIRE(game.pState->GetPathfinder().FindPath(rScout, game.At(10, 10)).bReachable);
     const StepEvaluator steps(game.Map(), game.pState->GetTileEffects());
-    CHECK(steps.EvaluateStep(rScout, rScout.GetTile(), game.At(5, 4)).outcome
+    CHECK(steps.EvaluateStep(rScout, rScout.GetTile(), game.At(9, 9)).outcome
           == StepOutcome_t::BlockedByTerritory);
 
-    rScout.SetOrder(MoveOrder_t{&game.At(6, 4)});
+    rScout.SetOrder(MoveOrder_t{&game.At(10, 10)});
     UnitOrderExecutor& rOrders = game.pState->GetUnitOrderExecutor();
     CHECK(rOrders.Execute(rScout) == OrderProgress_t::Continue);
 
-    CHECK(&rScout.GetTile() == &game.At(4, 4));
+    CHECK(&rScout.GetTile() == &game.At(8, 8));
     CHECK(rScout.GetOrder().has_value());
     const std::vector<TerritoryEntryInteraction_t> entries = game.Queued<TerritoryEntryInteraction_t>();
     REQUIRE(entries.size() == 1);
@@ -45,13 +45,13 @@ TEST_CASE("A covert unit enters Treaty territory without asking",
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    REQUIRE(game.Owner(5, 4) == game.pB->GetFactionId());
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4, {"test_chassis", "covert"});
+    REQUIRE(game.Owner(9, 9) == game.pB->GetFactionId());
+    Unit& rScout = game.MakeUnit(*game.pA, 8, 8, {"test_chassis", "covert"});
 
-    rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
+    rScout.SetOrder(MoveOrder_t{&game.At(9, 9)});
     game.pState->GetUnitOrderExecutor().Execute(rScout);
 
-    CHECK(&rScout.GetTile() == &game.At(5, 4));
+    CHECK(&rScout.GetTile() == &game.At(9, 9));
     CHECK(game.Queued<TerritoryEntryInteraction_t>().empty());
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
@@ -61,14 +61,14 @@ TEST_CASE("Breaking the Treaty at the border declares Vendetta and resumes the m
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4);
-    rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
+    Unit& rScout = game.MakeUnit(*game.pA, 8, 8);
+    rScout.SetOrder(MoveOrder_t{&game.At(9, 9)});
     REQUIRE(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Continue);
 
     BreakAgreementAndContinue(*game.pState, rScout, game.pB->GetFactionId());
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
-    CHECK(&rScout.GetTile() == &game.At(5, 4));
+    CHECK(&rScout.GetTile() == &game.At(9, 9));
 }
 
 TEST_CASE("An AI unit drops a move order that would enter forbidden territory",
@@ -76,12 +76,12 @@ TEST_CASE("An AI unit drops a move order that would enter forbidden territory",
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rScout = game.MakeUnit(*game.pB, 5, 4);
-    rScout.SetOrder(MoveOrder_t{&game.At(3, 4)});
+    Unit& rScout = game.MakeUnit(*game.pB, 9, 9);
+    rScout.SetOrder(MoveOrder_t{&game.At(7, 7)});
 
     CHECK(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Complete);
     CHECK_FALSE(rScout.GetOrder().has_value());
-    CHECK(&rScout.GetTile() == &game.At(5, 4));
+    CHECK(&rScout.GetTile() == &game.At(9, 9));
     CHECK(game.Queued<TerritoryEntryInteraction_t>().empty());
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
@@ -91,9 +91,9 @@ TEST_CASE("Path planning keeps out of forbidden territory when a route avoids it
 {
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 0);
+    Unit& rScout = game.MakeUnit(*game.pA, 12, 4);
 
-    const Path_t path = game.pState->GetPathfinder().FindPath(rScout, game.At(4, 8));
+    const Path_t path = game.pState->GetPathfinder().FindPath(rScout, game.At(4, 12));
     REQUIRE(path.bReachable);
     for (const Tile* pTile : path.tiles)
     {
@@ -107,8 +107,8 @@ TEST_CASE("Breaking a Treaty at the border obliges the owner's Pact partners",
     DiplomacyFixture game;
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Treaty);
     game.Set(*game.pB, *game.pC, DiplomaticStatus_t::Pact);
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4);
-    rScout.SetOrder(MoveOrder_t{&game.At(5, 4)});
+    Unit& rScout = game.MakeUnit(*game.pA, 8, 8);
+    rScout.SetOrder(MoveOrder_t{&game.At(9, 9)});
     REQUIRE(game.pState->GetUnitOrderExecutor().Execute(rScout) == OrderProgress_t::Continue);
 
     BreakAgreementAndContinue(*game.pState, rScout, game.pB->GetFactionId());

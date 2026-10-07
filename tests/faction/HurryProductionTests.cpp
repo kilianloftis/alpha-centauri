@@ -411,7 +411,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     // Completing a hurried item fires on_complete_effects, which need a bound GameState.
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -422,7 +422,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = rFaction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
         pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);

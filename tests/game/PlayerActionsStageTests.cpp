@@ -44,7 +44,9 @@ struct PlayerActionsGame_
     PlayerActionsGame_()
     {
         pState = std::make_unique<GameState>(
-            std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixtures.dataContext,
+            std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                       actest::TestMapRules()),
+            fixtures.dataContext,
             settings, actest::k_TestRngSeed);
 
         auto pFaction = std::make_unique<Faction>(
@@ -90,8 +92,8 @@ TEST_CASE("PlayerActions mid-pass yield does not double-tick HoldForTurns",
           "[PlayerActions][TurnProcessor]")
 {
     PlayerActionsGame_ game;
-    Unit& holder = game.MakeUnit(2, 2);
-    Unit& shortHold = game.MakeUnit(4, 4);
+    Unit& holder = game.MakeUnit(8, 4);
+    Unit& shortHold = game.MakeUnit(8, 8);
 
     holder.SetOrder(HoldForTurnsOrder_t{3});
     // Completes in one Execute and still has moves → Yield after holder already advanced.
@@ -124,7 +126,7 @@ TEST_CASE("PlayerActions interaction yield then resolves orders on resume",
           "[PlayerActions][TurnProcessor]")
 {
     PlayerActionsGame_ game;
-    Unit& holder = game.MakeUnit(2, 2);
+    Unit& holder = game.MakeUnit(8, 4);
     holder.SetOrder(HoldForTurnsOrder_t{1});
 
     PerFactionTurnStageRegistry_t perFaction;
@@ -148,7 +150,7 @@ TEST_CASE("PlayerActions yields for interaction again on the next pass",
           "[PlayerActions]")
 {
     PlayerActionsGame_ game;
-    Unit& holder = game.MakeUnit(2, 2);
+    Unit& holder = game.MakeUnit(8, 4);
     // Multi-turn hold so the order pass Continues without a "needs orders" Yield.
     holder.SetOrder(HoldForTurnsOrder_t{2});
 
@@ -167,8 +169,8 @@ TEST_CASE("PlayerActions mid-pass Yield allows a new order on the completed unit
           "[PlayerActions][TurnProcessor]")
 {
     PlayerActionsGame_ game;
-    Unit& multi = game.MakeUnit(2, 2);
-    Unit& finishing = game.MakeUnit(4, 4);
+    Unit& multi = game.MakeUnit(8, 4);
+    Unit& finishing = game.MakeUnit(8, 8);
     multi.SetOrder(HoldForTurnsOrder_t{3});
     finishing.SetOrder(HoldForTurnsOrder_t{1});
 
@@ -211,8 +213,8 @@ TEST_CASE("SkipTurn persists without spending moves or re-opening needs-orders",
           "[PlayerActions][unit-order]")
 {
     PlayerActionsGame_ game;
-    Unit& skipped = game.MakeUnit(2, 2);
-    Unit& awaiting = game.MakeUnit(4, 4);
+    Unit& skipped = game.MakeUnit(8, 4);
+    Unit& awaiting = game.MakeUnit(8, 8);
     const int skippedMoves = skipped.GetMoveFragmentsRemaining();
     const int awaitingMoves = awaiting.GetMoveFragmentsRemaining();
     REQUIRE(skippedMoves > 0);
@@ -243,8 +245,8 @@ TEST_CASE("SkipTurn stays out of needs-orders when another unit yields mid-pass"
           "[PlayerActions][unit-order]")
 {
     PlayerActionsGame_ game;
-    Unit& skipped = game.MakeUnit(2, 2);
-    Unit& shortHold = game.MakeUnit(4, 4);
+    Unit& skipped = game.MakeUnit(8, 4);
+    Unit& shortHold = game.MakeUnit(8, 8);
     const int skippedMoves = skipped.GetMoveFragmentsRemaining();
     skipped.SetOrder(SkipTurnOrder_t{});
     shortHold.SetOrder(HoldForTurnsOrder_t{1});
@@ -265,7 +267,7 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
           "[Population][Mood][TurnProcessor]")
 {
     PlayerActionsGame_ game;
-    Tile* pTile = game.pState->GetWorldMap().GetTile(3, 3);
+    Tile* pTile = game.pState->GetWorldMap().GetTile(8, 6);
     REQUIRE(pTile);
     BaseManager* pBase = game.pPlayer->CreateBase(
         game.pState->AllocateBaseId(), "TestBase", pTile,
@@ -317,7 +319,9 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
     auto makeState = [&](unsigned seed)
     {
         auto pState = std::make_unique<GameState>(
-            std::make_unique<WorldMap>(16, 16, actest::TestMapRules()), fixtures.dataContext,
+            std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                       actest::TestMapRules()),
+            fixtures.dataContext,
             settings, actest::k_TestRngSeed);
         pState->GetRng().seed(seed);
         pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);

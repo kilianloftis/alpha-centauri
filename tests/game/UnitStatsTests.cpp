@@ -45,7 +45,7 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
     CHECK(unit.GetCurrentFuel() == unit.GetMaxFuel());
@@ -60,7 +60,7 @@ TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     // Overkill damage floors at zero rather than going negative.
     unit.SetCurrentHp(-5);

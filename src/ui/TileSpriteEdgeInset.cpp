@@ -1,5 +1,7 @@
 #include "ui/TileSpriteEdgeInset.h"
 
+#include "game/map/MapUtils.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -20,13 +22,13 @@ SpriteEdgeMatch_t MatchOrthoEdges_(const Tile& rTile, const WorldMap* pMap, Pred
         return match;
     }
 
-    // Order N, E, S, W → diamond NE, SE, SW, NW.
+    // Order N, E, S, W lattice → diamond NE, SE, SW, NW.
     static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
     bool* const edges[4] = {&match.bNe, &match.bSe, &match.bSw, &match.bNw};
     for (int i = 0; i < 4; ++i)
     {
         const Tile* pNeighbor =
-            pMap->GetTile(rTile.GetX() + k_Deltas[i][0], rTile.GetY() + k_Deltas[i][1]);
+            GetTileAtLatticeOffset(*pMap, rTile, k_Deltas[i][0], k_Deltas[i][1]);
         if (pNeighbor && matches(rTile, *pNeighbor))
         {
             *edges[i] = true;

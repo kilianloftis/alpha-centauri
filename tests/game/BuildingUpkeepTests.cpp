@@ -69,8 +69,8 @@ TEST_CASE("Faction sums building upkeep across bases and copies", "[building][up
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     CHECK(faction.GetBuildingUpkeep() == 0);
 
@@ -93,8 +93,8 @@ TEST_CASE("Building upkeep is available per type for UI", "[building][upkeep]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     baseA.GetBuildingManager().AddBuilding("upkeep_hall");
     baseA.GetBuildingManager().AddBuilding("upkeep_hall");
@@ -136,7 +136,7 @@ TEST_CASE("ApplyBuildingUpkeep deducts from the faction energy treasury", "[buil
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("upkeep_hall");
     base.GetBuildingManager().AddBuilding("upkeep_hall");
 
@@ -158,7 +158,7 @@ TEST_CASE("ApplyBuildingUpkeep throws when the treasury cannot cover upkeep",
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("upkeep_hall");
 
     faction.GetEconomy().AddEnergy(1);
@@ -170,7 +170,7 @@ TEST_CASE("GetNetIncomePerTurn subtracts building upkeep", "[building][upkeep]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     const int before = faction.GetNetIncomePerTurn();
     base.GetBuildingManager().AddBuilding("upkeep_hall");
@@ -181,7 +181,7 @@ TEST_CASE("Headquarters does not charge facility energy upkeep", "[building][upk
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     base.GetBuildingManager().AddBuilding("Headquarters");
     CHECK(faction.GetBuildingUpkeep() == 0);
@@ -193,7 +193,7 @@ TEST_CASE("Continuous GrantBuilding targets do not pay maintenance", "[building]
     // a copy. Upkeep only tallies BuildingManager holdings, so the virtual grant is free.
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     base.GetBuildingManager().AddBuilding("grantor_local");
     CHECK_FALSE(base.GetBuildingManager().HasBuilding("granted_hall"));
@@ -248,7 +248,7 @@ TEST_CASE("Discovered tech FacilityEnergyUpkeep reduces maintenance", "[building
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("upkeep_hall");
     base.GetBuildingManager().AddBuilding("granted_hall");
 
@@ -269,7 +269,7 @@ TEST_CASE("Fusion and Quantum Power raise Command Center upkeep", "[building][up
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("Command_Center");
     base.GetBuildingManager().AddBuilding("upkeep_hall");
 

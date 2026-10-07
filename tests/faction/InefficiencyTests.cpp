@@ -16,23 +16,25 @@ using namespace ac;
 TEST_CASE("TabletopDiagonalDistance is longer + shorter/2 with X wrap",
           "[economy][inefficiency][map]")
 {
-    actest::WorldFixture world(16, 16);
+    actest::WorldFixture world;
+    const int width = world.map.GetWidth();
+    const Tile& rOrigin = world.At(10, 6);
 
-    // Pure axis: shorter = 0 → distance equals the longer leg.
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(4, 0), 16) == 4);
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(0, 5), 16) == 5);
+    // Pure axis: shorter = 0 → distance equals the longer leg (lattice offset (4, 0)).
+    CHECK(TabletopDiagonalDistance(rOrigin, world.At(14, 10), width) == 4);
+    CHECK(TabletopDiagonalDistance(rOrigin, world.At(5, 11), width) == 5);
 
     // Equal legs: longer + floor(shorter/2) = 3 + 1 = 4 (Chebyshev would be 3).
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(3, 3), 16) == 4);
+    CHECK(TabletopDiagonalDistance(rOrigin, world.At(10, 12), width) == 4);
 
-    // Unequal: dx=4, dy=2 → 4 + 1 = 5.
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(4, 2), 16) == 5);
+    // Unequal: lattice offset (4, 2) → 4 + 1 = 5.
+    CHECK(TabletopDiagonalDistance(rOrigin, world.At(12, 12), width) == 5);
 
-    // Odd shorter floor: dx=5, dy=1 → 5 + 0 = 5.
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(5, 1), 16) == 5);
+    // Odd shorter floor: lattice offset (5, 1) → 5 + 0 = 5.
+    CHECK(TabletopDiagonalDistance(rOrigin, world.At(14, 12), width) == 5);
 
-    // Horizontal wrap: (0,0) to (15,0) is one step west, not 15 east.
-    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(15, 0), 16) == 1);
+    // Horizontal wrap: (0, 0) to (width - 2, 0) is one step west, not width / 2 - 1 steps east.
+    CHECK(TabletopDiagonalDistance(world.At(0, 0), world.At(width - 2, 0), width) == 1);
 }
 
 TEST_CASE("CalculateInefficiencyLoss uses the configured denominators",
@@ -82,8 +84,8 @@ TEST_CASE("HQ base loses no energy to inefficiency regardless of Efficiency rati
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 2);
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 12, 8);
 
     hq.GetBuildingManager().AddBuilding("Headquarters");
     hq.GetBuildingManager().AddBuilding("energy_tap");
@@ -104,7 +106,7 @@ TEST_CASE("No headquarters uses Distance 16 for inefficiency", "[economy][ineffi
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("energy_tap");
 
     REQUIRE(faction.GetHeadquarters() == nullptr);
@@ -119,10 +121,9 @@ TEST_CASE("Efficiency SE rating changes remote-base inefficiency loss",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    // Fixture map is 9 wide; stay inside the non-wrapping half so distance is literal dx.
-    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
-    // Tabletop distance: dx=4, dy=0 → 4.
-    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 2);
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
+    // Lattice offset (4, 0) → tabletop distance 4.
+    BaseManager& remote = fixture.MakeFactionBase(faction, 12, 8);
 
     hq.GetBuildingManager().AddBuilding("Headquarters");
     remote.GetBuildingManager().AddBuilding("energy_tap");

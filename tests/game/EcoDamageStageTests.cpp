@@ -118,7 +118,7 @@ TEST_CASE("A base at 100% eco damage blooms inside its radius", "[ecology][stage
 {
     EcoSession_ session;
     session.Eco().damageFormula = "100";
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     std::vector<EvFungalBloom> events;
     session.pState->GetEventBus().Subscribe<EvFungalBloom>(
         std::function<void(const EvFungalBloom&)>(
@@ -150,7 +150,7 @@ TEST_CASE("A base at 0% eco damage never blooms", "[ecology][stage]")
 {
     EcoSession_ session;
     session.Eco().damageFormula = "0";
-    session.MakeBase(*session.pPlayer, 4, 4);
+    session.MakeBase(*session.pPlayer, 8, 8);
 
     session.RunEcoDamage(*session.pPlayer);
 
@@ -164,7 +164,7 @@ TEST_CASE("max_chance_percent caps the pop roll", "[ecology][stage]")
     EcoSession_ session;
     session.Eco().damageFormula = "100";
     session.Eco().maxChancePercent = 0;
-    session.MakeBase(*session.pPlayer, 4, 4);
+    session.MakeBase(*session.pPlayer, 8, 8);
 
     session.RunEcoDamage(*session.pPlayer);
 
@@ -175,7 +175,7 @@ TEST_CASE("An AI bloom is recorded but not announced to the player", "[ecology][
 {
     EcoSession_ session;
     session.Eco().damageFormula = "100";
-    session.MakeBase(*session.pAi, 4, 4);
+    session.MakeBase(*session.pAi, 8, 8);
 
     session.RunEcoDamage(*session.pAi);
 
@@ -187,8 +187,8 @@ TEST_CASE("The pop tile is never one that already has fungus", "[ecology][stage]
 {
     EcoSession_ session;
     session.Eco().damageFormula = "100";
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
-    const Tile* pFree = session.At(6, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
+    const Tile* pFree = session.At(10, 10);
     for (const Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
     {
         if (pTile != pFree)
@@ -208,7 +208,7 @@ TEST_CASE("The pop tile is never one that already has fungus", "[ecology][stage]
 TEST_CASE("on_pop_effects applied without a pop tile plant nothing", "[ecology][stage]")
 {
     EcoSession_ session;
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
 
     TriggeredEffectContext_t context(*session.pState, rBase);
     context.pTile = nullptr;
@@ -220,7 +220,7 @@ TEST_CASE("Each bloom raises the clean-minerals cap by one", "[ecology][stage][c
 {
     EcoSession_ session;
     session.Eco().damageFormula = "100";
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
 
     session.RunEcoDamage(*session.pPlayer);
     session.RunEcoDamage(*session.pPlayer);
@@ -235,7 +235,7 @@ TEST_CASE("A Perihelion starting this turn is in the stack when EcoDamage rolls"
 {
     EcoSession_ session;
     session.pState->CreateWorldEvents();
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     const double baseline = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
                                             SeedFor(StatId_t::EcologicalDamage));
     session.Eco().damageFormula = "(eco_scale > " + std::to_string(baseline) + ") and 100 or 0";
@@ -266,12 +266,12 @@ TEST_CASE("Each eco facility completed after the first bloom grants one clean mi
             REQUIRE(rBase.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
         };
 
-        BaseManager& rBefore = session.MakeBase(*session.pPlayer, 2, 2);
+        BaseManager& rBefore = session.MakeBase(*session.pPlayer, 8, 4);
         complete(rBefore);
         CHECK(session.Ecology().CleanMineralGrants(factionId) == 0);
 
         session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
-        BaseManager& rAfter = session.MakeBase(*session.pPlayer, 6, 6);
+        BaseManager& rAfter = session.MakeBase(*session.pPlayer, 8, 12);
         complete(rAfter);
         CHECK(session.Ecology().CleanMineralGrants(factionId) == 1);
 
@@ -286,7 +286,7 @@ TEST_CASE("A facility that arrives without being built grants nothing", "[ecolog
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
     session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
 
     // The direct add behind base capture and granted buildings.
     rBase.GetBuildingManager().AddBuilding("test_tree_farm");
@@ -306,7 +306,7 @@ TEST_CASE("A Nanoreplicator raises EcoDamageReduction but never the cap",
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
     session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     session.Eco().damageFormula = "damage_reduction";
     const BuildingConfig_t* pNano =
         session.fixtures.dataContext.buildingRegistry->Find("test_nanoreplicator");
@@ -325,8 +325,8 @@ TEST_CASE("A grant credited mid-turn moves the score", "[ecology][clean-minerals
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
     session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
-    BaseManager& rBase = session.MakeBase(*session.pPlayer, 4, 4);
-    BaseManager& rBuilder = session.MakeBase(*session.pPlayer, 7, 7);
+    BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
+    BaseManager& rBuilder = session.MakeBase(*session.pPlayer, 8, 14);
     session.Eco().damageFormula = "clean_mineral_grants";
     CHECK(rBase.GetEcologicalDamage() == 0);
 

@@ -18,7 +18,8 @@ class Unit;
 class WorldMap
 {
 public:
-    // Throws unless both dimensions are positive: a zero-sized map has no valid tile.
+    // Throws unless both dimensions are positive and width is even. width is the SMAC x
+    // wrap period (two units per tile in a row); the map holds width*height/2 tiles.
     // Copies rMapRules and binds every tile to that copy. The map is immovable so those
     // tile pointers stay valid.
     WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules);
@@ -32,11 +33,12 @@ public:
     int GetWidth() const;
     int GetHeight() const;
 
-    // Tile access. X wraps horizontally (cylinder); Y out of bounds returns nullptr.
+    // Tile access in SMAC coordinates (x+y even). X wraps horizontally (cylinder);
+    // Y out of bounds returns nullptr. Odd parity throws.
     Tile* GetTile(int x, int y);
     const Tile* GetTile(int x, int y) const;
 
-    // Row-major index into GetTiles() for an in-bounds (x, y). Does not bounds-check.
+    // Row-major index into GetTiles() for an in-bounds even-parity (x, y). Throws on odd parity.
     int GetTileIndex(int x, int y) const;
     int GetTileIndex(const Tile& rTile) const;
 

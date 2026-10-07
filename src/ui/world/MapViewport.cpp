@@ -38,6 +38,41 @@ bool ShapeContains_(const TileShape_t& rShape, float px, float py)
            || TriangleContains_(rC, rShape.south, rShape.west, px, py);
 }
 
+// Flat diamond under map units (u, v): centre (x+1, y+1) with |u-x-1|+|v-y-1| ≤ 1.
+std::optional<std::pair<int, int>> FlatTileAtMapUnits_(float u, float v, int mapWidth,
+                                                       int mapHeight)
+{
+    const int approxX = static_cast<int>(std::floor(u)) - 1;
+    const int approxY = static_cast<int>(std::floor(v)) - 1;
+    std::optional<std::pair<int, int>> best;
+    float bestDist = 0.0f;
+    for (int dy = -1; dy <= 2; ++dy)
+    {
+        for (int dx = -1; dx <= 2; ++dx)
+        {
+            const int x = approxX + dx;
+            const int y = approxY + dy;
+            if (y < 0 || y >= mapHeight || ((x + y) & 1) != 0)
+            {
+                continue;
+            }
+            const float manhattan =
+                std::abs(u - static_cast<float>(x) - 1.0f)
+                + std::abs(v - static_cast<float>(y) - 1.0f);
+            if (manhattan > 1.0f + 1e-4f)
+            {
+                continue;
+            }
+            if (!best || manhattan < bestDist)
+            {
+                best = std::pair{WrapX(x, mapWidth), y};
+                bestDist = manhattan;
+            }
+        }
+    }
+    return best;
+}
+
 } // namespace
 
 MapViewport::MapViewport(const WorldMap& rWorldMap, WindowLayout_t layout, float tileSize)
@@ -45,8 +80,9 @@ MapViewport::MapViewport(const WorldMap& rWorldMap, WindowLayout_t layout, float
     , m_layout(layout)
     , m_tileWidth(tileSize)
     , m_tileHeight(tileSize * k_IsoHeightRatio)
-    , m_visibleCols(std::max(1, static_cast<int>(layout.width / tileSize)))
-    , m_visibleRows(std::max(1, static_cast<int>(layout.height / (tileSize * k_IsoHeightRatio))))
+    , m_visibleCols(std::max(1, static_cast<int>(layout.width / (tileSize * 0.5f))))
+    , m_visibleRows(
+          std::max(1, static_cast<int>(layout.height / (tileSize * k_IsoHeightRatio * 0.5f))))
 {
 }
 
@@ -118,8 +154,8 @@ void MapViewport::AabbOriginFromRel_(int relX, int relY, float& rOutX, float& rO
 {
     const float halfW = m_tileWidth * 0.5f;
     const float halfH = m_tileHeight * 0.5f;
-    rOutX = m_layout.x + static_cast<float>(relX - relY) * halfW;
-    rOutY = m_layout.y + static_cast<float>(relX + relY) * halfH;
+    rOutX = m_layout.x + static_cast<float>(relX) * halfW;
+    rOutY = m_layout.y + static_cast<float>(relY) * halfH;
 }
 
 bool MapViewport::BoxIntersectsLayout_(float x, float y, float height) const
@@ -215,52 +251,52 @@ std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX,
         return std::nullopt;
     }
 
-    // Unproject relative to diamond centers (AABB origin + half size).
-    const float ux = pixelX - m_layout.x - m_tileWidth * 0.5f;
-    const float uy = pixelY - m_layout.y - m_tileHeight * 0.5f;
-    const float fRelX = ux / m_tileWidth + uy / m_tileHeight;
-    const float fRelY = uy / m_tileHeight - ux / m_tileWidth;
-    const int flatRelX = static_cast<int>(std::lround(fRelX));
-    const int flatRelY = static_cast<int>(std::lround(fRelY));
+    const float halfW = m_tileWidth * 0.5f;
+    const float halfH = m_tileHeight * 0.5f;
+    const float u = static_cast<float>(m_cameraX) + (pixelX - m_layout.x) / halfW;
+    const float v = static_cast<float>(m_cameraY) + (pixelY - m_layout.y) / halfH;
 
-    // A raised tile shows above its flat place, so the pixel may belong to a tile further down
-    // the screen. Search from the front (largest depth) back to the flat tile's row.
-    const int reach =
-        static_cast<int>(std::ceil(MaxLiftPixels_() / (m_tileHeight * 0.5f))) + 1;
-    const int flatDepth = flatRelX + flatRelY;
-    const int flatColumn = flatRelX - flatRelY;
-    for (int depth = flatDepth + reach; depth >= flatDepth - 1; --depth)
+    const auto flat = FlatTileAtMapUnits_(u, v, mapWidth, mapHeight);
+    if (!flat)
     {
-        for (int column = flatColumn - 1; column <= flatColumn + 1; ++column)
+        return std::nullopt;
+    }
+
+    // Raised tiles show above their flat place; search front-first (larger y) back to the flat
+    // tile's row.
+    const int reach =
+        static_cast<int>(std::ceil(MaxLiftPixels_() / halfH)) + 1;
+    const int flatY = flat->second;
+    for (int worldY = std::min(mapHeight - 1, flatY + reach); worldY >= flatY; --worldY)
+    {
+        for (int dx = -2; dx <= 2; ++dx)
         {
-            if (((depth + column) & 1) != 0)
+            const int worldX = WrapWorldX_(flat->first + dx);
+            if (((worldX + worldY) & 1) != 0)
             {
                 continue;
             }
-            const int relX = (depth + column) / 2;
-            const int relY = (depth - column) / 2;
-            const int worldY = m_cameraY + relY;
-            const Tile* pTile = m_rWorldMap.GetTile(WrapWorldX_(m_cameraX + relX), worldY);
+            const Tile* pTile = m_rWorldMap.GetTile(worldX, worldY);
             if (!pTile)
+            {
+                continue;
+            }
+            const auto rel = RelOf_(worldX, worldY);
+            if (!rel)
             {
                 continue;
             }
             float aabbX = 0.0f;
             float aabbY = 0.0f;
-            AabbOriginFromRel_(relX, relY, aabbX, aabbY);
+            AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
             if (ShapeContains_(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false), pixelX, pixelY))
             {
-                return std::pair{WrapWorldX_(m_cameraX + relX), worldY};
+                return std::pair{worldX, worldY};
             }
         }
     }
 
-    const int worldY = m_cameraY + flatRelY;
-    if (worldY < 0 || worldY >= mapHeight)
-    {
-        return std::nullopt;
-    }
-    return std::pair{WrapWorldX_(m_cameraX + flatRelX), worldY};
+    return flat;
 }
 
 } // namespace ac

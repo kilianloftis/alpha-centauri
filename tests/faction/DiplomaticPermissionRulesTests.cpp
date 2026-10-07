@@ -14,27 +14,27 @@ TEST_CASE("Only Treaty keeps a faction's units out of the other's territory",
           "[diplomacy][status][movement]")
 {
     DiplomacyFixture game;
-    REQUIRE(game.Owner(6, 4) == game.pB->GetFactionId());
-    Unit& rScout = game.MakeUnit(*game.pA, 4, 4);
+    REQUIRE(game.Owner(10, 10) == game.pB->GetFactionId());
+    Unit& rScout = game.MakeUnit(*game.pA, 8, 8);
 
     for (const DiplomaticStatus_t status :
          {DiplomaticStatus_t::Neutral, DiplomaticStatus_t::Pact, DiplomaticStatus_t::Vendetta})
     {
         game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), status);
-        CHECK(CanEnterTile(rScout, game.At(6, 4), game.Map(), game.Grids()));
+        CHECK(CanEnterTile(rScout, game.At(10, 10), game.Map(), game.Grids()));
     }
 
     game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                             DiplomaticStatus_t::Treaty);
-    CHECK_FALSE(CanEnterTile(rScout, game.At(6, 4), game.Map(), game.Grids()));
-    CHECK(CanEnterTile(rScout, game.At(2, 4), game.Map(), game.Grids()));
+    CHECK_FALSE(CanEnterTile(rScout, game.At(10, 10), game.Map(), game.Grids()));
+    CHECK(CanEnterTile(rScout, game.At(6, 6), game.Map(), game.Grids()));
 }
 
 TEST_CASE("Only Pact partners may stand on the same tile", "[diplomacy][status][movement]")
 {
     DiplomacyFixture game;
-    Unit& rMover = game.MakeUnit(*game.pA, 3, 0);
-    Unit& rOther = game.MakeUnit(*game.pB, 4, 0);
+    Unit& rMover = game.MakeUnit(*game.pA, 11, 3);
+    Unit& rOther = game.MakeUnit(*game.pB, 12, 4);
 
     CHECK_FALSE(HasFriendlyOccupant(rMover, rOther.GetTile(), game.Map()));
     MoveOrder_t order;
@@ -52,7 +52,7 @@ TEST_CASE("Units repair in their own bases and in Pact partners' bases",
           "[diplomacy][status][repair]")
 {
     DiplomacyFixture game;
-    Unit& rUnit = game.MakeUnit(*game.pA, 4, 4);
+    Unit& rUnit = game.MakeUnit(*game.pA, 8, 8);
 
     CHECK(MayRepairAt(rUnit, *game.pBaseA));
     CHECK_FALSE(MayRepairAt(rUnit, *game.pBaseB));

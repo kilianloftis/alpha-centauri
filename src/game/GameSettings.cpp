@@ -31,6 +31,10 @@ void ValidateMapGeneration_(const MapGenerationConfig_t& rConfig, const std::str
         fail("width and height must be positive, got " + std::to_string(rConfig.width) + "x"
              + std::to_string(rConfig.height));
     }
+    if (rConfig.width % 2 != 0)
+    {
+        fail("width must be even, got " + std::to_string(rConfig.width));
+    }
     if (rConfig.oceanCoverage < 0.0f || rConfig.oceanCoverage > 1.0f)
     {
         fail("ocean_coverage must be in [0, 1], got " + std::to_string(rConfig.oceanCoverage));

@@ -40,7 +40,7 @@ struct CommerceGame_
         // here rather than added to the shared fixture, which several tests count.
         fixtures.dataContext.techRegistry->Load(FixturePath("techs_commerce.json"));
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -91,8 +91,8 @@ int ExpectedPairRaw_(int energyA, int energyB)
 TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     game.pState->GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
@@ -115,8 +115,8 @@ TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[
 TEST_CASE("Faction GetCommerce matches calculator for the same pair", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
 
     game.pState->GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
@@ -132,9 +132,9 @@ TEST_CASE("Faction GetCommerce matches calculator for the same pair", "[commerce
 TEST_CASE("ComputeForBase is empty for surplus bases and non-commerce treaties", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& a2 = game.MakeHqBase(*game.pA, 2, 6);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& a2 = game.MakeHqBase(*game.pA, 4, 8);
+    game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("energy_tap");
     REQUIRE(a1.GetEnergyProduction() > a2.GetEnergyProduction());
 
@@ -151,9 +151,9 @@ TEST_CASE("ComputeForBase is empty for surplus bases and non-commerce treaties",
 TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& a2 = game.MakeHqBase(*game.pA, 2, 6);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& a2 = game.MakeHqBase(*game.pA, 4, 8);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     a1.GetBuildingManager().AddBuilding("energy_tap");
     REQUIRE(a1.GetEnergyProduction() > a2.GetEnergyProduction());
@@ -172,8 +172,8 @@ TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[comm
 TEST_CASE("A Treaty's commerce effects halve the pair; a Pact trades at full rate", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
     REQUIRE(pairRaw >= 2);
@@ -192,8 +192,8 @@ TEST_CASE("A Treaty's commerce effects halve the pair; a Pact trades at full rat
 TEST_CASE("No commerce for Truce, Neutral, or Vendetta", "[commerce]")
 {
     CommerceGame_ game;
-    game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
 
     DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
 
@@ -211,8 +211,8 @@ TEST_CASE("No commerce for Truce, Neutral, or Vendetta", "[commerce]")
 TEST_CASE("CommerceRate doubles pair value when present", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_rate_doubler");
 
     game.pState->GetDiplomacyLedger().SetStatus(
@@ -227,8 +227,8 @@ TEST_CASE("A Treaty's halving stacks multiplicatively with a faction CommerceRat
           "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_rate_doubler");
 
     game.pState->GetDiplomacyLedger().SetStatus(
@@ -243,8 +243,8 @@ TEST_CASE("commerce_rating and economic techs feed the tech ratio; total ignores
           "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_rating_shrine"); // +2 CommerceRating
 
     game.pA->GetResearch().AddDiscoveredTech("industrial_automation"); // +1 economic tech
@@ -264,8 +264,8 @@ TEST_CASE("commerce_rating and economic techs feed the tech ratio; total ignores
 TEST_CASE("CommerceEnergyBonus adds at the end of each pair", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_energy_bonus_shrine");
 
     game.pState->GetDiplomacyLedger().SetStatus(
@@ -279,8 +279,8 @@ TEST_CASE("CommerceEnergyBonus adds at the end of each pair", "[commerce]")
 TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     game.pState->GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
@@ -307,8 +307,8 @@ TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[c
 TEST_CASE("Commerce is reciprocal: the partner earns it too, and the lines agree", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     // Asymmetric energy, so a line that silently used one side's figure for both would show.
     a1.GetBuildingManager().AddBuilding("energy_tap");
 
@@ -332,10 +332,10 @@ TEST_CASE("Commerce is reciprocal: the partner earns it too, and the lines agree
 TEST_CASE("A base accumulates one commerce line per eligible partner", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     Faction& rC = game.AddFaction();
-    BaseManager& c1 = game.MakeHqBase(rC, 6, 6);
+    BaseManager& c1 = game.MakeHqBase(rC, 8, 12);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     game.SetStatus(rC, DiplomaticStatus_t::Pact);
@@ -356,8 +356,8 @@ TEST_CASE("A base accumulates one commerce line per eligible partner", "[commerc
 TEST_CASE("Commerce reaches labs and psych, not just econ", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
 
     // An even three-way split, so every category visibly carries commerce.
     game.pA->GetEconomy().SetEnergyAllocation(EnergyAllocation_t{34, 33, 33});
@@ -377,8 +377,8 @@ TEST_CASE("Commerce reaches labs and psych, not just econ", "[commerce]")
 TEST_CASE("A negative commerce_rating tech cannot zero the tech denominator", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     // Planet-wide tech total of -1 would make the raw denominator (total + 1) zero.
     game.pA->GetResearch().AddDiscoveredTech("negative_commerce_tech");
@@ -395,8 +395,8 @@ TEST_CASE("A negative commerce_rating tech cannot zero the tech denominator", "[
 TEST_CASE("A gated commerce_rating tech stays out of the planet-wide denominator", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     const int baseline = game.calculator.ComputeForFaction(*game.pA, *game.pState)
@@ -414,9 +414,9 @@ TEST_CASE("A base detached from its faction reports no commerce instead of throw
           "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pA, 2, 6);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pA, 4, 8);
+    game.MakeHqBase(*game.pB, 12, 8);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     REQUIRE_FALSE(game.calculator.ComputeForBase(a1, *game.pState).empty());
@@ -435,8 +435,8 @@ TEST_CASE("A base detached from its faction reports no commerce instead of throw
 TEST_CASE("CommerceManager recomputes when a treaty changes", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
     const CommerceManager& rCommerce = game.pA->GetCommerce();
 
     CHECK(rCommerce.GetCommerceEnergy(a1) == 0);
@@ -455,8 +455,8 @@ TEST_CASE("CommerceManager recomputes when a treaty changes", "[commerce]")
 TEST_CASE("A partner-side change reaches the composition input key", "[commerce]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
     game.pA->GetEconomy().SetEnergyAllocation(EnergyAllocation_t{34, 33, 33});
 
     const DroneCalculator& rDrones = *game.fixtures.dataContext.droneCalculator;
@@ -474,8 +474,8 @@ TEST_CASE("A partner-side change reaches the composition input key", "[commerce]
 TEST_CASE("Atrocity sanctions zero commerce for both sides of the pair", "[commerce][atrocity]")
 {
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
 
     REQUIRE(game.calculator.ComputeForBase(a1, *game.pState).size() == 1);
@@ -503,8 +503,8 @@ TEST_CASE("CommerceManager recomputes when a sanction lands", "[commerce][atroci
     // the atrocity revision in that key, an atrocity kept paying commerce for the rest of the
     // turn.
     CommerceGame_ game;
-    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
-    game.MakeHqBase(*game.pB, 6, 2);
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
+    game.MakeHqBase(*game.pB, 12, 8);
     const CommerceManager& rCommerce = game.pA->GetCommerce();
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);

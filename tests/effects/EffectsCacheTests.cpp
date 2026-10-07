@@ -31,7 +31,7 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     // Repeated reads neither rebuild nor move the pool.
     const uint64_t v0 = faction.GetEffectsVersion();
@@ -61,7 +61,7 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
     CHECK(v4 != v3);
 
     // Units invalidate on creation and destruction.
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"energy_siphon"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"energy_siphon"});
     const uint64_t v5 = faction.GetEffectsVersion();
     CHECK(v5 != v4);
     faction.GetUnitManager().DestroyUnit(unit);
@@ -69,7 +69,7 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
     CHECK(v6 != v5);
 
     // Founding another base invalidates (base-list revision).
-    fixture.MakeFactionBase(faction, 6, 6);
+    fixture.MakeFactionBase(faction, 8, 12);
     CHECK(faction.GetEffectsVersion() != v6);
 }
 
@@ -78,7 +78,7 @@ TEST_CASE("Base effects cache: stat getters stay current through the memoized pa
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     const int before = base.GetNutrientProduction();
     CHECK(base.GetNutrientProduction() == before); // repeated read via the cache

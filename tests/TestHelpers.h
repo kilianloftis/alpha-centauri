@@ -26,6 +26,11 @@ class BaseManager;
 namespace actest
 {
 
+// Default test map in SMAC coordinates. Lattice cell (a, b) in 0..8 x 0..8 sits at
+// (a - b + 8, a + b); the width keeps the seam out of reach of that diamond.
+constexpr int k_TestMapWidth = 36;
+constexpr int k_TestMapHeight = 17;
+
 inline std::string FixturePath(const std::string& rName)
 {
     return std::string(AC_TEST_FIXTURES_DIR) + "/" + rName;

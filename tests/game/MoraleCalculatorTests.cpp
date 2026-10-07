@@ -106,7 +106,7 @@ TEST_CASE("Morale level effects apply Attack AddPercent in combat resolve", "[mo
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"});
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{};
 
@@ -134,15 +134,15 @@ TEST_CASE("DisplayName switches on IsNativeLife", "[morale]")
     Faction& faction = fixture.MakeFaction();
     const MoraleCalculator& morale = fixture.morale();
 
-    Unit& conventional = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& conventional = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     conventional.SetXp(3);
     CHECK(morale.DisplayName(conventional) == "Hardened");
 
-    Unit& psi = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_psi"});
+    Unit& psi = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_psi"});
     psi.SetXp(3);
     CHECK(morale.DisplayName(psi) == "Hardened");
 
-    Unit& native = fixture.MakeUnit(faction, 6, 4, {"native_life_chassis"});
+    Unit& native = fixture.MakeUnit(faction, 10, 10, {"native_life_chassis"});
     native.SetXp(3);
     CHECK(morale.DisplayName(native) == "Boil");
 }
@@ -151,8 +151,8 @@ TEST_CASE("SE Morale +2 adds defense-in-base morale_bonus only when defending", 
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base);
     unit.SetXp(2); // Disciplined intrinsic
     const MoraleCalculator& morale = fixture.morale();
 
@@ -173,9 +173,9 @@ TEST_CASE("Low SE Morale halves positive Creche defense bonus", "[morale][se]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetBuildingManager().AddBuilding("Childrens_Creche");
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base);
     unit.SetXp(2);
     const MoraleCalculator& morale = fixture.morale();
 
@@ -193,7 +193,7 @@ TEST_CASE("Defense floor keeps defender at Green", "[morale]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     unit.SetXp(0); // Very Green
     const MoraleCalculator& morale = fixture.morale();
 
@@ -207,7 +207,7 @@ TEST_CASE("ResolveCombatUnitStat applies morale level Attack AddPercent", "[mora
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"});
     unit.SetXp(4); // Veteran = +25%
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
@@ -226,14 +226,14 @@ TEST_CASE("morale_bonus carries a Unit-domain amount_source without a caller-sta
     // to stamp the subject from the live unit rather than throwing on it.
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_empire_morale"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_empire_morale"});
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
 
     const int noBases = morale.EffectiveMoraleLevel(unit, ctx);
 
-    fixture.MakeFactionBase(faction, 2, 2);
-    fixture.MakeFactionBase(faction, 6, 6);
+    fixture.MakeFactionBase(faction, 8, 4);
+    fixture.MakeFactionBase(faction, 8, 12);
     REQUIRE(faction.GetBaseCount() == 2);
     CHECK(morale.EffectiveMoraleLevel(unit, ctx) == noBases + 2);
 }
@@ -242,7 +242,7 @@ TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]"
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     const MoraleCalculator& morale = fixture.morale();
     std::mt19937 rng(1);
 
@@ -264,8 +264,8 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     }
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     attacker.SetXp(1);
     defender.SetXp(1);
     // Glass cannon defender: 0 armor so attacker wins quickly.
@@ -293,10 +293,10 @@ TEST_CASE("A committed riot costs morale only for units homed at the rioting bas
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& rioting = fixture.MakeFactionBase(faction, 4, 4);
-    BaseManager& calm = fixture.MakeFactionBase(faction, 6, 6);
-    Unit& homedAtRiot = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &rioting);
-    Unit& homedElsewhere = fixture.MakeUnit(faction, 6, 6, {"test_chassis"}, &calm);
+    BaseManager& rioting = fixture.MakeFactionBase(faction, 8, 8);
+    BaseManager& calm = fixture.MakeFactionBase(faction, 8, 12);
+    Unit& homedAtRiot = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &rioting);
+    Unit& homedElsewhere = fixture.MakeUnit(faction, 8, 12, {"test_chassis"}, &calm);
     homedAtRiot.SetXp(3);
     homedElsewhere.SetXp(3);
 

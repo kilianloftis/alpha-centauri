@@ -56,7 +56,8 @@ struct ScrambleGame_
 
     ScrambleGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(20, 20, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                                   actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
@@ -141,12 +142,12 @@ TEST_CASE("Air Superiority scrambler becomes combat defender", "[unit][scramble]
     ScrambleGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
-        game.MakeUnit(*game.pAi, 5, 7, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        game.MakeUnit(*game.pAi, 6, 12, {"test_flight_chassis", "test_weapon", "air_superiority"});
     game.FullMoves(scrambler);
     Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
     game.FullMoves(attacker);
 
     const Tile& rGroundTile = ground.GetTile();
@@ -187,17 +188,17 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
     auto& rEffects = game.pState->GetTileEffects();
     const Pathfinder& rPathfinder = game.pState->GetPathfinder();
 
-    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
 
     SECTION("insufficient remaining fragments for the path")
     {
         // Distance 2 costs two move points; one spent leaves not enough to arrive.
         Unit& scrambler =
-            game.MakeUnit(*game.pAi, 5, 7,
+            game.MakeUnit(*game.pAi, 6, 12,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         scrambler.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
         Unit& attacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
         CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
@@ -205,11 +206,11 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
     SECTION("out of radius")
     {
         Unit& scrambler =
-            game.MakeUnit(*game.pAi, 5, 10,
+            game.MakeUnit(*game.pAi, 3, 15,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(scrambler);
         Unit& attacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
         CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
@@ -217,11 +218,11 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
     SECTION("enemy air superiority does not scramble for the defender")
     {
         Unit& enemyScrambler =
-            game.MakeUnit(*game.pPlayer, 5, 7,
+            game.MakeUnit(*game.pPlayer, 6, 12,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(enemyScrambler);
         Unit& attacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
         CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
@@ -229,12 +230,12 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
     SECTION("land attacker fails Domain air condition")
     {
         Unit& scrambler =
-            game.MakeUnit(*game.pAi, 5, 7,
+            game.MakeUnit(*game.pAi, 6, 12,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(scrambler);
         const Tile& rScramblerTile = scrambler.GetTile();
         Unit& landAttacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "test_weapon"});
         CHECK(FindScrambler(landAttacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
 
@@ -255,17 +256,17 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
     auto& rEffects = game.pState->GetTileEffects();
     const Pathfinder& rPathfinder = game.pState->GetPathfinder();
 
-    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
 
     SECTION("higher Attack wins")
     {
         Unit& weak =
-            game.MakeUnit(*game.pAi, 5, 7,
+            game.MakeUnit(*game.pAi, 6, 12,
                           {"test_flight_chassis", "test_weak_weapon", "air_superiority"});
         Unit& strong =
-            game.MakeUnit(*game.pAi, 6, 7,
+            game.MakeUnit(*game.pAi, 7, 13,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(weak);
         game.FullMoves(strong);
@@ -276,10 +277,10 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
     SECTION("equal Attack prefers higher HP")
     {
         Unit& lowHp =
-            game.MakeUnit(*game.pAi, 5, 7,
+            game.MakeUnit(*game.pAi, 6, 12,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         Unit& highHp =
-            game.MakeUnit(*game.pAi, 6, 7,
+            game.MakeUnit(*game.pAi, 7, 13,
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(lowHp);
         game.FullMoves(highHp);
@@ -295,12 +296,12 @@ TEST_CASE("Scramble MoveOrder walks hop by hop via Execute", "[unit][scramble]")
     ScrambleGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
-        game.MakeUnit(*game.pAi, 5, 7, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        game.MakeUnit(*game.pAi, 6, 12, {"test_flight_chassis", "test_weapon", "air_superiority"});
     game.FullMoves(scrambler);
     Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
     game.FullMoves(attacker);
 
     std::vector<const Tile*> tilesSeen;
@@ -327,15 +328,15 @@ TEST_CASE("Scramble never routes into territory its faction may not enter", "[un
     FactionConfig_t thirdDefinition = game.fixtures.factionDefinition;
     thirdDefinition.id = "third";
     Faction& rThird = AddSessionFaction(game.fixtures, *game.pState, thirdDefinition, false);
-    MakeSessionBase(game.fixtures, *game.pState, rThird, 5, 3);
-    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(5, 5) == rThird.GetFactionId());
+    MakeSessionBase(game.fixtures, *game.pState, rThird, 10, 8);
+    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(8, 10) == rThird.GetFactionId());
 
-    Unit& ground = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis", "test_weapon"});
+    Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
-        game.MakeUnit(*game.pAi, 5, 7, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        game.MakeUnit(*game.pAi, 6, 12, {"test_flight_chassis", "test_weapon", "air_superiority"});
     game.FullMoves(scrambler);
     const Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
 
     const auto findScrambler = [&]
     {

@@ -36,11 +36,10 @@ bool Beats_(const ClaimCandidate_t& rChallenger, const ClaimCandidate_t& rIncumb
     return rChallenger.baseId < rIncumbent.baseId;
 }
 
-int EuclideanDistSq_(int x0, int y0, int x1, int y1, int mapWidth)
+int LatticeDistSq_(const Tile& rA, const Tile& rB, int mapWidth)
 {
-    const int dx = DeltaX(x0, x1, mapWidth);
-    const int dy = y0 - y1;
-    return dx * dx + dy * dy;
+    const LatticeDelta_t d = LatticeDelta(rA, rB, mapWidth);
+    return d.p * d.p + d.q * d.q;
 }
 
 void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
@@ -55,7 +54,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
     const int ox = rOrigin.GetX();
     const int oy = rOrigin.GetY();
 
-    if (ox < 0 || oy < 0 || ox >= width || oy >= height)
+    if (oy < 0 || oy >= height || ox < 0 || ox >= width)
     {
         throw std::out_of_range("TerritoryMap: base " + std::to_string(baseId) + " sits at ("
                                 + std::to_string(ox) + ", " + std::to_string(oy)
@@ -63,40 +62,37 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
                                 + std::to_string(height) + " territory grid");
     }
 
-    std::vector<uint8_t> visited(static_cast<size_t>(width) * static_cast<size_t>(height), 0);
-    auto index = [width](int x, int y) {
-        return static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x);
-    };
+    const size_t tileCount = static_cast<size_t>(width) * static_cast<size_t>(height) / 2;
+    std::vector<uint8_t> visited(tileCount, 0);
 
-    std::queue<std::pair<int, int>> queue;
-    queue.push({ox, oy});
-    visited[index(ox, oy)] = 1;
+    std::queue<const Tile*> queue;
+    queue.push(&rOrigin);
+    visited[static_cast<size_t>(TileIndex(ox, oy, width))] = 1;
 
     while (!queue.empty())
     {
-        const auto [x, y] = queue.front();
+        const Tile* pCurrent = queue.front();
         queue.pop();
 
-        const ClaimCandidate_t challenger{factionId, EuclideanDistSq_(ox, oy, x, y, width), baseId};
-        ClaimCandidate_t& rIncumbent = rBest[index(x, y)];
+        const size_t idx = static_cast<size_t>(
+            TileIndex(pCurrent->GetX(), pCurrent->GetY(), width));
+        const ClaimCandidate_t challenger{factionId, LatticeDistSq_(rOrigin, *pCurrent, width),
+                                          baseId};
+        ClaimCandidate_t& rIncumbent = rBest[idx];
         if (rIncumbent.factionId == k_NoFactionOwner || Beats_(challenger, rIncumbent))
         {
             rIncumbent = challenger;
         }
 
-        const Tile* pCurrent = rWorldMap.GetTile(x, y);
-        if (!pCurrent)
-        {
-            continue;
-        }
         ForEachOrthogonalNeighbor(*pCurrent, rWorldMap, [&](const Tile* pNeighbor) {
-            const int nx = pNeighbor->GetX();
-            const int ny = pNeighbor->GetY();
-            if (visited[index(nx, ny)])
+            const size_t nIdx = static_cast<size_t>(
+                TileIndex(pNeighbor->GetX(), pNeighbor->GetY(), width));
+            if (visited[nIdx])
             {
                 return;
             }
-            if (!InEuclideanRadius(DeltaX(ox, nx, width), ny - oy, radius))
+            const LatticeDelta_t d = LatticeDelta(rOrigin, *pNeighbor, width);
+            if (!InEuclideanRadius(d.p, d.q, radius))
             {
                 return;
             }
@@ -104,8 +100,8 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
             {
                 return;
             }
-            visited[index(nx, ny)] = 1;
-            queue.push({nx, ny});
+            visited[nIdx] = 1;
+            queue.push(pNeighbor);
         });
     }
 }
@@ -117,7 +113,7 @@ void TerritoryMap::Reset(int width, int height)
     m_width = width;
     m_height = height;
     const size_t count = (width > 0 && height > 0)
-        ? static_cast<size_t>(width) * static_cast<size_t>(height)
+        ? static_cast<size_t>(width) * static_cast<size_t>(height) / 2
         : 0;
     m_owners.assign(count, k_NoFactionOwner);
     m_revision.Bump();
@@ -161,7 +157,7 @@ bool TerritoryMap::InBounds_(int x, int y) const
 
 size_t TerritoryMap::Index_(int x, int y) const
 {
-    return static_cast<size_t>(y) * static_cast<size_t>(m_width) + static_cast<size_t>(x);
+    return static_cast<size_t>(TileIndex(x, y, m_width));
 }
 
 FactionId_t TerritoryMap::GetOwner(int x, int y) const

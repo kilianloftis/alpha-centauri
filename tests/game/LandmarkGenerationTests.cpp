@@ -115,7 +115,7 @@ TEST_CASE("ExpandLandmarkShape disk and mask", "[worldgen][landmarks]")
 TEST_CASE("PlaceLandmarks respects water domain for FossilFieldRidge-style stamp",
           "[worldgen][landmarks]")
 {
-    actest::WorldFixture world(21, 21);
+    actest::WorldFixture world;
     FillWater_(world.map);
 
     LandmarkConfig_t landmark;
@@ -145,7 +145,7 @@ TEST_CASE("PlaceLandmarks respects water domain for FossilFieldRidge-style stamp
 
 TEST_CASE("PlaceLandmarks fails water landmark on all-land map", "[worldgen][landmarks]")
 {
-    actest::WorldFixture world(11, 11);
+    actest::WorldFixture world;
     FillLand_(world.map);
 
     LandmarkConfig_t landmark;
@@ -163,7 +163,7 @@ TEST_CASE("PlaceLandmarks fails water landmark on all-land map", "[worldgen][lan
 
 TEST_CASE("PlaceLandmarks stamps land landmark yield improvement", "[worldgen][landmarks]")
 {
-    actest::WorldFixture world(15, 15);
+    actest::WorldFixture world;
     FillLand_(world.map);
 
     LandmarkConfig_t landmark;

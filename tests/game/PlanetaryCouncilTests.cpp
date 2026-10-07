@@ -46,7 +46,7 @@ struct CouncilGame_
     {
         InstallCouncil(fixtures.dataContext);
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -69,9 +69,9 @@ struct CouncilGame_
         pC = &pState->AddFaction(std::move(pFactionC));
 
         // Default bases give each faction equal population for representative votes.
-        fixtures.MakeFactionBase(*pA, 2, 2);
-        fixtures.MakeFactionBase(*pB, 6, 2);
-        fixtures.MakeFactionBase(*pC, 4, 6);
+        fixtures.MakeFactionBase(*pA, 8, 4);
+        fixtures.MakeFactionBase(*pB, 12, 8);
+        fixtures.MakeFactionBase(*pC, 6, 10);
 
         pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(2100);
@@ -347,7 +347,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     fixtures.factionDefinition.effects.push_back(config);
 
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
 
     Faction& rA = state.AddFaction(std::make_unique<Faction>(
@@ -672,9 +672,9 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
 {
     CouncilGame_ game;
     // Extra bases: A = 9 pop, B = 6, C = 3 (each base starts at size 3).
-    game.fixtures.MakeFactionBase(*game.pA, 1, 1);
-    game.fixtures.MakeFactionBase(*game.pA, 1, 3);
-    game.fixtures.MakeFactionBase(*game.pB, 7, 1);
+    game.fixtures.MakeFactionBase(*game.pA, 8, 2);
+    game.fixtures.MakeFactionBase(*game.pA, 6, 4);
+    game.fixtures.MakeFactionBase(*game.pB, 14, 8);
 
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
@@ -970,8 +970,8 @@ TEST_CASE("The AI stub never votes for an ineligible candidate", "[council][elec
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
 
     // Make the proposer the *least* populous member, so it is outside the top two.
-    game.fixtures.MakeFactionBase(*game.pB, 7, 4);
-    game.fixtures.MakeFactionBase(*game.pC, 1, 7);
+    game.fixtures.MakeFactionBase(*game.pB, 11, 11);
+    game.fixtures.MakeFactionBase(*game.pC, 2, 8);
 
     const std::vector<Faction*> eligible =
         rCouncil.EligibleCandidates(rCouncil.GetRegistry().Get("elect_planetary_governor"));

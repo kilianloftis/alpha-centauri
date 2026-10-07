@@ -52,7 +52,7 @@ struct AttackGame_
 
     AttackGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
@@ -217,9 +217,9 @@ Unit& PlaceAttacker_(AttackGame_& game, AttackerStance_t stance, bool bPods, int
 void CheckMatrixCase_(const AttackCase_t& rCase, bool bPods)
 {
     AttackGame_ game;
-    // Target at (5,4); attacker at (4,4) so they are adjacent.
-    const Tile& rTarget = PlaceTarget_(game, rCase.target, 5, 4);
-    Unit& rAttacker = PlaceAttacker_(game, rCase.from, bPods, 4, 4);
+    // Target at (9, 9); attacker at (8, 8) so they are adjacent.
+    const Tile& rTarget = PlaceTarget_(game, rCase.target, 9, 9);
+    Unit& rAttacker = PlaceAttacker_(game, rCase.from, bPods, 8, 8);
     const bool bExpected = bPods ? rCase.bAllowedWithPods : rCase.bAllowedWithoutPods;
     const InteractionGridsConfig_t& rGrids =
         game.pState->GetTileEffects().GetInteractionGrids();
@@ -251,20 +251,20 @@ TEST_CASE("CanAttackTile implies CanEnterTile; amphibious assault still needs po
     WorldMap& rMap = game.pState->GetWorldMap();
     const InteractionGridsConfig_t& rGrids =
         game.pState->GetTileEffects().GetInteractionGrids();
-    rMap.GetTile(4, 4)->SetElevation(100);
-    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& pods = game.MakeUnit(*game.pPlayer, 3, 4,
+    rMap.GetTile(8, 8)->SetElevation(100);
+    Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& pods = game.MakeUnit(*game.pPlayer, 7, 7,
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
-    BaseManager& rEnemy = game.MakeBase(*game.pAi, 5, 4);
+    BaseManager& rEnemy = game.MakeBase(*game.pAi, 9, 9);
     CHECK_FALSE(CanEnterTile(land, rEnemy.GetTile(), rMap, rGrids));
     CHECK_FALSE(CanAttackTile(land, rEnemy.GetTile(), rMap, rGrids));
     CHECK(CanEnterTile(pods, rEnemy.GetTile(), rMap, rGrids));
     CHECK(CanAttackTile(pods, rEnemy.GetTile(), rMap, rGrids));
 
-    rMap.GetTile(3, 4)->SetElevation(100);
-    CHECK(CanEnterTile(land, *rMap.GetTile(3, 4), rMap, rGrids));
-    CHECK(CanAttackTile(land, *rMap.GetTile(3, 4), rMap, rGrids));
+    rMap.GetTile(7, 7)->SetElevation(100);
+    CHECK(CanEnterTile(land, *rMap.GetTile(7, 7), rMap, rGrids));
+    CHECK(CanAttackTile(land, *rMap.GetTile(7, 7), rMap, rGrids));
 }
 
 TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
@@ -273,18 +273,18 @@ TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
     WorldMap& rMap = game.pState->GetWorldMap();
     const InteractionGridsConfig_t& rGrids =
         game.pState->GetTileEffects().GetInteractionGrids();
-    rMap.GetTile(4, 4)->SetElevation(100);
-    rMap.GetTile(5, 5)->SetElevation(-100);
-    Unit& sea = game.MakeUnit(*game.pPlayer, 5, 5, {"test_sea_chassis", "test_weapon"});
-    Unit& air = game.MakeUnit(*game.pPlayer, 4, 4, {"test_flight_chassis", "test_weapon"});
+    rMap.GetTile(8, 8)->SetElevation(100);
+    rMap.GetTile(8, 10)->SetElevation(-100);
+    Unit& sea = game.MakeUnit(*game.pPlayer, 8, 10, {"test_sea_chassis", "test_weapon"});
+    Unit& air = game.MakeUnit(*game.pPlayer, 8, 8, {"test_flight_chassis", "test_weapon"});
 
-    CHECK_FALSE(CanAttackTile(sea, *rMap.GetTile(4, 4), rMap, rGrids)); // shore
-    CHECK(CanAttackTile(sea, *rMap.GetTile(6, 5), rMap, rGrids));        // open water
+    CHECK_FALSE(CanAttackTile(sea, *rMap.GetTile(8, 8), rMap, rGrids)); // shore
+    CHECK(CanAttackTile(sea, *rMap.GetTile(9, 11), rMap, rGrids));        // open water
     // Air can enter land and water, so both attacks are legal.
-    CHECK(CanAttackTile(air, *rMap.GetTile(4, 4), rMap, rGrids));
-    CHECK(CanAttackTile(air, *rMap.GetTile(5, 5), rMap, rGrids));
-    CHECK(CanEnterTile(air, *rMap.GetTile(4, 4), rMap, rGrids));
-    CHECK(CanEnterTile(air, *rMap.GetTile(5, 5), rMap, rGrids));
+    CHECK(CanAttackTile(air, *rMap.GetTile(8, 8), rMap, rGrids));
+    CHECK(CanAttackTile(air, *rMap.GetTile(8, 10), rMap, rGrids));
+    CHECK(CanEnterTile(air, *rMap.GetTile(8, 8), rMap, rGrids));
+    CHECK(CanEnterTile(air, *rMap.GetTile(8, 10), rMap, rGrids));
 }
 
 TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit][attack]")
@@ -292,10 +292,10 @@ TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit]
     AttackGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
-    rMap.GetTile(4, 4)->SetElevation(100);
-    rMap.GetTile(5, 4)->SetElevation(100);
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis", "test_weapon"});
+    rMap.GetTile(8, 8)->SetElevation(100);
+    rMap.GetTile(9, 9)->SetElevation(100);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis", "test_weapon"});
 
     Unit* pTarget = FindAttackableHostileOnTile(attacker, defender.GetTile(), rMap, rEffects);
     REQUIRE(pTarget == &defender);
@@ -314,32 +314,32 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
 
     SECTION("open-sea transport: cargo not selectable")
     {
-        rMap.GetTile(5, 5)->SetElevation(-100);
-        rMap.GetTile(4, 5)->SetElevation(100);
-        Unit& transport = game.MakeUnit(*game.pAi, 5, 5, {"test_sea_chassis", "test_transport"});
-        Unit& cargo = game.MakeUnit(*game.pAi, 5, 5, {"test_chassis"});
+        rMap.GetTile(8, 10)->SetElevation(-100);
+        rMap.GetTile(7, 9)->SetElevation(100);
+        Unit& transport = game.MakeUnit(*game.pAi, 8, 10, {"test_sea_chassis", "test_transport"});
+        Unit& cargo = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis"});
         REQUIRE(TryAttachToTransport(cargo, rMap));
-        Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 5,
+        Unit& attacker = game.MakeUnit(*game.pPlayer, 7, 9,
                                        {"test_chassis", "test_weapon", "test_amphibious"});
 
         auto& rEffects = game.pState->GetTileEffects();
         Unit* pTarget =
-            FindVisibleHostileOnTile(attacker, *rMap.GetTile(5, 5), rMap, rEffects);
+            FindVisibleHostileOnTile(attacker, *rMap.GetTile(8, 10), rMap, rEffects);
         REQUIRE(pTarget == &transport);
         CHECK(pTarget != &cargo);
         // Shore land without enterability onto open water cannot declare the attack.
-        CHECK_FALSE(CanDeclareAttack(attacker, *rMap.GetTile(5, 5), rMap, rEffects));
+        CHECK_FALSE(CanDeclareAttack(attacker, *rMap.GetTile(8, 10), rMap, rEffects));
     }
 
     SECTION("base: embarked cargo eligible; carrier preferred")
     {
-        BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4);
+        BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
         Unit& transport =
-            game.MakeUnit(*game.pAi, 5, 4, {"test_sea_chassis", "test_transport"}, &rBase);
-        Unit& cargo = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+            game.MakeUnit(*game.pAi, 9, 9, {"test_sea_chassis", "test_transport"}, &rBase);
+        Unit& cargo = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
         REQUIRE(TryAttachToTransport(cargo, rMap));
-        rMap.GetTile(4, 4)->SetElevation(100);
-        Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4,
+        rMap.GetTile(8, 8)->SetElevation(100);
+        Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8,
                                        {"test_chassis", "test_weapon", "test_amphibious"});
         auto& rEffects = game.pState->GetTileEffects();
 
@@ -359,31 +359,31 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
     AttackGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
-    rMap.GetTile(4, 4)->SetElevation(100);
-    rMap.GetTile(5, 4)->SetElevation(100);
-    rMap.GetTile(6, 4)->SetElevation(100);
+    rMap.GetTile(8, 8)->SetElevation(100);
+    rMap.GetTile(9, 9)->SetElevation(100);
+    rMap.GetTile(10, 10)->SetElevation(100);
 
-    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& airDefender =
-        game.MakeUnit(*game.pAi, 5, 4, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pAi, 9, 9, {"test_flight_chassis", "test_weapon"});
     Unit& missileDefender =
-        game.MakeUnit(*game.pAi, 6, 4, {"test_orbital_chassis", "test_weapon"});
+        game.MakeUnit(*game.pAi, 10, 10, {"test_orbital_chassis", "test_weapon"});
 
     SECTION("land cannot attack air or orbital without the flag")
     {
         CHECK_FALSE(CanDeclareAttack(land, airDefender.GetTile(), rMap, rEffects));
         Unit& landNearMissile =
-            game.MakeUnit(*game.pPlayer, 5, 5, {"test_chassis", "test_weapon"});
-        rMap.GetTile(5, 5)->SetElevation(100);
+            game.MakeUnit(*game.pPlayer, 8, 10, {"test_chassis", "test_weapon"});
+        rMap.GetTile(8, 10)->SetElevation(100);
         CHECK_FALSE(CanDeclareAttack(landNearMissile, missileDefender.GetTile(), rMap, rEffects));
     }
 
     SECTION("Air Superiority unlocks air and orbital targets")
     {
         // (5,5) is adjacent to both (5,4) and (6,4).
-        Unit& withFlag = game.MakeUnit(*game.pPlayer, 5, 5,
+        Unit& withFlag = game.MakeUnit(*game.pPlayer, 8, 10,
                                        {"test_chassis", "test_weapon", "air_superiority"});
-        rMap.GetTile(5, 5)->SetElevation(100);
+        rMap.GetTile(8, 10)->SetElevation(100);
         CHECK(CanDeclareAttack(withFlag, airDefender.GetTile(), rMap, rEffects));
         CHECK(CanDeclareAttack(withFlag, missileDefender.GetTile(), rMap, rEffects));
     }
@@ -391,34 +391,34 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
     SECTION("air-to-air and missile-to-air still need the flag")
     {
         Unit& airAttacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
         Unit& missileAttacker =
-            game.MakeUnit(*game.pPlayer, 5, 5, {"test_orbital_chassis", "test_weapon"});
-        rMap.GetTile(4, 5)->SetElevation(100);
-        rMap.GetTile(5, 5)->SetElevation(100);
+            game.MakeUnit(*game.pPlayer, 8, 10, {"test_orbital_chassis", "test_weapon"});
+        rMap.GetTile(7, 9)->SetElevation(100);
+        rMap.GetTile(8, 10)->SetElevation(100);
         CHECK_FALSE(CanDeclareAttack(airAttacker, airDefender.GetTile(), rMap, rEffects));
         CHECK_FALSE(CanDeclareAttack(missileAttacker, airDefender.GetTile(), rMap, rEffects));
 
         Unit& flagged = game.MakeUnit(
-            *game.pPlayer, 6, 5, {"test_flight_chassis", "test_weapon", "air_superiority"});
-        rMap.GetTile(6, 5)->SetElevation(100);
+            *game.pPlayer, 9, 11, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        rMap.GetTile(9, 11)->SetElevation(100);
         CHECK(CanDeclareAttack(flagged, airDefender.GetTile(), rMap, rEffects));
     }
 
     SECTION("harbored base tile exempts the gate")
     {
-        rMap.GetTile(5, 5)->SetElevation(100);
-        rMap.GetTile(6, 5)->SetElevation(100);
-        rMap.GetTile(4, 5)->SetElevation(100);
-        rMap.GetTile(5, 6)->SetElevation(100);
-        BaseManager& rAirBase = game.MakeBase(*game.pAi, 5, 5);
-        BaseManager& rMissileBase = game.MakeBase(*game.pAi, 6, 5);
+        rMap.GetTile(8, 10)->SetElevation(100);
+        rMap.GetTile(9, 11)->SetElevation(100);
+        rMap.GetTile(7, 9)->SetElevation(100);
+        rMap.GetTile(7, 11)->SetElevation(100);
+        BaseManager& rAirBase = game.MakeBase(*game.pAi, 8, 10);
+        BaseManager& rMissileBase = game.MakeBase(*game.pAi, 9, 11);
         Unit& groundedAir =
-            game.MakeUnit(*game.pAi, 5, 5, {"test_flight_chassis", "test_weapon"}, &rAirBase);
+            game.MakeUnit(*game.pAi, 8, 10, {"test_flight_chassis", "test_weapon"}, &rAirBase);
         Unit& groundedMissile = game.MakeUnit(
-            *game.pAi, 6, 5, {"test_orbital_chassis", "test_weapon"}, &rMissileBase);
-        Unit& nearAir = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "test_weapon"});
-        Unit& nearMissile = game.MakeUnit(*game.pPlayer, 5, 6, {"test_chassis", "test_weapon"});
+            *game.pAi, 9, 11, {"test_orbital_chassis", "test_weapon"}, &rMissileBase);
+        Unit& nearAir = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "test_weapon"});
+        Unit& nearMissile = game.MakeUnit(*game.pPlayer, 7, 11, {"test_chassis", "test_weapon"});
         REQUIRE(FindAttackableHostileOnTile(nearAir, groundedAir.GetTile(), rMap, rEffects)
                 == &groundedAir);
         REQUIRE(FindAttackableHostileOnTile(
@@ -432,14 +432,14 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
     {
         // Open sea: air without Air Superiority cannot declare. A friendly deck underfoot
         // does not ground the aircraft for targeting (same as IsRefuelSite).
-        rMap.GetTile(5, 5)->SetElevation(-100);
-        rMap.GetTile(4, 5)->SetElevation(100);
+        rMap.GetTile(8, 10)->SetElevation(-100);
+        rMap.GetTile(7, 9)->SetElevation(100);
         Unit& airOverDeck =
-            game.MakeUnit(*game.pAi, 5, 5, {"test_flight_chassis", "test_weapon"});
-        game.MakeUnit(*game.pAi, 5, 5,
+            game.MakeUnit(*game.pAi, 8, 10, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pAi, 8, 10,
                       {"test_sea_chassis", "test_carrier_deck", "test_weapon"});
         Unit& airAttacker =
-            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+            game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
         REQUIRE(FindVisibleHostileOnTile(airAttacker, airOverDeck.GetTile(), rMap, rEffects)
                 == &airOverDeck);
         CHECK(FindAttackableHostileOnTile(airAttacker, airOverDeck.GetTile(), rMap, rEffects)

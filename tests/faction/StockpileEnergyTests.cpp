@@ -115,7 +115,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         .rAtrocities = fixture.rAtrocities,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.nextBaseId++, "TestBase",
-                                               rFixtures.At(4, 4), rules, nullptr, *rFixtures.ctx);
+                                               rFixtures.At(8, 8), rules, nullptr, *rFixtures.ctx);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;
@@ -158,7 +158,7 @@ TEST_CASE("A new base queues the default stockpile", "[production][stockpile]")
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
 
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
     REQUIRE(pStockpile != nullptr);
@@ -171,7 +171,7 @@ TEST_CASE("Clearing production falls back to the default stockpile", "[productio
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
     REQUIRE(pStockpile != nullptr);
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
@@ -191,7 +191,7 @@ TEST_CASE("Falling back to the default never charges the retool penalty",
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
@@ -208,7 +208,7 @@ TEST_CASE("Stockpile Energy converts this turn's minerals and never completes",
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
     REQUIRE(pStockpile != nullptr);
     REQUIRE(base.GetProduction().GetCurrentProduction() == pStockpile);
@@ -232,7 +232,7 @@ TEST_CASE("Stockpile converts prior production-stockpile leftovers with this tur
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     REQUIRE(base.GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
 
     // Leftovers left after a prior completion (not converted in that same Apply).
@@ -287,7 +287,7 @@ TEST_CASE("A stockpile converts zero minerals to zero output", "[production][sto
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
 
     LeaveMineralBank_(base, 0);
     (void)TakeEcon_(base);
@@ -306,7 +306,7 @@ TEST_CASE("A stockpile is not a building", "[production][stockpile]")
     REQUIRE(fixtures.stockpiles().Find("Stockpile_Energy") != nullptr);
 
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     CHECK_THROWS_AS(base.GetBuildingManager().CanAddBuilding("Stockpile_Energy"),
                     std::runtime_error);
     CHECK_FALSE(base.GetBuildingManager().HasBuilding("Stockpile_Energy"));
@@ -316,7 +316,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -327,7 +327,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(2, 2),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
         pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
@@ -571,7 +571,7 @@ TEST_CASE("ApplyProduction converts surplus minerals when a stockpile is queued"
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
 
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
@@ -585,11 +585,11 @@ TEST_CASE("Mineral support claims the bank before stockpile conversion",
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     // Support 0 grants two free slots; the third chassis costs 1 mineral.
-    fixtures.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    fixtures.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    fixtures.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+    fixtures.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    fixtures.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    fixtures.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
@@ -606,7 +606,7 @@ TEST_CASE("Stockpile econ reaches the treasury the same turn", "[production][sto
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
 
     LeaveMineralBank_(base, 8);
     (void)TakeEcon_(base);
@@ -623,7 +623,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -634,7 +634,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
         pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
@@ -668,7 +668,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -679,7 +679,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
         pState->GetTileEffects(),
         pState->GetSecretProjectAvailability());
     REQUIRE(pBase != nullptr);
@@ -707,7 +707,7 @@ TEST_CASE("ApplyProduction banks leftover minerals into a real production item",
 {
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_hurry_facility");
     REQUIRE(pFacility != nullptr);
 
@@ -727,7 +727,7 @@ TEST_CASE("BankProduction accepts leftovers onto an already-funded item",
     // FactionFixture has no GameState, so bank without going through completion.
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_hurry_facility");
     REQUIRE(pFacility != nullptr);
 

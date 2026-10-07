@@ -35,9 +35,9 @@ TEST_CASE("Founding a base registers the Base improvement and its defense bonus 
           "[effects][base]")
 {
     actest::BaseFixture fixture;
-    fixture.MakeBase(4, 4);
+    fixture.MakeBase(8, 8);
 
-    Tile& tile = fixture.At(4, 4);
+    Tile& tile = fixture.At(8, 8);
     CHECK(tile.HasImprovement("Base"));
     CHECK(tile.HasFeature("Base"));
     // Fixture Base entry: +100% defense through the same mechanism as Bunker/Rocky.
@@ -48,8 +48,8 @@ TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the ow
           "[effects][base]")
 {
     actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(6, 6);
+    BaseManager& baseA = fixture.MakeBase(8, 4);
+    BaseManager& baseB = fixture.MakeBase(8, 12);
 
     baseA.GetBuildingManager().AddBuilding("flat_nutrient");
     baseB.GetBuildingManager().AddBuilding("granted_hall");
@@ -79,8 +79,8 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     actest::EffectPool pool;
     const FactionEffects_t factionEffects{faction, {
@@ -117,7 +117,7 @@ TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no ba
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
 
     actest::EffectPool pool;
     const FactionEffects_t factionEffects{faction, {
@@ -132,12 +132,12 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
     Faction& faction = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
         state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
@@ -171,7 +171,7 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
     Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
@@ -179,7 +179,7 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
     Faction& other = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext,
         state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
-    BaseManager& base = fixture.MakeFactionBase(beneficiary, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(beneficiary, 8, 8);
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
     REQUIRE(pInfiltrator != nullptr);
@@ -202,7 +202,7 @@ TEST_CASE("Building production without spawn services completes without on_compl
           "[effects][base][triggered]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     REQUIRE(fixture.pOwnerFaction->GetGameState() == nullptr);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
@@ -233,7 +233,7 @@ TEST_CASE("Unit production without spawn services throws before spawning",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     UnitSlotConfig_t chassisSlot;
     chassisSlot.id = "slot_0";
@@ -271,10 +271,10 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // A wet farm tile next door: Wet(+2) + Farm(+1) nutrients.
-    Tile& farmTile = fixture.At(5, 4);
+    Tile& farmTile = fixture.At(9, 9);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");

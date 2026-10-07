@@ -222,8 +222,8 @@ TEST_CASE("Bureaucracy PureMultiplier multiplies difficulty and Efficiency",
 TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
           "[difficulty][effects][bureaucracy][drones]")
 {
-    // Citizen + Efficiency 0 on 80×40 → limit 16.
-    FactionFixture fixtures(80, 40);
+    // Citizen + Efficiency 0 on 80×80 (3200 tiles) → limit 16.
+    FactionFixture fixtures(80, 80);
     UseFixtureDifficulty_(fixtures, "citizen");
     fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
     fixtures.dataContext.socialRatingRegistry->Load(

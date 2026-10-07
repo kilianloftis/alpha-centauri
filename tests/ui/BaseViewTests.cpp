@@ -78,7 +78,7 @@ TEST_CASE("The base display key is stable across paints and moves when the playe
     // own the snapshot would be rebuilt per frame anyway, and if it failed to move on an
     // assignment the panels would show yesterday's yields.
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const BaseDisplayKey_t initial = ReadBaseDisplayKey(rBase);
     CHECK(ReadBaseDisplayKey(rBase) == initial);
@@ -97,7 +97,7 @@ TEST_CASE("The snapshot describes every workable tile the panel draws", "[ui][ba
     // BaseWorkableAreaDisplay throws on a tile the snapshot does not carry; both walk
     // GetWorkableTiles, and this pins that they cannot drift apart.
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
     const auto& rWorkable = rBase.GetWorkerAssignments().GetWorkableTiles();
@@ -112,7 +112,7 @@ TEST_CASE("The snapshot describes every workable tile the panel draws", "[ui][ba
 TEST_CASE("The snapshot reports the same yields the panel used to query live", "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
     CHECK(snapshot.nutrientProduction == rBase.GetNutrientProduction());
@@ -143,7 +143,7 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
           "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
     REQUIRE(pView);
@@ -183,7 +183,7 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
 TEST_CASE("BaseView lists every constructed building by name, stacked vertically", "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     BuildingManager& rBuildings = rBase.GetBuildingManager();
 
     rBuildings.AddBuilding("test_facility_a");
@@ -206,7 +206,7 @@ TEST_CASE("The buildings list is live: a paint after add or destroy shows the ne
           "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const WindowLayout_t layout{0.0f, 0.0f, 200.0f, 400.0f};
     BuildingsDisplay display(rBase, layout);
@@ -232,7 +232,7 @@ TEST_CASE("The buildings list is live: a paint after add or destroy shows the ne
 TEST_CASE("A granted-only building is listed in the darker granted colour", "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("grantor_local");
 
     BuildingsDisplay display(rBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
@@ -254,7 +254,7 @@ TEST_CASE("A constructed building that is also granted is listed with a * in the
           "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("granted_hall");
     rBase.GetBuildingManager().AddBuilding("grantor_local");
 
@@ -270,8 +270,8 @@ TEST_CASE("A constructed building that is also granted is listed with a * in the
 TEST_CASE("A ThisBase grant does not appear on another base's buildings list", "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rGrantorBase = fixture.MakeBase(4, 4);
-    BaseManager& rOtherBase = fixture.MakeBase(6, 6);
+    BaseManager& rGrantorBase = fixture.MakeBase(8, 8);
+    BaseManager& rOtherBase = fixture.MakeBase(8, 12);
     rGrantorBase.GetBuildingManager().AddBuilding("grantor_local");
 
     BuildingsDisplay display(rOtherBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
@@ -283,8 +283,8 @@ TEST_CASE("A ThisBase grant does not appear on another base's buildings list", "
 TEST_CASE("A faction-global grant appears on every base in the granted colour", "[ui][base]")
 {
     ViewFixture fixture;
-    BaseManager& rGrantorBase = fixture.MakeBase(4, 4);
-    BaseManager& rOtherBase = fixture.MakeBase(6, 6);
+    BaseManager& rGrantorBase = fixture.MakeBase(8, 8);
+    BaseManager& rOtherBase = fixture.MakeBase(8, 12);
     rGrantorBase.GetBuildingManager().AddBuilding("grantor_global");
 
     BuildingsDisplay display(rOtherBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
@@ -345,7 +345,7 @@ MouseEvent_t ClickAtDrawnText_(const RecordingGraphics& rGraphics, const std::st
 TEST_CASE("BaseView draws Hurry on the build queue", "[ui][base][hurry]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
     REQUIRE(pView);
     pView->Render(fixture.graphics);
@@ -356,7 +356,7 @@ TEST_CASE("BaseView draws Hurry on the build queue", "[ui][base][hurry]")
 TEST_CASE("Hurry does nothing when the queued item cannot be hurried", "[ui][base][hurry]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     REQUIRE_FALSE(rBase.QuoteHurry().bAvailable);
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -368,7 +368,7 @@ TEST_CASE("Hurry does nothing when the queued item cannot be hurried", "[ui][bas
 TEST_CASE("Clicking Hurry opens a popup quoting the finish cost", "[ui][base][hurry]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     QueueHurryFacility_(rBase, fixture);
 
     const HurryQuote_t quote = rBase.QuoteHurry();
@@ -392,7 +392,7 @@ TEST_CASE("Clicking Hurry opens a popup quoting the finish cost", "[ui][base][hu
 TEST_CASE("Confirming Hurry spends the quoted credits", "[ui][base][hurry]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     QueueHurryFacility_(rBase, fixture);
     const HurryQuote_t quote = rBase.QuoteHurry();
     REQUIRE(quote.creditCost > 0);
@@ -410,7 +410,7 @@ TEST_CASE("Hurry that the treasury cannot cover explains why rather than throwin
           "[ui][base][hurry]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     QueueHurryFacility_(rBase, fixture);
     REQUIRE(rBase.QuoteHurry().creditCost > 1);
     rBase.GetFaction().GetEconomy().AddEnergy(1);
@@ -430,7 +430,7 @@ TEST_CASE("Hurry that the treasury cannot cover explains why rather than throwin
 TEST_CASE("A stockpile queue shows no turns to completion", "[ui][base][production]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     CHECK_FALSE(rBase.GetTurnsToProductionCompletion().has_value());
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -442,7 +442,7 @@ TEST_CASE("A stockpile queue shows no turns to completion", "[ui][base][producti
 TEST_CASE("BaseView shows turns to completion for a queued facility", "[ui][base][production]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     QueueHurryFacility_(rBase, fixture);
     rBase.GetBuildingManager().AddBuilding("mineral_cache");
 
@@ -460,7 +460,7 @@ TEST_CASE("Clicking a constructed building offers scrap here or scrap everywhere
           "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -479,7 +479,7 @@ TEST_CASE("Clicking a constructed building offers scrap here or scrap everywhere
 TEST_CASE("Dismissing the scrap menu leaves the building in place", "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -496,7 +496,7 @@ TEST_CASE("Confirming scrap of one copy quotes the refund and then grants it",
           "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     const auto payout = rBase.GetFaction().QuoteScrapBuilding(rBase, "test_hurry_facility");
@@ -527,7 +527,7 @@ TEST_CASE("Confirming scrap of one copy quotes the refund and then grants it",
 TEST_CASE("Cancel on the scrap confirm leaves the building in place", "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -549,8 +549,8 @@ TEST_CASE("Confirming scrap at all bases removes every copy and refunds each",
           "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rHere = fixture.MakeBase(2, 2);
-    BaseManager& rThere = fixture.MakeBase(5, 5);
+    BaseManager& rHere = fixture.MakeBase(8, 4);
+    BaseManager& rThere = fixture.MakeBase(8, 10);
     rHere.GetBuildingManager().AddBuilding("test_hurry_facility");
     rThere.GetBuildingManager().AddBuilding("test_hurry_facility");
 
@@ -576,7 +576,7 @@ TEST_CASE("A secret project explains that it cannot be scrapped instead of quoti
           "[ui][base][scrap][secret-project]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("test_secret_project");
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -599,7 +599,7 @@ TEST_CASE("Headquarters explains that it cannot be scrapped instead of quoting a
           "[ui][base][scrap][hq]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
@@ -625,7 +625,7 @@ TEST_CASE("The scrap menu titles a granted copy by name, without the list's mark
     // list chrome, not the building's name, so the menu must not inherit it - which is what the
     // view's own second lookup of the name used to guard against by accident.
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("grantor_global");
     rBase.GetBuildingManager().AddBuilding("granted_hall");
 
@@ -649,8 +649,8 @@ TEST_CASE("Clicking a granted-only building offers scrap and then denies it",
           "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rGrantorBase = fixture.MakeBase(4, 4);
-    BaseManager& rOtherBase = fixture.MakeBase(6, 6);
+    BaseManager& rGrantorBase = fixture.MakeBase(8, 8);
+    BaseManager& rOtherBase = fixture.MakeBase(8, 12);
     rGrantorBase.GetBuildingManager().AddBuilding("grantor_global");
     REQUIRE_FALSE(rOtherBase.GetBuildingManager().HasBuilding("granted_hall"));
 
@@ -675,7 +675,7 @@ TEST_CASE("Clicking a granted-only building offers scrap and then denies it",
 TEST_CASE("A Command Nexus grant offers scrap and then denies it", "[ui][base][scrap]")
 {
     ViewFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(4, 4);
+    BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("Command_Nexus");
     REQUIRE_FALSE(rBase.GetBuildingManager().HasBuilding("Command_Center"));
 
@@ -709,12 +709,12 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
         fixture.dataContext, fixture.pState->GetWorldMap(), fixture.settings,
         actest::k_TestFactionSeed));
 
-    BaseManager& rBase = fixture.MakeBase(2, 2);
+    BaseManager& rBase = fixture.MakeBase(8, 4);
     rBase.GetBuildingManager().AddBuilding("world_beacon");
 
     BaseManager* pPartnerBase = rPartner.CreateBase(
         fixture.pState->AllocateBaseId(), "PartnerBase",
-        fixture.pState->GetWorldMap().GetTile(6, 2),
+        fixture.pState->GetWorldMap().GetTile(12, 8),
         fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
     REQUIRE(pPartnerBase != nullptr);
     pPartnerBase->GetBuildingManager().AddBuilding("world_beacon");

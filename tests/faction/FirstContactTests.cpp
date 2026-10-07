@@ -31,7 +31,7 @@ struct ContactGame_
 
     ContactGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -90,8 +90,8 @@ TEST_CASE("Vision of a foreign unit establishes Known", "[diplomacy][first-conta
         game.pA->GetFactionId(), game.pB->GetFactionId()));
 
     // Place B's unit next to A's unit so A's vision covers it after create rebuild.
-    game.MakeUnit(*game.pA, 4, 4);
-    game.MakeUnit(*game.pB, 5, 4);
+    game.MakeUnit(*game.pA, 8, 8);
+    game.MakeUnit(*game.pB, 9, 9);
 
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
@@ -100,15 +100,15 @@ TEST_CASE("Vision of a foreign unit establishes Known", "[diplomacy][first-conta
 TEST_CASE("Moving into foreign vision establishes Known", "[diplomacy][first-contact]")
 {
     ContactGame_ game;
-    Unit& rA = game.MakeUnit(*game.pA, 1, 1);
-    game.MakeUnit(*game.pB, 7, 7);
+    Unit& rA = game.MakeUnit(*game.pA, 8, 2);
+    game.MakeUnit(*game.pB, 8, 14);
     // Far apart: not known yet if vision radius is small.
     // Force clear known in case create-order already contacted (adjacent vision disks).
     game.pState->GetDiplomacyLedger().SetKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId(), false);
 
     // Move A next to B; OnUnitMoved rebuilds A's vision and checks B seeing A.
-    Tile* pNear = game.pState->GetWorldMap().GetTile(6, 7);
+    Tile* pNear = game.pState->GetWorldMap().GetTile(7, 13);
     REQUIRE(pNear);
     game.pState->GetWorldMap().GetUnitPositions().MoveUnit(rA, *pNear);
 
@@ -119,13 +119,13 @@ TEST_CASE("Moving into foreign vision establishes Known", "[diplomacy][first-con
 TEST_CASE("Seeing a foreign base establishes Known", "[diplomacy][first-contact]")
 {
     ContactGame_ game;
-    game.MakeUnit(*game.pA, 4, 4);
+    game.MakeUnit(*game.pA, 8, 8);
     game.pState->GetDiplomacyLedger().SetKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId(), false);
 
     game.pB->CreateBase(
         game.pState->AllocateBaseId(), "Enemy",
-        game.pState->GetWorldMap().GetTile(5, 4),
+        game.pState->GetWorldMap().GetTile(9, 9),
         game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
 
@@ -137,12 +137,12 @@ TEST_CASE("Cloaked unit on visible map still establishes Known",
           "[diplomacy][first-contact][conceal]")
 {
     ContactGame_ game;
-    game.MakeUnit(*game.pA, 4, 4);
+    game.MakeUnit(*game.pA, 8, 8);
     game.pState->GetDiplomacyLedger().SetKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId(), false);
 
     // Cloaking hides the unit for combat/UI, but the tile is still in A's vision.
-    Unit& rCloaked = game.MakeUnit(*game.pB, 5, 4, {"test_chassis", "Cloaking_Device"});
+    Unit& rCloaked = game.MakeUnit(*game.pB, 9, 9, {"test_chassis", "Cloaking_Device"});
 
     REQUIRE(game.pA->GetVisibleMap().IsVisible(rCloaked.GetTile()));
     REQUIRE_FALSE(IsUnitVisibleTo(*game.pA, rCloaked, game.pState->GetTileEffects()));
@@ -155,8 +155,8 @@ TEST_CASE("Already known is a no-op", "[diplomacy][first-contact]")
     ContactGame_ game;
     game.pState->GetDiplomacyLedger().SetKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId());
-    game.MakeUnit(*game.pA, 4, 4);
-    game.MakeUnit(*game.pB, 5, 4);
+    game.MakeUnit(*game.pA, 8, 8);
+    game.MakeUnit(*game.pB, 9, 9);
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
 }
@@ -167,10 +167,10 @@ TEST_CASE("Seeing native life establishes no contact", "[diplomacy][first-contac
     Faction& rPlanet = AddNativeLifeFaction(game.fixtures, *game.pState);
 
     // Each side arrives in the other's vision once.
-    game.MakeUnit(*game.pA, 4, 4);
-    game.MakeUnit(rPlanet, 5, 4);
-    game.MakeUnit(rPlanet, 1, 1);
-    game.MakeUnit(*game.pA, 2, 1);
+    game.MakeUnit(*game.pA, 8, 8);
+    game.MakeUnit(rPlanet, 9, 9);
+    game.MakeUnit(rPlanet, 8, 2);
+    game.MakeUnit(*game.pA, 9, 3);
 
     CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(game.pA->GetFactionId(),
                                                           rPlanet.GetFactionId()));
@@ -182,17 +182,17 @@ TEST_CASE("Seeing a covert unit establishes no contact", "[diplomacy][first-cont
     // A's base sees two tiles out; B's units see one, so they never see A back.
     game.pA->CreateBase(
         game.pState->AllocateBaseId(), "Watch",
-        game.pState->GetWorldMap().GetTile(4, 4),
+        game.pState->GetWorldMap().GetTile(8, 8),
         game.pState->GetTileEffects(),
         game.pState->GetSecretProjectAvailability());
 
-    Unit& rCovert = game.MakeUnit(*game.pB, 6, 4, {"test_chassis", "covert"});
+    Unit& rCovert = game.MakeUnit(*game.pB, 10, 10, {"test_chassis", "covert"});
 
     REQUIRE(game.pA->GetVisibleMap().IsVisible(rCovert.GetTile()));
     CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
 
-    game.MakeUnit(*game.pB, 6, 4);
+    game.MakeUnit(*game.pB, 10, 10);
 
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));

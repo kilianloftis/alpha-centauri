@@ -35,7 +35,7 @@ struct CouncilFixture_
     {
         InstallCouncil(fixtures.dataContext);
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (const auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -50,8 +50,8 @@ struct CouncilFixture_
             pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
             pState->GetWorldMap(), settings, k_TestFactionSeed));
 
-        fixtures.MakeFactionBase(*pA, 2, 2);
-        fixtures.MakeFactionBase(*pB, 6, 2);
+        fixtures.MakeFactionBase(*pA, 8, 4);
+        fixtures.MakeFactionBase(*pB, 12, 8);
 
         pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(2100);
@@ -89,7 +89,7 @@ TEST_CASE("Each faction gets its own cached weight", "[ui][council]")
     CouncilVoteWeightCache cache;
 
     // Give A a second base so population-weighted votes differ between the two.
-    fixture.fixtures.MakeFactionBase(*fixture.pA, 4, 4);
+    fixture.fixtures.MakeFactionBase(*fixture.pA, 8, 8);
 
     const int liveA =
         fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Population);
@@ -131,7 +131,7 @@ TEST_CASE("A cached weight is not reused across weighting modes", "[ui][council]
 {
     CouncilFixture_ fixture;
     CouncilVoteWeightCache cache;
-    fixture.fixtures.MakeFactionBase(*fixture.pA, 4, 4);
+    fixture.fixtures.MakeFactionBase(*fixture.pA, 8, 8);
 
     const int representative =
         fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Representative);

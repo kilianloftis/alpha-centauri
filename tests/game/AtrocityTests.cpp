@@ -46,7 +46,7 @@ struct AtrocityGame_
     {
         InstallCouncil(fixtures.dataContext);
 
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -58,9 +58,9 @@ struct AtrocityGame_
         pB = &AddFaction_(fixtures.factionDefinition, false);
         pC = &AddFaction_(fixtures.factionDefinition, false);
 
-        fixtures.MakeFactionBase(*pA, 2, 2);
-        fixtures.MakeFactionBase(*pB, 6, 2);
-        fixtures.MakeFactionBase(*pC, 4, 6);
+        fixtures.MakeFactionBase(*pA, 8, 4);
+        fixtures.MakeFactionBase(*pB, 12, 8);
+        fixtures.MakeFactionBase(*pC, 6, 10);
 
         pState->CreatePlanetaryCouncil();
         pState->SetMissionYear(k_StartYear);
@@ -575,22 +575,22 @@ TEST_CASE("An atrocity sneak-attacks its victim while the world declares on the 
         game.AddFaction_(game.fixtures.factionDefinition, /*bPlayer=*/false);
     game.Diplomacy().SetStatus(rVictim.GetFactionId(), rVictimPartner.GetFactionId(),
                                DiplomaticStatus_t::Pact);
-    MakeSessionBase(game.fixtures, *game.pState, rPerpetrator, 1, 1);
-    MakeSessionBase(game.fixtures, *game.pState, rVictim, 7, 1);
-    MakeSessionBase(game.fixtures, *game.pState, rBystander, 1, 7);
-    MakeSessionBase(game.fixtures, *game.pState, rVictimPartner, 7, 7);
+    MakeSessionBase(game.fixtures, *game.pState, rPerpetrator, 8, 2);
+    MakeSessionBase(game.fixtures, *game.pState, rVictim, 14, 8);
+    MakeSessionBase(game.fixtures, *game.pState, rBystander, 2, 8);
+    MakeSessionBase(game.fixtures, *game.pState, rVictimPartner, 8, 14);
 
     const TerritoryMap& rTerritory = game.pState->GetWorldMap().GetTerritory();
-    REQUIRE(rTerritory.GetOwner(6, 1) == rVictim.GetFactionId());
-    REQUIRE(rTerritory.GetOwner(1, 6) == rBystander.GetFactionId());
-    REQUIRE(rTerritory.GetOwner(2, 1) == rPerpetrator.GetFactionId());
-    REQUIRE(rTerritory.GetOwner(1, 2) == rPerpetrator.GetFactionId());
-    REQUIRE(rTerritory.GetOwner(2, 2) == rPerpetrator.GetFactionId());
-    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 6, 1);
-    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictim, 2, 1);
-    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 1, 6);
-    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, *game.pState, rBystander, 1, 2);
-    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictimPartner, 2, 2);
+    REQUIRE(rTerritory.GetOwner(13, 7) == rVictim.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(3, 7) == rBystander.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(9, 3) == rPerpetrator.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(7, 3) == rPerpetrator.GetFactionId());
+    REQUIRE(rTerritory.GetOwner(8, 4) == rPerpetrator.GetFactionId());
+    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 13, 7);
+    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictim, 9, 3);
+    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 3, 7);
+    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, *game.pState, rBystander, 7, 3);
+    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictimPartner, 8, 4);
 
     CommitAtrocity(*game.pState, rPerpetrator, &rVictim, k_Major);
 

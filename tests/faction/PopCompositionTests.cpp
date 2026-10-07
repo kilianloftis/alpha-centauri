@@ -156,7 +156,7 @@ TEST_CASE("ApplyCompositionResult seats configured drone tiers and talents",
           "[population][composition]")
 {
     actest::BaseFixture fixture;
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     pops.AddPop("Worker");
     pops.AddPop("Worker");
     pops.AddPop("Drone");
@@ -178,7 +178,7 @@ TEST_CASE("RecalculateComposition is stable when called repeatedly within a turn
           "[population][composition][psych]")
 {
     actest::BaseFixture fixture;
-    ac::BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 6);
+    ac::BaseManager& base = fixture.MakeBase(8, 8, /*initialPopulation*/ 6);
     ac::PopulationManager& pops = base.GetPopulation();
 
     const int dronesAfterFirst = pops.GetDroneCount();
@@ -202,7 +202,7 @@ TEST_CASE("ConvertTo Drone to Worker reseats under unchanged pressure",
     // Building effects only reach composition when the base is on the faction's list.
     actest::FactionFixture fixture;
     ac::Faction& rFaction = fixture.MakeFaction();
-    ac::BaseManager& base = fixture.MakeFactionBase(rFaction, 4, 4);
+    ac::BaseManager& base = fixture.MakeFactionBase(rFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("drone_hall");
     ac::PopulationManager& pops = base.GetPopulation();
     pops.RecalculateComposition();
@@ -232,7 +232,7 @@ TEST_CASE("Mood sums range over the composition pool, never base size",
           "[population][riot][goldenage]")
 {
     actest::BaseFixture fixture;
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     pops.AddPop("Drone");
     pops.AddPop("Drone");
     pops.AddPop("Talent");
@@ -280,7 +280,7 @@ TEST_CASE("Mood sums skip Outside pops even when they declare weights",
 ])");
     actest::BaseFixture fixture;
     fixture.popTypes().Load(file.Path());
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     pops.AddPop("Doctor");
     CHECK(pops.GetMoodWeightSums().riot == 0);
 
@@ -291,7 +291,7 @@ TEST_CASE("Mood sums skip Outside pops even when they declare weights",
 TEST_CASE("RestoreMoodState pending emits OnWillRiot once", "[population][mood][restore]")
 {
     actest::BaseFixture fixture;
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     int willRiot = 0;
     pops.OnWillRiot.Connect([&]() { ++willRiot; });
 
@@ -310,7 +310,7 @@ TEST_CASE("Golden age is talents against workers and drones, ignoring specialist
           "[population][goldenage]")
 {
     actest::BaseFixture fixture;
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     pops.AddPop("Talent");
     pops.AddPop("Talent");
     pops.AddPop("Worker");
@@ -341,7 +341,7 @@ TEST_CASE("Any drone blocks a golden age regardless of the weight sum",
           "[population][goldenage]")
 {
     actest::BaseFixture fixture;
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 0).GetPopulation();
     for (int i = 0; i < 4; ++i)
     {
         pops.AddPop("Talent");
@@ -359,7 +359,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
           "[population][goldenage][effects]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 0);
+    BaseManager& base = fixture.MakeBase(8, 8, /*initialPopulation*/ 0);
     PopulationManager& pops = base.GetPopulation();
     pops.AddPop("Talent");
     pops.AddPop("Talent");
@@ -761,7 +761,7 @@ TEST_CASE("Every conversion path resolves the obsolescence chain", "[population]
 {
     actest::BaseFixture fixture;
     fixture.popTypes().Load(actest::FixturePath("pop_types_obsolescence.json"));
-    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 1).GetPopulation();
+    ac::PopulationManager& pops = fixture.MakeBase(8, 8, /*initialPopulation*/ 1).GetPopulation();
     Pop& rPop = *pops.Pops().begin();
 
     pops.ConvertTo(rPop, "Technician");
@@ -837,7 +837,7 @@ TEST_CASE("Each drone source is computed on its own formula", "[population][comp
     BureaucracyDroneInputs_t bureaucracy;
     bureaucracy.bureaucracy = 1.0;
     bureaucracy.mapWidth = 80;
-    bureaucracy.mapHeight = 40;
+    bureaucracy.mapHeight = 80;
     bureaucracy.baseId = 1;
     bureaucracy.factionBaseCount = 1;
     CHECK(calculator.CalculateBureaucracyDrones(bureaucracy) == 0);
@@ -849,7 +849,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
 {
     actest::FactionFixture fixtures;
     ac::GameSettings settings;
-    auto pMap = std::make_unique<ac::WorldMap>(9, 9, actest::TestMapRules());
+    auto pMap = std::make_unique<ac::WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -860,7 +860,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rFaction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
         pState->GetTileEffects(), pState->GetSecretProjectAvailability(),
         /*initialPopulation*/ 3);
     REQUIRE(pBase != nullptr);
@@ -885,7 +885,7 @@ TEST_CASE("Committed riot applies disable_production and resource clamps", "[rio
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     PopulationManager& pops = base.GetPopulation();
 
     const BuildingConfig_t* pCommons = fixture.buildings().Find("Recreation_Commons");
@@ -930,7 +930,7 @@ TEST_CASE("Committed riot applies disable_production and resource clamps", "[rio
 TEST_CASE("Riot mood state survives snapshot restore", "[riot][save]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 3);
+    BaseManager& base = fixture.MakeBase(8, 8, /*initialPopulation*/ 3);
     base.GetPopulation().ForceRiot(2);
     base.GetPopulation().CommitMood();
     base.GetPopulation().CommitMood();
@@ -956,7 +956,7 @@ TEST_CASE("Ownership transfer restarts the riot escalation ladder", "[riot][tran
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(owner, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
 
     base.GetPopulation().ForceRiot(/*turns=*/3);
     base.GetPopulation().CommitMood();

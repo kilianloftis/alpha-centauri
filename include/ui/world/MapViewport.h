@@ -17,8 +17,8 @@ namespace ac
 {
 
 // Camera window over a WorldMap that wraps horizontally (cylinder). Presentation is a
-// SMAC-style 2:1 isometric diamond grid whose tiles rise with the terrain (TileRelief);
-// gameplay topology stays square.
+// SMAC-style rectangular brick of diamonds: tile (x, y) sits at ((x-camX)·½w, (y-camY)·½h).
+// Gameplay topology stays the square lattice.
 class MapViewport
 {
 public:
@@ -34,7 +34,7 @@ public:
 
     int CameraX() const { return m_cameraX; }
     int CameraY() const { return m_cameraY; }
-    // Approximate orthogonal FOV used for camera centering and the top-down minimap frame.
+    // Layout size in whole map units (½ tile width / height each).
     int VisibleCols() const { return m_visibleCols; }
     int VisibleRows() const { return m_visibleRows; }
     float TileSize() const { return m_tileWidth; }
@@ -68,20 +68,11 @@ public:
     }
 
     // fn(const Tile& tile, const TileShape_t& shape) for every tile whose raised shape reaches
-    // the layout, back-to-front (increasing relX+relY, then relX). bShaded adds the relief's
-    // slope shades, which only terrain drawing needs.
+    // the layout, back-to-front (north row first). bShaded adds the relief's slope shades,
+    // which only terrain drawing needs.
     template<typename Fn>
     void ForEachVisibleTile(Fn&& fn, bool bShaded = true) const
     {
-        struct Item_t
-        {
-            const Tile* pTile = nullptr;
-            TileShape_t shape;
-            int depth = 0;
-            int relX = 0;
-        };
-
-        std::vector<Item_t> items;
         const int mapWidth = m_rWorldMap.GetWidth();
         const int mapHeight = m_rWorldMap.GetHeight();
         if (mapWidth <= 0 || mapHeight <= 0 || m_tileWidth <= 0.0f || m_tileHeight <= 0.0f)
@@ -91,21 +82,28 @@ public:
 
         const float halfW = m_tileWidth * 0.5f;
         const float halfH = m_tileHeight * 0.5f;
-        // Tiles below the layout can rise into it.
         const float maxLift = MaxLiftPixels_();
-        const int range = static_cast<int>(std::ceil(m_layout.width / halfW
-                                                     + (m_layout.height + maxLift) / halfH))
-                          + 2;
+        // One row above the camera; past the layout bottom by how far a raised tile can climb.
+        const int relYStart = -1;
+        const int relYEnd =
+            static_cast<int>(std::ceil((m_layout.height + maxLift) / halfH)) + 1;
+        const int relXStart = -2;
+        const int relXEnd = static_cast<int>(std::ceil(m_layout.width / halfW)) + 2;
 
-        for (int relY = -range; relY <= range; ++relY)
+        for (int relY = relYStart; relY <= relYEnd; ++relY)
         {
             const int worldY = m_cameraY + relY;
             if (worldY < 0 || worldY >= mapHeight)
             {
                 continue;
             }
-            for (int relX = -range; relX <= range; ++relX)
+            for (int relX = relXStart; relX <= relXEnd; ++relX)
             {
+                const int worldX = WrapWorldX_(m_cameraX + relX);
+                if (((worldX + worldY) & 1) != 0)
+                {
+                    continue;
+                }
                 float aabbX = 0.0f;
                 float aabbY = 0.0f;
                 AabbOriginFromRel_(relX, relY, aabbX, aabbY);
@@ -113,7 +111,6 @@ public:
                 {
                     continue;
                 }
-                const int worldX = WrapWorldX_(m_cameraX + relX);
                 const Tile* pTile = m_rWorldMap.GetTile(worldX, worldY);
                 if (!pTile)
                 {
@@ -124,21 +121,8 @@ public:
                 {
                     continue;
                 }
-                items.push_back(Item_t{pTile, shape, relX + relY, relX});
+                fn(*pTile, shape);
             }
-        }
-
-        std::sort(items.begin(), items.end(), [](const Item_t& a, const Item_t& b) {
-            if (a.depth != b.depth)
-            {
-                return a.depth < b.depth;
-            }
-            return a.relX < b.relX;
-        });
-
-        for (const Item_t& rItem : items)
-        {
-            fn(*rItem.pTile, rItem.shape);
         }
     }
 

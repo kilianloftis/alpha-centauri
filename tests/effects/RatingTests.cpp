@@ -25,7 +25,7 @@ using Catch::Approx;
 TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][rating]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
         Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
@@ -45,7 +45,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     actest::EffectPool pool;
 
     SECTION("a defined level returns its gameplay effects")
@@ -159,8 +159,8 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& plainBase = fixture.MakeFactionBase(faction, 8, 12);
 
     // Policy: +2 Growth faction-wide. Shrine: +1 Growth in its base only.
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("growth_policy"));
@@ -181,8 +181,8 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& plainBase = fixture.MakeFactionBase(faction, 8, 12);
 
     // No rating: (3+1) * 10 nutrients per pop row.
     CHECK(plainBase.GetNutrientsRequired() == 40);
@@ -201,7 +201,7 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     struct StubItem : IConstructable
     {
@@ -230,8 +230,8 @@ TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlo
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     // No policy involved: the building alone raises the faction-wide Growth score.
     baseA.GetBuildingManager().AddBuilding("faction_growth_shrine"); // +2 Growth, FactionGlobal
@@ -249,14 +249,14 @@ TEST_CASE("Economy rating +2 adds one energy per worked square",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Flat land so tile energy is stable; workers + free base center are the worked set.
     for (int dx = -1; dx <= 1; ++dx)
     {
         for (int dy = -1; dy <= 1; ++dy)
         {
-            fixture.At(4 + dx, 4 + dy).SetRockiness(Rockiness_t::Flat);
+            fixture.At(8 + dx - dy, 8 + dx + dy).SetRockiness(Rockiness_t::Flat);
         }
     }
     base.GetWorkerAssignments().AutoAssignWorkers();
@@ -283,8 +283,8 @@ TEST_CASE("Economy rating -1 subtracts energy only at the headquarters base",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 8, 12);
     hq.GetBuildingManager().AddBuilding("Headquarters");
 
     const int hqBefore = hq.GetResources().GetEnergyProduction(hq.GetBaseEffects());
@@ -304,7 +304,7 @@ TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce r
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     base.GetWorkerAssignments().AutoAssignWorkers();
 
     int workedTiles = 1;
@@ -335,7 +335,7 @@ TEST_CASE("Base-level minerals AddPercent scales worked minerals",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Pack the workable area with Rocky (+2 minerals each). Base center is worked for free;
     // AutoAssignWorkers places the starting workers on the best remaining tiles.
@@ -343,7 +343,7 @@ TEST_CASE("Base-level minerals AddPercent scales worked minerals",
     {
         for (int dy = -1; dy <= 1; ++dy)
         {
-            fixture.At(4 + dx, 4 + dy).SetRockiness(Rockiness_t::Rocky);
+            fixture.At(8 + dx - dy, 8 + dx + dy).SetRockiness(Rockiness_t::Rocky);
         }
     }
     base.GetWorkerAssignments().AutoAssignWorkers();
@@ -365,7 +365,7 @@ TEST_CASE("Base-level Labs AddPercent seeds from the energy split, not zero",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Flat +10 energy at HQ → default 50% labs split = 5 (no inefficiency).
     base.GetBuildingManager().AddBuilding("Headquarters");
@@ -388,7 +388,7 @@ TEST_CASE("Research rating AddPercent scales labs from the energy split",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     base.GetBuildingManager().AddBuilding("Headquarters");
     base.GetBuildingManager().AddBuilding("world_beacon");
@@ -416,8 +416,8 @@ TEST_CASE("Faction-lane rating expand ignores ThisBase modifiers across multiple
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
 
     // Policy +2 Morale (FactionGlobal). Two ThisBase shrines must not inflate FactionUnits.
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("morale_policy"));
@@ -451,7 +451,7 @@ TEST_CASE("Faction-lane rating expand observes pop FactionGlobal SocialRatingMod
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     // MoraleOfficer declares +1 Morale FactionGlobal. If rating expand ran before pop
     // collection, the expanded FactionUnits level would be absent.
@@ -474,11 +474,11 @@ TEST_CASE("Faction-lane rating expand observes unit-component SocialRatingModifi
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeFactionBase(faction, 2, 2);
+    fixture.MakeFactionBase(faction, 8, 4);
 
     // morale_beacon declares +1 Morale FactionGlobal on a component of a live unit. Unit
     // faction-lane effects are collected after ratings only if the pipeline is misordered.
-    fixture.MakeUnit(faction, 3, 3, {"test_chassis", "morale_beacon"});
+    fixture.MakeUnit(faction, 8, 6, {"test_chassis", "morale_beacon"});
 
     bool foundLevel = false;
     for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
@@ -496,7 +496,7 @@ TEST_CASE("removed_by_tech gates GrantBuilding before expansion",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     base.GetBuildingManager().AddBuilding("gated_grantor");
     // FilterBaseLevelByStatId excludes AnyTile MaxClamp from tile_yield_rules — same cut
@@ -516,7 +516,7 @@ TEST_CASE("removed_by_tech gates SocialRatingModifier before faction-lane expand
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     base.GetBuildingManager().AddBuilding("gated_morale_policy_building");
     {
@@ -543,7 +543,7 @@ TEST_CASE("removed_by_tech gates a rating modifier that arrives through a grant"
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     // The grantor is ungated; the gated +2 Morale modifier only exists after grant
     // expansion. The gate must run between expansion and rating accumulation — the level
@@ -592,8 +592,8 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
     auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext,
                                                fixture.map, fixture.settings,
                                                actest::k_TestFactionSeed + 2);
-    BaseManager& baseA = fixture.MakeFactionBase(*pFactionA, 2, 2);
-    BaseManager& baseB = fixture.MakeFactionBase(*pFactionB, 4, 4);
+    BaseManager& baseA = fixture.MakeFactionBase(*pFactionA, 8, 4);
+    BaseManager& baseB = fixture.MakeFactionBase(*pFactionB, 8, 8);
 
     // Base-level filter so tile_yield_rules AnyTile MaxClamp is not part of this assert.
     const BaseEffects_t localA{baseA, pFactionA->GetLocalActiveEffects().effects};

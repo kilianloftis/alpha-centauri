@@ -133,7 +133,7 @@ TEST_CASE("Disabled combat-unit-built skips the completion prompt",
     config.combatUnitBuilt = false;
     harness.fixture.settings.SetPauseOnEvents(config);
 
-    BaseManager& rBase = harness.fixture.MakeBase(4, 4);
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
     harness.Enqueue(ProductionIdleInteraction_t{
         harness.fixture.pPlayer->GetFactionId(),
         rBase.GetBaseId(),
@@ -159,7 +159,7 @@ TEST_CASE("Prototype combat still pauses when only combat-unit-built is enabled"
     config.combatUnitBuilt = true;
     harness.fixture.settings.SetPauseOnEvents(config);
 
-    BaseManager& rBase = harness.fixture.MakeBase(4, 4);
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
     harness.Enqueue(ProductionIdleInteraction_t{
         harness.fixture.pPlayer->GetFactionId(),
         rBase.GetBaseId(),
@@ -184,7 +184,7 @@ TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
     config.buildOrdersOutOfDate = false;
     harness.fixture.settings.SetPauseOnEvents(config);
 
-    BaseManager& rBase = harness.fixture.MakeBase(4, 4);
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
     harness.Enqueue(ProductionIdleInteraction_t{
         harness.fixture.pPlayer->GetFactionId(),
         rBase.GetBaseId(),
@@ -220,7 +220,7 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     config.delayInTranscendence = false;
     harness.fixture.settings.SetPauseOnEvents(config);
 
-    BaseManager& rBase = harness.fixture.MakeBase(4, 4);
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
     while (rBase.GetPopulation().GetSize() > 1)
     {
         rBase.GetPopulation().RemovePop();

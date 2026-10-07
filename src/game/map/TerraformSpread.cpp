@@ -145,20 +145,19 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
 void SpreadTerraformImprovements(WorldMap& rWorldMap, TileEffectsContext& rTileEffects,
                                  int turnIndex, std::mt19937& rRng)
 {
-    const int width = rWorldMap.GetWidth();
-    const int height = rWorldMap.GetHeight();
-    if (width <= 0 || height <= 0)
+    const auto tiles = rWorldMap.GetTiles();
+    if (tiles.empty())
     {
         return;
     }
 
-    const int attempts = TerraformSpreadGrowthAttempts(width * height, turnIndex);
-    std::uniform_int_distribution<int> distX(0, width - 1);
-    std::uniform_int_distribution<int> distY(0, height - 1);
+    const int tileCount = static_cast<int>(tiles.size());
+    const int attempts = TerraformSpreadGrowthAttempts(tileCount, turnIndex);
+    std::uniform_int_distribution<int> dist(0, tileCount - 1);
 
     for (int iter = 0; iter < attempts; ++iter)
     {
-        Tile* pTile = rWorldMap.GetTile(distX(rRng), distY(rRng));
+        Tile* pTile = tiles[static_cast<size_t>(dist(rRng))].get();
         if (!pTile)
         {
             continue;

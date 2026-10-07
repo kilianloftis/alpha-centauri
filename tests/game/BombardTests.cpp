@@ -131,33 +131,33 @@ TEST_CASE("Bombard range includes adjacent and the configured edge", "[bombard]"
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "bombard"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
 
-    CHECK(IsWithinBombardRange(attacker, fixture.At(5, 4), fixture.map));
-    CHECK(IsWithinBombardRange(attacker, fixture.At(6, 4), fixture.map));
-    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(4, 4), fixture.map));
-    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(7, 4), fixture.map));
+    CHECK(IsWithinBombardRange(attacker, fixture.At(9, 9), fixture.map));
+    CHECK(IsWithinBombardRange(attacker, fixture.At(10, 10), fixture.map));
+    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(8, 8), fixture.map));
+    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(11, 11), fixture.map));
 
     OrderHarness_ orders(fixture, 1);
     const int before = attacker.GetMoveFragmentsRemaining();
-    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(4, 4)));
-    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(7, 4)));
+    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(8, 8)));
+    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(11, 11)));
     CHECK(attacker.GetMoveFragmentsRemaining() == before);
 
-    Unit& plain = fixture.MakeUnit(player, 3, 3, {"test_chassis"});
-    CHECK_FALSE(IsWithinBombardRange(plain, fixture.At(4, 3), fixture.map));
+    Unit& plain = fixture.MakeUnit(player, 8, 6, {"test_chassis"});
+    CHECK_FALSE(IsWithinBombardRange(plain, fixture.At(9, 7), fixture.map));
 }
 
 TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP floor", "[bombard]")
 {
-    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
     BindFloors_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "bombard"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     attacker.SetXp(2);
     defender.SetXp(2);
     const int attackerHp = attacker.GetCurrentHp();
@@ -172,8 +172,8 @@ TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP fl
     CHECK(ResolvedFloorPercent_(fixture, defender.GetTile()) == 1);
     CHECK(static_cast<int>(std::ceil(10 * 1 / 100.0)) == 1);
 
-    Unit& open = fixture.MakeUnit(enemy, 5, 5, {"test_chassis", "test_armor"});
-    Unit& shooter = fixture.MakeUnit(player, 4, 5, {"test_chassis", "test_weapon", "bombard"});
+    Unit& open = fixture.MakeUnit(enemy, 8, 10, {"test_chassis", "test_armor"});
+    Unit& shooter = fixture.MakeUnit(player, 7, 9, {"test_chassis", "test_weapon", "bombard"});
     shooter.SetXp(2);
     open.SetXp(2);
     const CombatResult_t* pOpenHit = FirstWinningStrike_(fixture, shooter, open, 1);
@@ -186,9 +186,9 @@ TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP fl
     REQUIRE(pOpenDrop != nullptr);
     CHECK(open.GetCurrentHp() == 1);
 
-    fixture.At(6, 4).AddImprovement(fixture.improvements.Get("Bunker"));
-    Unit& bunkered = fixture.MakeUnit(enemy, 6, 4, {"test_chassis"});
-    Unit& bunkerShooter = fixture.MakeUnit(player, 6, 3, {"test_chassis", "test_weapon", "bombard"});
+    fixture.At(10, 10).AddImprovement(fixture.improvements.Get("Bunker"));
+    Unit& bunkered = fixture.MakeUnit(enemy, 10, 10, {"test_chassis"});
+    Unit& bunkerShooter = fixture.MakeUnit(player, 11, 9, {"test_chassis", "test_weapon", "bombard"});
     bunkerShooter.SetXp(2);
     bunkered.SetXp(2);
     CHECK(ResolvedFloorPercent_(fixture, bunkered.GetTile()) == 50);
@@ -208,8 +208,8 @@ TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP fl
     REQUIRE(pOne != nullptr);
     CHECK(bunkered.GetCurrentHp() == 1);
 
-    fixture.At(7, 4).AddImprovement(fixture.improvements.Get("Base"));
-    CHECK(ResolvedFloorPercent_(fixture, fixture.At(7, 4)) == 50);
+    fixture.At(11, 11).AddImprovement(fixture.improvements.Get("Base"));
+    CHECK(ResolvedFloorPercent_(fixture, fixture.At(11, 11)) == 50);
 }
 
 TEST_CASE("A strike rolls every hostile and cancels each order", "[bombard]")
@@ -218,14 +218,14 @@ TEST_CASE("A strike rolls every hostile and cancels each order", "[bombard]")
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "bombard"});
-    Unit& first = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& second = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
+    Unit& first = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& second = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     first.SetOrder(HoldOrder_t{});
     second.SetOrder(HoldOrder_t{});
 
     OrderHarness_ orders(fixture, 1);
-    const auto result = orders.orders.TryBombard(attacker, fixture.At(5, 4));
+    const auto result = orders.orders.TryBombard(attacker, fixture.At(9, 9));
     REQUIRE(result);
     REQUIRE(result->combats.size() == 2);
     CHECK(result->combats[0].rounds.size() == 1);
@@ -244,8 +244,8 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "bombard"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_weapon", "test_armor", "bombard"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon", "test_armor", "bombard"});
     attacker.SetXp(2);
     defender.SetXp(2);
     defender.SetMoveFragmentsRemaining(1);
@@ -271,16 +271,16 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     CHECK_FALSE(duel.bAttackerDisengaged);
     CHECK_FALSE(duel.bDefenderDisengaged);
 
-    Unit& fragileAttacker = fixture.MakeUnit(player, 3, 3, {"test_chassis", "bombard"});
-    Unit& gunner = fixture.MakeUnit(enemy, 3, 4, {"test_chassis", "test_weapon", "bombard"});
+    Unit& fragileAttacker = fixture.MakeUnit(player, 8, 6, {"test_chassis", "bombard"});
+    Unit& gunner = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "bombard"});
     fragileAttacker.SetCurrentHp(10);
     CombatHarness_ hurt(fixture, 2);
     const CombatResult_t attackerFalls = hurt.combat.Resolve(fragileAttacker, gunner, DuelOptions_());
     CHECK(attackerFalls.bAttackerDestroyed);
     CHECK_FALSE(attackerFalls.bAttackerDisengaged);
 
-    Unit& killer = fixture.MakeUnit(player, 2, 2, {"test_chassis", "test_weapon", "bombard"});
-    Unit& fragileDefender = fixture.MakeUnit(enemy, 2, 3, {"test_slow_chassis", "bombard"});
+    Unit& killer = fixture.MakeUnit(player, 8, 4, {"test_chassis", "test_weapon", "bombard"});
+    Unit& fragileDefender = fixture.MakeUnit(enemy, 7, 5, {"test_slow_chassis", "bombard"});
     killer.SetXp(2);
     fragileDefender.SetXp(2);
     fragileDefender.SetCurrentHp(1);
@@ -290,9 +290,9 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     CHECK_FALSE(defenderDies.bAttackerDisengaged);
     CHECK_FALSE(defenderDies.bDefenderDisengaged);
 
-    Unit& fast = fixture.MakeUnit(player, 1, 1,
+    Unit& fast = fixture.MakeUnit(player, 8, 2,
                                   {"test_chassis", "test_weapon", "bombard", "test_always_disengages"});
-    Unit& slow = fixture.MakeUnit(enemy, 1, 2, {"test_slow_chassis", "test_weapon", "bombard"});
+    Unit& slow = fixture.MakeUnit(enemy, 7, 3, {"test_slow_chassis", "test_weapon", "bombard"});
     fast.SetCurrentHp(2);
     CombatHarness_ noRetreat(fixture, 3);
     const CombatResult_t stayed = noRetreat.combat.Resolve(fast, slow, DuelOptions_());
@@ -307,8 +307,8 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "bombard"});
-    Unit& defender = fixture.MakeUnit(enemy, 6, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+    Unit& defender = fixture.MakeUnit(enemy, 10, 10, {"test_chassis"});
     attacker.SetXp(2);
     defender.SetXp(2);
     const int point = MovementConstants_t::k_moveFragmentsPerPoint;
@@ -324,8 +324,8 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     CHECK(strike->combats.front().attackStrength == expectedStrike.attackStrength);
     CHECK(attacker.GetMoveFragmentsRemaining() == 0);
 
-    Unit& duelAttacker = fixture.MakeUnit(player, 4, 6, {"test_chassis", "test_weapon", "bombard"});
-    Unit& duelDefender = fixture.MakeUnit(enemy, 6, 6, {"test_chassis", "test_weapon", "bombard"});
+    Unit& duelAttacker = fixture.MakeUnit(player, 6, 10, {"test_chassis", "test_weapon", "bombard"});
+    Unit& duelDefender = fixture.MakeUnit(enemy, 8, 12, {"test_chassis", "test_weapon", "bombard"});
     duelAttacker.SetXp(2);
     duelDefender.SetXp(2);
     duelAttacker.SetMoveFragmentsRemaining(point * 2 / 3);
@@ -347,13 +347,13 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "bombard"});
-    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetXp(2);
     defender.SetXp(2);
 
-    fixture.At(4, 4).SetElevation(2000);
-    fixture.At(5, 4).SetElevation(0);
+    fixture.At(8, 8).SetElevation(2000);
+    fixture.At(9, 9).SetElevation(0);
     EffectContext_t ctx{&defender.GetTile(), CombatRole_t::Attacker};
     ctx.pAttacker = &attacker;
     ctx.pDefender = &defender;
@@ -362,13 +362,13 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
           == 6);
     CHECK(attacker.GetStat(StatId_t::Attack) == 4);
 
-    fixture.At(4, 4).SetElevation(999);
+    fixture.At(8, 8).SetElevation(999);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
                                 fixture.morale().EffectiveLevelEffects(attacker, ctx))
           == 4);
 
-    fixture.At(4, 4).SetElevation(0);
-    fixture.At(5, 4).SetElevation(2000);
+    fixture.At(8, 8).SetElevation(0);
+    fixture.At(9, 9).SetElevation(2000);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
                                 fixture.morale().EffectiveLevelEffects(attacker, ctx))
           == 4);
@@ -379,10 +379,10 @@ TEST_CASE("An empty tile loses one non-base improvement, including outside visio
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "bombard"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
     player.RebuildVisibility();
 
-    Tile& rFar = fixture.At(6, 4);
+    Tile& rFar = fixture.At(10, 10);
     rFar.AddImprovement(fixture.improvements.Get("Farm"));
     rFar.AddImprovement(fixture.improvements.Get("Base"));
     CHECK_FALSE(player.GetVisibleMap().IsVisible(rFar));
@@ -396,14 +396,14 @@ TEST_CASE("An empty tile loses one non-base improvement, including outside visio
     CHECK(rFar.HasImprovement(ImprovementIds::k_Base));
     CHECK(attacker.GetMoveFragmentsRemaining() == 0);
 
-    Unit& second = fixture.MakeUnit(player, 4, 2, {"test_chassis", "bombard"});
+    Unit& second = fixture.MakeUnit(player, 10, 6, {"test_chassis", "bombard"});
     Faction& enemy = fixture.MakeFaction();
-    Unit& occupant = fixture.MakeUnit(enemy, 5, 2, {"test_chassis"});
-    fixture.At(5, 2).AddImprovement(fixture.improvements.Get("Farm"));
-    const auto occupied = orders.orders.TryBombard(second, fixture.At(5, 2));
+    Unit& occupant = fixture.MakeUnit(enemy, 11, 7, {"test_chassis"});
+    fixture.At(11, 7).AddImprovement(fixture.improvements.Get("Farm"));
+    const auto occupied = orders.orders.TryBombard(second, fixture.At(11, 7));
     REQUIRE(occupied);
     CHECK_FALSE(occupied->destroyedImprovementId.has_value());
-    CHECK(fixture.At(5, 2).HasImprovement(ImprovementIds::k_Farm));
+    CHECK(fixture.At(11, 7).HasImprovement(ImprovementIds::k_Farm));
     CHECK(occupant.GetCurrentHp() == 10);
 }
 
@@ -413,8 +413,8 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "bombard"});
-    Unit& fogged = fixture.MakeUnit(enemy, 6, 4, {"test_chassis"});
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
+    Unit& fogged = fixture.MakeUnit(enemy, 10, 10, {"test_chassis"});
     fogged.SetOrder(HoldOrder_t{});
     player.RebuildVisibility();
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
@@ -430,15 +430,15 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK_FALSE(fogged.GetOrder().has_value());
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
 
-    Unit& artillery = fixture.MakeUnit(enemy, 6, 6, {"test_chassis", "bombard", "Cloaking_Device"});
-    Unit& bystander = fixture.MakeUnit(enemy, 6, 6, {"test_chassis"});
+    Unit& artillery = fixture.MakeUnit(enemy, 8, 12, {"test_chassis", "bombard", "Cloaking_Device"});
+    Unit& bystander = fixture.MakeUnit(enemy, 8, 12, {"test_chassis"});
     artillery.SetOrder(HoldOrder_t{});
     bystander.SetOrder(HoldOrder_t{});
     player.RebuildVisibility();
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(artillery));
     CHECK_FALSE(IsUnitVisibleTo(player, artillery, *fixture.ctx));
 
-    Unit& second = fixture.MakeUnit(player, 4, 6, {"test_chassis", "bombard"});
+    Unit& second = fixture.MakeUnit(player, 6, 10, {"test_chassis", "bombard"});
     const auto duel = orders.orders.TryBombard(second, artillery.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);

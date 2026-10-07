@@ -39,12 +39,9 @@ int BandFloor_(int band)
 
 void FillMap_(actest::WorldFixture& rWorld, int elevation)
 {
-    for (int y = 0; y < 5; ++y)
+    for (const auto& pTile : rWorld.map.GetTiles())
     {
-        for (int x = 0; x < 5; ++x)
-        {
-            rWorld.map.GetTile(x, y)->SetElevation(elevation);
-        }
+        pTile->SetElevation(elevation);
     }
 }
 
@@ -52,9 +49,9 @@ void FillMap_(actest::WorldFixture& rWorld, int elevation)
 
 TEST_CASE("A water tile's centre takes the detail step of its own depth", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(3));
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
 
     const struct
     {
@@ -78,9 +75,9 @@ TEST_CASE("A water tile's centre takes the detail step of its own depth", "[ui][
 
 TEST_CASE("Without a map every vertex takes the tile's own depth", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(3));
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(BandFloor_(1));
 
     const DiamondShades_t shades = ResolveWaterShades(rTile, nullptr, k_Shading);
@@ -94,16 +91,16 @@ TEST_CASE("Without a map every vertex takes the tile's own depth", "[ui][water_s
 TEST_CASE("A corner takes the band of the average depth of the tiles that share it",
           "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(0));
-    // The three neighbors that share the N corner with (2, 2).
-    for (const auto& [x, y] : {std::pair{1, 2}, std::pair{1, 1}, std::pair{2, 1}})
+    // The three neighbors that share the N corner with (8, 4).
+    for (const auto& [x, y] : {std::pair{7, 3}, std::pair{8, 2}, std::pair{9, 3}})
     {
         world.map.GetTile(x, y)->SetElevation(BandFloor_(3));
     }
 
     const DiamondShades_t shades =
-        ResolveWaterShades(*world.map.GetTile(2, 2), &world.map, k_Shading);
+        ResolveWaterShades(*world.map.GetTile(8, 4), &world.map, k_Shading);
     // N: (0 + 3 + 3 + 3) / 4 bands up = 2.25 → band 2. W and E each share one raised tile
     // (0.75 → band 0); S shares none.
     CHECK(shades.center == 30);
@@ -115,52 +112,54 @@ TEST_CASE("A corner takes the band of the average depth of the tiles that share 
 
 TEST_CASE("Land counts as ocean level in a corner's average", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(0));
-    world.map.GetTile(2, 1)->SetElevation(actest::TestMapRules().maxElevationMeters);
+    world.map.GetTile(9, 3)->SetElevation(actest::TestMapRules().maxElevationMeters);
 
     const DiamondShades_t water =
-        ResolveWaterShades(*world.map.GetTile(2, 2), &world.map, k_Shading);
+        ResolveWaterShades(*world.map.GetTile(8, 4), &world.map, k_Shading);
     // N: the land counts as 4 bands up, not more: (0 + 0 + 0 + 4) / 4 = 1.
     CHECK(water.north == 20);
 
     const DiamondShades_t land =
-        ResolveWaterShades(*world.map.GetTile(2, 1), &world.map, k_Shading);
+        ResolveWaterShades(*world.map.GetTile(9, 3), &world.map, k_Shading);
     CHECK(land.center == 0);
 }
 
 TEST_CASE("Rows off the map are left out of a corner's average", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(0));
-    world.map.GetTile(1, 0)->SetElevation(BandFloor_(2));
+    world.map.GetTile(7, 1)->SetElevation(BandFloor_(3));
 
     const DiamondShades_t shades =
-        ResolveWaterShades(*world.map.GetTile(2, 0), &world.map, k_Shading);
-    // N corner of a top-row tile: only (1, 0) is on the map. (0 + 2) / 2 = 1.
-    CHECK(shades.north == 20);
+        ResolveWaterShades(*world.map.GetTile(8, 0), &world.map, k_Shading);
+    // W corner of a top-row tile: its NW neighbor is off the map, leaving (8, 0), (6, 0) and
+    // (7, 1). (0 + 0 + 3) / 3 = 1.
+    CHECK(shades.west == 20);
 }
 
 TEST_CASE("Corners wrap across the map's x seam", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     FillMap_(world, BandFloor_(0));
-    world.map.GetTile(4, 2)->SetElevation(BandFloor_(2));
-    world.map.GetTile(4, 3)->SetElevation(BandFloor_(2));
+    world.map.GetTile(-1, 3)->SetElevation(BandFloor_(2));
+    world.map.GetTile(-2, 4)->SetElevation(BandFloor_(2));
 
     const DiamondShades_t shades =
-        ResolveWaterShades(*world.map.GetTile(0, 2), &world.map, k_Shading);
-    // W corner of (0, 2) is shared with (0, 3), (4, 3) and (4, 2): (0 + 0 + 2 + 2) / 4 = 1.
+        ResolveWaterShades(*world.map.GetTile(0, 4), &world.map, k_Shading);
+    // W corner of (0, 4) is shared with its NW, W and SW neighbors across the seam,
+    // (-1, 3), (-2, 4) and (-1, 5): (0 + 2 + 2 + 0) / 4 = 1.
     CHECK(shades.west == 20);
 }
 
 TEST_CASE("Depth steps count down from ocean level, and deeper water takes the deepest shade",
           "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     const WaterShadingStyle_t shading = Shading_(500.0f);
     FillMap_(world, -1);
-    Tile& rTile = *world.map.GetTile(2, 2);
+    Tile& rTile = *world.map.GetTile(8, 4);
 
     const struct
     {
@@ -183,12 +182,12 @@ TEST_CASE("Depth steps count down from ocean level, and deeper water takes the d
 
 TEST_CASE("An empty shade table or a non-positive detail step is an error", "[ui][water_shading]")
 {
-    actest::WorldFixture world(5, 5);
+    actest::WorldFixture world;
     WaterShadingStyle_t empty = k_Shading;
     empty.depthShades.clear();
-    CHECK_THROWS_AS(ResolveWaterShades(*world.map.GetTile(2, 2), &world.map, empty),
+    CHECK_THROWS_AS(ResolveWaterShades(*world.map.GetTile(8, 4), &world.map, empty),
                     std::invalid_argument);
-    CHECK_THROWS_AS(ResolveWaterShades(*world.map.GetTile(2, 2), &world.map, Shading_(0.0f)),
+    CHECK_THROWS_AS(ResolveWaterShades(*world.map.GetTile(8, 4), &world.map, Shading_(0.0f)),
                     std::invalid_argument);
 }
 

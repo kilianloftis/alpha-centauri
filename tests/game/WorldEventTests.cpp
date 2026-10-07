@@ -113,8 +113,8 @@ TEST_CASE("An active event's effects reach every faction and leave with it", "[w
 {
     WorldEventSession_ session;
     session.pState->CreateWorldEvents();
-    const BaseManager& rPlayerBase = session.MakeBase(*session.pPlayer, 2, 2);
-    const BaseManager& rAiBase = session.MakeBase(*session.pAi, 6, 6);
+    const BaseManager& rPlayerBase = session.MakeBase(*session.pPlayer, 8, 4);
+    const BaseManager& rAiBase = session.MakeBase(*session.pAi, 8, 12);
     const auto scale = [](const BaseManager& rBase) {
         return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
                                SeedFor(StatId_t::EcologicalDamage));

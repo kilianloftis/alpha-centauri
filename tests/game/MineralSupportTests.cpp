@@ -84,7 +84,7 @@ TEST_CASE("Fixture chassis reports mineral upkeep of 1", "[unit][support]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     CHECK(unit.GetDesign().GetMineralUpkeep() == 1);
     CHECK(unit.GetMineralUpkeep() == 1);
 }
@@ -94,10 +94,10 @@ TEST_CASE("Clean reactor ability zeroes mineral upkeep without taking a free slo
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& freeCost = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_clean_reactor"}, &base);
-    Unit& paid = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
+    Unit& freeCost = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_clean_reactor"}, &base);
+    Unit& paid = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
     CHECK(freeCost.GetMineralUpkeep() == 0);
     CHECK(paid.GetMineralUpkeep() == 1);
 
@@ -115,11 +115,11 @@ TEST_CASE("Support 0 grants two free unit slots per base", "[unit][support][rati
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& a = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    Unit& b = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    Unit& newest = fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+    Unit& a = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    Unit& b = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    Unit& newest = fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
     const UnitId_t newestId = newest.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -137,13 +137,13 @@ TEST_CASE("Facility free_unit_support stacks on Support 0", "[unit][support]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Unit& oldest = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    Unit& middle = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    Unit& newer = fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
-    Unit& newest = fixture.MakeUnit(faction, 8, 4, {"test_chassis"}, &base);
-    Unit& fifth = fixture.MakeUnit(faction, 3, 4, {"test_chassis"}, &base);
+    Unit& oldest = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    Unit& middle = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    Unit& newer = fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
+    Unit& newest = fixture.MakeUnit(faction, 12, 12, {"test_chassis"}, &base);
+    Unit& fifth = fixture.MakeUnit(faction, 7, 7, {"test_chassis"}, &base);
     const UnitId_t fifthId = fifth.GetUnitId();
 
     base.GetBuildingManager().AddBuilding("free_support_depot"); // +2 → 4 free total
@@ -164,17 +164,17 @@ TEST_CASE("Support +2 grants four free unit slots", "[unit][support][rating]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("support_policy"));
     REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Support) == 2);
 
-    for (int x = 5; x <= 8; ++x)
+    for (int step = 1; step <= 4; ++step)
     {
-        fixture.MakeUnit(faction, x, 4, {"test_chassis"}, &base);
+        fixture.MakeUnit(faction, 8 + step, 8 + step, {"test_chassis"}, &base);
     }
-    Unit& fifth = fixture.MakeUnit(faction, 3, 4, {"test_chassis"}, &base);
+    Unit& fifth = fixture.MakeUnit(faction, 7, 7, {"test_chassis"}, &base);
     const UnitId_t fifthId = fifth.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -188,14 +188,14 @@ TEST_CASE("Support -2 grants one free unit slot", "[unit][support][rating]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("low_support_policy"));
     REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Support) == -2);
 
-    Unit& free = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    Unit& paid = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
+    Unit& free = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    Unit& paid = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
     const UnitId_t paidId = paid.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -211,13 +211,13 @@ TEST_CASE("Support -4 doubles mineral upkeep and zeroes free slots",
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
     REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Support) == -4);
 
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     CHECK(unit.GetMineralUpkeep() == 2);
 
     LeaveMineralBank_(base, 2);
@@ -231,13 +231,13 @@ TEST_CASE("FactionUnits mineral_upkeep Add increases support charge", "[unit][su
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Collapse free slots so the single unit is charged (Support 0 would cover it).
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     // Support -4 already adds +1 upkeep → chassis 1 + SE 1 = 2.
     CHECK(unit.GetMineralUpkeep() == 2);
 
@@ -255,12 +255,12 @@ TEST_CASE("Insufficient minerals disband newest charged home units first", "[uni
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Support 0: two free. Third unit is charged.
-    Unit& a = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    Unit& b = fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    Unit& c = fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+    Unit& a = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    Unit& b = fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    Unit& c = fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
     const UnitId_t cId = c.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -277,7 +277,7 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     base.GetBuildingManager().AddBuilding("mineral_cache");
     const int gross = base.GetMineralProduction();
@@ -286,9 +286,9 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
     CHECK(base.GetMineralsForProduction() == gross);
 
     // Support 0 covers two chassis; the third costs 1 mineral.
-    fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
     CHECK(base.GetMineralSupportCost() == 1);
     CHECK(base.GetMineralsForProduction() == gross - 1);
@@ -300,7 +300,7 @@ TEST_CASE("Turns to completion is remaining minerals over after-support rate, ro
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     const BuildingConfig_t* pFacility = fixture.buildings().Find("test_hurry_facility");
     REQUIRE(pFacility != nullptr);
     base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
@@ -326,7 +326,7 @@ TEST_CASE("A stockpile has no turns to completion", "[production][stockpile]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     REQUIRE(base.GetProduction().GetCurrentProduction() != nullptr);
     REQUIRE(base.GetProduction().GetCurrentProduction()->IsStockpile());
     CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
@@ -336,12 +336,12 @@ TEST_CASE("Mineral support leaves remainder for production", "[unit][support]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // Support 0 covers two; third costs 1 → remainder 4 from bank 5.
-    fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
-    fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
-    fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
     LeaveMineralBank_(base, 5);
     base.ApplyMineralSupport();
@@ -354,14 +354,14 @@ TEST_CASE("Native life on fungus pays no mineral support", "[unit][support]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
-    fixture.At(5, 4).AddTerrainFeature(fixture.improvements.Get("Fungus"));
+    fixture.At(9, 9).AddTerrainFeature(fixture.improvements.Get("Fungus"));
     Unit& lifeform = fixture.MakeUnit(
-        faction, 5, 4, {"native_life_chassis", "test_chassis"}, &base);
+        faction, 9, 9, {"native_life_chassis", "test_chassis"}, &base);
     // Support -4 adds 1. Standing on fungus does not change the stat.
     CHECK(lifeform.GetMineralUpkeep() == 2);
 
@@ -376,13 +376,13 @@ TEST_CASE("Native life off fungus still pays mineral support", "[unit][support]"
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
     Unit& lifeform = fixture.MakeUnit(
-        faction, 5, 4, {"native_life_chassis", "test_chassis"}, &base);
+        faction, 9, 9, {"native_life_chassis", "test_chassis"}, &base);
     const UnitId_t lifeformId = lifeform.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -396,13 +396,13 @@ TEST_CASE("A non-lifeform on fungus still pays mineral support", "[unit][support
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("collapse_support_policy"));
 
-    fixture.At(5, 4).AddTerrainFeature(fixture.improvements.Get("Fungus"));
-    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    fixture.At(9, 9).AddTerrainFeature(fixture.improvements.Get("Fungus"));
+    Unit& unit = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
     const UnitId_t unitId = unit.GetUnitId();
 
     LeaveMineralBank_(base, 0);
@@ -416,7 +416,7 @@ TEST_CASE("SpendMinerals rejects overspend", "[unit][support][resources]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
     LeaveMineralBank_(base, 1);
     CHECK_THROWS(base.GetResources().SpendMinerals(2));
     CHECK_THROWS(base.GetResources().SpendMinerals(-1));

@@ -58,7 +58,7 @@ TEST_CASE("TransferUnitTo does not destroy: identity preserved, no OnUnitDestroy
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    Unit& unit = fixture.MakeUnit(giver, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(giver, 8, 8, {"test_chassis"});
     Unit* pAddress = &unit;
     const UnitId_t unitId = unit.GetUnitId();
 
@@ -108,10 +108,10 @@ TEST_CASE("TransferUnitTo keeps train XP; home claim is cleared",
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    BaseManager& giverBase = fixture.MakeFactionBase(giver, 2, 2);
+    BaseManager& giverBase = fixture.MakeFactionBase(giver, 8, 4);
     giverBase.GetBuildingManager().AddBuilding("Aerospace_Complex");
     Unit& unit =
-        fixture.MakeUnit(giver, 3, 2, {"test_flight_chassis"}, &giverBase, &giverBase);
+        fixture.MakeUnit(giver, 9, 5, {"test_flight_chassis"}, &giverBase, &giverBase);
     Unit* pAddress = &unit;
     REQUIRE(unit.GetHomeBase() == &giverBase);
     const int xpAtSpawn = unit.GetXp();
@@ -134,12 +134,12 @@ TEST_CASE("ProducedAtThisBase stamp survives rehome and ownership transfer",
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    BaseManager& giverBase = fixture.MakeFactionBase(giver, 2, 2);
-    BaseManager& otherBase = fixture.MakeFactionBase(giver, 6, 6);
+    BaseManager& giverBase = fixture.MakeFactionBase(giver, 8, 4);
+    BaseManager& otherBase = fixture.MakeFactionBase(giver, 8, 12);
     giverBase.GetBuildingManager().AddBuilding("test_train_attack");
 
     Unit& unit =
-        fixture.MakeUnit(giver, 3, 2, {"test_chassis", "test_weapon"}, &giverBase, &giverBase);
+        fixture.MakeUnit(giver, 9, 5, {"test_chassis", "test_weapon"}, &giverBase, &giverBase);
     Unit* pAddress = &unit;
     // test_weapon Attack 4 + stamped +1 from production base.
     REQUIRE(unit.GetStat(StatId_t::Attack) == 5);
@@ -167,8 +167,8 @@ TEST_CASE("Transfer to self is rejected rather than corrupting ownership",
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
-    Unit& unit = fixture.MakeUnit(faction, 3, 2, {"test_chassis"});
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
+    Unit& unit = fixture.MakeUnit(faction, 9, 5, {"test_chassis"});
 
     CHECK_THROWS(faction.TransferUnitTo(unit.GetUnitId(), faction));
     CHECK_THROWS(faction.TransferBaseTo(base.GetBaseId(), faction));
@@ -196,7 +196,7 @@ TEST_CASE("DestroyUnit still applies combat rules and fires OnUnitDestroyed for 
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     bool bDestroyedFired = false;
     bool bReleasedFired = false;
@@ -216,8 +216,8 @@ TEST_CASE("Transferring a loaded transport preserves cargo and embarkation",
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    Unit& transport = fixture.MakeUnit(giver, 4, 4, {"test_sea_chassis", "test_transport"});
-    Unit& cargo = fixture.MakeUnit(giver, 4, 4, {"test_chassis"});
+    Unit& transport = fixture.MakeUnit(giver, 8, 8, {"test_sea_chassis", "test_transport"});
+    Unit& cargo = fixture.MakeUnit(giver, 8, 8, {"test_chassis"});
     cargo.EmbarkInto(transport);
     REQUIRE(cargo.IsEmbarked());
     REQUIRE(transport.GetCargo().size() == 1);
@@ -243,8 +243,8 @@ TEST_CASE("Transferring an embarked passenger detaches it cleanly without destro
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    Unit& transport = fixture.MakeUnit(giver, 4, 4, {"test_sea_chassis", "test_transport"});
-    Unit& passenger = fixture.MakeUnit(giver, 4, 4, {"test_chassis"});
+    Unit& transport = fixture.MakeUnit(giver, 8, 8, {"test_sea_chassis", "test_transport"});
+    Unit& passenger = fixture.MakeUnit(giver, 8, 8, {"test_chassis"});
     passenger.EmbarkInto(transport);
     REQUIRE(passenger.IsEmbarked());
 
@@ -265,9 +265,9 @@ TEST_CASE("Transferring a unit clears its home-base claim", "[unit][lifetime][tr
     FactionFixture fixture;
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
-    BaseManager& home = fixture.MakeFactionBase(giver, 2, 2);
+    BaseManager& home = fixture.MakeFactionBase(giver, 8, 4);
 
-    Unit& unit = fixture.MakeUnit(giver, 3, 2, {"test_chassis"}, &home);
+    Unit& unit = fixture.MakeUnit(giver, 9, 5, {"test_chassis"}, &home);
     REQUIRE(unit.GetHomeBase() == &home);
 
     giver.TransferUnitTo(unit.GetUnitId(), receiver);
@@ -284,7 +284,7 @@ TEST_CASE("TransferBaseTo preserves BaseManager identity", "[base][lifetime][tra
     FactionFixture fixture;
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
     BaseManager* pAddress = &base;
     const BaseId_t baseId = base.GetBaseId();
 
@@ -311,7 +311,7 @@ TEST_CASE("BaseManager::OnDestroyed fires on raze but not on transfer",
 
     SECTION("transfer survives")
     {
-        BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+        BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
         bool bDestroyed = false;
         base.OnDestroyed.Connect([&]() { bDestroyed = true; });
 
@@ -322,7 +322,7 @@ TEST_CASE("BaseManager::OnDestroyed fires on raze but not on transfer",
 
     SECTION("raze destroys")
     {
-        BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+        BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
         const BaseId_t baseId = base.GetBaseId();
         bool bDestroyed = false;
         base.OnDestroyed.Connect([&]() { bDestroyed = true; });
@@ -342,11 +342,11 @@ TEST_CASE("Deploy cooldown migrates with a transferred base and does not leak to
     Faction& giver = fixture.MakeFaction();
     Faction& receiver = fixture.MakeFaction();
 
-    BaseManager& coolingBase = fixture.MakeFactionBase(giver, 2, 2);
+    BaseManager& coolingBase = fixture.MakeFactionBase(giver, 8, 4);
     coolingBase.GetBuildingManager().AddBuilding("test_facility_a");
     giver.DeployBuilding(coolingBase.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
 
-    BaseManager& readyBase = fixture.MakeFactionBase(giver, 6, 6);
+    BaseManager& readyBase = fixture.MakeFactionBase(giver, 8, 12);
     readyBase.GetBuildingManager().AddBuilding("test_facility_a");
 
     // Two copies faction-wide, one cooling: the giver already tracks readiness per copy.
@@ -370,11 +370,11 @@ TEST_CASE("Extracting (razing) a base drops its deploy cooldown instead of leaki
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    BaseManager& doomedBase = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& doomedBase = fixture.MakeFactionBase(faction, 8, 4);
     doomedBase.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(doomedBase.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
 
-    BaseManager& survivingBase = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& survivingBase = fixture.MakeFactionBase(faction, 8, 12);
     survivingBase.GetBuildingManager().AddBuilding("test_facility_a");
 
     REQUIRE(faction.ExtractBase(doomedBase.GetBaseId()).has_value());
@@ -390,11 +390,11 @@ TEST_CASE("NotifyBuildingDestroyed only drops the record for its own base",
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
     baseA.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(baseA.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
 
-    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
     baseB.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(baseB.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
 
@@ -414,7 +414,7 @@ TEST_CASE("NotifyBuildingDestroyed retires the still-cooling record, not an expi
     // One base, two copies of the same building: an old deploy that has already come off
     // cooldown and a fresh one that has not. Records are only pruned once per turn (Upkeep),
     // so both are in the ledger when a copy is destroyed.
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
     base.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 10);
@@ -439,7 +439,7 @@ TEST_CASE("CountReadyBuildings is a pure query: asking about a future year chang
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
 
@@ -457,7 +457,7 @@ TEST_CASE("PruneExpiredDeploys retires elapsed records without changing any answ
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
     faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 10);
 
@@ -493,7 +493,7 @@ TEST_CASE("EventBridge wires bases via OnBaseAdded, without a founding-only call
     bus.Subscribe<EvBaseGainedPop>([&](const EvBaseGainedPop&) { ++gainedEvents; });
 
     // Founded (not the Engine-only path) — still wired because AddBase emits OnBaseAdded.
-    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(giver, 8, 8);
     base.GetPopulation().AddPop();
     CHECK(gainedEvents == 1);
 
@@ -513,7 +513,7 @@ TEST_CASE("Extracting a base with assigned workers releases their tile claims cl
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     // The base's initial pops are auto-assigned to workable tiles at construction.
     Pop& rWorker = FirstWorkerPop_(base);

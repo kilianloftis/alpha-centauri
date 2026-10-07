@@ -28,9 +28,9 @@ shorelines, temperature and river sources, and before the landmarks and `world_r
 - **Every tile.** Fungus is placed on land and sea alike. SMAC draws none in deep water.
   `map_wipe` (`0x591040`) clears rockiness, and `world_rocky` assigns it only after fungus, so
   `world_fungus`'s rocky test excludes nothing.
-- **Coordinates.** SMAC's `x` steps by 2 along a row and `y` is the row. Our tile `(gx, gy)`
-  draws where SMAC's `(gx − gy, gx + gy)` would, since `MapViewport` puts it at
-  `((gx − gy)·½w, (gx + gy)·½h)`.
+- **Coordinates.** SMAC's `x` steps by 2 along a row and `y` is the row. Our tiles use the same
+  SMAC coordinates: tile `(x, y)` draws at `((x − camX)·½w, (y − camY)·½h)`, so the fractal
+  samples the tile's own `(x, y)`.
 
 ### What we do today
 
@@ -45,8 +45,8 @@ shorelines, temperature and river sources, and before the landmarks and `world_r
   - `Sample(x, y)` and `Value(x, y, fineShift)` as above;
   - fungus uses `fineShift` 4.
 - **Placement** (`PlaceFungus` in `FungusGeneration`): one fractal per map. For every tile the
-  Fungus entry can occupy (`CanBuildImprovement`), take the value at `(gx − gy, gx + gy)`. Add
-  fungus when it falls in a band. A tile on the first or last row (`gy` 0 or height − 1) that
+  Fungus entry can occupy (`CanBuildImprovement`), take the value at the tile's own `(x, y)`. Add
+  fungus when it falls in a band. A tile on the first or last row (`y` 0 or height − 1) that
   misses every band gets fungus with chance `pole_row_chance`. Deep ocean keeps the fungus
   dormant through `suppress_terrain`, as today.
 - **Config:**
@@ -85,7 +85,7 @@ shorelines, temperature and river sources, and before the landmarks and `world_r
      - 3 (18) covers none.
    - **Pole rows:** with an out-of-band lattice, chance 1 covers exactly the first and last
      rows and chance 0 covers nothing.
-   - **Coordinates:** each tile follows the value at `(gx − gy, gx + gy)`.
+   - **Coordinates:** each tile follows the value at its own `(x, y)`.
    - **Coverage:**
      - land and sea get fungus alike;
      - a tile the Fungus entry cannot occupy stays clear;

@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/DiplomaticPermissionRules.h"
+#include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -67,9 +68,9 @@ const Tile* FindBestOnChebyshevRing_(const Unit& rUnit, const Tile& rOrigin,
     int bestY = std::numeric_limits<int>::max();
     int bestX = std::numeric_limits<int>::max();
 
-    auto consider = [&](int dx, int dy)
+    auto consider = [&](int p, int q)
     {
-        const Tile* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
+        const Tile* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, p, q);
         if (!pTile || !IsValidEvacuateDestination_(rUnit, *pTile, rWorldMap, ownFactionId,
                                                    rGrids))
         {
@@ -89,15 +90,15 @@ const Tile* FindBestOnChebyshevRing_(const Unit& rUnit, const Tile& rOrigin,
         return pBest;
     }
 
-    for (int dy = -distance; dy <= distance; ++dy)
+    for (int q = -distance; q <= distance; ++q)
     {
-        for (int dx = -distance; dx <= distance; ++dx)
+        for (int p = -distance; p <= distance; ++p)
         {
-            if (std::max(std::abs(dx), std::abs(dy)) != distance)
+            if (std::max(std::abs(p), std::abs(q)) != distance)
             {
                 continue;
             }
-            consider(dx, dy);
+            consider(p, q);
         }
     }
     return pBest;
@@ -105,7 +106,7 @@ const Tile* FindBestOnChebyshevRing_(const Unit& rUnit, const Tile& rOrigin,
 
 int MaxChebyshevEvacuateRadius_(const WorldMap& rWorldMap)
 {
-    return rWorldMap.GetWidth() / 2 + std::max(0, rWorldMap.GetHeight() - 1);
+    return (rWorldMap.GetWidth() / 2 + std::max(0, rWorldMap.GetHeight() - 1)) / 2;
 }
 
 } // namespace

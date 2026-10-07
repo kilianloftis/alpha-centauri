@@ -9,6 +9,7 @@
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/MoistureGeneration.h"
 #include "game/map/RiverGeneration.h"
+#include "game/map/MapUtils.h"
 #include "game/map/RockinessGeneration.h"
 
 #include <algorithm>
@@ -85,7 +86,7 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
 {
     const int width = rWorld.GetWidth();
     const int height = rWorld.GetHeight();
-    const int tileCount = width * height;
+    const int tileCount = static_cast<int>(rWorld.GetTiles().size());
 
     // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
     // session seed, never of rConfig.seed (the request, where 0 means "pick one").
@@ -94,38 +95,38 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
     const float scale = std::max(rPreset.continentScale, 0.001f);
-    // Sample on a cylinder so x=0 and x=width are adjacent in noise space (horizontal wrap).
+    // One map unit is √½ lattice lengths; sample on a cylinder so x wraps in noise space.
     constexpr float kTwoPi = 6.283185307179586f;
+    constexpr float kSqrtHalf = 0.7071067811865476f;
     const float cylinderRadius =
-        (static_cast<float>(width) * scale) / kTwoPi;
+        (static_cast<float>(width) * kSqrtHalf * scale) / kTwoPi;
 
     std::vector<float> field(static_cast<size_t>(tileCount));
     float minValue = 0.0f;
     float maxValue = 0.0f;
 
-    for (int y = 0; y < height; ++y)
+    for (const auto& pTile : rWorld.GetTiles())
     {
-        for (int x = 0; x < width; ++x)
-        {
-            const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
-            const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
-            const float angle = (static_cast<float>(x) / static_cast<float>(width)) * kTwoPi;
-            const float sampleX = std::cos(angle) * cylinderRadius;
-            const float sampleZ = std::sin(angle) * cylinderRadius;
-            const float sampleY = static_cast<float>(y) * scale;
-            const float masked =
-                ApplyLandmassMask_(noise.Sample(sampleX, sampleY, sampleZ), nx, ny, rPreset);
+        const int x = pTile->GetX();
+        const int y = pTile->GetY();
+        const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
+        const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
+        const float angle = (static_cast<float>(x) / static_cast<float>(width)) * kTwoPi;
+        const float sampleX = std::cos(angle) * cylinderRadius;
+        const float sampleZ = std::sin(angle) * cylinderRadius;
+        const float sampleY = static_cast<float>(y) * kSqrtHalf * scale;
+        const float masked =
+            ApplyLandmassMask_(noise.Sample(sampleX, sampleY, sampleZ), nx, ny, rPreset);
 
-            const size_t index = static_cast<size_t>(y * width + x);
-            field[index] = masked;
-            if (index == 0 || masked < minValue)
-            {
-                minValue = masked;
-            }
-            if (index == 0 || masked > maxValue)
-            {
-                maxValue = masked;
-            }
+        const size_t index = static_cast<size_t>(TileIndex(x, y, width));
+        field[index] = masked;
+        if (index == 0 || masked < minValue)
+        {
+            minValue = masked;
+        }
+        if (index == 0 || masked > maxValue)
+        {
+            maxValue = masked;
         }
     }
 
@@ -141,34 +142,27 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
                      sorted.end());
     const float threshold = sorted[waterCount];
 
-    for (int y = 0; y < height; ++y)
+    for (const auto& pTile : rWorld.GetTiles())
     {
-        for (int x = 0; x < width; ++x)
+        const size_t index =
+            static_cast<size_t>(TileIndex(pTile->GetX(), pTile->GetY(), width));
+        const float value = field[index];
+        int elevation = 0;
+        if (value < threshold)
         {
-            Tile* pTile = rWorld.GetTile(x, y);
-            if (!pTile)
-            {
-                continue;
-            }
-
-            const float value = field[static_cast<size_t>(y * width + x)];
-            int elevation = 0;
-            if (value < threshold)
-            {
-                const float belowWaterline =
-                    Remap_(value, minValue, threshold, 1.0f, 0.0f);
-                const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
-                elevation = static_cast<int>(std::lround(
-                    -1.0f + depth * static_cast<float>(rPreset.minElevation + 1)));
-            }
-            else
-            {
-                elevation = static_cast<int>(std::lround(
-                    Remap_(value, threshold, maxValue,
-                           0.0f, static_cast<float>(rPreset.maxElevation))));
-            }
-            pTile->SetElevation(elevation);
+            const float belowWaterline =
+                Remap_(value, minValue, threshold, 1.0f, 0.0f);
+            const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
+            elevation = static_cast<int>(std::lround(
+                -1.0f + depth * static_cast<float>(rPreset.minElevation + 1)));
         }
+        else
+        {
+            elevation = static_cast<int>(std::lround(
+                Remap_(value, threshold, maxValue,
+                       0.0f, static_cast<float>(rPreset.maxElevation))));
+        }
+        pTile->SetElevation(elevation);
     }
 }
 
@@ -217,39 +211,33 @@ void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
                                        const MoistureDecorationConfig_t& rMoisture,
                                        int maxElevationMeters)
 {
-    const int width = rWorld.GetWidth();
     const int height = rWorld.GetHeight();
 
-    for (int y = 0; y < height; ++y)
+    for (const auto& pOwnedTile : rWorld.GetTiles())
     {
-        for (int x = 0; x < width; ++x)
+        Tile* pTile = pOwnedTile.get();
+        const int x = pTile->GetX();
+        const int y = pTile->GetY();
+
+        // Mid-band base so unaided tiles still produce a mix of tiers.
+        float score = rMoisture.baseMin + RandomFloat_() * rMoisture.baseRange;
+        score += moisture_gen::TropicalMoistureBonus(y, height, rMoisture);
+
+        if (pTile->IsLand())
         {
-            Tile* pTile = rWorld.GetTile(x, y);
-            if (!pTile)
-            {
-                continue;
-            }
+            score += moisture_gen::CoastalMoistureBonus(*pTile, rWorld, rMoisture);
 
-            // Mid-band base so unaided tiles still produce a mix of tiers.
-            float score = rMoisture.baseMin + RandomFloat_() * rMoisture.baseRange;
-            score += moisture_gen::TropicalMoistureBonus(y, height, rMoisture);
-
-            if (pTile->IsLand())
-            {
-                score += moisture_gen::CoastalMoistureBonus(*pTile, rWorld, rMoisture);
-
-                const Tile* pWest = rWorld.GetTile(x - 1, y);
-                const Tile* pEast = rWorld.GetTile(x + 1, y);
-                const int elevWest = pWest ? pWest->GetElevation() : pTile->GetElevation();
-                const int elevEast = pEast ? pEast->GetElevation() : pTile->GetElevation();
-                score += moisture_gen::OrographicMoistureBias(
-                    pTile->GetElevation(), elevWest, elevEast, rMoisture, maxElevationMeters);
-            }
-
-            const Moisture_t moisture = moisture_gen::QuantizeMoistureScore(score, rMoisture);
-            pTile->SetBaseMoisture(moisture);
-            pTile->SetMoisture(moisture);
+            const Tile* pWest = rWorld.GetTile(x - 2, y);
+            const Tile* pEast = rWorld.GetTile(x + 2, y);
+            const int elevWest = pWest ? pWest->GetElevation() : pTile->GetElevation();
+            const int elevEast = pEast ? pEast->GetElevation() : pTile->GetElevation();
+            score += moisture_gen::OrographicMoistureBias(
+                pTile->GetElevation(), elevWest, elevEast, rMoisture, maxElevationMeters);
         }
+
+        const Moisture_t moisture = moisture_gen::QuantizeMoistureScore(score, rMoisture);
+        pTile->SetBaseMoisture(moisture);
+        pTile->SetMoisture(moisture);
     }
 }
 
@@ -261,16 +249,9 @@ void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
 
     const RockinessWeights_t& rWeights = WeightsForLevel(rRockiness, erosiveForces);
 
-    for (int y = 0; y < rWorld.GetHeight(); ++y)
+    for (const auto& pTile : rWorld.GetTiles())
     {
-        for (int x = 0; x < rWorld.GetWidth(); ++x)
-        {
-            Tile* pTile = rWorld.GetTile(x, y);
-            if (pTile)
-            {
-                pTile->SetRockiness(SampleRockiness(rWeights, RandomFloat_()));
-            }
-        }
+        pTile->SetRockiness(SampleRockiness(rWeights, RandomFloat_()));
     }
 }
 

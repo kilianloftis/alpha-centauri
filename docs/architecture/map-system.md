@@ -81,17 +81,27 @@ graph TB
     style CollectTileEffects fill:#bfb,stroke:#333,stroke-width:3px
 ```
 
-## Distance Metrics
+## Coordinates and Distance Metrics
 
-Spatial helpers live in `include/game/map/MapUtils.h`. The map uses three coherent metrics:
+Tiles use SMAC coordinates: a tile sits at `(x, y)` with `x + y` even. `y` is the screen row
+(0 at the north edge). `x` counts half-tile columns and wraps at `WorldMap::GetWidth()` (SMAC's
+`axis_x`, always even). The map holds `width · height / 2` tiles. Indexing goes through
+`MapUtils::TileIndex` (`y · width / 2 + wrapped_x / 2`), which throws on odd parity.
+
+Gameplay geometry stays the square lattice. A lattice step `(p, q)` — `p` toward screen SE,
+`q` toward screen SW — moves `(p − q, p + q)` in map coordinates. `LatticeDelta` and
+`GetTileAtLatticeOffset` convert; neighbor tables keep today's lattice offsets and fetch
+through that helper. Orthogonal neighbors are the tiles across the diamond's edges.
+
+Spatial helpers live in `include/game/map/MapUtils.h`. Distances are on the lattice:
 
 | Metric | Definition | Used for |
 |--------|------------|----------|
-| **Chebyshev** | `max(\|dx\|, \|dy\|)` (king-move / square) | Unit/base/Sensor **sight**, improvement **auras** (Sensor defense, Mirror, Condenser), unit ThisTile auras — `ForEachTileInChebyshevRadius` |
-| **Tabletop diagonal** | `longer + shorter/2` on `\|DeltaX\|` and `\|dy\|` | Energy **inefficiency** HQ distance, unit-scrap closest friendly base — `TabletopDiagonalDistance` |
-| **Euclidean disk** | `dx² + dy² ≤ R² + 1` | **Base workable area** (`R = 2`), **territory claim radius** (land `R = 7`, sea `R = 3`) — `InEuclideanRadius` / `ForEachTileInEuclideanRadius` |
+| **Chebyshev** | `max(\|p\|, \|q\|)` = `(\|dx\| + \|dy\|) / 2` | Unit/base/Sensor **sight**, improvement **auras**, unit ThisTile auras — `ForEachTileInChebyshevRadius` |
+| **Tabletop diagonal** | `longer + shorter/2` on `\|p\|` and `\|q\|` | Energy **inefficiency** HQ distance, unit-scrap closest friendly base — `TabletopDiagonalDistance` |
+| **Euclidean disk** | `p² + q² ≤ R² + 1` | **Base workable area** (`R = 2`), **territory claim radius** (land `R = 7`, sea `R = 3`) — `InEuclideanRadius` / `ForEachTileInEuclideanRadius` |
 
-Territory overlap between factions is broken by crow-flies distance (`dx² + dy²`) to the claiming base, then lower `BaseId` — not by Chebyshev.
+Territory overlap between factions is broken by lattice crow-flies distance (`p² + q²`) to the claiming base, then lower `BaseId` — not by Chebyshev.
 
 ## Component Overview
 
@@ -107,7 +117,7 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
   - Expose `GetTerrainFeatures()` (terrain config pointers) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
   - Resolve intrinsic feature ids via `TerrainFeature_t`, whose enumerator names are the terrain-config ids (`magic_enum` maps between them). `HasFeature` switches over it exhaustively — `-Werror=switch` on `ac-core` means adding an enumerator breaks the build until every site decides about it — and `ValidateTerrainFeatures` throws at load if any enumerator lacks an entry whose `placement` is Terrain. Features stack: a sea tile carries `Water` *and* one of `Ocean`/`OceanShelf`
 - **Composition**:
-  - `Position`: x,y coordinates on the map grid
+  - `Position`: SMAC `(x, y)` with `x + y` even
   - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `features` entry in `config/terrain.json`
   - `Rockiness_t`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its `features` entry in `config/terrain.json`
   - `Elevation`: Integer in meters. The storage range is the world-gen preset's `min_elevation` and `max_elevation` (`config/worldGen/presets.json`), copied onto the world's elevation rules when the map is created. Those rules belong to the world: every tile is bound to them (`Tile::MapRules()`), and Former eligibility, the raise/lower energy quote and every play-time edit read them from the tile they act on. `GameDataContext::elevationRules` keeps `map_rules.json` as parsed and only seeds world generation. Ocean level and ocean shelf stay in `config/map_rules.json` (`ocean_level_meters`, `ocean_shelf_meters`). `Tile` stores the meters and reads that bound config — the elevation-to-energy rule belongs to the effects layer (`amount_source: ElevationEnergy`, band width from `tile_yield_rules.json`), same as every other terrain-to-yield rule. Play-time edits (Former raise/lower and earthquakes) go through `ApplyElevationDelta` (`include/game/map/ElevationChange.h`). One level is a uniform draw in `[level_min_meters, level_max_meters]` from the same file. After the origin moves, Chebyshev neighbors of every tile that edit changed are pulled up or down until the gap is at most `max_adjacent_difference_meters`. A Former applies one level, clamped at both ends (raise stops at the preset's `max_elevation`; lower stops at `ocean_level_meters` on land or the preset's `min_elevation` at sea — a roll deeper than the floor lands on the floor rather than failing an order that has already been paid for). `ApplyEarthquake` sums `levelCount` rolls and clamps to that same range; the `Earthquake` triggered effect is what fires it in play (a Tectonic Payload's `on_detonate_effects`, sized by the reactor's `earthquake_levels`). An `Explosion` lowers every tile in its Chebyshev disk by one of those level rolls first (`LowerTilesOneLevel`), then runs that same slope relaxation once from the whole changed set, so a neighbor is not pulled before its own roll. A Planet Buster's `on_detonate_effects` fires it, sized by the reactor's `explosion_radius` (1, 2, 3, 4). Radius 1 is 9 tiles. Former eligibility and the raise/lower energy band use `reference_level_meters`, not the rolled size, and forest/fungus spread onto high ground uses `spread_altitude_limit_meters` — three separate knobs that ship the same number. A play-time edit that crosses ocean level reconciles occupancy inside `ApplyElevationDelta` when the caller passes tile effects: that call removes every improvement whose `domain` (`land` or `sea` on `ImprovementConfig_t`; omitted survives either surface) is not the surface the tile landed on. `Base` is `land`. It stays on water when a sea colony pod founded it, or when the base has the Pressure Dome building at the crossing; otherwise the base is razed. A tile that does not flip is left alone.
@@ -221,7 +231,7 @@ graph TB
   - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture, Rockiness, Landmark, Vegetation, River, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
-  - `TileRenderer`: consumes `ResolveTileLayers`, draws the tile set cell for the tile's neighbor mask or picks from the surface's `sprite_paths` via coordinate hash, scales sprites to the isometric diamond AABB, draws terrain art through the palette at its vertex shades (relief on land, depth on water via `WaterShading`), and shades and hazes fogged terrain; procedural moisture/rockiness/river cues when a layer sprite is missing. Presentation is isometric (`MapViewport`); the tile model stays square.
+  - `TileRenderer`: consumes `ResolveTileLayers`, draws the tile set cell for the tile's neighbor mask or picks from the surface's `sprite_paths` via coordinate hash, scales sprites to the diamond AABB, draws terrain art through the palette at its vertex shades (relief on land, depth on water via `WaterShading`), and shades and hazes fogged terrain; procedural moisture/rockiness/river cues when a layer sprite is missing. Presentation is the rectangular brick of diamonds (`MapViewport`); gameplay stays on the square lattice.
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
   1. `Landform`: `OceanShelf` / `Ocean` / water on sea; empty on land (flat has no sheet art)
@@ -264,12 +274,13 @@ graph TB
 - Every placement path shares the predicate: world-gen bonuses, landmark stamping, improvement projects, and forest spread. The incumbent side reads a tile's terrain configs, which exist only after `Tile::BindOccupants` — so `WorldGenerator` binds the whole grid before its first stage. Forest spread does not treat a fungus neighbour as a legal target.
 
 ### WorldMap
-- **Purpose**: Container owning the tile grid plus world-scoped indexes (`WorkedTileIndex`, `UnitPositionIndex`, `TerritoryMap`).
+- **Purpose**: Container owning the SMAC-coordinate tile array plus world-scoped indexes (`WorkedTileIndex`, `UnitPositionIndex`, `TerritoryMap`).
 - **Responsibilities**:
-  - Store 2D grid of `Tile` instances; `GetTile(x, y)` (null out of bounds, X wraps)
-  - Expose worked-tile, unit-position, and territory indexes
+  - Store `width · height / 2` tiles in row-major order (north row first); `GetWidth()` is the x wrap period
+  - `GetTile(x, y)` wraps X, returns null for Y out of bounds, throws on odd parity
+  - Expose worked-tile, unit-position, and territory indexes (sized through `TileIndex`)
 - **Invariants**:
-  - Both dimensions are positive — the constructor throws otherwise, rather than yielding a map whose every generation stage silently no-ops.
+  - Both dimensions are positive and width is even — the constructor throws otherwise.
   - Tile addresses are stable for the map's lifetime: units, bases, `UnitPositionIndex` and `WorkedTileIndex` all hold raw `Tile*`. `GetTiles()` therefore returns `std::span<const std::unique_ptr<Tile>>` — tiles stay mutable through the pointer, but the ownership vector cannot be cleared or reseated from outside.
 - **Note**: Older docs called this `TileMap`; the live type is `WorldMap`.
 
@@ -278,7 +289,7 @@ graph TB
 ### Base System
 - Bases work tiles to extract resources
 - `BaseManager::GetX()` / `GetY()` track map position via the base's tile
-- `WorkerAssignmentManager::GetWorkableTiles()` / `ForEachTileInWorkableArea` yield the **Euclidean radius-2** disk (`dx² + dy² ≤ 5`) around the base — the classic SMAC 5×5 with corners cut — excluding the base's own tile (20 surrounding tiles). Enemy-unit blocking is a TODO pending combat.
+- `WorkerAssignmentManager::GetWorkableTiles()` / `ForEachTileInWorkableArea` yield the **Euclidean radius-2** lattice disk (`p² + q² ≤ 5`) around the base — the classic SMAC 5×5 with corners cut — excluding the base's own tile (20 surrounding tiles). Enemy-unit blocking is a TODO pending combat.
 - `WorkerAssignmentManager::ComputeWorkedResources()` aggregates resources from worked tiles
 - `TileResources_t` struct used to pass resource totals
 - Each worker assigned to a tile contributes that tile's resource production

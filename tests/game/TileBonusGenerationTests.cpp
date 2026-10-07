@@ -66,8 +66,9 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable til
 
     CHECK(bonusTiles == placed);
     CHECK(monoliths > 0);
-    CHECK(bonusTiles >= static_cast<int>(0.1f * 24 * 24));
-    CHECK(bonusTiles <= static_cast<int>(0.3f * 24 * 24));
+    const float tileCount = static_cast<float>(world.GetTiles().size());
+    CHECK(bonusTiles >= static_cast<int>(0.1f * tileCount));
+    CHECK(bonusTiles <= static_cast<int>(0.3f * tileCount));
 }
 
 TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",

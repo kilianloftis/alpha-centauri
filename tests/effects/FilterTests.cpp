@@ -67,7 +67,7 @@ TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and conditio
           "[effects][filter]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Nutrients, 2.0), "flat"),
@@ -87,9 +87,9 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
     hq.GetBuildingManager().AddBuilding("Headquarters");
-    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 8, 12);
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{hq, {
@@ -122,7 +122,7 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
           "[effects][filter][amount_source]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     actest::EffectPool pool;
     StatModifierEffect_t converted;
     converted.stat = StatId_t::Energy;
@@ -148,7 +148,7 @@ TEST_CASE("FilterBaseLevelByStatId includes BaseSize only when the context carri
           "[effects][filter][amount_source]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
 
     actest::EffectPool pool;
     StatModifierEffect_t baseSize;
@@ -185,7 +185,7 @@ TEST_CASE("ResolveBaseStat: University BaseSize floors per source then stacks wi
 {
     actest::BaseFixture fixture;
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 16);
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() < 13)
     {
         base.GetPopulation().AddPop();
@@ -217,7 +217,7 @@ TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired cal
           "[effects][amount_source][drop_in]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
     // Default size is typically 1; floor(1×10)=10 AddPercent-scale amount as RawScaled seed 100.
     actest::EffectPool pool;
     StatModifierEffect_t baseSize;
@@ -246,7 +246,7 @@ TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bun
     // ResolveStatModifiers evaluates against the context is what made the no-context form
     // throw instead of resolving.
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 8);
 
     actest::EffectPool pool;
     StatModifierEffect_t baseSize;
@@ -311,18 +311,18 @@ TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_empire_pulse"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_empire_pulse"});
 
     // Flat +1 Attack; BasesOwned contribution is 0 with no bases.
     CHECK(unit.GetStat(StatId_t::Attack) == 1);
     // IDesign-only resolve has no faction subject, so BasesOwned is dropped.
     CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 1);
 
-    fixture.MakeFactionBase(faction, 2, 2);
+    fixture.MakeFactionBase(faction, 8, 4);
     CHECK(faction.GetBaseCount() == 1);
     CHECK(unit.GetStat(StatId_t::Attack) == 2);
 
-    fixture.MakeFactionBase(faction, 6, 6);
+    fixture.MakeFactionBase(faction, 8, 12);
     CHECK(faction.GetBaseCount() == 2);
     CHECK(unit.GetStat(StatId_t::Attack) == 3);
 }

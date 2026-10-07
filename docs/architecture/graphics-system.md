@@ -117,11 +117,12 @@ UI components use the Graphics interface to render game information.
   - `SetCurrentPop()`: Set population directly
 
 ### WorldDisplay / MapViewport
-- **Purpose**: Displays the world map as a SMAC-style 2:1 isometric diamond grid with base markers
+- **Purpose**: Displays the world map as a SMAC-style rectangular brick of 2:1 diamonds with base markers
 - **File**: `ui/world/WorldDisplay.h`, `ui/world/MapViewport.h`
-- **Model vs presentation**: `WorldMap` stays square (neighbors, wrap-X, pathfinding). All isometric
-  math lives in `MapViewport` (`PixelOriginOf` / `PixelCenterOf` / `WorldCoordsAtPixel` /
-  depth-ordered `ForEachVisibleTile`).
+- **Model vs presentation**: `WorldMap` uses SMAC coordinates (wrap-X, even parity). Lattice geometry
+  lives in `MapUtils`; screen placement lives in `MapViewport` — tile `(x, y)`'s footprint at
+  `((x − camX)·½w, (y − camY)·½h)`, with `PixelOriginOf` / `PixelCenterOf` /
+  `WorldCoordsAtPixel` / row-ordered `ForEachVisibleTile`.
 - **Relief**: `MapViewport::SetRelief` (from `GameSettings::GetMapDisplay()`, set every frame)
   raises each tile's centre and corners with `TileRelief` (`ui/TileRelief.h`), SMAC's vertex
   lift ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md), "Relief"):
@@ -149,7 +150,7 @@ UI components use the Graphics interface to render game information.
 - **Methods**:
   - `Render(rGraphics)`: Painter’s-algorithm pass over visible diamonds from the stored camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
-  - `GetViewport().SetCamera(tileX, tileY)`: Anchor tile for the isometric projection
+  - `GetViewport().SetCamera(tileX, tileY)`: Anchor for the brick projection (map units)
 - **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
   `ResolveTileLayers` sprites scaled to the diamond AABB. Land art keeps its sheet colors and
   water art is shaded per vertex by depth, as in SMAC
@@ -173,8 +174,8 @@ UI components use the Graphics interface to render game information.
   `sprites/landforms/<set>/<mask>.png`: blob sets get 47 masks, edge sets 16.
   Rolling/rocky are keyed overlays, and `sprites/coast/` holds the coast overlays.
   `--contact-sheet` also writes `_tiles_contact_sheet.png` to check the tile sets.
-- **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel`. Orthogonal
-  `TileHitTester::HitTestWorldGrid` remains for non-iso grids; base workable area stays orthogonal.
+- **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under
+  the pixel, then raised tiles in front). `BaseWorkableAreaDisplay` hit-tests its own tile rects.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
   render (no per-frame base-info DTO). Base-at-tile clicks go through
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
@@ -269,15 +270,6 @@ UI components use the Graphics interface to render game information.
   - Worked tiles: Green text
   - Unworked tiles: White text
   - Base center: Yellow "BASE" label
-
-### TileHitTester
-- **Purpose**: Converts pixel coordinates to tile coordinates for orthogonal grids
-- **File**: `ui/TileHitTester.h`, `ui/TileHitTester.cpp`
-- **Dependencies**: None (stateless utility, all methods are static)
-- **Methods**:
-  - `HitTestWorldGrid(...)`: Orthogonal grid helper (world map uses `MapViewport::WorldCoordsAtPixel`)
-  - `HitTestBaseWorkableArea(mouseX, mouseY, renderCenterX, renderCenterY, tileSize, baseX, baseY)`: Returns `optional<pair<int,int>>` tile coords for clicks on the base workable area (validates diamond pattern)
-- **Usage**: Base workable area and similar orthogonal panels
 
 ## View System
 

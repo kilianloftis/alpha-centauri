@@ -56,7 +56,8 @@ struct AirdropGame_
 
     AirdropGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(20, 20, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                               actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
@@ -137,13 +138,13 @@ TEST_CASE("Airdrop requires Drop Pods, launch pad, and full moves", "[unit][aird
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
 
-    BaseManager& rBase = game.MakeBase(*game.pPlayer, 4, 4);
-    Unit& withoutPods = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"}, &rBase);
+    BaseManager& rBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Unit& withoutPods = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"}, &rBase);
     game.LatchTurnStart(withoutPods);
     CHECK(CanAttemptAirdrop(withoutPods).failReason == AirdropFailReason_t::NotCapable);
 
     Unit& withPods =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rBase);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rBase);
     game.LatchTurnStart(withPods);
     CHECK(CanAttemptAirdrop(withPods).Ok());
 
@@ -151,12 +152,12 @@ TEST_CASE("Airdrop requires Drop Pods, launch pad, and full moves", "[unit][aird
     CHECK(CanAttemptAirdrop(withPods).failReason == AirdropFailReason_t::NoMovesRemaining);
     game.LatchTurnStart(withPods);
 
-    Tile* pOffPad = rMap.GetTile(5, 4);
+    Tile* pOffPad = rMap.GetTile(9, 9);
     REQUIRE(pOffPad);
     rMap.GetUnitPositions().MoveUnit(withPods, *pOffPad);
     CHECK(CanAttemptAirdrop(withPods).failReason == AirdropFailReason_t::NotOnLaunchPad);
 
-    Tile* pNear = rMap.GetTile(6, 4);
+    Tile* pNear = rMap.GetTile(10, 10);
     REQUIRE(pNear);
     CHECK(CanAirdropTo(withPods, *pNear, rMap, rEffects).failReason
           == AirdropFailReason_t::NotOnLaunchPad);
@@ -167,10 +168,10 @@ TEST_CASE("Airdrop cannot chain through a friendly launch pad", "[unit][airdrop]
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
-    BaseManager& rOtherPad = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
+    BaseManager& rOtherPad = game.MakeBase(*game.pPlayer, 12, 12);
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAirdrop(dropper, rOtherPad.GetTile());
@@ -178,7 +179,7 @@ TEST_CASE("Airdrop cannot chain through a friendly launch pad", "[unit][airdrop]
     CHECK(dropper.HasAirdroppedThisTurn());
     CHECK(CanAttemptAirdrop(dropper).failReason == AirdropFailReason_t::AlreadyAirdropped);
 
-    Tile* pField = rMap.GetTile(6, 4);
+    Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
     result = game.pState->GetUnitOrderExecutor().TryAirdrop(dropper, *pField);
     CHECK(result.failReason == AirdropFailReason_t::AlreadyAirdropped);
@@ -190,13 +191,13 @@ TEST_CASE("Airdrop range 8 vs orbital insertion", "[unit][airdrop]")
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
 
-    BaseManager& rBase = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& rBase = game.MakeBase(*game.pPlayer, 8, 4);
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 2, 2, {"test_chassis", "test_weapon", "drop_pods"}, &rBase);
+        game.MakeUnit(*game.pPlayer, 8, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rBase);
     game.LatchTurnStart(dropper);
 
-    Tile* pInRange = rMap.GetTile(2 + 8, 2);
-    Tile* pOutOfRange = rMap.GetTile(2 + 9, 2);
+    Tile* pInRange = rMap.GetTile(16, 12);
+    Tile* pOutOfRange = rMap.GetTile(17, 13);
     REQUIRE(pInRange);
     REQUIRE(pOutOfRange);
     CHECK(CanAirdropTo(dropper, *pInRange, rMap, rEffects).Ok());
@@ -213,15 +214,15 @@ TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
-    BaseManager& rOtherPad = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
+    BaseManager& rOtherPad = game.MakeBase(*game.pPlayer, 12, 12);
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
     const int maxHp = dropper.GetCurrentHp();
     REQUIRE(maxHp == 10);
 
-    Tile* pField = rMap.GetTile(6, 4);
+    Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
     auto result = game.pState->GetUnitOrderExecutor().TryAirdrop(dropper, *pField);
     REQUIRE(result.Ok());
@@ -231,7 +232,7 @@ TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
     CHECK(&dropper.GetTile() == pField);
 
     Unit& toPad =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(toPad);
     const int padHp = toPad.GetCurrentHp();
     result = game.pState->GetUnitOrderExecutor().TryAirdrop(toPad, rOtherPad.GetTile());
@@ -244,16 +245,16 @@ TEST_CASE("Singularity increases airdrop landing damage", "[unit][airdrop]")
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
     // Chassis 10 + singularity 40 = 50 HP; damage 20+6 = 26% → 13
     Unit& dropper = game.MakeUnit(
-        *game.pPlayer, 4, 4,
+        *game.pPlayer, 8, 8,
         {"test_chassis", "test_weapon", "drop_pods", "singularity_inductor"}, &rHome);
     game.LatchTurnStart(dropper);
     REQUIRE(dropper.GetCurrentHp() == 50);
     CHECK(ResolveStat(dropper, StatId_t::AirdropLandingDamage) == 26);
 
-    Tile* pField = rMap.GetTile(6, 4);
+    Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAirdrop(dropper, *pField).Ok());
     CHECK(dropper.GetCurrentHp() == 50 - 13);
@@ -265,22 +266,22 @@ TEST_CASE("Airdrop rejects enemy-occupied tiles and interdiction", "[unit][airdr
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
 
-    Tile* pDest = rMap.GetTile(6, 4);
+    Tile* pDest = rMap.GetTile(10, 10);
     REQUIRE(pDest);
-    game.MakeUnit(*game.pAi, 6, 4, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
     CHECK(CanAirdropTo(dropper, *pDest, rMap, rEffects).failReason
           == AirdropFailReason_t::EnemyOccupied);
 
     // Clear occupant by using another dest; place air superiority nearby.
-    Tile* pClear = rMap.GetTile(7, 4);
+    Tile* pClear = rMap.GetTile(11, 11);
     REQUIRE(pClear);
     Unit& interceptor =
-        game.MakeUnit(*game.pAi, 7, 6, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        game.MakeUnit(*game.pAi, 9, 13, {"test_flight_chassis", "test_weapon", "air_superiority"});
     CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
           == AirdropFailReason_t::Interdicted);
 
@@ -296,17 +297,17 @@ TEST_CASE("Friendly interceptor does not block airdrop", "[unit][airdrop]")
     WorldMap& rMap = game.pState->GetWorldMap();
     auto& rEffects = game.pState->GetTileEffects();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
 
     Unit& friendly =
-        game.MakeUnit(*game.pPlayer, 7, 6, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        game.MakeUnit(*game.pPlayer, 9, 13, {"test_flight_chassis", "test_weapon", "air_superiority"});
     friendly.SetMoveFragmentsRemaining(
         friendly.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
 
-    Tile* pClear = rMap.GetTile(7, 4);
+    Tile* pClear = rMap.GetTile(11, 11);
     REQUIRE(pClear);
     CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).Ok());
 }
@@ -316,18 +317,18 @@ TEST_CASE("Noncombat airdrop spends remaining moves; combat keeps them", "[unit]
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& combat =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     Unit& former =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_terraformer", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_terraformer", "drop_pods"}, &rHome);
     game.LatchTurnStart(combat);
     game.LatchTurnStart(former);
     REQUIRE(combat.IsCombatUnit());
     REQUIRE_FALSE(former.IsCombatUnit());
 
-    Tile* pA = rMap.GetTile(5, 4);
-    Tile* pB = rMap.GetTile(6, 5);
+    Tile* pA = rMap.GetTile(9, 9);
+    Tile* pB = rMap.GetTile(9, 11);
     REQUIRE(pA);
     REQUIRE(pB);
 
@@ -344,17 +345,17 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 4, 4);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(attacker);
 
-    Tile* pLand = rMap.GetTile(5, 4);
+    Tile* pLand = rMap.GetTile(9, 9);
     REQUIRE(pLand);
     REQUIRE(game.pState->GetUnitOrderExecutor().TryAirdrop(attacker, *pLand).Ok());
     REQUIRE(attacker.HasAirdroppedThisTurn());
 
-    Unit& defender = game.MakeUnit(*game.pAi, 6, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
     EffectContext_t ctx;
     ctx.pUnit = &attacker;
     ctx.pAttacker = &attacker;
@@ -372,13 +373,13 @@ TEST_CASE("Airdrop into empty foreign base captures via arrival", "[unit][airdro
     AirdropGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
 
-    BaseManager& rHome = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 4);
     // CapturePopLoss is 1; size must exceed that so the base survives to transfer.
-    BaseManager& rEnemyBase = game.MakeBase(*game.pAi, 8, 2, /*pop=*/3);
+    BaseManager& rEnemyBase = game.MakeBase(*game.pAi, 14, 10, /*pop=*/3);
     REQUIRE(rEnemyBase.GetFaction().GetFactionId() == game.pAi->GetFactionId());
 
     Unit& dropper =
-        game.MakeUnit(*game.pPlayer, 2, 2, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+        game.MakeUnit(*game.pPlayer, 8, 4, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
     game.pPlayer->GetResearch().AddDiscoveredTech("graviton_theory");
 

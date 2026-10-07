@@ -27,8 +27,8 @@ TEST_CASE("ResolveTileYield: absent MaxClamp leaves yield uncapped",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(tile, "Farm"); // Wet+2 Farm+1 = 3
@@ -43,8 +43,8 @@ TEST_CASE("ResolveTileYield: MaxClamp clamps the pre-bypass lane",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(tile, "Farm");
@@ -60,8 +60,8 @@ TEST_CASE("ResolveTileYield: bypass_clamp bonuses bypass MaxClamp",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(1, 1);
-    Tile& tile = fixture.At(4, 4);
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(tile, "Farm");
@@ -80,9 +80,9 @@ TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Tile& farmTile = fixture.At(5, 4);
+    Tile& farmTile = fixture.At(9, 9);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
@@ -119,9 +119,9 @@ TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
     // so a building that boosts Farms must be visible before the player assigns anyone.
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Tile& farmTile = fixture.At(5, 4);
+    Tile& farmTile = fixture.At(9, 9);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
@@ -144,9 +144,9 @@ TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after M
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    Tile& rich = fixture.At(5, 4);
+    Tile& rich = fixture.At(9, 9);
     rich.SetBaseMoisture(Moisture_t::Wet);
     rich.SetMoisture(Moisture_t::Wet); // +2 nutrients
     fixture.ctx->AddOccupantWithEffects(rich, "Farm"); // +1

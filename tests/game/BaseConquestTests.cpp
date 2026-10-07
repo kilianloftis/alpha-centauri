@@ -67,7 +67,7 @@ struct ConquestGame_
     explicit ConquestGame_(FactionSpecies_t playerSpecies = FactionSpecies_t::Human,
                            FactionSpecies_t aiSpecies = FactionSpecies_t::Human)
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
+        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
@@ -150,13 +150,13 @@ struct ConquestGame_
 TEST_CASE("CanCaptureBase: cannot_capture_bases is the sole veto", "[unit][conquest]")
 {
     ConquestGame_ game;
-    game.MakeBase(*game.pAi, 5, 4);
+    game.MakeBase(*game.pAi, 9, 9);
 
-    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& needle = game.MakeUnit(*game.pPlayer, 4, 5,
+    Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& needle = game.MakeUnit(*game.pPlayer, 7, 9,
                                  {"test_fuel_flight_chassis", "test_weapon"});
-    Unit& grav = game.MakeUnit(*game.pPlayer, 3, 4, {"test_flight_chassis", "test_weapon"});
-    Unit& former = game.MakeUnit(*game.pPlayer, 3, 5, {"test_chassis", "test_terraformer"});
+    Unit& grav = game.MakeUnit(*game.pPlayer, 7, 7, {"test_flight_chassis", "test_weapon"});
+    Unit& former = game.MakeUnit(*game.pPlayer, 6, 8, {"test_chassis", "test_terraformer"});
 
     CHECK(CanCaptureBase(land));
     CHECK_FALSE(CanCaptureBase(needle));
@@ -169,14 +169,14 @@ TEST_CASE("Sea-base assault: attack needs pods for land; capture is flag-gated",
 {
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
-    game.pState->GetWorldMap().GetTile(4, 4)->SetElevation(100);
-    game.pState->GetWorldMap().GetTile(4, 5)->SetElevation(100);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4);
+    game.pState->GetWorldMap().GetTile(8, 8)->SetElevation(100);
+    game.pState->GetWorldMap().GetTile(7, 9)->SetElevation(100);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
 
-    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& amph = game.MakeUnit(*game.pPlayer, 4, 5,
+    Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& amph = game.MakeUnit(*game.pPlayer, 7, 9,
                                {"test_chassis", "test_weapon", "test_amphibious"});
-    Unit& sea = game.MakeUnit(*game.pPlayer, 3, 4, {"test_sea_chassis", "test_weapon"});
+    Unit& sea = game.MakeUnit(*game.pPlayer, 7, 7, {"test_sea_chassis", "test_weapon"});
 
     // Capture itself is flag-gated only; entry/attack use enter + attack_unit grids.
     CHECK(CanCaptureBase(land));
@@ -196,10 +196,10 @@ TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conques
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
     // Coastal approach: attacker on land adjacent to a sea base.
-    game.pState->GetWorldMap().GetTile(4, 4)->SetElevation(100);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_sea_chassis"}, &rBase);
-    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    game.pState->GetWorldMap().GetTile(8, 8)->SetElevation(100);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_sea_chassis"}, &rBase);
+    Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
 
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryAttack(
         land, defender.GetTile()).has_value());
@@ -217,10 +217,10 @@ TEST_CASE("Pods land can attack then step into a sea base to capture",
 {
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
-    game.pState->GetWorldMap().GetTile(4, 4)->SetElevation(100);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_sea_chassis"}, &rBase);
-    Unit& amph = game.MakeUnit(*game.pPlayer, 4, 4,
+    game.pState->GetWorldMap().GetTile(8, 8)->SetElevation(100);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_sea_chassis"}, &rBase);
+    Unit& amph = game.MakeUnit(*game.pPlayer, 8, 8,
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -243,14 +243,14 @@ TEST_CASE("Pods land can enter an undefended sea base to capture it",
 {
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
-    game.pState->GetWorldMap().GetTile(4, 4)->SetElevation(100);
-    game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    game.pState->GetWorldMap().GetTile(8, 8)->SetElevation(100);
+    game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
 
-    Unit& amph = game.MakeUnit(*game.pPlayer, 4, 4,
+    Unit& amph = game.MakeUnit(*game.pPlayer, 8, 8,
                                {"test_chassis", "test_weapon", "test_amphibious"});
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(
-        amph, *game.pState->GetWorldMap().GetTile(5, 4), order).bEntered);
+        amph, *game.pState->GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
@@ -260,13 +260,13 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
           "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/4);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/4);
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
     rBase.GetBuildingManager().AddBuilding("test_secret_project");
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     attacker.SetCurrentHp(1);
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -305,11 +305,11 @@ TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss s
           "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     rBase.GetBuildingManager().AddBuilding("Perimeter_Defense");
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -331,13 +331,13 @@ TEST_CASE("A facility can clamp capture facility destruction to nothing", "[unit
 {
     // ConquestGame_ sets min 1 / max 100%, so without the shield at least one facility goes.
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/4);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/4);
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
     rBase.GetBuildingManager().AddBuilding("test_facility_b");
     rBase.GetBuildingManager().AddBuilding("test_capture_facility_shield");
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -361,11 +361,11 @@ TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit
                                 StatId_t::LastDefenderPopLoss, 3);
     actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
                                 StatId_t::CapturePopLoss, 3);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/6);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/6);
     rBase.GetBuildingManager().AddBuilding("test_last_defender_pop_loss_cap");
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -385,12 +385,12 @@ TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit
 TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     const BaseId_t baseId = rBase.GetBaseId();
 
     Unit& attacker =
-        game.MakeUnit(*game.pPlayer, 4, 4, {"test_fuel_flight_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_fuel_flight_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -417,13 +417,13 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
 TEST_CASE("Entering an undefended foreign base captures it", "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
 
-    Unit& mover = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& mover = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(
-        mover, *game.pState->GetWorldMap().GetTile(5, 4), order).bEntered);
+        mover, *game.pState->GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
@@ -435,10 +435,10 @@ TEST_CASE("A raid that consumes the mover ends the move order as UnitDestroyed",
           "[unit][conquest]")
 {
     ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
-    game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
 
-    Unit& worm = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "test_psi"});
-    const Tile& rBaseTile = *game.pState->GetWorldMap().GetTile(5, 4);
+    Unit& worm = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
+    const Tile& rBaseTile = *game.pState->GetWorldMap().GetTile(9, 9);
     worm.SetOrder(MoveOrder_t{&rBaseTile});
 
     // Execute must stop advancing the order rather than touch the freed raider.
@@ -449,12 +449,12 @@ TEST_CASE("A raid that consumes the mover ends the move order as UnitDestroyed",
 TEST_CASE("Former cannot capture an undefended base on entry", "[unit][conquest]")
 {
     ConquestGame_ game;
-    game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
 
-    Unit& former = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_terraformer"});
+    Unit& former = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_terraformer"});
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(
-        former, *game.pState->GetWorldMap().GetTile(5, 4), order).bEntered);
+        former, *game.pState->GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 1);
     CHECK(game.pPlayer->GetBaseCount() == 0);
@@ -463,15 +463,15 @@ TEST_CASE("Former cannot capture an undefended base on entry", "[unit][conquest]
 TEST_CASE("Native life raids an undefended base then disappears", "[unit][conquest]")
 {
     ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
 
-    Unit& worm = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& worm = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
     const size_t nativesBefore = CountUnits_(*game.pPlayer);
 
     MoveOrder_t order;
     const StepResult_t stepped = game.pState->GetUnitOrderExecutor().TryStep(
-        worm, *game.pState->GetWorldMap().GetTile(5, 4), order);
+        worm, *game.pState->GetWorldMap().GetTile(9, 9), order);
     REQUIRE(stepped.bEntered);
     // The raid consumes the worm: the step must say so, or callers keep using freed memory.
     REQUIRE(stepped.bMoverDestroyed);
@@ -492,10 +492,10 @@ TEST_CASE("Human conquering Progenitor reduces population to one and spawns esca
           "[unit][conquest]")
 {
     ConquestGame_ game(FactionSpecies_t::Human, FactionSpecies_t::Progenitor);
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/5);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/5);
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
     const size_t aiUnitsBefore = CountUnits_(*game.pAi);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
@@ -523,11 +523,11 @@ TEST_CASE("Population reduced to zero razes the base and tombstones Secret Proje
           "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/1);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/1);
     rBase.GetBuildingManager().AddBuilding("test_secret_project");
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -547,12 +547,12 @@ TEST_CASE("Population reduced to zero razes the base and tombstones Secret Proje
 TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
 
     Unit& attacker = game.MakeUnit(
-        *game.pPlayer, 4, 4, {"test_chassis", "test_weapon", "test_no_conquest_repair"});
+        *game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "test_no_conquest_repair"});
     attacker.SetCurrentHp(1);
-    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
         attacker, defender.GetTile());
@@ -575,7 +575,7 @@ TEST_CASE("Losing the last pop razes a base where it happens, with no explicit r
     // handler), so secret-project tombstoning cannot drift between them.
     // See docs/game-rules-decisions.md.
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 8, 8);
     const BaseId_t baseId = rBase.GetBaseId();
     REQUIRE(game.pAi->GetBaseCount() == 1);
 
@@ -600,7 +600,7 @@ TEST_CASE("A razed base outlives the raze until it is reaped", "[base][raze]")
     // The whole point of marking rather than erasing: a base can die from inside its own signal
     // handler, or mid-iteration, without the object going away under the caller.
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 4, 4);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 8, 8);
 
     bool bDestroyedFired = false;
     Signal<>::ScopedConnection connection =
@@ -622,10 +622,10 @@ TEST_CASE("A razed base outlives the raze until it is reaped", "[base][raze]")
 TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     CHECK_FALSE(rBase.GetPopulation().GetAssimilation().IsAssimilating());
 
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
@@ -642,7 +642,7 @@ TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit]
 TEST_CASE("Diplomatic transfer does not start assimilation", "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     game.pAi->TransferBaseTo(rBase.GetBaseId(), *game.pPlayer);
     CHECK_FALSE(rBase.GetPopulation().GetAssimilation().IsAssimilating());
 }
@@ -651,7 +651,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
           "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     PopulationManager& rPops = rBase.GetPopulation();
 
     rPops.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
@@ -679,7 +679,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
 TEST_CASE("Recapture within ten turns clears the penalty", "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     PopulationManager& rPops = rBase.GetPopulation();
 
     rPops.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
@@ -695,7 +695,7 @@ TEST_CASE("A third faction capturing during assimilation starts a fresh occupier
           "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     PopulationManager& rPops = rBase.GetPopulation();
     rPops.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
     for (int i = 0; i < 12; ++i)
@@ -716,7 +716,7 @@ TEST_CASE("The original owner recapturing after a third party gets the reversed 
           "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     PopulationManager& rPops = rBase.GetPopulation();
     const FactionId_t original = game.pAi->GetFactionId();
     const FactionId_t firstCapturer = game.pPlayer->GetFactionId();
@@ -742,7 +742,7 @@ TEST_CASE("Assimilation expires after fifty turns and the next capture is fresh"
           "[unit][conquest][drones]")
 {
     ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     PopulationManager& rPops = rBase.GetPopulation();
     rPops.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
     for (int i = 0; i < 50; ++i)
