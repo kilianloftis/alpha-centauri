@@ -116,9 +116,19 @@ UI components use the Graphics interface to render game information.
   - `SetPopulation()`: Set the population manager to display
   - `SetCurrentPop()`: Set population directly
 
+### MapSurfaceRenderer
+- **Purpose**: Shared map-surface paint for the world map and the base workable-area ring
+- **File**: `ui/MapSurfaceRenderer.h`, `ui/MapSurfaceRenderer.cpp`
+- **Stack**: `RenderTile` draws terrain → grid → objects (`TileRenderer` halves); `RenderBase`
+  draws faction bare + building map overlays afterward so sprite overhang is not covered by
+  front-tile terrain. Grid styles: `WorldMapEdges` (NW/NE, ocean/explored rules) or
+  `FullDiamond` (closed perimeter for sparse clusters). Owns `FactionBaseArtCache`.
+
 ### WorldDisplay / MapViewport
-- **Purpose**: Displays the world map as a SMAC-style rectangular brick of 2:1 diamonds with base markers
-- **File**: `ui/world/WorldDisplay.h`, `ui/world/MapViewport.h`
+- **Purpose**: Displays the world map as a SMAC-style rectangular brick of 2:1 diamonds with
+  faction base sprites and name labels
+- **File**: `ui/world/WorldDisplay.h`, `ui/world/MapViewport.h`, `ui/MapSurfaceRenderer.h`,
+  `ui/world/FactionBaseArt.h`
 - **Model vs presentation**: `WorldMap` uses SMAC coordinates (wrap-X, even parity). Lattice geometry
   lives in `MapUtils`; screen placement lives in `MapViewport` — tile `(x, y)`'s footprint at
   `((x − camX)·½w, (y − camY)·½h)`, with `PixelOriginOf` / `PixelCenterOf` /
@@ -141,12 +151,11 @@ UI components use the Graphics interface to render game information.
     corners rise in whole quarter levels, so a value up to a quarter level keeps SMAC's results.
   - Land also lightens `altitude_light_steps` steps per level above sea level, so higher ground
     reads brighter (not in SMAC; 0 turns it off).
-- **Grid**: between each tile's terrain (`TileRenderer::RenderTerrain`) and its objects
-  (`RenderObjects`), as SMAC orders them, `WorldDisplay` draws its NW and NE edges through the
-  raised corners: `grid_land_color` between land tiles, `grid_water_color` where water is involved
-  (only with the map display's `ocean_grid`), and the land color next to unexplored ground.
-  The settings panel's Map Display rows switch the relief (a Choice row: Smooth, Stepped, Flat)
-  and the ocean grid.
+- **Grid**: `MapSurfaceRenderer` draws NW/NE edges between terrain and objects (`WorldMapEdges`):
+  `grid_land_color` between land tiles, `grid_water_color` where water is involved (only with
+  the map display's `ocean_grid`), and the land color next to unexplored ground. The settings
+  panel's Map Display rows switch the relief (a Choice row: Smooth, Stepped, Flat) and the
+  ocean grid.
 - **Methods**:
   - `Render(rGraphics)`: Painter’s-algorithm pass over visible diamonds from the stored camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
@@ -162,8 +171,8 @@ UI components use the Graphics interface to render game information.
   sprites (tile bonuses, monolith, improvements: `ter1.pcx` 100×62 over a 100×50 footprint) set
   `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. Their
   shadows are partly transparent black, so they darken the terrain underneath as SMAC's
-  shadow table does (`extract_terrain.py` turns ter1.pcx's shadow index 246 into black at
-  alpha 54 on land sprites, 21 on sea sprites). The
+  shadow table does (`extract_pcx_common` turns shadow index 246 into black at alpha 54 on
+  land sprites, 21 on sea sprites — shared by ter1 objects and faction bases). The
   tile's single moisture cell fills the diamond and fades out toward drier land.
   Land next to water then gets SMAC's coast: per diamond corner, ocean and a shore band
   baked from `Rainfall.pcx`
@@ -177,6 +186,22 @@ UI components use the Graphics interface to render game information.
 - **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under
   the pixel, then raised tiles in front). `BaseWorkableAreaDisplay` hit-tests its own diamonds
   with `TileRenderer::ShapeContains` (shared with the viewport).
+- **Bases**: `FactionBaseArtCache` uses `assets/factions/<faction.id>/` when that directory
+  exists (`extract_faction.py` maps SMAC `.pcx` stems like `gaians`/`univ` onto config ids).
+  Draws bare land/water bases plus `colors.json`. Base sheet shadows use the same index-246
+  bake as ter1 objects (`extract_pcx_common.apply_shadow`: land alpha 54, water 21). Building
+  map overlays come from building config (`map_overlay` paths with `{faction}` / `{size}`),
+  resolved through `map_overlay_channels.json` (channel exclusivity by priority; default draw
+  layer per channel; optional per-building layer override). Perimeter/Tachyon art is a
+  pixel-diff overlay on the bare base, not a full fortified sprite. Size stages come from
+  `config/base_sprite_sizes.json` (open-ended `size_stages` + optional `stage_bump_buildings`).
+  Missing sizeN art falls back to sizeN−1…size1 with a stderr warning (bare bases and building
+  overlays alike). Sprites seat like other map objects via `ForEachVisibleTile` +
+  `FootprintOrigin` (corner-mean origin, `base_sprite_overhang_ratio` ≈ (75−62)/62). Missing all
+  sizes keeps the name-only marker;
+  labels use `faction_text_color_primary` (else `faction_color_primary`, else style
+  `base_name_color`). BaseView uses the same `MapSurfaceRenderer::RenderBase` after its tile
+  pass; without art it keeps the `BASE` placeholder.
 - **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
   render (no per-frame base-info DTO). Base-at-tile clicks go through
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
@@ -263,21 +288,19 @@ UI components use the Graphics interface to render game information.
 - **Purpose**: Displays the workable area of a base as a brick of 2:1 diamonds matching the
   world map (lattice `(p, q)` → map `(p − q, p + q)`), using `FlatTileShape` / `DrawDiamond`
 - **File**: `ui/base/BaseWorkableAreaDisplay.h`, `ui/base/BaseWorkableAreaDisplay.cpp`
-- **Dependencies**: Graphics, WorldMap, Base, WorkerAssignmentManager, TileRenderer
+- **Dependencies**: Graphics, WorldMap, Base, WorkerAssignmentManager, `MapSurfaceRenderer`
 - **Layout**: Cluster sized to the Euclidean radius-2 disk; base diamond at the centre; clicks
   use `TileRenderer::ShapeContains` (front-most diamond wins)
-- **Tile Display Format**: Each surrounding tile shows `nutrients minerals energy`
-- **Visual Indicators**:
-  - Worked tiles: Green text
-  - Unworked tiles: White text
-  - Base center: Yellow "BASE" label
+- **Paint**: Same `MapSurfaceRenderer` stack as WorldDisplay (`FullDiamond` grid), then yield
+  triples on surrounding tiles; worked green / unworked white / unavailable dim; missing base
+  art keeps the yellow `BASE` placeholder
 
 ## View System
 
 The Engine manages a `ViewMode` state machine with two views:
 
 ### World View (default)
-- Renders `WorldDisplay` with the full tile grid and yellow "BASE" labels
+- Renders `WorldDisplay` with the full tile grid and faction base sprites / name labels
 - **Mouse click on base tile**: Opens Base View for that base
 - **Mouse click elsewhere**: Shows clicked tile coordinates
 - **Enter**: Processes a turn

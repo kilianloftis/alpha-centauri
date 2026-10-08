@@ -6,6 +6,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/production/ScrapConfig.h"
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,14 @@ namespace ac
 {
 
 using BuildingId_t = std::string;
+
+// World-map art drawn on top of the faction base sprite. Paths may use {faction} (sheet stem)
+// and {size} (size1…size4 stage). Land vs sea follow the base tile surface.
+struct BuildingMapOverlay_t
+{
+    std::string landPath;
+    std::string seaPath;
+};
 
 struct BuildingConfig_t : public IConstructable
 {
@@ -37,6 +46,13 @@ struct BuildingConfig_t : public IConstructable
     // Optional partial override of kinds.building.default_scrap. `"formula": null` denies
     // scrap. Secret projects reject this.
     std::optional<ScrapOverride_t> scrap;
+    // Optional world-map sprite overlay (see map_overlay_channels.json for channel layers).
+    std::optional<BuildingMapOverlay_t> mapOverlay;
+    // Empty = unchanneled (always stacks). Non-empty must name a registered channel.
+    std::string mapOverlayChannel;
+    int mapOverlayPriority = 0;
+    // When set, overrides the channel registry layer (or sets layer when unchanneled).
+    std::optional<int> mapOverlayLayer;
 
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }

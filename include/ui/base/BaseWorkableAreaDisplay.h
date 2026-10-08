@@ -4,6 +4,7 @@
 #include "input/Input.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
+#include "ui/MapSurfaceRenderer.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 
 #include <functional>
@@ -15,9 +16,12 @@ namespace ac
 
 // Displays the workable area of a base as a brick of 2:1 diamonds matching the world map:
 // lattice neighbors land at map (p − q, p + q). The center diamond is the base tile.
-// Each diamond paints terrain, grid edges, then objects via TileRenderer; surrounding tiles
-// overlay nutrients minerals energy (worked tiles in green), and the center overlays BASE.
+// Tile surfaces (terrain, grid, objects, bases) go through MapSurfaceRenderer — the same
+// stack as WorldDisplay. Surrounding tiles then overlay yield text; missing base art keeps
+// a BASE placeholder.
 class BaseManager;
+struct BaseSpriteSizesConfig_t;
+struct MapOverlayChannelsConfig_t;
 
 class BaseWorkableAreaDisplay : public UIElement
 {
@@ -28,6 +32,8 @@ public:
     BaseWorkableAreaDisplay(const BaseManager& rBase,
                             const BaseDisplaySnapshot_t& rSnapshot,
                             WindowLayout_t layout,
+                            const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
+                            const MapOverlayChannelsConfig_t& rMapOverlayChannels,
                             TileClickCallback_t onTileClicked,
                             BaseClickCallback_t onBaseClicked);
 
@@ -46,16 +52,16 @@ private:
     };
 
     void CacheTileDiamonds_();
+    void RenderYieldLabel_(Graphics& rGraphics, const TileDiamond_t& rEntry) const;
+
     const BaseManager& m_rBase;
     const BaseDisplaySnapshot_t& m_rSnapshot;
     TileClickCallback_t m_onTileClicked;
     BaseClickCallback_t m_onBaseClicked;
+    MapSurfaceRenderer m_mapSurface;
 
     float m_tileWidth = 0.f;
     std::vector<TileDiamond_t> m_tileDiamonds;
-
-    void RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const;
-    void RenderGridEdges_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape) const;
 };
 
 } // namespace ac

@@ -3,15 +3,20 @@
 
 #include "game/Faction.h"
 #include "game/GameSettings.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/FactionBaseArt.h"
 #include "ui/world/WorldDisplay.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <filesystem>
 
 using namespace ac;
 using actest::RecordingGraphics;
@@ -132,4 +137,85 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
     });
     REQUIRE(edge != graphics.lines.end());
     CHECK(SameColor_(edge->color, Style().tileRenderer.gridLandColor));
+}
+
+TEST_CASE("Missing faction base art keeps the name-only marker", "[ui][world][bases]")
+{
+    ViewFixture fixture;
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    // Short name so map-label truncation cannot hide it.
+    BaseManager* pBase = fixture.pPlayer->CreateBase(
+        fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
+        fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
+    REQUIRE(pBase != nullptr);
+
+    const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
+    const bool bDrewBaseSprite = std::ranges::any_of(graphics.sprites, [](const auto& rSprite) {
+        return rSprite.textureId.find("assets/factions/") != std::string::npos;
+    });
+    CHECK_FALSE(bDrewBaseSprite);
+    CHECK(std::ranges::any_of(graphics.texts, [](const auto& rText) { return rText.text == "HQ"; }));
+}
+
+TEST_CASE("Faction base sprites and colors.json label colour draw when assets exist",
+          "[ui][world][bases]")
+{
+    ViewFixture fixture;
+    fixture.factionDefinition.id = "gaian";
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    BaseManager* pBase = fixture.pPlayer->CreateBase(
+        fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
+        fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
+    REQUIRE(pBase != nullptr);
+
+    const std::string spritePath = BareBaseSpritePath("gaian", false, 1);
+    actest::WriteStubPng(spritePath);
+    std::filesystem::create_directories("assets/factions/gaian");
+    {
+        // Overwrite any extracted colors.json so the assertion is deterministic.
+        std::ofstream out(FactionColorsPath("gaian"));
+        out << R"({
+  "faction_text_color_primary": {"palette_index": 1, "rgb": [11, 22, 33], "hex": "#0B1621"},
+  "faction_color_primary": {"palette_index": 2, "rgb": [1, 2, 3], "hex": "#010203"}
+})";
+    }
+
+    const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
+    CHECK(std::ranges::any_of(graphics.sprites, [&](const auto& rSprite) {
+        return rSprite.textureId == spritePath;
+    }));
+    const auto name = std::ranges::find_if(graphics.texts, [](const auto& rText) {
+        return rText.text == "HQ";
+    });
+    REQUIRE(name != graphics.texts.end());
+    CHECK(name->color.r == 11);
+    CHECK(name->color.g == 22);
+    CHECK(name->color.b == 33);
+}
+
+TEST_CASE("A Perimeter Defense base draws bare base then the perimeter overlay",
+          "[ui][world][bases]")
+{
+    ViewFixture fixture;
+    fixture.factionDefinition.id = "hive";
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    BaseManager& rBase = fixture.MakeBase(8, 8);
+    rBase.GetBuildingManager().AddBuilding("Perimeter_Defense");
+
+    const std::string barePath = BareBaseSpritePath("hive", false, 1);
+    const std::string overlayPath =
+        "assets/factions/hive/bases/overlays/perimeter_size1.png";
+    actest::WriteStubPng(barePath);
+    actest::WriteStubPng(overlayPath);
+
+    const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
+    const auto bare = std::ranges::find_if(graphics.sprites, [&](const auto& rSprite) {
+        return rSprite.textureId == barePath;
+    });
+    const auto overlay = std::ranges::find_if(graphics.sprites, [&](const auto& rSprite) {
+        return rSprite.textureId == overlayPath;
+    });
+    REQUIRE(bare != graphics.sprites.end());
+    REQUIRE(overlay != graphics.sprites.end());
+    CHECK(bare->order < overlay->order);
 }

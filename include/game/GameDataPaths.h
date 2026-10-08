@@ -11,6 +11,11 @@ struct GameDataPaths
 {
     std::string popTypes = "config/pop_types.json";
     std::string buildings = "config/buildings";
+    // Channel id → default draw layer for building map overlays (not under buildings/, which
+    // merges every top-level *.json as a building array).
+    std::string mapOverlayChannels = "config/map_overlay_channels.json";
+    // Population → map base size stage (size1…sizeN) and optional stage-bump buildings.
+    std::string baseSpriteSizes = "config/base_sprite_sizes.json";
     std::string stockpiles = "config/stockpiles.json";
     std::string improvements = "config/improvements.json";
     std::string terrain = "config/terrain.json";

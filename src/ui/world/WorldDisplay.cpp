@@ -1,4 +1,5 @@
 #include "ui/world/WorldDisplay.h"
+#include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/effects/TileEffectsContext.h"
@@ -6,13 +7,10 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/map/ImprovementIds.h"
-#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
-#include "ui/TileRenderer.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <string>
@@ -25,7 +23,7 @@ namespace ac
 namespace
 {
 
-constexpr size_t k_BaseNameMinTruncChars        = 3;
+constexpr size_t k_BaseNameMinTruncChars = 3;
 
 struct PlayerFogMaps_t
 {
@@ -47,6 +45,8 @@ PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
 
 WorldDisplay::WorldDisplay(const GameState& rGameState, WindowLayout_t layout)
     : m_rGameState(rGameState)
+    , m_mapSurface(*rGameState.GetGameData().baseSpriteSizes,
+                   *rGameState.GetGameData().mapOverlayChannels)
     , m_viewport(rGameState.GetWorldMap(), layout,
                  layout.height * Style().worldDisplay.defaultTileScale)
 {
@@ -86,23 +86,34 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics)
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.baseNameFontSizeRatio);
     const float textOffsetX = tileSize * s.baseTextOffsetRatio;
+    const float textOffsetY = tileSize * s.baseTextOffsetRatio;
 
-    for (const Faction& rFaction : m_rGameState.Factions())
-    {
-        for (const BaseManager& rBase : rFaction.Bases())
-        {
-            const Tile& rBaseTile = rBase.GetTile();
-            const auto origin = m_viewport.PixelOriginOf(rBaseTile.GetX(), rBaseTile.GetY());
-            if (!origin)
+    // Same visible-wrap pass as unit markers / tile objects so bases seat on the on-screen
+    // diamond, not a different wrap of PixelOriginOf.
+    m_viewport.ForEachVisibleTile(
+        [&](const Tile& rTile, const TileShape_t& rShape) {
+            const BaseManager* pBase = m_rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
+            if (!pBase)
             {
-                continue;
+                return;
             }
+            const BaseManager& rBase = *pBase;
+            const Faction& rFaction = rBase.GetFaction();
 
             // Shroud hides bases entirely; fog still shows last-known bases.
-            if (fog.explored && !fog.explored->IsExplored(rBaseTile))
+            if (fog.explored && !fog.explored->IsExplored(rTile))
             {
-                continue;
+                return;
             }
+
+            Color_t nameColor = s.baseNameColor;
+            if (const auto colors = m_mapSurface.ColorsFor(rFaction))
+            {
+                nameColor = colors->LabelColor(s.baseNameColor);
+            }
+
+            const auto [labelX, labelY] = m_viewport.FootprintOrigin(rShape);
+            (void)m_mapSurface.RenderBase(rGraphics, rBase, rShape);
 
             const size_t maxChars = static_cast<size_t>(
                 (tileSize * s.baseNameWidthRatio) / (fontSize * s.baseNameCharWidthRatio));
@@ -116,15 +127,12 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics)
                 displayName = displayName.substr(0, maxChars);
             }
 
-            const float textOffsetY = tileSize * s.baseTextOffsetRatio;
-
-            // TODO: Use faction color for base marker based on rBase.GetFactionId()
             // TODO: Show capture animation when base capture is implemented
             // TODO: Show population size below name
-            rGraphics.DrawText(displayName, origin->first + textOffsetX, origin->second + textOffsetY,
-                               fontSize, s.baseNameColor);
-        }
-    }
+            rGraphics.DrawText(displayName, labelX + textOffsetX, labelY + textOffsetY, fontSize,
+                               nameColor);
+        },
+        /*bShaded=*/false);
 }
 
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
@@ -166,50 +174,8 @@ void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
     const float thickness = std::max(1.0f, m_viewport.TileSize() * s.pathPreviewLineThicknessRatio);
     for (size_t i = 1; i < centers.size(); ++i)
     {
-        rGraphics.DrawLine(centers[i - 1].first, centers[i - 1].second,
-                           centers[i].first, centers[i].second,
-                           s.pathPreviewColor, thickness);
-    }
-}
-
-// Grid lines along the tile's NW and NE edges, so every edge is drawn once and raised tiles in
-// front cover the lines behind them. Edges touching water need the ocean grid; anything next to
-// unexplored ground uses the land colour so the grid does not reveal coastlines.
-void WorldDisplay::RenderGridEdges_(Graphics& rGraphics, const Tile& rTile,
-                                    const TileShape_t& rShape, bool bOceanGrid) const
-{
-    const auto& s = Style().tileRenderer;
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const auto explored = [&fog](const Tile& rAny) {
-        return !fog.explored || fog.explored->IsExplored(rAny);
-    };
-    const WorldMap& rWorldMap = m_viewport.GetWorldMap();
-    const struct
-    {
-        int dx;
-        int dy;
-        const TileVertex_t* pFrom;
-        const TileVertex_t* pTo;
-    } k_Edges[] = {
-        {-1, 0, &rShape.west, &rShape.north},
-        {0, -1, &rShape.north, &rShape.east},
-    };
-    for (const auto& rEdge : k_Edges)
-    {
-        const Tile* pNeighbor = GetTileAtLatticeOffset(rWorldMap, rTile, rEdge.dx, rEdge.dy);
-        if (!pNeighbor)
-        {
-            continue;
-        }
-        const bool bHidden = !explored(rTile) || !explored(*pNeighbor);
-        const bool bLand = rTile.IsLand() && pNeighbor->IsLand();
-        if (!bHidden && !bLand && !bOceanGrid)
-        {
-            continue;
-        }
-        const Color_t& rColor = bHidden || bLand ? s.gridLandColor : s.gridWaterColor;
-        rGraphics.DrawLine(rEdge.pFrom->x, rEdge.pFrom->y, rEdge.pTo->x, rEdge.pTo->y, rColor,
-                           s.gridLineWidth);
+        rGraphics.DrawLine(centers[i - 1].first, centers[i - 1].second, centers[i].first,
+                           centers[i].second, s.pathPreviewColor, thickness);
     }
 }
 
@@ -224,22 +190,18 @@ void WorldDisplay::Render(Graphics& rGraphics)
     const MapDisplayConfig_t& rDisplay = m_rGameState.GetSettings().GetMapDisplay();
     m_viewport.SetRelief(rDisplay.relief, Style().tileRenderer.relief);
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const TileRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
+    const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
         return m_rGameState.GetTileEffects().ResolveTileYield(rTile).effective;
+    };
+    const MapSurfaceRenderer::ExploredFn_t explored = [&fog](const Tile& rTile) {
+        return !fog.explored || fog.explored->IsExplored(rTile);
     };
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-        if (fog.explored && !fog.explored->IsExplored(rTile))
-        {
-            rGraphics.FillTileShape(rShape, Style().worldDisplay.shroudColor);
-            RenderGridEdges_(rGraphics, rTile, rShape, rDisplay.bOceanGrid);
-            return;
-        }
-        // SMAC draws a tile's grid lines over its terrain and under its objects.
-        const bool bFogged = fog.visible && !fog.visible->IsVisible(rTile);
-        TileRenderer::RenderTerrain(rGraphics, rTile, rShape, bFogged, &rWorldMap);
-        RenderGridEdges_(rGraphics, rTile, rShape, rDisplay.bOceanGrid);
-        TileRenderer::RenderObjects(rGraphics, rTile, rShape, yieldOf);
+        const bool bShrouded = fog.explored && !fog.explored->IsExplored(rTile);
+        const bool bFogged = !bShrouded && fog.visible && !fog.visible->IsVisible(rTile);
+        m_mapSurface.RenderTile(rGraphics, rTile, rShape, rWorldMap, bFogged, bShrouded, yieldOf,
+                                MapGridStyle_t::WorldMapEdges, rDisplay.bOceanGrid, explored);
     });
 
     RenderBases_(rGraphics);

@@ -1,0 +1,8 @@
+{
+  "base_defense": {
+    "layer": 100
+  },
+  "test_channel": {
+    "layer": 50
+  }
+}

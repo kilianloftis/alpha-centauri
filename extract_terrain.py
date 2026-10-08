@@ -34,7 +34,8 @@ Tile sets, one sprite per neighbor mask, in sprites/landforms/<set>/<mask>.png:
 ter1.pcx object sprites are 100×62: a 100×50 footprint diamond with 12 px of art above it.
 Purple 253 is the key and dark-purple 252 marks the footprint; SMAC drops both. Peach 246
 marks shadow pixels, which SMAC draws by darkening the terrain underneath; they become
-partly transparent black. Tile bonuses come in two sea and two land variants per resource.
+partly transparent black via extract_pcx_common (shared with faction bases). Tile bonuses
+come in two sea and two land variants per resource.
 
 Coastlines are baked from Rainfall.pcx (see docs/thinker/smac-coastline-rainfall.md):
 sprites/coast/{water,shore}_<corner>_<case>.png, one pair per diamond corner (w/n/e/s)
@@ -56,6 +57,13 @@ try:
 except ImportError:
     sys.exit("Pillow is required:  pip install Pillow")
 
+from extract_pcx_common import (
+    LAND_SHADOW_ALPHA as TER1_LAND_SHADOW_ALPHA,
+    SEA_SHADOW_ALPHA as TER1_SEA_SHADOW_ALPHA,
+    apply_shadow,
+    clear_transparent_rgb,
+)
+
 # --------------------------------------------------------------------------- #
 # Layout
 # --------------------------------------------------------------------------- #
@@ -70,13 +78,6 @@ TEXTURE_KEY_INDICES = frozenset({0, 255})
 TER1_KEY_INDICES = frozenset({0, 252, 253, 255})
 TER1_SPRITE_WIDTH = 100
 TER1_SPRITE_HEIGHT = 62
-# ter1.pcx shadow pixels. SMAC loads the sheet into palette slots shifted by 10, so 246 wraps to
-# 0, and Sprite_draw_dest darkens the terrain under a 0 through its shadow table (shadow.tmp).
-TER1_SHADOW_INDEX = 246
-# Black at these alphas darkens the painted terrain as much as that table does on average:
-# land to 0.79 of its luminance, water to 0.92.
-TER1_LAND_SHADOW_ALPHA = 54
-TER1_SEA_SHADOW_ALPHA = 21
 
 # Ocean cells right of the rainfall grid, between guide rows at y=78/135/192.
 OCEAN_SHELF_BOX = (280, 79, 280 + TEXTURE_CELL, 79 + TEXTURE_CELL)
@@ -420,25 +421,6 @@ def bake_diamond(
 
 def blend_corners(rotation: int) -> tuple[tuple[int, int], ...]:
     return tuple(BLEND_CORNERS[(k + rotation) & 3] for k in range(4))
-
-
-def apply_shadow(rgba: Image.Image, sprite: Image.Image, alpha: int) -> Image.Image:
-    """Turn shadow-index pixels into black at the given alpha."""
-    mask = sprite.point(lambda index: 255 if index == TER1_SHADOW_INDEX else 0, mode="L")
-    rgba.paste(Image.new("RGBA", rgba.size, (0, 0, 0, alpha)), (0, 0), mask)
-    return rgba
-
-
-def clear_transparent_rgb(rgba: Image.Image) -> Image.Image:
-    """Zero RGB on alpha=0 pixels so chroma-key leftovers cannot leak when blending."""
-    pixels = rgba.load()
-    width, height = rgba.size
-    for y in range(height):
-        for x in range(width):
-            red, green, blue, alpha = pixels[x, y]
-            if alpha == 0 and (red or green or blue):
-                pixels[x, y] = (0, 0, 0, 0)
-    return rgba
 
 
 def extract_regions(

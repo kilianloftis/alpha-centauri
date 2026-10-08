@@ -14,6 +14,8 @@ namespace ac
 {
 
 class BuildingRegistry;
+struct MapOverlayChannelsConfig_t;
+struct BaseSpriteSizesConfig_t;
 class StockpileRegistry;
 class UnitComponentRegistry;
 class UnitSlotRegistry;
@@ -74,6 +76,8 @@ struct GameDataContext
 
     // --- Registries and config structs (definition data) ---
     std::unique_ptr<BuildingRegistry> buildingRegistry;
+    std::unique_ptr<MapOverlayChannelsConfig_t> mapOverlayChannels;
+    std::unique_ptr<BaseSpriteSizesConfig_t> baseSpriteSizes;
     std::unique_ptr<StockpileRegistry> stockpileRegistry;
     std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
     std::unique_ptr<UnitSlotRegistry> unitSlotRegistry;

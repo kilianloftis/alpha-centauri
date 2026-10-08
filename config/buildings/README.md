@@ -23,6 +23,14 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
+| `map_overlay` | object | No | absent | World-map art on the faction base: `{ "land": "…", "sea": "…" }`. Paths may use `{faction}` (sheet stem) and `{size}` (size stage). At least one of land/sea required. |
+| `map_overlay_channel` | string | No | `""` | Exclusive visual slot; must name a channel in `config/map_overlay_channels.json`. Requires `map_overlay`. |
+| `map_overlay_priority` | int | No | `0` | Within a channel, only the highest priority overlay draws. Requires `map_overlay`. |
+| `map_overlay_layer` | int | No | absent | Draw order override (lower under higher). Default: channel registry layer if channeled, else `0`. Requires `map_overlay`. |
+
+Channel defaults live in [`config/map_overlay_channels.json`](../map_overlay_channels.json) (not under `buildings/`, which merges every top-level `*.json` as a building array). Example: `"base_defense": { "layer": 100 }` so defense art paints above ordinary overlays.
+
+Population → `{size}` stage comes from [`config/base_sprite_sizes.json`](../base_sprite_sizes.json): an ordered `size_stages` array of `{ "min_population": N }` (first entry is size1). Optional `stage_bump_buildings` (e.g. `Childrens_Creche`) each raise the stage by one, capped at the last entry. Add a fifth stage by appending a threshold and shipping `*_size5.png` (and matching overlay paths); missing art falls back to the previous stage with a warning.
 
 A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
 

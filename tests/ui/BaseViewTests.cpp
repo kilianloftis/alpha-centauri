@@ -21,17 +21,21 @@
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
 #include "input/Input.h"
+#include "StubSprites.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/BuildingsDisplay.h"
 #include "ui/style/UiStyle.h"
 #include "ui/UIElement.h"
+#include "ui/world/FactionBaseArt.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <filesystem>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <utility>
 
@@ -761,8 +765,11 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
 
     const Tile* pClickedTile = nullptr;
     bool bBaseClicked = false;
+    REQUIRE(fixture.dataContext.baseSpriteSizes);
+    REQUIRE(fixture.dataContext.mapOverlayChannels);
     BaseWorkableAreaDisplay panel(
-        rBase, snapshot, layout,
+        rBase, snapshot, layout, *fixture.dataContext.baseSpriteSizes,
+        *fixture.dataContext.mapOverlayChannels,
         [&](const Tile* pTile) { pClickedTile = pTile; },
         [&]() { bBaseClicked = true; });
 
@@ -799,7 +806,7 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     }
     CHECK(gridLineCount >= 12);
 
-    // Yield / BASE labels are centered on the diamond, not parked in the NW corner.
+    // No faction art for test_faction → BASE placeholder centered on the diamond.
     const float baseCenterX = k_BaseX + k_HalfW;
     const float baseCenterY = k_BaseY + k_HalfH;
     const auto& workableStyle = Style().baseWorkableAreaDisplay;
@@ -875,4 +882,32 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     pClickedTile = nullptr;
     click(k_BaseX - k_HalfW + k_HalfW, k_BaseY - k_HalfH + k_HalfH);
     CHECK(pClickedTile == pNw);
+}
+
+TEST_CASE("Base workable area draws faction base art when assets exist", "[ui][base][workable]")
+{
+    ViewFixture fixture;
+    fixture.factionDefinition.id = "gaian";
+    BaseManager& rBase = fixture.MakeBase(8, 8);
+
+    const std::string spritePath = BareBaseSpritePath("gaian", false, 1);
+    actest::WriteStubPng(spritePath);
+    std::filesystem::create_directories("assets/factions/gaian");
+
+    const WindowLayout_t layout{0.0f, 0.0f, 400.0f, 200.0f};
+    const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
+    REQUIRE(fixture.dataContext.baseSpriteSizes);
+    REQUIRE(fixture.dataContext.mapOverlayChannels);
+    BaseWorkableAreaDisplay panel(rBase, snapshot, layout, *fixture.dataContext.baseSpriteSizes,
+                                  *fixture.dataContext.mapOverlayChannels, nullptr, nullptr);
+
+    fixture.graphics.sprites.clear();
+    fixture.graphics.texts.clear();
+    panel.Render(fixture.graphics);
+
+    CHECK(std::ranges::any_of(fixture.graphics.sprites, [&](const auto& rSprite) {
+        return rSprite.textureId == spritePath;
+    }));
+    CHECK(std::ranges::none_of(fixture.graphics.texts,
+                               [](const auto& rText) { return rText.text == "BASE"; }));
 }

@@ -131,6 +131,8 @@ struct WorldDisplayStyle_t
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
     Color_t baseNameColor{};
+    // Extra height above the tile footprint for faction base sprites (100×75 on a 100×50 cell).
+    float baseSpriteOverhangRatio{};
     // Empty path: airdrop targeting does not change the mouse cursor.
     std::string airdropCursorPath{};
     unsigned int airdropCursorHotspotX = 0;

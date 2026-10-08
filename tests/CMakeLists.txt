@@ -140,6 +140,7 @@ add_executable(effects-tests
     ui/TileReliefTests.cpp
     ui/SettingsPanelTests.cpp
     ui/WorldDisplayTests.cpp
+    ui/FactionBaseArtTests.cpp
     ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
     lib/SignalTests.cpp

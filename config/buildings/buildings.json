@@ -367,7 +367,27 @@
     ],
     "category": "conquer",
     "required_tech": "test_tech_1",
-    "upkeep": 2
+    "upkeep": 2,
+    "map_overlay": {
+      "land": "assets/factions/{faction}/bases/overlays/perimeter_size{size}.png",
+      "sea": "assets/factions/{faction}/bases/overlays/water_perimeter_size{size}.png"
+    },
+    "map_overlay_channel": "base_defense",
+    "map_overlay_priority": 1
+  },
+  {
+    "id": "Tachyon_Field",
+    "name": "Tachyon Field",
+    "mineral_cost": 12,
+    "category": "conquer",
+    "required_tech": "test_tech_1",
+    "upkeep": 2,
+    "map_overlay": {
+      "land": "assets/factions/{faction}/bases/overlays/tachyon_size{size}.png",
+      "sea": "assets/factions/{faction}/bases/overlays/water_tachyon_size{size}.png"
+    },
+    "map_overlay_channel": "base_defense",
+    "map_overlay_priority": 2
   },
   {
     "id": "Recreation_Commons",

@@ -327,4 +327,4 @@ graph TB
 - **Orographic moisture after sculpting**: landmark sculpting is the last stage to change elevation, but moisture is derived before it, so a sculpted peak keeps its pre-sculpt moisture tier. Re-deriving moisture afterwards would re-roll tiers that landmark anchors were already chosen against (moisture ids are themselves `CanBuildImprovement` features) — resolving it needs a rule, not a reorder.
 - **Seed persistence**: `Engine` resolves one session seed and the whole map derives from it, but nothing writes it down — replaying a finished game waits on a save system.
 - **Combat system**: `ResolveTileDefenseMultiplier(tile, forFaction)` is ready to call but nothing resolves attacks yet
-- **Territory UI**: WorldDisplay shows Sensor markers; border/ownership tint is not implemented yet
+- **Territory UI**: WorldDisplay draws faction base sprites and name labels; border/ownership tint is not implemented yet

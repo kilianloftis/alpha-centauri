@@ -202,15 +202,16 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Base-screen workable ring as the same brick of 2:1 diamonds as the world map
-  (`FlatTileShape`, lattice → map deltas, `TileRenderer::ShapeContains` for clicks). Each
-  diamond paints terrain, then land/water grid edges (`tileRenderer` colours, full diamond —
-  the ring is sparse), then objects (snapshot yields for farm sprites); yield triples / `BASE`
-  text and the style border draw on top.
+  (`FlatTileShape`, lattice → map deltas, `TileRenderer::ShapeContains` for clicks). Tile
+  surfaces share `MapSurfaceRenderer` with WorldDisplay (terrain → full-diamond grid →
+  objects, then `RenderBase` so overhang is not covered). Surrounding tiles overlay yield
+  triples; without extracted art the center keeps the `BASE` placeholder; style borders draw
+  with each tile.
 
 ### WorldDisplay Viewport
 - **Purpose**: Controls which portion of the world map is visible as a rectangular brick of 2:1 diamonds (`MapViewport`). Gameplay topology stays the square lattice; poles are the top and bottom rows and the wrap seam is vertical.
 - **State**: diamond width (`TileSize` / `TileWidth`), height = width / 2, `m_cameraX`/`m_cameraY` (map-unit anchor). `VisibleCols` / `VisibleRows` are the layout size in map units (`layout / ½w`, `layout / ½h`).
-- **Rendering**: `ForEachVisibleTile` walks rows top to bottom (back-to-front), placing each tile at `((x − camX)·½w, (y − camY)·½h)`. Layers: tiles, bases, then units.
+- **Rendering**: `ForEachVisibleTile` walks rows top to bottom (back-to-front), placing each tile at `((x − camX)·½w, (y − camY)·½h)`. Layers: tiles, bases (bare faction sprite plus config-driven building map overlays when extracted, else name-only; label colour from `colors.json`), then units.
 - **Configurability**: Constructor tile size, `MapViewport::SetTileSize()`, and `MapViewport::SetCamera()` are the control points. Tile size is the zoom lever and a per-platform tuning knob.
 - **Mouse hit-testing**: `WorldView::HandleMouse` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under the pixel, then raised tiles in front, with wrap-X).
 - **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.

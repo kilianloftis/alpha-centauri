@@ -19,6 +19,7 @@
 #include "game/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/GameDataContext.h"
 #include <random>
 #include "game/map/ImprovementConfigParser.h"
@@ -58,6 +59,7 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -103,6 +105,89 @@ Tile* PickStartingBaseTile_(WorldMap& rMap,
     }
 
     return nullptr;
+}
+
+// Closest free land or water tile to rNear that respects founding separation.
+Tile* FindPreviewBaseTile_(WorldMap& rMap, const Tile& rNear, bool bWantWater,
+                           const std::vector<const BaseManager*>& rPlacedBases)
+{
+    Tile* pBest = nullptr;
+    int bestDistance = std::numeric_limits<int>::max();
+    const int mapWidth = rMap.GetWidth();
+    for (const auto& pTilePtr : rMap.GetTiles())
+    {
+        Tile* pTile = pTilePtr.get();
+        if (!pTile || (bWantWater ? !pTile->IsWater() : !pTile->IsLand()))
+        {
+            continue;
+        }
+        if (rMap.GetWorkedTiles().IsWorked(*pTile)
+            || IsTooCloseToAnyBase(*pTile, rMap, rPlacedBases))
+        {
+            continue;
+        }
+        const int distance = ChebyshevDistance(rNear, *pTile, mapWidth);
+        if (distance < bestDistance)
+        {
+            bestDistance = distance;
+            pBest = pTile;
+        }
+    }
+    return pBest;
+}
+
+// Temporary: extra player bases to eyeball size stages, water bases, and defense overlays.
+void PlacePreviewFactionBases_(GameState& rGameState, Faction& rPlayer,
+                               std::vector<const BaseManager*>& rPlacedBases)
+{
+    WorldMap& rMap = rGameState.GetWorldMap();
+    const Tile& rHq = rPlayer.Bases().front().GetTile();
+
+    struct PreviewBase_t
+    {
+        const char* name;
+        int population;
+        bool bWater;
+        bool bPerimeter;
+        bool bTachyon;
+    };
+    // Pops hit SMAC size stages 1–4 (1–3 / 4–7 / 8–14 / 15+); oversized pops are demo-only.
+    const PreviewBase_t k_Previews[] = {
+        {"Preview Outpost", 1, false, false, false},
+        {"Preview Fortress", 5, false, true, false},
+        {"Preview Citadel", 10, false, true, true},
+        {"Preview Metropolis", 16, false, true, true},
+        {"Preview Shoal", 2, true, false, false},
+        {"Preview Harbor", 6, true, true, false},
+        {"Preview Seawall", 12, true, true, true},
+    };
+
+    for (const PreviewBase_t& rPreview : k_Previews)
+    {
+        Tile* pTile = FindPreviewBaseTile_(rMap, rHq, rPreview.bWater, rPlacedBases);
+        if (!pTile)
+        {
+            std::cout << "Engine setup: skip preview base '" << rPreview.name
+                      << "' (no free " << (rPreview.bWater ? "water" : "land") << " tile)\n";
+            continue;
+        }
+        BaseManager* pBase = rPlayer.CreateBase(
+            rGameState.AllocateBaseId(), rPreview.name, pTile, rGameState.GetTileEffects(),
+            rGameState.GetSecretProjectAvailability(), rPreview.population, rPreview.bWater);
+        if (!pBase)
+        {
+            continue;
+        }
+        rPlacedBases.push_back(pBase);
+        if (rPreview.bPerimeter)
+        {
+            pBase->GetBuildingManager().AddBuilding("Perimeter_Defense");
+        }
+        if (rPreview.bTachyon)
+        {
+            pBase->GetBuildingManager().AddBuilding("Tachyon_Field");
+        }
+    }
 }
 
 #ifdef AC_PLACE_TEST_IMPROVEMENTS
@@ -544,6 +629,13 @@ void Engine::StartNewGame_()
         }
 
         ++positionIndex;
+    }
+
+    // Temporary: extra player bases to eyeball land/water sprites and defense overlays.
+    if (Faction* pPlayer = m_pGameState->GetPlayerFaction();
+        pPlayer && !pPlayer->Bases().empty())
+    {
+        PlacePreviewFactionBases_(*m_pGameState, *pPlayer, placedBases);
     }
 
     // Bases are founded before AddFaction, so each faction's territory is folded in by

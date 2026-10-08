@@ -226,6 +226,11 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
+    s.baseSpriteOverhangRatio = j.at("base_sprite_overhang_ratio").get<float>();
+    if (!(s.baseSpriteOverhangRatio >= 0.0f))
+    {
+        throw std::runtime_error("world_display.base_sprite_overhang_ratio must be >= 0");
+    }
     s.airdropCursorPath = j.at("airdrop_cursor_path").get<std::string>();
     const auto& hotspot = j.at("airdrop_cursor_hotspot");
     if (!hotspot.is_array() || hotspot.size() != 2)

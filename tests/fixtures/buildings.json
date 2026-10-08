@@ -864,7 +864,25 @@
         }
       }
     ],
-    "category": "conquer"
+    "category": "conquer",
+    "map_overlay": {
+      "land": "assets/factions/{faction}/bases/overlays/perimeter_size{size}.png",
+      "sea": "assets/factions/{faction}/bases/overlays/water_perimeter_size{size}.png"
+    },
+    "map_overlay_channel": "base_defense",
+    "map_overlay_priority": 1
+  },
+  {
+    "id": "Tachyon_Field",
+    "name": "Tachyon Field",
+    "mineral_cost": 12,
+    "category": "conquer",
+    "map_overlay": {
+      "land": "assets/factions/{faction}/bases/overlays/tachyon_size{size}.png",
+      "sea": "assets/factions/{faction}/bases/overlays/water_tachyon_size{size}.png"
+    },
+    "map_overlay_channel": "base_defense",
+    "map_overlay_priority": 2
   },
   {
     "id": "test_last_defender_pop_loss_cap",

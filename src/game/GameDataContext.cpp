@@ -2,7 +2,12 @@
 
 #include "game/EffectReferenceValidator.h"
 #include "game/RequiredTechValidator.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/buildings/BaseSpriteSizesConfigParser.h"
+#include "game/buildings/MapOverlayChannelsConfig.h"
+#include "game/buildings/MapOverlayChannelsConfigParser.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -72,6 +77,8 @@ void ThrowIfIncomplete(const GameDataContext& rData)
     // diagnostic a modder can act on.
     const std::pair<const void*, const char*> required[] = {
         {rData.buildingRegistry.get(), "buildingRegistry"},
+        {rData.mapOverlayChannels.get(), "mapOverlayChannels"},
+        {rData.baseSpriteSizes.get(), "baseSpriteSizes"},
         {rData.stockpileRegistry.get(), "stockpileRegistry"},
         {rData.unitComponentRegistry.get(), "unitComponentRegistry"},
         {rData.unitSlotRegistry.get(), "unitSlotRegistry"},
@@ -155,6 +162,40 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     rData.buildingRegistry = std::make_unique<BuildingRegistry>();
     rData.buildingRegistry->Load(rPaths.buildings);
+
+    {
+        MapOverlayChannelsConfigParser channelsParser;
+        rData.mapOverlayChannels = std::make_unique<MapOverlayChannelsConfig_t>(
+            channelsParser.ParseConfig(rPaths.mapOverlayChannels));
+        for (const BuildingConfig_t& rBuilding : rData.buildingRegistry->GetAll())
+        {
+            if (rBuilding.mapOverlayChannel.empty())
+            {
+                continue;
+            }
+            if (!rData.mapOverlayChannels->layersByChannel.contains(rBuilding.mapOverlayChannel))
+            {
+                throw std::runtime_error(
+                    "Building '" + rBuilding.id + "': unknown map_overlay_channel '"
+                    + rBuilding.mapOverlayChannel + "'");
+            }
+        }
+    }
+
+    {
+        BaseSpriteSizesConfigParser sizesParser;
+        rData.baseSpriteSizes = std::make_unique<BaseSpriteSizesConfig_t>(
+            sizesParser.ParseConfig(rPaths.baseSpriteSizes));
+        for (const std::string& rBumpId : rData.baseSpriteSizes->stageBumpBuildings)
+        {
+            if (!rData.buildingRegistry->Find(rBumpId))
+            {
+                throw std::runtime_error(
+                    "base_sprite_sizes: stage_bump_buildings names unknown building '" + rBumpId
+                    + "'");
+            }
+        }
+    }
 
     rData.stockpileRegistry = std::make_unique<StockpileRegistry>();
     rData.stockpileRegistry->Load(rPaths.stockpiles);

@@ -128,6 +128,7 @@
     "base_name_color": [
       255, 255, 0, 255
     ],
+    "base_sprite_overhang_ratio": 0.21,
     "airdrop_cursor_path": "",
     "airdrop_cursor_hotspot": [
       0,

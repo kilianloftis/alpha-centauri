@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 #include "game/units/Unit.h"
+#include "ui/MapSurfaceRenderer.h"
 #include "ui/UIElement.h"
 #include "ui/world/MapViewport.h"
 #include "ui/world/UnitMarkerRenderer.h"
@@ -18,9 +19,9 @@ class Tile;
 struct Path_t;
 
 // Displays the world map as a grid of tiles.
-// Each tile is painted by TileRenderer (elevation fill + landform sprites / procedural
-// moisture center and rockiness ring). Bases, Sensors, Monoliths, and units are read live
-// from GameState / WorldMap — no per-frame DTO rebuild.
+// Each tile is painted by MapSurfaceRenderer (terrain, grid, objects, then bases). Bases,
+// Sensors, Monoliths, and units are read live from GameState / WorldMap — no per-frame DTO
+// rebuild.
 class WorldDisplay
 {
 public:
@@ -54,18 +55,14 @@ private:
     const Unit* m_pSelectedUnit = nullptr;
     const Path_t* m_pPathPreview = nullptr;
     UnitMarkerRenderer m_unitMarkers;
+    MapSurfaceRenderer m_mapSurface;
     MapViewport m_viewport;
 
-    // Render base markers with owner color and population info
+    // Faction base sprites (when extracted) plus name labels in faction colours.
     void RenderBases_(Graphics& rGraphics);
-
-
 
     // Render path preview as a line through tile centers
     void RenderPathPreview_(Graphics& rGraphics);
-    // Grid lines along the tile's NW and NE edges through its raised corners.
-    void RenderGridEdges_(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                          bool bOceanGrid) const;
 };
 
 } // namespace ac

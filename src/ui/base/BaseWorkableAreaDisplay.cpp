@@ -1,4 +1,6 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
+#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/buildings/MapOverlayChannelsConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/effects/TileEffectsContext.h"
@@ -57,6 +59,8 @@ void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
                                                  const BaseDisplaySnapshot_t& rSnapshot,
                                                  WindowLayout_t layout,
+                                                 const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
+                                                 const MapOverlayChannelsConfig_t& rMapOverlayChannels,
                                                  TileClickCallback_t onTileClicked,
                                                  BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
@@ -64,6 +68,7 @@ BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
     , m_rSnapshot(rSnapshot)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
+    , m_mapSurface(rBaseSpriteSizes, rMapOverlayChannels)
 {
     CacheTileDiamonds_();
 }
@@ -125,72 +130,12 @@ void BaseWorkableAreaDisplay::CacheTileDiamonds_()
               });
 }
 
-void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
+void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
+                                                const TileDiamond_t& rEntry) const
 {
     const auto& style = Style().baseWorkableAreaDisplay;
-
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-                             style.backgroundColor);
-
-    for (const TileDiamond_t& rEntry : m_tileDiamonds)
-    {
-        RenderTile_(rGraphics, rEntry);
-    }
-}
-
-void BaseWorkableAreaDisplay::RenderGridEdges_(Graphics& rGraphics, const Tile& rTile,
-                                               const TileShape_t& rShape) const
-{
-    // Full diamond: the workable ring is sparse, so NW/NE-only (world map) would leave the
-    // cluster perimeter open. Land and water use the same colours as the map grid.
-    const auto& s = Style().tileRenderer;
-    const Color_t& rColor = rTile.IsLand() ? s.gridLandColor : s.gridWaterColor;
-    const struct
-    {
-        const TileVertex_t* pFrom;
-        const TileVertex_t* pTo;
-    } k_Edges[] = {
-        {&rShape.west, &rShape.north},
-        {&rShape.north, &rShape.east},
-        {&rShape.east, &rShape.south},
-        {&rShape.south, &rShape.west},
-    };
-    for (const auto& rEdge : k_Edges)
-    {
-        rGraphics.DrawLine(rEdge.pFrom->x, rEdge.pFrom->y, rEdge.pTo->x, rEdge.pTo->y, rColor,
-                           s.gridLineWidth);
-    }
-}
-
-void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond_t& rEntry) const
-{
-    const auto& style = Style().baseWorkableAreaDisplay;
-    const float x = ShapeAabbLeft_(rEntry.shape);
-    const float y = ShapeAabbTop_(rEntry.shape);
-    const float w = ShapeAabbWidth_(rEntry.shape);
-    const float h = ShapeAabbHeight_(rEntry.shape);
-
-    const WorldMap& rWorldMap = m_rBase.GetTileEffects().GetWorldMap();
-    const TileRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
-        const auto it = m_rSnapshot.tiles.find(&rTile);
-        if (it == m_rSnapshot.tiles.end())
-        {
-            return TileResources_t{};
-        }
-        return it->second.yield.effective;
-    };
-    // SMAC draws grid over terrain and under objects.
-    TileRenderer::RenderTerrain(rGraphics, *rEntry.pTile, rEntry.shape, /*bFogged*/ false,
-                                &rWorldMap);
-    RenderGridEdges_(rGraphics, *rEntry.pTile, rEntry.shape);
-    TileRenderer::RenderObjects(rGraphics, *rEntry.pTile, rEntry.shape, yieldOf);
-
-    rGraphics.DrawDiamond(x, y, w, h, style.tileBorderColor, style.tileBorderWidth);
-
     if (rEntry.bIsBase)
     {
-        DrawCenteredTileText_(rGraphics, rEntry.shape, "BASE", style.baseLabelFontSize,
-                              style.baseLabelColor, style.tileTextCharWidthRatio);
         return;
     }
 
@@ -204,12 +149,9 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond
 
     const TileDisplay_t& rTile = it->second;
     const bool bIsWorked = rTile.workState == TileWorkState_t::WorkedByThisBase;
-    const int nutrients = rTile.yield.effective.nutrients;
-    const int minerals = rTile.yield.effective.minerals;
-    const int energy = rTile.yield.effective.energy;
-
     std::ostringstream oss;
-    oss << nutrients << " " << minerals << " " << energy;
+    oss << rTile.yield.effective.nutrients << " " << rTile.yield.effective.minerals << " "
+        << rTile.yield.effective.energy;
 
     // Three states, not two. A tile held by a neighbouring base, another faction, or a supply
     // crawler is workable-in-principle but not available to this base: showing it in the
@@ -226,6 +168,54 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const TileDiamond
     }
     DrawCenteredTileText_(rGraphics, rEntry.shape, oss.str(), style.tileFontSize, textColor,
                           style.tileTextCharWidthRatio);
+}
+
+void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
+{
+    const auto& style = Style().baseWorkableAreaDisplay;
+    const WorldMap& rWorldMap = m_rBase.GetTileEffects().GetWorldMap();
+    const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
+        const auto it = m_rSnapshot.tiles.find(&rTile);
+        if (it == m_rSnapshot.tiles.end())
+        {
+            return TileResources_t{};
+        }
+        return it->second.yield.effective;
+    };
+
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+                             style.backgroundColor);
+
+    // Same layering as WorldDisplay: all tile surfaces first, bases after so overhang is not
+    // covered by front-tile terrain, then BaseView-only yield / placeholder labels.
+    const TileDiamond_t* pBaseEntry = nullptr;
+    for (const TileDiamond_t& rEntry : m_tileDiamonds)
+    {
+        m_mapSurface.RenderTile(rGraphics, *rEntry.pTile, rEntry.shape, rWorldMap,
+                                /*bFogged=*/false, /*bShrouded=*/false, yieldOf,
+                                MapGridStyle_t::FullDiamond);
+        rGraphics.DrawDiamond(ShapeAabbLeft_(rEntry.shape), ShapeAabbTop_(rEntry.shape),
+                              ShapeAabbWidth_(rEntry.shape), ShapeAabbHeight_(rEntry.shape),
+                              style.tileBorderColor, style.tileBorderWidth);
+        if (rEntry.bIsBase)
+        {
+            pBaseEntry = &rEntry;
+        }
+    }
+
+    if (pBaseEntry)
+    {
+        if (!m_mapSurface.RenderBase(rGraphics, m_rBase, pBaseEntry->shape))
+        {
+            DrawCenteredTileText_(rGraphics, pBaseEntry->shape, "BASE", style.baseLabelFontSize,
+                                  style.baseLabelColor, style.tileTextCharWidthRatio);
+        }
+    }
+
+    for (const TileDiamond_t& rEntry : m_tileDiamonds)
+    {
+        RenderYieldLabel_(rGraphics, rEntry);
+    }
 }
 
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)

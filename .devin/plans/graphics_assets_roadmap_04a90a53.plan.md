@@ -9,10 +9,10 @@ todos:
     content: "Phase 1b: isometric MapViewport (diamond project/unproject, hit-test, draw order, art)"
     status: completed
   - id: phase1c-world-followups
-    content: "Phase 1c: remaining world-map art and SMAC rules (terraform improvements, landmark cells and vertex offsets, unit/base seating)"
-    status: pending
+    content: "Phase 1c: remaining world-map art and SMAC rules (terraform improvements, unit/base seating, decoration). Landmarks deferred."
+    status: completed
   - id: phase2-bases
-    content: "Phase 2: harden extract_faction.py + draw base sprites on WorldDisplay"
+    content: "Phase 2: harden extract_faction.py + draw base sprites and faction colors on WorldDisplay (leaders/logos extract-only)"
     status: pending
   - id: phase3-icons
     content: "Phase 3: extract_icons.py (techs/facs/projs) + sprite_path on configs + UI wiring"
@@ -126,31 +126,35 @@ See detailed plan: [isometric_map_viewport.plan.md](isometric_map_viewport.plan.
 
 Land this before Phase 2 so faction bases sit on the diamond grid.
 
-### Phase 1c — Remaining world-map art and rules
+### Phase 1c — Remaining world-map art and rules (done)
 
 **Goal:** finish the world map before bases.
 
-- **Terraform improvements:** extend `extract_terrain.py` to the `texture.pcx` road, mag tube
-  and farm cells and the `ter1.pcx` mine, solar collector, condenser, mirror, borehole, bunker,
-  airbase, sensor, kelp, platform and harness sprites
-  ([smac-terrain-textures.md](../../docs/thinker/smac-terrain-textures.md) lists the crops), and
-  wire them into `improvements.json`.
-- **Landmarks:** extract the volcano, crater, mesa and dunes cells, and port SMAC's per-vertex
-  brightness offsets and lift percentages for those landmarks
-  ([smac-palette-lighting.md](../../docs/thinker/smac-palette-lighting.md)).
-- **Unit and base seating:** units, base labels and markers still sit on the raised tile centre;
-  confirm SMAC's anchor for them (terrain objects use the corners' mean) and match it.
-- **Map content:** SMAC maps carry more fungus, rivers and supply pods than ours; tune
-  `decoration.json` and the generator against a SMAC map.
+Shipped via [world-map-followups.md](../../docs/plans/world-map-followups.md): corner-mean
+seat, road/tube/farm ground and improvement object art, `improvements.json` wiring,
+`TileRenderer` draw order, decoration fungus/aquifer fractions. Sensors and Monoliths draw
+as objects; procedural markers removed.
+
+**Deferred (own plan):** landmark cells (volcano, crater, mesa, dunes) and SMAC per-vertex
+landmark lighting — blocked on reverse-engineering landmark placement
+([smac-palette-lighting.md](../../docs/thinker/smac-palette-lighting.md)).
 
 ### Phase 2 — Faction bases on the map
 
-**Extractor:** harden [`extract_faction.py`](extract_faction.py) (game-dir defaults, `--all`, gitignore `assets/factions/`); ensure output paths stay the contract for map drawing. Hook into `extract_all.py`.
+**Extractor:** harden [`extract_faction.py`](extract_faction.py) (this-machine game-dir
+default, `--all`); `assets/factions/` already gitignored. Output contract stays
+`assets/factions/<stem>/bases/…` plus `colors.json` (and the sheet’s leaders/logos/landscape
+PNGs). Hook into `extract_all.py` when that orchestrator lands.
 
-**Renderer/config work:**
+**In scope for the game:**
 
-- Replace yellow base-name-only markers in [`WorldDisplay`](src/ui/world/WorldDisplay.cpp) with size/defense/water base sprites from `assets/factions/<id>/bases/…`, using faction colors from `colors.json`.
-- Name labels stay as overlay text.
+- Replace name-only markers in [`WorldDisplay`](src/ui/world/WorldDisplay.cpp) with
+  size/defense/water base sprites from `assets/factions/<id>/bases/…`.
+- Load `colors.json` and use faction text/primary colors for base name labels (existing TODO).
+- Name labels stay as overlay text; missing sprites keep the text-only fallback.
+
+**Out of scope (extract only):** leader portraits, logos, diplomacy landscape — no UI wiring
+this phase. `vehicle_color` stays unused until Phase 5.
 
 ### Phase 3 — Content icons (tech / building / project)
 
@@ -215,4 +219,4 @@ Land this before Phase 2 so faction bases sit on the diamond grid.
 
 ## Immediate next step
 
-Write the **Phase 1c detailed plan**, starting with terraform improvement art.
+Write the **Phase 2 detailed plan** (base sprites + faction colors on the world map).

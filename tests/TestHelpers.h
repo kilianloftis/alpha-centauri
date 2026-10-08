@@ -43,6 +43,8 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.popTypes = FixturePath("pop_types.json");
     // buildings.json grants an unknown building on purpose, which the loader rejects.
     paths.buildings = FixturePath("buildings_loadable.json");
+    paths.mapOverlayChannels = FixturePath("map_overlay_channels.json");
+    paths.baseSpriteSizes = FixturePath("base_sprite_sizes.json");
     paths.stockpiles = FixturePath("stockpiles.json");
     paths.improvements = FixturePath("improvements.json");
     paths.terrain = FixturePath("terrain.json");

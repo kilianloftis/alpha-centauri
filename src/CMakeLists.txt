@@ -118,6 +118,8 @@ add_library(ac-core STATIC
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
+    game/buildings/MapOverlayChannelsConfigParser.cpp
+    game/buildings/BaseSpriteSizesConfigParser.cpp
     game/buildings/BuildingUpkeep.cpp
     game/buildings/SecretProjectAvailabilityCalculator.cpp
     game/stockpiles/StockpileConfigParser.cpp
@@ -331,6 +333,7 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 # ---------------------------------------------------------------------------
 add_library(ac-ui STATIC
     ui/TileRenderer.cpp
+    ui/MapSurfaceRenderer.cpp
     ui/TileSpriteEdgeInset.cpp
     ui/CoastOverlay.cpp
     ui/TileAutotile.cpp
@@ -350,6 +353,7 @@ add_library(ac-ui STATIC
     ui/world/CombatView.cpp
     ui/world/MapViewport.cpp
     ui/world/WorldDisplay.cpp
+    ui/world/FactionBaseArt.cpp
     ui/world/UnitMarkerRenderer.cpp
     ui/world/InfoPanelElement.cpp
     ui/world/LocationPanel.cpp

@@ -14,6 +14,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/MapOverlayChannelsConfig.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
@@ -59,6 +60,10 @@ TEST_CASE("ThrowIfIncomplete reports the first member still missing", "[composit
                       Catch::Matchers::ContainsSubstring("buildingRegistry"));
 
     data.buildingRegistry = std::make_unique<BuildingRegistry>();
+    CHECK_THROWS_WITH(ThrowIfIncomplete(data),
+                      Catch::Matchers::ContainsSubstring("mapOverlayChannels"));
+
+    data.mapOverlayChannels = std::make_unique<MapOverlayChannelsConfig_t>();
     CHECK_THROWS_WITH(ThrowIfIncomplete(data),
                       Catch::Matchers::ContainsSubstring("stockpileRegistry"));
 

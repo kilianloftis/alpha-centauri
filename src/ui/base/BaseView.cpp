@@ -14,6 +14,8 @@
 #include "ui/NoticePopup.h"
 #include "ui/ScrapRefundText.h"
 #include "ui/world/UnitStackPanel.h"
+#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/buildings/MapOverlayChannelsConfig.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
@@ -42,7 +44,9 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     WindowLayout_t layout,
-    bool bEditable
+    bool bEditable,
+    const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
+    const MapOverlayChannelsConfig_t& rMapOverlayChannels
 )
     : IGameView(layout)
     , m_rBase(rBase)
@@ -89,6 +93,8 @@ BaseView::BaseView(
         m_rBase,
         m_snapshot,
         ResolveLayout(topPanel, bv.workableLayout),
+        rBaseSpriteSizes,
+        rMapOverlayChannels,
         std::move(onTileClick),
         std::move(onBaseClick)
     ));

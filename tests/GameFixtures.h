@@ -5,6 +5,10 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/buildings/BaseSpriteSizesConfigParser.h"
+#include "game/buildings/MapOverlayChannelsConfig.h"
+#include "game/buildings/MapOverlayChannelsConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/stockpiles/StockpileRegistry.h"
@@ -223,6 +227,11 @@ struct WorldFixture
 
         dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
         dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
+        dataContext.mapOverlayChannels = std::make_unique<ac::MapOverlayChannelsConfig_t>(
+            ac::MapOverlayChannelsConfigParser{}.ParseConfig(
+                FixturePath("map_overlay_channels.json")));
+        dataContext.baseSpriteSizes = std::make_unique<ac::BaseSpriteSizesConfig_t>(
+            ac::BaseSpriteSizesConfigParser{}.ParseConfig(FixturePath("base_sprite_sizes.json")));
         dataContext.stockpileRegistry = std::make_unique<ac::StockpileRegistry>();
         dataContext.stockpileRegistry->Load(FixturePath("stockpiles.json"));
         dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
