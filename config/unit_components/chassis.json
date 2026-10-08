@@ -56,7 +56,7 @@
     "unit_name": "Speeder",
     "type": "chassis",
     "domain": "land",
-    "required_tech": "test_tech_1",
+    "required_tech": "doctrine_mobility",
     "mineral_cost": 20,
     "effects": [
       {
@@ -103,7 +103,7 @@
     "unit_name": "Foil",
     "type": "chassis",
     "domain": "sea",
-    "required_tech": "test_tech_2",
+    "required_tech": "doctrine_flexibility",
     "mineral_cost": 30,
     "effects": [
       {
@@ -150,7 +150,7 @@
     "unit_name": "Hovertank",
     "type": "chassis",
     "domain": "land",
-    "required_tech": "test_tech_3",
+    "required_tech": "mind_machine_interface",
     "mineral_cost": 40,
     "effects": [
       {
@@ -265,7 +265,7 @@
     "unit_name": "Needlejet",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "test_tech_2",
+    "required_tech": "doctrine_air_power",
     "mineral_cost": 40,
     "effects": [
       {
@@ -335,7 +335,7 @@
     "unit_name": "Copter",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "test_tech_2",
+    "required_tech": "doctrine_air_power",
     "mineral_cost": 30,
     "effects": [
       {
@@ -398,7 +398,7 @@
     "unit_name": "Gravship",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "test_tech_3",
+    "required_tech": "graviton_theory",
     "mineral_cost": 80,
     "effects": [
       {

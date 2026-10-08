@@ -23,6 +23,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
+| `icon` | string | No | `""` | UI icon path under `assets/sprites/` (facility/project PCX extract). Omit or empty = text-only in base/research/production UI. |
 | `map_overlay` | object | No | absent | World-map art on the faction base: `{ "land": "…", "sea": "…" }`. Paths may use `{faction}` (sheet stem) and `{size}` (size stage). At least one of land/sea required. |
 | `map_overlay_channel` | string | No | `""` | Exclusive visual slot; must name a channel in `config/map_overlay_channels.json`. Requires `map_overlay`. |
 | `map_overlay_priority` | int | No | `0` | Within a channel, only the highest priority overlay draws. Requires `map_overlay`. |

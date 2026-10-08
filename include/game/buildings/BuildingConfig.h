@@ -46,6 +46,8 @@ struct BuildingConfig_t : public IConstructable
     // Optional partial override of kinds.building.default_scrap. `"formula": null` denies
     // scrap. Secret projects reject this.
     std::optional<ScrapOverride_t> scrap;
+    // Optional UI icon path (tech/building/project panels). Empty = text-only.
+    std::string icon;
     // Optional world-map sprite overlay (see map_overlay_channels.json for channel layers).
     std::optional<BuildingMapOverlay_t> mapOverlay;
     // Empty = unchanneled (always stacks). Non-empty must name a registered channel.

@@ -19,6 +19,8 @@ struct TechConfig_t
     std::string name;
     GameCategory_t category;
     std::vector<std::string> prerequisites;
+    // Optional UI icon path (research panels). Empty = text-only.
+    std::string icon;
     // Continuous bonuses while this tech is discovered (e.g. FacilityEnergyUpkeep,
     // commerce_rating +1 for economic techs). ThisTech-scoped TechCost modifiers apply when
     // this tech is the research target, not after discovery.

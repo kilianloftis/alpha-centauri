@@ -1,279 +1,34 @@
 [
   {
-    "id": "Nutrient_Bank",
-    "name": "Nutrient Bank",
-    "mineral_cost": 10,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": "2"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "nutrients",
-          "selector": {
-            "kind": "HasImprovement",
-            "improvement": "Farm"
-          },
-          "amount": 1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "nutrients",
-          "selector": {
-            "kind": "HasImprovement",
-            "improvement": "Condenser"
-          },
-          "amount": 2,
-          "op": "Add"
-        }
-      }
-    ],
-    "category": "grow",
-    "required_tech": "test_tech_1",
-    "upkeep": 2
-  },
-  {
-    "id": "Recycling_Tanks",
-    "name": "Recycling Tanks",
-    "mineral_cost": 5,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": "1"
-        }
-      }
-    ],
-    "category": "grow",
-    "required_tech": "test_tech_2",
-    "upkeep": 2
-  },
-  {
-    "id": "Sky_Hydroponics_Lab",
-    "name": "Sky Hydroponics Lab",
-    "mineral_cost": 12,
-    "allow_multiple": true,
-    "orbital": true,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "AllOwnerBases",
-        "parameters": {
-          "stat": "nutrients",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ],
-    "category": "grow",
-    "required_tech": "orbital_spaceflight",
-    "upkeep": 2
-  },
-  {
-    "id": "Orbital_Power_Transmitter",
-    "name": "Orbital Power Transmitter",
-    "mineral_cost": 12,
-    "allow_multiple": true,
-    "orbital": true,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "AllOwnerBases",
-        "parameters": {
-          "stat": "energy",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
-    ],
-    "category": "discover",
-    "required_tech": "orbital_spaceflight",
-    "upkeep": 2
-  },
-  {
-    "id": "Nessus_Mining_Station",
-    "name": "Nessus Mining Station",
-    "mineral_cost": 12,
-    "allow_multiple": true,
-    "orbital": true,
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "AllOwnerBases",
-        "parameters": {
-          "stat": "minerals",
-          "amount": 1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "AllOwnerBases",
-        "parameters": {
-          "stat": "eco_mineral_offset",
-          "amount": -1,
-          "op": "Add"
-        }
-      }
-    ],
-    "category": "build",
-    "required_tech": "orbital_spaceflight",
-    "upkeep": 2
-  },
-  {
-    "id": "Orbital_Defense_Pod",
-    "name": "Orbital Defense Pod",
-    "mineral_cost": 12,
-    "allow_multiple": true,
-    "orbital": true,
-    "effects": [
-      {
-        "type": "OrbitalAttack",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "chance": 50,
-          "cooldown_turns": 1,
-          "chance_of_destruction_on_fail": 50
-        }
-      },
-      {
-        "type": "Intercept",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "chance": 50,
-          "cooldown_turns": 1,
-          "chance_of_destruction_on_fail": 0
-        },
-        "condition": {
-          "kind": "AllOf",
-          "conditions": [
-            {
-              "kind": "AttackerDomain",
-              "domains": [
-                "orbital"
-              ]
-            },
-            {
-              "kind": "TargetTileHas",
-              "value": "Base"
-            }
-          ]
-        }
-      }
-    ],
+    "id": "Headquarters",
+    "name": "Headquarters",
+    "mineral_cost": 0,
+    "upkeep": 0,
+    "secret_project": false,
     "category": "conquer",
-    "required_tech": "advanced_spaceflight",
-    "upkeep": 2
-  },
-  {
-    "id": "Aerospace_Complex",
-    "name": "Aerospace Complex",
-    "mineral_cost": 12,
-    "on_unit_produced_effects": [
-      {
-        "type": "GrantXp",
-        "parameters": {
-          "amount": 2,
-          "op": "Add"
-        },
-        "condition": {
-          "kind": "AllOf",
-          "conditions": [
-            { "kind": "SubjectDomain", "domain": "air" },
-            { "kind": "IsNativeLife", "value": false }
-          ]
-        }
-      }
-    ],
-    "category": "conquer",
-    "required_tech": "test_tech_1",
-    "upkeep": 2
-  },
-  {
-    "id": "Skunkworks",
-    "name": "Skunkworks",
-    "mineral_cost": 8,
+    "icon": "assets/sprites/facilities/fac000.png",
     "effects": [
       {
-        "type": "StatModifier",
+        "type": "RuleFlag",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "prototype_surcharge_scale",
-          "amount": 0,
-          "op": "MultiplyGeometric"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "retool_penalty_scale",
-          "amount": 0,
-          "op": "MultiplyGeometric"
+          "flag": "headquarters"
         }
       }
     ],
-    "category": "conquer",
-    "required_tech": "test_tech_1",
-    "upkeep": 1
-  },
-  {
-    "id": "Command_Center",
-    "name": "Command Center",
-    "mineral_cost": 10,
-    "on_unit_produced_effects": [
-      {
-        "type": "GrantXp",
-        "parameters": {
-          "amount": 2,
-          "op": "Add"
-        },
-        "condition": {
-          "kind": "AllOf",
-          "conditions": [
-            { "kind": "SubjectDomain", "domain": "land" },
-            { "kind": "IsNativeLife", "value": false }
-          ]
-        }
-      }
-    ],
-    "category": "conquer",
-    "required_tech": "test_tech_1",
-    "upkeep": 1
-  },
-  {
-    "id": "Command_Nexus",
-    "name": "Command Nexus",
-    "mineral_cost": 30,
-    "secret_project": true,
-    "effects": [
-      {
-        "type": "GrantBuilding",
-        "scope": "AllOwnerBases",
-        "parameters": {
-          "building_id": "Command_Center"
-        }
-      }
-    ],
-    "category": "conquer"
+    "scrap": {
+      "formula": null
+    }
   },
   {
     "id": "Childrens_Creche",
     "name": "Children's Creche",
     "mineral_cost": 8,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "ethical_calculus",
+    "icon": "assets/sprites/facilities/fac001.png",
     "effects": [
       {
         "type": "RuleFlag",
@@ -306,54 +61,37 @@
           "op": "Add"
         }
       }
-    ],
-    "category": "build",
-    "required_tech": "test_tech_1",
-    "upkeep": 2
+    ]
   },
   {
-    "id": "Headquarters",
-    "name": "Headquarters",
-    "mineral_cost": 0,
-    "effects": [
-      {
-        "type": "RuleFlag",
-        "scope": "ThisBase",
-        "parameters": {
-          "flag": "headquarters"
-        }
-      }
-    ],
-    "scrap": {
-      "formula": null
-    },
-    "category": "conquer",
-    "required_tech": "",
-    "upkeep": 0
-  },
-  {
-    "id": "Covert_Ops_Center",
-    "name": "Covert Ops Center",
-    "mineral_cost": 12,
+    "id": "Recycling_Tanks",
+    "name": "Recycling Tanks",
+    "mineral_cost": 5,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "grow",
+    "required_tech": "biogenetics",
+    "icon": "assets/sprites/facilities/fac002.png",
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "probe_defense",
-          "amount": 2,
-          "op": "Add"
+          "stat": "nutrients",
+          "amount": "1"
         }
       }
-    ],
-    "category": "conquer",
-    "required_tech": "planetary_networks",
-    "upkeep": 2
+    ]
   },
   {
     "id": "Perimeter_Defense",
     "name": "Perimeter Defense",
     "mineral_cost": 10,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "doctrine_loyalty",
+    "icon": "assets/sprites/facilities/fac003.png",
     "effects": [
       {
         "type": "StatModifier",
@@ -365,9 +103,6 @@
         }
       }
     ],
-    "category": "conquer",
-    "required_tech": "test_tech_1",
-    "upkeep": 2,
     "map_overlay": {
       "land": "assets/factions/{faction}/bases/overlays/perimeter_size{size}.png",
       "sea": "assets/factions/{faction}/bases/overlays/water_perimeter_size{size}.png"
@@ -379,9 +114,11 @@
     "id": "Tachyon_Field",
     "name": "Tachyon Field",
     "mineral_cost": 12,
-    "category": "conquer",
-    "required_tech": "test_tech_1",
     "upkeep": 2,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "probability_mechanics",
+    "icon": "assets/sprites/facilities/fac004.png",
     "map_overlay": {
       "land": "assets/factions/{faction}/bases/overlays/tachyon_size{size}.png",
       "sea": "assets/factions/{faction}/bases/overlays/water_tachyon_size{size}.png"
@@ -393,9 +130,11 @@
     "id": "Recreation_Commons",
     "name": "Recreation Commons",
     "mineral_cost": 4,
-    "category": "build",
-    "required_tech": "",
     "upkeep": 1,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "social_psych",
+    "icon": "assets/sprites/facilities/fac005.png",
     "effects": [
       {
         "type": "StatModifier",
@@ -409,18 +148,318 @@
     ]
   },
   {
+    "id": "Energy_Bank",
+    "name": "Energy Bank",
+    "mineral_cost": 80,
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "industrial_economics",
+    "icon": "assets/sprites/facilities/fac006.png"
+  },
+  {
     "id": "Network_Node",
     "name": "Network Node",
     "mineral_cost": 20,
-    "upkeep": 1
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "information_networks",
+    "icon": "assets/sprites/facilities/fac007.png"
+  },
+  {
+    "id": "Biology_Lab",
+    "name": "Biology Lab",
+    "mineral_cost": 60,
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "centauri_empathy",
+    "icon": "assets/sprites/facilities/fac008.png"
+  },
+  {
+    "id": "Skunkworks",
+    "name": "Skunkworks",
+    "mineral_cost": 8,
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "advanced_subatomic_theory",
+    "icon": "assets/sprites/facilities/fac009.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "prototype_surcharge_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "retool_penalty_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Hologram_Theatre",
+    "name": "Hologram Theatre",
+    "mineral_cost": 60,
+    "upkeep": 3,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "planetary_networks",
+    "icon": "assets/sprites/facilities/fac010.png"
+  },
+  {
+    "id": "Paradise_Garden",
+    "name": "Paradise Garden",
+    "mineral_cost": 120,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "sentient_econometrics",
+    "icon": "assets/sprites/facilities/fac011.png"
+  },
+  {
+    "id": "Tree_Farm",
+    "name": "Tree Farm",
+    "mineral_cost": 120,
+    "upkeep": 3,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "environmental_economics",
+    "icon": "assets/sprites/facilities/fac012.png"
+  },
+  {
+    "id": "Hybrid_Forest",
+    "name": "Hybrid Forest",
+    "mineral_cost": 240,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "planetary_economics",
+    "icon": "assets/sprites/facilities/fac013.png"
+  },
+  {
+    "id": "Fusion_Lab",
+    "name": "Fusion Lab",
+    "mineral_cost": 120,
+    "upkeep": 3,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "fusion_power",
+    "icon": "assets/sprites/facilities/fac014.png"
+  },
+  {
+    "id": "Quantum_Lab",
+    "name": "Quantum Lab",
+    "mineral_cost": 240,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "quantum_power",
+    "icon": "assets/sprites/facilities/fac015.png"
+  },
+  {
+    "id": "Research_Hospital",
+    "name": "Research Hospital",
+    "mineral_cost": 120,
+    "upkeep": 3,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "gene_splicing",
+    "icon": "assets/sprites/facilities/fac016.png"
+  },
+  {
+    "id": "Nanohospital",
+    "name": "Nanohospital",
+    "mineral_cost": 240,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "homo_superior",
+    "icon": "assets/sprites/facilities/fac017.png"
+  },
+  {
+    "id": "Robotic_Assembly_Plant",
+    "name": "Robotic Assembly Plant",
+    "mineral_cost": 200,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "industrial_nanorobotics",
+    "icon": "assets/sprites/facilities/fac018.png"
+  },
+  {
+    "id": "Nanoreplicator",
+    "name": "Nanoreplicator",
+    "mineral_cost": 320,
+    "upkeep": 6,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "matter_editation",
+    "icon": "assets/sprites/facilities/fac019.png"
+  },
+  {
+    "id": "Quantum_Converter",
+    "name": "Quantum Converter",
+    "mineral_cost": 200,
+    "upkeep": 5,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "quantum_machinery",
+    "icon": "assets/sprites/facilities/fac020.png"
+  },
+  {
+    "id": "Genejack_Factory",
+    "name": "Genejack Factory",
+    "mineral_cost": 100,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "retroviral_engineering",
+    "icon": "assets/sprites/facilities/fac021.png"
+  },
+  {
+    "id": "Punishment_Sphere",
+    "name": "Punishment Sphere",
+    "mineral_cost": 100,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "advanced_military_algorithms",
+    "icon": "assets/sprites/facilities/fac022.png"
+  },
+  {
+    "id": "Hab_Complex",
+    "name": "Hab Complex",
+    "mineral_cost": 80,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "industrial_automation",
+    "icon": "assets/sprites/facilities/fac023.png"
+  },
+  {
+    "id": "Habitation_Dome",
+    "name": "Habitation Dome",
+    "mineral_cost": 160,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "super_tensile_solids",
+    "icon": "assets/sprites/facilities/fac024.png"
+  },
+  {
+    "id": "Pressure_Dome",
+    "name": "Pressure Dome",
+    "mineral_cost": 80,
+    "upkeep": 0,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "doctrine_flexibility",
+    "icon": "assets/sprites/facilities/fac025.png"
+  },
+  {
+    "id": "Command_Center",
+    "name": "Command Center",
+    "mineral_cost": 10,
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "doctrine_mobility",
+    "icon": "assets/sprites/facilities/fac026.png",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 2,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectDomain",
+              "domain": "land"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "Naval_Yard",
+    "name": "Naval Yard",
+    "mineral_cost": 80,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "doctrine_initiative",
+    "icon": "assets/sprites/facilities/fac027.png"
+  },
+  {
+    "id": "Aerospace_Complex",
+    "name": "Aerospace Complex",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "doctrine_air_power",
+    "icon": "assets/sprites/facilities/fac028.png",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 2,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectDomain",
+              "domain": "air"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "Bioenhancement_Center",
+    "name": "Bioenhancement Center",
+    "mineral_cost": 100,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "neural_grafting",
+    "icon": "assets/sprites/facilities/fac029.png"
   },
   {
     "id": "Centauri_Preserve",
     "name": "Centauri Preserve",
     "mineral_cost": 100,
     "upkeep": 1,
+    "secret_project": false,
     "category": "grow",
     "required_tech": "centauri_meditation",
+    "icon": "assets/sprites/facilities/fac030.png",
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -430,6 +469,241 @@
         },
         "condition": {
           "kind": "IsNativeLife"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Temple_Of_Planet",
+    "name": "Temple of Planet",
+    "mineral_cost": 200,
+    "upkeep": 3,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "secrets_of_alpha_centauri",
+    "icon": "assets/sprites/facilities/fac031.png"
+  },
+  {
+    "id": "Psi_Gate",
+    "name": "Psi Gate",
+    "mineral_cost": 100,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "matter_transmission",
+    "icon": "assets/sprites/facilities/fac032.png"
+  },
+  {
+    "id": "Covert_Ops_Center",
+    "name": "Covert Ops Center",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "pre_sentient_algorithms",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "probe_defense",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Brood_Pit",
+    "name": "Brood Pit",
+    "mineral_cost": 80,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "centauri_genetics",
+    "icon": "assets/sprites/facilities/xfac034.png"
+  },
+  {
+    "id": "Aquafarm",
+    "name": "Aquafarm",
+    "mineral_cost": 80,
+    "upkeep": 1,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "progenitor_psych",
+    "icon": "assets/sprites/facilities/xfac035.png"
+  },
+  {
+    "id": "Subsea_Trunkline",
+    "name": "Subsea Trunkline",
+    "mineral_cost": 120,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "planetary_economics",
+    "icon": "assets/sprites/facilities/xfac036.png"
+  },
+  {
+    "id": "Thermocline_Transducer",
+    "name": "Thermocline Transducer",
+    "mineral_cost": 80,
+    "upkeep": 0,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "adaptive_economics",
+    "icon": "assets/sprites/facilities/xfac037.png"
+  },
+  {
+    "id": "Flechette_Defense_System",
+    "name": "Flechette Defense System",
+    "mineral_cost": 120,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "n_space_compression",
+    "icon": "assets/sprites/facilities/xfac038.png"
+  },
+  {
+    "id": "Subspace_Generator",
+    "name": "Subspace Generator",
+    "mineral_cost": 600,
+    "upkeep": 5,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "singularity_mechanics",
+    "icon": "assets/sprites/facilities/xfac039.png"
+  },
+  {
+    "id": "Geosynchronous_Survey_Pod",
+    "name": "Geosynchronous Survey Pod",
+    "mineral_cost": 160,
+    "upkeep": 4,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "n_space_compression",
+    "icon": "assets/sprites/facilities/xfac040.png"
+  },
+  {
+    "id": "Sky_Hydroponics_Lab",
+    "name": "Sky Hydroponics Lab",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "grow",
+    "required_tech": "orbital_spaceflight",
+    "icon": "assets/sprites/facilities/fac033.png",
+    "orbital": true,
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Nessus_Mining_Station",
+    "name": "Nessus Mining Station",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "build",
+    "required_tech": "self_aware_machines",
+    "icon": "assets/sprites/facilities/fac034.png",
+    "orbital": true,
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "eco_mineral_offset",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Orbital_Power_Transmitter",
+    "name": "Orbital Power Transmitter",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "discover",
+    "required_tech": "advanced_spaceflight",
+    "icon": "assets/sprites/facilities/fac035.png",
+    "orbital": true,
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Orbital_Defense_Pod",
+    "name": "Orbital Defense Pod",
+    "mineral_cost": 12,
+    "upkeep": 2,
+    "secret_project": false,
+    "category": "conquer",
+    "required_tech": "self_aware_machines",
+    "icon": "assets/sprites/facilities/fac036.png",
+    "orbital": true,
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 50,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 50
+        }
+      },
+      {
+        "type": "Intercept",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "chance": 50,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 0
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ]

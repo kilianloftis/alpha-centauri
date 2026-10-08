@@ -1,32 +1,512 @@
 [
   {
-    "id": "test_tech_1",
-    "name": "Test Tech 1",
-    "category": "build"
-  },
-  {
-    "id": "test_tech_2",
-    "name": "Test Tech 2",
-    "category": "grow"
-  },
-  {
-    "id": "test_tech_3",
-    "name": "Advanced Tech",
+    "id": "biogenetics",
+    "name": "Biogenetics",
     "category": "discover",
+    "icon": "assets/sprites/techs/tech000.png"
+  },
+  {
+    "id": "industrial_base",
+    "name": "Industrial Base",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech001.png"
+  },
+  {
+    "id": "information_networks",
+    "name": "Information Networks",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech002.png"
+  },
+  {
+    "id": "applied_physics",
+    "name": "Applied Physics",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech003.png"
+  },
+  {
+    "id": "social_psych",
+    "name": "Social Psych",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech004.png"
+  },
+  {
+    "id": "doctrine_mobility",
+    "name": "Doctrine: Mobility",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech005.png"
+  },
+  {
+    "id": "centauri_ecology",
+    "name": "Centauri Ecology",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech006.png"
+  },
+  {
+    "id": "superconductor",
+    "name": "Superconductor",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech007.png",
     "prerequisites": [
-      "test_tech_1",
-      "test_tech_2"
+      "optical_computers",
+      "industrial_base"
+    ]
+  },
+  {
+    "id": "nonlinear_mathematics",
+    "name": "Nonlinear Mathematics",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech008.png",
+    "prerequisites": [
+      "applied_physics",
+      "information_networks"
+    ]
+  },
+  {
+    "id": "applied_relativity",
+    "name": "Applied Relativity",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech009.png",
+    "prerequisites": [
+      "superconductor",
+      "advanced_subatomic_theory"
+    ]
+  },
+  {
+    "id": "fusion_power",
+    "name": "Fusion Power",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech010.png",
+    "prerequisites": [
+      "pre_sentient_algorithms",
+      "superconductor"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "silksteel_alloys",
+    "name": "Silksteel Alloys",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech011.png",
+    "prerequisites": [
+      "advanced_subatomic_theory",
+      "industrial_automation"
+    ]
+  },
+  {
+    "id": "advanced_subatomic_theory",
+    "name": "Advanced Subatomic Theory",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech012.png",
+    "prerequisites": [
+      "high_energy_chemistry",
+      "polymorphic_software"
+    ]
+  },
+  {
+    "id": "high_energy_chemistry",
+    "name": "High Energy Chemistry",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech013.png",
+    "prerequisites": [
+      "industrial_base",
+      "applied_physics"
+    ]
+  },
+  {
+    "id": "frictionless_surfaces",
+    "name": "Frictionless Surfaces",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech014.png",
+    "prerequisites": [
+      "unified_field_theory",
+      "industrial_nanorobotics"
+    ]
+  },
+  {
+    "id": "nanometallurgy",
+    "name": "Nanometallurgy",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech015.png",
+    "prerequisites": [
+      "probability_mechanics",
+      "doctrine_initiative"
+    ]
+  },
+  {
+    "id": "superstring_theory",
+    "name": "Superstring Theory",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech016.png",
+    "prerequisites": [
+      "nonlinear_mathematics",
+      "cyberethics"
+    ]
+  },
+  {
+    "id": "advanced_military_algorithms",
+    "name": "Advanced Military Algorithms",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech017.png",
+    "prerequisites": [
+      "adaptive_doctrine",
+      "optical_computers"
+    ]
+  },
+  {
+    "id": "monopole_magnets",
+    "name": "Monopole Magnets",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech018.png",
+    "prerequisites": [
+      "superstring_theory",
+      "silksteel_alloys"
+    ]
+  },
+  {
+    "id": "matter_compression",
+    "name": "Matter Compression",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech019.png",
+    "prerequisites": [
+      "nanometallurgy",
+      "nanominiaturization"
+    ]
+  },
+  {
+    "id": "unified_field_theory",
+    "name": "Unified Field Theory",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech020.png",
+    "prerequisites": [
+      "monopole_magnets",
+      "applied_relativity"
+    ]
+  },
+  {
+    "id": "graviton_theory",
+    "name": "Graviton Theory",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech021.png",
+    "prerequisites": [
+      "quantum_machinery",
+      "mind_machine_interface"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "orbital_insertion"
+        }
+      }
+    ]
+  },
+  {
+    "id": "polymorphic_software",
+    "name": "Polymorphic Software",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech022.png",
+    "prerequisites": [
+      "industrial_base",
+      "information_networks"
+    ]
+  },
+  {
+    "id": "applied_gravitonics",
+    "name": "Applied Gravitonics",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech023.png",
+    "prerequisites": [
+      "graviton_theory",
+      "digital_sentience"
+    ]
+  },
+  {
+    "id": "quantum_power",
+    "name": "Quantum Power",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech025.png",
+    "prerequisites": [
+      "frictionless_surfaces",
+      "planetary_economics"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "singularity_mechanics",
+    "name": "Singularity Mechanics",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech026.png",
+    "prerequisites": [
+      "secrets_of_creation",
+      "self_aware_machines"
+    ]
+  },
+  {
+    "id": "controlled_singularity",
+    "name": "Controlled Singularity",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech027.png",
+    "prerequisites": [
+      "singularity_mechanics",
+      "applied_gravitonics"
+    ]
+  },
+  {
+    "id": "temporal_mechanics",
+    "name": "Temporal Mechanics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech028.png",
+    "prerequisites": [
+      "eudaimonia",
+      "matter_transmission"
+    ]
+  },
+  {
+    "id": "probability_mechanics",
+    "name": "Probability Mechanics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech029.png",
+    "prerequisites": [
+      "photon_wave_mechanics",
+      "pre_sentient_algorithms"
+    ]
+  },
+  {
+    "id": "pre_sentient_algorithms",
+    "name": "Pre-Sentient Algorithms",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech030.png",
+    "prerequisites": [
+      "advanced_military_algorithms",
+      "cyberethics"
+    ]
+  },
+  {
+    "id": "super_tensile_solids",
+    "name": "Super Tensile Solids",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech031.png",
+    "prerequisites": [
+      "matter_compression",
+      "advanced_spaceflight"
+    ]
+  },
+  {
+    "id": "planetary_networks",
+    "name": "Planetary Networks",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech032.png",
+    "prerequisites": [
+      "information_networks"
+    ]
+  },
+  {
+    "id": "digital_sentience",
+    "name": "Digital Sentience",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech033.png",
+    "prerequisites": [
+      "industrial_nanorobotics",
+      "mind_machine_interface"
+    ]
+  },
+  {
+    "id": "self_aware_machines",
+    "name": "Self-Aware Machines",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech034.png",
+    "prerequisites": [
+      "n_space_compression",
+      "digital_sentience"
+    ]
+  },
+  {
+    "id": "doctrine_initiative",
+    "name": "Doctrine: Initiative",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech035.png",
+    "prerequisites": [
+      "doctrine_flexibility",
+      "industrial_automation"
+    ]
+  },
+  {
+    "id": "doctrine_flexibility",
+    "name": "Doctrine: Flexibility",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech036.png",
+    "prerequisites": [
+      "doctrine_mobility"
+    ]
+  },
+  {
+    "id": "intellectual_integrity",
+    "name": "Intellectual Integrity",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech037.png",
+    "prerequisites": [
+      "ethical_calculus",
+      "doctrine_loyalty"
+    ]
+  },
+  {
+    "id": "synthetic_fossil_fuels",
+    "name": "Synthetic Fossil Fuels",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech038.png",
+    "prerequisites": [
+      "high_energy_chemistry",
+      "gene_splicing"
+    ]
+  },
+  {
+    "id": "doctrine_air_power",
+    "name": "Doctrine: Air Power",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech039.png",
+    "prerequisites": [
+      "synthetic_fossil_fuels",
+      "doctrine_flexibility"
+    ]
+  },
+  {
+    "id": "photon_wave_mechanics",
+    "name": "Photon/Wave Mechanics",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech040.png",
+    "prerequisites": [
+      "applied_relativity",
+      "silksteel_alloys"
+    ]
+  },
+  {
+    "id": "mind_machine_interface",
+    "name": "Mind/Machine Interface",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech041.png",
+    "prerequisites": [
+      "doctrine_air_power",
+      "neural_grafting"
+    ]
+  },
+  {
+    "id": "nanominiaturization",
+    "name": "Nanominiaturization",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech042.png",
+    "prerequisites": [
+      "monopole_magnets",
+      "organic_superlubricant"
+    ]
+  },
+  {
+    "id": "doctrine_loyalty",
+    "name": "Doctrine: Loyalty",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech043.png",
+    "prerequisites": [
+      "doctrine_mobility",
+      "social_psych"
     ]
   },
   {
     "id": "ethical_calculus",
     "name": "Ethical Calculus",
-    "category": "grow"
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech044.png",
+    "prerequisites": [
+      "social_psych"
+    ]
+  },
+  {
+    "id": "industrial_economics",
+    "name": "Industrial Economics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech045.png",
+    "prerequisites": [
+      "industrial_base"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_automation",
+    "name": "Industrial Automation",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech046.png",
+    "prerequisites": [
+      "industrial_economics",
+      "planetary_networks"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "centauri_meditation",
+    "name": "Centauri Meditation",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech047.png",
+    "prerequisites": [
+      "ecological_engineering",
+      "centauri_empathy"
+    ]
   },
   {
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
+    "icon": "assets/sprites/techs/tech048.png",
+    "prerequisites": [
+      "social_psych",
+      "biogenetics"
+    ],
     "on_discover_effects": [
       {
         "type": "GrantTech",
@@ -41,133 +521,119 @@
     ]
   },
   {
-    "id": "planetary_networks",
-    "name": "Planetary Networks",
-    "category": "discover"
+    "id": "gene_splicing",
+    "name": "Gene Splicing",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech049.png",
+    "prerequisites": [
+      "biogenetics",
+      "ethical_calculus"
+    ]
   },
   {
-    "id": "centauri_empathy",
-    "name": "Centauri Empathy",
-    "category": "grow"
+    "id": "bio_engineering",
+    "name": "Bio-Engineering",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech050.png",
+    "prerequisites": [
+      "gene_splicing",
+      "neural_grafting"
+    ]
+  },
+  {
+    "id": "biomachinery",
+    "name": "Biomachinery",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech051.png",
+    "prerequisites": [
+      "mind_machine_interface",
+      "retroviral_engineering"
+    ]
+  },
+  {
+    "id": "neural_grafting",
+    "name": "Neural Grafting",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech052.png",
+    "prerequisites": [
+      "secrets_of_the_human_brain",
+      "industrial_automation"
+    ]
   },
   {
     "id": "cyberethics",
     "name": "Cyberethics",
-    "category": "build"
-  },
-  {
-    "id": "industrial_automation",
-    "name": "Industrial Automation",
     "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "stat": "commerce_rating",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
+    "icon": "assets/sprites/techs/tech053.png",
+    "prerequisites": [
+      "planetary_networks",
+      "intellectual_integrity"
     ]
   },
   {
     "id": "eudaimonia",
     "name": "Eudaimonia",
-    "category": "grow"
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech054.png",
+    "prerequisites": [
+      "sentient_econometrics",
+      "the_will_to_power"
+    ]
   },
   {
     "id": "the_will_to_power",
     "name": "The Will to Power",
-    "category": "grow"
-  },
-  {
-    "id": "centauri_meditation",
-    "name": "Centauri Meditation",
-    "category": "grow"
-  },
-  {
-    "id": "fusion_power",
-    "name": "Fusion Power",
-    "category": "discover",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "stat": "facility_energy_upkeep",
-          "amount": 1,
-          "op": "Add"
-        },
-        "buildingFilter": {
-          "kind": "BuildingId",
-          "building": "Command_Center"
-        }
-      }
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech055.png",
+    "prerequisites": [
+      "homo_superior",
+      "centauri_psi"
     ]
   },
   {
-    "id": "quantum_power",
-    "name": "Quantum Power",
-    "category": "discover",
+    "id": "threshold_of_transcendence",
+    "name": "Threshold of Transcendence",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech056.png",
     "prerequisites": [
-      "fusion_power"
+      "secrets_of_the_manifolds",
+      "temporal_mechanics"
+    ]
+  },
+  {
+    "id": "matter_transmission",
+    "name": "Matter Transmission",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech057.png",
+    "prerequisites": [
+      "matter_editation",
+      "secrets_of_alpha_centauri"
+    ]
+  },
+  {
+    "id": "centauri_empathy",
+    "name": "Centauri Empathy",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech058.png",
+    "prerequisites": [
+      "secrets_of_the_human_brain",
+      "centauri_ecology"
+    ]
+  },
+  {
+    "id": "environmental_economics",
+    "name": "Environmental Economics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech059.png",
+    "prerequisites": [
+      "industrial_economics",
+      "ecological_engineering"
     ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "FactionGlobal",
         "parameters": {
-          "stat": "facility_energy_upkeep",
-          "amount": 1,
-          "op": "Add"
-        },
-        "buildingFilter": {
-          "kind": "BuildingId",
-          "building": "Command_Center"
-        }
-      }
-    ]
-  },
-  {
-    "id": "mind_machine_interface",
-    "name": "Mind/Machine Interface",
-    "category": "conquer"
-  },
-  {
-    "id": "secrets_of_alpha_centauri",
-    "name": "Secrets of Alpha Centauri",
-    "category": "discover"
-  },
-  {
-    "id": "doctrine_air_power",
-    "name": "Doctrine: Air Power",
-    "category": "conquer"
-  },
-  {
-    "id": "gene_splicing",
-    "name": "Gene Splicing",
-    "category": "discover"
-  },
-  {
-    "id": "ecological_engineering",
-    "name": "Ecological Engineering",
-    "category": "build"
-  },
-  {
-    "id": "advanced_military_algorithms",
-    "name": "Advanced Military Algorithms",
-    "category": "conquer"
-  },
-  {
-    "id": "environmental_economics",
-    "name": "Environmental Economics",
-    "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
           "stat": "commerce_rating",
           "amount": 1,
           "op": "Add"
@@ -176,27 +642,24 @@
     ]
   },
   {
-    "id": "monopole_magnets",
-    "name": "Monopole Magnets",
-    "category": "discover"
-  },
-  {
-    "id": "advanced_ecological_engineering",
-    "name": "Advanced Ecological Engineering",
+    "id": "ecological_engineering",
+    "name": "Ecological Engineering",
     "category": "build",
+    "icon": "assets/sprites/techs/tech060.png",
     "prerequisites": [
-      "ecological_engineering"
+      "centauri_ecology",
+      "gene_splicing"
     ]
-  },
-  {
-    "id": "orbital_spaceflight",
-    "name": "Orbital Spaceflight",
-    "category": "discover"
   },
   {
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
+    "icon": "assets/sprites/techs/tech061.png",
+    "prerequisites": [
+      "adaptive_economics",
+      "intellectual_integrity"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -210,81 +673,277 @@
     ]
   },
   {
-    "id": "industrial_economics",
-    "name": "Industrial Economics",
+    "id": "advanced_ecological_engineering",
+    "name": "Adv. Ecological Engineering",
     "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "stat": "commerce_rating",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
+    "icon": "assets/sprites/techs/tech062.png",
+    "prerequisites": [
+      "fusion_power",
+      "environmental_economics"
     ]
   },
   {
-    "id": "industrial_nanorobotics",
-    "name": "Industrial Nanorobotics",
-    "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "stat": "commerce_rating",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
+    "id": "centauri_psi",
+    "name": "Centauri Psi",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech063.png",
+    "prerequisites": [
+      "centauri_genetics",
+      "advanced_ecological_engineering"
     ]
   },
   {
-    "id": "sentient_econometrics",
-    "name": "Sentient Econometrics",
-    "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "stat": "commerce_rating",
-          "amount": 1,
-          "op": "Add"
-        }
-      }
+    "id": "secrets_of_alpha_centauri",
+    "name": "Secrets of Alpha Centauri",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech064.png",
+    "prerequisites": [
+      "centauri_psi",
+      "sentient_econometrics"
+    ]
+  },
+  {
+    "id": "secrets_of_creation",
+    "name": "Secrets of Creation",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech065.png",
+    "prerequisites": [
+      "unified_field_theory",
+      "the_will_to_power"
     ]
   },
   {
     "id": "advanced_spaceflight",
     "name": "Advanced Spaceflight",
     "category": "discover",
+    "icon": "assets/sprites/techs/tech066.png",
     "prerequisites": [
-      "orbital_spaceflight"
+      "orbital_spaceflight",
+      "organic_superlubricant"
     ]
   },
   {
-    "id": "intellectual_integrity",
-    "name": "Intellectual Integrity",
-    "category": "discover"
+    "id": "homo_superior",
+    "name": "Homo Superior",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech067.png",
+    "prerequisites": [
+      "biomachinery",
+      "doctrine_initiative"
+    ]
   },
   {
-    "id": "graviton_theory",
-    "name": "Graviton Theory",
-    "category": "discover",
+    "id": "organic_superlubricant",
+    "name": "Organic Superlubricant",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech068.png",
     "prerequisites": [
-      "advanced_spaceflight"
+      "fusion_power",
+      "synthetic_fossil_fuels"
+    ]
+  },
+  {
+    "id": "quantum_machinery",
+    "name": "Quantum Machinery",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech069.png",
+    "prerequisites": [
+      "quantum_power",
+      "nanometallurgy"
+    ]
+  },
+  {
+    "id": "matter_editation",
+    "name": "Matter Editation",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech071.png",
+    "prerequisites": [
+      "self_aware_machines",
+      "super_tensile_solids"
+    ]
+  },
+  {
+    "id": "optical_computers",
+    "name": "Optical Computers",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech072.png",
+    "prerequisites": [
+      "applied_physics",
+      "polymorphic_software"
+    ]
+  },
+  {
+    "id": "industrial_nanorobotics",
+    "name": "Industrial Nanorobotics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech073.png",
+    "prerequisites": [
+      "nanominiaturization",
+      "industrial_automation"
     ],
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "FactionGlobal",
         "parameters": {
-          "flag": "orbital_insertion"
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
         }
       }
+    ]
+  },
+  {
+    "id": "centauri_genetics",
+    "name": "Centauri Genetics",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech074.png",
+    "prerequisites": [
+      "centauri_meditation",
+      "retroviral_engineering"
+    ]
+  },
+  {
+    "id": "sentient_econometrics",
+    "name": "Sentient Econometrics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech075.png",
+    "prerequisites": [
+      "planetary_economics",
+      "digital_sentience"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "retroviral_engineering",
+    "name": "Retroviral Engineering",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech076.png",
+    "prerequisites": [
+      "bio_engineering",
+      "advanced_military_algorithms"
+    ]
+  },
+  {
+    "id": "orbital_spaceflight",
+    "name": "Orbital Spaceflight",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech077.png",
+    "prerequisites": [
+      "doctrine_air_power",
+      "pre_sentient_algorithms"
+    ]
+  },
+  {
+    "id": "progenitor_psych",
+    "name": "Progenitor Psych",
+    "category": "grow",
+    "icon": "assets/sprites/techs/tech078.png"
+  },
+  {
+    "id": "field_modulation",
+    "name": "Field Modulation",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech079.png",
+    "prerequisites": [
+      "progenitor_psych",
+      "centauri_ecology"
+    ]
+  },
+  {
+    "id": "adaptive_doctrine",
+    "name": "Adaptive Doctrine",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech080.png",
+    "prerequisites": [
+      "polymorphic_software",
+      "doctrine_flexibility"
+    ]
+  },
+  {
+    "id": "adaptive_economics",
+    "name": "Adaptive Economics",
+    "category": "build",
+    "icon": "assets/sprites/techs/tech081.png",
+    "prerequisites": [
+      "progenitor_psych",
+      "industrial_economics"
+    ]
+  },
+  {
+    "id": "bioadaptive_resonance",
+    "name": "Bioadaptive Resonance",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech082.png",
+    "prerequisites": [
+      "field_modulation",
+      "centauri_empathy"
+    ]
+  },
+  {
+    "id": "sentient_resonance",
+    "name": "Sentient Resonance",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech083.png",
+    "prerequisites": [
+      "bioadaptive_resonance",
+      "centauri_psi"
+    ]
+  },
+  {
+    "id": "secrets_of_the_manifolds",
+    "name": "Secrets of the Manifolds",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech084.png",
+    "prerequisites": [
+      "sentient_resonance",
+      "secrets_of_alpha_centauri"
+    ]
+  },
+  {
+    "id": "n_space_compression",
+    "name": "N-Space Compression",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech085.png",
+    "prerequisites": [
+      "orbital_spaceflight",
+      "biomachinery"
+    ]
+  },
+  {
+    "id": "string_resonance",
+    "name": "String Resonance",
+    "category": "conquer",
+    "icon": "assets/sprites/techs/tech086.png",
+    "prerequisites": [
+      "secrets_of_the_manifolds",
+      "controlled_singularity"
+    ]
+  },
+  {
+    "id": "user_technology",
+    "name": "User Technology",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech087.png"
+  },
+  {
+    "id": "transcendent_thought",
+    "name": "Transcendent Thought",
+    "category": "discover",
+    "icon": "assets/sprites/techs/tech088.png",
+    "prerequisites": [
+      "threshold_of_transcendence",
+      "controlled_singularity"
     ]
   }
 ]

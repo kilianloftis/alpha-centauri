@@ -52,7 +52,7 @@ const std::vector<std::string>& KnownBuildingKeys_()
     static const std::vector<std::string> keys = {
         "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
         "allow_multiple", "secret_project", "orbital", "effects", "on_complete_effects",
-        "on_unit_produced_effects", "scrap", "map_overlay", "map_overlay_channel",
+        "on_unit_produced_effects", "scrap", "icon", "map_overlay", "map_overlay_channel",
         "map_overlay_priority", "map_overlay_layer",
     };
     return keys;
@@ -141,6 +141,8 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
         buildingJson, "on_unit_produced_effects", config.id);
     config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
                                           &nlohmann::json::is_number_integer, "an integer");
+    config.icon = ParseTyped_<std::string>(buildingJson, "icon", config.id, std::string{},
+                                           &nlohmann::json::is_string, "a string");
     if (buildingJson.contains("scrap"))
     {
         if (config.bIsSecretProject)

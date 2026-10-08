@@ -3,7 +3,11 @@
     "id": "Human_Genome_Project",
     "name": "Human Genome Project",
     "mineral_cost": 200,
+    "upkeep": 2,
     "secret_project": true,
+    "category": "grow",
+    "required_tech": "biogenetics",
+    "icon": "assets/sprites/projects/proj000.png",
     "effects": [
       {
         "type": "RuleFlag",
@@ -12,16 +16,166 @@
           "flag": "population_boom"
         }
       }
-    ],
-    "category": "grow",
-    "required_tech": "test_tech_1",
-    "upkeep": 2
+    ]
+  },
+  {
+    "id": "Command_Nexus",
+    "name": "Command Nexus",
+    "mineral_cost": 30,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "doctrine_loyalty",
+    "icon": "assets/sprites/projects/proj001.png",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Weather_Paradigm",
+    "name": "Weather Paradigm",
+    "mineral_cost": 200,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "centauri_ecology",
+    "icon": "assets/sprites/projects/proj002.png"
+  },
+  {
+    "id": "Merchant_Exchange",
+    "name": "Merchant Exchange",
+    "mineral_cost": 200,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "industrial_base",
+    "icon": "assets/sprites/projects/proj003.png"
+  },
+  {
+    "id": "Empath_Guild",
+    "name": "Empath Guild",
+    "mineral_cost": 200,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "centauri_empathy",
+    "icon": "assets/sprites/projects/proj004.png"
+  },
+  {
+    "id": "Citizens_Defense_Force",
+    "name": "Citizens' Defense Force",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "intellectual_integrity",
+    "icon": "assets/sprites/projects/proj005.png"
+  },
+  {
+    "id": "Virtual_World",
+    "name": "Virtual World",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "planetary_networks",
+    "icon": "assets/sprites/projects/proj006.png"
+  },
+  {
+    "id": "Planetary_Transit_System",
+    "name": "Planetary Transit System",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "industrial_automation",
+    "icon": "assets/sprites/projects/proj007.png"
+  },
+  {
+    "id": "Xenoempathy_Dome",
+    "name": "Xenoempathy Dome",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "centauri_meditation",
+    "icon": "assets/sprites/projects/proj008.png"
+  },
+  {
+    "id": "Neural_Amplifier",
+    "name": "Neural Amplifier",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "neural_grafting",
+    "icon": "assets/sprites/projects/proj009.png"
+  },
+  {
+    "id": "Maritime_Control_Center",
+    "name": "Maritime Control Center",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "doctrine_initiative",
+    "icon": "assets/sprites/projects/proj010.png"
+  },
+  {
+    "id": "Planetary_Datalinks",
+    "name": "Planetary Datalinks",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "cyberethics",
+    "icon": "assets/sprites/projects/proj011.png"
+  },
+  {
+    "id": "Supercollider",
+    "name": "Supercollider",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "applied_relativity",
+    "icon": "assets/sprites/projects/proj012.png"
+  },
+  {
+    "id": "Ascetic_Virtues",
+    "name": "Ascetic Virtues",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "planetary_economics",
+    "icon": "assets/sprites/projects/proj013.png"
+  },
+  {
+    "id": "Longevity_Vaccine",
+    "name": "Longevity Vaccine",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "bio_engineering",
+    "icon": "assets/sprites/projects/proj014.png"
   },
   {
     "id": "Hunter_Seeker_Algorithm",
     "name": "Hunter-Seeker Algorithm",
     "mineral_cost": 300,
+    "upkeep": 2,
     "secret_project": true,
+    "category": "conquer",
+    "required_tech": "pre_sentient_algorithms",
+    "icon": "assets/sprites/projects/proj015.png",
     "effects": [
       {
         "type": "RuleFlag",
@@ -39,16 +193,127 @@
           "op": "AddPercent"
         }
       }
-    ],
+    ]
+  },
+  {
+    "id": "Pholus_Mutagen",
+    "name": "Pholus Mutagen",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
     "category": "conquer",
-    "required_tech": "planetary_networks",
-    "upkeep": 2
+    "required_tech": "centauri_genetics",
+    "icon": "assets/sprites/projects/proj016.png"
+  },
+  {
+    "id": "Cyborg_Factory",
+    "name": "Cyborg Factory",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "mind_machine_interface",
+    "icon": "assets/sprites/projects/proj017.png"
+  },
+  {
+    "id": "Theory_Of_Everything",
+    "name": "Theory of Everything",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "unified_field_theory",
+    "icon": "assets/sprites/projects/proj018.png"
+  },
+  {
+    "id": "Dream_Twister",
+    "name": "Dream Twister",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "the_will_to_power",
+    "icon": "assets/sprites/projects/proj019.png"
+  },
+  {
+    "id": "Universal_Translator",
+    "name": "Universal Translator",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "homo_superior",
+    "icon": "assets/sprites/projects/proj020.png"
+  },
+  {
+    "id": "Network_Backbone",
+    "name": "Network Backbone",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "digital_sentience",
+    "icon": "assets/sprites/projects/proj021.png"
+  },
+  {
+    "id": "Nano_Factory",
+    "name": "Nano Factory",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "industrial_nanorobotics",
+    "icon": "assets/sprites/projects/proj022.png"
+  },
+  {
+    "id": "Living_Refinery",
+    "name": "Living Refinery",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "advanced_spaceflight",
+    "icon": "assets/sprites/projects/proj023.png"
+  },
+  {
+    "id": "Cloning_Vats",
+    "name": "Cloning Vats",
+    "mineral_cost": 500,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "biomachinery",
+    "icon": "assets/sprites/projects/proj024.png"
+  },
+  {
+    "id": "Self_Aware_Colony",
+    "name": "Self-Aware Colony",
+    "mineral_cost": 500,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "self_aware_machines",
+    "icon": "assets/sprites/projects/proj025.png"
+  },
+  {
+    "id": "Clinical_Immortality",
+    "name": "Clinical Immortality",
+    "mineral_cost": 500,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "matter_editation",
+    "icon": "assets/sprites/projects/proj026.png"
   },
   {
     "id": "The_Space_Elevator",
     "name": "The Space Elevator",
     "mineral_cost": 400,
+    "upkeep": 2,
     "secret_project": true,
+    "category": "conquer",
+    "required_tech": "super_tensile_solids",
+    "icon": "assets/sprites/projects/proj027.png",
     "effects": [
       {
         "type": "RuleFlag",
@@ -57,9 +322,96 @@
           "flag": "orbital_insertion"
         }
       }
-    ],
+    ]
+  },
+  {
+    "id": "Singularity_Inductor",
+    "name": "Singularity Inductor",
+    "mineral_cost": 600,
+    "upkeep": 0,
+    "secret_project": true,
     "category": "conquer",
-    "required_tech": "graviton_theory",
-    "upkeep": 2
+    "required_tech": "controlled_singularity",
+    "icon": "assets/sprites/projects/proj028.png"
+  },
+  {
+    "id": "Bulk_Matter_Transmitter",
+    "name": "Bulk Matter Transmitter",
+    "mineral_cost": 600,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "matter_transmission",
+    "icon": "assets/sprites/projects/proj029.png"
+  },
+  {
+    "id": "Telepathic_Matrix",
+    "name": "Telepathic Matrix",
+    "mineral_cost": 600,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "eudaimonia",
+    "icon": "assets/sprites/projects/proj030.png"
+  },
+  {
+    "id": "Voice_Of_Planet",
+    "name": "Voice of Planet",
+    "mineral_cost": 600,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "threshold_of_transcendence",
+    "icon": "assets/sprites/projects/proj031.png"
+  },
+  {
+    "id": "Ascent_To_Transcendence",
+    "name": "Ascent to Transcendence",
+    "mineral_cost": 2000,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "threshold_of_transcendence",
+    "icon": "assets/sprites/projects/proj032.png"
+  },
+  {
+    "id": "Manifold_Harmonics",
+    "name": "Manifold Harmonics",
+    "mineral_cost": 500,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "secrets_of_the_manifolds",
+    "icon": "assets/sprites/projects/proj033.png"
+  },
+  {
+    "id": "Nethack_Terminus",
+    "name": "Nethack Terminus",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "self_aware_machines",
+    "icon": "assets/sprites/projects/proj034.png"
+  },
+  {
+    "id": "Cloudbase_Academy",
+    "name": "Cloudbase Academy",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "mind_machine_interface",
+    "icon": "assets/sprites/projects/proj035.png"
+  },
+  {
+    "id": "Planetary_Energy_Grid",
+    "name": "Planetary Energy Grid",
+    "mineral_cost": 300,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "adaptive_economics",
+    "icon": "assets/sprites/projects/proj036.png"
   }
 ]
