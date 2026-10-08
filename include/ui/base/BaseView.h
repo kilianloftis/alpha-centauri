@@ -16,6 +16,7 @@ class Graphics;
 class Pop;
 class Tile;
 class MapRenderer;
+class SpriteLibrary;
 class Unit;
 class UnitStackPanel;
 struct PopTypeConfig_t;
@@ -29,7 +30,8 @@ public:
         BaseManager& rBase,
         WindowLayout_t layout,
         bool bEditable,
-        MapRenderer& rMapRenderer
+        MapRenderer& rMapRenderer,
+        SpriteLibrary& rSprites
     );
     ~BaseView();
 
@@ -66,6 +68,7 @@ private:
     // lifetime".
     Faction* m_pOwnerAtOpen;
     bool m_bEditable;
+    SpriteLibrary& m_rSprites;
     UnitStackPanel* m_pUnitStackPanel = nullptr;
     Unit* m_pSelectedUnit = nullptr;
     // Pops this view when the base is destroyed (razed on capture) while it is still open —

@@ -4,6 +4,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "graphics/Graphics.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/style/UiStyle.h"
 
 #include <string>
@@ -21,10 +22,12 @@ constexpr const char* k_GrantedAndConstructedPrefix = "* ";
 } // namespace
 
 BuildingsDisplay::BuildingsDisplay(const BaseManager& rBase,
+                                   SpriteLibrary& rSprites,
                                    WindowLayout_t layout,
                                    BuildingClickCallback_t onBuildingClick)
     : UIElement(layout)
     , m_rBase(rBase)
+    , m_rSprites(rSprites)
     , m_onBuildingClick(std::move(onBuildingClick))
 {
 }
@@ -102,14 +105,24 @@ void BuildingsDisplay::Render(Graphics& rGraphics)
     const unsigned int entryFontSize =
         static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
     const float leftPadding = m_layout.width * style.leftPaddingRatio;
+    const float lineHeight = m_layout.height * style.lineHeightRatio;
+    const float iconSize = lineHeight * style.iconSizeRatio;
+    const float iconGap = m_layout.width * style.iconGapRatio;
 
     rGraphics.DrawText(
         "Buildings", m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
 
     for (const BuildingRow_t& rRow : Rows_())
     {
-        rGraphics.DrawText(rRow.label, rRow.bounds.x + leftPadding, rRow.bounds.y, entryFontSize,
-                           rRow.color);
+        float textX = rRow.bounds.x + leftPadding;
+        if (rRow.pConfig && !rRow.pConfig->icon.empty()
+            && m_rSprites.Ensure(rRow.pConfig->icon))
+        {
+            const float iconY = rRow.bounds.y + (rRow.bounds.height - iconSize) * 0.5f;
+            rGraphics.DrawSprite(rRow.pConfig->icon, textX, iconY, iconSize, iconSize);
+            textX += iconSize + iconGap;
+        }
+        rGraphics.DrawText(rRow.label, textX, rRow.bounds.y, entryFontSize, rRow.color);
     }
 }
 

@@ -13,6 +13,7 @@
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/ScrapRefundText.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/world/UnitStackPanel.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
@@ -43,12 +44,14 @@ BaseView::BaseView(
     BaseManager& rBase,
     WindowLayout_t layout,
     bool bEditable,
-    MapRenderer& rMapRenderer
+    MapRenderer& rMapRenderer,
+    SpriteLibrary& rSprites
 )
     : IGameView(layout)
     , m_rBase(rBase)
     , m_pOwnerAtOpen(&rBase.GetFaction())
     , m_bEditable(bEditable)
+    , m_rSprites(rSprites)
     , m_destroyedConnection(rBase.OnDestroyed.ConnectScoped([this]() { m_bShouldClose = true; }))
 {
     m_rBase.GetPopulation().EnsureCompositionCurrent();
@@ -96,6 +99,7 @@ BaseView::BaseView(
     ));
     m_elements.push_back(std::make_unique<BuildingsDisplay>(
         m_rBase,
+        m_rSprites,
         ResolveLayout(topPanel, bv.buildingsLayout),
         std::move(onBuildingClick)
     ));
@@ -104,6 +108,7 @@ BaseView::BaseView(
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         m_rBase,
         m_snapshot,
+        m_rSprites,
         ResolveLayout(leftPanel, bv.productionLayout),
         std::move(onProductionClick)
     ));
@@ -302,18 +307,24 @@ void BaseView::HandleProductionDisplayClicked_()
     std::vector<PopupChoice_t> choices;
     for (const IConstructable* pItem : m_rBase.GetConstructable())
     {
-        choices.push_back({pItem->GetName(),
-                           [this, pItem]
-                           {
-                               m_rBase.GetProduction().SetProduction(pItem,
-                                                                     m_rBase.GetBaseEffects());
-                           }});
+        PopupChoice_t choice;
+        choice.label = pItem->GetName();
+        choice.onChosen = [this, pItem]
+        {
+            m_rBase.GetProduction().SetProduction(pItem, m_rBase.GetBaseEffects());
+        };
+        if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pItem))
+        {
+            choice.iconPath = pBuilding->icon;
+        }
+        choices.push_back(std::move(choice));
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Select Production", "Nothing available to build", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup,
+        &m_rSprites));
 }
 
 void BaseView::HandleHurryClicked_()

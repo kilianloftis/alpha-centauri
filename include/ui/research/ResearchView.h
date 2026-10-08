@@ -7,11 +7,17 @@
 namespace ac
 {
 
+class SpriteLibrary;
+class TechRegistry;
+
 class ResearchView : public IGameView
 {
 public:
 
-    explicit ResearchView(const ResearchManager& rResearch, WindowLayout_t layout);
+    ResearchView(const ResearchManager& rResearch,
+                 const TechRegistry& rTechs,
+                 SpriteLibrary& rSprites,
+                 WindowLayout_t layout);
 
     bool HandleKey(const KeyEvent_t& rEvent) override;
 private:

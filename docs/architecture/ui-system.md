@@ -245,7 +245,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
-- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`)
+- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`), `SpriteLibrary&` (tech/facility/project icons in research and base UI)
 - **Owner**: `Engine` creates and owns it during initialization
 - **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
   `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,

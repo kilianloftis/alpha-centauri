@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 #include "input/Input.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
@@ -18,12 +19,14 @@ ListSelectorPopup::ListSelectorPopup(std::string title,
                                      std::string emptyMessage,
                                      std::vector<PopupChoice_t> choices,
                                      WindowLayout_t layout,
-                                     const ListSelectorPopupStyle_t& rStyle)
+                                     const ListSelectorPopupStyle_t& rStyle,
+                                     SpriteLibrary* pSprites)
     : UIElement(layout)
     , m_title(std::move(title))
     , m_emptyMessage(std::move(emptyMessage))
     , m_choices(std::move(choices))
     , m_rStyle(rStyle)
+    , m_pSprites(pSprites)
 {
     for (const PopupChoice_t& rChoice : m_choices)
     {
@@ -89,6 +92,8 @@ void ListSelectorPopup::Render(Graphics& rGraphics)
     const auto entryFontSize =
         static_cast<unsigned int>(m_layout.height * m_rStyle.entryFontSizeRatio);
     const float lineHeight = m_layout.height * m_rStyle.lineHeightRatio;
+    const float iconSize = lineHeight * m_rStyle.iconSizeRatio;
+    const float iconGap = m_layout.width * m_rStyle.iconGapRatio;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
                              m_rStyle.backgroundColor);
@@ -108,8 +113,15 @@ void ListSelectorPopup::Render(Graphics& rGraphics)
     for (size_t i = 0; i < m_entryRects.size(); ++i)
     {
         const Rectangle_t& rRect = m_entryRects[i];
-        rGraphics.DrawText(m_choices[m_scrollOffset + i].label, rRect.x + padding, rRect.y,
-                           entryFontSize, m_rStyle.entryColor);
+        const PopupChoice_t& rChoice = m_choices[m_scrollOffset + i];
+        float textX = rRect.x + padding;
+        if (m_pSprites && !rChoice.iconPath.empty() && m_pSprites->Ensure(rChoice.iconPath))
+        {
+            const float iconY = rRect.y + (rRect.height - iconSize) * 0.5f;
+            rGraphics.DrawSprite(rChoice.iconPath, textX, iconY, iconSize, iconSize);
+            textX += iconSize + iconGap;
+        }
+        rGraphics.DrawText(rChoice.label, textX, rRect.y, entryFontSize, m_rStyle.entryColor);
     }
 
     // Named rather than dropped off the bottom edge, which is what an unbounded layout did.

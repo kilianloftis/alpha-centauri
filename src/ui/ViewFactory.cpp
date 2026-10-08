@@ -6,11 +6,13 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
+#include "game/research/TechRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesignAvailability.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "graphics/Graphics.h"
 #include "ui/HotkeyConfig.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/style/UiStyle.h"
 
 #include <stdexcept>
@@ -34,6 +36,7 @@ ViewFactory::ViewFactory(
     const HotkeyConfig& rHotkeys,
     Graphics& rGraphics,
     MapRenderer& rMapRenderer,
+    SpriteLibrary& rSprites,
     GameSettings& rSettings
 )
     : m_rGameState(rGameState)
@@ -41,6 +44,7 @@ ViewFactory::ViewFactory(
     , m_rHotkeys(rHotkeys)
     , m_rGraphics(rGraphics)
     , m_rMapRenderer(rMapRenderer)
+    , m_rSprites(rSprites)
     , m_rSettings(rSettings)
 {
 }
@@ -80,7 +84,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
     const Faction* pFaction = RequirePlayerFaction_();
 
     const bool bEditable = (rBase.GetFactionId() == pFaction->GetFactionId());
-    return std::make_unique<BaseView>(rBase, layout, bEditable, m_rMapRenderer);
+    return std::make_unique<BaseView>(rBase, layout, bEditable, m_rMapRenderer, m_rSprites);
 }
 
 std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
@@ -89,7 +93,8 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
 {
     const Faction* pFaction = RequirePlayerFaction_();
 
-    return std::make_unique<ResearchView>(pFaction->GetResearch(), layout);
+    return std::make_unique<ResearchView>(
+        pFaction->GetResearch(), *m_rGameDataContext.techRegistry, m_rSprites, layout);
 }
 
 std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(

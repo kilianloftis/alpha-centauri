@@ -97,7 +97,8 @@ struct ViewFixture : WorldFixture
         pMapRenderer = std::make_unique<ac::MapRenderer>(
             pSprites->sprites, *pState, ac::Style().tileRenderer, ac::Style().mapRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            *pState, dataContext, *pHotkeys, graphics, *pMapRenderer, settings);
+            *pState, dataContext, *pHotkeys, graphics, *pMapRenderer, pSprites->sprites,
+            settings);
     }
 
     ac::BaseManager& MakeBase(int x, int y)

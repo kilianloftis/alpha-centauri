@@ -6,10 +6,26 @@
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+#include <filesystem>
+#include <fstream>
 #include <variant>
 
 using namespace ac;
 using namespace actest;
+
+namespace
+{
+
+std::filesystem::path WriteTempTechJson_(const std::string& body)
+{
+    const auto path = std::filesystem::temp_directory_path() / "ac_tech_icon_test.json";
+    std::ofstream out(path);
+    out << "[\n" << body << "\n]\n";
+    return path;
+}
+
+} // namespace
 
 TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
 {
@@ -60,6 +76,40 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     REQUIRE(configs[16].onDiscoverEffects.size() == 1);
     CHECK(configs[17].id == "discover_chain_parent");
     CHECK(configs[18].id == "discover_chain_child");
+}
+
+TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[game][tech][parser][icon]")
+{
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "icon_tech", "name": "Icon Tech", "category": "discover",
+    "icon": "assets/sprites/techs/tech000.png" }
+)");
+        TechConfigParser parser;
+        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        REQUIRE(configs.size() == 1);
+        CHECK(configs[0].icon == "assets/sprites/techs/tech000.png");
+        std::filesystem::remove(path);
+    }
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "plain_tech", "name": "Plain Tech", "category": "build" }
+)");
+        TechConfigParser parser;
+        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        REQUIRE(configs.size() == 1);
+        CHECK(configs[0].icon.empty());
+        std::filesystem::remove(path);
+    }
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "typo_tech", "name": "Typo", "category": "build", "icone": "x.png" }
+)");
+        TechConfigParser parser;
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("icone"));
+        std::filesystem::remove(path);
+    }
 }
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")

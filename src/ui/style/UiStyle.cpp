@@ -448,6 +448,7 @@ CurrentResearchPanelStyle_t ParseCurrentResearchPanelStyle_(const nlohmann::json
     s.labelLayout = ParseLayout_(j, "label_layout");
     s.targetLayout = ParseLayout_(j, "target_layout");
     s.progressLayout = ParseLayout_(j, "progress_layout");
+    s.iconLayout = ParseLayout_(j, "icon_layout");
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.labelColor = ParseColor_(j, "label_color");
@@ -544,6 +545,8 @@ ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
     s.requiredLineIndex = j.at("required_line_index").get<float>();
     s.productionLineIndex = j.at("production_line_index").get<float>();
     s.turnsLineIndex = j.at("turns_line_index").get<float>();
+    s.iconSizeRatio = j.value("icon_size_ratio", 0.0f);
+    s.iconGapRatio = j.value("icon_gap_ratio", 0.0f);
     return s;
 }
 
@@ -589,6 +592,8 @@ BuildingsDisplayStyle_t ParseBuildingsDisplayStyle_(const nlohmann::json& j)
     s.lineHeightRatio = j.at("line_height_ratio").get<float>();
     s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
     s.headerLineOffset = j.at("header_line_offset").get<float>();
+    s.iconSizeRatio = j.value("icon_size_ratio", 0.85f);
+    s.iconGapRatio = j.value("icon_gap_ratio", 0.01f);
     return s;
 }
 
@@ -623,6 +628,8 @@ ListSelectorPopupStyle_t ParseListSelectorPopupStyle_(const nlohmann::json& j)
     s.paddingRatio = j.at("padding_ratio").get<float>();
     s.headerLineOffset = j.at("header_line_offset").get<float>();
     s.borderWidth = j.at("border_width").get<float>();
+    s.iconSizeRatio = j.value("icon_size_ratio", 0.85f);
+    s.iconGapRatio = j.value("icon_gap_ratio", 0.01f);
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.headerColor = ParseColor_(j, "header_color");

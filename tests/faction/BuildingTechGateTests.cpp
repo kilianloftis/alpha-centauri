@@ -88,6 +88,45 @@ TEST_CASE("BuildingConfigParser treats omitted required_tech as always available
     std::filesystem::remove(path);
 }
 
+TEST_CASE("BuildingConfigParser reads optional icon path", "[buildings][parser][icon]")
+{
+    const std::filesystem::path path = WriteTempBuildingJson(R"(
+  {
+    "id": "icon_hall",
+    "name": "Icon Hall",
+    "mineral_cost": 5,
+    "icon": "assets/sprites/facilities/fac000.png",
+    "category": "grow"
+  }
+)");
+
+    BuildingConfigParser parser;
+    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 1);
+    CHECK(configs[0].icon == "assets/sprites/facilities/fac000.png");
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("BuildingConfigParser treats omitted icon as empty", "[buildings][parser][icon]")
+{
+    const std::filesystem::path path = WriteTempBuildingJson(R"(
+  {
+    "id": "plain_hall",
+    "name": "Plain Hall",
+    "mineral_cost": 5,
+    "category": "grow"
+  }
+)");
+
+    BuildingConfigParser parser;
+    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 1);
+    CHECK(configs[0].icon.empty());
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("BuildingConfigParser rejects legacy required_techs array", "[buildings][tech-gate][parser]")
 {
     const std::filesystem::path path = WriteTempBuildingJson(R"(

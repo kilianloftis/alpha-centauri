@@ -30,6 +30,7 @@ class WorldDisplay;
 class Tile;
 class MapRenderer;
 class HotkeyConfig;
+class SpriteLibrary;
 
 class ViewFactory
 {
@@ -40,6 +41,7 @@ public:
         const HotkeyConfig& rHotkeys,
         Graphics& rGraphics,
         MapRenderer& rMapRenderer,
+        SpriteLibrary& rSprites,
         GameSettings& rSettings
     );
 
@@ -113,6 +115,7 @@ private:
     const HotkeyConfig& m_rHotkeys;
     Graphics& m_rGraphics;
     MapRenderer& m_rMapRenderer;
+    SpriteLibrary& m_rSprites;
     GameSettings& m_rSettings;
 };
 

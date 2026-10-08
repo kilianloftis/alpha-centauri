@@ -131,8 +131,10 @@ graph TB
   returns false when the file is missing, empty, or the backend load fails (subsequent calls
   remember failure without re-logging)
 - **Consumers**: `TileRenderer` (terrain and object sprites) and `FactionBaseArtCache` (faction
-  base sheets and building map overlays), both owned by `MapRenderer`. Later UI renderers are
-  expected to load through the same library rather than calling `LoadTexture` directly
+  base sheets and building map overlays), both owned by `MapRenderer`; research / base UI
+  (`CurrentResearchPanel`, `BuildingsDisplay`, `ProductionDisplay`, production
+  `ListSelectorPopup`) for tech/facility/project `icon` paths from config. Load through this
+  library rather than calling `LoadTexture` directly
 
 ## UI Components
 

@@ -314,6 +314,7 @@ struct CurrentResearchPanelStyle_t
     RatioLayout_t labelLayout{};
     RatioLayout_t targetLayout{};
     RatioLayout_t progressLayout{};
+    RatioLayout_t iconLayout{};
     Color_t backgroundColor{};
     Color_t borderColor{};
     Color_t labelColor{};
@@ -403,6 +404,9 @@ struct ResourceLinesPanelStyle_t
     float requiredLineIndex{};
     float productionLineIndex{};
     float turnsLineIndex{};
+    // Production panel only: square icon beside the header. 0 = no icon slot.
+    float iconSizeRatio{};
+    float iconGapRatio{};
 };
 
 struct PopulationDisplayStyle_t
@@ -443,6 +447,9 @@ struct BuildingsDisplayStyle_t
     float lineHeightRatio{};
     float leftPaddingRatio{};
     float headerLineOffset{};
+    // Square icon size as a fraction of line height; gap as a fraction of panel width.
+    float iconSizeRatio{};
+    float iconGapRatio{};
 };
 
 struct BaseWorkableAreaDisplayStyle_t
@@ -477,6 +484,9 @@ struct ListSelectorPopupStyle_t
     float paddingRatio{};
     float headerLineOffset{};
     float borderWidth{};
+    // Square icon size as a fraction of line height; gap as a fraction of popup width.
+    float iconSizeRatio{};
+    float iconGapRatio{};
     Color_t backgroundColor{};
     Color_t borderColor{};
     Color_t headerColor{};

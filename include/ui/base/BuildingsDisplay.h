@@ -12,6 +12,7 @@ namespace ac
 
 class BaseManager;
 class Graphics;
+class SpriteLibrary;
 
 using BuildingClickCallback_t = std::function<void(const BuildingConfig_t&)>;
 
@@ -23,6 +24,7 @@ class BuildingsDisplay : public UIElement
 {
 public:
     BuildingsDisplay(const BaseManager& rBase,
+                     SpriteLibrary& rSprites,
                      WindowLayout_t layout,
                      BuildingClickCallback_t onBuildingClick = {});
 
@@ -41,6 +43,7 @@ private:
     std::vector<BuildingRow_t> Rows_() const;
 
     const BaseManager& m_rBase;
+    SpriteLibrary& m_rSprites;
     BuildingClickCallback_t m_onBuildingClick;
 };
 

@@ -1,10 +1,13 @@
 #include "ui/base/ProductionDisplay.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "graphics/Graphics.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/style/UiStyle.h"
 #include <functional>
+#include <optional>
 #include <sstream>
 
 namespace ac
@@ -13,6 +16,7 @@ namespace ac
 ProductionDisplay::ProductionDisplay(
     const BaseManager& rBase,
     const BaseDisplaySnapshot_t& rSnapshot,
+    SpriteLibrary& rSprites,
     WindowLayout_t layout,
     std::function<void()> onClicked
 )
@@ -20,6 +24,7 @@ ProductionDisplay::ProductionDisplay(
     , m_onClicked(std::move(onClicked))
     , m_rBase(rBase)
     , m_rSnapshot(rSnapshot)
+    , m_rSprites(rSprites)
 {}
 
 void ProductionDisplay::Render(Graphics& rGraphics)
@@ -35,11 +40,25 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
     const float lineHeight   = m_layout.height * style.lineHeightRatio;
     const float leftPadding  = m_layout.width  * style.leftPaddingRatio;
+    const float iconSize = m_layout.height * style.iconSizeRatio;
+    const float iconGap = m_layout.width * style.iconGapRatio;
+
+    float headerX = m_layout.x + leftPadding;
+    const IConstructable* pProduction = m_rBase.GetProduction().GetCurrentProduction();
+    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pProduction))
+    {
+        if (!pBuilding->icon.empty() && style.iconSizeRatio > 0.0f
+            && m_rSprites.Ensure(pBuilding->icon))
+        {
+            rGraphics.DrawSprite(pBuilding->icon, headerX, m_layout.y, iconSize, iconSize);
+            headerX += iconSize + iconGap;
+        }
+    }
 
     const std::string header = m_rSnapshot.bHasProduction
                                    ? "Production: " + m_rSnapshot.productionName
                                    : "Production: (none)";
-    rGraphics.DrawText(header, m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
+    rGraphics.DrawText(header, headerX, m_layout.y, headerFontSize, style.textColor);
 
     std::ostringstream oss;
 

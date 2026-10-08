@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: phase3-icons
     content: "Phase 3: extract_icons.py (techs/facs/projs) + icon paths on configs + SpriteLibrary UI wiring"
-    status: pending
+    status: completed
   - id: phase4-fonts
     content: "Phase 4 fonts: extract_fonts.py + prefer assets/ui/fonts/arialn.ttf in font_paths"
     status: completed
@@ -31,7 +31,7 @@ todos:
     status: pending
   - id: extract-orchestrator
     content: "Cross-phase: extract_all.py orchestrator that runs every family extractor into expected assets/ paths"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -174,15 +174,18 @@ PNGs). Hook into `extract_all.py` when that orchestrator lands.
 **Out of scope (extract only):** leader portraits, logos, diplomacy landscape — no UI wiring
 this phase. `vehicle_color` stays unused until Phase 5.
 
-### Phase 3 — Content icons (tech / building / project)
+### Phase 3 — Content icons (tech / building / project) (done)
 
-**Extractor:** `extract_icons.py` — 1:1 convert `techs/techNNN.pcx`, `facs/facNNN.pcx`, `projs/projNNN.pcx` → the PNG paths written into config. Hook into `extract_all.py`.
+**Extractor:** [`extract_icons.py`](../../extract_icons.py) — 1:1 convert `techs/techNNN.pcx`,
+`facs/facNNN.pcx` (incl. `xfac*`), `projs/projNNN.pcx` → `assets/sprites/{techs,facilities,projects}/`.
+Registered in [`extract_all.py`](../../extract_all.py) with terrain, faction, and fonts.
 
 **Renderer/config work:**
 
-- Add icon paths to building / tech / secret-project configs + parsers (`KnownBuildingKeys_` for
-  buildings), loaded through `SpriteLibrary` when those views render.
-- Wire research / base / production UI placeholders to those icons.
+- Optional `icon` on tech / building (incl. projects) configs + parsers; shipping JSON filled from
+  alphax / classic facility PCX indices.
+- Research panel, buildings list, production panel, and production picker draw via `SpriteLibrary`
+  (text fallback when the PNG is missing).
 
 ### Phase 4 — UI chrome and fonts
 

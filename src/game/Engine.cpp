@@ -735,6 +735,7 @@ void Engine::InitializeUi_()
         *m_pHotkeys,
         *m_pGraphics,
         *m_pMapRenderer,
+        *m_pSprites,
         *m_pSettings);
 
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();

@@ -218,7 +218,7 @@ TEST_CASE("The buildings list is live: a paint after add or destroy shows the ne
     BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const WindowLayout_t layout{0.0f, 0.0f, 200.0f, 400.0f};
-    BuildingsDisplay display(rBase, layout);
+    BuildingsDisplay display(rBase, fixture.pSprites->sprites, layout);
 
     display.Render(fixture.graphics);
     CHECK_FALSE(fixture.graphics.AnyTextContaining("Test Facility A"));
@@ -244,7 +244,8 @@ TEST_CASE("A granted-only building is listed in the darker granted colour", "[ui
     BaseManager& rBase = fixture.MakeBase(8, 8);
     rBase.GetBuildingManager().AddBuilding("grantor_local");
 
-    BuildingsDisplay display(rBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
+    BuildingsDisplay display(rBase, fixture.pSprites->sprites,
+                             WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
     display.Render(fixture.graphics);
 
     const RecordingGraphics::TextDraw_t* pGranted = DrawnText_(fixture.graphics, "Granted Hall");
@@ -267,7 +268,8 @@ TEST_CASE("A constructed building that is also granted is listed with a * in the
     rBase.GetBuildingManager().AddBuilding("granted_hall");
     rBase.GetBuildingManager().AddBuilding("grantor_local");
 
-    BuildingsDisplay display(rBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
+    BuildingsDisplay display(rBase, fixture.pSprites->sprites,
+                             WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
     display.Render(fixture.graphics);
 
     const RecordingGraphics::TextDraw_t* pBoth = DrawnText_(fixture.graphics, "* Granted Hall");
@@ -283,7 +285,8 @@ TEST_CASE("A ThisBase grant does not appear on another base's buildings list", "
     BaseManager& rOtherBase = fixture.MakeBase(8, 12);
     rGrantorBase.GetBuildingManager().AddBuilding("grantor_local");
 
-    BuildingsDisplay display(rOtherBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
+    BuildingsDisplay display(rOtherBase, fixture.pSprites->sprites,
+                             WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
     display.Render(fixture.graphics);
 
     CHECK_FALSE(fixture.graphics.AnyTextContaining("Granted Hall"));
@@ -296,7 +299,8 @@ TEST_CASE("A faction-global grant appears on every base in the granted colour", 
     BaseManager& rOtherBase = fixture.MakeBase(8, 12);
     rGrantorBase.GetBuildingManager().AddBuilding("grantor_global");
 
-    BuildingsDisplay display(rOtherBase, WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
+    BuildingsDisplay display(rOtherBase, fixture.pSprites->sprites,
+                             WindowLayout_t{0.0f, 0.0f, 200.0f, 400.0f});
     display.Render(fixture.graphics);
 
     const RecordingGraphics::TextDraw_t* pGranted = DrawnText_(fixture.graphics, "Granted Hall");

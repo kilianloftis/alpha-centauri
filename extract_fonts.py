@@ -3,8 +3,7 @@
 Copy SMAC TrueType faces from a local install into assets/ui/fonts/.
 
 The original game assets are not redistributable, so this script copies them from a
-local SMAC installation at setup time. Wire into extract_all.py when that
-orchestrator lands (see graphics assets roadmap).
+local SMAC installation at setup time. Also invoked by extract_all.py.
 
 Usage:
     python extract_fonts.py
