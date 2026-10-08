@@ -8,6 +8,7 @@
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
@@ -92,7 +93,7 @@ void BaseWorkableAreaDisplay::CacheTileDiamonds_()
 
     m_tileDiamonds.clear();
     m_tileDiamonds.push_back(TileDiamond_t{
-        TileRenderer::FlatTileShape(originX, originY, m_tileWidth),
+        FlatTileShape(originX, originY, m_tileWidth),
         &rBaseTile,
         0,
         0,
@@ -112,7 +113,7 @@ void BaseWorkableAreaDisplay::CacheTileDiamonds_()
         const float aabbX = originX + static_cast<float>(mapDx) * halfW;
         const float aabbY = originY + static_cast<float>(mapDy) * halfH;
         m_tileDiamonds.push_back(TileDiamond_t{
-            TileRenderer::FlatTileShape(aabbX, aabbY, m_tileWidth),
+            FlatTileShape(aabbX, aabbY, m_tileWidth),
             pTile,
             mapDx,
             mapDy,
@@ -226,7 +227,7 @@ void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     // Front first (higher mapDy), matching the world map's raised-tile pick order.
     for (auto it = m_tileDiamonds.rbegin(); it != m_tileDiamonds.rend(); ++it)
     {
-        if (!TileRenderer::ShapeContains(it->shape, mouseX, mouseY))
+        if (!ShapeContains(it->shape, mouseX, mouseY))
         {
             continue;
         }

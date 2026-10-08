@@ -101,10 +101,6 @@ public:
     {
     }
 
-    void DrawFilledDiamond(float, float, float, float, const Color_t&) override
-    {
-    }
-
     void DrawDiamond(float, float, float, float, const Color_t&, float) override
     {
     }

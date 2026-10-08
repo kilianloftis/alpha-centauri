@@ -3,6 +3,7 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
@@ -37,7 +38,7 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float textX = m_layout.x + padding;
 
     TileRenderer::Render(rGraphics, *m_pSelectedTile,
-                         TileRenderer::FlatTileShape(previewX, previewY, previewSize));
+                         FlatTileShape(previewX, previewY, previewSize));
 
     float textY = previewY + previewSize + textGap;
     textY = DrawCoordinates_(rGraphics, textX, textY, fontSize) + textGap;

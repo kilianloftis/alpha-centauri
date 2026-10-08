@@ -5,6 +5,7 @@
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRelief.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/UIElement.h"
 
 #include <algorithm>
@@ -66,8 +67,8 @@ public:
     // shape's four corners as SMAC seats everything on a tile.
     std::pair<float, float> FootprintOrigin(const TileShape_t& rShape) const
     {
-        const float seatY =
-            (rShape.west.y + rShape.north.y + rShape.east.y + rShape.south.y) * 0.25f;
+        const auto [seatX, seatY] = SeatOf(rShape);
+        (void)seatX;
         return {rShape.west.x, seatY - m_tileHeight * 0.5f};
     }
 

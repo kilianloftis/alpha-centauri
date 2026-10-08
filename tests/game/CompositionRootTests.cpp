@@ -13,6 +13,7 @@
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/buildings/BaseSpriteSizesConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/MapOverlayChannelsConfig.h"
 #include "game/stockpiles/StockpileRegistry.h"
@@ -65,11 +66,11 @@ TEST_CASE("ThrowIfIncomplete reports the first member still missing", "[composit
 
     data.mapOverlayChannels = std::make_unique<MapOverlayChannelsConfig_t>();
     CHECK_THROWS_WITH(ThrowIfIncomplete(data),
-                      Catch::Matchers::ContainsSubstring("stockpileRegistry"));
+                      Catch::Matchers::ContainsSubstring("baseSpriteSizes"));
 
-    data.stockpileRegistry = std::make_unique<StockpileRegistry>();
+    data.baseSpriteSizes = std::make_unique<BaseSpriteSizesConfig_t>();
     CHECK_THROWS_WITH(ThrowIfIncomplete(data),
-                      Catch::Matchers::ContainsSubstring("unitComponentRegistry"));
+                      Catch::Matchers::ContainsSubstring("stockpileRegistry"));
 }
 
 TEST_CASE("A newly constructed faction already has sized fog maps", "[composition][faction]")

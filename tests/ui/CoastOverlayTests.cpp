@@ -47,7 +47,7 @@ void MakeIsland_(actest::WorldFixture& rWorld, int x, int y)
     }
 }
 
-const CoastCornerArt_t& Corner_(const CoastOverlay_t& rOverlay, CoastCorner_t corner)
+const CoastCornerArt_t& Corner_(const CoastOverlay_t& rOverlay, DiamondCorner_t corner)
 {
     return rOverlay.corners[static_cast<std::size_t>(corner)];
 }
@@ -85,14 +85,14 @@ TEST_CASE("Water across a diamond edge marks the two corners on that edge", "[ui
         int p;
         int q;
         // The edge is clockwise of one corner (bit 4) and counter-clockwise of the next (bit 1).
-        CoastCorner_t bit4Corner;
-        CoastCorner_t bit1Corner;
+        DiamondCorner_t bit4Corner;
+        DiamondCorner_t bit1Corner;
     };
     const Case_t cases[] = {
-        {0, -1, CoastCorner_t::North, CoastCorner_t::East},
-        {1, 0, CoastCorner_t::East, CoastCorner_t::South},
-        {0, 1, CoastCorner_t::South, CoastCorner_t::West},
-        {-1, 0, CoastCorner_t::West, CoastCorner_t::North},
+        {0, -1, DiamondCorner_t::North, DiamondCorner_t::East},
+        {1, 0, DiamondCorner_t::East, DiamondCorner_t::South},
+        {0, 1, DiamondCorner_t::South, DiamondCorner_t::West},
+        {-1, 0, DiamondCorner_t::West, DiamondCorner_t::North},
     };
     for (const Case_t& rCase : cases)
     {
@@ -124,13 +124,13 @@ TEST_CASE("Water touching a diamond corner marks only that corner", "[ui][coast]
     {
         int p;
         int q;
-        CoastCorner_t corner;
+        DiamondCorner_t corner;
     };
     const Case_t cases[] = {
-        {-1, -1, CoastCorner_t::North},
-        {1, -1, CoastCorner_t::East},
-        {1, 1, CoastCorner_t::South},
-        {-1, 1, CoastCorner_t::West},
+        {-1, -1, DiamondCorner_t::North},
+        {1, -1, DiamondCorner_t::East},
+        {1, 1, DiamondCorner_t::South},
+        {-1, 1, DiamondCorner_t::West},
     };
     for (const Case_t& rCase : cases)
     {
@@ -175,10 +175,10 @@ TEST_CASE("Coast neighbors wrap across the map's x seam", "[ui][coast]")
     MakeWater_(world, -1, 3);
 
     const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(0, 4), world.map);
-    CHECK(Corner_(overlay, CoastCorner_t::West).waterMask == 4);
-    CHECK(Corner_(overlay, CoastCorner_t::North).waterMask == 1);
-    CHECK(Corner_(overlay, CoastCorner_t::East).waterMask == 0);
-    CHECK(Corner_(overlay, CoastCorner_t::South).waterMask == 0);
+    CHECK(Corner_(overlay, DiamondCorner_t::West).waterMask == 4);
+    CHECK(Corner_(overlay, DiamondCorner_t::North).waterMask == 1);
+    CHECK(Corner_(overlay, DiamondCorner_t::East).waterMask == 0);
+    CHECK(Corner_(overlay, DiamondCorner_t::South).waterMask == 0);
 }
 
 TEST_CASE("Only all-water corners on odd rows use the alternate island shape", "[ui][coast]")
@@ -212,11 +212,11 @@ TEST_CASE("Only all-water corners on odd rows use the alternate island shape", "
         MakeWater_(world, 9, 1);
         MakeWater_(world, 10, 2);
         const CoastOverlay_t overlay = ResolveCoastOverlay(*world.map.GetTile(9, 3), world.map);
-        REQUIRE(Corner_(overlay, CoastCorner_t::North).waterMask == 7);
-        CHECK(Corner_(overlay, CoastCorner_t::North).bAlternate);
+        REQUIRE(Corner_(overlay, DiamondCorner_t::North).waterMask == 7);
+        CHECK(Corner_(overlay, DiamondCorner_t::North).bAlternate);
         for (const CoastCornerArt_t& rArt : overlay.corners)
         {
-            if (rArt.corner != CoastCorner_t::North)
+            if (rArt.corner != DiamondCorner_t::North)
             {
                 CHECK(rArt.waterMask != 7);
                 CHECK_FALSE(rArt.bAlternate);

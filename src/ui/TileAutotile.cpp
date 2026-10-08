@@ -11,30 +11,35 @@ namespace ac
 namespace
 {
 
-struct GridDelta_t
-{
-    int dx = 0;
-    int dy = 0;
-};
-
-constexpr std::array<GridDelta_t, 4> k_EdgeNeighbors = {{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}};
-
-constexpr std::array<GridDelta_t, 8> k_BlobNeighbors = {{
-    {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0},
-}};
+// Blob layout's eight neighbor bits start at NW; k_RingNeighbors starts at N (link cell order).
+constexpr std::array<std::size_t, 8> k_BlobRingIndex = {7, 0, 1, 2, 3, 4, 5, 6};
 
 constexpr std::uint8_t k_BlobEdgeBits = 0b10101010;
 
-template<std::size_t N>
-std::uint8_t MatchMask_(const std::array<GridDelta_t, N>& deltas, const Tile& rTile,
-                        const WorldMap& rMap,
-                        const std::function<bool(const Tile& rNeighbor)>& matches)
+std::uint8_t MatchEdgeMask_(const Tile& rTile, const WorldMap& rMap,
+                            const std::function<bool(const Tile& rNeighbor)>& matches)
 {
     std::uint8_t mask = 0;
-    for (std::size_t bit = 0; bit < N; ++bit)
+    for (std::size_t bit = 0; bit < k_EdgeNeighbors.size(); ++bit)
     {
-        const Tile* pNeighbor =
-            GetTileAtLatticeOffset(rMap, rTile, deltas[bit].dx, deltas[bit].dy);
+        const LatticeOffset_t& offset = k_EdgeNeighbors[bit];
+        const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, offset.p, offset.q);
+        if (pNeighbor && matches(*pNeighbor))
+        {
+            mask = static_cast<std::uint8_t>(mask | (1u << bit));
+        }
+    }
+    return mask;
+}
+
+std::uint8_t MatchBlobMask_(const Tile& rTile, const WorldMap& rMap,
+                            const std::function<bool(const Tile& rNeighbor)>& matches)
+{
+    std::uint8_t mask = 0;
+    for (std::size_t bit = 0; bit < k_BlobRingIndex.size(); ++bit)
+    {
+        const LatticeOffset_t& offset = k_RingNeighbors[k_BlobRingIndex[bit]];
+        const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, offset.p, offset.q);
         if (pNeighbor && matches(*pNeighbor))
         {
             mask = static_cast<std::uint8_t>(mask | (1u << bit));
@@ -66,9 +71,9 @@ std::uint8_t ResolveTileMask(SpriteTileLayout_t layout, const Tile& rTile, const
     switch (layout)
     {
         case SpriteTileLayout_t::Edges:
-            return MatchMask_(k_EdgeNeighbors, rTile, rMap, matches);
+            return MatchEdgeMask_(rTile, rMap, matches);
         case SpriteTileLayout_t::Blob:
-            return ReduceBlobMask_(MatchMask_(k_BlobNeighbors, rTile, rMap, matches));
+            return ReduceBlobMask_(MatchBlobMask_(rTile, rMap, matches));
     }
     throw std::invalid_argument("ResolveTileMask: unhandled SpriteTileLayout_t");
 }

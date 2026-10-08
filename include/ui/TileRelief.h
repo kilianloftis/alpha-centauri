@@ -3,32 +3,14 @@
 #include "game/MapDisplayConfig.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
 {
 
-// How far a tile's centre and corners rise on screen, in tile widths
-// (docs/thinker/smac-palette-lighting.md, "Relief").
-struct TileLifts_t
-{
-    float center = 0.0f;
-    float west = 0.0f;
-    float north = 0.0f;
-    float east = 0.0f;
-    float south = 0.0f;
-};
-
-// Slope and altitude shade at a tile's centre and corners, in palette steps (positive is
-// darker, 0 is the art as painted).
-struct TileShades_t
-{
-    float center = 0.0f;
-    float west = 0.0f;
-    float north = 0.0f;
-    float east = 0.0f;
-    float south = 0.0f;
-};
+using TileLifts_t = DiamondValues_t<float>;
+using TileShades_t = DiamondValues_t<float>;
 
 // A land centre lifts elevation / levelMeters levels (Smooth) or whole levels (Stepped); Flat
 // lifts nothing and water does not lift. A corner takes the mean of the four tiles that share

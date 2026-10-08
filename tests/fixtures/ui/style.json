@@ -54,35 +54,13 @@
     "forest_color": [
       34, 140, 56, 255
     ],
-    "fungus_color": [
-      220, 80, 180, 255
-    ],
-    "moist_center_color": [
-      150, 200, 100, 255
-    ],
-    "wet_center_color": [
-      40, 110, 50, 255
-    ],
-    "rolling_ring_color": [
-      190, 190, 190, 255
-    ],
-    "rocky_ring_color": [
-      70, 70, 70, 255
-    ],
     "fog_fill_dim_ratio": 0.55,
     "fog_land_shade": 3,
     "fog_haze_color": [
       100, 150, 150, 128
     ],
-    "landform_ring_outer_inset_ratio": 0.12,
-    "landform_ring_inner_inset_ratio": 0.32,
-    "sprite_overlay_edge_inset_ratio": 0.12,
     "coast_sprite_dir": "tests/fixtures/sprites/coast",
     "palette_path": "tests/fixtures/sprites/palette.png",
-    "river_color": [
-      40, 120, 220, 220
-    ],
-    "river_line_thickness_ratio": 0.1,
     "water_shading": {
       "depth_shades": [3, 2, 1, 0],
       "shades": {

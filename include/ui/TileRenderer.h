@@ -42,12 +42,6 @@ public:
     // Forest overrides the elevation gradient when present; fungus does not.
     static Color_t FillColor(const Tile& rTile, bool bFogged = false);
 
-    // The flat diamond inscribed in (x, y, size, size / 2), at shade 0.
-    static TileShape_t FlatTileShape(float x, float y, float size);
-
-    // True when (px, py) lies in any of the shape's four triangles (centre to each edge).
-    static bool ShapeContains(const TileShape_t& rShape, float px, float py);
-
     // Draws the tile on rShape: terrain on its four triangles (land at its vertex shades),
     // object sprites on a flat footprint seated at the mean of its corners. Fogged tiles
     // (explored memory on the world map) draw their land art fog_land_shade steps darker and get

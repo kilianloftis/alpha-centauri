@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 
@@ -10,20 +11,11 @@
 namespace ac
 {
 
-// Diamond corners in screen space. Each owns the quarter of the tile around it.
-enum class CoastCorner_t
-{
-    West,
-    North,
-    East,
-    South,
-};
-
-inline constexpr std::size_t k_CoastCornerCount = 4;
+inline constexpr std::size_t k_CoastCornerCount = k_DiamondCornerCount;
 
 struct CoastCornerArt_t
 {
-    CoastCorner_t corner = CoastCorner_t::West;
+    DiamondCorner_t corner = DiamondCorner_t::West;
     // 1 = edge neighbor counter-clockwise of the corner, 2 = corner neighbor, 4 = edge neighbor
     // clockwise of it. 0 = no coast in this quarter.
     std::uint8_t waterMask = 0;

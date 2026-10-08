@@ -333,8 +333,8 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 # ---------------------------------------------------------------------------
 add_library(ac-ui STATIC
     ui/TileRenderer.cpp
+    ui/TileShapeGeometry.cpp
     ui/MapSurfaceRenderer.cpp
-    ui/TileSpriteEdgeInset.cpp
     ui/CoastOverlay.cpp
     ui/TileAutotile.cpp
     ui/WaterShading.cpp

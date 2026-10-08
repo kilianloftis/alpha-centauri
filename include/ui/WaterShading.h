@@ -3,6 +3,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 
 #include <string>
@@ -11,16 +12,7 @@
 namespace ac
 {
 
-// SMAC's water depth shade at a tile diamond's centre and corners: steps down the water's
-// palette ramp (docs/thinker/smac-palette-lighting.md).
-struct DiamondShades_t
-{
-    int center = 0;
-    int west = 0;
-    int north = 0;
-    int east = 0;
-    int south = 0;
-};
+using DiamondShades_t = DiamondValues_t<int>;
 
 // SMAC's depth detail picks each vertex's shade from depthShades: one step per detailMeters
 // below ocean level, counted back from the table's last entry, with anything deeper taking the

@@ -8,17 +8,11 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr float k_IsoHeightRatio = 0.5f;
-
-} // namespace
 
 MapSurfaceRenderer::MapSurfaceRenderer(const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
                                        const MapOverlayChannelsConfig_t& rMapOverlayChannels)
@@ -63,17 +57,17 @@ void MapSurfaceRenderer::DrawWorldMapGridEdges_(Graphics& rGraphics, const Tile&
     };
     const struct
     {
-        int dx;
-        int dy;
+        std::size_t neighborIndex;
         const TileVertex_t* pFrom;
         const TileVertex_t* pTo;
     } k_Edges[] = {
-        {-1, 0, &rShape.west, &rShape.north},
-        {0, -1, &rShape.north, &rShape.east},
+        {3, &rShape.west, &rShape.north},
+        {0, &rShape.north, &rShape.east},
     };
     for (const auto& rEdge : k_Edges)
     {
-        const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rEdge.dx, rEdge.dy);
+        const LatticeOffset_t& offset = k_EdgeNeighbors[rEdge.neighborIndex];
+        const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, offset.p, offset.q);
         if (!pNeighbor)
         {
             continue;
@@ -128,8 +122,8 @@ bool MapSurfaceRenderer::RenderBase(Graphics& rGraphics, const BaseManager& rBas
 {
     const float tileWidth = rShape.east.x - rShape.west.x;
     const float tileHeight = tileWidth * k_IsoHeightRatio;
-    const float seatY =
-        (rShape.west.y + rShape.north.y + rShape.east.y + rShape.south.y) * 0.25f;
+    const auto [seatX, seatY] = SeatOf(rShape);
+    (void)seatX;
     const float spriteX = rShape.west.x;
     const float spriteY = seatY - tileHeight * 0.5f;
     const float spriteHeight =

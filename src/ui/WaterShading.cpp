@@ -3,7 +3,6 @@
 #include "game/map/MapUtils.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
@@ -13,18 +12,6 @@ namespace ac
 
 namespace
 {
-
-struct GridDelta_t
-{
-    int dx = 0;
-    int dy = 0;
-};
-
-// The three neighbors that share each corner with the tile.
-constexpr std::array<GridDelta_t, 3> k_WestCorner = {{{0, 1}, {-1, 1}, {-1, 0}}};
-constexpr std::array<GridDelta_t, 3> k_NorthCorner = {{{-1, 0}, {-1, -1}, {0, -1}}};
-constexpr std::array<GridDelta_t, 3> k_EastCorner = {{{0, -1}, {1, -1}, {1, 0}}};
-constexpr std::array<GridDelta_t, 3> k_SouthCorner = {{{1, 0}, {1, 1}, {0, 1}}};
 
 double DepthElevation_(const Tile& rTile)
 {
@@ -45,14 +32,15 @@ int ShadeAt_(double elevation, const ElevationRulesConfig_t& rRules,
     return rTable[index];
 }
 
-int CornerShade_(const Tile& rTile, const WorldMap& rMap,
-                 const std::array<GridDelta_t, 3>& neighbors, const WaterShadingStyle_t& rShading)
+int CornerShade_(const Tile& rTile, const WorldMap& rMap, DiamondCorner_t corner,
+                 const WaterShadingStyle_t& rShading)
 {
     double sum = DepthElevation_(rTile);
     int count = 1;
-    for (const GridDelta_t& rDelta : neighbors)
+    for (const LatticeOffset_t& rOffset :
+         k_CornerNeighbors[static_cast<std::size_t>(corner)])
     {
-        if (const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rDelta.dx, rDelta.dy))
+        if (const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rOffset.p, rOffset.q))
         {
             sum += DepthElevation_(*pNeighbor);
             ++count;
@@ -86,10 +74,10 @@ DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap* pMap,
     }
     return DiamondShades_t{
         own,
-        CornerShade_(rTile, *pMap, k_WestCorner, rShading),
-        CornerShade_(rTile, *pMap, k_NorthCorner, rShading),
-        CornerShade_(rTile, *pMap, k_EastCorner, rShading),
-        CornerShade_(rTile, *pMap, k_SouthCorner, rShading),
+        CornerShade_(rTile, *pMap, DiamondCorner_t::West, rShading),
+        CornerShade_(rTile, *pMap, DiamondCorner_t::North, rShading),
+        CornerShade_(rTile, *pMap, DiamondCorner_t::East, rShading),
+        CornerShade_(rTile, *pMap, DiamondCorner_t::South, rShading),
     };
 }
 
@@ -105,7 +93,7 @@ void ApplyWaterShades(TileShape_t& rShape, const DiamondShades_t& shades,
 {
     if (range.max < 0)
     {
-        throw std::invalid_argument("ApplyWaterShades: range.max is negative");
+        throw std::invalid_argument("ApplyWaterShades: max shade is negative");
     }
     rShape.center.shade = ShadeIn_(shades.center, range);
     rShape.west.shade = ShadeIn_(shades.west, range);

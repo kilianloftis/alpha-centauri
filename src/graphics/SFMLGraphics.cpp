@@ -360,19 +360,6 @@ public:
         m_window.draw(rect);
     }
 
-    void DrawFilledDiamond(float x, float y, float width, float height, const Color_t& color) override
-    {
-        sf::ConvexShape diamond(4);
-        diamond.setPoint(0, {width * 0.5f, 0.0f});
-        diamond.setPoint(1, {width, height * 0.5f});
-        diamond.setPoint(2, {width * 0.5f, height});
-        diamond.setPoint(3, {0.0f, height * 0.5f});
-        diamond.setPosition({x, y});
-        diamond.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
-        diamond.setOutlineThickness(0.0f);
-        m_window.draw(diamond);
-    }
-
     void DrawDiamond(float x, float y, float width, float height, const Color_t& color,
                      float thickness) override
     {

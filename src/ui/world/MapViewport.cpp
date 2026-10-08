@@ -1,7 +1,7 @@
 #include "ui/world/MapViewport.h"
 
 #include "game/map/MapUtils.h"
-#include "ui/TileRenderer.h"
+#include "ui/TileShapeGeometry.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,8 +12,6 @@ namespace ac
 
 namespace
 {
-
-constexpr float k_IsoHeightRatio = 0.5f;
 
 // Flat diamond under map units (u, v): centre (x+1, y+1) with |u-x-1|+|v-y-1| ≤ 1.
 std::optional<std::pair<int, int>> FlatTileAtMapUnits_(float u, float v, int mapWidth,
@@ -284,8 +282,7 @@ std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX,
             float aabbX = 0.0f;
             float aabbY = 0.0f;
             AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
-            if (TileRenderer::ShapeContains(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false),
-                                            pixelX, pixelY))
+            if (ShapeContains(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false), pixelX, pixelY))
             {
                 return std::pair{worldX, worldY};
             }

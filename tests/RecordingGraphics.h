@@ -132,13 +132,6 @@ public:
         rects.push_back(RectDraw_t{x, y, width, height, true, rColor, drawCount++});
     }
 
-    void DrawFilledDiamond(float x, float y, float width, float height,
-                           const ac::Color_t& rColor) override
-    {
-        // Record as a filled rect of the diamond AABB so color-at helpers keep working.
-        rects.push_back(RectDraw_t{x, y, width, height, true, rColor, drawCount++});
-    }
-
     void DrawDiamond(float x, float y, float width, float height, const ac::Color_t& rColor,
                      float) override
     {

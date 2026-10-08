@@ -7,6 +7,7 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -182,7 +183,7 @@ TileShape_t DrawnShape_(const Tile& rTile, const WorldMap& rMap, const std::stri
                         bool bFogged)
 {
     RecordingGraphics graphics;
-    TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 64.0f), bFogged, &rMap);
+    TileRenderer::Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 64.0f), bFogged, &rMap);
     for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
     {
         if (rSprite.textureId.starts_with(prefix) && rSprite.shape.has_value())
@@ -211,13 +212,12 @@ void SurroundWith_(actest::WorldFixture& rWorld, const Tile& rCentre, int elevat
 
 } // namespace
 
-TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholders",
-          "[ui][tile]")
+TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", "[ui][tile]")
 {
     EnsureStyleLoaded_();
     const auto& s = Style().tileRenderer;
 
-    SECTION("moist rocky land gets a grey ring and green center, no text")
+    SECTION("moist rocky land without sprites draws only the fill")
     {
         Tile tile(0, 0);
         tile.BindMapRules(actest::TestMapRules());
@@ -226,32 +226,17 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         tile.SetRockiness(Rockiness_t::Rocky);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(10.0f, 20.0f, 100.0f), /*bFogged*/ false);
+        TileRenderer::Render(graphics, tile, FlatTileShape(10.0f, 20.0f, 100.0f),
+                             /*bFogged*/ false);
 
         CHECK(graphics.texts.empty());
-        CHECK(HasFilledColor_(graphics, s.rockyRingColor));
-        CHECK(HasFilledColor_(graphics, s.moistCenterColor));
+        CHECK(graphics.sprites.empty());
+        REQUIRE(graphics.rects.size() == 1);
+        CHECK(graphics.rects.front().bFilled);
+        CHECK(ColorEq_(graphics.rects.front().color, TileRenderer::FillColor(tile, false)));
     }
 
-    SECTION("wet rolling land uses the lighter grey and darker green")
-    {
-        Tile tile(1, 1);
-        tile.BindMapRules(actest::TestMapRules());
-        tile.SetElevation(200);
-        tile.SetMoisture(Moisture_t::Wet);
-        tile.SetRockiness(Rockiness_t::Rolling);
-
-        RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(0.0f, 0.0f, 80.0f), /*bFogged*/ false);
-
-        CHECK(graphics.texts.empty());
-        CHECK(HasFilledColor_(graphics, s.rollingRingColor));
-        CHECK(HasFilledColor_(graphics, s.wetCenterColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.rockyRingColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.moistCenterColor));
-    }
-
-    SECTION("water keeps the elevation fill and skips landform overlays")
+    SECTION("water keeps the elevation fill")
     {
         Tile tile(2, 2);
         tile.BindMapRules(actest::TestMapRules());
@@ -260,13 +245,10 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         tile.SetRockiness(Rockiness_t::Rocky);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(0.0f, 0.0f, 64.0f), /*bFogged*/ false);
+        TileRenderer::Render(graphics, tile, FlatTileShape(0.0f, 0.0f, 64.0f),
+                             /*bFogged*/ false);
 
         CHECK(graphics.texts.empty());
-        CHECK_FALSE(HasFilledColor_(graphics, s.rockyRingColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.rollingRingColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.moistCenterColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.wetCenterColor));
         REQUIRE_FALSE(graphics.rects.empty());
         CHECK(graphics.rects.front().bFilled);
         CHECK(ColorEq_(graphics.rects.front().color,
@@ -291,7 +273,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         CHECK(ColorEq_(shallowFill, s.waterHighColor));
     }
 
-    SECTION("arid flat land is brown fill only")
+    SECTION("arid flat land is fill only")
     {
         Tile tile(3, 3);
         tile.BindMapRules(actest::TestMapRules());
@@ -300,16 +282,15 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         tile.SetRockiness(Rockiness_t::Flat);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(0.0f, 0.0f, 50.0f), /*bFogged*/ false);
+        TileRenderer::Render(graphics, tile, FlatTileShape(0.0f, 0.0f, 50.0f),
+                             /*bFogged*/ false);
 
         CHECK(graphics.texts.empty());
-        CHECK_FALSE(HasFilledColor_(graphics, s.rockyRingColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.rollingRingColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.moistCenterColor));
-        CHECK_FALSE(HasFilledColor_(graphics, s.wetCenterColor));
+        REQUIRE(graphics.rects.size() == 1);
+        CHECK(ColorEq_(graphics.rects.front().color, TileRenderer::FillColor(tile, false)));
     }
 
-    SECTION("fungus overlays terrain instead of replacing it with a solid fill")
+    SECTION("fungus overlays terrain with its sprite when present")
     {
         actest::WorldFixture world;
         // Moist/Rocky layers are also resolved on this tile — stub them before Render so a
@@ -329,11 +310,12 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 64.0f), /*bFogged*/ false);
+        TileRenderer::Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 64.0f),
+                             /*bFogged*/ false);
 
         REQUIRE_FALSE(graphics.rects.empty());
         CHECK(graphics.rects.front().bFilled);
-        CHECK_FALSE(ColorEq_(graphics.rects.front().color, s.fungusColor));
+        CHECK(ColorEq_(graphics.rects.front().color, TileRenderer::FillColor(rTile, false)));
         bool bFungusSprite = false;
         for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
         {
@@ -362,7 +344,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
         rTile.SetRockiness(Rockiness_t::Flat);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(10.0f, 20.0f, 100.0f), /*bFogged*/ false,
+        TileRenderer::Render(graphics, rTile, FlatTileShape(10.0f, 20.0f, 100.0f), /*bFogged*/ false,
                              &world.map);
 
         const std::ptrdiff_t index = FirstSpriteIndex_(graphics, moistPrefix);
@@ -453,7 +435,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         world.map.GetTile(9, 3)->SetElevation(shelfMeters);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::vector<RecordingGraphics::SpriteDraw_t> coast = CoastSprites_(graphics);
         REQUIRE(coast.size() == 4);
@@ -478,7 +460,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         rLand.AddImprovement(world.improvements.Get("Mine"));
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::string coastPrefix = Style().tileRenderer.coastSpriteDir + "/";
         const std::ptrdiff_t moist = FirstSpriteIndex_(graphics, moistPath);
@@ -505,7 +487,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         rLand.SetHasRiver(true);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::string coastPrefix = Style().tileRenderer.coastSpriteDir + "/";
         const std::ptrdiff_t moist = FirstSpriteIndex_(graphics, moistPath);
@@ -537,7 +519,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         }
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
         REQUIRE(water.size() == 3);
@@ -555,7 +537,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
         // The land's N and E corners are the W and S corners of the water across its NE edge.
         RecordingGraphics waterGraphics;
-        TileRenderer::Render(waterGraphics, *world.map.GetTile(9, 3), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
+        TileRenderer::Render(waterGraphics, *world.map.GetTile(9, 3), FlatTileShape(k_X, k_Y, k_Size),
                              /*bFogged*/ false, &world.map);
         const std::ptrdiff_t shelf = FirstSpriteIndex_(waterGraphics, shelfPath);
         REQUIRE(shelf >= 0);
@@ -586,9 +568,9 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         };
 
         RecordingGraphics lit;
-        TileRenderer::Render(lit, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(lit, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
         RecordingGraphics fogged;
-        TileRenderer::Render(fogged, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
+        TileRenderer::Render(fogged, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
 
         const std::ptrdiff_t litMoist = FirstSpriteIndex_(lit, moistPath);
         const std::ptrdiff_t foggedMoist = FirstSpriteIndex_(fogged, moistPath);
@@ -647,9 +629,9 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         }
 
         RecordingGraphics litSea;
-        TileRenderer::Render(litSea, rWater, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(litSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
         RecordingGraphics foggedSea;
-        TileRenderer::Render(foggedSea, rWater, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
+        TileRenderer::Render(foggedSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
         const std::ptrdiff_t litShelf = FirstSpriteIndex_(litSea, shelfPath);
         const std::ptrdiff_t foggedShelf = FirstSpriteIndex_(foggedSea, shelfPath);
         REQUIRE(litShelf >= 0);
@@ -669,7 +651,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         SurroundWith_(world, rLand, shelfMeters);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
         REQUIRE(water.size() == 4);
@@ -686,7 +668,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         SurroundWith_(world, rIsland, shelfMeters);
 
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rIsland, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rIsland, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
         const std::vector<RecordingGraphics::SpriteDraw_t> shore = CoastSprites_(graphics, "shore_");
         REQUIRE(shore.size() == 4);
@@ -702,15 +684,15 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         rWater.SetElevation(shelfMeters);
 
         RecordingGraphics noMap;
-        TileRenderer::Render(noMap, rLand, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false);
+        TileRenderer::Render(noMap, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false);
         CHECK(CoastSprites_(noMap).empty());
 
         RecordingGraphics waterTile;
-        TileRenderer::Render(waterTile, rWater, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(waterTile, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
         CHECK(CoastSprites_(waterTile).empty());
 
         RecordingGraphics inland;
-        TileRenderer::Render(inland, *world.map.GetTile(7, 5), TileRenderer::FlatTileShape(k_X, k_Y, k_Size),
+        TileRenderer::Render(inland, *world.map.GetTile(7, 5), FlatTileShape(k_X, k_Y, k_Size),
                              /*bFogged*/ false, &world.map);
         CHECK(CoastSprites_(inland).empty());
     }
@@ -736,7 +718,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
 
     const auto waterShape = [&](const std::string& path) {
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
         const std::ptrdiff_t index = FirstSpriteIndex_(graphics, path);
         REQUIRE(index >= 0);
         const RecordingGraphics::SpriteDraw_t& rSprite =
@@ -842,14 +824,14 @@ TEST_CASE("TileRenderer draws an occupant's art for the tile's surface", "[ui][t
     }
 
     RecordingGraphics onLand;
-    TileRenderer::Render(onLand, rLand, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+    TileRenderer::Render(onLand, rLand, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
     CHECK(drew(onLand, fungus.land.front()));
     CHECK_FALSE(drew(onLand, fungus.sea.front()));
     CHECK(drew(onLand, nutrients.land.front()));
     CHECK_FALSE(drew(onLand, nutrients.sea.front()));
 
     RecordingGraphics atSea;
-    TileRenderer::Render(atSea, rSea, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+    TileRenderer::Render(atSea, rSea, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
     CHECK(drew(atSea, fungus.sea.front()));
     CHECK_FALSE(drew(atSea, fungus.land.front()));
     CHECK(drew(atSea, nutrients.sea.front()));
@@ -873,7 +855,7 @@ TEST_CASE("Object sprites hang from the tile's seat as SMAC anchors them", "[ui]
     constexpr float k_Size = 100.0f;
     constexpr float k_Height = k_Size * 0.5f;
     RecordingGraphics graphics;
-    TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+    TileRenderer::Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
 
     const std::string& path = rNutrients.spritePaths.land.front();
     const auto it = std::ranges::find_if(graphics.sprites,
@@ -927,7 +909,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     });
     const auto render = [&world, &rTile]() {
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+        TileRenderer::Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
         return graphics;
     };
 
@@ -1002,7 +984,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
 
         RecordingGraphics deep;
         TileRenderer::Render(deep, *world.map.GetTile(9, 5),
-                             TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
+                             FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
                              &world.map);
         CHECK(countDrawn(deep, seaPrefix) == 0);
     }
@@ -1026,7 +1008,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     }
 }
 
-TEST_CASE("A river without art falls back to lines toward its connections", "[ui][tile]")
+TEST_CASE("A river without art draws nothing beyond the fill", "[ui][tile]")
 {
     EnsureStyleLoaded_();
     actest::WorldFixture world;
@@ -1038,28 +1020,14 @@ TEST_CASE("A river without art falls back to lines toward its connections", "[ui
     tile.SetElevation(500);
     tile.SetHasRiver(true);
 
-    constexpr float k_X = 10.0f;
-    constexpr float k_Y = 20.0f;
-    constexpr float k_Size = 100.0f;
-
-    SECTION("a line from the centre to each connected edge")
-    {
-        RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
-        REQUIRE(graphics.lines.size() == 1);
-        // North on the grid is the diamond's NE edge, whose midpoint is at (¾ w, ¼ h).
-        CHECK_THAT(graphics.lines[0].x1, WithinAbs(k_X + 50.0f, 0.001f));
-        CHECK_THAT(graphics.lines[0].y1, WithinAbs(k_Y + 25.0f, 0.001f));
-        CHECK_THAT(graphics.lines[0].x2, WithinAbs(k_X + 75.0f, 0.001f));
-        CHECK_THAT(graphics.lines[0].y2, WithinAbs(k_Y + 12.5f, 0.001f));
-    }
-
-    SECTION("a cross when no neighbor has a river")
-    {
-        RecordingGraphics graphics;
-        TileRenderer::Render(graphics, tile, TileRenderer::FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false);
-        CHECK(graphics.lines.size() == 2);
-    }
+    RecordingGraphics graphics;
+    TileRenderer::Render(graphics, tile, FlatTileShape(10.0f, 20.0f, 100.0f),
+                         /*bFogged*/ false, &world.map);
+    CHECK(graphics.lines.empty());
+    CHECK(graphics.sprites.empty());
+    REQUIRE_FALSE(graphics.rects.empty());
+    CHECK(graphics.rects.front().bFilled);
+    CHECK(ColorEq_(graphics.rects.front().color, TileRenderer::FillColor(tile, false)));
 }
 
 TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in sight",
@@ -1074,7 +1042,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     const std::string moistPrefix = TilePrefix_(world.improvements.Get("Moist").spriteTiles->land);
 
     // A raised, shaded tile: the centre 30 px up and the N corner 10 px up.
-    TileShape_t shape = TileRenderer::FlatTileShape(10.0f, 20.0f, 100.0f);
+    TileShape_t shape = FlatTileShape(10.0f, 20.0f, 100.0f);
     shape.center.y -= 30.0f;
     shape.north.y -= 10.0f;
     shape.center.shade = -1.5f;
@@ -1200,7 +1168,7 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
     const auto drawn = [&world](int x, int y) {
         RecordingGraphics graphics;
         TileRenderer::Render(graphics, *world.map.GetTile(x, y),
-                             TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
+                             FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
                              &world.map);
         std::vector<std::string> paths;
         for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
@@ -1298,7 +1266,7 @@ TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and 
     rTile.AddImprovement(rFarm);
     const auto render = [&](const TileRenderer::YieldLookup_t& rYieldOf) {
         RecordingGraphics graphics;
-        TileRenderer::Render(graphics, rTile, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f),
+        TileRenderer::Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 100.0f),
                              /*bFogged*/ false, &world.map, rYieldOf);
         return graphics;
     };
@@ -1350,7 +1318,7 @@ TEST_CASE("Improvements draw their sea art at sea", "[ui][tile]")
     rSea.AddImprovement(rKelp);
 
     RecordingGraphics graphics;
-    TileRenderer::Render(graphics, rSea, TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f),
+    TileRenderer::Render(graphics, rSea, FlatTileShape(0.0f, 0.0f, 100.0f),
                          /*bFogged*/ false, &world.map);
     const std::ptrdiff_t index = FirstSpriteIndex_(graphics, rKelp.spritePaths.sea.front());
     REQUIRE(index >= 0);
@@ -1364,7 +1332,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
     actest::WorldFixture world;
     Tile& rLand = *world.map.GetTile(8, 4);
     rLand.SetElevation(500);
-    const TileShape_t shape = TileRenderer::FlatTileShape(0.0f, 0.0f, 100.0f);
+    const TileShape_t shape = FlatTileShape(0.0f, 0.0f, 100.0f);
     const auto checkerCells = [&](const RecordingGraphics& rGraphics) {
         std::vector<RecordingGraphics::RectDraw_t> cells;
         std::ranges::copy_if(rGraphics.rects, std::back_inserter(cells), [&](const auto& rRect) {

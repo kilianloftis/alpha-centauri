@@ -11,7 +11,7 @@ Coastlines are covered separately in [smac-coastline-rainfall.md](smac-coastline
 
 | Set | First cell | Cells | Destination | Picked by |
 |-----|-----------|-------|-------------|-----------|
-| Rolling / rocky overlays | (1, 1) | 4 | `0x76E9E0` | Rockiness |
+| Rolling / rocky overlays | (1, 1) | 4 | `0x76E9E0` | Rockiness (full-tile keyed cells, corner-mapped like arid/ocean; not edge-inset) |
 | Dunes (`LM_DUNES`) | (229, 1) | 1 | `0x7AC220` | Landmark replaces the base |
 | Arid base | (1, 58) | 1 | `0x799E48` | Rainfall 0 |
 | Moist bases | (1, 115) | 16 | `0x799EB8` | Rainfall 1, blend table |

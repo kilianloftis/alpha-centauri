@@ -163,11 +163,6 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.landLowColor = ParseColor_(j, "land_low_color");
     s.landHighColor = ParseColor_(j, "land_high_color");
     s.forestColor = ParseColor_(j, "forest_color");
-    s.fungusColor = ParseColor_(j, "fungus_color");
-    s.moistCenterColor = ParseColor_(j, "moist_center_color");
-    s.wetCenterColor = ParseColor_(j, "wet_center_color");
-    s.rollingRingColor = ParseColor_(j, "rolling_ring_color");
-    s.rockyRingColor = ParseColor_(j, "rocky_ring_color");
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
     s.fogLandShade = j.at("fog_land_shade").get<float>();
     if (s.fogLandShade < 0.0f)
@@ -175,14 +170,6 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
         throw std::runtime_error("tile_renderer.fog_land_shade must not be negative");
     }
     s.fogHazeColor = ParseColor_(j, "fog_haze_color");
-    s.landformRingOuterInsetRatio = j.at("landform_ring_outer_inset_ratio").get<float>();
-    s.landformRingInnerInsetRatio = j.at("landform_ring_inner_inset_ratio").get<float>();
-    s.spriteOverlayEdgeInsetRatio = j.at("sprite_overlay_edge_inset_ratio").get<float>();
-    if (s.spriteOverlayEdgeInsetRatio < 0.0f || s.spriteOverlayEdgeInsetRatio > 0.45f)
-    {
-        throw std::runtime_error(
-            "tile_renderer.sprite_overlay_edge_inset_ratio must be in [0, 0.45]");
-    }
     s.coastSpriteDir = j.at("coast_sprite_dir").get<std::string>();
     if (s.coastSpriteDir.empty())
     {
@@ -193,8 +180,6 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     {
         throw std::runtime_error("tile_renderer.palette_path must not be empty");
     }
-    s.riverColor = ParseColor_(j, "river_color");
-    s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.waterShading = ParseWaterShadingStyle_(j.at("water_shading"));
     s.relief = ParseReliefStyle_(j.at("relief"));
     s.missingArtColor = ParseColor_(j, "missing_art_color");

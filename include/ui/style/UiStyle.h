@@ -81,32 +81,16 @@ struct TileRendererStyle_t
     Color_t landLowColor{};
     Color_t landHighColor{};
     Color_t forestColor{};
-    Color_t fungusColor{};
-    // Procedural landform fallback when sprite_paths is empty or the asset fails to load.
-    Color_t moistCenterColor{};
-    Color_t wetCenterColor{};
-    Color_t rollingRingColor{};
-    Color_t rockyRingColor{};
     float fogFillDimRatio{};
     // Palette steps darker that fogged land art draws, as SMAC shades remembered land.
     float fogLandShade{};
     // Haze drawn over a fogged tile's terrain layers.
     Color_t fogHazeColor{};
-    // Insets as a fraction of tile size: ring sits between outer and inner; moisture fills
-    // the center (same inner inset so it plugs the ring hole).
-    float landformRingOuterInsetRatio{};
-    float landformRingInnerInsetRatio{};
-    // Neighbor-aware rockiness overlay pull-in (fraction of diamond width). Matching ortho
-    // edges draw flush; mismatches inset.
-    float spriteOverlayEdgeInsetRatio{};
     // Directory of the {water,shore}_<corner>_<case>.png coast overlays (extract_terrain.py).
     std::string coastSpriteDir{};
     // palette.pcx as a 256 × 1 texture; terrain and coast art are indices into it
     // (extract_terrain.py).
     std::string palettePath{};
-    // River fallback lines when river art is missing.
-    Color_t riverColor{};
-    float riverLineThicknessRatio{};
     WaterShadingStyle_t waterShading{};
     ReliefStyle_t relief{};
     // Checker drawn where an object's configured art is missing: two colours, two cells a side,

@@ -2,6 +2,8 @@
 
 #include "game/map/Tile.h"
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -53,11 +55,46 @@ inline int TileIndex(int x, int y, int width)
 
 // Lattice step (p, q): p toward screen SE, q toward screen SW. A lattice offset maps to
 // map coordinates as (p - q, p + q).
+struct LatticeOffset_t
+{
+    int p = 0;
+    int q = 0;
+};
+
 struct LatticeDelta_t
 {
     int p = 0;
     int q = 0;
 };
+
+// Diamond corners in screen space (W, N, E, S vertices of the tile footprint).
+enum class DiamondCorner_t
+{
+    West,
+    North,
+    East,
+    South,
+};
+
+inline constexpr std::size_t k_DiamondCornerCount = 4;
+
+// The three lattice neighbors that share each corner with the tile. Neighbor i meets the point at
+// its own corner (corner + 1 + i) % 4.
+inline constexpr std::array<std::array<LatticeOffset_t, 3>, k_DiamondCornerCount> k_CornerNeighbors =
+    {{
+        {{{0, 1}, {-1, 1}, {-1, 0}}},
+        {{{-1, 0}, {-1, -1}, {0, -1}}},
+        {{{0, -1}, {1, -1}, {1, 0}}},
+        {{{1, 0}, {1, 1}, {0, 1}}},
+    }};
+
+// Orthogonal neighbors across diamond edges, N, E, S, W on screen.
+inline constexpr std::array<LatticeOffset_t, 4> k_EdgeNeighbors = {{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}};
+
+// Eight neighbors clockwise from the tile's N corner (same indexing as SMAC link cells).
+inline constexpr std::array<LatticeOffset_t, 8> k_RingNeighbors = {{
+    {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1},
+}};
 
 inline LatticeDelta_t LatticeDelta(const Tile& rFrom, const Tile& rTo, int width)
 {
@@ -111,10 +148,9 @@ inline int TabletopDiagonalDistance(const Tile& rA, const Tile& rB, int mapWidth
 template<typename WorldMapT, typename Fn>
 void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
 {
-    static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-    for (const auto& delta : k_Deltas)
+    for (const LatticeOffset_t& delta : k_EdgeNeighbors)
     {
-        auto* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, delta[0], delta[1]);
+        auto* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, delta.p, delta.q);
         if (pTile)
         {
             fn(pTile);
