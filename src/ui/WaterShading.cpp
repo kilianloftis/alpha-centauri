@@ -13,6 +13,23 @@ namespace ac
 namespace
 {
 
+void RequireDepthShadeLandform_(const ImprovementRegistry& rOccupants, const char* pKey,
+                                const std::string& rLandformId)
+{
+    const ImprovementConfig_t* pLandform = rOccupants.Find(rLandformId);
+    if (!pLandform)
+    {
+        throw std::runtime_error(std::string("tile_renderer.water_shading.") + pKey + " '"
+                                 + rLandformId + "' names no occupant");
+    }
+    if (!pLandform->art || pLandform->art->layer != ArtLayer_t::Landform
+        || !pLandform->art->depthShade)
+    {
+        throw std::runtime_error(std::string("tile_renderer.water_shading.") + pKey + " '"
+                                 + rLandformId + "' has no landform art with a depth_shade");
+    }
+}
+
 double DepthElevation_(const Tile& rTile)
 {
     const ElevationRulesConfig_t& rRules = rTile.MapRules();
@@ -86,6 +103,14 @@ const std::string& SeaArtLandform(const DiamondShades_t& shades, const WaterShad
     const bool bDeep = std::max({shades.west, shades.north, shades.east, shades.south})
                        >= rShading.deepFromShade;
     return bDeep ? rShading.deepLandform : rShading.shelfLandform;
+}
+
+void ValidateTerrainArtReferences(const WaterShadingStyle_t& rShading,
+                                  const ImprovementRegistry& rOccupants)
+{
+    RequireDepthShadeLandform_(rOccupants, "deep_landform", rShading.deepLandform);
+    RequireDepthShadeLandform_(rOccupants, "shelf_landform", rShading.shelfLandform);
+    RequireDepthShadeLandform_(rOccupants, "coast_shades", rShading.coastShades);
 }
 
 void ApplyWaterShades(TileShape_t& rShape, const DiamondShades_t& shades,

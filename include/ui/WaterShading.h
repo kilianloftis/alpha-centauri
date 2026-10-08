@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/OccupantArt.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
@@ -26,6 +28,11 @@ DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap* pMap,
 // deepFromShade, the shelf landform otherwise. The centre does not count.
 const std::string& SeaArtLandform(const DiamondShades_t& shades,
                                   const WaterShadingStyle_t& rShading);
+
+// Throws unless deep_landform, shelf_landform and coast_shades each name a landform in the
+// registry whose art has a depth_shade. Call once the style and the occupants are loaded.
+void ValidateTerrainArtReferences(const WaterShadingStyle_t& rShading,
+                                  const ImprovementRegistry& rOccupants);
 
 // Sets each vertex's shade to its depth shade plus the range's offset, kept within 0..max.
 void ApplyWaterShades(TileShape_t& rShape, const DiamondShades_t& shades,

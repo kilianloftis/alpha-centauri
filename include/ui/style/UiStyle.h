@@ -46,14 +46,6 @@ struct ReliefStyle_t
     float altitudeLightSteps{};
 };
 
-// The palette steps a water art takes: its depth shade plus offset, kept within 0..max so the
-// art stays on the water ramp.
-struct WaterShadeRange_t
-{
-    int offset = 0;
-    int max = 0;
-};
-
 // SMAC's water depth shading (docs/thinker/smac-palette-lighting.md).
 struct WaterShadingStyle_t
 {
@@ -67,10 +59,7 @@ struct WaterShadingStyle_t
     std::string deepLandform;
     std::string shelfLandform;
     int deepFromShade = 0;
-    // Each water landform's shade range, keyed by landform id; a landform without one draws as
-    // painted.
-    std::unordered_map<std::string, WaterShadeRange_t> shades;
-    // The shades entry coast water uses.
+    // The landform whose depth_shade coast water uses.
     std::string coastShades;
 };
 
@@ -80,7 +69,6 @@ struct TileRendererStyle_t
     Color_t waterHighColor{};
     Color_t landLowColor{};
     Color_t landHighColor{};
-    Color_t forestColor{};
     float fogFillDimRatio{};
     // Palette steps darker that fogged land art draws, as SMAC shades remembered land.
     float fogLandShade{};

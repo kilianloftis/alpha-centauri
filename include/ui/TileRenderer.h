@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/MapUtils.h"
+#include "game/map/OccupantArt.h"
 #include "graphics/Graphics.h"
 
 #include <array>
@@ -19,7 +20,6 @@ class Tile;
 class WorldMap;
 struct CoastCornerArt_t;
 struct ImprovementConfig_t;
-struct TileLayer_t;
 struct TileRendererStyle_t;
 
 // Stable variant index for a tile cell. Depends only on coords, content id, and count
@@ -32,12 +32,12 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 
 // Shared terrain-tile cell drawing for the world map, location panel preview, and base
 // workable-area ring.
-// Fills by forest overlay or elevation (blue water / brown land), then draws
-// ResolveTileLayers bottom-to-top. Terrain art is palette indices shaded as SMAC does: land by
-// its relief shades, water per vertex by depth. Fungus is an overlay sprite (not a solid
-// fill). Art that fails to load draws nothing under terrain (the fill shows) and a checker for
-// objects. Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
-// When sprite_paths lists multiple assets, PickSpritePath chooses one per tile. Sprites load
+// Fills by an occupant's fill_color or elevation (blue water / brown land), then draws each
+// occupant's art by its ArtLayer_t, bottom to top. Terrain art is palette indices shaded as SMAC
+// does: land by its relief shades, water per vertex by depth. Art that fails to load draws
+// nothing under terrain (the fill shows) and a checker for objects. Footprint is a 2:1
+// isometric diamond (width = size, height = size / 2).
+// When an art's variants list multiple assets, PickSpritePath chooses one per tile. Sprites load
 // through the SpriteLibrary the renderer was built over; the style is the one it was built with.
 class TileRenderer
 {
@@ -52,7 +52,7 @@ public:
     SpriteLibrary& Sprites() { return m_rSprites; }
 
     // Fill used by the world map, location preview, and minimap (fog dims the fill).
-    // Forest overrides the elevation gradient when present; fungus does not.
+    // The last occupant on the tile with a fill_color overrides the elevation gradient.
     Color_t FillColor(const Tile& rTile, bool bFogged = false) const;
 
     // Draws the tile on rShape: terrain on its four triangles (land at its vertex shades),
@@ -66,10 +66,10 @@ public:
                 const YieldLookup_t& rYieldOf = {}) const;
 
     // Render's two halves, so the world map can draw a tile's grid lines between them as SMAC
-    // does. RenderTerrain draws the fill, terrain layers (farm ground in place of the moisture
-    // base), road networks, coast and fog haze; RenderObjects the tile bonuses and then every
-    // improvement's object sprite (skipping those another occupant hides), seated at the mean of
-    // the shape's four corners. An object whose configured art is missing draws a magenta and
+    // does. RenderTerrain draws the fill, the landform to vegetation layers (an improvement's
+    // ground in place of the moisture base), coast, river, road networks and fog haze;
+    // RenderObjects the object art of terrain occupants and then of improvements (skipping those
+    // another occupant hides), seated at the mean of the shape's four corners. An object whose configured art is missing draws a magenta and
     // black checker in its place.
     void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                        bool bFogged, const WorldMap* pMap) const;
@@ -93,13 +93,18 @@ private:
     const std::string& CoastSpritePath_(std::size_t part, const CoastCornerArt_t& rArt) const;
     void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
                            const TileShape_t& rShape, float shoreShade) const;
-    bool TryDrawOccupantPath_(Graphics& rGraphics, const ImprovementConfig_t& rOccupant,
+    bool TryDrawOccupantPath_(Graphics& rGraphics, const OccupantArt_t& rArt,
                               const std::string& path, const TileShape_t& rShape,
                               const Color_t& tint) const;
-    bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile, const TileLayer_t& rLayer,
-                             const WorldMap* pMap, const TileShape_t& rShape) const;
-    bool TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile, const TileLayer_t& rLayer,
-                               const WorldMap* pMap, const TileShape_t& rShape) const;
+    void DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, ArtLayer_t layer,
+                           const WorldMap* pMap, const TileShape_t& rShape,
+                           const TileShape_t& rTerrain) const;
+    bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile,
+                             const ImprovementConfig_t& rOccupant, const WorldMap* pMap,
+                             const TileShape_t& rShape) const;
+    bool TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
+                               const ImprovementConfig_t& rOccupant, const WorldMap* pMap,
+                               const TileShape_t& rShape) const;
     void DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
                            const TileShape_t& rShape) const;
     void DrawMissingArt_(Graphics& rGraphics, const TileShape_t& rShape) const;

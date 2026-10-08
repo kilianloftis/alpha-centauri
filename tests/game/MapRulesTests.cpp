@@ -9,8 +9,6 @@
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
-#include "game/map/TileLayer.h"
-#include "game/map/TileLayerResolver.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
 
@@ -21,181 +19,27 @@
 
 using namespace ac;
 
-TEST_CASE("Tile layers resolve improvements by config id, not by sprite content id",
-          "[map][layers]")
-{
-    // The probe used TileLayerContent ("farm"/"forest"/"road"), which is the sprite domain;
-    // improvements.json declares "Farm"/"Forest"/"Road". Every probe failed, so Vegetation and
-    // Road stayed empty and their improvements fell through into the Improvement layer.
-    actest::WorldFixture world;
-    Tile& rTile = *world.map.GetTile(8, 4);
-    rTile.SetElevation(500);
-    rTile.AddImprovement(world.improvements.Get("Farm"));
-    rTile.AddImprovement(world.improvements.Get("Road"));
-
-    const auto layers = ResolveTileLayers(rTile);
-    const auto& rVegetation = layers[static_cast<size_t>(TileLayerType_t::Vegetation)];
-    const auto& rRoad = layers[static_cast<size_t>(TileLayerType_t::Road)];
-    const auto& rImprovement = layers[static_cast<size_t>(TileLayerType_t::Improvement)];
-
-    // Populated, and returning the lowercase sprite ids the renderer keys on.
-    REQUIRE(rVegetation.contentId.has_value());
-    CHECK(*rVegetation.contentId == TileLayerContent::k_Farm);
-    REQUIRE(rRoad.contentId.has_value());
-    CHECK(*rRoad.contentId == TileLayerContent::k_Road);
-
-    // ...and neither leaked into the Improvement layer.
-    CHECK_FALSE(rImprovement.contentId.has_value());
-}
-
-TEST_CASE("Fungus wins the vegetation layer over farm", "[map][layers]")
-{
-    actest::WorldFixture world;
-    Tile& rTile = *world.map.GetTile(8, 2);
-    rTile.SetElevation(500);
-    rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
-    rTile.AddImprovement(world.improvements.Get("Farm"));
-
-    const auto layers = ResolveTileLayers(rTile);
-    const auto& rVegetation = layers[static_cast<size_t>(TileLayerType_t::Vegetation)];
-    REQUIRE(rVegetation.contentId.has_value());
-    CHECK(*rVegetation.contentId == TileLayerContent::k_Fungus);
-}
-
 TEST_CASE("Fungus in deeper ocean lies dormant until the floor reaches the shelf",
-          "[map][layers][fungus]")
+          "[map][fungus]")
 {
     actest::WorldFixture world;
     Tile& rTile = *world.map.GetTile(8, 2);
     rTile.SetElevation(actest::TestMapRules().oceanShelfMeters - 1);
     rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
     REQUIRE(rTile.HasFeature("Ocean"));
-    const auto vegetation = [&rTile]() {
-        return ResolveTileLayers(rTile)[static_cast<size_t>(TileLayerType_t::Vegetation)];
-    };
     const auto activeFungus = [&rTile]() {
         return std::ranges::any_of(rTile.GetTerrainFeatures(), [](const auto* pConfig) {
             return pConfig->id == ImprovementIds::k_Fungus;
         });
     };
 
-    // Stored, but absent to every rule and to rendering.
     CHECK(rTile.HasTerrainFeature(ImprovementIds::k_Fungus));
     CHECK_FALSE(rTile.HasFeature(ImprovementIds::k_Fungus));
     CHECK_FALSE(activeFungus());
-    CHECK_FALSE(vegetation().contentId.has_value());
 
-    // Raised to the shelf, the same fungus wakes.
     rTile.SetElevation(actest::TestMapRules().oceanShelfMeters);
     CHECK(rTile.HasFeature(ImprovementIds::k_Fungus));
     CHECK(activeFungus());
-    REQUIRE(vegetation().contentId.has_value());
-    CHECK(*vegetation().contentId == TileLayerContent::k_Fungus);
-}
-
-TEST_CASE("Land rockiness overlays resolve above moisture; flat landform is empty",
-          "[map][layers]")
-{
-    actest::WorldFixture world;
-    Tile& rTile = *world.map.GetTile(8, 4);
-    rTile.SetElevation(500);
-    rTile.SetMoisture(Moisture_t::Moist);
-    rTile.SetRockiness(Rockiness_t::Rolling);
-
-    const auto layers = ResolveTileLayers(rTile);
-    CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landform)].contentId.has_value());
-    REQUIRE(layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId.has_value());
-    CHECK(*layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId
-          == TileLayerContent::k_Moist);
-    REQUIRE(layers[static_cast<size_t>(TileLayerType_t::Rockiness)].contentId.has_value());
-    CHECK(*layers[static_cast<size_t>(TileLayerType_t::Rockiness)].contentId
-          == TileLayerContent::k_Rolling);
-}
-
-TEST_CASE("Water tiles resolve depth-band landform and skip land rainfall/rock layers",
-          "[map][layers]")
-{
-    actest::WorldFixture world;
-
-    Tile& rShelf = *world.map.GetTile(8, 2);
-    rShelf.SetElevation(actest::TestMapRules().oceanShelfMeters);
-    rShelf.SetMoisture(Moisture_t::Wet);
-    rShelf.SetRockiness(Rockiness_t::Rocky);
-    REQUIRE(rShelf.IsWater());
-    REQUIRE(rShelf.HasFeature("OceanShelf"));
-
-    {
-        const auto layers = ResolveTileLayers(rShelf);
-        const auto& rLandform = layers[static_cast<size_t>(TileLayerType_t::Landform)];
-        const auto& rMoisture = layers[static_cast<size_t>(TileLayerType_t::Moisture)];
-        const auto& rRockiness = layers[static_cast<size_t>(TileLayerType_t::Rockiness)];
-        REQUIRE(rLandform.contentId.has_value());
-        CHECK(*rLandform.contentId == "OceanShelf");
-        CHECK_FALSE(rMoisture.contentId.has_value());
-        CHECK_FALSE(rRockiness.contentId.has_value());
-    }
-
-    Tile& rDeep = *world.map.GetTile(8, 4);
-    rDeep.SetElevation(actest::TestMapRules().minElevationMeters);
-    rDeep.SetMoisture(Moisture_t::Moist);
-    REQUIRE(rDeep.IsWater());
-    REQUIRE(rDeep.HasFeature("Ocean"));
-
-    {
-        const auto layers = ResolveTileLayers(rDeep);
-        const auto& rLandform = layers[static_cast<size_t>(TileLayerType_t::Landform)];
-        REQUIRE(rLandform.contentId.has_value());
-        CHECK(*rLandform.contentId == "Ocean");
-        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Moisture)].contentId.has_value());
-    }
-}
-
-TEST_CASE("Landmarks and rivers fill their own layers", "[map][layers]")
-{
-    actest::WorldFixture world;
-    Tile& rTile = *world.map.GetTile(8, 4);
-    rTile.SetElevation(500);
-
-    SECTION("a plain tile has neither")
-    {
-        const auto layers = ResolveTileLayers(rTile);
-        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landmark)].contentId.has_value());
-        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::River)].contentId.has_value());
-    }
-
-    SECTION("a landmark feature resolves by config id")
-    {
-        rTile.AddTerrainFeature(world.improvements.Get("MonsoonJungle"));
-        const auto layers = ResolveTileLayers(rTile);
-        const auto& rLandmark = layers[static_cast<size_t>(TileLayerType_t::Landmark)];
-        REQUIRE(rLandmark.contentId.has_value());
-        CHECK(*rLandmark.contentId == "MonsoonJungle");
-    }
-
-    SECTION("a terrain feature without the landmark tag stays out of the layer")
-    {
-        rTile.AddTerrainFeature(world.improvements.Get("Nutrients"));
-        const auto layers = ResolveTileLayers(rTile);
-        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::Landmark)].contentId.has_value());
-    }
-
-    SECTION("a river tile fills the river layer")
-    {
-        rTile.SetHasRiver(true);
-        const auto layers = ResolveTileLayers(rTile);
-        const auto& rRiver = layers[static_cast<size_t>(TileLayerType_t::River)];
-        REQUIRE(rRiver.contentId.has_value());
-        CHECK(*rRiver.contentId == TileLayerContent::k_River);
-    }
-
-    SECTION("a river's water tile draws no river")
-    {
-        rTile.SetElevation(-500);
-        rTile.SetHasRiver(true);
-        REQUIRE(rTile.IsWater());
-        const auto layers = ResolveTileLayers(rTile);
-        CHECK_FALSE(layers[static_cast<size_t>(TileLayerType_t::River)].contentId.has_value());
-    }
 }
 
 TEST_CASE("Improvement coexistence is enforced in both directions", "[map][improvements]")

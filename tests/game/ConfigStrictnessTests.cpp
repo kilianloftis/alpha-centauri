@@ -539,39 +539,12 @@ TEST_CASE("Tile renderer style rejects unusable water shading and relief values"
         return mutated;
     };
 
-    SECTION("coast_shades names no shades entry")
-    {
-        TempConfigFile config("ac_style_coast_shades.json",
-                              withReplaced("\"coast_shades\": \"OceanShelf\"",
-                                           "\"coast_shades\": \"Lagoon\""));
-        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("coast_shades"));
-    }
-
     SECTION("the depth detail step is not positive")
     {
         TempConfigFile config("ac_style_detail.json",
                               withReplaced("\"detail_meters\": 1000", "\"detail_meters\": 0"));
         CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("detail_meters"));
-    }
-
-    SECTION("deep_landform names no shades entry")
-    {
-        TempConfigFile config("ac_style_deep_landform.json",
-                              withReplaced("\"deep_landform\": \"Ocean\"",
-                                           "\"deep_landform\": \"Trench\""));
-        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("deep_landform"));
-    }
-
-    SECTION("a water shade range has a negative cap")
-    {
-        TempConfigFile config("ac_style_shade_cap.json",
-                              withReplaced("\"OceanShelf\": {\"offset\": 0, \"max\": 2}",
-                                           "\"OceanShelf\": {\"offset\": 0, \"max\": -1}"));
-        CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("OceanShelf.max"));
     }
 
     SECTION("fogged land is shaded lighter")

@@ -2,7 +2,6 @@
   {
     "id": "Road",
     "name": "Road",
-    "sprite_tiles": {"layout": "links", "land": "tests/fixtures/sprites/road/{mask}.png", "link_occupants": ["Road", "Base"]},
     "turns_required": 1,
     "effects": [
       {
@@ -32,12 +31,22 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "road",
+      "tiles": {
+        "layout": "links",
+        "land": "tests/fixtures/sprites/road/{mask}.png",
+        "link_occupants": [
+          "Road",
+          "Base"
+        ]
+      }
+    }
   },
   {
     "id": "MagTube",
     "name": "Mag Tube",
-    "sprite_tiles": {"layout": "links", "land": "tests/fixtures/sprites/mag_tube/{mask}.png", "link_occupants": ["MagTube", "Base"], "replaces_links_of": "Road"},
     "turns_required": 3,
     "required_tech": "monopole_magnets",
     "effects": [
@@ -68,14 +77,23 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "road",
+      "tiles": {
+        "layout": "links",
+        "land": "tests/fixtures/sprites/mag_tube/{mask}.png",
+        "link_occupants": [
+          "MagTube",
+          "Base"
+        ],
+        "replaces_links_of": "Road"
+      }
+    }
   },
   {
     "id": "Farm",
     "name": "Farm",
-    "ground_sprites": {"Arid": ["tests/fixtures/sprites/farm/arid_0.png"], "Moist": ["tests/fixtures/sprites/farm/moist_0.png", "tests/fixtures/sprites/farm/moist_1.png"], "Wet": ["tests/fixtures/sprites/farm/wet_0.png"]},
-    "sprite_yield_rows": {"stat": "nutrients", "land": ["tests/fixtures/sprites/farm_0.png", "tests/fixtures/sprites/farm_1.png", "tests/fixtures/sprites/farm_2.png"]},
-    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "land_terraform"
@@ -112,7 +130,31 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "object",
+      "yield_rows": {
+        "stat": "nutrients",
+        "land": [
+          "tests/fixtures/sprites/farm_0.png",
+          "tests/fixtures/sprites/farm_1.png",
+          "tests/fixtures/sprites/farm_2.png"
+        ]
+      },
+      "ground": {
+        "Arid": [
+          "tests/fixtures/sprites/farm/arid_0.png"
+        ],
+        "Moist": [
+          "tests/fixtures/sprites/farm/moist_0.png",
+          "tests/fixtures/sprites/farm/moist_1.png"
+        ],
+        "Wet": [
+          "tests/fixtures/sprites/farm/wet_0.png"
+        ]
+      },
+      "overhang": 0.24
+    }
   },
   {
     "id": "Forest",
@@ -122,10 +164,6 @@
       "land_terraform"
     ],
     "domain": "land",
-    "sprite_tiles": {
-      "layout": "edges",
-      "land": "tests/fixtures/sprites/forest/{mask}.png"
-    },
     "excludes": [
       "Fungus"
     ],
@@ -169,13 +207,24 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "vegetation",
+      "tiles": {
+        "layout": "edges",
+        "land": "tests/fixtures/sprites/forest/{mask}.png"
+      },
+      "fill_color": [
+        34,
+        140,
+        56,
+        255
+      ]
+    }
   },
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
-    "sprite_paths": {"sea": ["tests/fixtures/sprites/kelp.png"]},
-    "sprite_overhang_ratio": 0.24,
     "turns_required": 4,
     "tags": [
       "sea_terraform"
@@ -203,13 +252,21 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "object",
+      "variants": {
+        "sea": [
+          "tests/fixtures/sprites/kelp.png"
+        ]
+      },
+      "overhang": 0.24
+    }
   },
   {
     "id": "Mine",
     "name": "Mine",
     "turns_required": 8,
-    "sprite_paths": {"land": ["tests/fixtures/sprites/mine.png"]},
     "tags": [
       "land_terraform"
     ],
@@ -242,7 +299,15 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "object",
+      "variants": {
+        "land": [
+          "tests/fixtures/sprites/mine.png"
+        ]
+      }
+    }
   },
   {
     "id": "SolarCollector",
@@ -567,9 +632,6 @@
   {
     "id": "Condenser",
     "name": "Condenser",
-    "sprite_paths": {"land": ["tests/fixtures/sprites/condenser.png"]},
-    "sprite_overhang_ratio": 0.24,
-    "hides_sprites_of": ["Farm"],
     "turns_required": 12,
     "required_tech": "ecological_engineering",
     "tags": [
@@ -605,7 +667,19 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "art": {
+      "layer": "object",
+      "variants": {
+        "land": [
+          "tests/fixtures/sprites/condenser.png"
+        ]
+      },
+      "hides": [
+        "Farm"
+      ],
+      "overhang": 0.24
+    }
   },
   {
     "id": "ThermalBorehole",

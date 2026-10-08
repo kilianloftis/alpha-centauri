@@ -7,8 +7,6 @@ namespace ac
 
 // ImprovementConfig_t::id values from config/improvements.json that C++ references by name.
 // These are the gameplay/rules domain, matched by Tile::HasFeature and CanBuildImprovement.
-// Sprite/atlas keys live in TileLayerContent (TileLayer.h) and are a different, lowercase domain
-// - the two must not be swapped.
 namespace ImprovementIds
 {
     inline constexpr std::string_view k_Farm = "Farm";

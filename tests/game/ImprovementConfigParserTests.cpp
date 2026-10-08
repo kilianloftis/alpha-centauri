@@ -361,40 +361,48 @@ TEST_CASE("ImprovementConfigParser loads fixture improvements.json", "[improveme
     CHECK(IsBuildable(*pFarm));
 }
 
-TEST_CASE("sprite_paths lists art per tile surface", "[improvements][parser]")
+TEST_CASE("art variants list sprites per tile surface", "[improvements][parser][art]")
 {
     const auto path = WriteTempJson("ac_improvement_sprites.json", R"([
         {
             "id": "Kelp",
             "name": "Kelp",
-            "sprite_paths": { "land": ["a.png"], "sea": ["b.png", "c.png"] },
+            "art": { "layer": "object",
+                     "variants": { "land": ["a.png"], "sea": ["b.png", "c.png"] } },
             "effects": []
         },
         {
             "id": "Grove",
             "name": "Grove",
-            "sprite_paths": { "land": ["d.png"] },
+            "art": { "layer": "object", "variants": { "land": ["d.png"] } },
             "effects": []
-        }
+        },
+        { "id": "Plain", "name": "Plain", "effects": [] }
     ])");
 
     ImprovementConfigParser parser;
     const auto configs = parser.ParseConfig(path.string());
-    REQUIRE(configs.size() == 2);
-    CHECK(configs[0].spritePaths.land == std::vector<std::string>{"a.png"});
-    CHECK(configs[0].spritePaths.sea == std::vector<std::string>{"b.png", "c.png"});
-    CHECK(configs[1].spritePaths.land == std::vector<std::string>{"d.png"});
-    CHECK(configs[1].spritePaths.sea.empty());
+    REQUIRE(configs.size() == 3);
+    REQUIRE(configs[0].art.has_value());
+    CHECK(configs[0].art->layer == ArtLayer_t::Object);
+    const auto& kelp = std::get<OccupantSpritePaths_t>(configs[0].art->sprites);
+    CHECK(kelp.land == std::vector<std::string>{"a.png"});
+    CHECK(kelp.sea == std::vector<std::string>{"b.png", "c.png"});
+    REQUIRE(configs[1].art.has_value());
+    const auto& grove = std::get<OccupantSpritePaths_t>(configs[1].art->sprites);
+    CHECK(grove.land == std::vector<std::string>{"d.png"});
+    CHECK(grove.sea.empty());
+    CHECK_FALSE(configs[2].art.has_value());
     std::filesystem::remove(path);
 }
 
-TEST_CASE("sprite_paths rejects a surface that is not land or sea", "[improvements][parser]")
+TEST_CASE("art variants reject a surface that is not land or sea", "[improvements][parser][art]")
 {
     const auto path = WriteTempJson("ac_improvement_sprite_surface.json", R"([
         {
             "id": "Grove",
             "name": "Grove",
-            "sprite_paths": { "water": ["d.png"] },
+            "art": { "layer": "object", "variants": { "water": ["d.png"] } },
             "effects": []
         }
     ])");
@@ -406,63 +414,70 @@ TEST_CASE("sprite_paths rejects a surface that is not land or sea", "[improvemen
     std::filesystem::remove(path);
 }
 
-TEST_CASE("sprite_overhang_ratio defaults to zero and must not be negative",
-          "[improvements][parser]")
+TEST_CASE("art overhang defaults to zero and must not be negative",
+          "[improvements][parser][art]")
 {
     const auto path = WriteTempJson("ac_improvement_overhang.json", R"([
-        { "id": "Tall", "name": "Tall", "sprite_overhang_ratio": 0.24, "effects": [] },
-        { "id": "Flat", "name": "Flat", "effects": [] }
+        { "id": "Tall", "name": "Tall", "effects": [],
+          "art": { "layer": "object", "variants": { "land": ["t.png"] }, "overhang": 0.24 } },
+        { "id": "Flat", "name": "Flat", "effects": [],
+          "art": { "layer": "object", "variants": { "land": ["f.png"] } } }
     ])");
     ImprovementConfigParser parser;
     const auto configs = parser.ParseConfig(path.string());
     REQUIRE(configs.size() == 2);
-    CHECK(configs[0].spriteOverhangRatio == 0.24f);
-    CHECK(configs[1].spriteOverhangRatio == 0.0f);
+    CHECK(configs[0].art->overhang == 0.24f);
+    CHECK(configs[1].art->overhang == 0.0f);
     std::filesystem::remove(path);
 
     const auto negative = WriteTempJson("ac_improvement_overhang_negative.json", R"([
-        { "id": "Sunken", "name": "Sunken", "sprite_overhang_ratio": -0.1, "effects": [] }
+        { "id": "Sunken", "name": "Sunken", "effects": [],
+          "art": { "layer": "object", "variants": { "land": ["s.png"] }, "overhang": -0.1 } }
     ])");
     CHECK_THROWS_WITH(parser.ParseConfig(negative.string()),
                       Catch::Matchers::ContainsSubstring("Sunken")
-                          && Catch::Matchers::ContainsSubstring("sprite_overhang_ratio"));
+                          && Catch::Matchers::ContainsSubstring("overhang"));
     std::filesystem::remove(negative);
 }
 
-TEST_CASE("sprite_tiles names a tile set per surface", "[improvements][parser]")
+TEST_CASE("art tiles expand a pattern into one path per neighbor mask",
+          "[improvements][parser][art]")
 {
     const auto path = WriteTempJson("ac_improvement_tiles.json", R"([
         {
             "id": "Grove",
             "name": "Grove",
-            "sprite_tiles": { "layout": "edges", "land": "grove/{mask}.png" },
+            "art": { "layer": "vegetation",
+                     "tiles": { "layout": "edges", "land": "grove/{mask}.png" } },
             "effects": []
         },
         {
             "id": "Bloom",
             "name": "Bloom",
-            "sprite_tiles": { "layout": "blob", "land": "a/{mask}.png", "sea": "b/{mask}.png" },
+            "art": { "layer": "vegetation",
+                     "tiles": { "layout": "blob", "land": "a/{mask}.png", "sea": "b/{mask}.png" } },
             "effects": []
-        },
-        { "id": "Plain", "name": "Plain", "effects": [] }
+        }
     ])");
 
     ImprovementConfigParser parser;
     const auto configs = parser.ParseConfig(path.string());
-    REQUIRE(configs.size() == 3);
-    REQUIRE(configs[0].spriteTiles.has_value());
-    CHECK(configs[0].spriteTiles->layout == SpriteTileLayout_t::Edges);
-    CHECK(configs[0].spriteTiles->land == "grove/{mask}.png");
-    CHECK(configs[0].spriteTiles->sea.empty());
-    REQUIRE(configs[1].spriteTiles.has_value());
-    CHECK(configs[1].spriteTiles->layout == SpriteTileLayout_t::Blob);
-    CHECK(configs[1].spriteTiles->sea == "b/{mask}.png");
-    CHECK_FALSE(configs[2].spriteTiles.has_value());
+    REQUIRE(configs.size() == 2);
+    const auto& grove = std::get<OccupantTileSet_t>(configs[0].art->sprites);
+    CHECK(grove.layout == SpriteTileLayout_t::Edges);
+    REQUIRE(grove.paths.land.size() == 16);
+    CHECK(grove.paths.land[0] == "grove/0.png");
+    CHECK(grove.paths.land[15] == "grove/15.png");
+    CHECK(grove.paths.sea.empty());
+    const auto& bloom = std::get<OccupantTileSet_t>(configs[1].art->sprites);
+    CHECK(bloom.layout == SpriteTileLayout_t::Blob);
+    REQUIRE(bloom.paths.sea.size() == 256);
+    CHECK(bloom.paths.sea[7] == "b/7.png");
     std::filesystem::remove(path);
 }
 
-TEST_CASE("sprite_tiles rejects a pattern without {mask}, an unknown layout, or both art kinds",
-          "[improvements][parser]")
+TEST_CASE("art rejects a pattern without {mask}, an unknown layout, or two sprite kinds",
+          "[improvements][parser][art]")
 {
     ImprovementConfigParser parser;
     const struct
@@ -473,16 +488,30 @@ TEST_CASE("sprite_tiles rejects a pattern without {mask}, an unknown layout, or 
     } k_Cases[] = {
         {"ac_tiles_no_mask.json",
          R"([{ "id": "Grove", "name": "Grove",
-               "sprite_tiles": { "layout": "edges", "land": "grove.png" }, "effects": [] }])",
+               "art": { "layer": "vegetation",
+                        "tiles": { "layout": "edges", "land": "grove.png" } }, "effects": [] }])",
          "{mask}"},
         {"ac_tiles_layout.json",
          R"([{ "id": "Grove", "name": "Grove",
-               "sprite_tiles": { "layout": "corners", "land": "g/{mask}.png" }, "effects": [] }])",
+               "art": { "layer": "vegetation",
+                        "tiles": { "layout": "corners", "land": "g/{mask}.png" } },
+               "effects": [] }])",
          "layout"},
         {"ac_tiles_both.json",
-         R"([{ "id": "Grove", "name": "Grove", "sprite_paths": { "land": ["g.png"] },
-               "sprite_tiles": { "layout": "edges", "land": "g/{mask}.png" }, "effects": [] }])",
-         "sprite_tiles"},
+         R"([{ "id": "Grove", "name": "Grove",
+               "art": { "layer": "vegetation", "variants": { "land": ["g.png"] },
+                        "tiles": { "layout": "edges", "land": "g/{mask}.png" } },
+               "effects": [] }])",
+         "exactly one"},
+        {"ac_art_layer.json",
+         R"([{ "id": "Grove", "name": "Grove",
+               "art": { "layer": "canopy", "variants": { "land": ["g.png"] } }, "effects": [] }])",
+         "layer"},
+        {"ac_art_unknown_key.json",
+         R"([{ "id": "Grove", "name": "Grove",
+               "art": { "layer": "object", "variants": { "land": ["g.png"] }, "glow": 1 },
+               "effects": [] }])",
+         "glow"},
     };
     for (const auto& rCase : k_Cases)
     {
@@ -495,7 +524,8 @@ TEST_CASE("sprite_tiles rejects a pattern without {mask}, an unknown layout, or 
     }
 }
 
-TEST_CASE("Improvement art fields reject what the renderer cannot use", "[improvements][parser]")
+TEST_CASE("Improvement art fields reject what the renderer cannot use",
+          "[improvements][parser][art]")
 {
     const auto parseOne = [](const char* json) {
         const auto path = WriteTempJson("ac_improvement_art.json", json);
@@ -508,46 +538,110 @@ TEST_CASE("Improvement art fields reject what the renderer cannot use", "[improv
     SECTION("links need link occupants")
     {
         CHECK_THROWS_WITH(parseOne(R"([{"id": "Road", "name": "Road",
-            "sprite_tiles": {"layout": "links", "land": "r/{mask}.png"}, "effects": []}])"),
+            "art": {"layer": "road", "tiles": {"layout": "links", "land": "r/{mask}.png"}},
+            "effects": []}])"),
                           Catch::Matchers::ContainsSubstring("link_occupants"));
     }
 
     SECTION("link occupants need layout links")
     {
         CHECK_THROWS_WITH(parseOne(R"([{"id": "Forest", "name": "Forest",
-            "sprite_tiles": {"layout": "edges", "land": "f/{mask}.png",
-                             "link_occupants": ["Forest"]}, "effects": []}])"),
+            "art": {"layer": "vegetation",
+                    "tiles": {"layout": "edges", "land": "f/{mask}.png",
+                              "link_occupants": ["Forest"]}}, "effects": []}])"),
                           Catch::Matchers::ContainsSubstring("links"));
+    }
+
+    SECTION("a links tile set belongs to the road layer")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Road", "name": "Road",
+            "art": {"layer": "vegetation",
+                    "tiles": {"layout": "links", "land": "r/{mask}.png",
+                              "link_occupants": ["Road"]}}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("road layer"));
     }
 
     SECTION("a yield row stat must be a yield")
     {
         CHECK_THROWS_WITH(parseOne(R"([{"id": "Farm", "name": "Farm",
-            "sprite_yield_rows": {"stat": "morale", "land": ["f.png"]}, "effects": []}])"),
+            "art": {"layer": "object", "yield_rows": {"stat": "morale", "land": ["f.png"]}},
+            "effects": []}])"),
                           Catch::Matchers::ContainsSubstring("stat"));
     }
 
-    SECTION("ground sprites are keyed by moisture")
+    SECTION("yield rows belong to the object layer")
     {
         CHECK_THROWS_WITH(parseOne(R"([{"id": "Farm", "name": "Farm",
-            "ground_sprites": {"Soggy": ["g.png"]}, "effects": []}])"),
+            "art": {"layer": "vegetation",
+                    "yield_rows": {"stat": "nutrients", "land": ["f.png"]}}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("object layer"));
+    }
+
+    SECTION("ground art is keyed by moisture")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Farm", "name": "Farm",
+            "art": {"layer": "object", "variants": {"land": ["f.png"]},
+                    "ground": {"Soggy": ["g.png"]}}, "effects": []}])"),
                           Catch::Matchers::ContainsSubstring("Soggy"));
+    }
+
+    SECTION("depth_shade belongs to the landform layer")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Reef", "name": "Reef",
+            "art": {"layer": "object", "variants": {"sea": ["r.png"]},
+                    "depth_shade": {"offset": 0, "max": 5}}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("landform layer"));
+    }
+
+    SECTION("a depth shade cap must not be negative")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Lagoon", "name": "Lagoon",
+            "art": {"layer": "landform", "variants": {"sea": ["l.png"]},
+                    "depth_shade": {"offset": 0, "max": -1}}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("depth_shade"));
+    }
+
+    SECTION("a fill colour is an RGB or RGBA array within byte range")
+    {
+        CHECK_THROWS_WITH(parseOne(R"([{"id": "Grove", "name": "Grove",
+            "art": {"layer": "object", "variants": {"land": ["g.png"]},
+                    "fill_color": [0, 300, 0]}, "effects": []}])"),
+                          Catch::Matchers::ContainsSubstring("fill_color"));
+    }
+
+    SECTION("a fill colour defaults to opaque")
+    {
+        const auto configs = parseOne(R"([{"id": "Grove", "name": "Grove",
+            "art": {"layer": "object", "variants": {"land": ["g.png"]},
+                    "fill_color": [1, 2, 3]}, "effects": []}])");
+        REQUIRE(configs[0].art->fillColor.has_value());
+        CHECK(configs[0].art->fillColor->r == 1);
+        CHECK(configs[0].art->fillColor->b == 3);
+        CHECK(configs[0].art->fillColor->a == 255);
     }
 
     SECTION("hidden and linked ids must name occupants")
     {
         std::vector<ImprovementConfig_t> occupants(2);
         occupants[0].id = "Road";
-        occupants[0].spriteTiles =
-            OccupantSpriteTiles_t{SpriteTileLayout_t::Links, "r/{mask}.png", "", {"Road", "Base"}, ""};
+        OccupantArt_t roadArt;
+        roadArt.layer = ArtLayer_t::Road;
+        OccupantTileSet_t roadTiles;
+        roadTiles.layout = SpriteTileLayout_t::Links;
+        roadTiles.linkOccupants = {"Road", "Base"};
+        roadArt.sprites = roadTiles;
+        occupants[0].art = roadArt;
         occupants[1].id = "Enricher";
         CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
                           Catch::Matchers::ContainsSubstring("link_occupants")
                               && Catch::Matchers::ContainsSubstring("Base"));
 
-        occupants[0].spriteTiles->linkOccupants = {"Road"};
-        occupants[1].hidesSpritesOf = {"Farm"};
+        std::get<OccupantTileSet_t>(occupants[0].art->sprites).linkOccupants = {"Road"};
+        OccupantArt_t enricherArt;
+        enricherArt.layer = ArtLayer_t::Object;
+        enricherArt.hides = {"Farm"};
+        occupants[1].art = enricherArt;
         CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
-                          Catch::Matchers::ContainsSubstring("hides_sprites_of"));
+                          Catch::Matchers::ContainsSubstring("art.hides"));
     }
 }

@@ -5,6 +5,7 @@
 #include "ui/WaterShading.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <stdexcept>
 #include <utility>
@@ -24,6 +25,7 @@ WaterShadingStyle_t Shading_(float detailMeters = 1000.0f)
     shading.detailMeters = detailMeters;
     shading.deepLandform = "Ocean";
     shading.shelfLandform = "OceanShelf";
+    shading.coastShades = "OceanShelf";
     shading.deepFromShade = 20;
     return shading;
 }
@@ -230,5 +232,47 @@ TEST_CASE("Each vertex takes its depth shade plus the range's offset, kept withi
         CHECK(shape.north.shade == 15.0f);
         CHECK(shape.east.shade == 15.0f);
         CHECK(shape.south.shade == 15.0f);
+    }
+}
+
+TEST_CASE("Terrain art references name landforms that have a depth shade",
+          "[ui][water_shading][art]")
+{
+    actest::WorldFixture world;
+    WaterShadingStyle_t shading = Shading_();
+
+    SECTION("deep, shelf and coast landforms with a depth shade pass")
+    {
+        CHECK_NOTHROW(ValidateTerrainArtReferences(shading, world.improvements));
+    }
+
+    SECTION("an unknown deep landform is rejected")
+    {
+        shading.deepLandform = "Trench";
+        CHECK_THROWS_WITH(ValidateTerrainArtReferences(shading, world.improvements),
+                          Catch::Matchers::ContainsSubstring("deep_landform")
+                              && Catch::Matchers::ContainsSubstring("Trench"));
+    }
+
+    SECTION("an unknown shelf landform is rejected")
+    {
+        shading.shelfLandform = "Reef";
+        CHECK_THROWS_WITH(ValidateTerrainArtReferences(shading, world.improvements),
+                          Catch::Matchers::ContainsSubstring("shelf_landform"));
+    }
+
+    SECTION("a coast landform without a depth shade is rejected")
+    {
+        shading.coastShades = "Water";
+        CHECK_THROWS_WITH(ValidateTerrainArtReferences(shading, world.improvements),
+                          Catch::Matchers::ContainsSubstring("coast_shades")
+                              && Catch::Matchers::ContainsSubstring("depth_shade"));
+    }
+
+    SECTION("an occupant that is not a landform is rejected")
+    {
+        shading.deepLandform = "Moist";
+        CHECK_THROWS_WITH(ValidateTerrainArtReferences(shading, world.improvements),
+                          Catch::Matchers::ContainsSubstring("deep_landform"));
     }
 }

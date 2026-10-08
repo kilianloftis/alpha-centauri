@@ -93,22 +93,6 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
                 "tile_renderer.water_shading.depth_shades must not be negative");
         }
     }
-    const nlohmann::json& rShades = j.at("shades");
-    if (!rShades.is_object() || rShades.empty())
-    {
-        throw std::runtime_error(
-            "tile_renderer.water_shading.shades must name at least one landform");
-    }
-    for (const auto& [landform, rRange] : rShades.items())
-    {
-        WaterShadeRange_t range{rRange.at("offset").get<int>(), rRange.at("max").get<int>()};
-        if (range.max < 0)
-        {
-            throw std::runtime_error("tile_renderer.water_shading.shades." + landform
-                                     + ".max must not be negative");
-        }
-        s.shades.emplace(landform, range);
-    }
     s.coastShades = j.at("coast_shades").get<std::string>();
     s.detailMeters = j.at("detail_meters").get<float>();
     if (s.detailMeters <= 0.0f)
@@ -117,16 +101,6 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
     }
     s.deepLandform = j.at("deep_landform").get<std::string>();
     s.shelfLandform = j.at("shelf_landform").get<std::string>();
-    for (const auto& [key, rLandform] : {std::pair{"coast_shades", &s.coastShades},
-                                         std::pair{"deep_landform", &s.deepLandform},
-                                         std::pair{"shelf_landform", &s.shelfLandform}})
-    {
-        if (!s.shades.contains(*rLandform))
-        {
-            throw std::runtime_error(std::string("tile_renderer.water_shading.") + key + " '"
-                                     + *rLandform + "' names no shades entry");
-        }
-    }
     s.deepFromShade = j.at("deep_from_shade").get<int>();
     if (s.deepFromShade < 0)
     {
@@ -162,7 +136,6 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.waterHighColor = ParseColor_(j, "water_high_color");
     s.landLowColor = ParseColor_(j, "land_low_color");
     s.landHighColor = ParseColor_(j, "land_high_color");
-    s.forestColor = ParseColor_(j, "forest_color");
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
     s.fogLandShade = j.at("fog_land_shade").get<float>();
     if (s.fogLandShade < 0.0f)

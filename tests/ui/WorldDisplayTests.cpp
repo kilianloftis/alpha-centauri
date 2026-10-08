@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <variant>
 #include <filesystem>
 
 using namespace ac;
@@ -124,7 +125,7 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus != nullptr);
     rTile.AddTerrainFeature(*pBonus);
-    const std::string& bonusPath = pBonus->spritePaths.land.front();
+    const std::string& bonusPath = std::get<OccupantSpritePaths_t>(pBonus->art.value().sprites).land.front();
     fixture.pSprites->existing.insert(bonusPath);
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);

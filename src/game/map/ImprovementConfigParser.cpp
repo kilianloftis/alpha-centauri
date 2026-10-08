@@ -1,4 +1,5 @@
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/OccupantArtParser.h"
 #include "game/map/TerrainConfig.h"
 #include "game/map/Tile.h"
 #include "game/units/MovementConstants.h"
@@ -56,176 +57,6 @@ int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std
         wrap(e.what());
         return 0; // unreachable
     }
-}
-
-OccupantSpritePaths_t ParseSpritePaths_(const nlohmann::json& rJson, const std::string& id)
-{
-    const auto fail = [&id](const std::string& rMessage) {
-        throw std::runtime_error("Improvement '" + id + "': 'sprite_paths' " + rMessage);
-    };
-    if (!rJson.is_object())
-    {
-        fail("must be an object of 'land' and/or 'sea' path lists");
-    }
-
-    OccupantSpritePaths_t paths;
-    for (const auto& [surface, rList] : rJson.items())
-    {
-        const auto domain =
-            magic_enum::enum_cast<ImprovementDomain_t>(surface, magic_enum::case_insensitive);
-        if (!domain)
-        {
-            fail("has unknown surface '" + surface + "'");
-        }
-        if (!rList.is_array())
-        {
-            fail("'" + surface + "' must be an array of strings");
-        }
-        std::vector<std::string>& rPaths =
-            *domain == ImprovementDomain_t::Land ? paths.land : paths.sea;
-        for (const nlohmann::json& rPath : rList)
-        {
-            if (!rPath.is_string())
-            {
-                fail("'" + surface + "' entries must be strings");
-            }
-            rPaths.push_back(rPath.get<std::string>());
-        }
-    }
-    return paths;
-}
-
-OccupantSpriteTiles_t ParseSpriteTiles_(const nlohmann::json& rJson, const std::string& id)
-{
-    const auto fail = [&id](const std::string& rMessage) {
-        throw std::runtime_error("Improvement '" + id + "': 'sprite_tiles' " + rMessage);
-    };
-    if (!rJson.is_object())
-    {
-        fail("must be an object with a 'layout' and 'land' and/or 'sea' patterns");
-    }
-
-    OccupantSpriteTiles_t tiles;
-    bool bHasLayout = false;
-    for (const auto& [key, rValue] : rJson.items())
-    {
-        if (key == "layout")
-        {
-            const auto layout =
-                rValue.is_string() ? magic_enum::enum_cast<SpriteTileLayout_t>(
-                                         rValue.get<std::string>(), magic_enum::case_insensitive)
-                                   : std::nullopt;
-            if (!layout)
-            {
-                fail("'layout' must be \"edges\", \"blob\" or \"links\"");
-            }
-            tiles.layout = *layout;
-            bHasLayout = true;
-            continue;
-        }
-        if (key == "link_occupants")
-        {
-            tiles.linkOccupants = ConfigFields::ParseStringArray(rJson, "link_occupants");
-            continue;
-        }
-        if (key == "replaces_links_of")
-        {
-            if (!rValue.is_string())
-            {
-                fail("'replaces_links_of' must be an occupant id");
-            }
-            tiles.replacesLinksOf = rValue.get<std::string>();
-            continue;
-        }
-        const auto domain =
-            magic_enum::enum_cast<ImprovementDomain_t>(key, magic_enum::case_insensitive);
-        if (!domain)
-        {
-            fail("has unknown key '" + key + "'");
-        }
-        if (!rValue.is_string() || rValue.get<std::string>().find("{mask}") == std::string::npos)
-        {
-            fail("'" + key + "' must be a path pattern containing {mask}");
-        }
-        (*domain == ImprovementDomain_t::Land ? tiles.land : tiles.sea) = rValue.get<std::string>();
-    }
-    if (!bHasLayout)
-    {
-        fail("needs a 'layout'");
-    }
-    if (tiles.land.empty() && tiles.sea.empty())
-    {
-        fail("needs a 'land' or 'sea' pattern");
-    }
-    const bool bLinks = tiles.layout == SpriteTileLayout_t::Links;
-    if (bLinks && tiles.linkOccupants.empty())
-    {
-        fail("with layout \"links\" needs 'link_occupants'");
-    }
-    if (!bLinks && (!tiles.linkOccupants.empty() || !tiles.replacesLinksOf.empty()))
-    {
-        fail("names link occupants without layout \"links\"");
-    }
-    return tiles;
-}
-
-OccupantYieldRowSprites_t ParseYieldRowSprites_(const nlohmann::json& rJson, const std::string& id)
-{
-    const auto fail = [&id](const std::string& rMessage) {
-        throw std::runtime_error("Improvement '" + id + "': 'sprite_yield_rows' " + rMessage);
-    };
-    if (!rJson.is_object() || !rJson.contains("stat") || !rJson.at("stat").is_string())
-    {
-        fail("must be an object with a 'stat' and 'land' and/or 'sea' path lists");
-    }
-    const auto stat = magic_enum::enum_cast<YieldStat_t>(rJson.at("stat").get<std::string>(),
-                                                         magic_enum::case_insensitive);
-    if (!stat)
-    {
-        fail("'stat' must be \"nutrients\", \"minerals\" or \"energy\"");
-    }
-    nlohmann::json paths = rJson;
-    paths.erase("stat");
-    OccupantYieldRowSprites_t rows{*stat, ParseSpritePaths_(paths, id)};
-    if (rows.paths.land.empty() && rows.paths.sea.empty())
-    {
-        fail("needs a 'land' or 'sea' path list");
-    }
-    return rows;
-}
-
-std::unordered_map<std::string, std::vector<std::string>> ParseGroundSprites_(
-    const nlohmann::json& rJson, const std::string& id)
-{
-    const auto fail = [&id](const std::string& rMessage) {
-        throw std::runtime_error("Improvement '" + id + "': 'ground_sprites' " + rMessage);
-    };
-    if (!rJson.is_object())
-    {
-        fail("must be an object of moisture names to path lists");
-    }
-    std::unordered_map<std::string, std::vector<std::string>> ground;
-    for (const auto& [moisture, rList] : rJson.items())
-    {
-        if (moisture != ToString(Moisture_t::Arid) && moisture != ToString(Moisture_t::Moist)
-            && moisture != ToString(Moisture_t::Wet))
-        {
-            fail("has unknown moisture '" + moisture + "'");
-        }
-        if (!rList.is_array() || rList.empty())
-        {
-            fail("'" + moisture + "' must be a non-empty array of paths");
-        }
-        for (const nlohmann::json& rPath : rList)
-        {
-            if (!rPath.is_string())
-            {
-                fail("'" + moisture + "' entries must be strings");
-            }
-            ground[moisture].push_back(rPath.get<std::string>());
-        }
-    }
-    return ground;
 }
 
 } // namespace
@@ -356,8 +187,10 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
             expand(pConfig->suppressYieldSources, "suppress_yield_sources", pConfig->id);
         pConfig->suppressTerrain =
             expand(pConfig->suppressTerrain, "suppress_terrain", pConfig->id);
-        pConfig->hidesSpritesOf =
-            expand(pConfig->hidesSpritesOf, "hides_sprites_of", pConfig->id);
+        if (pConfig->art)
+        {
+            pConfig->art->hides = expand(pConfig->art->hides, "art.hides", pConfig->id);
+        }
     }
     std::unordered_set<std::string> ids;
     for (const ImprovementConfig_t* pConfig : configs)
@@ -378,11 +211,15 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
     for (const ImprovementConfig_t* pConfig : configs)
     {
         requireKnown(*pConfig, "suppress_terrain", pConfig->suppressTerrain);
-        requireKnown(*pConfig, "hides_sprites_of", pConfig->hidesSpritesOf);
-        if (pConfig->spriteTiles)
+        if (!pConfig->art)
         {
-            requireKnown(*pConfig, "link_occupants", pConfig->spriteTiles->linkOccupants);
-            requireKnown(*pConfig, "replaces_links_of", {pConfig->spriteTiles->replacesLinksOf});
+            continue;
+        }
+        requireKnown(*pConfig, "art.hides", pConfig->art->hides);
+        if (const auto* pTiles = std::get_if<OccupantTileSet_t>(&pConfig->art->sprites))
+        {
+            requireKnown(*pConfig, "art.tiles.link_occupants", pTiles->linkOccupants);
+            requireKnown(*pConfig, "art.tiles.replaces_links_of", {pTiles->replacesLinksOf});
         }
     }
 }
@@ -469,35 +306,7 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
     }
     config.ownedByTerritory = rImprovementJson.value("owned_by_territory", false);
     config.frequency = rImprovementJson.value("frequency", 0);
-    if (rImprovementJson.contains("sprite_paths"))
-    {
-        config.spritePaths = ParseSpritePaths_(rImprovementJson.at("sprite_paths"), config.id);
-    }
-    if (rImprovementJson.contains("sprite_tiles"))
-    {
-        if (rImprovementJson.contains("sprite_paths"))
-        {
-            throw std::runtime_error("Improvement '" + config.id
-                                     + "': has both 'sprite_paths' and 'sprite_tiles'");
-        }
-        config.spriteTiles = ParseSpriteTiles_(rImprovementJson.at("sprite_tiles"), config.id);
-    }
-    if (rImprovementJson.contains("sprite_yield_rows"))
-    {
-        config.spriteYieldRows =
-            ParseYieldRowSprites_(rImprovementJson.at("sprite_yield_rows"), config.id);
-    }
-    config.hidesSpritesOf = ConfigFields::ParseStringArray(rImprovementJson, "hides_sprites_of");
-    if (rImprovementJson.contains("ground_sprites"))
-    {
-        config.groundSprites = ParseGroundSprites_(rImprovementJson.at("ground_sprites"), config.id);
-    }
-    config.spriteOverhangRatio = rImprovementJson.value("sprite_overhang_ratio", 0.0f);
-    if (!(config.spriteOverhangRatio >= 0.0f))
-    {
-        throw std::runtime_error("Improvement '" + config.id
-                                 + "': 'sprite_overhang_ratio' must not be negative");
-    }
+    config.art = ParseOccupantArt(rImprovementJson, config.id);
     config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
     if (rImprovementJson.contains("domain") && !rImprovementJson.at("domain").is_null())
     {

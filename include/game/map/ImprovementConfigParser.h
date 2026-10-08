@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
+#include "game/map/OccupantArt.h"
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -43,56 +44,6 @@ struct FormerProject_t
     std::string requiredTech;
 };
 
-// World-map art per tile surface: JSON "sprite_paths": {"land": [...], "sea": [...]}. A surface
-// left out has no art there.
-struct OccupantSpritePaths_t
-{
-    std::vector<std::string> land;
-    std::vector<std::string> sea;
-};
-
-// How a tile set picks its sprite from the tile's neighbors (see ui/TileAutotile.h). Edges and
-// Blob match the JSON names aside from case; parse with magic_enum.
-enum class SpriteTileLayout_t
-{
-    Edges,
-    Blob,
-    // SMAC's road network: {mask} 0 is the hub, 1–8 one link each toward the NW edge, N corner,
-    // NE edge, E corner, SE edge, S corner, SW edge and W corner.
-    Links,
-};
-
-// World-map art drawn one sprite per neighbor mask: JSON "sprite_tiles": {"layout": "edges" |
-// "blob" | "links", "land": "...{mask}...", "sea": "..."}. An empty pattern means no art on that
-// surface. A links set also names "link_occupants" (a tile carrying any of them joins the
-// network; Base carries every network) and may name "replaces_links_of": the network whose
-// link it draws over where both tiles carry this one (a mag tube over a road).
-struct OccupantSpriteTiles_t
-{
-    SpriteTileLayout_t layout = SpriteTileLayout_t::Edges;
-    std::string land;
-    std::string sea;
-    std::vector<std::string> linkOccupants;
-    std::string replacesLinksOf;
-};
-
-// The yield an object sprite row follows.
-enum class YieldStat_t
-{
-    Nutrients,
-    Minerals,
-    Energy,
-};
-
-// Object sprites picked by the tile's yield: JSON "sprite_yield_rows": {"stat": "nutrients",
-// "land": [...], "sea": [...]}; row = clamp(yield - 1, 0, rows - 1), as SMAC picks its farm
-// structures.
-struct OccupantYieldRowSprites_t
-{
-    YieldStat_t stat = YieldStat_t::Nutrients;
-    OccupantSpritePaths_t paths;
-};
-
 struct ImprovementConfig_t
 {
     std::string id;
@@ -118,23 +69,8 @@ struct ImprovementConfig_t
     // a property of the improvement, not of individual effects.
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
-    // Optional world-map sprites. Empty → TileRenderer paints a procedural fallback
-    // (landform rings/centers today; tile bonuses simply omit the overlay). When more than
-    // one path is listed, TileRenderer picks one deterministically from the tile coords.
-    OccupantSpritePaths_t spritePaths;
-    // Neighbor-driven tile set instead of variants; never set together with spritePaths.
-    std::optional<OccupantSpriteTiles_t> spriteTiles;
-    // Object sprites by yield, drawn instead of spritePaths.
-    std::optional<OccupantYieldRowSprites_t> spriteYieldRows;
-    // Occupants whose object sprites are not drawn while this one is present (a soil enricher
-    // replaces the farm structures).
-    std::vector<std::string> hidesSpritesOf;
-    // Art drawn in place of the tile's moisture base, keyed by moisture name (Arid, Moist,
-    // Wet), one variant per tile (SMAC's farm ground).
-    std::unordered_map<std::string, std::vector<std::string>> groundSprites;
-    // How far the sprite reaches above the tile, as a fraction of the tile's height. Object
-    // sprites (TER1.PCX: 100×62 over a 100×50 footprint) use 0.24; tile textures use 0.
-    float spriteOverhangRatio = 0.0f;
+    // How this occupant draws on the world map; absent draws nothing.
+    std::optional<OccupantArt_t> art;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
@@ -163,9 +99,9 @@ struct ImprovementConfig_t
 // True when a former can build this occupant.
 bool IsBuildable(const ImprovementConfig_t& rConfig);
 
-// Expand @tag references in excludes, suppress_yield_sources, suppress_terrain and
-// hides_sprites_of. A tag no entry declares throws, as does an id no occupant has in
-// suppress_terrain, hides_sprites_of or a links tile set. Self-references are skipped. Call on
+// Expand @tag references in excludes, suppress_yield_sources, suppress_terrain and the art's
+// hides. A tag no entry declares throws, as does an id no occupant has in suppress_terrain,
+// hides or a links tile set. Self-references are skipped. Call on
 // the full occupant list, so an improvement may name a tag that only terrain entries carry.
 void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);
 

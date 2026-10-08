@@ -1,6 +1,7 @@
 #include "ui/world/MapViewport.h"
 
 #include "game/map/MapUtils.h"
+#include "ui/TileRelief.h"
 #include "ui/TileShapeGeometry.h"
 
 #include <algorithm>
@@ -46,6 +47,19 @@ std::optional<std::pair<int, int>> FlatTileAtMapUnits_(float u, float v, int map
         }
     }
     return best;
+}
+
+bool ReliefStyleEqual_(const ReliefStyle_t& rLeft, const ReliefStyle_t& rRight)
+{
+    return rLeft.liftPerLevelRatio == rRight.liftPerLevelRatio
+           && rLeft.levelMeters == rRight.levelMeters
+           && rLeft.fullShadeRiseMeters == rRight.fullShadeRiseMeters
+           && rLeft.altitudeLightSteps == rRight.altitudeLightSteps;
+}
+
+float MaxDiamondLift_(const TileLifts_t& rLifts)
+{
+    return std::max({rLifts.center, rLifts.west, rLifts.north, rLifts.east, rLifts.south});
 }
 
 } // namespace
@@ -168,12 +182,53 @@ bool MapViewport::ShapeIntersectsLayout_(const TileShape_t& rShape) const
     return BoxIntersectsLayout_(rShape.west.x, top, bottom - top);
 }
 
+void MapViewport::EnsureReliefCache_() const
+{
+    const uint64_t appearanceRevision = m_rWorldMap.GetAppearanceRevision();
+    if (m_bReliefCacheValid && appearanceRevision == m_reliefCacheAppearanceRevision
+        && m_relief == m_reliefCacheMode && ReliefStyleEqual_(m_reliefStyle, m_reliefCacheStyle))
+    {
+        return;
+    }
+
+    const std::span<const std::unique_ptr<Tile>> tiles = m_rWorldMap.GetTiles();
+    m_reliefLifts.resize(tiles.size());
+    m_reliefShades.resize(tiles.size());
+    float maxLiftRatio = 0.0f;
+    for (const std::unique_ptr<Tile>& pTile : tiles)
+    {
+        const int index = m_rWorldMap.GetTileIndex(*pTile);
+        m_reliefLifts[static_cast<std::size_t>(index)] =
+            ResolveTileLifts(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
+        m_reliefShades[static_cast<std::size_t>(index)] =
+            ResolveTileShades(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
+        maxLiftRatio =
+            std::max(maxLiftRatio, MaxDiamondLift_(m_reliefLifts[static_cast<std::size_t>(index)]));
+    }
+    m_cachedMaxLiftRatio = maxLiftRatio;
+    m_reliefCacheAppearanceRevision = appearanceRevision;
+    m_reliefCacheMode = m_relief;
+    m_reliefCacheStyle = m_reliefStyle;
+    m_bReliefCacheValid = true;
+}
+
+const TileLifts_t& MapViewport::CachedLifts_(const Tile& rTile) const
+{
+    EnsureReliefCache_();
+    return m_reliefLifts[static_cast<std::size_t>(m_rWorldMap.GetTileIndex(rTile))];
+}
+
+const TileShades_t& MapViewport::CachedShades_(const Tile& rTile) const
+{
+    EnsureReliefCache_();
+    return m_reliefShades[static_cast<std::size_t>(m_rWorldMap.GetTileIndex(rTile))];
+}
+
 TileShape_t MapViewport::ShapeAt_(const Tile& rTile, float aabbX, float aabbY,
                                   bool bShaded) const
 {
-    const TileLifts_t lifts = ResolveTileLifts(rTile, m_rWorldMap, m_relief, m_reliefStyle);
-    const TileShades_t shades =
-        bShaded ? ResolveTileShades(rTile, m_rWorldMap, m_relief, m_reliefStyle) : TileShades_t{};
+    const TileLifts_t& lifts = CachedLifts_(rTile);
+    const TileShades_t shades = bShaded ? CachedShades_(rTile) : TileShades_t{};
     const auto vertex = [&](float u, float v, float lift, float shade) {
         return TileVertex_t{aabbX + m_tileWidth * u, aabbY + m_tileHeight * v - lift * m_tileWidth,
                             shade};
@@ -189,12 +244,8 @@ TileShape_t MapViewport::ShapeAt_(const Tile& rTile, float aabbX, float aabbY,
 
 float MapViewport::MaxLiftPixels_() const
 {
-    const Tile* pAnyTile = m_rWorldMap.GetTile(0, 0);
-    if (!pAnyTile)
-    {
-        return 0.0f;
-    }
-    return MaxTileLift(pAnyTile->MapRules(), m_relief, m_reliefStyle) * m_tileWidth;
+    EnsureReliefCache_();
+    return m_cachedMaxLiftRatio * m_tileWidth;
 }
 
 std::optional<std::pair<float, float>> MapViewport::PixelOriginOf(int worldX, int worldY) const
@@ -210,7 +261,7 @@ std::optional<std::pair<float, float>> MapViewport::PixelOriginOf(int worldX, in
     float aabbY = 0.0f;
     AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
     // SMAC seats a tile's contents at the mean of its four corner lifts (MapWin_tile_to_pixel).
-    const TileLifts_t lifts = ResolveTileLifts(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
+    const TileLifts_t& lifts = CachedLifts_(*pTile);
     const float seatLift = (lifts.west + lifts.north + lifts.east + lifts.south) * 0.25f;
     const float originY = aabbY - seatLift * m_tileWidth;
     if (!BoxIntersectsLayout_(aabbX, originY, m_tileHeight))

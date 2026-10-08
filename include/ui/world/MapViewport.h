@@ -1,15 +1,16 @@
 #pragma once
 
 #include "game/MapDisplayConfig.h"
+#include "ui/TileRelief.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
-#include "ui/TileRelief.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/UIElement.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -143,6 +144,9 @@ private:
     TileShape_t ShapeAt_(const Tile& rTile, float aabbX, float aabbY, bool bShaded) const;
     // How far the map's highest tile can rise, in pixels.
     float MaxLiftPixels_() const;
+    void EnsureReliefCache_() const;
+    const TileLifts_t& CachedLifts_(const Tile& rTile) const;
+    const TileShades_t& CachedShades_(const Tile& rTile) const;
 
     const WorldMap& m_rWorldMap;
     WindowLayout_t m_layout;
@@ -154,6 +158,13 @@ private:
     int m_cameraY = 0;
     ReliefMode_t m_relief = ReliefMode_t::Flat;
     ReliefStyle_t m_reliefStyle{};
+    mutable std::vector<TileLifts_t> m_reliefLifts;
+    mutable std::vector<TileShades_t> m_reliefShades;
+    mutable float m_cachedMaxLiftRatio = 0.0f;
+    mutable uint64_t m_reliefCacheAppearanceRevision = 0;
+    mutable ReliefMode_t m_reliefCacheMode = ReliefMode_t::Flat;
+    mutable ReliefStyle_t m_reliefCacheStyle{};
+    mutable bool m_bReliefCacheValid = false;
 };
 
 } // namespace ac

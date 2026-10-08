@@ -57,6 +57,7 @@
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/InteractionPresenter.h"
+#include "ui/WaterShading.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <filesystem>
@@ -394,6 +395,8 @@ void Engine::InitializeApp_()
     // Every config parser + cross-config id validation (including HasComponent conditions).
     // Returns complete or throws: nothing downstream has to check a member for null.
     m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
+    ValidateTerrainArtReferences(Style().tileRenderer.waterShading,
+                                 *m_gameDataContext->improvementRegistry);
 
     // Settings name a difficulty by id; reject an unknown one here, where the message can
     // still point at the settings file, rather than from the first Faction constructor.

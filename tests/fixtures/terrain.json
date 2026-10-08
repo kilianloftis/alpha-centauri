@@ -68,10 +68,6 @@
       "tags": [
         "landform"
       ],
-      "sprite_tiles": {
-        "layout": "blob",
-        "land": "tests/fixtures/sprites/moist/{mask}.png"
-      },
       "effects": [
         {
           "type": "StatModifier",
@@ -82,7 +78,14 @@
             "op": "Add"
           }
         }
-      ]
+      ],
+      "art": {
+        "layer": "moisture",
+        "tiles": {
+          "layout": "blob",
+          "land": "tests/fixtures/sprites/moist/{mask}.png"
+        }
+      }
     },
     {
       "id": "Wet",
@@ -105,10 +108,6 @@
     {
       "id": "River",
       "name": "River",
-      "sprite_tiles": {
-        "layout": "edges",
-        "land": "tests/fixtures/sprites/river/{mask}.png"
-      },
       "excludes": [
         "Mine"
       ],
@@ -122,7 +121,14 @@
             "op": "Add"
           }
         }
-      ]
+      ],
+      "art": {
+        "layer": "river",
+        "tiles": {
+          "layout": "edges",
+          "land": "tests/fixtures/sprites/river/{mask}.png"
+        }
+      }
     },
     {
       "id": "Water",
@@ -148,9 +154,22 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": {"sea": ["tests/fixtures/sprites/ocean.png"]},
-      "suppress_terrain": ["Fungus"],
-      "effects": []
+      "suppress_terrain": [
+        "Fungus"
+      ],
+      "effects": [],
+      "art": {
+        "layer": "landform",
+        "variants": {
+          "sea": [
+            "tests/fixtures/sprites/ocean.png"
+          ]
+        },
+        "depth_shade": {
+          "offset": -1,
+          "max": 2
+        }
+      }
     },
     {
       "id": "OceanShelf",
@@ -158,7 +177,6 @@
       "tags": [
         "landform"
       ],
-      "sprite_paths": {"sea": ["tests/fixtures/sprites/ocean_shelf.png"]},
       "effects": [
         {
           "type": "StatModifier",
@@ -169,17 +187,24 @@
             "op": "Add"
           }
         }
-      ]
+      ],
+      "art": {
+        "layer": "landform",
+        "variants": {
+          "sea": [
+            "tests/fixtures/sprites/ocean_shelf.png"
+          ]
+        },
+        "depth_shade": {
+          "offset": 0,
+          "max": 2
+        }
+      }
     },
     {
       "id": "Fungus",
       "name": "Fungus",
       "move_cost": 3,
-      "sprite_tiles": {
-        "layout": "blob",
-        "land": "tests/fixtures/sprites/fungus_land/{mask}.png",
-        "sea": "tests/fixtures/sprites/fungus_sea/{mask}.png"
-      },
       "suppress_yield_sources": [
         "@landform",
         "River",
@@ -218,7 +243,15 @@
             "channel": "terrain"
           }
         }
-      ]
+      ],
+      "art": {
+        "layer": "vegetation",
+        "tiles": {
+          "layout": "blob",
+          "land": "tests/fixtures/sprites/fungus_land/{mask}.png",
+          "sea": "tests/fixtures/sprites/fungus_sea/{mask}.png"
+        }
+      }
     },
     {
       "id": "Nutrients",
@@ -227,11 +260,6 @@
         "resource_bonus"
       ],
       "frequency": 10,
-      "sprite_paths": {
-        "land": ["tests/fixtures/sprites/nutrients_land.png"],
-        "sea": ["tests/fixtures/sprites/nutrients_sea.png"]
-      },
-      "sprite_overhang_ratio": 0.24,
       "effects": [
         {
           "type": "StatModifier",
@@ -243,7 +271,19 @@
             "bypass_clamp": true
           }
         }
-      ]
+      ],
+      "art": {
+        "layer": "object",
+        "variants": {
+          "land": [
+            "tests/fixtures/sprites/nutrients_land.png"
+          ],
+          "sea": [
+            "tests/fixtures/sprites/nutrients_sea.png"
+          ]
+        },
+        "overhang": 0.24
+      }
     },
     {
       "id": "Monolith",
@@ -321,11 +361,14 @@
         "landmark"
       ],
       "domain": "land",
-      "sprite_tiles": {
-        "layout": "blob",
-        "land": "tests/fixtures/sprites/jungle/{mask}.png"
-      },
-      "effects": []
+      "effects": [],
+      "art": {
+        "layer": "landmark",
+        "tiles": {
+          "layout": "blob",
+          "land": "tests/fixtures/sprites/jungle/{mask}.png"
+        }
+      }
     },
     {
       "id": "Aquifer",

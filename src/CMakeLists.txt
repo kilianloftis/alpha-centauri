@@ -176,7 +176,7 @@ add_library(ac-core STATIC
     game/social-engineering/SocialRatingConfigParser.cpp
     game/social-engineering/SocialRatingResolver.cpp
     game/map/Tile.cpp
-    game/map/TileLayerResolver.cpp
+    game/map/OccupantArtParser.cpp
     game/map/UnitPositionIndex.cpp
     game/map/WorkedTileIndex.cpp
     game/map/TileFlagMap.cpp
