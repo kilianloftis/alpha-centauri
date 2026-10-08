@@ -179,7 +179,6 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
     s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
     s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
-    s.baseNameCharWidthRatio = j.at("base_name_char_width_ratio").get<float>();
     s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
@@ -594,7 +593,6 @@ BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.baseLabelFontSize = j.at("base_label_font_size").get<unsigned int>();
     s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
-    s.tileTextCharWidthRatio = j.at("tile_text_char_width_ratio").get<float>();
     s.baseLabelColor = ParseColor_(j, "base_label_color");
     s.workedTileTextColor = ParseColor_(j, "worked_tile_text_color");
     s.unworkedTileTextColor = ParseColor_(j, "unworked_tile_text_color");

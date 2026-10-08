@@ -819,9 +819,8 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
         }
     }
     REQUIRE(pBaseLabel);
-    const float baseLabelWidth = static_cast<float>(pBaseLabel->text.size())
-                                 * static_cast<float>(workableStyle.baseLabelFontSize)
-                                 * workableStyle.tileTextCharWidthRatio;
+    const float baseLabelWidth =
+        fixture.graphics.MeasureTextWidth(pBaseLabel->text, workableStyle.baseLabelFontSize);
     CHECK(std::abs((pBaseLabel->x + baseLabelWidth * 0.5f) - baseCenterX) < 0.01f);
     CHECK(std::abs((pBaseLabel->y + static_cast<float>(workableStyle.baseLabelFontSize) * 0.5f)
                    - baseCenterY)

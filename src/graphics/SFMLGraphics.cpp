@@ -342,6 +342,12 @@ public:
         m_window.draw(drawable);
     }
 
+    float MeasureTextWidth(const std::string& text, unsigned int size) const override
+    {
+        const sf::Text drawable(m_font, text, size);
+        return drawable.getLocalBounds().size.x;
+    }
+
     void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));

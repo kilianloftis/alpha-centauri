@@ -93,6 +93,11 @@ public:
     {
     }
 
+    float MeasureTextWidth(const std::string& text, unsigned int size) const override
+    {
+        return static_cast<float>(text.size()) * static_cast<float>(size) * 0.5f;
+    }
+
     void DrawRect(float, float, float, float, const Color_t&, float) override
     {
     }

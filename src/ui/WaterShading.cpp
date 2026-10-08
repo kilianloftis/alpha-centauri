@@ -73,7 +73,7 @@ float ShadeIn_(int shade, const WaterShadeRange_t& range)
 
 } // namespace
 
-DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap* pMap,
+DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap& rMap,
                                    const WaterShadingStyle_t& rShading)
 {
     if (rShading.depthShades.empty())
@@ -85,16 +85,12 @@ DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap* pMap,
         throw std::invalid_argument("ResolveWaterShades: detailMeters is not positive");
     }
     const int own = ShadeAt_(DepthElevation_(rTile), rTile.MapRules(), rShading);
-    if (!pMap)
-    {
-        return DiamondShades_t{own, own, own, own, own};
-    }
     return DiamondShades_t{
         own,
-        CornerShade_(rTile, *pMap, DiamondCorner_t::West, rShading),
-        CornerShade_(rTile, *pMap, DiamondCorner_t::North, rShading),
-        CornerShade_(rTile, *pMap, DiamondCorner_t::East, rShading),
-        CornerShade_(rTile, *pMap, DiamondCorner_t::South, rShading),
+        CornerShade_(rTile, rMap, DiamondCorner_t::West, rShading),
+        CornerShade_(rTile, rMap, DiamondCorner_t::North, rShading),
+        CornerShade_(rTile, rMap, DiamondCorner_t::East, rShading),
+        CornerShade_(rTile, rMap, DiamondCorner_t::South, rShading),
     };
 }
 

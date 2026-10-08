@@ -120,6 +120,11 @@ public:
         texts.push_back(TextDraw_t{rText, x, y, size, rColor});
     }
 
+    float MeasureTextWidth(const std::string& text, unsigned int size) const override
+    {
+        return static_cast<float>(text.size()) * static_cast<float>(size) * 0.5f;
+    }
+
     void DrawRect(float x, float y, float width, float height, const ac::Color_t& rColor,
                   float) override
     {

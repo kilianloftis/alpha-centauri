@@ -6,13 +6,24 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
+#include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 
 namespace ac
 {
 
 void ApplyRemoveShroud(Faction& rFaction)
 {
-    rFaction.GetExploredMap().MarkAll();
+    FactionExploredMap& rExplored = rFaction.GetExploredMap();
+    for (const auto& pOwnedTile : rFaction.GetWorldMap().GetTiles())
+    {
+        if (pOwnedTile && !rExplored.IsExplored(*pOwnedTile))
+        {
+            rFaction.GetTileMemory().Record(*pOwnedTile);
+        }
+    }
+    // TODO: confirm in terranx.exe what a faction sees on tiles explored by map trade or shroud removal
+    rExplored.MarkAll();
 }
 
 void ApplyRemoveFog(Faction& rFaction)

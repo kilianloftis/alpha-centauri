@@ -116,16 +116,31 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics)
             const auto [labelX, labelY] = m_viewport.FootprintOrigin(rShape);
             (void)m_mapSurface.RenderBase(rGraphics, rBase, rShape);
 
-            const size_t maxChars = static_cast<size_t>(
-                (tileSize * s.baseNameWidthRatio) / (fontSize * s.baseNameCharWidthRatio));
+            const float maxNameWidth = tileSize * s.baseNameWidthRatio;
             std::string displayName = rBase.GetName();
-            if (displayName.length() > maxChars && maxChars > k_BaseNameMinTruncChars)
+            if (rGraphics.MeasureTextWidth(displayName, fontSize) > maxNameWidth)
             {
-                displayName = displayName.substr(0, maxChars - 1) + ".";
-            }
-            else if (displayName.length() > maxChars)
-            {
-                displayName = displayName.substr(0, maxChars);
+                for (size_t n = displayName.size(); n > 0; --n)
+                {
+                    std::string candidate;
+                    if (n > k_BaseNameMinTruncChars)
+                    {
+                        candidate = displayName.substr(0, n - 1) + ".";
+                    }
+                    else if (n >= k_BaseNameMinTruncChars)
+                    {
+                        candidate = displayName.substr(0, n);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                    if (rGraphics.MeasureTextWidth(candidate, fontSize) <= maxNameWidth)
+                    {
+                        displayName = std::move(candidate);
+                        break;
+                    }
+                }
             }
 
             // TODO: Show capture animation when base capture is implemented

@@ -88,7 +88,6 @@
     "base_name_font_size_ratio": 0.25,
     "base_text_offset_ratio": 0.1,
     "base_name_width_ratio": 0.8,
-    "base_name_char_width_ratio": 0.5,
     "shroud_color": [
       0, 0, 0, 255
     ],
@@ -609,7 +608,6 @@
     "tile_border_width": -1.0,
     "base_label_font_size": 14,
     "tile_font_size": 12,
-    "tile_text_char_width_ratio": 0.5,
     "base_label_color": [
       255, 255, 0, 255
     ],

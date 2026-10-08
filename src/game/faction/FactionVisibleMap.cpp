@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionTileMemory.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -43,14 +44,27 @@ void FactionVisibleMap::RevealAround_(const Tile& rOrigin, int radius, const Wor
         });
 }
 
+void FactionVisibleMap::RecordVisible_(const WorldMap& rWorldMap, FactionTileMemory& rMemory) const
+{
+    for (const auto& pOwnedTile : rWorldMap.GetTiles())
+    {
+        if (pOwnedTile && IsVisible(*pOwnedTile))
+        {
+            rMemory.Record(*pOwnedTile);
+        }
+    }
+}
+
 void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
-                                           FactionExploredMap& rExplored)
+                                           FactionExploredMap& rExplored,
+                                           FactionTileMemory& rMemory)
 {
     if (!IsSized())
     {
         throw std::runtime_error("FactionVisibleMap::RebuildFromSources: map is unsized");
     }
 
+    RecordVisible_(rWorldMap, rMemory);
     ClearAll();
 
     for (const Unit& rUnit : rFaction.GetUnitManager().Units())
@@ -93,6 +107,8 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
             RevealAround_(*pTile, sight, rWorldMap, rExplored);
         }
     }
+
+    RecordVisible_(rWorldMap, rMemory);
 }
 
 } // namespace ac

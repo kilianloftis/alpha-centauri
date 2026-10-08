@@ -18,6 +18,7 @@
 #include "game/faction/FactionEffectsPool.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionRevealedUnits.h"
+#include "game/faction/FactionTileMemory.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/Unit.h"
@@ -339,6 +340,9 @@ public:
     const FactionExploredMap& GetExploredMap() const;
     FactionVisibleMap& GetVisibleMap();
     const FactionVisibleMap& GetVisibleMap() const;
+    // What the faction last saw on each tile; tiles out of sight draw from it.
+    FactionTileMemory& GetTileMemory();
+    const FactionTileMemory& GetTileMemory() const;
     // Contact reveal: concealed units this faction has bumped into (occupied tile / ZOC).
     FactionRevealedUnits& GetRevealedUnits();
     const FactionRevealedUnits& GetRevealedUnits() const;
@@ -445,6 +449,7 @@ private:
     FactionEffectsPool m_effectsPool;
     FactionExploredMap m_explored;
     FactionVisibleMap m_visible;
+    FactionTileMemory m_tileMemory;
     FactionRevealedUnits m_revealedUnits;
     WorldMap& m_rWorldMap; // constructor-injected; RebuildVisibility can never be a no-op
     const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected

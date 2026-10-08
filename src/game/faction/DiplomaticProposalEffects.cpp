@@ -7,6 +7,8 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/ResearchManager.h"
+#include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 
 #include <variant>
 #include <vector>
@@ -47,7 +49,23 @@ struct Deliver_
 
     void operator()(const TradeWorldMap_t& /*rMap*/) const
     {
-        rReceiver.GetExploredMap().MergeFrom(rGiver.GetExploredMap());
+        const FactionExploredMap& rGiverExplored = rGiver.GetExploredMap();
+        FactionExploredMap& rReceiverExplored = rReceiver.GetExploredMap();
+        std::vector<const Tile*> traded;
+        for (const auto& pOwnedTile : rReceiver.GetWorldMap().GetTiles())
+        {
+            if (pOwnedTile && rGiverExplored.IsExplored(*pOwnedTile)
+                && !rReceiverExplored.IsExplored(*pOwnedTile))
+            {
+                traded.push_back(pOwnedTile.get());
+            }
+        }
+        rReceiverExplored.MergeFrom(rGiverExplored);
+        // TODO: confirm in terranx.exe what a faction sees on tiles explored by map trade or shroud removal
+        for (const Tile* pTile : traded)
+        {
+            rReceiver.GetTileMemory().Record(*pTile);
+        }
     }
 
     void operator()(const TradeDeclareVendetta_t& rVendetta) const

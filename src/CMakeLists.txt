@@ -182,6 +182,7 @@ add_library(ac-core STATIC
     game/map/TileFlagMap.cpp
     game/map/TerritoryMap.cpp
     game/faction/FactionVisibleMap.cpp
+    game/faction/FactionTileMemory.cpp
     game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
@@ -353,6 +354,7 @@ add_library(ac-ui STATIC
     ui/world/CombatPresentation.cpp
     ui/world/CombatView.cpp
     ui/world/MapViewport.cpp
+    ui/world/MapAppearance.cpp
     ui/world/WorldDisplay.cpp
     ui/world/FactionBaseArt.cpp
     ui/world/UnitMarkerRenderer.cpp

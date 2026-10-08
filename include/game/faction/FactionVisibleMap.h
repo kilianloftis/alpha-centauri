@@ -7,6 +7,7 @@ namespace ac
 
 class Faction;
 class FactionExploredMap;
+class FactionTileMemory;
 class Tile;
 class WorldMap;
 
@@ -41,17 +42,21 @@ public:
     void MarkAll() { m_flags.SetAll(); }
 
     // Clear current visibility, then reveal from every unit, base, and owned Sensor
-    // (vision improvements) of rFaction. Newly visible tiles are also marked on rExplored.
+    // (vision improvements) of rFaction. Newly visible tiles are also marked on rExplored, and
+    // every visible tile is recorded in rMemory as it now looks (tiles that were visible until
+    // this call are recorded first, so memory keeps what they showed when they left sight).
     // Throws if this map is unsized — a faction always has one, so an unsized map is a wiring
     // bug rather than a reason to see everything. Does not clear the RemoveFog bypass flag.
     void RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
-        FactionExploredMap& rExplored);
+        FactionExploredMap& rExplored, FactionTileMemory& rMemory);
 
     uint64_t GetRevision() const { return m_flags.GetRevision(); }
 
 private:
     void RevealAround_(const Tile& rOrigin, int radius, const WorldMap& rWorldMap,
         FactionExploredMap& rExplored);
+
+    void RecordVisible_(const WorldMap& rWorldMap, FactionTileMemory& rMemory) const;
 
     void Mark_(const Tile& rTile) { m_flags.Set(rTile); }
 

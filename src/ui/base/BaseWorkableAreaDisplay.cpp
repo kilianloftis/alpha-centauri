@@ -46,12 +46,12 @@ float ShapeAabbHeight_(const TileShape_t& rShape)
 }
 
 void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const std::string& rText,
-                           unsigned int fontSize, const Color_t& rColor, float charWidthRatio)
+                           unsigned int fontSize, const Color_t& rColor)
 {
     const float centerX = (rShape.west.x + rShape.east.x) * 0.5f;
     const float centerY = (rShape.north.y + rShape.south.y) * 0.5f;
     const float size = static_cast<float>(fontSize);
-    const float textWidth = static_cast<float>(rText.size()) * size * charWidthRatio;
+    const float textWidth = rGraphics.MeasureTextWidth(rText, fontSize);
     rGraphics.DrawText(rText, centerX - textWidth * 0.5f, centerY - size * 0.5f, fontSize, rColor);
 }
 
@@ -168,8 +168,7 @@ void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
     {
         textColor = style.unavailableTileTextColor;
     }
-    DrawCenteredTileText_(rGraphics, rEntry.shape, oss.str(), style.tileFontSize, textColor,
-                          style.tileTextCharWidthRatio);
+    DrawCenteredTileText_(rGraphics, rEntry.shape, oss.str(), style.tileFontSize, textColor);
 }
 
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
@@ -210,7 +209,7 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
         if (!m_mapSurface.RenderBase(rGraphics, m_rBase, pBaseEntry->shape))
         {
             DrawCenteredTileText_(rGraphics, pBaseEntry->shape, "BASE", style.baseLabelFontSize,
-                                  style.baseLabelColor, style.tileTextCharWidthRatio);
+                                  style.baseLabelColor);
         }
     }
 

@@ -100,6 +100,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     // did nothing.
     m_explored.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     m_visible.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
+    m_tileMemory.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     RebuildVisibility();
 
     if (rDataContext.nativeUnitRegistry)
@@ -1048,6 +1049,16 @@ const FactionVisibleMap& Faction::GetVisibleMap() const
     return m_visible;
 }
 
+FactionTileMemory& Faction::GetTileMemory()
+{
+    return m_tileMemory;
+}
+
+const FactionTileMemory& Faction::GetTileMemory() const
+{
+    return m_tileMemory;
+}
+
 FactionRevealedUnits& Faction::GetRevealedUnits()
 {
     return m_revealedUnits;
@@ -1108,7 +1119,7 @@ void Faction::RebuildVisibility()
         return;
     }
 
-    m_visible.RebuildFromSources(*this, m_rWorldMap, m_explored);
+    m_visible.RebuildFromSources(*this, m_rWorldMap, m_explored, m_tileMemory);
     ApplyVisibilityRules(*this, m_rSettings);
     OnVisibilityRebuilt.Emit(*this);
 }
