@@ -50,11 +50,12 @@ void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t
 
 } // namespace
 
-MinimapDisplay::MinimapDisplay(const GameState& rGameState, WindowLayout_t layout,
-                               const MapViewport& rViewport,
+MinimapDisplay::MinimapDisplay(const GameState& rGameState, const TileRenderer& rTileRenderer,
+                               WindowLayout_t layout, const MapViewport& rViewport,
                                CenterOnTileCallback_t onCenterOnTile)
     : UIElement(layout)
     , m_rGameState(rGameState)
+    , m_rTileRenderer(rTileRenderer)
     , m_rViewport(rViewport)
     , m_onCenterOnTile(std::move(onCenterOnTile))
     , m_textureId("minimap:" + std::to_string(reinterpret_cast<std::uintptr_t>(this)))
@@ -224,7 +225,7 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
         if (!fog.pExplored || fog.pExplored->IsExplored(rTile))
         {
             const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(rTile);
-            color = TileRenderer::FillColor(rTile, bFogged);
+            color = m_rTileRenderer.FillColor(rTile, bFogged);
         }
 
         for (int dx = 0; dx < 2; ++dx)

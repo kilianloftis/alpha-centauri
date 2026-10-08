@@ -8,6 +8,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
+#include "ui/SpriteLibrary.h"
 
 #include <nlohmann/json.hpp>
 
@@ -311,27 +312,13 @@ std::string FactionColorsPath(const std::string& rSheetStem)
     return "assets/factions/" + rSheetStem + "/colors.json";
 }
 
-FactionBaseArtCache::StemCache_t& FactionBaseArtCache::Stem_(const std::string& rStem)
+FactionBaseArtCache::FactionBaseArtCache(SpriteLibrary& rSprites)
+    : m_rSprites(rSprites)
 {
-    return m_byStem[rStem];
-}
-
-bool FactionBaseArtCache::EnsureTexture_(Graphics& rGraphics, StemCache_t& rStem,
-                                         const std::string& rPath)
-{
-    TextureState_t& rState = rStem.textures[rPath];
-    if (rState == TextureState_t::Untried)
-    {
-        rState = std::filesystem::exists(rPath) && rGraphics.LoadTexture(rPath, rPath)
-                     ? TextureState_t::Loaded
-                     : TextureState_t::Missing;
-    }
-    return rState == TextureState_t::Loaded;
 }
 
 std::optional<std::string> FactionBaseArtCache::EnsureBareBaseSprite(
-    Graphics& rGraphics, const Faction& rFaction, const BaseManager& rBase,
-    const BaseSpriteSizesConfig_t& rSizes)
+    const Faction& rFaction, const BaseManager& rBase, const BaseSpriteSizesConfig_t& rSizes)
 {
     const auto stem = FactionSheetStem(rFaction);
     if (!stem)
@@ -342,22 +329,19 @@ std::optional<std::string> FactionBaseArtCache::EnsureBareBaseSprite(
     const bool bWater = rBase.GetTile().IsWater();
     const int sizeStage =
         BaseSpriteSizeStage(rBase.GetPopulation().GetSize(), rBase, rSizes);
-    StemCache_t& rStem = Stem_(*stem);
     const std::string label =
         std::string(bWater ? "water base" : "base") + " '" + *stem + "'";
     return ResolveSizedSpritePath(
         sizeStage,
         [&](int stage) { return BareBaseSpritePath(*stem, bWater, stage); },
-        [&](const std::string& rPath) { return EnsureTexture_(rGraphics, rStem, rPath); }, label);
+        [&](const std::string& rPath) { return m_rSprites.Ensure(rPath); }, label);
 }
 
 std::vector<std::string> FactionBaseArtCache::EnsureOverlaySprites(
-    Graphics& rGraphics, const std::vector<ResolvedBaseOverlay_t>& rOverlays)
+    const std::vector<ResolvedBaseOverlay_t>& rOverlays)
 {
     std::vector<std::string> loaded;
     loaded.reserve(rOverlays.size());
-    // Overlay paths are absolute-ish asset paths; cache under a shared "" stem bucket.
-    StemCache_t& rStem = Stem_("");
     for (const ResolvedBaseOverlay_t& rOverlay : rOverlays)
     {
         const std::string label = "overlay '" + rOverlay.buildingId + "'";
@@ -366,8 +350,7 @@ std::vector<std::string> FactionBaseArtCache::EnsureOverlaySprites(
                 [&](int stage) {
                     return ReplaceToken_(rOverlay.pathTemplate, "size", std::to_string(stage));
                 },
-                [&](const std::string& rPath) { return EnsureTexture_(rGraphics, rStem, rPath); },
-                label))
+                [&](const std::string& rPath) { return m_rSprites.Ensure(rPath); }, label))
         {
             loaded.push_back(*path);
         }
@@ -383,7 +366,7 @@ std::optional<FactionColors_t> FactionBaseArtCache::ColorsFor(const Faction& rFa
         return std::nullopt;
     }
 
-    StemCache_t& rStem = Stem_(*stem);
+    StemCache_t& rStem = m_byStem[*stem];
     if (!rStem.bColorsTried)
     {
         rStem.bColorsTried = true;

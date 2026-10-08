@@ -36,7 +36,8 @@ public:
     using YieldLookup_t = TileRenderer::YieldLookup_t;
     using ExploredFn_t = std::function<bool(const Tile&)>;
 
-    MapSurfaceRenderer(const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
+    MapSurfaceRenderer(TileRenderer& rTileRenderer,
+                       const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
                        const MapOverlayChannelsConfig_t& rMapOverlayChannels);
 
     // One tile's terrain → grid → objects. Shrouded tiles get a fill + grid only.
@@ -59,6 +60,7 @@ private:
                                 const WorldMap& rMap, bool bOceanGrid,
                                 const ExploredFn_t& rExplored) const;
 
+    const TileRenderer& m_rTileRenderer;
     FactionBaseArtCache m_art;
     const BaseSpriteSizesConfig_t& m_rBaseSpriteSizes;
     const MapOverlayChannelsConfig_t& m_rMapOverlayChannels;

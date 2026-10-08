@@ -15,6 +15,7 @@ class Faction;
 class Graphics;
 class Pop;
 class Tile;
+class TileRenderer;
 class Unit;
 class UnitStackPanel;
 struct BaseSpriteSizesConfig_t;
@@ -31,6 +32,7 @@ public:
         BaseManager& rBase,
         WindowLayout_t layout,
         bool bEditable,
+        TileRenderer& rTileRenderer,
         const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
         const MapOverlayChannelsConfig_t& rMapOverlayChannels
     );

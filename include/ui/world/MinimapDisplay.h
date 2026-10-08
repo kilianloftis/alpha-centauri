@@ -15,6 +15,7 @@ namespace ac
 class GameState;
 class Graphics;
 class MapViewport;
+class TileRenderer;
 
 // Full-map terrain overview in the world dashboard right panel. Same elevation /
 // fog / shroud colours as WorldDisplay, without per-tile labels or overlays.
@@ -26,8 +27,8 @@ class MinimapDisplay : public UIElement
 public:
     using CenterOnTileCallback_t = std::function<void(int tileX, int tileY)>;
 
-    MinimapDisplay(const GameState& rGameState, WindowLayout_t layout,
-                   const MapViewport& rViewport,
+    MinimapDisplay(const GameState& rGameState, const TileRenderer& rTileRenderer,
+                   WindowLayout_t layout, const MapViewport& rViewport,
                    CenterOnTileCallback_t onCenterOnTile);
 
     void Render(Graphics& rGraphics) override;
@@ -64,6 +65,7 @@ private:
     void EnsureTerrainCache_(Graphics& rGraphics, const MapContentLayout_t& rLayout);
 
     const GameState& m_rGameState;
+    const TileRenderer& m_rTileRenderer;
     const MapViewport& m_rViewport;
     CenterOnTileCallback_t m_onCenterOnTile;
     const std::string m_textureId;

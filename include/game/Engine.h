@@ -18,6 +18,8 @@ class EventBridge;
 struct GameDataContext;
 class HotkeyConfig;
 class ViewFactory;
+class SpriteLibrary;
+class TileRenderer;
 class UIManager;
 class InteractionPresenter;
 class GameSettings;
@@ -50,6 +52,8 @@ private:
     // Before the backends too: the window is opened from these.
     std::unique_ptr<GameSettings> m_pSettings;
     std::unique_ptr<Graphics> m_pGraphics;
+    // Over m_pGraphics, so it is declared after it and torn down before it.
+    std::unique_ptr<SpriteLibrary> m_pSprites;
     std::unique_ptr<Input> m_pInput;
     // Declared before every live-state member below: Faction, BaseManager, and
     // TileEffectsContext all hold non-owning references into the definition data, so it
@@ -65,6 +69,8 @@ private:
     std::unique_ptr<EventBridge> m_eventBridge;
     // Before the views: WorldView and ViewFactory borrow this for the session.
     std::unique_ptr<HotkeyConfig> m_pHotkeys;
+    // Before the views for the same reason; built once the UI style is loaded.
+    std::unique_ptr<TileRenderer> m_pTileRenderer;
     std::unique_ptr<ViewFactory> m_viewFactory;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<InteractionPresenter> m_interactionPresenter;

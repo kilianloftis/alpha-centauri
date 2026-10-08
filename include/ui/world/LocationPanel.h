@@ -7,13 +7,14 @@ namespace ac
 
 class Graphics;
 class Tile;
+class TileRenderer;
 
 // Dashboard location column: preview of the selected map tile plus feature names from
 // ImprovementConfig_t::name (terrain + improvements in improvements.json).
 class LocationPanel : public UIElement
 {
 public:
-    explicit LocationPanel(WindowLayout_t layout);
+    LocationPanel(const TileRenderer& rTileRenderer, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
@@ -28,6 +29,7 @@ private:
     void DrawContents_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize,
                        float textGap) const;
 
+    const TileRenderer& m_rTileRenderer;
     const Tile* m_pSelectedTile = nullptr;
 };
 

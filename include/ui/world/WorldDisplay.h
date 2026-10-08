@@ -25,7 +25,7 @@ struct Path_t;
 class WorldDisplay
 {
 public:
-    WorldDisplay(const GameState& rGameState, WindowLayout_t layout);
+    WorldDisplay(const GameState& rGameState, TileRenderer& rTileRenderer, WindowLayout_t layout);
 
     // Set the unit currently selected by the player (highlighted on the map). Also used as
     // the path-preview line origin when a path is active.

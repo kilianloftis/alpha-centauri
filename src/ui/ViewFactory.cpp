@@ -33,12 +33,14 @@ ViewFactory::ViewFactory(
     const GameDataContext& rGameDataContext,
     const HotkeyConfig& rHotkeys,
     Graphics& rGraphics,
+    TileRenderer& rTileRenderer,
     GameSettings& rSettings
 )
     : m_rGameState(rGameState)
     , m_rGameDataContext(rGameDataContext)
     , m_rHotkeys(rHotkeys)
     , m_rGraphics(rGraphics)
+    , m_rTileRenderer(rTileRenderer)
     , m_rSettings(rSettings)
 {
 }
@@ -56,6 +58,7 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
         m_rGameState,
         m_rHotkeys,
         m_rGameState.GetWorldMap(),
+        m_rTileRenderer,
         layout,
         std::move(onProcessTurn),
         std::move(onRequestExit),
@@ -77,7 +80,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
     const Faction* pFaction = RequirePlayerFaction_();
 
     const bool bEditable = (rBase.GetFactionId() == pFaction->GetFactionId());
-    return std::make_unique<BaseView>(rBase, layout, bEditable,
+    return std::make_unique<BaseView>(rBase, layout, bEditable, m_rTileRenderer,
                                       *m_rGameDataContext.baseSpriteSizes,
                                       *m_rGameDataContext.mapOverlayChannels);
 }

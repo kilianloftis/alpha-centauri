@@ -12,8 +12,9 @@
 namespace ac
 {
 
-LocationPanel::LocationPanel(WindowLayout_t layout)
+LocationPanel::LocationPanel(const TileRenderer& rTileRenderer, WindowLayout_t layout)
     : UIElement(layout)
+    , m_rTileRenderer(rTileRenderer)
 {
 }
 
@@ -37,8 +38,8 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float previewY = m_layout.y + padding;
     const float textX = m_layout.x + padding;
 
-    TileRenderer::Render(rGraphics, *m_pSelectedTile,
-                         FlatTileShape(previewX, previewY, previewSize));
+    m_rTileRenderer.Render(rGraphics, *m_pSelectedTile,
+                           FlatTileShape(previewX, previewY, previewSize));
 
     float textY = previewY + previewSize + textGap;
     textY = DrawCoordinates_(rGraphics, textX, textY, fontSize) + textGap;

@@ -332,6 +332,7 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 # it and drive views against a recording Graphics.
 # ---------------------------------------------------------------------------
 add_library(ac-ui STATIC
+    ui/SpriteLibrary.cpp
     ui/TileRenderer.cpp
     ui/TileShapeGeometry.cpp
     ui/MapSurfaceRenderer.cpp

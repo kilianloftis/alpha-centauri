@@ -132,6 +132,7 @@ add_executable(effects-tests
     ui/ViewFactoryTests.cpp
     ui/HotkeyConfigTests.cpp
     ui/WorldViewTests.cpp
+    ui/SpriteLibraryTests.cpp
     ui/TileRendererTests.cpp
     ui/CoastOverlayTests.cpp
     ui/TileAutotileTests.cpp

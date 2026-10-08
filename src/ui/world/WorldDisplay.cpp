@@ -43,9 +43,10 @@ PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
 
 } // namespace
 
-WorldDisplay::WorldDisplay(const GameState& rGameState, WindowLayout_t layout)
+WorldDisplay::WorldDisplay(const GameState& rGameState, TileRenderer& rTileRenderer,
+                           WindowLayout_t layout)
     : m_rGameState(rGameState)
-    , m_mapSurface(*rGameState.GetGameData().baseSpriteSizes,
+    , m_mapSurface(rTileRenderer, *rGameState.GetGameData().baseSpriteSizes,
                    *rGameState.GetGameData().mapOverlayChannels)
     , m_viewport(rGameState.GetWorldMap(), layout,
                  layout.height * Style().worldDisplay.defaultTileScale)

@@ -14,9 +14,12 @@
 namespace ac
 {
 
-MapSurfaceRenderer::MapSurfaceRenderer(const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
+MapSurfaceRenderer::MapSurfaceRenderer(TileRenderer& rTileRenderer,
+                                       const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
                                        const MapOverlayChannelsConfig_t& rMapOverlayChannels)
-    : m_rBaseSpriteSizes(rBaseSpriteSizes)
+    : m_rTileRenderer(rTileRenderer)
+    , m_art(rTileRenderer.Sprites())
+    , m_rBaseSpriteSizes(rBaseSpriteSizes)
     , m_rMapOverlayChannels(rMapOverlayChannels)
 {
 }
@@ -96,7 +99,7 @@ void MapSurfaceRenderer::RenderTile(Graphics& rGraphics, const Tile& rTile,
     }
     else
     {
-        TileRenderer::RenderTerrain(rGraphics, rTile, rShape, bFogged, &rMap);
+        m_rTileRenderer.RenderTerrain(rGraphics, rTile, rShape, bFogged, &rMap);
     }
 
     switch (gridStyle)
@@ -113,7 +116,7 @@ void MapSurfaceRenderer::RenderTile(Graphics& rGraphics, const Tile& rTile,
 
     if (!bShrouded)
     {
-        TileRenderer::RenderObjects(rGraphics, rTile, rShape, rYieldOf);
+        m_rTileRenderer.RenderObjects(rGraphics, rTile, rShape, rYieldOf);
     }
 }
 
@@ -130,8 +133,7 @@ bool MapSurfaceRenderer::RenderBase(Graphics& rGraphics, const BaseManager& rBas
         tileHeight * (1.0f + Style().worldDisplay.baseSpriteOverhangRatio);
 
     const Faction& rFaction = rBase.GetFaction();
-    const auto barePath =
-        m_art.EnsureBareBaseSprite(rGraphics, rFaction, rBase, m_rBaseSpriteSizes);
+    const auto barePath = m_art.EnsureBareBaseSprite(rFaction, rBase, m_rBaseSpriteSizes);
     if (!barePath)
     {
         return false;
@@ -143,7 +145,7 @@ bool MapSurfaceRenderer::RenderBase(Graphics& rGraphics, const BaseManager& rBas
             BaseSpriteSizeStage(rBase.GetPopulation().GetSize(), rBase, m_rBaseSpriteSizes);
         const auto overlays = ResolveBaseMapOverlays(
             rBase, *stem, rBase.GetTile().IsWater(), sizeStage, m_rMapOverlayChannels);
-        for (const std::string& rOverlayPath : m_art.EnsureOverlaySprites(rGraphics, overlays))
+        for (const std::string& rOverlayPath : m_art.EnsureOverlaySprites(overlays))
         {
             rGraphics.DrawSprite(rOverlayPath, spriteX, spriteY, tileWidth, spriteHeight);
         }

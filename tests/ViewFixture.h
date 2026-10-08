@@ -2,6 +2,7 @@
 
 #include "GameFixtures.h"
 #include "RecordingGraphics.h"
+#include "SpriteRig.h"
 
 #include "game/Faction.h"
 #include "game/GameSettings.h"
@@ -33,6 +34,7 @@ struct ViewFixture : WorldFixture
     std::unique_ptr<ac::GameState> pState;
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
+    std::unique_ptr<SpriteRig> pSprites;
     std::unique_ptr<ac::ViewFactory> pFactory;
 
     // Loaded once per process — UiStyle is still a singleton (deferred, package 14), so every
@@ -89,8 +91,9 @@ struct ViewFixture : WorldFixture
             dataContext.paths.hotkeys, *dataContext.improvementRegistry,
             *dataContext.terrainOperationRegistry));
 
+        pSprites = std::make_unique<SpriteRig>(graphics, ac::Style().tileRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            *pState, dataContext, *pHotkeys, graphics, settings);
+            *pState, dataContext, *pHotkeys, graphics, pSprites->renderer, settings);
     }
 
     ac::BaseManager& MakeBase(int x, int y)

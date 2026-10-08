@@ -60,6 +60,7 @@ WorldView::WorldView(
     GameState& rGameState,
     const HotkeyConfig& rHotkeys,
     const WorldMap& rWorldMap,
+    TileRenderer& rTileRenderer,
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
@@ -71,7 +72,7 @@ WorldView::WorldView(
 , m_rGameState(rGameState)
 , m_rHotkeys(rHotkeys)
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
-, m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
+, m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, rTileRenderer, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
 , m_onOpenBase(std::move(onOpenBase))
@@ -85,7 +86,8 @@ WorldView::WorldView(
     m_pSelectedUnitPanel = pSelectedUnit.get();
     m_elements.push_back(std::move(pSelectedUnit));
 
-    auto pLocation = std::make_unique<LocationPanel>(ResolveLayout(m_layout, Style().layouts.locationPanel));
+    auto pLocation = std::make_unique<LocationPanel>(
+        rTileRenderer, ResolveLayout(m_layout, Style().layouts.locationPanel));
     m_pLocationPanel = pLocation.get();
     m_elements.push_back(std::move(pLocation));
 
@@ -106,6 +108,7 @@ WorldView::WorldView(
     const WindowLayout_t rightPanel = ResolveLayout(m_layout, Style().layouts.rightPanel);
     m_elements.push_back(std::make_unique<MinimapDisplay>(
         m_rGameState,
+        rTileRenderer,
         rightPanel,
         m_pWorldDisplay->GetViewport(),
         [this](int tileX, int tileY) {

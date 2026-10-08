@@ -32,6 +32,7 @@ public:
     BaseWorkableAreaDisplay(const BaseManager& rBase,
                             const BaseDisplaySnapshot_t& rSnapshot,
                             WindowLayout_t layout,
+                            TileRenderer& rTileRenderer,
                             const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
                             const MapOverlayChannelsConfig_t& rMapOverlayChannels,
                             TileClickCallback_t onTileClicked,

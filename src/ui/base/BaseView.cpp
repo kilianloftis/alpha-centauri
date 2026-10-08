@@ -45,6 +45,7 @@ BaseView::BaseView(
     BaseManager& rBase,
     WindowLayout_t layout,
     bool bEditable,
+    TileRenderer& rTileRenderer,
     const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
     const MapOverlayChannelsConfig_t& rMapOverlayChannels
 )
@@ -93,6 +94,7 @@ BaseView::BaseView(
         m_rBase,
         m_snapshot,
         ResolveLayout(topPanel, bv.workableLayout),
+        rTileRenderer,
         rBaseSpriteSizes,
         rMapOverlayChannels,
         std::move(onTileClick),

@@ -1,4 +1,3 @@
-#include "StubSprites.h"
 #include "ViewFixture.h"
 
 #include "TestHelpers.h"

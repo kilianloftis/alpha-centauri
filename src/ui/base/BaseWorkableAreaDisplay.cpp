@@ -60,6 +60,7 @@ void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
                                                  const BaseDisplaySnapshot_t& rSnapshot,
                                                  WindowLayout_t layout,
+                                                 TileRenderer& rTileRenderer,
                                                  const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
                                                  const MapOverlayChannelsConfig_t& rMapOverlayChannels,
                                                  TileClickCallback_t onTileClicked,
@@ -69,7 +70,7 @@ BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
     , m_rSnapshot(rSnapshot)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
-    , m_mapSurface(rBaseSpriteSizes, rMapOverlayChannels)
+    , m_mapSurface(rTileRenderer, rBaseSpriteSizes, rMapOverlayChannels)
 {
     CacheTileDiamonds_();
 }

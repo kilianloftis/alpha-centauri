@@ -52,11 +52,14 @@
 #include "game/map/WorldGenPresetRegistry.h"
 #include "game/map/WorldGenerator.h"
 #include "game/map/WorldGenPresetConfigParser.h"
+#include "ui/SpriteLibrary.h"
+#include "ui/TileRenderer.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/InteractionPresenter.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -296,6 +299,9 @@ Engine::Engine()
     {
         throw std::runtime_error("Failed to create graphics backend");
     }
+    m_pSprites = std::make_unique<SpriteLibrary>(
+        *m_pGraphics,
+        [](const std::string& rPath) { return std::filesystem::exists(rPath); });
     if (!m_pInput)
     {
         throw std::runtime_error("Failed to create input backend");
@@ -715,11 +721,14 @@ void Engine::InitializeUi_()
         *m_gameDataContext->improvementRegistry,
         *m_gameDataContext->terrainOperationRegistry));
 
+    m_pTileRenderer = std::make_unique<TileRenderer>(*m_pSprites, Style().tileRenderer);
+
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_pGameState,
         *m_gameDataContext,
         *m_pHotkeys,
         *m_pGraphics,
+        *m_pTileRenderer,
         *m_pSettings);
 
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();

@@ -1,4 +1,3 @@
-#include "StubSprites.h"
 #include "ViewFixture.h"
 
 #include "game/Faction.h"
@@ -41,7 +40,8 @@ std::size_t CountLines_(const RecordingGraphics& rGraphics, const Color_t& color
 RecordingGraphics Render_(ViewFixture& rFixture, ReliefMode_t relief, bool bOceanGrid)
 {
     rFixture.settings.SetMapDisplay(MapDisplayConfig_t{relief, bOceanGrid});
-    WorldDisplay display(*rFixture.pState, ViewFixture::FullScreen());
+    WorldDisplay display(*rFixture.pState, rFixture.pSprites->renderer,
+                         ViewFixture::FullScreen());
     RecordingGraphics graphics;
     display.Render(graphics);
     return graphics;
@@ -97,7 +97,8 @@ TEST_CASE("Grid lines run through the raised corners", "[ui][world][grid][relief
 
     const RecordingGraphics flat = Render_(fixture, ReliefMode_t::Flat, false);
     const RecordingGraphics raised = Render_(fixture, ReliefMode_t::Smooth, false);
-    const WorldDisplay display(*fixture.pState, ViewFixture::FullScreen());
+    const WorldDisplay display(*fixture.pState, fixture.pSprites->renderer,
+                               ViewFixture::FullScreen());
     // Inland corners all sit two levels up.
     const float lift = 2.0f * s.relief.liftPerLevelRatio * display.GetViewport().TileWidth();
 
@@ -124,7 +125,7 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
     REQUIRE(pBonus != nullptr);
     rTile.AddTerrainFeature(*pBonus);
     const std::string& bonusPath = pBonus->spritePaths.land.front();
-    actest::WriteStubPng(bonusPath);
+    fixture.pSprites->existing.insert(bonusPath);
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
     const auto bonus = std::ranges::find_if(graphics.sprites, [&](const auto& rSprite) {
@@ -169,7 +170,7 @@ TEST_CASE("Faction base sprites and colors.json label colour draw when assets ex
     REQUIRE(pBase != nullptr);
 
     const std::string spritePath = BareBaseSpritePath("gaian", false, 1);
-    actest::WriteStubPng(spritePath);
+    fixture.pSprites->existing.insert(spritePath);
     std::filesystem::create_directories("assets/factions/gaian");
     {
         // Overwrite any extracted colors.json so the assertion is deterministic.
@@ -205,8 +206,8 @@ TEST_CASE("A Perimeter Defense base draws bare base then the perimeter overlay",
     const std::string barePath = BareBaseSpritePath("hive", false, 1);
     const std::string overlayPath =
         "assets/factions/hive/bases/overlays/perimeter_size1.png";
-    actest::WriteStubPng(barePath);
-    actest::WriteStubPng(overlayPath);
+    fixture.pSprites->existing.insert(barePath);
+    fixture.pSprites->existing.insert(overlayPath);
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
     const auto bare = std::ranges::find_if(graphics.sprites, [&](const auto& rSprite) {

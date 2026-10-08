@@ -14,6 +14,7 @@ namespace ac
 
 class BaseManager;
 class Faction;
+class SpriteLibrary;
 struct BaseSpriteSizesConfig_t;
 struct MapOverlayChannelsConfig_t;
 
@@ -74,42 +75,34 @@ std::optional<std::string> ResolveSizedSpritePath(
     int wantedStage, const std::function<std::string(int)>& pathForStage,
     const std::function<bool(const std::string&)>& pathExists, std::string_view assetLabel);
 
-// Loads and caches faction base textures and colors.json per sheet stem.
+// Loads faction base textures through the SpriteLibrary and caches colors.json per sheet stem.
 class FactionBaseArtCache
 {
 public:
+    explicit FactionBaseArtCache(SpriteLibrary& rSprites);
+
     // Empty when the faction has no sheet stem or no size stage PNG loads (after fallback).
-    std::optional<std::string> EnsureBareBaseSprite(Graphics& rGraphics, const Faction& rFaction,
+    std::optional<std::string> EnsureBareBaseSprite(const Faction& rFaction,
                                                     const BaseManager& rBase,
                                                     const BaseSpriteSizesConfig_t& rSizes);
 
     // Loads each overlay, falling back to lower size stages when the preferred PNG is missing.
-    std::vector<std::string> EnsureOverlaySprites(Graphics& rGraphics,
-                                                  const std::vector<ResolvedBaseOverlay_t>& rOverlays);
+    std::vector<std::string> EnsureOverlaySprites(
+        const std::vector<ResolvedBaseOverlay_t>& rOverlays);
 
     // Empty when there is no sheet stem or colors.json is absent. Throws if colors.json
     // exists but is invalid.
     std::optional<FactionColors_t> ColorsFor(const Faction& rFaction);
 
 private:
-    enum class TextureState_t
-    {
-        Untried,
-        Loaded,
-        Missing,
-    };
-
     struct StemCache_t
     {
         bool bColorsTried = false;
         bool bColorsPresent = false;
         FactionColors_t colors{};
-        std::unordered_map<std::string, TextureState_t> textures;
     };
 
-    StemCache_t& Stem_(const std::string& rStem);
-    bool EnsureTexture_(Graphics& rGraphics, StemCache_t& rStem, const std::string& rPath);
-
+    SpriteLibrary& m_rSprites;
     std::unordered_map<std::string, StemCache_t> m_byStem;
 };
 

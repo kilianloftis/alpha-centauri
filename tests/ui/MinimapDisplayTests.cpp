@@ -28,10 +28,11 @@ constexpr float k_PixelH = 10.0f;
 struct MinimapRig_t
 {
     ViewFixture fixture{false};
-    WorldDisplay display{*fixture.pState, ViewFixture::FullScreen()};
+    WorldDisplay display{*fixture.pState, fixture.pSprites->renderer, ViewFixture::FullScreen()};
     WindowLayout_t layout{100.0f, 50.0f, 720.0f, 170.0f};
     std::vector<std::pair<int, int>> centered;
-    MinimapDisplay minimap{*fixture.pState, layout, display.GetViewport(),
+    MinimapDisplay minimap{*fixture.pState, fixture.pSprites->renderer, layout,
+                           display.GetViewport(),
                            [this](int x, int y) { centered.emplace_back(x, y); }};
 
     void ClickPixel(int px, int py, MouseButton_t button = MouseButton_t::Left)
@@ -78,8 +79,8 @@ TEST_CASE("Minimap draws the map as a brick with 2:1 texels", "[ui][minimap]")
     SECTION("a narrow layout keeps the 2:1 texel aspect and centres the image")
     {
         const WindowLayout_t narrow{0.0f, 0.0f, 300.0f, 400.0f};
-        MinimapDisplay minimap(*rig.fixture.pState, narrow, rig.display.GetViewport(),
-                               [](int, int) {});
+        MinimapDisplay minimap(*rig.fixture.pState, rig.fixture.pSprites->renderer, narrow,
+                               rig.display.GetViewport(), [](int, int) {});
         RecordingGraphics graphics;
         minimap.Render(graphics);
         REQUIRE(graphics.sprites.size() == 1);

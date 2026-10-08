@@ -21,7 +21,6 @@
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
 #include "input/Input.h"
-#include "StubSprites.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/BuildingsDisplay.h"
@@ -768,7 +767,7 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     REQUIRE(fixture.dataContext.baseSpriteSizes);
     REQUIRE(fixture.dataContext.mapOverlayChannels);
     BaseWorkableAreaDisplay panel(
-        rBase, snapshot, layout, *fixture.dataContext.baseSpriteSizes,
+        rBase, snapshot, layout, fixture.pSprites->renderer, *fixture.dataContext.baseSpriteSizes,
         *fixture.dataContext.mapOverlayChannels,
         [&](const Tile* pTile) { pClickedTile = pTile; },
         [&]() { bBaseClicked = true; });
@@ -891,14 +890,15 @@ TEST_CASE("Base workable area draws faction base art when assets exist", "[ui][b
     BaseManager& rBase = fixture.MakeBase(8, 8);
 
     const std::string spritePath = BareBaseSpritePath("gaian", false, 1);
-    actest::WriteStubPng(spritePath);
+    fixture.pSprites->existing.insert(spritePath);
     std::filesystem::create_directories("assets/factions/gaian");
 
     const WindowLayout_t layout{0.0f, 0.0f, 400.0f, 200.0f};
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
     REQUIRE(fixture.dataContext.baseSpriteSizes);
     REQUIRE(fixture.dataContext.mapOverlayChannels);
-    BaseWorkableAreaDisplay panel(rBase, snapshot, layout, *fixture.dataContext.baseSpriteSizes,
+    BaseWorkableAreaDisplay panel(rBase, snapshot, layout, fixture.pSprites->renderer,
+                                  *fixture.dataContext.baseSpriteSizes,
                                   *fixture.dataContext.mapOverlayChannels, nullptr, nullptr);
 
     fixture.graphics.sprites.clear();
