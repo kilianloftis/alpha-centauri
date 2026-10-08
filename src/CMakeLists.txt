@@ -336,7 +336,7 @@ add_library(ac-ui STATIC
     ui/SpriteLibrary.cpp
     ui/TileRenderer.cpp
     ui/TileShapeGeometry.cpp
-    ui/MapSurfaceRenderer.cpp
+    ui/MapRenderer.cpp
     ui/CoastOverlay.cpp
     ui/TileAutotile.cpp
     ui/WaterShading.cpp

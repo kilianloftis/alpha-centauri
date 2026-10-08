@@ -1,12 +1,7 @@
 #include "ui/world/WorldDisplay.h"
-#include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/effects/TileEffectsContext.h"
-#include "game/Faction.h"
-#include "game/faction/FactionExploredMap.h"
-#include "game/faction/FactionVisibleMap.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Pathfinder.h"
@@ -14,41 +9,16 @@
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
 #include <algorithm>
-#include <string>
 #include <utility>
 #include <vector>
 
 namespace ac
 {
 
-namespace
-{
-
-constexpr size_t k_BaseNameMinTruncChars = 3;
-
-struct PlayerFogMaps_t
-{
-    const FactionExploredMap* explored = nullptr;
-    const FactionVisibleMap* visible = nullptr;
-};
-
-PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
-{
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer || !pPlayer->GetExploredMap().IsSized() || !pPlayer->GetVisibleMap().IsSized())
-    {
-        return {};
-    }
-    return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap()};
-}
-
-} // namespace
-
-WorldDisplay::WorldDisplay(const GameState& rGameState, TileRenderer& rTileRenderer,
+WorldDisplay::WorldDisplay(const GameState& rGameState, MapRenderer& rMapRenderer,
                            WindowLayout_t layout)
     : m_rGameState(rGameState)
-    , m_mapSurface(rTileRenderer, *rGameState.GetGameData().baseSpriteSizes,
-                   *rGameState.GetGameData().mapOverlayChannels)
+    , m_rMapRenderer(rMapRenderer)
     , m_viewport(rGameState.GetWorldMap(), layout,
                  layout.height * Style().worldDisplay.defaultTileScale)
 {
@@ -62,12 +32,11 @@ void WorldDisplay::SetPathPreview(const Path_t* pPath)
 void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
 {
     m_pSelectedUnit = pUnit;
-    m_unitMarkers.SetSelectedUnit(pUnit);
 }
 
 void WorldDisplay::SetPlaybackVisibleUnits(const std::unordered_set<UnitId_t>* pUnitIds)
 {
-    m_unitMarkers.SetPlaybackVisibleUnits(pUnitIds);
+    m_pPlaybackVisibleUnits = pUnitIds;
 }
 
 float WorldDisplay::GetEffectiveTileSize() const
@@ -80,76 +49,14 @@ int WorldDisplay::GetVisibleRows() const
     return m_viewport.VisibleRows();
 }
 
-void WorldDisplay::RenderBases_(Graphics& rGraphics)
+std::optional<Rectangle_t> WorldDisplay::MarkerRectOf(UnitId_t unitId) const
 {
-    const auto& s = Style().worldDisplay;
-    const float tileSize = m_viewport.TileSize();
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.baseNameFontSizeRatio);
-    const float textOffsetX = tileSize * s.baseTextOffsetRatio;
-    const float textOffsetY = tileSize * s.baseTextOffsetRatio;
-
-    // Same visible-wrap pass as unit markers / tile objects so bases seat on the on-screen
-    // diamond, not a different wrap of PixelOriginOf.
-    m_viewport.ForEachVisibleTile(
-        [&](const Tile& rTile, const TileShape_t& rShape) {
-            const BaseManager* pBase = m_rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
-            if (!pBase)
-            {
-                return;
-            }
-            const BaseManager& rBase = *pBase;
-            const Faction& rFaction = rBase.GetFaction();
-
-            // Shroud hides bases entirely; fog still shows last-known bases.
-            if (fog.explored && !fog.explored->IsExplored(rTile))
-            {
-                return;
-            }
-
-            Color_t nameColor = s.baseNameColor;
-            if (const auto colors = m_mapSurface.ColorsFor(rFaction))
-            {
-                nameColor = colors->LabelColor(s.baseNameColor);
-            }
-
-            const auto [labelX, labelY] = m_viewport.FootprintOrigin(rShape);
-            (void)m_mapSurface.RenderBase(rGraphics, rBase, rShape);
-
-            const float maxNameWidth = tileSize * s.baseNameWidthRatio;
-            std::string displayName = rBase.GetName();
-            if (rGraphics.MeasureTextWidth(displayName, fontSize) > maxNameWidth)
-            {
-                for (size_t n = displayName.size(); n > 0; --n)
-                {
-                    std::string candidate;
-                    if (n > k_BaseNameMinTruncChars)
-                    {
-                        candidate = displayName.substr(0, n - 1) + ".";
-                    }
-                    else if (n >= k_BaseNameMinTruncChars)
-                    {
-                        candidate = displayName.substr(0, n);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                    if (rGraphics.MeasureTextWidth(candidate, fontSize) <= maxNameWidth)
-                    {
-                        displayName = std::move(candidate);
-                        break;
-                    }
-                }
-            }
-
-            // TODO: Show capture animation when base capture is implemented
-            // TODO: Show population size below name
-            rGraphics.DrawText(displayName, labelX + textOffsetX, labelY + textOffsetY, fontSize,
-                               nameColor);
-        },
-        /*bShaded=*/false);
+    const auto it = m_unitMarkers.find(unitId);
+    if (it == m_unitMarkers.end())
+    {
+        return std::nullopt;
+    }
+    return it->second;
 }
 
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
@@ -204,27 +111,22 @@ void WorldDisplay::Render(Graphics& rGraphics)
         return;
     }
 
-    const MapDisplayConfig_t& rDisplay = m_rGameState.GetSettings().GetMapDisplay();
-    m_viewport.SetRelief(rDisplay.relief, Style().tileRenderer.relief);
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const MapAppearance appearance = AppearanceOf(rWorldMap, m_rGameState.GetPlayerFaction());
-    const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
-        return m_rGameState.GetTileEffects().ResolveTileYield(rTile).effective;
-    };
-    const MapSurfaceRenderer::ExploredFn_t explored = [&fog](const Tile& rTile) {
-        return !fog.explored || fog.explored->IsExplored(rTile);
-    };
+    m_viewport.SetRelief(m_rGameState.GetSettings().GetMapDisplay().relief,
+                         Style().tileRenderer.relief);
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
 
-    m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-        const bool bShrouded = fog.explored && !fog.explored->IsExplored(rTile);
-        const bool bFogged = !bShrouded && fog.visible && !fog.visible->IsVisible(rTile);
-        m_mapSurface.RenderTile(rGraphics, rTile, rShape, appearance, bFogged, bShrouded, yieldOf,
-                                MapGridStyle_t::WorldMapEdges, rDisplay.bOceanGrid, explored);
-    });
+    MapContent_t content;
+    content.showsBase = [](const BaseManager&) { return true; };
+    content.showsUnit = [this, pPlayer](const Unit& rUnit) {
+        // Per-unit visibility (fog, Conceal/Detect, contact reveal), not tile fog alone.
+        return (m_pPlaybackVisibleUnits && m_pPlaybackVisibleUnits->contains(rUnit.GetUnitId()))
+               || !pPlayer || IsUnitVisibleTo(*pPlayer, rUnit, m_rGameState.GetTileEffects());
+    };
+    content.pSelectedUnit = m_pSelectedUnit;
 
-    RenderBases_(rGraphics);
+    m_unitMarkers = m_rMapRenderer.Render(rGraphics, m_viewport.VisibleTiles(),
+                                          MapAppearance::Fogged(rWorldMap, pPlayer), content);
     RenderPathPreview_(rGraphics);
-    m_unitMarkers.Render(rGraphics, m_rGameState, m_viewport);
 }
 
 } // namespace ac

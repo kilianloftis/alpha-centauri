@@ -29,7 +29,7 @@ class InfoPanelElement;
 class LocationPanel;
 class SelectedUnitPanel;
 class Tile;
-class TileRenderer;
+class MapRenderer;
 class UnitStackPanel;
 
 class WorldView : public IWorldView
@@ -52,7 +52,7 @@ public:
         GameState& rGameState,
         const HotkeyConfig& rHotkeys,
         const WorldMap& rWorldMap,
-        TileRenderer& rTileRenderer,
+        MapRenderer& rMapRenderer,
         WindowLayout_t layout,
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,

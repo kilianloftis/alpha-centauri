@@ -86,24 +86,29 @@ struct TileRendererStyle_t
     Color_t missingArtColor{};
     Color_t missingArtAltColor{};
     float missingArtSizeRatio{};
+    // Fills a tile the viewer never explored.
+    Color_t shroudColor{};
+};
+
+struct MapRendererStyle_t
+{
     // Grid lines along tile edges: between two land tiles, and touching water.
     Color_t gridLandColor{};
     Color_t gridWaterColor{};
     float gridLineWidth{};
+    // Extra height above the tile footprint for faction base sprites (100×75 on a 100×50 cell).
+    float baseSpriteOverhangRatio{};
+    float baseNameFontSizeRatio{};
+    float baseTextOffsetRatio{};
+    float baseNameWidthRatio{};
+    Color_t baseNameColor{};
 };
 
 struct WorldDisplayStyle_t
 {
     float defaultTileScale{};
-    float baseNameFontSizeRatio{};
-    float baseTextOffsetRatio{};
-    float baseNameWidthRatio{};
-    Color_t shroudColor{};
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
-    Color_t baseNameColor{};
-    // Extra height above the tile footprint for faction base sprites (100×75 on a 100×50 cell).
-    float baseSpriteOverhangRatio{};
     // Empty path: airdrop targeting does not change the mouse cursor.
     std::string airdropCursorPath{};
     unsigned int airdropCursorHotspotX = 0;
@@ -116,6 +121,7 @@ struct WorldDisplayStyle_t
 
 struct MinimapDisplayStyle_t
 {
+    Color_t backgroundColor{};
     Color_t viewportBorderColor{};
     float viewportBorderWidth{};
 };
@@ -442,11 +448,7 @@ struct BuildingsDisplayStyle_t
 struct BaseWorkableAreaDisplayStyle_t
 {
     Color_t backgroundColor{};
-    Color_t tileBorderColor{};
-    float tileBorderWidth{};
-    unsigned int baseLabelFontSize{};
     unsigned int tileFontSize{};
-    Color_t baseLabelColor{};
     Color_t workedTileTextColor{};
     Color_t unworkedTileTextColor{};
     // Workable, but held by a neighbouring base / another faction / a supply crawler, so this
@@ -647,6 +649,7 @@ public:
     LayoutsStyle_t layouts;
     ViewFactoryStyle_t viewFactory;
     TileRendererStyle_t tileRenderer;
+    MapRendererStyle_t mapRenderer;
     WorldDisplayStyle_t worldDisplay;
     MinimapDisplayStyle_t minimapDisplay;
     UnitMarkerStyle_t unitMarker;

@@ -334,16 +334,16 @@ bool TileRenderer::TryDrawTileSprite_(Graphics& rGraphics, const std::string& pa
            && rGraphics.DrawTileSprite(path, palette, rShape);
 }
 
-// Land in sight keeps the relief's shades; out of sight SMAC shades land a flat
-// fog_land_shade instead of lighting its slopes. Terrain layers on water draw as painted.
+// Land in sight keeps the relief's shades; under fog SMAC shades land a flat fog_land_shade
+// instead of lighting its slopes. Terrain layers on water draw as painted.
 TileShape_t TileRenderer::TerrainShape_(const TileShape_t& rShape, const Tile& rTile,
-                                        bool bFogged) const
+                                        TileCover_t cover) const
 {
     if (!rTile.IsLand())
     {
         return UniformShade_(rShape, 0.0f);
     }
-    return bFogged ? UniformShade_(rShape, m_rStyle.fogLandShade) : rShape;
+    return cover == TileCover_t::Fog ? UniformShade_(rShape, m_rStyle.fogLandShade) : rShape;
 }
 
 const std::string& TileRenderer::CoastSpritePath_(std::size_t part,
@@ -396,9 +396,8 @@ bool TileRenderer::TryDrawOccupantPath_(Graphics& rGraphics, const OccupantArt_t
     const float width = rShape.east.x - rShape.west.x;
     const float height = width * k_IsoHeightRatio;
     const float overhang = height * rArt.overhang;
-    const auto [seatX, seatY] = SeatOf(rShape);
-    return TryDrawSprite_(rGraphics, path, seatX - width * 0.5f, seatY - height * 0.5f, width,
-                          height + overhang, tint);
+    const auto [originX, originY] = FootprintOrigin(rShape);
+    return TryDrawSprite_(rGraphics, path, originX, originY, width, height + overhang, tint);
 }
 
 // A terrain occupant's baked diamond drawn on the shape.
@@ -569,10 +568,14 @@ void TileRenderer::DrawObject_(Graphics& rGraphics, const ImprovementConfig_t& r
     }
 }
 
-Color_t TileRenderer::FillColor(const Tile& rTile, const MapAppearance& rAppearance,
-                                bool bFogged) const
+Color_t TileRenderer::FillColor(const Tile& rTile, const MapAppearance& rAppearance) const
 {
     const TileRendererStyle_t& s = m_rStyle;
+    const TileCover_t cover = rAppearance.CoverOf(rTile);
+    if (cover == TileCover_t::Shroud)
+    {
+        return s.shroudColor;
+    }
     const int elevation = rTile.GetElevation();
     Color_t fill{};
 
@@ -608,19 +611,11 @@ Color_t TileRenderer::FillColor(const Tile& rTile, const MapAppearance& rAppeara
         fill = LerpColor_(s.landLowColor, s.landHighColor, t);
     }
 
-    if (bFogged)
+    if (cover == TileCover_t::Fog)
     {
         fill = DimColor_(fill, s.fogFillDimRatio);
     }
     return fill;
-}
-
-void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                          bool bFogged, const MapAppearance& rAppearance,
-                          const YieldLookup_t& rYieldOf) const
-{
-    RenderTerrain(rGraphics, rTile, rShape, bFogged, rAppearance);
-    RenderObjects(rGraphics, rTile, rShape, rAppearance, rYieldOf);
 }
 
 void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, ArtLayer_t layer,
@@ -654,12 +649,15 @@ void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, Art
 }
 
 void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                                 bool bFogged, const MapAppearance& rAppearance) const
+                                 const MapAppearance& rAppearance) const
 {
-    const Color_t baseFill = FillColor(rTile, rAppearance, bFogged);
-    const TileShape_t terrain = TerrainShape_(rShape, rTile, bFogged);
-
-    rGraphics.FillTileShape(rShape, baseFill);
+    rGraphics.FillTileShape(rShape, FillColor(rTile, rAppearance));
+    const TileCover_t cover = rAppearance.CoverOf(rTile);
+    if (cover == TileCover_t::Shroud)
+    {
+        return;
+    }
+    const TileShape_t terrain = TerrainShape_(rShape, rTile, cover);
 
     constexpr std::array<ArtLayer_t, 5> k_BeforeCoast = {
         ArtLayer_t::Landform,   ArtLayer_t::Moisture,   ArtLayer_t::Rockiness,
@@ -673,13 +671,13 @@ void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const T
     // The coast covers the terrain layers and sits under rivers, roads and improvements.
     // TODO: confirm in terranx.exe whether remembered tiles keep their old elevation
     DrawCoastOverlay_(rGraphics, rTile, rAppearance.Map(), rShape,
-                      bFogged ? m_rStyle.fogLandShade : 0.0f);
+                      cover == TileCover_t::Fog ? m_rStyle.fogLandShade : 0.0f);
 
     DrawTerrainLayer_(rGraphics, rTile, ArtLayer_t::River, rAppearance, rShape, terrain);
     DrawLinkNetworks_(rGraphics, rTile, rAppearance, terrain);
 
     // Fog hazes the terrain layers; objects draw clear on top of it, as in SMAC.
-    if (bFogged)
+    if (cover == TileCover_t::Fog)
     {
         rGraphics.FillTileShape(rShape, m_rStyle.fogHazeColor);
     }
@@ -689,6 +687,10 @@ void TileRenderer::RenderObjects(Graphics& rGraphics, const Tile& rTile, const T
                                  const MapAppearance& rAppearance,
                                  const YieldLookup_t& rYieldOf) const
 {
+    if (rAppearance.CoverOf(rTile) == TileCover_t::Shroud)
+    {
+        return;
+    }
     const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
     std::vector<std::string> hidden;
     occupants.ForEach([&hidden](const ImprovementConfig_t& rOccupant) {

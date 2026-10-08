@@ -3,22 +3,23 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
-#include "ui/TileRenderer.h"
+#include "ui/MapRenderer.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
 #include <algorithm>
+#include <span>
 #include <sstream>
 #include <string>
 
 namespace ac
 {
 
-LocationPanel::LocationPanel(const GameState& rGameState, const TileRenderer& rTileRenderer,
+LocationPanel::LocationPanel(const GameState& rGameState, MapRenderer& rMapRenderer,
                              WindowLayout_t layout)
     : UIElement(layout)
     , m_rGameState(rGameState)
-    , m_rTileRenderer(rTileRenderer)
+    , m_rMapRenderer(rMapRenderer)
 {
 }
 
@@ -43,10 +44,9 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float textX = m_layout.x + padding;
 
     const MapAppearance appearance =
-        AppearanceOf(m_rGameState.GetWorldMap(), m_rGameState.GetPlayerFaction());
-    m_rTileRenderer.Render(rGraphics, *m_pSelectedTile,
-                           FlatTileShape(previewX, previewY, previewSize), /*bFogged=*/false,
-                           appearance);
+        MapAppearance::Clear(m_rGameState.GetWorldMap(), m_rGameState.GetPlayerFaction());
+    const PlacedTile_t preview{m_pSelectedTile, FlatTileShape(previewX, previewY, previewSize)};
+    m_rMapRenderer.Render(rGraphics, std::span(&preview, 1), appearance, MapContent_t{});
 
     float textY = previewY + previewSize + textGap;
     textY = DrawCoordinates_(rGraphics, textX, textY, fontSize) + textGap;

@@ -53,7 +53,7 @@
 #include "game/map/WorldGenerator.h"
 #include "game/map/WorldGenPresetConfigParser.h"
 #include "ui/SpriteLibrary.h"
-#include "ui/TileRenderer.h"
+#include "ui/MapRenderer.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/InteractionPresenter.h"
@@ -68,6 +68,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#define AC_PLACE_TEST_IMPROVEMENTS 1
 
 namespace ac
 {
@@ -724,14 +726,15 @@ void Engine::InitializeUi_()
         *m_gameDataContext->improvementRegistry,
         *m_gameDataContext->terrainOperationRegistry));
 
-    m_pTileRenderer = std::make_unique<TileRenderer>(*m_pSprites, Style().tileRenderer);
+    m_pMapRenderer = std::make_unique<MapRenderer>(*m_pSprites, *m_pGameState, Style().tileRenderer,
+                                                   Style().mapRenderer);
 
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_pGameState,
         *m_gameDataContext,
         *m_pHotkeys,
         *m_pGraphics,
-        *m_pTileRenderer,
+        *m_pMapRenderer,
         *m_pSettings);
 
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();

@@ -8,8 +8,6 @@
 #include "ui/TileShapeGeometry.h"
 #include "ui/UIElement.h"
 
-#include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -64,73 +62,9 @@ public:
     // applied).
     std::optional<std::pair<int, int>> WorldCoordsAtPixel(float pixelX, float pixelY) const;
 
-    // Top-left of the tile's flat footprint (diamond bounding box), seated at the mean of the
-    // shape's four corners as SMAC seats everything on a tile.
-    std::pair<float, float> FootprintOrigin(const TileShape_t& rShape) const
-    {
-        const auto [seatX, seatY] = SeatOf(rShape);
-        (void)seatX;
-        return {rShape.west.x, seatY - m_tileHeight * 0.5f};
-    }
-
-    // fn(const Tile& tile, const TileShape_t& shape) for every tile whose raised shape reaches
-    // the layout, back-to-front (north row first). bShaded adds the relief's slope shades,
-    // which only terrain drawing needs.
-    template<typename Fn>
-    void ForEachVisibleTile(Fn&& fn, bool bShaded = true) const
-    {
-        const int mapWidth = m_rWorldMap.GetWidth();
-        const int mapHeight = m_rWorldMap.GetHeight();
-        if (mapWidth <= 0 || mapHeight <= 0 || m_tileWidth <= 0.0f || m_tileHeight <= 0.0f)
-        {
-            return;
-        }
-
-        const float halfW = m_tileWidth * 0.5f;
-        const float halfH = m_tileHeight * 0.5f;
-        const float maxLift = MaxLiftPixels_();
-        // One row above the camera; past the layout bottom by how far a raised tile can climb.
-        const int relYStart = -1;
-        const int relYEnd =
-            static_cast<int>(std::ceil((m_layout.height + maxLift) / halfH)) + 1;
-        const int relXStart = -2;
-        const int relXEnd = static_cast<int>(std::ceil(m_layout.width / halfW)) + 2;
-
-        for (int relY = relYStart; relY <= relYEnd; ++relY)
-        {
-            const int worldY = m_cameraY + relY;
-            if (worldY < 0 || worldY >= mapHeight)
-            {
-                continue;
-            }
-            for (int relX = relXStart; relX <= relXEnd; ++relX)
-            {
-                const int worldX = WrapWorldX_(m_cameraX + relX);
-                if (((worldX + worldY) & 1) != 0)
-                {
-                    continue;
-                }
-                float aabbX = 0.0f;
-                float aabbY = 0.0f;
-                AabbOriginFromRel_(relX, relY, aabbX, aabbY);
-                if (!BoxIntersectsLayout_(aabbX, aabbY - maxLift, m_tileHeight + maxLift))
-                {
-                    continue;
-                }
-                const Tile* pTile = m_rWorldMap.GetTile(worldX, worldY);
-                if (!pTile)
-                {
-                    continue;
-                }
-                TileShape_t shape = ShapeAt_(*pTile, aabbX, aabbY, bShaded);
-                if (!ShapeIntersectsLayout_(shape))
-                {
-                    continue;
-                }
-                fn(*pTile, shape);
-            }
-        }
-    }
+    // Every tile whose raised shape reaches the layout, back to front (north row first), with the
+    // relief's slope shades.
+    std::vector<PlacedTile_t> VisibleTiles() const;
 
 private:
     int WrapWorldX_(int worldX) const;
@@ -139,9 +73,8 @@ private:
     void AabbOriginFromRel_(int relX, int relY, float& rOutX, float& rOutY) const;
     bool BoxIntersectsLayout_(float x, float y, float height) const;
     bool ShapeIntersectsLayout_(const TileShape_t& rShape) const;
-    // The tile raised by the relief, with its flat diamond box at (aabbX, aabbY); bShaded adds
-    // the slope shades.
-    TileShape_t ShapeAt_(const Tile& rTile, float aabbX, float aabbY, bool bShaded) const;
+    // The tile raised and shaded by the relief, with its flat diamond box at (aabbX, aabbY).
+    TileShape_t ShapeAt_(const Tile& rTile, float aabbX, float aabbY) const;
     // How far the map's highest tile can rise, in pixels.
     float MaxLiftPixels_() const;
     void EnsureReliefCache_() const;

@@ -53,4 +53,12 @@ std::pair<float, float> SeatOf(const TileShape_t& rShape)
     return {seatX, seatY};
 }
 
+std::pair<float, float> FootprintOrigin(const TileShape_t& rShape)
+{
+    const float height = (rShape.east.x - rShape.west.x) * k_IsoHeightRatio;
+    const auto [seatX, seatY] = SeatOf(rShape);
+    (void)seatX;
+    return {rShape.west.x, seatY - height * 0.5f};
+}
+
 } // namespace ac

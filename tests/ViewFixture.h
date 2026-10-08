@@ -12,6 +12,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "ui/HotkeyConfig.h"
+#include "ui/MapRenderer.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
 
@@ -35,6 +36,7 @@ struct ViewFixture : WorldFixture
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<SpriteRig> pSprites;
+    std::unique_ptr<ac::MapRenderer> pMapRenderer;
     std::unique_ptr<ac::ViewFactory> pFactory;
 
     // Loaded once per process — UiStyle is still a singleton (deferred, package 14), so every
@@ -92,8 +94,10 @@ struct ViewFixture : WorldFixture
             *dataContext.terrainOperationRegistry));
 
         pSprites = std::make_unique<SpriteRig>(graphics, ac::Style().tileRenderer);
+        pMapRenderer = std::make_unique<ac::MapRenderer>(
+            pSprites->sprites, *pState, ac::Style().tileRenderer, ac::Style().mapRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            *pState, dataContext, *pHotkeys, graphics, pSprites->renderer, settings);
+            *pState, dataContext, *pHotkeys, graphics, *pMapRenderer, settings);
     }
 
     ac::BaseManager& MakeBase(int x, int y)

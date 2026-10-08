@@ -1,14 +1,11 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
-#include "game/buildings/BaseSpriteSizesConfig.h"
-#include "game/buildings/MapOverlayChannelsConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
-#include "ui/TileRenderer.h"
-#include "ui/TileShapeGeometry.h"
+#include "ui/MapRenderer.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
 #include <algorithm>
@@ -26,26 +23,6 @@ namespace
 constexpr float k_ClusterWidthInTiles = 4.0f;
 constexpr float k_ClusterHeightInTiles = 2.0f;
 
-float ShapeAabbLeft_(const TileShape_t& rShape)
-{
-    return rShape.west.x;
-}
-
-float ShapeAabbTop_(const TileShape_t& rShape)
-{
-    return rShape.north.y;
-}
-
-float ShapeAabbWidth_(const TileShape_t& rShape)
-{
-    return rShape.east.x - rShape.west.x;
-}
-
-float ShapeAabbHeight_(const TileShape_t& rShape)
-{
-    return rShape.south.y - rShape.north.y;
-}
-
 void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const std::string& rText,
                            unsigned int fontSize, const Color_t& rColor)
 {
@@ -61,31 +38,28 @@ void DrawCenteredTileText_(Graphics& rGraphics, const TileShape_t& rShape, const
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
                                                  const BaseDisplaySnapshot_t& rSnapshot,
                                                  WindowLayout_t layout,
-                                                 TileRenderer& rTileRenderer,
-                                                 const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
-                                                 const MapOverlayChannelsConfig_t& rMapOverlayChannels,
+                                                 MapRenderer& rMapRenderer,
                                                  TileClickCallback_t onTileClicked,
                                                  BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
     , m_rBase(rBase)
     , m_rSnapshot(rSnapshot)
+    , m_rMapRenderer(rMapRenderer)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
-    , m_mapSurface(rTileRenderer, rBaseSpriteSizes, rMapOverlayChannels)
 {
-    CacheTileDiamonds_();
+    PlaceTiles_();
 }
 
-void BaseWorkableAreaDisplay::CacheTileDiamonds_()
+void BaseWorkableAreaDisplay::PlaceTiles_()
 {
-    m_tileWidth =
+    const float tileWidth =
         std::min(m_layout.width / k_ClusterWidthInTiles, m_layout.height / k_ClusterHeightInTiles);
-    const float tileHeight = m_tileWidth * 0.5f;
-    const float halfW = m_tileWidth * 0.5f;
-    const float halfH = tileHeight * 0.5f;
-    const float clusterW = k_ClusterWidthInTiles * m_tileWidth;
+    const float halfW = tileWidth * 0.5f;
+    const float halfH = tileWidth * k_IsoHeightRatio * 0.5f;
+    const float clusterW = k_ClusterWidthInTiles * tileWidth;
     // 2 tile-heights = 1 tile-width when height = width / 2.
-    const float clusterH = k_ClusterHeightInTiles * m_tileWidth;
+    const float clusterH = k_ClusterHeightInTiles * tileWidth;
     // Cluster is 8 half-steps; base footprint origin is inset by 3 (max |map delta|).
     const float originX = m_layout.x + (m_layout.width - clusterW) * 0.5f + 3.0f * halfW;
     const float originY = m_layout.y + (m_layout.height - clusterH) * 0.5f + 3.0f * halfH;
@@ -93,59 +67,53 @@ void BaseWorkableAreaDisplay::CacheTileDiamonds_()
     const Tile& rBaseTile = m_rBase.GetTile();
     const int mapWidth = m_rBase.GetTileEffects().GetWorldMap().GetWidth();
 
-    m_tileDiamonds.clear();
-    m_tileDiamonds.push_back(TileDiamond_t{
-        FlatTileShape(originX, originY, m_tileWidth),
-        &rBaseTile,
-        0,
-        0,
-        true,
-    });
-
+    // Map delta from the base; higher map rows draw and hit in front.
+    struct Placement_t
+    {
+        int mapDy = 0;
+        int mapDx = 0;
+        PlacedTile_t placed;
+    };
+    std::vector<Placement_t> placements{
+        Placement_t{0, 0, PlacedTile_t{&rBaseTile, FlatTileShape(originX, originY, tileWidth)}}};
     for (const Tile* pTile : m_rBase.GetWorkerAssignments().GetWorkableTiles())
     {
         if (!pTile)
         {
             continue;
         }
-
         const LatticeDelta_t d = LatticeDelta(rBaseTile, *pTile, mapWidth);
         const int mapDx = d.p - d.q;
         const int mapDy = d.p + d.q;
-        const float aabbX = originX + static_cast<float>(mapDx) * halfW;
-        const float aabbY = originY + static_cast<float>(mapDy) * halfH;
-        m_tileDiamonds.push_back(TileDiamond_t{
-            FlatTileShape(aabbX, aabbY, m_tileWidth),
-            pTile,
-            mapDx,
-            mapDy,
-            false,
-        });
+        placements.push_back(Placement_t{
+            mapDy, mapDx,
+            PlacedTile_t{pTile, FlatTileShape(originX + static_cast<float>(mapDx) * halfW,
+                                              originY + static_cast<float>(mapDy) * halfH,
+                                              tileWidth)}});
     }
 
-    std::sort(m_tileDiamonds.begin(), m_tileDiamonds.end(),
-              [](const TileDiamond_t& a, const TileDiamond_t& b) {
-                  if (a.mapDy != b.mapDy)
-                  {
-                      return a.mapDy < b.mapDy;
-                  }
-                  return a.mapDx < b.mapDx;
-              });
+    std::ranges::sort(placements, [](const Placement_t& a, const Placement_t& b) {
+        if (a.mapDy != b.mapDy)
+        {
+            return a.mapDy < b.mapDy;
+        }
+        return a.mapDx < b.mapDx;
+    });
+    m_tiles.clear();
+    for (const Placement_t& rPlacement : placements)
+    {
+        m_tiles.push_back(rPlacement.placed);
+    }
 }
 
 void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
-                                                const TileDiamond_t& rEntry) const
+                                                const PlacedTile_t& rPlaced) const
 {
     const auto& style = Style().baseWorkableAreaDisplay;
-    if (rEntry.bIsBase)
-    {
-        return;
-    }
-
-    const auto it = m_rSnapshot.tiles.find(rEntry.pTile);
+    const auto it = m_rSnapshot.tiles.find(rPlaced.pTile);
     if (it == m_rSnapshot.tiles.end())
     {
-        // The snapshot walks the same workable-tile list this panel cached, so a miss means
+        // The snapshot walks the same workable-tile list this panel placed, so a miss means
         // the two disagree about the base's radius.
         throw std::runtime_error("BaseWorkableAreaDisplay: workable tile missing from snapshot");
     }
@@ -169,55 +137,28 @@ void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
     {
         textColor = style.unavailableTileTextColor;
     }
-    DrawCenteredTileText_(rGraphics, rEntry.shape, oss.str(), style.tileFontSize, textColor);
+    DrawCenteredTileText_(rGraphics, rPlaced.shape, oss.str(), style.tileFontSize, textColor);
 }
 
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 {
     const auto& style = Style().baseWorkableAreaDisplay;
-    const MapAppearance appearance =
-        AppearanceOf(m_rBase.GetTileEffects().GetWorldMap(), &m_rBase.GetFaction());
-    const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
-        const auto it = m_rSnapshot.tiles.find(&rTile);
-        if (it == m_rSnapshot.tiles.end())
-        {
-            return TileResources_t{};
-        }
-        return it->second.yield.effective;
-    };
-
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
                              style.backgroundColor);
 
-    // Same layering as WorldDisplay: all tile surfaces first, bases after so overhang is not
-    // covered by front-tile terrain, then BaseView-only yield / placeholder labels.
-    const TileDiamond_t* pBaseEntry = nullptr;
-    for (const TileDiamond_t& rEntry : m_tileDiamonds)
-    {
-        m_mapSurface.RenderTile(rGraphics, *rEntry.pTile, rEntry.shape, appearance,
-                                /*bFogged=*/false, /*bShrouded=*/false, yieldOf,
-                                MapGridStyle_t::FullDiamond);
-        rGraphics.DrawDiamond(ShapeAabbLeft_(rEntry.shape), ShapeAabbTop_(rEntry.shape),
-                              ShapeAabbWidth_(rEntry.shape), ShapeAabbHeight_(rEntry.shape),
-                              style.tileBorderColor, style.tileBorderWidth);
-        if (rEntry.bIsBase)
-        {
-            pBaseEntry = &rEntry;
-        }
-    }
+    MapContent_t content;
+    content.showsBase = [](const BaseManager&) { return true; };
+    m_rMapRenderer.Render(
+        rGraphics, m_tiles,
+        MapAppearance::Clear(m_rBase.GetTileEffects().GetWorldMap(), &m_rBase.GetFaction()),
+        content);
 
-    if (pBaseEntry)
+    for (const PlacedTile_t& rPlaced : m_tiles)
     {
-        if (!m_mapSurface.RenderBase(rGraphics, m_rBase, pBaseEntry->shape))
+        if (rPlaced.pTile != &m_rBase.GetTile())
         {
-            DrawCenteredTileText_(rGraphics, pBaseEntry->shape, "BASE", style.baseLabelFontSize,
-                                  style.baseLabelColor);
+            RenderYieldLabel_(rGraphics, rPlaced);
         }
-    }
-
-    for (const TileDiamond_t& rEntry : m_tileDiamonds)
-    {
-        RenderYieldLabel_(rGraphics, rEntry);
     }
 }
 
@@ -226,14 +167,14 @@ void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     const float mouseX = static_cast<float>(rEvent.x);
     const float mouseY = static_cast<float>(rEvent.y);
 
-    // Front first (higher mapDy), matching the world map's raised-tile pick order.
-    for (auto it = m_tileDiamonds.rbegin(); it != m_tileDiamonds.rend(); ++it)
+    // Front first, matching the world map's raised-tile pick order.
+    for (auto it = m_tiles.rbegin(); it != m_tiles.rend(); ++it)
     {
         if (!ShapeContains(it->shape, mouseX, mouseY))
         {
             continue;
         }
-        if (it->bIsBase)
+        if (it->pTile == &m_rBase.GetTile())
         {
             if (m_onBaseClicked)
             {

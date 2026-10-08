@@ -8,16 +8,16 @@ namespace ac
 class GameState;
 class Graphics;
 class MapAppearance;
+class MapRenderer;
 class Tile;
-class TileRenderer;
 
-// Dashboard location column: preview of the selected map tile plus feature names from
-// ImprovementConfig_t::name (terrain + improvements in improvements.json).
+// Dashboard location column: preview of the selected map tile, drawn by MapRenderer as the
+// player knows it (no fog), plus feature names from ImprovementConfig_t::name (terrain +
+// improvements in improvements.json).
 class LocationPanel : public UIElement
 {
 public:
-    LocationPanel(const GameState& rGameState, const TileRenderer& rTileRenderer,
-                  WindowLayout_t layout);
+    LocationPanel(const GameState& rGameState, MapRenderer& rMapRenderer, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
@@ -33,7 +33,7 @@ private:
                        float textY, unsigned int fontSize, float textGap) const;
 
     const GameState& m_rGameState;
-    const TileRenderer& m_rTileRenderer;
+    MapRenderer& m_rMapRenderer;
     const Tile* m_pSelectedTile = nullptr;
 };
 

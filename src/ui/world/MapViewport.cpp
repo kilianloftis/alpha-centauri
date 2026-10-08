@@ -224,11 +224,10 @@ const TileShades_t& MapViewport::CachedShades_(const Tile& rTile) const
     return m_reliefShades[static_cast<std::size_t>(m_rWorldMap.GetTileIndex(rTile))];
 }
 
-TileShape_t MapViewport::ShapeAt_(const Tile& rTile, float aabbX, float aabbY,
-                                  bool bShaded) const
+TileShape_t MapViewport::ShapeAt_(const Tile& rTile, float aabbX, float aabbY) const
 {
     const TileLifts_t& lifts = CachedLifts_(rTile);
-    const TileShades_t shades = bShaded ? CachedShades_(rTile) : TileShades_t{};
+    const TileShades_t& shades = CachedShades_(rTile);
     const auto vertex = [&](float u, float v, float lift, float shade) {
         return TileVertex_t{aabbX + m_tileWidth * u, aabbY + m_tileHeight * v - lift * m_tileWidth,
                             shade};
@@ -279,6 +278,62 @@ std::optional<std::pair<float, float>> MapViewport::PixelCenterOf(const Tile& rT
         return std::nullopt;
     }
     return std::pair{origin->first + m_tileWidth * 0.5f, origin->second + m_tileHeight * 0.5f};
+}
+
+std::vector<PlacedTile_t> MapViewport::VisibleTiles() const
+{
+    std::vector<PlacedTile_t> tiles;
+    const int mapWidth = m_rWorldMap.GetWidth();
+    const int mapHeight = m_rWorldMap.GetHeight();
+    if (mapWidth <= 0 || mapHeight <= 0 || m_tileWidth <= 0.0f || m_tileHeight <= 0.0f)
+    {
+        return tiles;
+    }
+
+    const float halfW = m_tileWidth * 0.5f;
+    const float halfH = m_tileHeight * 0.5f;
+    const float maxLift = MaxLiftPixels_();
+    // One row above the camera; past the layout bottom by how far a raised tile can climb.
+    const int relYStart = -1;
+    const int relYEnd = static_cast<int>(std::ceil((m_layout.height + maxLift) / halfH)) + 1;
+    const int relXStart = -2;
+    const int relXEnd = static_cast<int>(std::ceil(m_layout.width / halfW)) + 2;
+
+    for (int relY = relYStart; relY <= relYEnd; ++relY)
+    {
+        const int worldY = m_cameraY + relY;
+        if (worldY < 0 || worldY >= mapHeight)
+        {
+            continue;
+        }
+        for (int relX = relXStart; relX <= relXEnd; ++relX)
+        {
+            const int worldX = WrapWorldX_(m_cameraX + relX);
+            if (((worldX + worldY) & 1) != 0)
+            {
+                continue;
+            }
+            float aabbX = 0.0f;
+            float aabbY = 0.0f;
+            AabbOriginFromRel_(relX, relY, aabbX, aabbY);
+            if (!BoxIntersectsLayout_(aabbX, aabbY - maxLift, m_tileHeight + maxLift))
+            {
+                continue;
+            }
+            const Tile* pTile = m_rWorldMap.GetTile(worldX, worldY);
+            if (!pTile)
+            {
+                continue;
+            }
+            TileShape_t shape = ShapeAt_(*pTile, aabbX, aabbY);
+            if (!ShapeIntersectsLayout_(shape))
+            {
+                continue;
+            }
+            tiles.push_back(PlacedTile_t{pTile, shape});
+        }
+    }
+    return tiles;
 }
 
 std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX, float pixelY) const
@@ -333,7 +388,7 @@ std::optional<std::pair<int, int>> MapViewport::WorldCoordsAtPixel(float pixelX,
             float aabbX = 0.0f;
             float aabbY = 0.0f;
             AabbOriginFromRel_(rel->first, rel->second, aabbX, aabbY);
-            if (ShapeContains(ShapeAt_(*pTile, aabbX, aabbY, /*bShaded*/ false), pixelX, pixelY))
+            if (ShapeContains(ShapeAt_(*pTile, aabbX, aabbY), pixelX, pixelY))
             {
                 return std::pair{worldX, worldY};
             }

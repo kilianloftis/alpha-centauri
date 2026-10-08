@@ -125,8 +125,11 @@ void UnitStackPanel::DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const
     const auto& s = Style().unitStackPanel;
     const float iconSize = rSlot.rect.width;
     const Rectangle_t marker{rSlot.rect.x, rSlot.rect.y, iconSize, iconSize};
-    UnitMarkerRenderer::DrawMarker(
-        rGraphics, *rSlot.pUnit, marker, rSlot.pUnit == m_pSelectedUnit);
+    UnitMarkerRenderer::DrawMarker(rGraphics, *rSlot.pUnit, marker);
+    if (rSlot.pUnit == m_pSelectedUnit)
+    {
+        UnitMarkerRenderer::DrawSelection(rGraphics, marker);
+    }
 
     const unsigned int statFontSize =
         std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));

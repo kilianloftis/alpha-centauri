@@ -28,7 +28,7 @@ class BaseManager;
 class UnitSlotRegistry;
 class WorldDisplay;
 class Tile;
-class TileRenderer;
+class MapRenderer;
 class HotkeyConfig;
 
 class ViewFactory
@@ -39,7 +39,7 @@ public:
         const GameDataContext& rGameDataContext,
         const HotkeyConfig& rHotkeys,
         Graphics& rGraphics,
-        TileRenderer& rTileRenderer,
+        MapRenderer& rMapRenderer,
         GameSettings& rSettings
     );
 
@@ -112,7 +112,7 @@ private:
     const GameDataContext& m_rGameDataContext;
     const HotkeyConfig& m_rHotkeys;
     Graphics& m_rGraphics;
-    TileRenderer& m_rTileRenderer;
+    MapRenderer& m_rMapRenderer;
     GameSettings& m_rSettings;
 };
 

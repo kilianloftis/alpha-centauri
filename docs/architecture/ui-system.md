@@ -44,6 +44,7 @@ graph TB
 
     subgraph "Map rendering (Engine-owned)"
         SpriteLibrary[SpriteLibrary]
+        MapRenderer[MapRenderer]
         TileRenderer[TileRenderer]
     end
 
@@ -56,12 +57,14 @@ graph TB
     Engine -->|owns| UIManager
     Engine -->|owns| ViewFactory
     Engine -->|owns| SpriteLibrary
-    Engine -->|owns| TileRenderer
+    Engine -->|owns| MapRenderer
     Engine -->|sets world view on| UIManager
+    MapRenderer -->|owns| TileRenderer
+    MapRenderer --> SpriteLibrary
     TileRenderer --> SpriteLibrary
     SpriteLibrary --> Graphics
-    ViewFactory -->|TileRenderer&| WorldView
-    ViewFactory -->|TileRenderer&| BaseView
+    ViewFactory -->|MapRenderer&| WorldView
+    ViewFactory -->|MapRenderer&| BaseView
     ViewFactory -->|creates| WorldView
     ViewFactory -->|creates| BaseView
     ViewFactory -->|creates| ResearchView
@@ -214,18 +217,18 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 ### BaseWorkableAreaDisplay
 - **Purpose**: Base-screen workable ring as the same brick of 2:1 diamonds as the world map
   (`FlatTileShape` from `TileShapeGeometry.h`, lattice → map deltas, `ShapeContains` for
-  clicks). Tile surfaces share `MapSurfaceRenderer` with WorldDisplay (terrain → full-diamond
-  grid → objects, then `RenderBase` so overhang is not covered), using `MapAppearance` for the
-  player faction. Surrounding tiles overlay yield triples; without extracted art the center
-  keeps the `BASE` placeholder; centred base label width uses `Graphics::MeasureTextWidth`.
+  clicks). Its placed tiles go through `MapRenderer::Render` like WorldDisplay's (terrain →
+  grid → objects, then the base so overhang is not covered), with `MapAppearance::Clear` for the
+  base's faction and every base on its tiles shown. Surrounding tiles overlay yield triples; without
+  extracted art the base shows its name, as on the world map.
 
 ### WorldDisplay Viewport
 - **Purpose**: Controls which portion of the world map is visible as a rectangular brick of 2:1 diamonds (`MapViewport`). Gameplay topology stays the square lattice; poles are the top and bottom rows and the wrap seam is vertical.
 - **State**: diamond width (`TileSize` / `TileWidth`), height = width / 2, `m_cameraX`/`m_cameraY` (map-unit anchor). `VisibleCols` / `VisibleRows` are the layout size in map units (`layout / ½w`, `layout / ½h`). Relief lifts and shades are cached per tile (invalidated when the map appearance revision, relief mode, or relief style changes).
-- **Rendering**: `ForEachVisibleTile` walks rows top to bottom (back-to-front), placing each tile at `((x − camX)·½w, (y − camY)·½h)`. Layers: tiles, bases (bare faction sprite plus config-driven building map overlays when extracted, else name-only; label colour from `colors.json`), then units.
+- **Rendering**: `VisibleTiles` walks rows top to bottom (back-to-front), placing each tile at `((x − camX)·½w, (y − camY)·½h)`; `MapRenderer::Render` draws them in layers: tiles, bases (bare faction sprite plus config-driven building map overlays when extracted, else name-only; label colour from `colors.json`), then units. The path preview draws last, over the units.
 - **Configurability**: Constructor tile size, `MapViewport::SetTileSize()`, and `MapViewport::SetCamera()` are the control points. Tile size is the zoom lever and a per-platform tuning knob.
 - **Mouse hit-testing**: `WorldView::HandleMouse` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under the pixel, then raised tiles in front, with wrap-X).
-- **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
+- **Unit Layer**: `MapRenderer` draws unit markers on top of bases from `WorldMap::GetAllUnitsOnTile()` for each placed tile, keeping the ones `WorldDisplay`'s content shows (`IsUnitVisibleTo` the player, or listed by bombard playback). Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
 - **Unit Selection**: Left-clicking a tile with a base opens that base (`m_onOpenBase`), even when units are garrisoned there — the base screen's unit stack is how the player picks a unit on a base tile. Otherwise, left-clicking a tile with units selects the first visible unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`.
 - **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. `Shift+D` opens Disband Units (`Disband`, `Self Destruct`, `Cancel`); `Disband` quotes `Faction::QuoteScrapUnit` and confirms before `ScrapUnit`. `Self Destruct` is a stub notice. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
 - **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
@@ -235,14 +238,14 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Dependencies**: `WorldView` takes `GameState` and `HotkeyConfig`, not the ruleset. Order legality comes from the session's executors — founding (`TryFoundBase`), terraform eligibility (`CanStartTerraformProject`) and probe menus (`ProbeActionExecutor`) — which read definition data from `GameState::GetGameData()`.
 - **HotkeyConfig**: Loaded once from `config/ui/hotkeys.json`. Chords there cover unit orders, `Bombard`, each former project by its id, camera pan/zoom, world chrome (`Cancel`, `EndTurn`, `NextUnit`), and view shortcuts. `ctrl`, `alt`, and `shift` are part of the chord. An action with no entry is unbound. Order actions may share a chord; the selected unit decides which one is valid, and two valid orders on that chord throw.
 - **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&`, `WorldMap&`, and `HotkeyConfig&`. Pans with the `PanLeft`, `PanRight`, `PanUp`, and `PanDown` chords along the screen axes (two map units per screen tile) and edge-scrolls the same way. `ZoomIn` / `ZoomOut` scale diamond width by `camera_input.zoom_factor` within `min_tile_scale`…`max_tile_scale` (relative to layout height), recentering on the previous view center. Vertical clamp keeps the north and south pole rows on screen.
-- **MinimapDisplay**: Brick layout matching the main view — a `width × height` image where tile `(x, y)` fills pixels `x` and `x + 1` of row `y`, drawn with 2:1 pixel aspect. Terrain colours come from the injected `TileRenderer::FillColor` over a `MapAppearance` that includes the player's `FactionTileMemory`. The RGBA cache key includes world `GetAppearanceRevision()`, explored/visible map revisions, and tile-memory revision. A click picks the covering tile; the camera frame is the viewport rectangle in map units, split at the wrap seam.
+- **MinimapDisplay**: Brick layout matching the main view — a `width × height` image where tile `(x, y)` fills pixels `x` and `x + 1` of row `y`, drawn with 2:1 pixel aspect. Terrain colours come from the injected `MapRenderer::TileColor` over `MapAppearance::Fogged` for the player (shroud, fog-dimmed fills, remembered occupants). The RGBA cache key includes world `GetAppearanceRevision()`, explored/visible map revisions, and tile-memory revision. A click picks the covering tile; the camera frame is the viewport rectangle in map units, split at the wrap seam.
 - **UnitOrderInputController**: Owned by `WorldView`; constructed with `HotkeyConfig&`. Dispatches the order chords (`Hold`, `SkipTurn`, `AttachTransport`, `UnloadTransport`, `Disband`, `SupplyCrawl`, `FoundBase`, `Detonate`, `Airdrop`). Supply crawl, found base, detonate, and airdrop count only when the selected unit can perform them, so a shared chord can resolve to a different order. Two orders that are both valid throw. Also handles right-click-and-hold for `MoveOrder_t`. A long-press inside bombard range sets a bombard request; `WorldView` calls `TryBeginBombard_` from that flag.
 - **Shared chords**: After the order controller, `HandleKey` walks `Bombard` and the former projects bound to the pressed chord. It runs the one that is valid for the selected unit and throws when more than one is (`Bombard` and `Farm` both use `F`). Bombard targeting swaps the cursor when `bombard_cursor_path` is set, and the next click fires.
 - **Dispatch order**: `HandleKey` tries the order controller, then that shared-chord walk, then the camera controller, then `Cancel`, `EndTurn`, and `NextUnit`. `HandleMouse` tries the order controller, then the camera controller, then handles left-click unit selection and base opening. View shortcuts from the same file run in `UIManager` only when the active view did not consume the key.
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
-- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`, `TileRenderer&` (shared map paint instance from `Engine`)
+- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`)
 - **Owner**: `Engine` creates and owns it during initialization
 - **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
   `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,

@@ -9,7 +9,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"
-#include "ui/TileRenderer.h"
+#include "ui/MapRenderer.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
 #include "ui/world/MapViewport.h"
@@ -25,23 +25,6 @@ namespace ac
 namespace
 {
 
-struct PlayerFogMaps_t
-{
-    const FactionExploredMap* pExplored = nullptr;
-    const FactionVisibleMap* pVisible = nullptr;
-    const FactionTileMemory* pMemory = nullptr;
-};
-
-PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
-{
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer || !pPlayer->GetExploredMap().IsSized() || !pPlayer->GetVisibleMap().IsSized())
-    {
-        return {};
-    }
-    return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap(), &pPlayer->GetTileMemory()};
-}
-
 void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t& rColor)
 {
     const size_t offset = index * 4;
@@ -53,12 +36,12 @@ void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t
 
 } // namespace
 
-MinimapDisplay::MinimapDisplay(const GameState& rGameState, const TileRenderer& rTileRenderer,
+MinimapDisplay::MinimapDisplay(const GameState& rGameState, const MapRenderer& rMapRenderer,
                                WindowLayout_t layout, const MapViewport& rViewport,
                                CenterOnTileCallback_t onCenterOnTile)
     : UIElement(layout)
     , m_rGameState(rGameState)
-    , m_rTileRenderer(rTileRenderer)
+    , m_rMapRenderer(rMapRenderer)
     , m_rViewport(rViewport)
     , m_onCenterOnTile(std::move(onCenterOnTile))
     , m_textureId("minimap:" + std::to_string(reinterpret_cast<std::uintptr_t>(this)))
@@ -184,24 +167,16 @@ void MinimapDisplay::RenderViewportFrame_(Graphics& rGraphics,
 MinimapDisplay::TerrainCacheKey_t MinimapDisplay::CurrentTerrainKey_() const
 {
     const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
     TerrainCacheKey_t key;
     key.appearanceRevision = rWorldMap.GetAppearanceRevision();
     key.mapWidth = rWorldMap.GetWidth();
     key.mapHeight = rWorldMap.GetHeight();
-    key.bHasExplored = fog.pExplored != nullptr;
-    key.bHasVisible = fog.pVisible != nullptr;
-    if (fog.pExplored)
+    if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
     {
-        key.exploredRevision = fog.pExplored->GetRevision();
-    }
-    if (fog.pVisible)
-    {
-        key.visibleRevision = fog.pVisible->GetRevision();
-    }
-    if (fog.pMemory)
-    {
-        key.memoryRevision = fog.pMemory->GetRevision();
+        key.bHasViewer = true;
+        key.exploredRevision = pPlayer->GetExploredMap().GetRevision();
+        key.visibleRevision = pPlayer->GetVisibleMap().GetRevision();
+        key.memoryRevision = pPlayer->GetTileMemory().GetRevision();
     }
     return key;
 }
@@ -215,26 +190,19 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
     }
 
     const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
-    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
-    const MapAppearance appearance(rWorldMap, fog.pVisible, fog.pMemory);
-    const Color_t shroud = Style().worldDisplay.shroudColor;
+    const MapAppearance appearance =
+        MapAppearance::Fogged(rWorldMap, m_rGameState.GetPlayerFaction());
     const size_t pixelCount =
         static_cast<size_t>(rLayout.mapWidth) * static_cast<size_t>(rLayout.mapHeight);
     m_terrainPixels.assign(pixelCount * 4, 0);
 
-    // Unexplored pixels stay shroud (already filled). Paint each tile into x and x+1 of row y.
+    // Paint each tile into x and x+1 of row y.
     for (const auto& pOwnedTile : rWorldMap.GetTiles())
     {
         const Tile& rTile = *pOwnedTile;
         const int x = rTile.GetX();
         const int y = rTile.GetY();
-
-        Color_t color = shroud;
-        if (!fog.pExplored || fog.pExplored->IsExplored(rTile))
-        {
-            const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(rTile);
-            color = m_rTileRenderer.FillColor(rTile, appearance, bFogged);
-        }
+        const Color_t color = m_rMapRenderer.TileColor(rTile, appearance);
 
         for (int dx = 0; dx < 2; ++dx)
         {
@@ -262,7 +230,7 @@ void MinimapDisplay::Render(Graphics& rGraphics)
     const MapContentLayout_t layout = ComputeMapContentLayout_();
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-                             Style().worldDisplay.shroudColor);
+                             Style().minimapDisplay.backgroundColor);
 
     EnsureTerrainCache_(rGraphics, layout);
 

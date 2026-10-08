@@ -15,11 +15,9 @@ class Faction;
 class Graphics;
 class Pop;
 class Tile;
-class TileRenderer;
+class MapRenderer;
 class Unit;
 class UnitStackPanel;
-struct BaseSpriteSizesConfig_t;
-struct MapOverlayChannelsConfig_t;
 struct PopTypeConfig_t;
 
 class BaseView : public IGameView
@@ -27,14 +25,11 @@ class BaseView : public IGameView
 public:
     // The base's owner is the only faction this view needs: pop types are offered only when
     // the view is editable, which ViewFactory grants only for the player's own base.
-    // Sprite size / overlay configs drive the workable-area base art (same as WorldDisplay).
     BaseView(
         BaseManager& rBase,
         WindowLayout_t layout,
         bool bEditable,
-        TileRenderer& rTileRenderer,
-        const BaseSpriteSizesConfig_t& rBaseSpriteSizes,
-        const MapOverlayChannelsConfig_t& rMapOverlayChannels
+        MapRenderer& rMapRenderer
     );
     ~BaseView();
 

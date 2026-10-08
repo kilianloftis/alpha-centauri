@@ -162,13 +162,29 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     {
         throw std::runtime_error("tile_renderer.missing_art_size_ratio must be positive");
     }
+    s.shroudColor = ParseColor_(j, "shroud_color");
+    return s;
+}
+
+MapRendererStyle_t ParseMapRendererStyle_(const nlohmann::json& j)
+{
+    MapRendererStyle_t s{};
     s.gridLandColor = ParseColor_(j, "grid_land_color");
     s.gridWaterColor = ParseColor_(j, "grid_water_color");
     s.gridLineWidth = j.at("grid_line_width").get<float>();
     if (s.gridLineWidth <= 0.0f)
     {
-        throw std::runtime_error("tile_renderer.grid_line_width must be positive");
+        throw std::runtime_error("map_renderer.grid_line_width must be positive");
     }
+    s.baseSpriteOverhangRatio = j.at("base_sprite_overhang_ratio").get<float>();
+    if (!(s.baseSpriteOverhangRatio >= 0.0f))
+    {
+        throw std::runtime_error("map_renderer.base_sprite_overhang_ratio must be >= 0");
+    }
+    s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
+    s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
+    s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
+    s.baseNameColor = ParseColor_(j, "base_name_color");
     return s;
 }
 
@@ -176,18 +192,8 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
 {
     WorldDisplayStyle_t s{};
     s.defaultTileScale = j.at("default_tile_scale").get<float>();
-    s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
-    s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
-    s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
-    s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
-    s.baseNameColor = ParseColor_(j, "base_name_color");
-    s.baseSpriteOverhangRatio = j.at("base_sprite_overhang_ratio").get<float>();
-    if (!(s.baseSpriteOverhangRatio >= 0.0f))
-    {
-        throw std::runtime_error("world_display.base_sprite_overhang_ratio must be >= 0");
-    }
     s.airdropCursorPath = j.at("airdrop_cursor_path").get<std::string>();
     const auto& hotspot = j.at("airdrop_cursor_hotspot");
     if (!hotspot.is_array() || hotspot.size() != 2)
@@ -210,6 +216,7 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
 MinimapDisplayStyle_t ParseMinimapDisplayStyle_(const nlohmann::json& j)
 {
     MinimapDisplayStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
     s.viewportBorderColor = ParseColor_(j, "viewport_border_color");
     s.viewportBorderWidth = j.at("viewport_border_width").get<float>();
     return s;
@@ -589,11 +596,7 @@ BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann
 {
     BaseWorkableAreaDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
-    s.tileBorderColor = ParseColor_(j, "tile_border_color");
-    s.tileBorderWidth = j.at("tile_border_width").get<float>();
-    s.baseLabelFontSize = j.at("base_label_font_size").get<unsigned int>();
     s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
-    s.baseLabelColor = ParseColor_(j, "base_label_color");
     s.workedTileTextColor = ParseColor_(j, "worked_tile_text_color");
     s.unworkedTileTextColor = ParseColor_(j, "unworked_tile_text_color");
     s.unavailableTileTextColor = ParseColor_(j, "unavailable_tile_text_color");
@@ -822,6 +825,7 @@ void UiStyle::Load(const std::string& filePath)
     style.layouts = ParseLayoutsStyle_(root.at("layouts"));
     style.viewFactory = ParseViewFactoryStyle_(root.at("view_factory"));
     style.tileRenderer = ParseTileRendererStyle_(root.at("tile_renderer"));
+    style.mapRenderer = ParseMapRendererStyle_(root.at("map_renderer"));
     style.worldDisplay = ParseWorldDisplayStyle_(root.at("world_display"));
     style.minimapDisplay = ParseMinimapDisplayStyle_(root.at("minimap_display"));
     style.unitMarker = ParseUnitMarkerStyle_(root.at("unit_marker"));

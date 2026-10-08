@@ -217,7 +217,8 @@ terrain through `DrawTileSprite` ([smac-palette-lighting.md](../thinker/smac-pal
 coast overlays ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)), and depth
 shading on water (`WaterShading.h`). Populate PNGs with `extract_terrain.py`.
 
-[`TileRenderer`](../../include/ui/TileRenderer.h) walks `MapAppearance::OccupantsOf` and dispatches
+[`MapRenderer`](../../include/ui/MapRenderer.h) is the one path every map display draws through;
+its [`TileRenderer`](../../include/ui/TileRenderer.h) walks `MapAppearance::OccupantsOf` and dispatches
 by `ArtLayer_t`: landform → moisture (or an occupant's `ground`) → rockiness → landmark →
 vegetation, then coast, river, and link networks, then fog haze; `RenderObjects` draws `object`
 art for terrain occupants then improvements, honouring `hides`. Neighbor rules for tile sets and
@@ -234,9 +235,11 @@ those spans as `TileOccupants_t`; `GetRevision()` bumps when any tile is recorde
 
 Recording runs at the end of `FactionVisibleMap::RebuildFromSources` for every visible tile, in
 `VisibilityRules` when the explored map is fully marked, and in `DiplomaticProposalEffects` after
-map merge. UI builds `MapAppearance(world, visible, memory)` so tiles in sight use live occupants
-and fogged explored tiles use memory; null visible or memory pointers mean live everywhere.
-Coast, water depth, relief, and yield lookups for object rows still read the live tile.
+map merge. UI builds `MapAppearance::Fogged(world, faction)` or `MapAppearance::Clear(world,
+faction)` so tiles in sight use live occupants and explored tiles out of sight use memory; a null
+faction means live everywhere. `CoverOf` gives each tile its cover: shroud where the faction never
+explored, fog on remembered tiles in a `Fogged` appearance, else none. Coast, water depth, relief,
+and yield lookups for object rows still read the live tile.
 
 ### Tile Improvement Effects
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.

@@ -19,7 +19,7 @@ struct GameDataContext;
 class HotkeyConfig;
 class ViewFactory;
 class SpriteLibrary;
-class TileRenderer;
+class MapRenderer;
 class UIManager;
 class InteractionPresenter;
 class GameSettings;
@@ -70,7 +70,7 @@ private:
     // Before the views: WorldView and ViewFactory borrow this for the session.
     std::unique_ptr<HotkeyConfig> m_pHotkeys;
     // Before the views for the same reason; built once the UI style is loaded.
-    std::unique_ptr<TileRenderer> m_pTileRenderer;
+    std::unique_ptr<MapRenderer> m_pMapRenderer;
     std::unique_ptr<ViewFactory> m_viewFactory;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<InteractionPresenter> m_interactionPresenter;

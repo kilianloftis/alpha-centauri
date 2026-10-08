@@ -116,8 +116,7 @@ void CombatPresentation::Render(Graphics& rGraphics,
         return;
     }
 
-    const UnitMarkerRenderer& rMarkers = rDisplay.GetUnitMarkers();
-    if (const std::optional<Rectangle_t> cached = rMarkers.GetCachedMarkerRect(*flashingId))
+    if (const std::optional<Rectangle_t> cached = rDisplay.MarkerRectOf(*flashingId))
     {
         UnitMarkerRenderer::DrawHitOverlay(rGraphics, *cached);
         return;
@@ -145,7 +144,7 @@ void CombatPresentation::Render(Graphics& rGraphics,
     UnitMarkerRenderer::DrawHitOverlay(
         rGraphics,
         UnitMarkerRenderer::MarkerRectOnTile(origin->first, origin->second,
-                                             rDisplay.GetEffectiveTileSize()));
+                                             rDisplay.GetEffectiveTileSize(), 0));
 }
 
 void CombatPresentation::DrawBombardOverlay_(Graphics& rGraphics,
@@ -162,7 +161,7 @@ void CombatPresentation::DrawBombardOverlay_(Graphics& rGraphics,
         return;
     }
     const Rectangle_t rect = UnitMarkerRenderer::MarkerRectOnTile(
-        origin->first, origin->second, rDisplay.GetEffectiveTileSize());
+        origin->first, origin->second, rDisplay.GetEffectiveTileSize(), 0);
     const auto& s = Style().bombardPresentation;
     rGraphics.DrawFilledRect(rect.x, rect.y, rect.width, rect.height, s.overlayFill);
     rGraphics.DrawRect(rect.x, rect.y, rect.width, rect.height, s.overlayBorder,

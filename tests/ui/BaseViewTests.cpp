@@ -764,11 +764,8 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
 
     const Tile* pClickedTile = nullptr;
     bool bBaseClicked = false;
-    REQUIRE(fixture.dataContext.baseSpriteSizes);
-    REQUIRE(fixture.dataContext.mapOverlayChannels);
     BaseWorkableAreaDisplay panel(
-        rBase, snapshot, layout, fixture.pSprites->renderer, *fixture.dataContext.baseSpriteSizes,
-        *fixture.dataContext.mapOverlayChannels,
+        rBase, snapshot, layout, *fixture.pMapRenderer,
         [&](const Tile* pTile) { pClickedTile = pTile; },
         [&]() { bBaseClicked = true; });
 
@@ -781,7 +778,7 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     constexpr float k_BaseX = 150.0f;
     constexpr float k_BaseY = 75.0f;
 
-    // Terrain under the yield labels: TileRenderer fills each diamond shape.
+    // Terrain under the yield labels: the map fills each diamond shape.
     int terrainFillCount = 0;
     for (const RecordingGraphics::RectDraw_t& rRect : fixture.graphics.rects)
     {
@@ -792,8 +789,8 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     }
     CHECK(terrainFillCount >= 3);
 
-    // Grid edges: four lines per tile in the tileRenderer land/water colours.
-    const auto& gridStyle = Style().tileRenderer;
+    // Grid edges in the map's land/water colours, as on the world map.
+    const auto& gridStyle = Style().mapRenderer;
     int gridLineCount = 0;
     for (const RecordingGraphics::LineDraw_t& rLine : fixture.graphics.lines)
     {
@@ -805,33 +802,28 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     }
     CHECK(gridLineCount >= 12);
 
-    // No faction art for test_faction → BASE placeholder centered on the diamond.
-    const float baseCenterX = k_BaseX + k_HalfW;
-    const float baseCenterY = k_BaseY + k_HalfH;
-    const auto& workableStyle = Style().baseWorkableAreaDisplay;
-    const RecordingGraphics::TextDraw_t* pBaseLabel = nullptr;
+    // No faction art for test_faction: the base's name marks its tile, as on the world map.
+    const float nameOffset = k_TileWidth * Style().mapRenderer.baseTextOffsetRatio;
+    const RecordingGraphics::TextDraw_t* pBaseName = nullptr;
     for (const RecordingGraphics::TextDraw_t& rText : fixture.graphics.texts)
     {
-        if (rText.text == "BASE")
+        if (std::abs(rText.x - (k_BaseX + nameOffset)) < 0.01f
+            && std::abs(rText.y - (k_BaseY + nameOffset)) < 0.01f)
         {
-            pBaseLabel = &rText;
+            pBaseName = &rText;
             break;
         }
     }
-    REQUIRE(pBaseLabel);
-    const float baseLabelWidth =
-        fixture.graphics.MeasureTextWidth(pBaseLabel->text, workableStyle.baseLabelFontSize);
-    CHECK(std::abs((pBaseLabel->x + baseLabelWidth * 0.5f) - baseCenterX) < 0.01f);
-    CHECK(std::abs((pBaseLabel->y + static_cast<float>(workableStyle.baseLabelFontSize) * 0.5f)
-                   - baseCenterY)
-          < 0.01f);
+    REQUIRE(pBaseName);
+    // Long names are cut down to fit the tile, never below three characters.
+    CHECK(pBaseName->text.substr(0, 3) == rBase.GetName().substr(0, 3));
 
     const RecordingGraphics::RectDraw_t* pBaseDiamond = nullptr;
     const RecordingGraphics::RectDraw_t* pSeDiamond = nullptr;
     const RecordingGraphics::RectDraw_t* pNwDiamond = nullptr;
     for (const RecordingGraphics::RectDraw_t& rRect : fixture.graphics.rects)
     {
-        if (rRect.bFilled || rRect.width != k_TileWidth)
+        if (!rRect.bFilled || !rRect.shape.has_value() || rRect.width != k_TileWidth)
         {
             continue;
         }
@@ -894,11 +886,8 @@ TEST_CASE("Base workable area draws faction base art when assets exist", "[ui][b
 
     const WindowLayout_t layout{0.0f, 0.0f, 400.0f, 200.0f};
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
-    REQUIRE(fixture.dataContext.baseSpriteSizes);
-    REQUIRE(fixture.dataContext.mapOverlayChannels);
-    BaseWorkableAreaDisplay panel(rBase, snapshot, layout, fixture.pSprites->renderer,
-                                  *fixture.dataContext.baseSpriteSizes,
-                                  *fixture.dataContext.mapOverlayChannels, nullptr, nullptr);
+    BaseWorkableAreaDisplay panel(rBase, snapshot, layout, *fixture.pMapRenderer, nullptr,
+                                  nullptr);
 
     fixture.graphics.sprites.clear();
     fixture.graphics.texts.clear();
@@ -907,6 +896,31 @@ TEST_CASE("Base workable area draws faction base art when assets exist", "[ui][b
     CHECK(std::ranges::any_of(fixture.graphics.sprites, [&](const auto& rSprite) {
         return rSprite.textureId == spritePath;
     }));
-    CHECK(std::ranges::none_of(fixture.graphics.texts,
-                               [](const auto& rText) { return rText.text == "BASE"; }));
+}
+
+TEST_CASE("The base view shows every base in its radius, as the world map does",
+          "[ui][base][workable]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(8, 8);
+    // Lattice (2, 0) from the base: map (+2, +2), inside the workable radius.
+    BaseManager& rNeighbor = fixture.MakeBase(10, 10);
+    const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
+    REQUIRE(snapshot.tiles.contains(&rNeighbor.GetTile()));
+
+    BaseWorkableAreaDisplay panel(rBase, snapshot, WindowLayout_t{0.0f, 0.0f, 400.0f, 200.0f},
+                                  *fixture.pMapRenderer, nullptr, nullptr);
+    panel.Render(fixture.graphics);
+
+    // tileWidth 100: the base's footprint starts at (150, 75), the neighbor's two half-steps
+    // right and down at (250, 125). Each name sits at its footprint plus the label offset.
+    const float nameOffset = 100.0f * Style().mapRenderer.baseTextOffsetRatio;
+    const auto drawsNameAt = [&](float x, float y) {
+        return std::ranges::any_of(fixture.graphics.texts, [&](const auto& rText) {
+            return std::abs(rText.x - (x + nameOffset)) < 0.01f
+                   && std::abs(rText.y - (y + nameOffset)) < 0.01f;
+        });
+    };
+    CHECK(drawsNameAt(150.0f, 75.0f));
+    CHECK(drawsNameAt(250.0f, 125.0f));
 }

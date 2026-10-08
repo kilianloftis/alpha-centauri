@@ -4,6 +4,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/OccupantArt.h"
 #include "graphics/Graphics.h"
+#include "ui/world/MapAppearance.h"
 
 #include <array>
 #include <cstddef>
@@ -15,7 +16,6 @@
 namespace ac
 {
 
-class MapAppearance;
 class SpriteLibrary;
 class Tile;
 class WorldMap;
@@ -31,15 +31,16 @@ size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t 
 const std::string& PickSpritePath(const std::vector<std::string>& paths, int tileX, int tileY,
                                   std::string_view contentId);
 
-// Shared terrain-tile cell drawing for the world map, location panel preview, and base
-// workable-area ring.
+// Paints one tile for MapRenderer, as the MapAppearance shows it to its viewer.
 // Fills by an occupant's fill_color or elevation (blue water / brown land), then draws each
 // occupant's art by its ArtLayer_t, bottom to top. The occupants a tile draws, and those its
 // neighbors count for tile sets and road networks, come from the MapAppearance: remembered on
-// tiles out of sight. Elevation and surface (coast, water shading) are always the live tile's. Terrain art is palette indices shaded as SMAC
-// does: land by its relief shades, water per vertex by depth. Art that fails to load draws
-// nothing under terrain (the fill shows) and a checker for objects. Footprint is a 2:1
-// isometric diamond (width = size, height = size / 2).
+// tiles out of sight. Elevation and surface (coast, water shading) are always the live tile's.
+// The appearance's cover decides the rest: shroud draws only the shroud colour; fog draws land
+// art fog_land_shade steps darker under a haze, with object sprites clear on top. Terrain art is
+// palette indices shaded as SMAC does: land by its relief shades, water per vertex by depth. Art
+// that fails to load draws nothing under terrain (the fill shows) and a checker for objects.
+// Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
 // When an art's variants list multiple assets, PickSpritePath chooses one per tile. Sprites load
 // through the SpriteLibrary the renderer was built over; the style is the one it was built with.
 class TileRenderer
@@ -51,29 +52,20 @@ public:
 
     TileRenderer(SpriteLibrary& rSprites, const TileRendererStyle_t& rStyle);
 
-    // Faction base art loads through the same library.
-    SpriteLibrary& Sprites() { return m_rSprites; }
+    // The tile's one colour: the shroud colour, else the last occupant fill_color on the tile or
+    // the elevation gradient, dimmed under fog.
+    Color_t FillColor(const Tile& rTile, const MapAppearance& rAppearance) const;
 
-    // Fill used by the world map, location preview, and minimap (fog dims the fill).
-    // The last occupant on the tile with a fill_color overrides the elevation gradient.
-    Color_t FillColor(const Tile& rTile, const MapAppearance& rAppearance,
-                      bool bFogged = false) const;
-
-    // Draws the tile on rShape: terrain on its four triangles (land at its vertex shades),
-    // object sprites on a flat footprint seated at the mean of its corners. Fogged tiles
-    // (explored memory on the world map) draw their land art fog_land_shade steps darker and get
-    // a haze over the terrain layers; object sprites stay clear on top.
-    void Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape, bool bFogged,
-                const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf = {}) const;
-
-    // Render's two halves, so the world map can draw a tile's grid lines between them as SMAC
-    // does. RenderTerrain draws the fill, the landform to vegetation layers (an improvement's
-    // ground in place of the moisture base), coast, river, road networks and fog haze;
-    // RenderObjects the object art of terrain occupants and then of improvements (skipping those
-    // another occupant hides), seated at the mean of the shape's four corners. An object whose configured art is missing draws a magenta and
-    // black checker in its place.
+    // A tile's two halves, so MapRenderer can draw its grid lines between them as SMAC does.
+    // RenderTerrain draws the fill, the landform to vegetation layers (an improvement's ground in
+    // place of the moisture base), coast, river, road networks and fog haze on rShape's four
+    // triangles (land at its vertex shades); under shroud, only the shroud. RenderObjects draws
+    // the object art of terrain occupants and then of improvements (skipping those another
+    // occupant hides) on a flat footprint seated at the mean of the shape's four corners, and
+    // nothing under shroud. An object whose configured art is missing draws a magenta and black
+    // checker in its place.
     void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                       bool bFogged, const MapAppearance& rAppearance) const;
+                       const MapAppearance& rAppearance) const;
     void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                        const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf = {}) const;
 
@@ -90,7 +82,8 @@ private:
                         float width, float height, const Color_t& tint) const;
     bool TryDrawTileSprite_(Graphics& rGraphics, const std::string& path,
                             const TileShape_t& rShape) const;
-    TileShape_t TerrainShape_(const TileShape_t& rShape, const Tile& rTile, bool bFogged) const;
+    TileShape_t TerrainShape_(const TileShape_t& rShape, const Tile& rTile,
+                              TileCover_t cover) const;
     const std::string& CoastSpritePath_(std::size_t part, const CoastCornerArt_t& rArt) const;
     void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
                            const TileShape_t& rShape, float shoreShade) const;

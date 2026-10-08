@@ -48,11 +48,7 @@ void SupportDisplay::Render(Graphics& rGraphics)
             break;
         }
 
-        UnitMarkerRenderer::DrawMarker(
-            rGraphics,
-            *pUnit,
-            Rectangle_t{x, y, iconSize, iconSize},
-            false);
+        UnitMarkerRenderer::DrawMarker(rGraphics, *pUnit, Rectangle_t{x, y, iconSize, iconSize});
         x += iconSize + gap;
     }
 }

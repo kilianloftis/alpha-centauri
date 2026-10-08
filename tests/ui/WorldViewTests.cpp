@@ -19,8 +19,7 @@
 #include "ui/UIElement.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/AirdropFailMessages.h"
-#include "ui/world/MapViewport.h"
-#include "ui/world/UnitMarkerRenderer.h"
+#include "ui/world/WorldDisplay.h"
 #include "ui/world/WorldView.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -369,20 +368,18 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     fixture.pPlayer->RebuildVisibility();
     CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.pState->GetTileEffects()));
 
-    const WindowLayout_t layout = ViewFixture::FullScreen();
-    MapViewport viewport(fixture.pState->GetWorldMap(), layout, 40.0f);
-    UnitMarkerRenderer markers;
-    markers.Render(fixture.graphics, *fixture.pState, viewport);
-    CHECK_FALSE(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+    WorldDisplay display(*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen());
+    display.Render(fixture.graphics);
+    CHECK_FALSE(display.MarkerRectOf(shrouded.GetUnitId()).has_value());
 
     const std::unordered_set<UnitId_t> playback{shrouded.GetUnitId()};
-    markers.SetPlaybackVisibleUnits(&playback);
-    markers.Render(fixture.graphics, *fixture.pState, viewport);
-    CHECK(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+    display.SetPlaybackVisibleUnits(&playback);
+    display.Render(fixture.graphics);
+    CHECK(display.MarkerRectOf(shrouded.GetUnitId()).has_value());
 
-    markers.SetPlaybackVisibleUnits(nullptr);
-    markers.Render(fixture.graphics, *fixture.pState, viewport);
-    CHECK_FALSE(markers.GetCachedMarkerRect(shrouded.GetUnitId()).has_value());
+    display.SetPlaybackVisibleUnits(nullptr);
+    display.Render(fixture.graphics);
+    CHECK_FALSE(display.MarkerRectOf(shrouded.GetUnitId()).has_value());
     CHECK_FALSE(fixture.pPlayer->GetRevealedUnits().IsRevealed(shrouded));
 }
 

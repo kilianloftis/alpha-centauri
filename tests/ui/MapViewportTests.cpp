@@ -76,13 +76,14 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
     {
         float topY = 1.0e9f;
         int firstRow = -1;
-        viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
+        for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
+        {
             if (firstRow < 0)
             {
-                firstRow = rTile.GetY();
+                firstRow = rPlaced.pTile->GetY();
             }
-            topY = std::min(topY, rShape.north.y);
-        });
+            topY = std::min(topY, rPlaced.shape.north.y);
+        }
         CHECK(firstRow == 0);
         CHECK_THAT(topY, WithinAbs(layout.y, 0.01f));
     }
@@ -145,8 +146,9 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
         {
             viewport.SetCamera(cameraX, 0);
             int checked = 0;
-            viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-                const auto [originX, originY] = viewport.FootprintOrigin(rShape);
+            for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
+            {
+                const auto [originX, originY] = FootprintOrigin(rPlaced.shape);
                 const std::pair<float, float> center{originX + viewport.TileWidth() * 0.5f,
                                                      originY + viewport.TileHeight() * 0.5f};
                 const bool bInLayout = center.first >= layout.x
@@ -154,25 +156,26 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
                     && center.second < layout.y + layout.height;
                 if (!bInLayout)
                 {
-                    return;
+                    continue;
                 }
                 const auto hit = viewport.WorldCoordsAtPixel(center.first, center.second);
                 REQUIRE(hit);
-                CHECK(hit->first == rTile.GetX());
-                CHECK(hit->second == rTile.GetY());
+                CHECK(hit->first == rPlaced.pTile->GetX());
+                CHECK(hit->second == rPlaced.pTile->GetY());
                 ++checked;
-            });
+            }
             CHECK(checked > 0);
         }
     }
 
-    SECTION("ForEachVisibleTile enumerates rows north to south")
+    SECTION("VisibleTiles lists rows north to south")
     {
         std::vector<float> depthKeys;
         const float halfH = viewport.TileHeight() * 0.5f;
-        viewport.ForEachVisibleTile([&](const Tile&, const TileShape_t& rShape) {
-            depthKeys.push_back((rShape.north.y - layout.y) / halfH);
-        });
+        for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
+        {
+            depthKeys.push_back((rPlaced.shape.north.y - layout.y) / halfH);
+        }
         REQUIRE_FALSE(depthKeys.empty());
         CHECK(std::is_sorted(depthKeys.begin(), depthKeys.end()));
     }
@@ -180,9 +183,10 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
     SECTION("a row's visible tiles share one screen y")
     {
         std::vector<std::pair<int, float>> rows;
-        viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-            rows.emplace_back(rTile.GetY(), rShape.north.y);
-        });
+        for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
+        {
+            rows.emplace_back(rPlaced.pTile->GetY(), rPlaced.shape.north.y);
+        }
         REQUIRE_FALSE(rows.empty());
         for (const auto& [row, northY] : rows)
         {
@@ -242,11 +246,9 @@ TEST_CASE("MapViewport raises tiles with the relief and hit-tests the raised sha
         // The hill's flat box starts at y = 80, below this layout; raised, its top is at 60.
         MapViewport viewport(world.map, WindowLayout_t{0.0f, 0.0f, 400.0f, 79.0f}, 40.0f);
         const auto visits = [&viewport, &rHill]() {
-            bool bVisited = false;
-            viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t&) {
-                bVisited = bVisited || &rTile == &rHill;
+            return std::ranges::any_of(viewport.VisibleTiles(), [&rHill](const PlacedTile_t& rPlaced) {
+                return rPlaced.pTile == &rHill;
             });
-            return bVisited;
         };
         viewport.SetRelief(ReliefMode_t::Flat, k_Style);
         CHECK_FALSE(visits());

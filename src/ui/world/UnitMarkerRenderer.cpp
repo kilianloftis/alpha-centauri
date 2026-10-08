@@ -1,13 +1,9 @@
 #include "ui/world/UnitMarkerRenderer.h"
 
-#include "game/GameState.h"
-#include "game/Faction.h"
-#include "game/faction/UnitVisibility.h"
-#include "game/map/Tile.h"
-#include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
-#include "ui/world/MapViewport.h"
 
 namespace ac
 {
@@ -19,85 +15,25 @@ constexpr size_t k_UnitNameFirstCharCount    = 1;
 
 } // namespace
 
-void UnitMarkerRenderer::Render(Graphics& rGraphics,
-                                const GameState& rGameState,
-                                const MapViewport& rViewport)
+Rectangle_t UnitMarkerRenderer::MarkerRectOnTile(float tileX, float tileY, float tileWidth,
+                                                 std::size_t slot)
 {
-    m_markerRects.clear();
-
     const auto& s = Style().unitMarker;
-    const WorldMap& rWorldMap = rGameState.GetWorldMap();
-    const float tileWidth = rViewport.TileWidth();
-    const float tileHeight = rViewport.TileHeight();
     const float markerWidth = tileWidth * s.widthRatio;
     const float markerHeight = tileWidth * s.heightRatio;
     const float spacing = tileWidth * s.spacingRatio;
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-
-    rViewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
-        const auto [tileX, tileY] = rViewport.FootprintOrigin(rShape);
-        const std::vector<Unit*> units = rWorldMap.GetAllUnitsOnTile(rTile);
-        if (units.empty())
-        {
-            return;
-        }
-
-        // Per-unit visibility (fog, Conceal/Detect, and contact reveal) — not tile fog
-        // alone, so contact-revealed units still draw even if they pierce fog of war.
-        size_t drawn = 0;
-        for (const Unit* pUnit : units)
-        {
-            if (!pUnit)
-            {
-                continue;
-            }
-            const bool bPlaybackVisible = m_pPlaybackVisibleUnits
-                && m_pPlaybackVisibleUnits->contains(pUnit->GetUnitId());
-            if (!bPlaybackVisible && pPlayer
-                && !IsUnitVisibleTo(*pPlayer, *pUnit, rGameState.GetTileEffects()))
-            {
-                continue;
-            }
-
-            // Anchor on the diamond center — AABB bottom-left sits outside the tile toward SW.
-            const Rectangle_t marker{
-                tileX + (tileWidth - markerWidth) * 0.5f + (drawn * (markerWidth + spacing)),
-                tileY + (tileHeight - markerHeight) * 0.5f,
-                markerWidth,
-                markerHeight};
-            ++drawn;
-
-            m_markerRects[pUnit->GetUnitId()] = marker;
-            DrawMarker(rGraphics, *pUnit, marker, pUnit == m_pSelectedUnit);
-        }
-    }, /*bShaded*/ false);
-}
-
-std::optional<Rectangle_t> UnitMarkerRenderer::GetCachedMarkerRect(UnitId_t unitId) const
-{
-    const auto it = m_markerRects.find(unitId);
-    if (it == m_markerRects.end())
-    {
-        return std::nullopt;
-    }
-    return it->second;
-}
-
-Rectangle_t UnitMarkerRenderer::MarkerRectOnTile(float tileX, float tileY, float tileSize)
-{
-    const auto& s = Style().unitMarker;
-    const float markerWidth = tileSize * s.widthRatio;
-    const float markerHeight = tileSize * s.heightRatio;
-    const float tileHeight = tileSize * 0.5f;
+    const float tileHeight = tileWidth * k_IsoHeightRatio;
+    // Anchor on the diamond center — AABB bottom-left sits outside the tile toward SW.
     return Rectangle_t{
-        tileX + (tileSize - markerWidth) * 0.5f,
+        tileX + (tileWidth - markerWidth) * 0.5f
+            + static_cast<float>(slot) * (markerWidth + spacing),
         tileY + (tileHeight - markerHeight) * 0.5f,
         markerWidth,
         markerHeight};
 }
 
 void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
-                                    const Rectangle_t& rMarker, bool bSelected)
+                                    const Rectangle_t& rMarker)
 {
     const auto& s = Style().unitMarker;
     const bool bExhausted = rUnit.GetMoveFragmentsRemaining() <= 0;
@@ -105,17 +41,6 @@ void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
 
     // TODO: Use faction color based on rUnit.GetFaction().
     rGraphics.DrawFilledRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, markerColor);
-
-    if (bSelected)
-    {
-        rGraphics.DrawRect(
-            rMarker.x - s.selectionBorderOffset,
-            rMarker.y - s.selectionBorderOffset,
-            rMarker.width + s.selectionBorderExpansion,
-            rMarker.height + s.selectionBorderExpansion,
-            s.selectionBorderColor,
-            s.selectionBorderWidth);
-    }
 
     const std::string& unitName = rUnit.GetDesign().GetName();
     if (unitName.empty())
@@ -134,6 +59,18 @@ void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
         rMarker.y + spacing,
         fontSize,
         s.initialTextColor);
+}
+
+void UnitMarkerRenderer::DrawSelection(Graphics& rGraphics, const Rectangle_t& rMarker)
+{
+    const auto& s = Style().unitMarker;
+    rGraphics.DrawRect(
+        rMarker.x - s.selectionBorderOffset,
+        rMarker.y - s.selectionBorderOffset,
+        rMarker.width + s.selectionBorderExpansion,
+        rMarker.height + s.selectionBorderExpansion,
+        s.selectionBorderColor,
+        s.selectionBorderWidth);
 }
 
 void UnitMarkerRenderer::DrawHitOverlay(Graphics& rGraphics, const Rectangle_t& rMarker)

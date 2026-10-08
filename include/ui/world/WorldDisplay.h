@@ -2,10 +2,9 @@
 
 #include "graphics/Graphics.h"
 #include "game/units/Unit.h"
-#include "ui/MapSurfaceRenderer.h"
+#include "ui/MapRenderer.h"
 #include "ui/UIElement.h"
 #include "ui/world/MapViewport.h"
-#include "ui/world/UnitMarkerRenderer.h"
 
 #include <optional>
 #include <unordered_set>
@@ -19,19 +18,20 @@ class Tile;
 struct Path_t;
 
 // Displays the world map as a grid of tiles.
-// Each tile is painted by MapSurfaceRenderer (terrain, grid, objects, then bases). Bases,
-// Sensors, Monoliths, and units are read live from GameState / WorldMap — no per-frame DTO
-// rebuild.
+// MapRenderer paints the viewport's tiles as the player sees them: fog over remembered tiles,
+// every base, and the units the player can see. Bases, Sensors, Monoliths, and units are read
+// live from GameState / WorldMap — no per-frame DTO rebuild.
 class WorldDisplay
 {
 public:
-    WorldDisplay(const GameState& rGameState, TileRenderer& rTileRenderer, WindowLayout_t layout);
+    WorldDisplay(const GameState& rGameState, MapRenderer& rMapRenderer, WindowLayout_t layout);
 
     // Set the unit currently selected by the player (highlighted on the map). Also used as
     // the path-preview line origin when a path is active.
     void SetSelectedUnit(const Unit* pUnit);
 
-    // Forwarded to the unit markers. Null restores ordinary visibility.
+    // Units drawn even when IsUnitVisibleTo is false. Bombard playback points this at the
+    // shrouded or concealed units on the target tile, then clears it with null.
     void SetPlaybackVisibleUnits(const std::unordered_set<UnitId_t>* pUnitIds);
 
     // Set the path preview to render (nullptr to clear). Pointer must remain valid until
@@ -44,22 +44,20 @@ public:
     float GetEffectiveTileSize() const;
     int GetVisibleRows() const;
 
-    // Unit marker layer: last-frame draw cache for combat overlays / hit animations.
-    const UnitMarkerRenderer& GetUnitMarkers() const { return m_unitMarkers; }
+    // Where the last Render drew the unit's marker, if it drew one (combat hit overlays).
+    std::optional<Rectangle_t> MarkerRectOf(UnitId_t unitId) const;
 
     // Render the world map using the stored layout.
     void Render(Graphics& rGraphics);
 
 private:
     const GameState& m_rGameState;
+    MapRenderer& m_rMapRenderer;
     const Unit* m_pSelectedUnit = nullptr;
     const Path_t* m_pPathPreview = nullptr;
-    UnitMarkerRenderer m_unitMarkers;
-    MapSurfaceRenderer m_mapSurface;
+    const std::unordered_set<UnitId_t>* m_pPlaybackVisibleUnits = nullptr;
+    UnitMarkerRects_t m_unitMarkers;
     MapViewport m_viewport;
-
-    // Faction base sprites (when extracted) plus name labels in faction colours.
-    void RenderBases_(Graphics& rGraphics);
 
     // Render path preview as a line through tile centers
     void RenderPathPreview_(Graphics& rGraphics);

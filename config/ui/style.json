@@ -75,30 +75,32 @@
     "missing_art_color": [255, 0, 255, 255],
     "missing_art_alt_color": [0, 0, 0, 255],
     "missing_art_size_ratio": 0.3,
+    "shroud_color": [
+      0, 0, 0, 255
+    ]
+  },
+  "map_renderer": {
     "grid_land_color": [
       21, 41, 24, 255
     ],
     "grid_water_color": [
       14, 37, 75, 255
     ],
-    "grid_line_width": 1.0
-  },
-  "world_display": {
-    "default_tile_scale": 0.1,
+    "grid_line_width": 1.0,
+    "base_sprite_overhang_ratio": 0.21,
     "base_name_font_size_ratio": 0.25,
     "base_text_offset_ratio": 0.1,
     "base_name_width_ratio": 0.8,
-    "shroud_color": [
-      0, 0, 0, 255
-    ],
+    "base_name_color": [
+      255, 255, 0, 255
+    ]
+  },
+  "world_display": {
+    "default_tile_scale": 0.1,
     "path_preview_color": [
       255, 0, 0, 220
     ],
     "path_preview_line_thickness_ratio": 0.08,
-    "base_name_color": [
-      255, 255, 0, 255
-    ],
-    "base_sprite_overhang_ratio": 0.21,
     "airdrop_cursor_path": "",
     "airdrop_cursor_hotspot": [
       0,
@@ -111,6 +113,9 @@
     ]
   },
   "minimap_display": {
+    "background_color": [
+      0, 0, 0, 255
+    ],
     "viewport_border_color": [
       255, 255, 255, 220
     ],
@@ -602,15 +607,7 @@
     "background_color": [
       20, 20, 20, 255
     ],
-    "tile_border_color": [
-      80, 80, 80, 255
-    ],
-    "tile_border_width": -1.0,
-    "base_label_font_size": 14,
     "tile_font_size": 12,
-    "base_label_color": [
-      255, 255, 0, 255
-    ],
     "worked_tile_text_color": [
       0, 255, 0, 255
     ],

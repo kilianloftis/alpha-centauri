@@ -14,11 +14,12 @@ namespace ac
 
 class GameState;
 class Graphics;
+class MapRenderer;
 class MapViewport;
-class TileRenderer;
 
-// Full-map terrain overview in the world dashboard right panel. Same elevation /
-// fog / shroud colours as WorldDisplay, without per-tile labels or overlays.
+// Full-map terrain overview in the world dashboard right panel. Each tile takes
+// MapRenderer::TileColor as the player sees it: the same elevation / fog / shroud colours as
+// WorldDisplay, without per-tile labels or overlays.
 // Brick layout matching the main view: width×height image, tile (x,y) fills pixels
 // x and x+1 of row y, drawn with 2:1 pixel aspect. Left-click centers the camera.
 // Viewport frame is in map units (split at the seam when it wraps).
@@ -27,7 +28,7 @@ class MinimapDisplay : public UIElement
 public:
     using CenterOnTileCallback_t = std::function<void(int tileX, int tileY)>;
 
-    MinimapDisplay(const GameState& rGameState, const TileRenderer& rTileRenderer,
+    MinimapDisplay(const GameState& rGameState, const MapRenderer& rMapRenderer,
                    WindowLayout_t layout, const MapViewport& rViewport,
                    CenterOnTileCallback_t onCenterOnTile);
 
@@ -53,8 +54,7 @@ private:
         uint64_t memoryRevision = 0;
         int mapWidth = 0;
         int mapHeight = 0;
-        bool bHasExplored = false;
-        bool bHasVisible = false;
+        bool bHasViewer = false;
 
         bool operator==(const TerrainCacheKey_t&) const = default;
     };
@@ -66,7 +66,7 @@ private:
     void EnsureTerrainCache_(Graphics& rGraphics, const MapContentLayout_t& rLayout);
 
     const GameState& m_rGameState;
-    const TileRenderer& m_rTileRenderer;
+    const MapRenderer& m_rMapRenderer;
     const MapViewport& m_rViewport;
     CenterOnTileCallback_t m_onCenterOnTile;
     const std::string m_textureId;

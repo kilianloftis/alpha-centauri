@@ -31,10 +31,10 @@ constexpr float k_PixelH = 10.0f;
 struct MinimapRig_t
 {
     ViewFixture fixture{false};
-    WorldDisplay display{*fixture.pState, fixture.pSprites->renderer, ViewFixture::FullScreen()};
+    WorldDisplay display{*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen()};
     WindowLayout_t layout{100.0f, 50.0f, 720.0f, 170.0f};
     std::vector<std::pair<int, int>> centered;
-    MinimapDisplay minimap{*fixture.pState, fixture.pSprites->renderer, layout,
+    MinimapDisplay minimap{*fixture.pState, *fixture.pMapRenderer, layout,
                            display.GetViewport(),
                            [this](int x, int y) { centered.emplace_back(x, y); }};
 
@@ -82,7 +82,7 @@ TEST_CASE("Minimap draws the map as a brick with 2:1 texels", "[ui][minimap]")
     SECTION("a narrow layout keeps the 2:1 texel aspect and centres the image")
     {
         const WindowLayout_t narrow{0.0f, 0.0f, 300.0f, 400.0f};
-        MinimapDisplay minimap(*rig.fixture.pState, rig.fixture.pSprites->renderer, narrow,
+        MinimapDisplay minimap(*rig.fixture.pState, *rig.fixture.pMapRenderer, narrow,
                                rig.display.GetViewport(), [](int, int) {});
         RecordingGraphics graphics;
         minimap.Render(graphics);
@@ -167,8 +167,8 @@ TEST_CASE("Minimap viewport frame splits at the seam", "[ui][minimap]")
 TEST_CASE("Minimap redraws when the player's tile memory changes", "[ui][minimap][memory]")
 {
     ViewFixture fixture;
-    WorldDisplay display{*fixture.pState, fixture.pSprites->renderer, ViewFixture::FullScreen()};
-    MinimapDisplay minimap{*fixture.pState, fixture.pSprites->renderer,
+    WorldDisplay display{*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen()};
+    MinimapDisplay minimap{*fixture.pState, *fixture.pMapRenderer,
                            WindowLayout_t{100.0f, 50.0f, 720.0f, 170.0f}, display.GetViewport(),
                            [](int, int) {}};
     Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 6);
