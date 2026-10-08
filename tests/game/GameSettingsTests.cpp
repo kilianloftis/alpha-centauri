@@ -245,6 +245,30 @@ TEST_CASE("GameSettings round-trips the graphics block", "[GameSettings]")
     std::filesystem::remove(path);
 }
 
+TEST_CASE("GameSettings loads SMAC font path before system fallbacks", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_smac_font.json");
+    std::filesystem::remove(path);
+
+    {
+        std::ofstream file(path);
+        file << R"({"graphics": {"font_paths": [
+                    "assets/ui/fonts/arialn.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"]}})"
+             << '\n';
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    const GraphicsConfig_t& rGraphics = loaded.GetGraphics();
+    REQUIRE(rGraphics.fontPaths.size() == 3);
+    CHECK(rGraphics.fontPaths[0] == "assets/ui/fonts/arialn.ttf");
+    CHECK(rGraphics.fontPaths[1] == "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("GameSettings rejects an unusable graphics block", "[GameSettings]")
 {
     const std::filesystem::path path = TempSettingsPath("ac_settings_bad_graphics.json");

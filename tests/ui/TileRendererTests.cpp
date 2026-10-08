@@ -3,12 +3,18 @@
 #include "SpriteRig.h"
 #include "TestHelpers.h"
 
+#include "game/Faction.h"
+#include "game/faction/FactionVisibleMap.h"
+#include "game/faction/UnitManager.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/units/Unit.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -32,6 +38,11 @@ using Catch::Matchers::WithinAbs;
 
 namespace
 {
+
+MapAppearance Live_(const WorldMap& rMap)
+{
+    return MapAppearance(rMap, nullptr, nullptr);
+}
 
 bool ColorEq_(const Color_t& a, const Color_t& b)
 {
@@ -198,7 +209,7 @@ TileShape_t DrawnShape_(const TileRenderer& rRenderer, const Tile& rTile, const 
                         const std::string& prefix, bool bFogged)
 {
     RecordingGraphics graphics;
-    rRenderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 64.0f), bFogged, &rMap);
+    rRenderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 64.0f), bFogged, Live_(rMap));
     for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
     {
         if (rSprite.textureId.starts_with(prefix) && rSprite.shape.has_value())
@@ -231,57 +242,54 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
 {
     EnsureStyleLoaded_();
     Rig_t rig;
+    actest::WorldFixture world;
     const auto& s = Style().tileRenderer;
 
     SECTION("moist rocky land without sprites draws only the fill")
     {
-        Tile tile(0, 0);
-        tile.BindMapRules(actest::TestMapRules());
+        Tile& tile = *world.map.GetTile(0, 0);
         tile.SetElevation(500);
         tile.SetMoisture(Moisture_t::Moist);
         tile.SetRockiness(Rockiness_t::Rocky);
 
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, tile, FlatTileShape(10.0f, 20.0f, 100.0f),
-                             /*bFogged*/ false);
+                             /*bFogged*/ false, Live_(world.map));
 
         CHECK(graphics.texts.empty());
         CHECK(graphics.sprites.empty());
         REQUIRE(graphics.rects.size() == 1);
         CHECK(graphics.rects.front().bFilled);
-        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, false)));
+        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, Live_(world.map), false)));
     }
 
     SECTION("water keeps the elevation fill")
     {
-        Tile tile(2, 2);
-        tile.BindMapRules(actest::TestMapRules());
+        Tile& tile = *world.map.GetTile(2, 2);
         tile.SetElevation(-1500);
         tile.SetMoisture(Moisture_t::Wet);
         tile.SetRockiness(Rockiness_t::Rocky);
 
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, tile, FlatTileShape(0.0f, 0.0f, 64.0f),
-                             /*bFogged*/ false);
+                             /*bFogged*/ false, Live_(world.map));
 
         CHECK(graphics.texts.empty());
         REQUIRE_FALSE(graphics.rects.empty());
         CHECK(graphics.rects.front().bFilled);
         CHECK(ColorEq_(graphics.rects.front().color,
-                       rig.renderer.FillColor(tile, /*bFogged*/ false)));
+                       rig.renderer.FillColor(tile, Live_(world.map), /*bFogged*/ false)));
     }
 
     SECTION("deeper water is darker than shallower water on the elevation gradient")
     {
-        Tile deep(4, 4);
-        deep.BindMapRules(actest::TestMapRules());
+        Tile& deep = *world.map.GetTile(4, 4);
         deep.SetElevation(actest::TestMapRules().minElevationMeters);
-        Tile shallow(5, 5);
-        shallow.BindMapRules(actest::TestMapRules());
+        Tile& shallow = *world.map.GetTile(5, 3);
         shallow.SetElevation(actest::TestMapRules().oceanLevelMeters - 1);
 
-        const Color_t deepFill = rig.renderer.FillColor(deep, /*bFogged*/ false);
-        const Color_t shallowFill = rig.renderer.FillColor(shallow, /*bFogged*/ false);
+        const Color_t deepFill = rig.renderer.FillColor(deep, Live_(world.map), /*bFogged*/ false);
+        const Color_t shallowFill = rig.renderer.FillColor(shallow, Live_(world.map), /*bFogged*/ false);
         const int deepLuma = deepFill.r + deepFill.g + deepFill.b;
         const int shallowLuma = shallowFill.r + shallowFill.g + shallowFill.b;
         CHECK(deepLuma < shallowLuma);
@@ -291,10 +299,9 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
 
     SECTION("an occupant's fill_color replaces the elevation fill and the last one wins")
     {
-        actest::WorldFixture world;
         Tile& rTile = *world.map.GetTile(8, 4);
         rTile.SetElevation(500);
-        const Color_t elevationFill = rig.renderer.FillColor(rTile, false);
+        const Color_t elevationFill = rig.renderer.FillColor(rTile, Live_(world.map), false);
 
         ImprovementConfig_t first = world.improvements.Get("Condenser");
         first.id = "FirstTint";
@@ -304,39 +311,36 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
         second.art->fillColor = Color_t{40, 50, 60, 255};
 
         rTile.AddImprovement(first);
-        CHECK(ColorEq_(rig.renderer.FillColor(rTile, false), Color_t{10, 20, 30, 255}));
+        CHECK(ColorEq_(rig.renderer.FillColor(rTile, Live_(world.map), false), Color_t{10, 20, 30, 255}));
         rTile.AddImprovement(second);
-        CHECK(ColorEq_(rig.renderer.FillColor(rTile, false), Color_t{40, 50, 60, 255}));
-        CHECK_FALSE(ColorEq_(rig.renderer.FillColor(rTile, false), elevationFill));
+        CHECK(ColorEq_(rig.renderer.FillColor(rTile, Live_(world.map), false), Color_t{40, 50, 60, 255}));
+        CHECK_FALSE(ColorEq_(rig.renderer.FillColor(rTile, Live_(world.map), false), elevationFill));
     }
 
     SECTION("arid flat land is fill only")
     {
-        Tile tile(3, 3);
-        tile.BindMapRules(actest::TestMapRules());
+        Tile& tile = *world.map.GetTile(3, 3);
         tile.SetElevation(100);
         tile.SetMoisture(Moisture_t::Arid);
         tile.SetRockiness(Rockiness_t::Flat);
 
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, tile, FlatTileShape(0.0f, 0.0f, 50.0f),
-                             /*bFogged*/ false);
+                             /*bFogged*/ false, Live_(world.map));
 
         CHECK(graphics.texts.empty());
         REQUIRE(graphics.rects.size() == 1);
-        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, false)));
+        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, Live_(world.map), false)));
     }
 
     SECTION("fungus overlays terrain with its sprite when present")
     {
-        actest::WorldFixture world;
         // Moist/Rocky layers are also resolved on this tile — stub them before Render so a
         // Missing SpriteCache_ entry cannot poison later sections in this process.
         rig.AddOccupant(world.improvements.Get("Moist"));
         rig.AddOccupant(world.improvements.Get("Rocky"));
         rig.AddOccupant(world.improvements.Get("Fungus"));
         REQUIRE(world.improvements.Get("Fungus").art.has_value());
-        // No map: every tile set uses its mask-0 sprite.
         const std::string fungusPath =
             TilePath_(TileSet_(world.improvements.Get("Fungus")).paths.land, 0);
 
@@ -348,11 +352,11 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
 
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 64.0f),
-                             /*bFogged*/ false);
+                             /*bFogged*/ false, Live_(world.map));
 
         REQUIRE_FALSE(graphics.rects.empty());
         CHECK(graphics.rects.front().bFilled);
-        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(rTile, false)));
+        CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(rTile, Live_(world.map), false)));
         bool bFungusSprite = false;
         for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
         {
@@ -370,7 +374,6 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
     {
         // Bound tiles resolve Moist via the registry; ensure the configured PNGs exist so CI
         // without a prior extract_terrain.py run still exercises the sprite path.
-        actest::WorldFixture world;
         const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
         rig.AddOccupant(rMoist);
         const std::string moistPrefix = TilePrefix_(TileSet_(rMoist).paths.land);
@@ -382,7 +385,7 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
 
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, rTile, FlatTileShape(10.0f, 20.0f, 100.0f), /*bFogged*/ false,
-                             &world.map);
+                             Live_(world.map));
 
         const std::ptrdiff_t index = FirstSpriteIndex_(graphics, moistPrefix);
         REQUIRE(index >= 0);
@@ -399,7 +402,6 @@ TEST_CASE("Missing terrain art leaves only the fill; objects draw the checker", 
 
     SECTION("land art draws as painted at any elevation")
     {
-        actest::WorldFixture world;
         const ImprovementConfig_t& rMoist = world.improvements.Get("Moist");
         rig.AddOccupant(rMoist);
         Tile& rTile = *world.map.GetTile(8, 4);
@@ -473,7 +475,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         world.map.GetTile(9, 3)->SetElevation(shelfMeters);
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::vector<RecordingGraphics::SpriteDraw_t> coast = CoastSprites_(graphics);
         REQUIRE(coast.size() == 4);
@@ -498,7 +500,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         rLand.AddImprovement(world.improvements.Get("Mine"));
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::string coastPrefix = Style().tileRenderer.coastSpriteDir + "/";
         const std::ptrdiff_t moist = FirstSpriteIndex_(graphics, moistPath);
@@ -525,7 +527,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         rLand.SetHasRiver(true);
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::string coastPrefix = Style().tileRenderer.coastSpriteDir + "/";
         const std::ptrdiff_t moist = FirstSpriteIndex_(graphics, moistPath);
@@ -557,7 +559,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         }
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
         REQUIRE(water.size() == 3);
@@ -576,7 +578,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         // The land's N and E corners are the W and S corners of the water across its NE edge.
         RecordingGraphics waterGraphics;
         rig.renderer.Render(waterGraphics, *world.map.GetTile(9, 3), FlatTileShape(k_X, k_Y, k_Size),
-                             /*bFogged*/ false, &world.map);
+                             /*bFogged*/ false, Live_(world.map));
         const std::ptrdiff_t shelf = FirstSpriteIndex_(waterGraphics, shelfPath);
         REQUIRE(shelf >= 0);
         const std::optional<TileShape_t>& rWaterShape =
@@ -606,9 +608,9 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         };
 
         RecordingGraphics lit;
-        rig.renderer.Render(lit, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(lit, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
         RecordingGraphics fogged;
-        rig.renderer.Render(fogged, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
+        rig.renderer.Render(fogged, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, Live_(world.map));
 
         const std::ptrdiff_t litMoist = FirstSpriteIndex_(lit, moistPath);
         const std::ptrdiff_t foggedMoist = FirstSpriteIndex_(fogged, moistPath);
@@ -667,9 +669,9 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         }
 
         RecordingGraphics litSea;
-        rig.renderer.Render(litSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(litSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
         RecordingGraphics foggedSea;
-        rig.renderer.Render(foggedSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, &world.map);
+        rig.renderer.Render(foggedSea, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ true, Live_(world.map));
         const std::ptrdiff_t litShelf = FirstSpriteIndex_(litSea, shelfPath);
         const std::ptrdiff_t foggedShelf = FirstSpriteIndex_(foggedSea, shelfPath);
         REQUIRE(litShelf >= 0);
@@ -689,7 +691,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         SurroundWith_(world, rLand, shelfMeters);
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::vector<RecordingGraphics::SpriteDraw_t> water = CoastSprites_(graphics, "water_");
         REQUIRE(water.size() == 4);
@@ -706,7 +708,7 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         SurroundWith_(world, rIsland, shelfMeters);
 
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rIsland, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rIsland, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
         const std::vector<RecordingGraphics::SpriteDraw_t> shore = CoastSprites_(graphics, "shore_");
         REQUIRE(shore.size() == 4);
@@ -716,22 +718,18 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         CHECK(shore[3].textureId == CoastPath_("shore", 's', "7_alt"));
     }
 
-    SECTION("no coast without a map, on water tiles, or inland")
+    SECTION("no coast on water tiles or inland")
     {
         Tile& rWater = *world.map.GetTile(9, 3);
         rWater.SetElevation(shelfMeters);
 
-        RecordingGraphics noMap;
-        rig.renderer.Render(noMap, rLand, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false);
-        CHECK(CoastSprites_(noMap).empty());
-
         RecordingGraphics waterTile;
-        rig.renderer.Render(waterTile, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(waterTile, rWater, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
         CHECK(CoastSprites_(waterTile).empty());
 
         RecordingGraphics inland;
         rig.renderer.Render(inland, *world.map.GetTile(7, 5), FlatTileShape(k_X, k_Y, k_Size),
-                             /*bFogged*/ false, &world.map);
+                             /*bFogged*/ false, Live_(world.map));
         CHECK(CoastSprites_(inland).empty());
     }
 }
@@ -757,7 +755,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
 
     const auto waterShape = [&](const std::string& path) {
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
         const std::ptrdiff_t index = FirstSpriteIndex_(graphics, path);
         REQUIRE(index >= 0);
         const RecordingGraphics::SpriteDraw_t& rSprite =
@@ -864,14 +862,14 @@ TEST_CASE("TileRenderer draws an occupant's art for the tile's surface", "[ui][t
     }
 
     RecordingGraphics onLand;
-    rig.renderer.Render(onLand, rLand, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+    rig.renderer.Render(onLand, rLand, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, Live_(world.map));
     CHECK(drew(onLand, fungus.land.front()));
     CHECK_FALSE(drew(onLand, fungus.sea.front()));
     CHECK(drew(onLand, nutrients.land.front()));
     CHECK_FALSE(drew(onLand, nutrients.sea.front()));
 
     RecordingGraphics atSea;
-    rig.renderer.Render(atSea, rSea, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+    rig.renderer.Render(atSea, rSea, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, Live_(world.map));
     CHECK(drew(atSea, fungus.sea.front()));
     CHECK_FALSE(drew(atSea, fungus.land.front()));
     CHECK(drew(atSea, nutrients.sea.front()));
@@ -896,7 +894,7 @@ TEST_CASE("Object sprites hang from the tile's seat as SMAC anchors them", "[ui]
     constexpr float k_Size = 100.0f;
     constexpr float k_Height = k_Size * 0.5f;
     RecordingGraphics graphics;
-    rig.renderer.Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, &world.map);
+    rig.renderer.Render(graphics, rTile, FlatTileShape(k_X, k_Y, k_Size), /*bFogged*/ false, Live_(world.map));
 
     const std::string& path = Variants_(rNutrients).land.front();
     const auto it = std::ranges::find_if(graphics.sprites,
@@ -951,7 +949,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     });
     const auto render = [&rig, &world, &rTile]() {
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false, Live_(world.map));
         return graphics;
     };
 
@@ -1027,7 +1025,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
         RecordingGraphics deep;
         rig.renderer.Render(deep, *world.map.GetTile(9, 5),
                              FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
-                             &world.map);
+                             Live_(world.map));
         CHECK(countDrawn(deep, seaPrefix) == 0);
     }
 
@@ -1065,12 +1063,12 @@ TEST_CASE("A river without art draws nothing beyond the fill", "[ui][tile]")
 
     RecordingGraphics graphics;
     rig.renderer.Render(graphics, tile, FlatTileShape(10.0f, 20.0f, 100.0f),
-                         /*bFogged*/ false, &world.map);
+                         /*bFogged*/ false, Live_(world.map));
     CHECK(graphics.lines.empty());
     CHECK(graphics.sprites.empty());
     REQUIRE_FALSE(graphics.rects.empty());
     CHECK(graphics.rects.front().bFilled);
-    CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, false)));
+    CHECK(ColorEq_(graphics.rects.front().color, rig.renderer.FillColor(tile, Live_(world.map), false)));
 }
 
 TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in sight",
@@ -1111,7 +1109,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     SECTION("land terrain lands on the shape and carries its shades")
     {
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, Live_(world.map));
         const TileShape_t drawn = drawnShape(graphics, moistPrefix);
         CHECK(drawn.center.y == shape.center.y);
         CHECK(drawn.north.y == shape.north.y);
@@ -1124,7 +1122,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     SECTION("every tile sprite draws through the style's palette")
     {
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, Live_(world.map));
         bool bTileSprite = false;
         for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
         {
@@ -1142,7 +1140,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         const ImprovementConfig_t& rNutrients = world.improvements.Get("Nutrients");
         rLand.AddTerrainFeature(rNutrients);
         RecordingGraphics graphics;
-        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, &world.map);
+        rig.renderer.Render(graphics, rLand, shape, /*bFogged*/ false, Live_(world.map));
         const std::ptrdiff_t index =
             FirstSpriteIndex_(graphics, Variants_(rNutrients).land.front());
         REQUIRE(index >= 0);
@@ -1164,12 +1162,12 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         const std::string& bonusPath = Variants_(rNutrients).land.front();
 
         RecordingGraphics terrain;
-        rig.renderer.RenderTerrain(terrain, rLand, shape, /*bFogged*/ false, &world.map);
+        rig.renderer.RenderTerrain(terrain, rLand, shape, /*bFogged*/ false, Live_(world.map));
         CHECK(FirstSpriteIndex_(terrain, moistPrefix) >= 0);
         CHECK(FirstSpriteIndex_(terrain, bonusPath) < 0);
 
         RecordingGraphics objects;
-        rig.renderer.RenderObjects(objects, rLand, shape);
+        rig.renderer.RenderObjects(objects, rLand, shape, Live_(world.map));
         CHECK(FirstSpriteIndex_(objects, bonusPath) >= 0);
         CHECK(FirstSpriteIndex_(objects, moistPrefix) < 0);
         CHECK(objects.rects.empty());
@@ -1178,7 +1176,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     SECTION("fogged land draws at the fog shade, and water at its depth shades")
     {
         RecordingGraphics fogged;
-        rig.renderer.Render(fogged, rLand, shape, /*bFogged*/ true, &world.map);
+        rig.renderer.Render(fogged, rLand, shape, /*bFogged*/ true, Live_(world.map));
         const TileShape_t foggedLand = drawnShape(fogged, moistPrefix);
         CHECK(foggedLand.center.shade == Style().tileRenderer.fogLandShade);
         CHECK(foggedLand.north.shade == Style().tileRenderer.fogLandShade);
@@ -1186,7 +1184,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         Tile& rWater = *world.map.GetTile(9, 3);
         rWater.SetElevation(actest::TestMapRules().oceanShelfMeters);
         RecordingGraphics sea;
-        rig.renderer.Render(sea, rWater, shape, /*bFogged*/ false, &world.map);
+        rig.renderer.Render(sea, rWater, shape, /*bFogged*/ false, Live_(world.map));
         const TileShape_t water =
             drawnShape(sea, Variants_(world.improvements.Get("OceanShelf")).sea.front());
         // The shelf line is the fixture's shade 1; the relief's shades do not reach water.
@@ -1214,7 +1212,7 @@ TEST_CASE("TileRenderer draws road networks the way SMAC links them", "[ui][tile
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, *world.map.GetTile(x, y),
                              FlatTileShape(0.0f, 0.0f, 100.0f), /*bFogged*/ false,
-                             &world.map);
+                             Live_(world.map));
         std::vector<std::string> paths;
         for (const RecordingGraphics::SpriteDraw_t& rSprite : graphics.sprites)
         {
@@ -1309,7 +1307,7 @@ TEST_CASE("TileRenderer draws farms like SMAC: ground, structures by yield, and 
     const auto render = [&](const TileRenderer::YieldLookup_t& rYieldOf) {
         RecordingGraphics graphics;
         rig.renderer.Render(graphics, rTile, FlatTileShape(0.0f, 0.0f, 100.0f),
-                             /*bFogged*/ false, &world.map, rYieldOf);
+                             /*bFogged*/ false, Live_(world.map), rYieldOf);
         return graphics;
     };
     const auto nutrients = [](int amount) {
@@ -1362,7 +1360,7 @@ TEST_CASE("Improvements draw their sea art at sea", "[ui][tile]")
 
     RecordingGraphics graphics;
     rig.renderer.Render(graphics, rSea, FlatTileShape(0.0f, 0.0f, 100.0f),
-                         /*bFogged*/ false, &world.map);
+                         /*bFogged*/ false, Live_(world.map));
     const std::ptrdiff_t index = FirstSpriteIndex_(graphics, Variants_(rKelp).sea.front());
     REQUIRE(index >= 0);
     CHECK_FALSE(graphics.sprites[static_cast<std::size_t>(index)].shape.has_value());
@@ -1393,7 +1391,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         std::get<OccupantSpritePaths_t>(missing.art->sprites).land = {"tests/fixtures/sprites/missing/no_such_art.png"};
         rLand.AddImprovement(missing);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape);
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
 
         const auto cells = checkerCells(graphics);
         REQUIRE(cells.size() == 4);
@@ -1419,7 +1417,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         rig.AddOccupant(rCondenser);
         rLand.AddImprovement(rCondenser);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape);
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
         CHECK(checkerCells(graphics).empty());
     }
 
@@ -1429,8 +1427,98 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         artless.art.reset();
         rLand.AddImprovement(artless);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape);
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
         CHECK(checkerCells(graphics).empty());
         CHECK(graphics.sprites.empty());
+    }
+}
+
+TEST_CASE("Tiles out of sight draw the occupants the faction last saw", "[ui][tile][fog][memory]")
+{
+    EnsureStyleLoaded_();
+    Rig_t rig;
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    const ImprovementConfig_t& rCondenser = fixture.improvements.Get("Condenser");
+    rig.AddOccupant(rCondenser);
+    const std::vector<std::string>& rArt = Variants_(rCondenser).land;
+
+    Unit& rUnit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    Tile& rTile = fixture.At(8, 8);
+    rTile.SetElevation(500);
+    const TileShape_t shape = FlatTileShape(0.0f, 0.0f, 100.0f);
+
+    const auto drawsCondenser = [&] {
+        RecordingGraphics graphics;
+        rig.renderer.RenderObjects(graphics, rTile, shape, AppearanceOf(fixture.map, &faction));
+        return std::ranges::any_of(graphics.sprites, [&rArt](const auto& rSprite) {
+            return std::ranges::find(rArt, rSprite.textureId) != rArt.end();
+        });
+    };
+
+    SECTION("tiles in sight draw live occupants")
+    {
+        REQUIRE(faction.GetVisibleMap().IsVisible(rTile));
+        CHECK_FALSE(drawsCondenser());
+
+        rTile.AddImprovement(rCondenser);
+        CHECK(drawsCondenser());
+
+        rTile.RemoveImprovement(rCondenser.id);
+        CHECK_FALSE(drawsCondenser());
+    }
+
+    SECTION("an improvement added out of sight does not draw until the tile is seen again")
+    {
+        fixture.MoveUnit(rUnit, 12, 12);
+        REQUIRE_FALSE(faction.GetVisibleMap().IsVisible(rTile));
+
+        rTile.AddImprovement(rCondenser);
+        CHECK_FALSE(drawsCondenser());
+
+        fixture.MoveUnit(rUnit, 9, 9);
+        REQUIRE(faction.GetVisibleMap().IsVisible(rTile));
+        CHECK(drawsCondenser());
+    }
+
+    SECTION("an improvement removed out of sight keeps drawing")
+    {
+        rTile.AddImprovement(rCondenser);
+        fixture.MoveUnit(rUnit, 12, 12);
+        REQUIRE_FALSE(faction.GetVisibleMap().IsVisible(rTile));
+
+        rTile.RemoveImprovement(rCondenser.id);
+        CHECK(drawsCondenser());
+
+        fixture.MoveUnit(rUnit, 9, 9);
+        CHECK_FALSE(drawsCondenser());
+    }
+
+    SECTION("a viewer with no fog maps sees every tile live")
+    {
+        fixture.MoveUnit(rUnit, 12, 12);
+        rTile.AddImprovement(rCondenser);
+
+        RecordingGraphics graphics;
+        rig.renderer.RenderObjects(graphics, rTile, shape, Live_(fixture.map));
+        CHECK(std::ranges::any_of(graphics.sprites, [&rArt](const auto& rSprite) {
+            return std::ranges::find(rArt, rSprite.textureId) != rArt.end();
+        }));
+    }
+
+    SECTION("the fill follows the remembered occupants")
+    {
+        ImprovementConfig_t tint = rCondenser;
+        tint.id = "RememberedTint";
+        tint.art->fillColor = Color_t{10, 20, 30, 255};
+        const MapAppearance appearance = AppearanceOf(fixture.map, &faction);
+        const Color_t elevationFill = rig.renderer.FillColor(rTile, appearance, true);
+
+        fixture.MoveUnit(rUnit, 12, 12);
+        rTile.AddImprovement(tint);
+        CHECK(ColorEq_(rig.renderer.FillColor(rTile, appearance, true), elevationFill));
+
+        fixture.MoveUnit(rUnit, 9, 9);
+        CHECK_FALSE(ColorEq_(rig.renderer.FillColor(rTile, appearance, true), elevationFill));
     }
 }

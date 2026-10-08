@@ -25,6 +25,11 @@ graph TB
         CompileFlag[USE_SFML<br/>compile-time flag]
     end
 
+    subgraph "Sprite loading"
+        SpriteLibrary[SpriteLibrary<br/>Ensure(path)]
+        TileRenderer[TileRenderer<br/>instance]
+    end
+
     subgraph "Dependencies"
         KeyMapping[KeyMapping]
         PlatformEventQueue[PlatformEventQueue<br/>owned by Engine]
@@ -38,6 +43,8 @@ graph TB
     SFMLGraphics --> SFMLFont
     SFMLGraphics --> TextureMap
     SFMLGraphics --> EventProcessing
+    SpriteLibrary --> TextureMap
+    TileRenderer --> SpriteLibrary
 
     EventProcessing --> KeyMapping
     EventProcessing --> PlatformEventQueue
@@ -67,8 +74,9 @@ graph TB
   - `UpsertTextureRGBA(id, width, height, rgba)`: Create or replace an RGBA8 texture from tightly packed pixels (minimap terrain cache)
   - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)` / `DrawSprite(..., destWidth, destHeight, tint)`: Draw a sprite at position, optionally scaled and color-multiplied
   - `DrawTileSprite(textureId, paletteId, shape)`: Draw palette-index art (grey is the `palette.pcx` index, alpha is coverage) the way SMAC does. The texture's inscribed diamond maps onto a `TileShape_t` (centre and W/N/E/S corners, each with a position and a `shade` in palette steps) as four triangles around the centre. Each pixel takes the palette entry at its index plus the interpolated shade rounded to a whole step, within the art range 0–235. `SFMLGraphics` does this in a fragment shader (the shade travels in the vertex colour) and throws at startup without shader support. Edge pixels sample just inside the texture's diamond, so shapes that share vertices meet without gaps (terrain tiles, raised relief, water depth shading)
-  - `FillTileShape(shape, color)`: Fill a shape's four triangles with one color (tile fill, fog haze, shroud, procedural cues)
+  - `FillTileShape(shape, color)`: Fill a shape's four triangles with one color (tile fill, fog haze, shroud)
   - `DrawText(text, x, y, size)`: Draw text at position
+  - `MeasureTextWidth(text, size)`: Width of the string at the given font size (SFML uses glyph bounds; headless/test backends approximate)
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
   - `DrawFilledDiamond` / `DrawDiamond`: Isometric tile footprint whose AABB is `(x, y, width, height)`
   - `SetMouseCursor(path, hotspotX, hotspotY)`: Apply a custom OS cursor from an image file. Empty path or load failure leaves the current cursor and returns false; the backend keeps the cursor object alive until the next set/reset
@@ -78,7 +86,13 @@ graph TB
 - **Purpose**: SFML-based graphics implementation
 - **Components**:
   - `sf::RenderWindow`: SFML render window, sized/titled/FPS-capped from `GraphicsConfig_t`
-  - `sf::Font`: opened from the first usable path in `GraphicsConfig_t::fontPaths`. **Throws if none opens** — the entire UI is text and rectangles, so "no font" would present a black window with no diagnostic.
+  - `sf::Font`: opened from the first usable path in `GraphicsConfig_t::fontPaths`
+    (and `user_settings.json` `graphics.font_paths`). **Throws if none opens** — the
+    entire UI is text and rectangles, so "no font" would present a black window with no
+    diagnostic. Defaults try `assets/ui/fonts/arialn.ttf` first (SMAC Arial Narrow from
+    `python extract_fonts.py`; gitignored under `assets/ui/fonts/`), then system
+    DejaVu/Liberation. UI text is solid RGBA via `DrawText` — not the terrain palette
+    shader.
   - `unordered_map<string, sf::Texture>`: Texture cache; `LoadTexture` replaces an existing id
   - `PumpEvents()`: Translates SFML events and pushes them onto the shared `PlatformEventQueue`
 - **Dependencies**:
@@ -103,6 +117,18 @@ graph TB
   - If defined: Returns `SFMLGraphics`
   - If not defined: Returns `NullGraphics`
 
+### SpriteLibrary
+- **Purpose**: Loads each sprite file path into the `Graphics` backend at most once
+- **File**: `ui/SpriteLibrary.h`, `ui/SpriteLibrary.cpp`
+- **Construction**: `Engine` builds one library over its `Graphics` instance, with a
+  `FileExists_t` callback (`std::filesystem::exists` in production)
+- **API**: `Ensure(path)` returns true when the texture is loaded and usable; logs once and
+  returns false when the file is missing, empty, or the backend load fails (subsequent calls
+  remember failure without re-logging)
+- **Consumers**: `TileRenderer` (terrain and object sprites), `FactionBaseArtCache` (faction base
+  sheets and building map overlays). Later UI renderers are expected to load through the same
+  library rather than calling `LoadTexture` directly
+
 ## UI Components
 
 UI components use the Graphics interface to render game information.
@@ -119,10 +145,12 @@ UI components use the Graphics interface to render game information.
 ### MapSurfaceRenderer
 - **Purpose**: Shared map-surface paint for the world map and the base workable-area ring
 - **File**: `ui/MapSurfaceRenderer.h`, `ui/MapSurfaceRenderer.cpp`
-- **Stack**: `RenderTile` draws terrain → grid → objects (`TileRenderer` halves); `RenderBase`
-  draws faction bare + building map overlays afterward so sprite overhang is not covered by
-  front-tile terrain. Grid styles: `WorldMapEdges` (NW/NE, ocean/explored rules) or
-  `FullDiamond` (closed perimeter for sparse clusters). Owns `FactionBaseArtCache`.
+- **Construction**: Holds `TileRenderer&` and a `FactionBaseArtCache` wired to the same
+  `SpriteLibrary` as the tile renderer
+- **Stack**: `RenderTile` draws terrain → grid → objects (`TileRenderer` halves) with
+  `MapAppearance`; `RenderBase` draws faction bare + building map overlays afterward so sprite
+  overhang is not covered by front-tile terrain. Grid styles: `WorldMapEdges` (NW/NE,
+  ocean/explored rules) or `FullDiamond` (closed perimeter for sparse clusters).
 
 ### WorldDisplay / MapViewport
 - **Purpose**: Displays the world map as a SMAC-style rectangular brick of 2:1 diamonds with
@@ -135,7 +163,10 @@ UI components use the Graphics interface to render game information.
   `WorldCoordsAtPixel` / row-ordered `ForEachVisibleTile`.
 - **Relief**: `MapViewport::SetRelief` (from `GameSettings::GetMapDisplay()`, set every frame)
   raises each tile's centre and corners with `TileRelief` (`ui/TileRelief.h`), SMAC's vertex
-  lift ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md), "Relief"):
+  lift ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md), "Relief"). Per-tile
+  lifts and slope shades are cached in vectors keyed on `WorldMap::GetAppearanceRevision()`,
+  the relief mode, and the relief style; `ShapeAt_`, `PixelOriginOf`, and `MaxLiftPixels_` read
+  the cache and only rebuild when one of those inputs changes:
   - A land centre lifts `elevation / level_meters` levels (`smooth`) or whole levels
     (`stepped`), `lift_per_level_ratio` of a tile width per level; `flat` turns relief off.
   - A corner takes the mean of its four tiles, or stays at sea level when one is water or off
@@ -160,32 +191,22 @@ UI components use the Graphics interface to render game information.
   - `Render(rGraphics)`: Painter’s-algorithm pass over visible diamonds from the stored camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
   - `GetViewport().SetCamera(tileX, tileY)`: Anchor for the brick projection (map units)
-- **Tile drawing**: Each diamond is painted by `TileRenderer` — elevation-colored fill, then
-  `ResolveTileLayers` sprites scaled to the diamond AABB. Land art keeps its sheet colors and
-  water art is shaded per vertex by depth, as in SMAC
-  ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md)). Occupants
-  list `sprite_paths` per tile surface (`land` / `sea`), and the renderer's `PickSpritePath`
-  chooses one from a hash of tile coordinates and content id (stable across save/load; no
-  per-tile variant field). Or they name a `sprite_tiles` set, and the renderer draws the
-  cell for the tile's neighbor mask (moisture, forest, fungus, jungle, rivers). Object
-  sprites (tile bonuses, monolith, improvements: `ter1.pcx` 100×62 over a 100×50 footprint) set
-  `sprite_overhang_ratio` and are drawn on the tile's footprint, reaching above it. Their
-  shadows are partly transparent black, so they darken the terrain underneath as SMAC's
-  shadow table does (`extract_pcx_common` turns shadow index 246 into black at alpha 54 on
-  land sprites, 21 on sea sprites — shared by ter1 objects and faction bases). The
-  tile's single moisture cell fills the diamond and fades out toward drier land.
-  Land next to water then gets SMAC's coast: per diamond corner, ocean and a shore band
-  baked from `Rainfall.pcx`
-  ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Rivers are a tile
-  layer drawn above the coast. Missing PNGs fall back to procedural moisture, rockiness and
-  river cues. Art is not shipped; run `extract_terrain.py` against a local SMAC install to
-  populate `assets/sprites/`. Terrain cells are baked to 112×56 diamonds. Tile sets go to
-  `sprites/landforms/<set>/<mask>.png`: blob sets get 47 masks, edge sets 16.
-  Rolling/rocky are keyed overlays, and `sprites/coast/` holds the coast overlays.
-  `--contact-sheet` also writes `_tiles_contact_sheet.png` to check the tile sets.
+- **Tile drawing**: `MapSurfaceRenderer` calls the injected `TileRenderer` with a
+  `MapAppearance` built for the viewing faction (`AppearanceOf` from live map, visible map, and
+  `FactionTileMemory`). Each diamond gets `FillColor`, terrain layers, optional grid edges,
+  then object sprites. Occupant art comes from each config entry's `art` block (see map-system
+  docs); palette terrain draws with `DrawTileSprite`, water landforms with depth shading, coast
+  per corner from `Rainfall.pcx` extracts
+  ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Object sprites (TER1
+  100×62 over a 100×50 footprint) use `art.overhang` and seat at `SeatOf` the raised shape.
+  Missing configured terrain art draws nothing (the fill shows); missing object art draws the
+  magenta/black checker from `tile_renderer` style keys. Art is not shipped; run
+  `extract_terrain.py` against a local SMAC install to populate `assets/sprites/`.
+- **Base names**: `WorldDisplay::RenderBases_` truncates long labels using
+  `Graphics::MeasureTextWidth` instead of a fixed character-width estimate.
 - **Hit-testing**: `WorldView` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under
   the pixel, then raised tiles in front). `BaseWorkableAreaDisplay` hit-tests its own diamonds
-  with `TileRenderer::ShapeContains` (shared with the viewport).
+  with `ShapeContains` from `ui/TileShapeGeometry.h` (shared footprint helpers with the viewport).
 - **Bases**: `FactionBaseArtCache` uses `assets/factions/<faction.id>/` when that directory
   exists (`extract_faction.py` maps SMAC `.pcx` stems like `gaians`/`univ` onto config ids).
   Draws bare land/water bases plus `colors.json`. Base sheet shadows use the same index-246
@@ -207,82 +228,50 @@ UI components use the Graphics interface to render game information.
   `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
 
 ### TileRenderer
-- **Purpose**: Shared map-cell paint for the world map, location preview, and similar views
+- **Purpose**: Shared map-cell paint for the world map, location preview, minimap terrain cache,
+  and base workable-area ring
 - **File**: `ui/TileRenderer.h`, `ui/TileRenderer.cpp`
-- **Footprint**: a `TileShape_t` from `MapViewport` (raised and shaded) or `FlatTileShape(x, y,
-  size)` (the flat 2:1 diamond at shade 0, for the location preview). Terrain draws on the
-  shape's four triangles; inset art (rockiness) and procedural cues map their flat sub-diamond
-  through it. Land terrain layers in sight carry the shape's slope shades; terrain layers on
-  water draw at shade 0
-- **Palette art**: terrain and coast sprites are palette indices (`extract_terrain.py`) drawn
-  with `DrawTileSprite` through `palette_path` (`palette.pcx` as a 256 × 1 texture), so every
-  shade is a step along SMAC's palette ramps rather than a colour multiply. A tile sprite draws
-  only when the palette loads too; otherwise the procedural cues stand in
-- **Elevation**: continuous meters → fill gradient and water depth shading (not a `TileLayer`)
-- **Water shading**: `WaterShading` (`ui/WaterShading.h`) gives a water tile's centre the
-  shade of its own depth and each corner the shade of the average depth of the tiles that
-  share it (land at ocean level, off-map rows left out, x wraps). Depth runs on SMAC's detail
-  scale: one step per `water_shading.detail_meters` (50 m) below ocean level, counted back
-  from the end of `depth_shades` (SMAC's 60-entry table), and anything deeper takes its first
-  entry. `water_shading.shades` gives each water landform id a range: its art draws at the
-  depth shade plus `offset`, kept within 0..`max` (the deep art moves 16 steps back, as SMAC's
-  does, and each art stays on the water ramp, which ends at index 188). A landform without a
-  range draws at shade 0. Tiles of the `deep_landform` (Ocean) and `shelf_landform`
-  (OceanShelf) trade art by depth, as SMAC does: the deep art once any corner's shade reaches
-  `deep_from_shade` (16, about 1450 m down), the shelf art otherwise. The Landform sprite is
-  drawn with `DrawTileSprite` on the whole tile
-- **Fog**: fogged land draws its terrain art and coast shore `fog_land_shade` palette steps
-  darker (SMAC's 2) instead of its slope shades; water keeps its depth shades. After its
-  terrain a fogged tile gets a `fog_haze_color` diamond (the average of SMAC's black
-  scanlines). Object sprites draw untinted on top. Fills, procedural cues and the minimap
-  use `fog_fill_dim_ratio`
-- **Variants**: `sprite_paths.land` / `.sea` by tile surface + `PickSpriteIndex` /
-  `PickSpritePath` (coord + id hash); `sprite_overhang_ratio` lifts object sprites above
-  the footprint
-- **Tile sets**: `sprite_tiles` replaces `{mask}` in the surface's pattern with
-  `ResolveTileMask` (`ui/TileAutotile.h`): an `edges` set takes 4 edge-neighbor bits, a `blob`
-  set adds the corner neighbors between two matching edges (47 distinct masks). The Moisture
-  layer matches water and neighbors at least as wet, every other layer neighbors with the same
-  occupant.
-  Without a `WorldMap` every set draws mask 0
-- **Moisture**: one base cell per land tile at the full tile rect; no stacking or insets
-- **Shapes**: every terrain layer and the coast draw with `DrawTileSprite`, so tiles meet edge
-  to edge with no fill between them. Object sprites (`RenderObjects`) draw as rects, anchored as SMAC anchors ter1 objects: the cell starts at the
-  tile's top corner, seated at the mean of the shape's four corners (not the raised centre),
-  and its overhang hangs below. The art sits high in its cells, so a tile bonus lands mid-tile
-- **Edge insets**: rockiness overlays only. `MatchRockinessEdges` + `DestRectForEdgeInsets`
-  (`TileSpriteEdgeInset`; a scaled diamond that stays inside the tile, flush on matched edges
-  where it can); style key `sprite_overlay_edge_inset_ratio`
-- **Coast**: `CoastOverlay` gives each diamond corner of a land tile a 3-bit water mask (edge
-  neighbors are orthogonal, the corner neighbor diagonal) and SMAC's odd-row alternate for
-  all-water corners. Drawn after Vegetation and before River as
-  `<coast_sprite_dir>/{water,shore}_<w|n|e|s>_<mask>[_alt].png` at the tile rect. Water is
-  drawn with `DrawTileSprite`, shaded from the land tile's own vertex depths within the
-  `water_shading.coast_shades` range, so it meets the neighboring water at their shared corners;
-  the shore draws at shade 0, or the fog shade. Needs a `WorldMap`; style key `coast_sprite_dir`
-- **Rivers**: the River layer draws its `edges` cell; without art, lines run from the tile
-  centre to each connected edge's midpoint (`GetRiverConnections`), or a short cross with no
-  connection. Style keys `river_color` / `river_line_thickness_ratio` under `tile_renderer`
-- **Improvements** (`improvements.json`; SMAC's rules in
-  [smac-terrain-textures.md](../thinker/smac-terrain-textures.md), "Improvements"):
-  - `ground_sprites` (Farm) replace the Moisture layer's cell with the variant for the tile's
-    moisture (Arid, Moist, Wet).
-  - A `links` tile set (Road, MagTube) draws on the Road layer: one cell per land neighbor
-    carrying the network (its `link_occupants`; a base carries every network), and the hub
-    when no link is drawn and the tile is not a base. `replaces_links_of` draws the mag tube's
-    link over the road's where both tiles carry tubes.
-  - `RenderObjects` draws the terrain objects (tile bonuses, Monolith), then every improvement's
-    object sprite in `improvements.json` order, skipping those a present occupant names in
-    `hides_sprites_of` (a soil enricher replaces the farm structures).
-  - `sprite_yield_rows` pick the object sprite by the tile's yield (`YieldLookup_t`, from
-    `TileEffectsContext` on the world map): row `clamp(yield - 1, 0, rows - 1)`. Without a
-    lookup (location preview) the first row draws.
-  - Object art that is configured but fails to load draws a 2 × 2 checker of
-    `missing_art_color` and `missing_art_alt_color` (magenta and black), `missing_art_size_ratio`
-    of the tile width, at the seat.
-- **Layers**: fungus wins vegetation (fungus in deeper ocean is dormant and draws nothing, see
-  `suppress_terrain` in effects-system.md); a landmark (Monsoon Jungle) draws on its own layer
-  and is skipped by the feature-sprite pass
+- **Lifetime**: One instance owned by `Engine`, constructed with `SpriteLibrary&` and
+  `TileRendererStyle_t` from `UiStyle`. `ViewFactory` passes `TileRenderer&` into `WorldView`
+  (`WorldDisplay`, `MinimapDisplay`, `LocationPanel`) and `BaseView` (`BaseWorkableAreaDisplay`).
+  Coast sprite path tables (2 parts × 4 corners × 8 cases) are built in the constructor from
+  `coast_sprite_dir` in style.
+- **Footprint helpers**: `ui/TileShapeGeometry.h` — `k_IsoHeightRatio`, `FlatTileShape`,
+  `ShapeContains`, `SeatOf` (mean of the four corners). Callers pass a `TileShape_t` from
+  `MapViewport` (raised, optionally shaded) or a flat diamond for previews.
+- **MapAppearance**: All render entry points take `const MapAppearance&`. Occupant lists and
+  neighbor walks for autotile and road links use `OccupantsOf`; elevation, surface, coast, and
+  water depth stay on the live `Tile`. See `ui/world/MapAppearance.h` and map-system
+  `FactionTileMemory`.
+- **Draw order** (`Render` = `RenderTerrain` + `RenderObjects`; world map inserts grid between
+  the halves via `MapSurfaceRenderer`):
+  1. `FillColor` — elevation gradient on water/land, optional occupant `fill_color`, fog dim
+  2. Terrain layers by `ArtLayer_t`: landform, moisture (or farm `ground`), rockiness, landmark,
+     vegetation — each occupant with matching `art.layer` on the tile
+  3. Coast overlay (live map geometry)
+  4. River layer, then link networks (`links` tile sets on the road layer)
+  5. Fog haze on explored-but-not-visible tiles
+  6. `RenderObjects`: `object` layer for terrain occupants then improvements, skipping ids in
+     any present occupant's `hides`; yield rows use live `YieldLookup_t` when supplied
+- **Palette art**: terrain and coast cells are palette indices drawn with `DrawTileSprite` and
+  the style's palette texture; land uses relief vertex shades (fog replaces with
+  `fog_land_shade` steps). Water landforms use `WaterShading` (`ui/WaterShading.h`) with
+  per-landform `depth_shade` on the occupant art and style keys for deep/shelf swap and coast
+  ranges.
+- **Sprites**: `TryDrawSprite_` / `TryDrawTileSprite_` call `SpriteLibrary::Ensure` before draw.
+- **Missing art**: configured terrain paths that fail to load draw nothing (fill remains).
+  Configured object paths that fail draw `DrawMissingArt_` — a 2×2 checker at `SeatOf` using
+  `missing_art_color`, `missing_art_alt_color`, and `missing_art_size_ratio`. No procedural
+  moisture, rockiness, or river fallbacks.
+- **Free helpers**: `PickSpriteIndex` / `PickSpritePath` for stable variant choice from tile
+  coords and occupant id.
+
+### MapAppearance
+- **Purpose**: Per-viewer occupant source for rendering — live on visible tiles, remembered on
+  fogged explored tiles
+- **File**: `ui/world/MapAppearance.h`, `ui/world/MapAppearance.cpp`
+- **API**: `MapAppearance(world, pVisible, pMemory)`; `OccupantsOf(tile)`; `AppearanceOf(world,
+  faction)` for the player faction's maps (null faction → live everywhere)
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base as a brick of 2:1 diamonds matching the
@@ -290,10 +279,10 @@ UI components use the Graphics interface to render game information.
 - **File**: `ui/base/BaseWorkableAreaDisplay.h`, `ui/base/BaseWorkableAreaDisplay.cpp`
 - **Dependencies**: Graphics, WorldMap, Base, WorkerAssignmentManager, `MapSurfaceRenderer`
 - **Layout**: Cluster sized to the Euclidean radius-2 disk; base diamond at the centre; clicks
-  use `TileRenderer::ShapeContains` (front-most diamond wins)
-- **Paint**: Same `MapSurfaceRenderer` stack as WorldDisplay (`FullDiamond` grid), then yield
-  triples on surrounding tiles; worked green / unworked white / unavailable dim; missing base
-  art keeps the yellow `BASE` placeholder
+  use `ShapeContains` (front-most diamond wins). Centre label width uses `MeasureTextWidth`.
+- **Paint**: Same `MapSurfaceRenderer` stack as WorldDisplay (`FullDiamond` grid) with
+  `MapAppearance` for the player faction, then yield triples on surrounding tiles; worked green
+  / unworked white / unavailable dim; missing base art keeps the yellow `BASE` placeholder
 
 ## View System
 

@@ -15,6 +15,7 @@
 namespace ac
 {
 
+class MapAppearance;
 class SpriteLibrary;
 class Tile;
 class WorldMap;
@@ -33,7 +34,9 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 // Shared terrain-tile cell drawing for the world map, location panel preview, and base
 // workable-area ring.
 // Fills by an occupant's fill_color or elevation (blue water / brown land), then draws each
-// occupant's art by its ArtLayer_t, bottom to top. Terrain art is palette indices shaded as SMAC
+// occupant's art by its ArtLayer_t, bottom to top. The occupants a tile draws, and those its
+// neighbors count for tile sets and road networks, come from the MapAppearance: remembered on
+// tiles out of sight. Elevation and surface (coast, water shading) are always the live tile's. Terrain art is palette indices shaded as SMAC
 // does: land by its relief shades, water per vertex by depth. Art that fails to load draws
 // nothing under terrain (the fill shows) and a checker for objects. Footprint is a 2:1
 // isometric diamond (width = size, height = size / 2).
@@ -53,17 +56,15 @@ public:
 
     // Fill used by the world map, location preview, and minimap (fog dims the fill).
     // The last occupant on the tile with a fill_color overrides the elevation gradient.
-    Color_t FillColor(const Tile& rTile, bool bFogged = false) const;
+    Color_t FillColor(const Tile& rTile, const MapAppearance& rAppearance,
+                      bool bFogged = false) const;
 
     // Draws the tile on rShape: terrain on its four triangles (land at its vertex shades),
     // object sprites on a flat footprint seated at the mean of its corners. Fogged tiles
     // (explored memory on the world map) draw their land art fog_land_shade steps darker and get
-    // a haze over the terrain layers; object sprites stay clear on top. pMap enables
-    // neighbor-aware tile sets, coast overlays and water corner shading; null draws no coast
-    // and shades water from the tile alone.
-    void Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                bool bFogged = false, const WorldMap* pMap = nullptr,
-                const YieldLookup_t& rYieldOf = {}) const;
+    // a haze over the terrain layers; object sprites stay clear on top.
+    void Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape, bool bFogged,
+                const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf = {}) const;
 
     // Render's two halves, so the world map can draw a tile's grid lines between them as SMAC
     // does. RenderTerrain draws the fill, the landform to vegetation layers (an improvement's
@@ -72,9 +73,9 @@ public:
     // another occupant hides), seated at the mean of the shape's four corners. An object whose configured art is missing draws a magenta and
     // black checker in its place.
     void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                       bool bFogged, const WorldMap* pMap) const;
+                       bool bFogged, const MapAppearance& rAppearance) const;
     void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                       const YieldLookup_t& rYieldOf = {}) const;
+                       const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf = {}) const;
 
 private:
     static constexpr std::size_t k_CoastPartCount = 2;
@@ -97,16 +98,16 @@ private:
                               const std::string& path, const TileShape_t& rShape,
                               const Color_t& tint) const;
     void DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, ArtLayer_t layer,
-                           const WorldMap* pMap, const TileShape_t& rShape,
+                           const MapAppearance& rAppearance, const TileShape_t& rShape,
                            const TileShape_t& rTerrain) const;
     bool TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile,
-                             const ImprovementConfig_t& rOccupant, const WorldMap* pMap,
-                             const TileShape_t& rShape) const;
+                             const ImprovementConfig_t& rOccupant,
+                             const MapAppearance& rAppearance, const TileShape_t& rShape) const;
     bool TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
-                               const ImprovementConfig_t& rOccupant, const WorldMap* pMap,
-                               const TileShape_t& rShape) const;
-    void DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
-                           const TileShape_t& rShape) const;
+                               const ImprovementConfig_t& rOccupant,
+                               const MapAppearance& rAppearance, const TileShape_t& rShape) const;
+    void DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile,
+                           const MapAppearance& rAppearance, const TileShape_t& rShape) const;
     void DrawMissingArt_(Graphics& rGraphics, const TileShape_t& rShape) const;
     void DrawObject_(Graphics& rGraphics, const ImprovementConfig_t& rConfig,
                      const std::string& path, const TileShape_t& rShape) const;

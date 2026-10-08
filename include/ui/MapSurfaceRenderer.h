@@ -13,6 +13,7 @@ namespace ac
 class BaseManager;
 class Faction;
 class FactionExploredMap;
+class MapAppearance;
 class Tile;
 class WorldMap;
 struct BaseSpriteSizesConfig_t;
@@ -42,7 +43,7 @@ public:
 
     // One tile's terrain → grid → objects. Shrouded tiles get a fill + grid only.
     void RenderTile(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                    const WorldMap& rMap, bool bFogged, bool bShrouded,
+                    const MapAppearance& rAppearance, bool bFogged, bool bShrouded,
                     const YieldLookup_t& rYieldOf, MapGridStyle_t gridStyle,
                     bool bOceanGrid = false, const ExploredFn_t& rExplored = {});
 

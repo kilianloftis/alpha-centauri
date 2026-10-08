@@ -87,7 +87,7 @@ WorldView::WorldView(
     m_elements.push_back(std::move(pSelectedUnit));
 
     auto pLocation = std::make_unique<LocationPanel>(
-        rTileRenderer, ResolveLayout(m_layout, Style().layouts.locationPanel));
+        rGameState, rTileRenderer, ResolveLayout(m_layout, Style().layouts.locationPanel));
     m_pLocationPanel = pLocation.get();
     m_elements.push_back(std::move(pLocation));
 

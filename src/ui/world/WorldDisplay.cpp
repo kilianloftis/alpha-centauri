@@ -12,6 +12,7 @@
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -206,6 +207,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     const MapDisplayConfig_t& rDisplay = m_rGameState.GetSettings().GetMapDisplay();
     m_viewport.SetRelief(rDisplay.relief, Style().tileRenderer.relief);
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const MapAppearance appearance = AppearanceOf(rWorldMap, m_rGameState.GetPlayerFaction());
     const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
         return m_rGameState.GetTileEffects().ResolveTileYield(rTile).effective;
     };
@@ -216,7 +218,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, const TileShape_t& rShape) {
         const bool bShrouded = fog.explored && !fog.explored->IsExplored(rTile);
         const bool bFogged = !bShrouded && fog.visible && !fog.visible->IsVisible(rTile);
-        m_mapSurface.RenderTile(rGraphics, rTile, rShape, rWorldMap, bFogged, bShrouded, yieldOf,
+        m_mapSurface.RenderTile(rGraphics, rTile, rShape, appearance, bFogged, bShrouded, yieldOf,
                                 MapGridStyle_t::WorldMapEdges, rDisplay.bOceanGrid, explored);
     });
 

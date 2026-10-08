@@ -11,6 +11,7 @@
 #include "ui/TileShapeGeometry.h"
 #include "ui/WaterShading.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 
 #include <algorithm>
 #include <array>
@@ -113,9 +114,16 @@ const std::string& VariantSpritePath_(const ImprovementConfig_t& rOccupant, cons
 
 using NeighborRule_t = std::function<bool(const Tile& rNeighbor)>;
 
+bool HasOccupantId_(const MapAppearance& rAppearance, const Tile& rTile, std::string_view id)
+{
+    return rAppearance.OccupantsOf(rTile).ForEach(
+        [id](const ImprovementConfig_t& rOccupant) { return rOccupant.id == id; });
+}
+
 // Moisture tiles connect to water and to land at least as wet, fading out toward drier land;
 // every other tile set connects to neighbors with the same occupant.
-NeighborRule_t LayerNeighborRule_(const Tile& rTile, const ImprovementConfig_t& rOccupant)
+NeighborRule_t LayerNeighborRule_(const MapAppearance& rAppearance, const Tile& rTile,
+                                  const ImprovementConfig_t& rOccupant)
 {
     if (ArtOf_(rOccupant).layer == ArtLayer_t::Moisture)
     {
@@ -125,11 +133,13 @@ NeighborRule_t LayerNeighborRule_(const Tile& rTile, const ImprovementConfig_t& 
                           >= static_cast<int>(rTile.GetMoisture());
         };
     }
-    return [&rOccupant](const Tile& rNeighbor) { return rNeighbor.HasFeature(rOccupant.id); };
+    return [&rAppearance, &rOccupant](const Tile& rNeighbor) {
+        return HasOccupantId_(rAppearance, rNeighbor, rOccupant.id);
+    };
 }
 
 const std::string& TileSpritePath_(const OccupantTileSet_t& rTiles, const Tile& rTile,
-                                   const WorldMap* pMap, const NeighborRule_t& matches)
+                                   const WorldMap& rMap, const NeighborRule_t& matches)
 {
     static const std::string k_Empty;
     const std::vector<std::string>& rPaths = rTiles.paths.ForSurface(rTile.IsWater());
@@ -137,26 +147,27 @@ const std::string& TileSpritePath_(const OccupantTileSet_t& rTiles, const Tile& 
     {
         return k_Empty;
     }
-    const std::uint8_t mask = pMap ? ResolveTileMask(rTiles.layout, rTile, *pMap, matches) : 0;
+    const std::uint8_t mask = ResolveTileMask(rTiles.layout, rTile, rMap, matches);
     return rPaths.at(mask);
 }
 
 const std::string& LayerSpritePath_(const Tile& rTile, const ImprovementConfig_t& rOccupant,
-                                    const WorldMap* pMap)
+                                    const MapAppearance& rAppearance)
 {
     if (const auto* pTiles = std::get_if<OccupantTileSet_t>(&ArtOf_(rOccupant).sprites))
     {
-        return TileSpritePath_(*pTiles, rTile, pMap, LayerNeighborRule_(rTile, rOccupant));
+        return TileSpritePath_(*pTiles, rTile, rAppearance.Map(),
+                               LayerNeighborRule_(rAppearance, rTile, rOccupant));
     }
     return VariantSpritePath_(rOccupant, rTile);
 }
 
 // The occupant ground art that replaces the moisture base (SMAC's farm ground), if any.
-std::string GroundSpritePath_(const Tile& rTile)
+std::string GroundSpritePath_(const MapAppearance& rAppearance, const Tile& rTile)
 {
     const std::string moisture = ToString(rTile.GetMoisture());
     std::string path;
-    rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
+    rAppearance.OccupantsOf(rTile).ForEach([&](const ImprovementConfig_t& rOccupant) {
         if (!rOccupant.art)
         {
             return false;
@@ -179,11 +190,13 @@ const OccupantTileSet_t& NetworkOf_(const ImprovementConfig_t& rConfig)
     return std::get<OccupantTileSet_t>(ArtOf_(rConfig).sprites);
 }
 
-bool CarriesNetwork_(const Tile& rTile, const OccupantTileSet_t& rNetwork)
+bool CarriesNetwork_(const MapAppearance& rAppearance, const Tile& rTile,
+                     const OccupantTileSet_t& rNetwork)
 {
     return rTile.IsLand()
-           && std::ranges::any_of(rNetwork.linkOccupants,
-                                  [&rTile](const std::string& rId) { return rTile.HasFeature(rId); });
+           && std::ranges::any_of(rNetwork.linkOccupants, [&](const std::string& rId) {
+                  return HasOccupantId_(rAppearance, rTile, rId);
+              });
 }
 
 bool HasLayerArt_(const ImprovementConfig_t& rOccupant, ArtLayer_t layer)
@@ -207,6 +220,7 @@ int YieldOf_(const TileResources_t& rYield, YieldStat_t stat)
 
 // An object's sprite on this tile's surface: a yield row when it has them, else a variant of
 // its sprite paths. Empty when it has none.
+// TODO: confirm which yield SMAC uses for remembered farm structures
 std::string ObjectSpritePath_(const ImprovementConfig_t& rConfig, const Tile& rTile,
                               const TileRenderer::YieldLookup_t& rYieldOf)
 {
@@ -353,7 +367,7 @@ void TileRenderer::DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, con
     }
     const WaterShadingStyle_t& rShading = m_rStyle.waterShading;
     TileShape_t water = UniformShade_(rShape, 0.0f);
-    ApplyWaterShades(water, ResolveWaterShades(rTile, &rMap, rShading),
+    ApplyWaterShades(water, ResolveWaterShades(rTile, rMap, rShading),
                      DepthShadeOf_(rTile, rShading.coastShades));
     for (const CoastCornerArt_t& rArt : overlay.corners)
     {
@@ -389,10 +403,11 @@ bool TileRenderer::TryDrawOccupantPath_(Graphics& rGraphics, const OccupantArt_t
 
 // A terrain occupant's baked diamond drawn on the shape.
 bool TileRenderer::TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile,
-                                       const ImprovementConfig_t& rOccupant, const WorldMap* pMap,
+                                       const ImprovementConfig_t& rOccupant,
+                                       const MapAppearance& rAppearance,
                                        const TileShape_t& rShape) const
 {
-    return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rOccupant, pMap), rShape);
+    return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rOccupant, rAppearance), rShape);
 }
 
 // Water art shaded per vertex by depth within the shade range of the landform's depth_shade; a
@@ -400,15 +415,17 @@ bool TileRenderer::TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile,
 // picks its deep or shelf texture per tile.
 bool TileRenderer::TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
                                          const ImprovementConfig_t& rOccupant,
-                                         const WorldMap* pMap, const TileShape_t& rShape) const
+                                         const MapAppearance& rAppearance,
+                                         const TileShape_t& rShape) const
 {
     TileShape_t water = UniformShade_(rShape, 0.0f);
     if (!rOccupant.art->depthShade)
     {
-        return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rOccupant, pMap), water);
+        return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rOccupant, rAppearance),
+                                  water);
     }
     const WaterShadingStyle_t& rShading = m_rStyle.waterShading;
-    const DiamondShades_t shades = ResolveWaterShades(rTile, pMap, rShading);
+    const DiamondShades_t shades = ResolveWaterShades(rTile, rAppearance.Map(), rShading);
     const ImprovementConfig_t* pArt = &rOccupant;
     if (rOccupant.id == rShading.deepLandform || rOccupant.id == rShading.shelfLandform)
     {
@@ -419,23 +436,25 @@ bool TileRenderer::TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
         }
     }
     ApplyWaterShades(water, shades, DepthShadeOf_(*pArt));
-    return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, *pArt, pMap), water);
+    return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, *pArt, rAppearance), water);
 }
 
 // Road-style networks (layout "links"), as SMAC draws roads and mag tubes: a cell toward every
 // land neighbor carrying the same network, the replacing network's cell where both tiles carry
 // it, and a hub on a tile that has the network's own occupant but drew no link.
-void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
+void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile,
+                                     const MapAppearance& rAppearance,
                                      const TileShape_t& rShape) const
 {
+    const WorldMap& rMap = rAppearance.Map();
     if (!rTile.IsLand())
     {
         return;
     }
     // Networks are found on the tile and its neighbors: a base joins whatever reaches it.
     std::vector<const ImprovementConfig_t*> networks;
-    const auto collect = [&networks](const Tile& rAny) {
-        for (const ImprovementConfig_t* pImprovement : rAny.GetImprovements())
+    const auto collect = [&networks, &rAppearance](const Tile& rAny) {
+        for (const ImprovementConfig_t* pImprovement : rAppearance.OccupantsOf(rAny).improvements)
         {
             if (pImprovement && HasLayerArt_(*pImprovement, ArtLayer_t::Road)
                 && !NetworkOf_(*pImprovement).paths.land.empty()
@@ -462,13 +481,13 @@ void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, con
     for (std::size_t n = 0; n < networks.size(); ++n)
     {
         const OccupantTileSet_t& rNetwork = NetworkOf_(*networks[n]);
-        if (!CarriesNetwork_(rTile, rNetwork))
+        if (!CarriesNetwork_(rAppearance, rTile, rNetwork))
         {
             continue;
         }
         for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
         {
-            links[n][dir] = neighbors[dir] && CarriesNetwork_(*neighbors[dir], rNetwork);
+            links[n][dir] = neighbors[dir] && CarriesNetwork_(rAppearance, *neighbors[dir], rNetwork);
         }
     }
     // A replacing network's link stands in for the one it replaces.
@@ -508,9 +527,12 @@ void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile, con
         const OccupantTileSet_t& rNetwork = NetworkOf_(rConfig);
         // Only the network's own occupant draws a hub (a base never does), and a plain network
         // only when no link of any network was drawn.
-        const bool bOwnOnly = rTile.HasImprovement(rConfig.id)
+        const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
+        const bool bOwnOnly = std::ranges::find(occupants.improvements, &rConfig)
+                                  != occupants.improvements.end()
                               && std::ranges::none_of(rNetwork.linkOccupants, [&](const std::string& rId) {
-                                     return rId != rConfig.id && rTile.HasFeature(rId);
+                                     return rId != rConfig.id
+                                            && HasOccupantId_(rAppearance, rTile, rId);
                                  });
         const bool bNoOwnLink = std::ranges::none_of(links[n], [](bool bLink) { return bLink; });
         if (bOwnOnly && bNoOwnLink && (!rNetwork.replacesLinksOf.empty() || !bAnyLink))
@@ -547,14 +569,15 @@ void TileRenderer::DrawObject_(Graphics& rGraphics, const ImprovementConfig_t& r
     }
 }
 
-Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged) const
+Color_t TileRenderer::FillColor(const Tile& rTile, const MapAppearance& rAppearance,
+                                bool bFogged) const
 {
     const TileRendererStyle_t& s = m_rStyle;
     const int elevation = rTile.GetElevation();
     Color_t fill{};
 
     std::optional<Color_t> occupantFill;
-    rTile.ForEachOccupant([&occupantFill](const ImprovementConfig_t& rOccupant) {
+    rAppearance.OccupantsOf(rTile).ForEach([&occupantFill](const ImprovementConfig_t& rOccupant) {
         if (rOccupant.art && rOccupant.art->fillColor)
         {
             occupantFill = rOccupant.art->fillColor;
@@ -593,25 +616,26 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged) const
 }
 
 void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                          bool bFogged, const WorldMap* pMap, const YieldLookup_t& rYieldOf) const
+                          bool bFogged, const MapAppearance& rAppearance,
+                          const YieldLookup_t& rYieldOf) const
 {
-    RenderTerrain(rGraphics, rTile, rShape, bFogged, pMap);
-    RenderObjects(rGraphics, rTile, rShape, rYieldOf);
+    RenderTerrain(rGraphics, rTile, rShape, bFogged, rAppearance);
+    RenderObjects(rGraphics, rTile, rShape, rAppearance, rYieldOf);
 }
 
 void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, ArtLayer_t layer,
-                                     const WorldMap* pMap, const TileShape_t& rShape,
+                                     const MapAppearance& rAppearance, const TileShape_t& rShape,
                                      const TileShape_t& rTerrain) const
 {
     if (layer == ArtLayer_t::Moisture)
     {
-        const std::string ground = GroundSpritePath_(rTile);
+        const std::string ground = GroundSpritePath_(rAppearance, rTile);
         if (!ground.empty() && TryDrawTileSprite_(rGraphics, ground, rTerrain))
         {
             return;
         }
     }
-    rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
+    rAppearance.OccupantsOf(rTile).ForEach([&](const ImprovementConfig_t& rOccupant) {
         if (!HasLayerArt_(rOccupant, layer))
         {
             return false;
@@ -619,20 +643,20 @@ void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, Art
         // Missing terrain art draws nothing; the fill underneath remains.
         if (layer == ArtLayer_t::Landform && rTile.IsWater())
         {
-            (void)TryDrawWaterLandform_(rGraphics, rTile, rOccupant, pMap, rShape);
+            (void)TryDrawWaterLandform_(rGraphics, rTile, rOccupant, rAppearance, rShape);
         }
         else
         {
-            (void)TryDrawLayerSprite_(rGraphics, rTile, rOccupant, pMap, rTerrain);
+            (void)TryDrawLayerSprite_(rGraphics, rTile, rOccupant, rAppearance, rTerrain);
         }
         return false;
     });
 }
 
 void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                                 bool bFogged, const WorldMap* pMap) const
+                                 bool bFogged, const MapAppearance& rAppearance) const
 {
-    const Color_t baseFill = FillColor(rTile, bFogged);
+    const Color_t baseFill = FillColor(rTile, rAppearance, bFogged);
     const TileShape_t terrain = TerrainShape_(rShape, rTile, bFogged);
 
     rGraphics.FillTileShape(rShape, baseFill);
@@ -643,20 +667,16 @@ void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const T
     };
     for (const ArtLayer_t layer : k_BeforeCoast)
     {
-        DrawTerrainLayer_(rGraphics, rTile, layer, pMap, rShape, terrain);
+        DrawTerrainLayer_(rGraphics, rTile, layer, rAppearance, rShape, terrain);
     }
 
     // The coast covers the terrain layers and sits under rivers, roads and improvements.
-    if (pMap)
-    {
-        DrawCoastOverlay_(rGraphics, rTile, *pMap, rShape, bFogged ? m_rStyle.fogLandShade : 0.0f);
-    }
+    // TODO: confirm in terranx.exe whether remembered tiles keep their old elevation
+    DrawCoastOverlay_(rGraphics, rTile, rAppearance.Map(), rShape,
+                      bFogged ? m_rStyle.fogLandShade : 0.0f);
 
-    DrawTerrainLayer_(rGraphics, rTile, ArtLayer_t::River, pMap, rShape, terrain);
-    if (pMap)
-    {
-        DrawLinkNetworks_(rGraphics, rTile, *pMap, terrain);
-    }
+    DrawTerrainLayer_(rGraphics, rTile, ArtLayer_t::River, rAppearance, rShape, terrain);
+    DrawLinkNetworks_(rGraphics, rTile, rAppearance, terrain);
 
     // Fog hazes the terrain layers; objects draw clear on top of it, as in SMAC.
     if (bFogged)
@@ -666,10 +686,12 @@ void TileRenderer::RenderTerrain(Graphics& rGraphics, const Tile& rTile, const T
 }
 
 void TileRenderer::RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
+                                 const MapAppearance& rAppearance,
                                  const YieldLookup_t& rYieldOf) const
 {
+    const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
     std::vector<std::string> hidden;
-    rTile.ForEachOccupant([&hidden](const ImprovementConfig_t& rOccupant) {
+    occupants.ForEach([&hidden](const ImprovementConfig_t& rOccupant) {
         if (rOccupant.art)
         {
             hidden.insert(hidden.end(), rOccupant.art->hides.begin(), rOccupant.art->hides.end());
@@ -677,9 +699,8 @@ void TileRenderer::RenderObjects(Graphics& rGraphics, const Tile& rTile, const T
         return false;
     });
 
-    // ForEachOccupant visits terrain bonuses and the Monolith before improvements, as SMAC draws
-    // them.
-    rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
+    // Terrain bonuses and the Monolith come before improvements, as SMAC draws them.
+    occupants.ForEach([&](const ImprovementConfig_t& rOccupant) {
         if (!HasLayerArt_(rOccupant, ArtLayer_t::Object)
             || std::ranges::find(hidden, rOccupant.id) != hidden.end())
         {

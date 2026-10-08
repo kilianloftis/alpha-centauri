@@ -5,7 +5,9 @@
 namespace ac
 {
 
+class GameState;
 class Graphics;
+class MapAppearance;
 class Tile;
 class TileRenderer;
 
@@ -14,7 +16,8 @@ class TileRenderer;
 class LocationPanel : public UIElement
 {
 public:
-    LocationPanel(const TileRenderer& rTileRenderer, WindowLayout_t layout);
+    LocationPanel(const GameState& rGameState, const TileRenderer& rTileRenderer,
+                  WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
@@ -26,9 +29,10 @@ private:
     void DrawEmptyState_(Graphics& rGraphics) const;
     float DrawCoordinates_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     float DrawElevation_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
-    void DrawContents_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize,
-                       float textGap) const;
+    void DrawContents_(Graphics& rGraphics, const MapAppearance& rAppearance, float textX,
+                       float textY, unsigned int fontSize, float textGap) const;
 
+    const GameState& m_rGameState;
     const TileRenderer& m_rTileRenderer;
     const Tile* m_pSelectedTile = nullptr;
 };

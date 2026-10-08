@@ -50,6 +50,7 @@ private:
         uint64_t appearanceRevision = 0;
         uint64_t exploredRevision = 0;
         uint64_t visibleRevision = 0;
+        uint64_t memoryRevision = 0;
         int mapWidth = 0;
         int mapHeight = 0;
         bool bHasExplored = false;

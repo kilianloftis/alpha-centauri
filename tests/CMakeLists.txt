@@ -89,6 +89,7 @@ add_executable(effects-tests
     game/ConfigStrictnessTests.cpp
     game/PopulationCalculatorTests.cpp
     game/VisibilityTests.cpp
+    game/FactionTileMemoryTests.cpp
     game/UnitVisibilityTests.cpp
     game/NativeUnitsTests.cpp
     game/ArtifactLinkTests.cpp

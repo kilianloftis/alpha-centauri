@@ -93,7 +93,15 @@ Gameplay geometry stays the square lattice. A lattice step `(p, q)` — `p` towa
 `GetTileAtLatticeOffset` convert; neighbor tables keep today's lattice offsets and fetch
 through that helper. Orthogonal neighbors are the tiles across the diamond's edges.
 
-Spatial helpers live in `include/game/map/MapUtils.h`. Distances are on the lattice:
+Spatial helpers live in `include/game/map/MapUtils.h`. Diamond footprint geometry shares one set
+of lattice tables: `DiamondCorner_t` (W/N/E/S screen vertices), `k_CornerNeighbors` (the three
+lattice steps that meet each corner), `k_EdgeNeighbors` (orthogonal neighbors across the four
+diamond edges, used by `ForEachOrthogonalNeighbor`), and `k_RingNeighbors` (eight neighbors
+clockwise from the N corner — the same indexing SMAC uses for road link cells). UI code
+(`CoastOverlay`, `TileAutotile`, road links, relief) reads these instead of duplicating local
+delta tables.
+
+Distances are on the lattice:
 
 | Metric | Definition | Used for |
 |--------|------------|----------|
@@ -181,76 +189,59 @@ graph LR
 - **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
 - **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
 
-### Tile Visual Layer System
+### Occupant art (`OccupantArt_t`)
 
-Two id domains meet here and must not be swapped: `TileLayerContent` holds lowercase **sprite** ids (`"farm"`), while `ImprovementIds` / `config/improvements.json` hold PascalCase **config** ids (`"Farm"`). The resolver probes tiles with config ids; the fixed layers return `TileLayerContent` sprite ids.
+Map rendering reads each terrain or improvement entry's optional JSON **`art`** block, parsed into
+`OccupantArt_t` on `ImprovementConfig_t` (`include/game/map/OccupantArt.h`). Gameplay still stores
+occupants as config pointers on the tile; art is presentation only.
 
-The Landmark and Improvement layers are the exception: they return the config id verbatim, because there is no sprite-id mapping for the open-ended set of occupants that can fill them (Monsoon Jungle, Borehole, Monolith, …). The Improvement layer's rendering priority and exclusion rules are still a TODO in `ResolveImprovementLayer_`; whatever resolves them owes this layer a mapping too.
+- **`layer`**: `ArtLayer_t` — `landform`, `moisture`, `rockiness`, `landmark`, `vegetation`,
+  `river`, `road`, or `object`. Required when `art` is present.
+- **Sprite source** (exactly one): `variants` (ordered paths per surface; one picked per tile via
+  `PickSpritePath`), `tiles` (`OccupantTileSet_t`: `edges`, `blob`, or `links` layout with
+  `{mask}` paths expanded at parse), or `yield_rows` on `object` layers only.
+- **`ground`**: farm-style art that replaces the moisture layer, keyed by moisture name.
+- **`hides`**: config ids whose `object` art is skipped while this occupant is present.
+- **`overhang`**: object-only; fraction of tile height above the footprint (TER1 objects ≈ 0.24).
+- **`depth_shade`**: landform on water; range for depth-based palette shading (`WaterShading`).
+- **`fill_color`**: overrides elevation fill and minimap colour; last occupant in walk order with
+  one wins.
 
-**Elevation is not a layer.** Continuous meters stay on `Tile`. The map shows them as relief, as SMAC does: `MapViewport` raises each tile's corners with the terrain (`TileRelief`; the map display setting picks smooth heights, SMAC's whole-level steps, or flat), and [`TileRenderer`](../../include/ui/TileRenderer.h) shades land slopes, brightens high ground and shades water art per vertex by depth. Terrain art is palette indices, and every shade moves each texel along SMAC's palette ramps, as SMAC's renderer does ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md)). Land next to water gets SMAC's per-corner coast overlay ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)). Populate sprites with `extract_terrain.py`. An occupant's art is one of two kinds, per tile surface (`land` / `sea`):
+Entries with nothing to draw (`Flat`, `Water`, `Aquifer`, `Base`, …) omit `art`. Sheet layouts
+and SMAC selection rules: [smac-terrain-textures.md](../thinker/smac-terrain-textures.md),
+[terrain-autotiles.md](../plans/terrain-autotiles.md).
 
-- `sprite_paths`: ordered variants; the renderer picks one from tile coordinates and content id.
-- `sprite_tiles`: a neighbor-aware tile set. `layout` is `edges` (16 cells, one bit per edge neighbor) or `blob` (47 cells, edges plus the corners between two matching edges), and the `land` / `sea` patterns name the cell file with a `{mask}` placeholder. `ResolveTileMask` ([`TileAutotile.h`](../../include/ui/TileAutotile.h)) computes the mask. Moisture cells match water and land at least as wet as the tile, so they fade out toward drier land; every other tile set matches neighbors holding the same occupant. Plan: [terrain-autotiles.md](../plans/terrain-autotiles.md).
+**Elevation is not art.** Continuous meters stay on `Tile`. Relief and slope shading come from
+`MapViewport` + `TileRelief`; [`TileRenderer`](../../include/ui/TileRenderer.h) draws palette-index
+terrain through `DrawTileSprite` ([smac-palette-lighting.md](../thinker/smac-palette-lighting.md)),
+coast overlays ([smac-coastline-rainfall.md](../thinker/smac-coastline-rainfall.md)), and depth
+shading on water (`WaterShading.h`). Populate PNGs with `extract_terrain.py`.
 
-An occupant declares one kind or neither, never both. Sheet layouts and SMAC's own selection rules: [smac-terrain-textures.md](../thinker/smac-terrain-textures.md).
+[`TileRenderer`](../../include/ui/TileRenderer.h) walks `MapAppearance::OccupantsOf` and dispatches
+by `ArtLayer_t`: landform → moisture (or an occupant's `ground`) → rockiness → landmark →
+vegetation, then coast, river, and link networks, then fog haze; `RenderObjects` draws `object`
+art for terrain occupants then improvements, honouring `hides`. Neighbor rules for tile sets and
+roads stay in the renderer, keyed by layer (moisture: at least as wet; landform on water:
+deep/shelf swap; road: `links` layout over `k_RingNeighbors`; other sets: same occupant on the
+neighbor).
 
-```mermaid
-graph TB
-    subgraph "Tile Visual Layer System"
-        Resolver[TileLayerResolver]
-        Layers[std::array&lt;TileLayer_t&gt;]
-        Landform[Landform<br/>OceanShelf / Ocean / water / empty on land]
-        Moisture_t[Moisture_t<br/>arid / moist / wet / empty on water]
-        Rockiness_t[Rockiness_t<br/>rolling / rocky / empty]
-        Landmark[Landmark<br/>landmark config id / empty]
-        Vegetation[Vegetation<br/>fungus / farm / forest / empty]
-        River[River<br/>river / empty]
-        Road[Road<br/>road / empty]
-        Improvement[Improvement<br/>dominant other / empty]
-    end
+### FactionTileMemory
 
-    Tile[Tile] --> Resolver
-    Resolver --> Layers
-    Layers --> Landform
-    Layers --> Moisture_t
-    Layers --> Rockiness_t
-    Layers --> Landmark
-    Layers --> Vegetation
-    Layers --> River
-    Layers --> Road
-    Layers --> Improvement
-    TileRenderer[TileRenderer] --> Resolver
-    Tile -->|elevation tint| TileRenderer
+`FactionTileMemory` (`include/game/faction/FactionTileMemory.h`) lives on `Faction` beside
+`FactionVisibleMap` and `FactionExploredMap`. For each tile it stores copies of the terrain and
+improvement occupant lists from the last `Record(const Tile&)`. `Occupants(const Tile&)` returns
+those spans as `TileOccupants_t`; `GetRevision()` bumps when any tile is recorded.
 
-    style Resolver fill:#fbf,stroke:#333,stroke-width:3px
-    style Layers fill:#f9f,stroke:#333,stroke-width:3px
-```
-
-- **Purpose**: Provides an ordered, render-only representation of a tile's visual contents
-- **Components**:
-  - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture, Rockiness, Landmark, Vegetation, River, Road, Improvement)
-  - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
-  - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
-  - `TileRenderer`: consumes `ResolveTileLayers`, draws the tile set cell for the tile's neighbor mask or picks from the surface's `sprite_paths` via coordinate hash, scales sprites to the diamond AABB, draws terrain art through the palette at its vertex shades (relief on land, depth on water via `WaterShading`), and shades and hazes fogged terrain; procedural moisture/rockiness/river cues when a layer sprite is missing. Presentation is the rectangular brick of diamonds (`MapViewport`); gameplay stays on the square lattice.
-- **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
-- **Layer Order** (bottom to top):
-  1. `Landform`: `OceanShelf` / `Ocean` / water on sea; empty on land (flat has no sheet art)
-  2. `Moisture_t`: arid / moist / wet bases (empty on water — rainfall art must not cover sea sprites)
-  3. `Rockiness_t`: rolling / rocky keyed overlays above moisture (empty if flat or on water)
-  4. `Landmark`: the tile's landmark terrain feature (tagged `landmark`), e.g. Monsoon Jungle
-  5. `Vegetation`: fungus (if present), else farm or forest
-  6. `River`: river on land (empty if the tile has none, and on the water tile a river ends in); the coast overlay draws just below it
-  7. `Road`: road
-  8. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
-- **Open Questions / TODOs**:
-  - Landform generation rules beyond the elevation water threshold
-  - Vegetation mutual exclusivity and placement rules (Borehole/Base vs Farm/Forest)
-  - Improvement rendering priority and Monolith handling
+Recording runs at the end of `FactionVisibleMap::RebuildFromSources` for every visible tile, in
+`VisibilityRules` when the explored map is fully marked, and in `DiplomaticProposalEffects` after
+map merge. UI builds `MapAppearance(world, visible, memory)` so tiles in sight use live occupants
+and fogged explored tiles use memory; null visible or memory pointers mean live everywhere.
+Coast, water depth, relief, and yield lookups for object rows still read the live tile.
 
 ### Tile Improvement Effects
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
-  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, `placement`, `excludes` (incompatible occupant ids), per-effect `radius`, optional `owned_by_territory`, an `effects` array, and an optional `project` (`FormerProject_t`: turns, energy, required tech) present only when a former can build it — so "terrain with a build cost" is unrepresentable rather than three fields every terrain consumer knows to ignore, and `IsBuildable` is just `project.has_value()`. Coexistence is **not** in this header: `OccupantCoexistence.h` owns the predicate, leaving the parser to parse.
+  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, `placement`, `excludes` (incompatible occupant ids), per-effect `radius`, optional `owned_by_territory`, an `effects` array, optional `std::optional<OccupantArt_t> art` (the JSON `art` block — see Occupant art above), and an optional `project` (`FormerProject_t`: turns, energy, required tech) present only when a former can build it — so "terrain with a build cost" is unrepresentable rather than three fields every terrain consumer knows to ignore, and `IsBuildable` is just `project.has_value()`. Coexistence is **not** in this header: `OccupantCoexistence.h` owns the predicate, leaving the parser to parse.
   - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).
   - `OccupantsBlockPlacement(tile, candidate, leavingIds, overrides)` (`include/game/map/ImprovementConfigParser.h`) — the one coexistence predicate. `CanBuildImprovement` is the same question asked the other way round for call sites that want permission rather than a blocker.
 - **Configuration**: `config/improvements.json` holds improvements, each carrying its own `turns_required` / `energy_cost` / `required_tech` when a former can build it. `config/terrain.json` holds terrain occupants (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith) under `features`, and former projects that place no improvement (`LevelTerrain`, `PlantFungus`, `RemoveFungus`, `RaiseLand`, `LowerLand`, `Aquifer`) under `operations`. An operation is `turns_required` / `energy_cost` / `required_tech` plus an `on_complete_effects` list of triggered effects — the same machinery a Tectonic Payload's `on_detonate_effects` uses — so the set is open and nothing in code enumerates it. Each entry's `condition` is also what decides whether the project may start: `CanStartTerraform` refuses when no effect would fire, so a project is never paid for when it would do nothing. Two fields cover the rules that are not expressible as effects: `energy_cost_source: RaiseLowerQuote` swaps the flat `energy_cost` for the elevation-band-plus-distance quote, and `former_domain: Any` lets either Former run it on whatever tile it is standing on. Both files load into **one** `ImprovementRegistry`; `ImprovementConfig_t::placement` says which file an entry came from, so an id cannot be both and `ValidateNoDuplicates_` catches an attempt. `LoadMapOccupants` (`include/game/map/MapOccupantLoad.h`) is the single loading path — production and every test fixture call it, so neither can drift from the other or skip the check that refuses an operation id a buildable improvement would shadow. It reads `terrain.json` once and hands each half to its owner. Callers with no use for former projects use `ImprovementRegistry::LoadOccupants`. `Base` declares no `turns_required`, which is exactly what makes it unbuildable.
@@ -264,7 +255,7 @@ graph TB
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
-- **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry `sprite_paths`/`description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
+- **Modeling**: A tile bonus is a `config/terrain.json` `features` entry like any other terrain occupant. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry an `art` block / `description`. `PlaceTileBonuses` picks from registry entries whose `placement` is Terrain and whose `frequency` > 0, and adds the winner with `AddTerrainFeature`. Coexistence is the same `excludes` list.
 - **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.fraction` of the tiles a bonus entry can occupy.
 
 ### Improvement coexistence (`CanBuildImprovement`)

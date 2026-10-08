@@ -10,6 +10,7 @@
 #include "game/map/WorldMap.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 
 namespace ac
 {
@@ -88,8 +89,8 @@ void MapSurfaceRenderer::DrawWorldMapGridEdges_(Graphics& rGraphics, const Tile&
 }
 
 void MapSurfaceRenderer::RenderTile(Graphics& rGraphics, const Tile& rTile,
-                                   const TileShape_t& rShape, const WorldMap& rMap, bool bFogged,
-                                   bool bShrouded, const YieldLookup_t& rYieldOf,
+                                   const TileShape_t& rShape, const MapAppearance& rAppearance,
+                                   bool bFogged, bool bShrouded, const YieldLookup_t& rYieldOf,
                                    MapGridStyle_t gridStyle, bool bOceanGrid,
                                    const ExploredFn_t& rExplored)
 {
@@ -99,7 +100,7 @@ void MapSurfaceRenderer::RenderTile(Graphics& rGraphics, const Tile& rTile,
     }
     else
     {
-        m_rTileRenderer.RenderTerrain(rGraphics, rTile, rShape, bFogged, &rMap);
+        m_rTileRenderer.RenderTerrain(rGraphics, rTile, rShape, bFogged, rAppearance);
     }
 
     switch (gridStyle)
@@ -110,13 +111,14 @@ void MapSurfaceRenderer::RenderTile(Graphics& rGraphics, const Tile& rTile,
         DrawFullDiamondGrid_(rGraphics, rTile, rShape);
         break;
     case MapGridStyle_t::WorldMapEdges:
-        DrawWorldMapGridEdges_(rGraphics, rTile, rShape, rMap, bOceanGrid, rExplored);
+        DrawWorldMapGridEdges_(rGraphics, rTile, rShape, rAppearance.Map(), bOceanGrid,
+                               rExplored);
         break;
     }
 
     if (!bShrouded)
     {
-        m_rTileRenderer.RenderObjects(rGraphics, rTile, rShape, rYieldOf);
+        m_rTileRenderer.RenderObjects(rGraphics, rTile, rShape, rAppearance, rYieldOf);
     }
 }
 

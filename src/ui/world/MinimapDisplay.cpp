@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionTileMemory.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -10,6 +11,7 @@
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 #include "ui/world/MapViewport.h"
 
 #include <algorithm>
@@ -27,6 +29,7 @@ struct PlayerFogMaps_t
 {
     const FactionExploredMap* pExplored = nullptr;
     const FactionVisibleMap* pVisible = nullptr;
+    const FactionTileMemory* pMemory = nullptr;
 };
 
 PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
@@ -36,7 +39,7 @@ PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
     {
         return {};
     }
-    return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap()};
+    return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap(), &pPlayer->GetTileMemory()};
 }
 
 void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t& rColor)
@@ -196,6 +199,10 @@ MinimapDisplay::TerrainCacheKey_t MinimapDisplay::CurrentTerrainKey_() const
     {
         key.visibleRevision = fog.pVisible->GetRevision();
     }
+    if (fog.pMemory)
+    {
+        key.memoryRevision = fog.pMemory->GetRevision();
+    }
     return key;
 }
 
@@ -209,6 +216,7 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
 
     const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const MapAppearance appearance(rWorldMap, fog.pVisible, fog.pMemory);
     const Color_t shroud = Style().worldDisplay.shroudColor;
     const size_t pixelCount =
         static_cast<size_t>(rLayout.mapWidth) * static_cast<size_t>(rLayout.mapHeight);
@@ -225,7 +233,7 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
         if (!fog.pExplored || fog.pExplored->IsExplored(rTile))
         {
             const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(rTile);
-            color = m_rTileRenderer.FillColor(rTile, bFogged);
+            color = m_rTileRenderer.FillColor(rTile, appearance, bFogged);
         }
 
         for (int dx = 0; dx < 2; ++dx)

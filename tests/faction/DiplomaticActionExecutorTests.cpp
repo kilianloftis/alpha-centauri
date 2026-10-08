@@ -3,6 +3,9 @@
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionTileMemory.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/Tile.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/TradeItem.h"
 #include "game/faction/base/BaseManager.h"
@@ -190,6 +193,31 @@ TEST_CASE("World map trade merges explored tiles", "[diplomacy][executor]")
 
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
     CHECK(game.pB->GetExploredMap().IsExplored(8, 6));
+}
+
+TEST_CASE("World map trade records the tiles it newly explores for the receiver",
+          "[diplomacy][executor]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    const ImprovementConfig_t& rMine = game.fixtures.improvements.Get("Mine");
+    Tile& rTraded = game.At(8, 6);
+    Tile& rKnown = game.At(6, 6);
+    game.pA->GetExploredMap().Mark(rTraded);
+    game.pA->GetExploredMap().Mark(rKnown);
+    game.pB->GetExploredMap().Mark(rKnown);
+    REQUIRE_FALSE(game.pB->GetExploredMap().IsExplored(rTraded));
+    rTraded.AddImprovement(rMine);
+    rKnown.AddImprovement(rMine);
+    DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
+    proposal.give.push_back(TradeWorldMap_t{});
+
+    CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
+
+    const FactionTileMemory& rMemory = game.pB->GetTileMemory();
+    REQUIRE(rMemory.Occupants(rTraded).improvements.size() == 1);
+    CHECK(rMemory.Occupants(rTraded).improvements.front() == &rMine);
+    CHECK(rMemory.Occupants(rKnown).improvements.empty());
 }
 
 TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")

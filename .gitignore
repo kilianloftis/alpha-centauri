@@ -8,3 +8,4 @@ __pycache__/
 # Extracted SMAC art (not redistributable). Populate with extract_*.py.
 assets/sprites/
 assets/factions/
+assets/ui/fonts/

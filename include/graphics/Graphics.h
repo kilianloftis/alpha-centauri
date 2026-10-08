@@ -18,7 +18,9 @@ struct GraphicsConfig_t
     std::string windowTitle = "Alpha Centauri";
     unsigned int framerateLimit = 60;
     // Tried in order; the first that opens wins. Empty is a config error, not "no text".
+    // Prefer SMAC Arial Narrow after extract_fonts.py; system faces if extract was skipped.
     std::vector<std::string> fontPaths = {
+        "assets/ui/fonts/arialn.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
     };

@@ -1,10 +1,12 @@
 #include "ui/world/LocationPanel.h"
+#include "game/GameState.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -12,8 +14,10 @@
 namespace ac
 {
 
-LocationPanel::LocationPanel(const TileRenderer& rTileRenderer, WindowLayout_t layout)
+LocationPanel::LocationPanel(const GameState& rGameState, const TileRenderer& rTileRenderer,
+                             WindowLayout_t layout)
     : UIElement(layout)
+    , m_rGameState(rGameState)
     , m_rTileRenderer(rTileRenderer)
 {
 }
@@ -38,13 +42,16 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float previewY = m_layout.y + padding;
     const float textX = m_layout.x + padding;
 
+    const MapAppearance appearance =
+        AppearanceOf(m_rGameState.GetWorldMap(), m_rGameState.GetPlayerFaction());
     m_rTileRenderer.Render(rGraphics, *m_pSelectedTile,
-                           FlatTileShape(previewX, previewY, previewSize));
+                           FlatTileShape(previewX, previewY, previewSize), /*bFogged=*/false,
+                           appearance);
 
     float textY = previewY + previewSize + textGap;
     textY = DrawCoordinates_(rGraphics, textX, textY, fontSize) + textGap;
     textY = DrawElevation_(rGraphics, textX, textY, fontSize) + textGap;
-    DrawContents_(rGraphics, textX, textY, fontSize, textGap);
+    DrawContents_(rGraphics, appearance, textX, textY, fontSize, textGap);
 }
 
 void LocationPanel::DrawBackground_(Graphics& rGraphics) const
@@ -94,15 +101,16 @@ float LocationPanel::DrawElevation_(Graphics& rGraphics, float textX, float text
     return textY + static_cast<float>(fontSize);
 }
 
-void LocationPanel::DrawContents_(Graphics& rGraphics, float textX, float textY,
-                                  unsigned int fontSize, float textGap) const
+void LocationPanel::DrawContents_(Graphics& rGraphics, const MapAppearance& rAppearance,
+                                  float textX, float textY, unsigned int fontSize,
+                                  float textGap) const
 {
     const auto& s = Style().locationPanel;
     const float lineStep = static_cast<float>(fontSize) + textGap;
     float y = textY;
     const float bottom = m_layout.y + m_layout.height - m_layout.width * s.paddingRatio;
 
-    m_pSelectedTile->ForEachOccupant([&](const ImprovementConfig_t& rConfig) {
+    rAppearance.OccupantsOf(*m_pSelectedTile).ForEach([&](const ImprovementConfig_t& rConfig) {
         if (y + static_cast<float>(fontSize) > bottom)
         {
             return true;

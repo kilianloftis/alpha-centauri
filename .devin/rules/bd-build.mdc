@@ -21,7 +21,15 @@ cmake --build build -j$(nproc)
 make -C build effects-tests
 ctest --test-dir build
 ./build/tests/effects-tests "[movement]"
+./bd test -- "[GameSettings]"   # Catch filters are not passed through
 ```
+
+## How `./bd test` behaves
+
+- Builds the `effects-tests` target, then runs the **full** suite via `ctest` (not a Catch tag subset).
+- Accepted extras are only build-dir, `--config`, and `-j` / `--jobs`. Other arguments (including Catch filters like `"[GameSettings]"` or `-- "[tag]"`) are **ignored** — do not treat them as a filtered run.
+- On success, ctest output is discarded: exit code `0` with little or no suite summary is normal. Do not assume silence means tests did not run.
+- On failure, `bd` prints the ctest log (`--output-on-failure`). Use that output when reporting which cases failed.
 
 ## Failure handling
 

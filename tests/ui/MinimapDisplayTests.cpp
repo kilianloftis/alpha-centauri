@@ -1,5 +1,8 @@
 #include "ViewFixture.h"
 
+#include "game/Faction.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapViewport.h"
@@ -159,4 +162,27 @@ TEST_CASE("Minimap viewport frame splits at the seam", "[ui][minimap]")
         CHECK_THAT(frame[1].x, WithinAbs(rig.layout.x, 0.01f));
         CHECK_THAT(frame[1].width, WithinAbs(static_cast<float>(cols - 4) * k_PixelW, 0.01f));
     }
+}
+
+TEST_CASE("Minimap redraws when the player's tile memory changes", "[ui][minimap][memory]")
+{
+    ViewFixture fixture;
+    WorldDisplay display{*fixture.pState, fixture.pSprites->renderer, ViewFixture::FullScreen()};
+    MinimapDisplay minimap{*fixture.pState, fixture.pSprites->renderer,
+                           WindowLayout_t{100.0f, 50.0f, 720.0f, 170.0f}, display.GetViewport(),
+                           [](int, int) {}};
+    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 6);
+    const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
+    REQUIRE(pBonus != nullptr);
+    rTile.AddTerrainFeature(*pBonus);
+
+    RecordingGraphics graphics;
+    minimap.Render(graphics);
+    const int uploads = graphics.upsertTextureCount;
+    minimap.Render(graphics);
+    CHECK(graphics.upsertTextureCount == uploads);
+
+    fixture.pPlayer->GetTileMemory().Record(rTile);
+    minimap.Render(graphics);
+    CHECK(graphics.upsertTextureCount == uploads + 1);
 }

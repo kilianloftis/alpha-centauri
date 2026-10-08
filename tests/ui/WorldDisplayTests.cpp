@@ -125,6 +125,7 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus != nullptr);
     rTile.AddTerrainFeature(*pBonus);
+    fixture.pPlayer->GetTileMemory().Record(rTile);
     const std::string& bonusPath = std::get<OccupantSpritePaths_t>(pBonus->art.value().sprites).land.front();
     fixture.pSprites->existing.insert(bonusPath);
 

@@ -10,6 +10,7 @@
 #include "ui/TileRenderer.h"
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapAppearance.h"
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
@@ -174,7 +175,8 @@ void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 {
     const auto& style = Style().baseWorkableAreaDisplay;
-    const WorldMap& rWorldMap = m_rBase.GetTileEffects().GetWorldMap();
+    const MapAppearance appearance =
+        AppearanceOf(m_rBase.GetTileEffects().GetWorldMap(), &m_rBase.GetFaction());
     const MapSurfaceRenderer::YieldLookup_t yieldOf = [this](const Tile& rTile) {
         const auto it = m_rSnapshot.tiles.find(&rTile);
         if (it == m_rSnapshot.tiles.end())
@@ -192,7 +194,7 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     const TileDiamond_t* pBaseEntry = nullptr;
     for (const TileDiamond_t& rEntry : m_tileDiamonds)
     {
-        m_mapSurface.RenderTile(rGraphics, *rEntry.pTile, rEntry.shape, rWorldMap,
+        m_mapSurface.RenderTile(rGraphics, *rEntry.pTile, rEntry.shape, appearance,
                                 /*bFogged=*/false, /*bShrouded=*/false, yieldOf,
                                 MapGridStyle_t::FullDiamond);
         rGraphics.DrawDiamond(ShapeAabbLeft_(rEntry.shape), ShapeAabbTop_(rEntry.shape),
