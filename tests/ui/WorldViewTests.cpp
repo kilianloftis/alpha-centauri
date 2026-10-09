@@ -150,7 +150,7 @@ MouseEvent_t ReleaseAt_(int x, int y)
 // style map layout put SMAC tile (tileX, tileY) at ((tileX)·½w, (tileY)·½h) from the map origin.
 std::pair<int, int> MapTileClick_(const WindowLayout_t& rFullscreen, int tileX, int tileY)
 {
-    const WindowLayout_t mapLayout = ResolveLayout(rFullscreen, Style().layouts.map);
+    const WindowLayout_t mapLayout = MapBandAbove(rFullscreen, Style().layouts.console);
     const float tileWidth = mapLayout.height * Style().worldDisplay.defaultTileScale;
     const float tileHeight = tileWidth * 0.5f;
     const float halfW = tileWidth * 0.5f;

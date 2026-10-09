@@ -74,8 +74,9 @@ WorldView::WorldView(
 , m_rGameState(rGameState)
 , m_rHotkeys(rHotkeys)
 , m_rSprites(rSprites)
-, m_consoleLayout(ResolveLayout(layout, Style().layouts.console))
-, m_mapLayout(ResolveLayout(layout, Style().layouts.map))
+, m_consolePlacement(PlaceFixedLayout(layout, Style().layouts.console))
+, m_mapLayout(MapBandAbove(
+      layout, m_consolePlacement.layout, m_consolePlacement.mapOverlap))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, rMapRenderer, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
@@ -87,34 +88,35 @@ WorldView::WorldView(
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys))
 {
     const auto& console = Style().worldView;
+    const WindowLayout_t& rConsole = m_consolePlacement.layout;
 
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(
-        ResolveLayout(m_consoleLayout, console.consoleUnit), m_rSprites);
+        ResolveLayout(rConsole, console.consoleUnit), m_rSprites);
     m_pSelectedUnitPanel = pSelectedUnit.get();
     m_elements.push_back(std::move(pSelectedUnit));
 
     auto pLocation = std::make_unique<LocationPanel>(
         rGameState, rMapRenderer, m_rSprites,
-        ResolveLayout(m_consoleLayout, console.consoleLocation));
+        ResolveLayout(rConsole, console.consoleLocation));
     m_pLocationPanel = pLocation.get();
     m_elements.push_back(std::move(pLocation));
 
     auto pInfo = std::make_unique<InfoPanelElement>(
-        ResolveLayout(m_consoleLayout, console.consoleInfo), m_rSprites);
+        ResolveLayout(rConsole, console.consoleInfo), m_rSprites);
     m_pInfoPanel = pInfo.get();
     m_elements.push_back(std::move(pInfo));
 
     auto pUnitStack = std::make_unique<UnitStackPanel>(
-        ResolveLayout(m_consoleLayout, console.consoleStack), m_rSprites,
+        ResolveLayout(rConsole, console.consoleStack), m_rSprites,
         [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); });
     m_pUnitStackPanel = pUnitStack.get();
     m_elements.push_back(std::move(pUnitStack));
 
     m_elements.push_back(std::make_unique<CommlinksButton>(
-        ResolveLayout(m_consoleLayout, console.consoleCommlinks),
+        ResolveLayout(rConsole, console.consoleCommlinks),
         [this]() { m_onOpenCommlinks(); }));
 
-    const WindowLayout_t rightPanel = ResolveLayout(m_consoleLayout, console.consoleMinimap);
+    const WindowLayout_t rightPanel = ResolveLayout(rConsole, console.consoleMinimap);
     m_elements.push_back(std::make_unique<MinimapDisplay>(
         m_rGameState,
         rMapRenderer,
@@ -1166,15 +1168,24 @@ void WorldView::ClearBombardTargeting_()
 void WorldView::DrawConsoleChrome_(Graphics& rGraphics) const
 {
     const auto& console = Style().worldView;
-    const float bandHeight = (m_layout.y + m_layout.height) - m_consoleLayout.y;
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_consoleLayout.y, m_layout.width, bandHeight, console.consoleBackdropColor);
+    const WindowLayout_t& rConsole = m_consolePlacement.layout;
+    // Start below the map so the inset strip (tower overlap) is not painted over.
+    const float bandTop = m_mapLayout.y + m_mapLayout.height;
+    const float bandHeight = (m_layout.y + m_layout.height) - bandTop;
+    if (bandHeight > 0.0f)
+    {
+        rGraphics.DrawFilledRect(
+            m_layout.x, bandTop, m_layout.width, bandHeight, console.consoleBackdropColor);
+    }
 
-    if (console.consoleSprite.empty() || !m_rSprites.Ensure(console.consoleSprite))
+    if (m_consolePlacement.sprite.empty() || !m_rSprites.Ensure(m_consolePlacement.sprite))
     {
         return;
     }
-    rGraphics.DrawSprite(console.consoleSprite, m_consoleLayout.x, m_consoleLayout.y);
+    rGraphics.DrawSprite(
+        m_consolePlacement.sprite,
+        rConsole.x + m_consolePlacement.spriteOffsetX,
+        rConsole.y);
 }
 
 void WorldView::SyncTargetingCursor_(Graphics& rGraphics)

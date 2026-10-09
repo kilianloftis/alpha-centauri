@@ -8,8 +8,8 @@ RGBA (GDI `SetTextColor`), not terrain `palette.pcx`.
 
 | Source | Size | Output |
 |---|---|---|
-| `console.pcx` | 800×257 | `assets/ui/chrome/console.png` |
-| `console2.pcx` | 1024×257 | `assets/ui/chrome/console2.png` |
+| `console.pcx` | 800×257 | `console.png` (default, side bars) + `console_nobar.png` |
+| `console2.pcx` | 1024×257 | `console2.png` (default, side bars) + `console2_nobar.png` |
 | `console_x.pcx` / `console_x2.pcx` | 800×600 | whole sheet + crops under `chrome/console_x/` / `chrome/console_x2/` |
 | `text.pcx` | 800×600 | `assets/ui/chrome/text.png` (dialog sheet; not a glyph atlas) |
 | `artbox0.pcx`–`artbox24.pcx` | 420×520 | `assets/ui/artboxes/artboxNN.png` |
@@ -17,13 +17,18 @@ RGBA (GDI `SetTextColor`), not terrain `palette.pcx`.
 
 ## `console2.pcx` world console (1024×257)
 
-Drawn as a **single** native-size strip (`assets/ui/chrome/console2.png`) at `layouts.console`.
-The map uses `layouts.map`, which ends on a solid line at the console’s top. Shipping ratios
-target the default 1280×900 window so the console rect is exactly 1024×257 and centered
-(`[0.1, 0.7144, 0.8, 0.2856]`). Retune those ratios if the window size changes. A full-width
-`console_backdrop_color` fill under that line occludes anything below before the sprite draws.
-Do not slice the strip into per-panel backgrounds — the metal frame is continuous. Content
-views use `world_view.console_layouts` (ratios of the console layout rect):
+Drawn as a **single** native-size strip via `layouts.console` (fixed placement: `align`
+`[0.5, 1.0]` bottom-centered). Default extract output pads opaque black on both sides out
+to a 3840-wide canvas (`extract_ui.py` `CONSOLE_SIDE_COVER_WIDTH`), starting at the
+top-silhouette valley so gutters match the map seam; excess pad clips at the window edge.
+Plain strips are `console*_nobar.png` — switch the variant `sprite` and set
+`sprite_offset_x` to 0 to use them. Layout `width`/`height` stay the art size
+(1024×257 / 800×257); `sprite_offset_x` is the negative left pad so the art still seats on
+the layout origin. Corner towers sit above the center frame; each variant’s `map_overlap`
+(45px — that valley from extract) extends the map to the valley with towers drawn over it.
+`console_backdrop_color` fills from the map bottom to the window bottom before the sprite
+draws. Do not slice the strip into per-panel backgrounds — the metal frame is continuous.
+Content views use `world_view.console_layouts` (ratios of the placed console rect):
 
 | Window | Box in sheet (x0,y0)–(x1,y1) | `console_layouts` key | Role |
 |---|---|---|---|

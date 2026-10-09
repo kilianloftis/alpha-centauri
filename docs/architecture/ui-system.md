@@ -289,12 +289,19 @@ change, which genuinely replaces the layout.
 ### UiStyle — the theme, and its known shape problem
 All chrome (colours, optional `background_sprite` paths, font-size ratios, sub-layouts) comes from
 `config/ui/style.json`, parsed into `UiStyle` and read through the free function `Style()`.
-The world bottom band uses `layouts.map` and `layouts.console` from `style.json`;
-`world_view.console_sprite` draws at the console rect with an opaque backdrop fill below the
-map. Dashboard panels are transparent content windows from `world_view.console_layouts`.
-`DrawPanelChrome` paints a native-size sprite via `SpriteLibrary` when the path loads, otherwise
-the panel’s fill colour (and optional border). Extracted UI art lives under gitignored
-`assets/ui/{chrome,cursors,thumbs,artboxes}/` from `extract_ui.py` (see
+The world bottom band uses `layouts.console`, a fixed-size placement (`align` plus pixel
+`variants`). `PlaceFixedLayout` picks the widest variant that fits the window width (else
+the narrowest, which may clip) and docks it by align. Each variant carries `map_overlap`
+(pixels into the console from its top — the art’s top-silhouette valley) and optional
+`sprite_offset_x` when the PNG includes black side bars. `MapBandAbove` ends the map at
+`console.y + map_overlap`; default extract sprites pad black to the sides so gutters stay
+occluded when the strip is centered (pads clip at the window edge). Point a variant at
+`console*_nobar.png` and `sprite_offset_x: 0` for the plain strip. An opaque backdrop fill
+starts at the map bottom so the overlap strip stays map+sprite. Dashboard panels are
+transparent content windows from `world_view.console_layouts` (ratios of the placed
+console rect). `DrawPanelChrome` paints a native-size sprite via `SpriteLibrary` when the
+path loads, otherwise the panel’s fill colour (and optional border). Extracted UI art lives
+under gitignored `assets/ui/{chrome,cursors,thumbs,artboxes}/` from `extract_ui.py` (see
 [ui-chrome.md](../plans/ui-chrome.md)). `Load` fails loudly on a missing file or key and commits
 into the global only after a full parse; `Get` throws if used before `Load`.
 

@@ -3,6 +3,8 @@
 #include "input/Input.h"
 
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace ac
 {
@@ -20,6 +22,35 @@ struct Rectangle_t
 
 using RatioLayout_t = Rectangle_t;
 using WindowLayout_t = Rectangle_t;
+
+// Native-size chrome: pixel size plus alignment inside a parent rect. Variants are
+// alternatives for different parent widths (widest that fits, else the narrowest).
+struct FixedLayoutVariant_t
+{
+    float width{};
+    float height{};
+    // Map (or other content above) extends this many pixels into the fixed rect from its
+    // top — the top-silhouette valley of the console art (corner towers sit above it).
+    float mapOverlap{};
+    // Draw the sprite at layout.x + spriteOffsetX (negative when the PNG has side bars).
+    float spriteOffsetX{};
+    std::string sprite{};
+};
+
+struct FixedLayout_t
+{
+    float alignX{};
+    float alignY{};
+    std::vector<FixedLayoutVariant_t> variants{};
+};
+
+struct FixedPlacement_t
+{
+    WindowLayout_t layout{};
+    std::string sprite{};
+    float mapOverlap{};
+    float spriteOffsetX{};
+};
 
 inline bool ContainsMouseCoord(const Rectangle_t& rRect, float x, float y)
 {
@@ -43,6 +74,63 @@ inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const Ra
             ratioLayout.width  * windowLayout.width,
             ratioLayout.height * windowLayout.height
         };
+}
+
+inline FixedPlacement_t PlaceFixedLayout(const WindowLayout_t& rParent, const FixedLayout_t& rSpec)
+{
+    if (rSpec.variants.empty())
+    {
+        throw std::runtime_error("Fixed layout has no variants");
+    }
+
+    const FixedLayoutVariant_t* pChosen = nullptr;
+    for (const FixedLayoutVariant_t& rVariant : rSpec.variants)
+    {
+        if (rVariant.width <= rParent.width
+            && (!pChosen || rVariant.width > pChosen->width))
+        {
+            pChosen = &rVariant;
+        }
+    }
+    if (!pChosen)
+    {
+        pChosen = &rSpec.variants.front();
+        for (const FixedLayoutVariant_t& rVariant : rSpec.variants)
+        {
+            if (rVariant.width < pChosen->width)
+            {
+                pChosen = &rVariant;
+            }
+        }
+    }
+
+    return {
+        WindowLayout_t{
+            rParent.x + rSpec.alignX * (rParent.width - pChosen->width),
+            rParent.y + rSpec.alignY * (rParent.height - pChosen->height),
+            pChosen->width,
+            pChosen->height},
+        pChosen->sprite,
+        pChosen->mapOverlap,
+        pChosen->spriteOffsetX};
+}
+
+// Full-width band from the parent top down to rBelow.y + overlapIntoBelow (overlap lets
+// the band meet a lower center frame; side black bars on the chrome sprite occlude the
+// gutters beside a centered strip).
+inline WindowLayout_t MapBandAbove(const WindowLayout_t& rParent,
+                                   const WindowLayout_t& rBelow,
+                                   float overlapIntoBelow = 0.0f)
+{
+    const float bottom = rBelow.y + overlapIntoBelow;
+    const float height = bottom - rParent.y;
+    return {rParent.x, rParent.y, rParent.width, height > 0.0f ? height : 0.0f};
+}
+
+inline WindowLayout_t MapBandAbove(const WindowLayout_t& rParent, const FixedLayout_t& rSpec)
+{
+    const FixedPlacement_t placed = PlaceFixedLayout(rParent, rSpec);
+    return MapBandAbove(rParent, placed.layout, placed.mapOverlap);
 }
 
 // Shared chrome layouts (map, dashboard columns, popups) live in config/ui/style.json

@@ -69,7 +69,7 @@
 #include <utility>
 #include <vector>
 
-#define AC_PLACE_TEST_IMPROVEMENTS 0
+// #define AC_PLACE_TEST_IMPROVEMENTS 0
 
 namespace ac
 {

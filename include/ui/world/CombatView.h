@@ -46,7 +46,7 @@ private:
     WorldDisplay& m_rWorldDisplay;
     SpriteLibrary& m_rSprites;
     WindowLayout_t m_mapLayout;
-    WindowLayout_t m_consoleLayout;
+    FixedPlacement_t m_consolePlacement;
     std::function<void()> m_onFinished;
     std::string m_attackerName;
     std::string m_defenderName;

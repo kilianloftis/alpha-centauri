@@ -52,12 +52,63 @@ RatioLayout_t ParseLayout_(const nlohmann::json& j, const char* key)
         arr.at(3).get<float>()};
 }
 
+FixedLayout_t ParseFixedLayout_(const nlohmann::json& j, const char* key)
+{
+    const auto& obj = j.at(key);
+    if (!obj.is_object())
+    {
+        throw std::runtime_error(std::string("Expected fixed layout object for '") + key + "'");
+    }
+
+    const auto& align = obj.at("align");
+    if (!align.is_array() || align.size() != 2)
+    {
+        throw std::runtime_error(std::string("Expected [x,y] align for '") + key + "'");
+    }
+    const float alignX = align.at(0).get<float>();
+    const float alignY = align.at(1).get<float>();
+    if (alignX < 0.0f || alignX > 1.0f || alignY < 0.0f || alignY > 1.0f)
+    {
+        throw std::runtime_error(std::string("align for '") + key + "' must be in [0, 1]");
+    }
+
+    const auto& variants = obj.at("variants");
+    if (!variants.is_array() || variants.empty())
+    {
+        throw std::runtime_error(std::string("variants for '") + key + "' must be a non-empty array");
+    }
+
+    FixedLayout_t s{};
+    s.alignX = alignX;
+    s.alignY = alignY;
+    for (const auto& rVariant : variants)
+    {
+        FixedLayoutVariant_t variant{};
+        variant.width = rVariant.at("width").get<float>();
+        variant.height = rVariant.at("height").get<float>();
+        if (variant.width <= 0.0f || variant.height <= 0.0f)
+        {
+            throw std::runtime_error(std::string("variant size for '") + key
+                                     + "' must be positive");
+        }
+        variant.mapOverlap = rVariant.at("map_overlap").get<float>();
+        if (variant.mapOverlap < 0.0f || variant.mapOverlap > variant.height)
+        {
+            throw std::runtime_error(std::string("map_overlap for '") + key
+                                     + "' must be in [0, height]");
+        }
+        variant.spriteOffsetX = rVariant.value("sprite_offset_x", 0.0f);
+        variant.sprite = rVariant.at("sprite").get<std::string>();
+        s.variants.push_back(std::move(variant));
+    }
+    return s;
+}
+
 LayoutsStyle_t ParseLayoutsStyle_(const nlohmann::json& j)
 {
     LayoutsStyle_t s{};
     s.fullscreen = ParseLayout_(j, "fullscreen");
-    s.map = ParseLayout_(j, "map");
-    s.console = ParseLayout_(j, "console");
+    s.console = ParseFixedLayout_(j, "console");
     s.topPanel = ParseLayout_(j, "top_panel");
     s.leftPanel = ParseLayout_(j, "left_panel");
     s.locationPanel = ParseLayout_(j, "location_panel");
@@ -342,7 +393,6 @@ WorldViewStyle_t ParseWorldViewStyle_(const nlohmann::json& j)
     s.researchTextColor = ParseColor_(j, "research_text_color");
     s.missionYearColor = ParseColor_(j, "mission_year_color");
     s.energyTextColor = ParseColor_(j, "energy_text_color");
-    s.consoleSprite = j.value("console_sprite", "");
     s.consoleBackdropColor = ParseColor_(j, "console_backdrop_color");
     const auto& consoleLayouts = j.at("console_layouts");
     s.consoleUnit = ParseLayout_(consoleLayouts, "unit");

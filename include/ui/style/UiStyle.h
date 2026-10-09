@@ -13,8 +13,9 @@ namespace ac
 struct LayoutsStyle_t
 {
     RatioLayout_t fullscreen{};
-    RatioLayout_t map{};
-    RatioLayout_t console{};
+    // Native-size bottom console; map band is MapBandAbove(parent, console) using each
+    // variant's map_overlap (top-silhouette valley). Default sprites include side bars.
+    FixedLayout_t console{};
     RatioLayout_t topPanel{};
     RatioLayout_t leftPanel{};
     RatioLayout_t locationPanel{};
@@ -234,12 +235,9 @@ struct WorldViewStyle_t
     Color_t researchTextColor{};
     Color_t missionYearColor{};
     Color_t energyTextColor{};
-    // Native-size bottom console strip (console2.png); empty skips the sprite draw.
-    // Placement is layouts.console in style.json.
-    std::string consoleSprite{};
     // Opaque fill for the full-width band under the map (covers console transparent holes).
     Color_t consoleBackdropColor{};
-    // Content windows as ratios of the console layout rect (layouts.console).
+    // Content windows as ratios of the placed console rect (layouts.console).
     RatioLayout_t consoleUnit{};
     RatioLayout_t consoleLocation{};
     RatioLayout_t consoleInfo{};

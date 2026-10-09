@@ -43,24 +43,25 @@ CombatView::CombatView(WindowLayout_t layout,
     , m_rWorldDisplay(rWorldDisplay)
     , m_rSprites(rSprites)
     , m_mapLayout(mapLayout)
-    , m_consoleLayout(ResolveLayout(layout, Style().layouts.console))
+    , m_consolePlacement(PlaceFixedLayout(layout, Style().layouts.console))
     , m_onFinished(std::move(onFinished))
     , m_attackerName(std::move(attackerName))
     , m_defenderName(std::move(defenderName))
 {
     const auto& console = Style().worldView;
+    const WindowLayout_t& rConsole = m_consolePlacement.layout;
     auto pAttacker = std::make_unique<InfoPanelElement>(
-        ResolveLayout(m_consoleLayout, console.consoleUnit), rSprites);
+        ResolveLayout(rConsole, console.consoleUnit), rSprites);
     m_pAttackerPanel = pAttacker.get();
     m_elements.push_back(std::move(pAttacker));
 
     auto pRound = std::make_unique<InfoPanelElement>(
-        ResolveLayout(m_consoleLayout, console.consoleInfo), rSprites);
+        ResolveLayout(rConsole, console.consoleInfo), rSprites);
     m_pRoundPanel = pRound.get();
     m_elements.push_back(std::move(pRound));
 
     auto pDefender = std::make_unique<InfoPanelElement>(
-        ResolveLayout(m_consoleLayout, console.consoleMinimap), rSprites);
+        ResolveLayout(rConsole, console.consoleMinimap), rSprites);
     m_pDefenderPanel = pDefender.get();
     m_elements.push_back(std::move(pDefender));
 
@@ -89,12 +90,20 @@ void CombatView::Render(Graphics& rGraphics)
 {
     m_presentation.Render(rGraphics, m_rWorldDisplay);
     const auto& console = Style().worldView;
-    const float bandHeight = (m_layout.y + m_layout.height) - m_consoleLayout.y;
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_consoleLayout.y, m_layout.width, bandHeight, console.consoleBackdropColor);
-    if (!console.consoleSprite.empty() && m_rSprites.Ensure(console.consoleSprite))
+    const WindowLayout_t& rConsole = m_consolePlacement.layout;
+    const float bandTop = m_mapLayout.y + m_mapLayout.height;
+    const float bandHeight = (m_layout.y + m_layout.height) - bandTop;
+    if (bandHeight > 0.0f)
     {
-        rGraphics.DrawSprite(console.consoleSprite, m_consoleLayout.x, m_consoleLayout.y);
+        rGraphics.DrawFilledRect(
+            m_layout.x, bandTop, m_layout.width, bandHeight, console.consoleBackdropColor);
+    }
+    if (!m_consolePlacement.sprite.empty() && m_rSprites.Ensure(m_consolePlacement.sprite))
+    {
+        rGraphics.DrawSprite(
+            m_consolePlacement.sprite,
+            rConsole.x + m_consolePlacement.spriteOffsetX,
+            rConsole.y);
     }
     IGameView::Render(rGraphics);
 }

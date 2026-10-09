@@ -126,6 +126,7 @@ add_executable(effects-tests
     ui/MinimapDisplayTests.cpp
     ui/ListSelectorPopupTests.cpp
     ui/DrawPanelChromeTests.cpp
+    ui/FixedLayoutTests.cpp
     ui/HurryProductionPopupTests.cpp
     ui/BaseViewTests.cpp
     ui/CouncilVoteWeightCacheTests.cpp

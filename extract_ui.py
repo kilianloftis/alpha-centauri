@@ -10,7 +10,9 @@ Usage:
     python extract_ui.py --game-dir "/path/to/Sid Meier's Alpha Centauri"
 
 Output (gitignored under assets/ui/):
-    chrome/console*.png, console_x*/ crops, text.png, iface crops, dialog_panel
+    chrome/console.png, console2.png (default: black side bars to cover wide windows)
+    chrome/console_nobar.png, console2_nobar.png (plain strips; point style.json here to opt out)
+    chrome/console_x*/ crops, text.png, iface crops, dialog_panel
     cursors/<name>.png
     thumbs/*_sm.png
     artboxes/artboxNN.png
@@ -68,13 +70,21 @@ class Region:
 
 
 # Whole-file converts under chrome/ (stem → relative path without extension).
+# console.pcx / console2.pcx are handled separately (plain + side-bar variants).
 WHOLE_CHROME = (
-    "console.pcx",
-    "console2.pcx",
     "console_x.pcx",
     "console_x2.pcx",
     "text.pcx",
 )
+
+# World console strips: plain art plus a default copy with opaque black side pads so a
+# centered console occludes the map in the window gutters (pads clip at the window edge).
+CONSOLE_SHEETS = (
+    "console.pcx",
+    "console2.pcx",
+)
+# Pad each side so a centered strip covers this window width; wider windows still clip.
+CONSOLE_SIDE_COVER_WIDTH = 3840
 
 # console_x2.pcx (800×600): cyan guide index 254. Widget sheet, not a layout band.
 CONSOLE_X2_CROPS = (
@@ -248,6 +258,83 @@ def convert_whole(game_dir: Path, filename: str, out_dir: Path, *, keyed: bool) 
     return save_rgba(sheet, out_dir / f"{source.stem}.png", keyed=keyed)
 
 
+def console_top_valley_y(
+    rgba: Image.Image, *, alpha_threshold: int = 128, top_band: int = 80
+) -> int:
+    """Lowest y of the top silhouette (center frame under the corner towers).
+
+    Only the top `top_band` rows are considered so interior panel holes do not count.
+    """
+    width, height = rgba.size
+    band = min(top_band, height)
+    pixels = rgba.load()
+    valley = 0
+    for x in range(width):
+        for y in range(band):
+            if pixels[x, y][3] > alpha_threshold:
+                valley = max(valley, y)
+                break
+    return valley
+
+
+def with_console_side_bars(
+    rgba: Image.Image, *, cover_width: int, bar_top_y: int
+) -> Image.Image:
+    """Center the console on a canvas with black side pads from `bar_top_y` down.
+
+    Pads stay transparent above `bar_top_y` (the top-silhouette valley) so the map can
+    reach the same line beside the strip that it does in the center notch; black below
+    that occludes gutters and clips at the window edge.
+    """
+    art_w, art_h = rgba.size
+    total_w = max(art_w, cover_width)
+    pad_left = (total_w - art_w) // 2
+    canvas = Image.new("RGBA", (total_w, art_h), (0, 0, 0, 0))
+    canvas.paste(rgba, (pad_left, 0), rgba)
+    top = max(0, min(bar_top_y, art_h))
+    if top < art_h and pad_left > 0:
+        bar = Image.new("RGBA", (pad_left, art_h - top), (0, 0, 0, 255))
+        canvas.paste(bar, (0, top))
+        canvas.paste(bar, (pad_left + art_w, top))
+    return canvas
+
+
+def convert_console_sheets(
+    game_dir: Path, out_dir: Path, *, keyed: bool
+) -> list[Path]:
+    """Write console*_nobar.png (plain) and console*.png (default, with side bars)."""
+    written: list[Path] = []
+    for filename in CONSOLE_SHEETS:
+        source = game_dir / filename
+        if not source.is_file():
+            raise FileNotFoundError(f"Missing UI sheet: {source}")
+        rgba = to_rgba(load_pcx(source), keyed=keyed)
+        stem = source.stem
+        valley = console_top_valley_y(rgba)
+        print(
+            f"  {stem}: top valley y={valley} "
+            f"(map_overlap for style.json variants; ~{valley}/{rgba.size[1]} of height)"
+        )
+
+        nobar_path = out_dir / f"{stem}_nobar.png"
+        nobar_path.parent.mkdir(parents=True, exist_ok=True)
+        rgba.save(nobar_path)
+        written.append(nobar_path)
+
+        barred = with_console_side_bars(
+            rgba, cover_width=CONSOLE_SIDE_COVER_WIDTH, bar_top_y=valley
+        )
+        barred_path = out_dir / f"{stem}.png"
+        barred.save(barred_path)
+        written.append(barred_path)
+        pad = (barred.size[0] - rgba.size[0]) // 2
+        print(
+            f"  {stem}.png: {barred.size[0]}×{barred.size[1]} "
+            f"(side pad {pad}px each from y={valley}; sprite_offset_x={-pad})"
+        )
+    return written
+
+
 def crop_regions(
     sheet: Image.Image, regions: tuple[Region, ...], asset_root: Path, *, keyed: bool
 ) -> list[Path]:
@@ -281,6 +368,7 @@ def extract_ui(game_dir: Path, asset_root: Path, *, keyed: bool) -> dict[str, li
     by_family: dict[str, list[Path]] = {}
 
     chrome: list[Path] = []
+    chrome.extend(convert_console_sheets(game_dir, ui_root / "chrome", keyed=keyed))
     for filename in WHOLE_CHROME:
         chrome.append(convert_whole(game_dir, filename, ui_root / "chrome", keyed=keyed))
 

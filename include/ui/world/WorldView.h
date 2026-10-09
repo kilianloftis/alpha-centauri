@@ -134,7 +134,7 @@ private:
     GameState& m_rGameState;
     const HotkeyConfig& m_rHotkeys;
     SpriteLibrary& m_rSprites;
-    const WindowLayout_t m_consoleLayout;
+    const FixedPlacement_t m_consolePlacement;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;

@@ -66,8 +66,8 @@ flowchart LR
 ```text
 assets/ui/
   chrome/
-    console.png          # from console.pcx (800-wide reference)
-    console2.png         # 1024-wide world console (drawn whole)
+    console.png / console_nobar.png     # 800-wide; default has black side bars
+    console2.png / console2_nobar.png   # 1024-wide; default has black side bars
     console_x.png / console_x2.png
     console_x/…          # guided crops from console_x.pcx
     console_x2/…         # guided crops from console_x2.pcx
@@ -141,9 +141,9 @@ and are listed below get the library reference when they gain a sprite path.
 
 Use `DrawPanelChrome` + style paths for:
 
-1. **World bottom band:** `layouts.map` / `layouts.console` in `style.json`; 
-   `world_view.console_sprite` draws at the console rect with an opaque backdrop fill.
-   Dashboard panels use `world_view.console_layouts`.
+1. **World bottom band:** `layouts.console` fixed placement in `style.json` (pixel variants
+   + align); map is the band above the placed console. The chosen variant’s sprite draws at
+   native size with an opaque backdrop fill. Dashboard panels use `world_view.console_layouts`.
 2. **Popups / research:** `ListSelectorPopup`, `NoticePopup`, `CurrentResearchPanel` —
    `text.png` or iface frame crops.
 3. **Base screen major panels:** `BuildingsDisplay`, `ProductionDisplay` (and the other
