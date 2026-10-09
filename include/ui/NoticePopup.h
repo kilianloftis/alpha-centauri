@@ -13,6 +13,7 @@ namespace ac
 // style block. Moving it to ui/ would let this widget stop reaching into another screen's
 // namespace; it needs its own style section first.
 class SatelliteLabeledButton;
+class SpriteLibrary;
 
 // A modal "here is what happened / why that did not work" popup: title, message, OK.
 // Was OrbitalAttackOutcomePopup, which was already generic apart from a hardcoded header — the
@@ -24,7 +25,8 @@ public:
     NoticePopup(WindowLayout_t layout,
                 std::string title,
                 std::string message,
-                std::function<void()> onOk = {});
+                std::function<void()> onOk = {},
+                SpriteLibrary* pSprites = nullptr);
     // Out of line: m_pOkButton's type is only forward-declared here.
     ~NoticePopup() override;
 
@@ -39,6 +41,7 @@ private:
     std::string m_title;
     std::string m_message;
     std::function<void()> m_onOk;
+    SpriteLibrary* m_pSprites = nullptr;
     std::unique_ptr<SatelliteLabeledButton> m_pOkButton;
 };
 

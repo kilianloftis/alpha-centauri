@@ -30,6 +30,7 @@ class LocationPanel;
 class SelectedUnitPanel;
 class Tile;
 class MapRenderer;
+class SpriteLibrary;
 class UnitStackPanel;
 
 class WorldView : public IWorldView
@@ -53,6 +54,7 @@ public:
         const HotkeyConfig& rHotkeys,
         const WorldMap& rWorldMap,
         MapRenderer& rMapRenderer,
+        SpriteLibrary& rSprites,
         WindowLayout_t layout,
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,
@@ -125,11 +127,14 @@ private:
     void ClearAirdropTargeting_();
     void ClearBombardTargeting_();
     void SyncTargetingCursor_(Graphics& rGraphics);
+    void DrawConsoleChrome_(Graphics& rGraphics) const;
     void TryCommitAirdrop_(Unit& rUnit, const Tile& rDest);
     void ShowAirdropNotice_(std::string message);
 
     GameState& m_rGameState;
     const HotkeyConfig& m_rHotkeys;
+    SpriteLibrary& m_rSprites;
+    const WindowLayout_t m_consoleLayout;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;

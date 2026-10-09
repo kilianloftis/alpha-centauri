@@ -133,7 +133,8 @@ graph TB
 - **Consumers**: `TileRenderer` (terrain and object sprites) and `FactionBaseArtCache` (faction
   base sheets and building map overlays), both owned by `MapRenderer`; research / base UI
   (`CurrentResearchPanel`, `BuildingsDisplay`, `ProductionDisplay`, production
-  `ListSelectorPopup`) for tech/facility/project `icon` paths from config. Load through this
+  `ListSelectorPopup`) for tech/facility/project `icon` paths from config; world dashboard and
+  popup chrome via `DrawPanelChrome` (`background_sprite` in `style.json`). Load through this
   library rather than calling `LoadTexture` directly
 
 ## UI Components
@@ -195,8 +196,9 @@ flowchart LR
   `ocean_grid`.
 - **Bases**: `FactionBaseArtCache` resolves the bare sprite and building map overlays; the name
   label uses `faction_text_color_primary` (else `faction_color_primary`, else `base_name_color`)
-  and is cut down with `MeasureTextWidth` to `base_name_width_ratio`. A base whose art does not
-  load shows only its name.
+  and is cut down with `MeasureTextWidth` to `base_name_width_ratio`. Label origin is
+  `FootprintOrigin + tileWidth · (base_name_offset_x_ratio, base_name_offset_y_ratio)` so the
+  name sits under the base sprite (SMAC). A base whose art does not load shows only its name.
 
 ### WorldDisplay / MapViewport
 - **Purpose**: Displays the world map as a SMAC-style rectangular brick of 2:1 diamonds with

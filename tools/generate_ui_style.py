@@ -2,7 +2,9 @@
 """Generate UiStyle C++ headers/sources from config/ui/style.json.
 
 config/ui/style.json is the source of truth. Edit values (and add fields/sections)
-there, then run this script to regenerate:
+there, then run this script to regenerate. Keep scalar arrays compact
+(`python tools/format_ui_style_json.py`); do not rewrite the JSON with
+`json.dumps(..., indent=2)`.
 
   include/ui/style/UiStyle.h
   src/ui/style/UiStyle.cpp

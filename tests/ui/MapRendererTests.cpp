@@ -224,8 +224,9 @@ TEST_CASE("Bases draw over every tile with their names, and only the bases the c
     }
 
     REQUIRE(graphics.texts.size() == 1);
-    const float nameOffset = k_TileWidth * Style().mapRenderer.baseTextOffsetRatio;
-    CHECK(SamePoint_(graphics.texts.front().x, graphics.texts.front().y, nameOffset, nameOffset));
+    const float nameX = k_TileWidth * Style().mapRenderer.baseNameOffsetXRatio;
+    const float nameY = k_TileWidth * Style().mapRenderer.baseNameOffsetYRatio;
+    CHECK(SamePoint_(graphics.texts.front().x, graphics.texts.front().y, nameX, nameY));
 }
 
 TEST_CASE("Units draw last, as the content filters them, and Render reports where",
@@ -290,7 +291,7 @@ TEST_CASE("The location preview shows a remembered tile without fog, its farm by
     // A yield past the first row, so the row shows the yield was read.
     REQUIRE(nutrients >= 2);
 
-    LocationPanel panel(*fixture.pState, *fixture.pMapRenderer,
+    LocationPanel panel(*fixture.pState, *fixture.pMapRenderer, fixture.pSprites->sprites,
                         WindowLayout_t{0.0f, 0.0f, 300.0f, 400.0f});
     panel.SetSelectedTile(&rTile);
     RecordingGraphics graphics;

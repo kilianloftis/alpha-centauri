@@ -17,6 +17,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -502,6 +503,31 @@ TEST_CASE("Unit-slot columns accept the shipped wire form", "[config][units]")
     CHECK(registry.Get("defaulted").column == SlotColumn_t::Left);
 }
 
+TEST_CASE("UI style JSON keeps scalar arrays compact", "[config][ui]")
+{
+    // json.dumps(indent=2) expands every colour/layout element onto its own line. Shipping and
+    // fixture style.json use one value-line per array (tools/format_ui_style_json.py). A line
+    // that is only a number with a trailing comma is the expanded form.
+    std::ifstream in(actest::FixturePath("ui/style.json"));
+    REQUIRE(in.good());
+    std::string line;
+    while (std::getline(in, line))
+    {
+        const auto first = line.find_first_not_of(" \t");
+        if (first == std::string::npos)
+        {
+            continue;
+        }
+        const std::string trimmed = line.substr(first);
+        const bool bNumberThenComma =
+            !trimmed.empty() && (std::isdigit(static_cast<unsigned char>(trimmed.front()))
+                                 || trimmed.front() == '-')
+            && trimmed.back() == ',';
+        INFO(line);
+        CHECK_FALSE(bNumberThenComma);
+    }
+}
+
 TEST_CASE("A colour with too many components is a typo, not extra data", "[config][ui]")
 {
     // ParseColor_ read arr[0..3] and ignored anything past it, so a five-entry array — the shape
@@ -584,8 +610,9 @@ TEST_CASE("Tile renderer style rejects unusable water shading and relief values"
 
     SECTION("depth_shades is empty")
     {
+        // Compact style keeps the values on one line between brackets (see format_ui_style_json).
         TempConfigFile config("ac_style_depth_shades.json",
-                              withReplaced("\"depth_shades\": [3, 2, 1, 0]",
+                              withReplaced("\"depth_shades\": [\n        3, 2, 1, 0\n      ]",
                                            "\"depth_shades\": []"));
         CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("depth_shades"));

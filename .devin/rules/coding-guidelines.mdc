@@ -29,6 +29,11 @@ When asked to address review findings or implement a review/plan, treat every fi
 ## Commmenting
 Keep comments to a minimum. Code should be self-documenting. We don't need comments explainging why something was changed.
 
+## UI style JSON
+`config/ui/style.json` and `tests/fixtures/ui/style.json` keep scalar arrays compact (one
+value-line per array, not one element per line). Do not rewrite them with
+`json.dumps(..., indent=2)`. Run `python tools/format_ui_style_json.py` after bulk edits.
+
 ## SOLID Principles
 All code must adhere to SOLID principles:
 - **S**ingle Responsibility Principle: Each class/function should have one reason to change

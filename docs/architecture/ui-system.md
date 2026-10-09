@@ -287,9 +287,21 @@ lists — including, mid-callback, the button that was clicked. `Rebuild_()` rem
 change, which genuinely replaces the layout.
 
 ### UiStyle — the theme, and its known shape problem
-All chrome (colours, font-size ratios, sub-layouts) comes from `config/ui/style.json`, parsed into
-`UiStyle` and read through the free function `Style()`. `Load` fails loudly on a missing file or
-key and commits into the global only after a full parse; `Get` throws if used before `Load`.
+All chrome (colours, optional `background_sprite` paths, font-size ratios, sub-layouts) comes from
+`config/ui/style.json`, parsed into `UiStyle` and read through the free function `Style()`.
+The world bottom band uses `layouts.map` and `layouts.console` from `style.json`;
+`world_view.console_sprite` draws at the console rect with an opaque backdrop fill below the
+map. Dashboard panels are transparent content windows from `world_view.console_layouts`.
+`DrawPanelChrome` paints a native-size sprite via `SpriteLibrary` when the path loads, otherwise
+the panel’s fill colour (and optional border). Extracted UI art lives under gitignored
+`assets/ui/{chrome,cursors,thumbs,artboxes}/` from `extract_ui.py` (see
+[ui-chrome.md](../plans/ui-chrome.md)). `Load` fails loudly on a missing file or key and commits
+into the global only after a full parse; `Get` throws if used before `Load`.
+
+**Scalar arrays stay compact** (layouts, colours, hotspots): values on one line inside the
+brackets — never one element per line. Do not rewrite these files with `json.dumps(...,
+indent=2)`. Use `python tools/format_ui_style_json.py` (and the matching
+`[config][ui]` test on the fixture).
 
 **`UiStyle` is a process-global god object, and that is a known open finding.** It is a ~36-member
 typed bag plus a file-scope singleton, so every new panel needs a nested struct, a `UiStyle`

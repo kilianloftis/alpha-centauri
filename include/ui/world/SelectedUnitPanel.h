@@ -6,12 +6,13 @@ namespace ac
 {
 
 class Graphics;
+class SpriteLibrary;
 class Unit;
 
 class SelectedUnitPanel : public UIElement
 {
 public:
-    explicit SelectedUnitPanel(WindowLayout_t layout);
+    SelectedUnitPanel(WindowLayout_t layout, SpriteLibrary& rSprites);
 
     void Render(Graphics& rGraphics) override;
 
@@ -30,6 +31,7 @@ private:
     float DrawOrders_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     void DrawHomeBase_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
 
+    SpriteLibrary& m_rSprites;
     const Unit* m_pSelectedUnit = nullptr;
 };
 

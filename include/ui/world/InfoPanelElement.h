@@ -9,13 +9,12 @@
 namespace ac
 {
 
+class SpriteLibrary;
+
 class InfoPanelElement : public UIElement
 {
 public:
-    explicit InfoPanelElement(WindowLayout_t layout)
-        : UIElement(layout)
-    {
-    }
+    InfoPanelElement(WindowLayout_t layout, SpriteLibrary& rSprites);
 
     struct InfoLine
     {
@@ -29,6 +28,7 @@ public:
     const std::vector<InfoLine>& GetInfoLines() const { return m_infoLines; }
 
 private:
+    SpriteLibrary& m_rSprites;
     std::vector<InfoLine> m_infoLines;
 };
 

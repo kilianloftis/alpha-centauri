@@ -3,6 +3,7 @@
 #include "ui/satellite/SatelliteLabeledButton.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
@@ -11,11 +12,13 @@ namespace ac
 NoticePopup::NoticePopup(WindowLayout_t layout,
                          std::string title,
                          std::string message,
-                         std::function<void()> onOk)
+                         std::function<void()> onOk,
+                         SpriteLibrary* pSprites)
     : UIElement(layout)
     , m_title(std::move(title))
     , m_message(std::move(message))
     , m_onOk(std::move(onOk))
+    , m_pSprites(pSprites)
 {
     const NoticePopupStyle_t& rStyle = Style().noticePopup;
     m_pOkButton = std::make_unique<SatelliteLabeledButton>(
@@ -51,10 +54,8 @@ void NoticePopup::Render(Graphics& rGraphics)
     const unsigned int entryFontSize =
         static_cast<unsigned int>(m_layout.height * rPopupStyle.entryFontSizeRatio);
 
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.backgroundColor);
-    rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.borderColor);
+    DrawPanelChrome(rGraphics, m_pSprites, m_layout, rStyle.backgroundColor,
+                    rStyle.backgroundSprite, rStyle.borderColor);
 
     rGraphics.DrawText(
         m_title,

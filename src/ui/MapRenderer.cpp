@@ -238,7 +238,6 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
     const MapRendererStyle_t& s = m_rStyle;
     const float tileWidth = WidthOf_(rShape);
     const unsigned int fontSize = static_cast<unsigned int>(tileWidth * s.baseNameFontSizeRatio);
-    const float textOffset = tileWidth * s.baseTextOffsetRatio;
 
     Color_t nameColor = s.baseNameColor;
     if (const auto colors = m_baseArt.ColorsFor(rBase.GetFaction()))
@@ -246,12 +245,13 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
         nameColor = colors->LabelColor(s.baseNameColor);
     }
 
-    const auto [labelX, labelY] = FootprintOrigin(rShape);
+    const auto [originX, originY] = FootprintOrigin(rShape);
     // TODO: Show capture animation when base capture is implemented
     // TODO: Show population size below name
     rGraphics.DrawText(
         FitBaseName_(rGraphics, rBase.GetName(), fontSize, tileWidth * s.baseNameWidthRatio),
-        labelX + textOffset, labelY + textOffset, fontSize, nameColor);
+        originX + tileWidth * s.baseNameOffsetXRatio,
+        originY + tileWidth * s.baseNameOffsetYRatio, fontSize, nameColor);
 }
 
 // The tile's units the content shows, side by side from the tile's centre. Units keep their own

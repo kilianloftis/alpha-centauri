@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: phase4-ui
     content: "Phase 4 chrome: extract_ui.py (chrome/cursors/thumbs/text.pcx) + style.json + view wiring"
-    status: pending
+    status: completed
   - id: phase5-units
     content: "Phase 5: extract_units.py (Units.pcx) + bake_cvr_units.py + UnitMarkerRenderer"
     status: pending
@@ -195,20 +195,10 @@ and `user_settings.json` prefer `assets/ui/fonts/arialn.ttf`, then DejaVu/Libera
 Skip `.fot` / Win3.x BMP stubs. Bold/italic copies are on disk for later face selection;
 runtime still loads one path via `font_paths`.
 
-**Chrome extractor** (still pending; register with fonts in `extract_all.py` when that lands):
-
-- `extract_ui.py` — slice/convert `iface.pcx`, `console*.pcx`, `text.pcx` (UI backdrop/chrome,
-  not a glyph atlas), `artbox*`, cursors, `*_sm` notice thumbs into `assets/ui/…`. Color-blind
-  `text.pcx` / chrome under `Color Blind Palette/` when that set is handled.
-
-**Renderer/config work (chrome still pending):**
-
-- Point [`config/ui/style.json`](config/ui/style.json) (and view code) at chrome sprites; keep
-  rect+text fallbacks.
-- Audit `style.json` text RGBA against SMAC chrome (GDI `SetTextColor` over paletted UI —
-  not terrain `palette.pcx`). Record face/size/sample RGB in
-  `docs/thinker/smac-ui-typography.md` when reverse-engineering.
-- Do not route UI `DrawText` through the terrain palette shader.
+**Chrome (detailed plan):** [ui-chrome.md](ui-chrome.md) — `extract_ui.py`, native-size
+chrome via `style.json` + `DrawPanelChrome`, typography RE, world-map base name position.
+Color-blind palette pack and stretch/9-slice are out of that plan (stretch tracked under
+Later exploration below).
 
 ### Phase 5 — Units (natives + CVR bake)
 
@@ -258,4 +248,9 @@ runtime still loads one path via `font_paths`.
 
 ## Immediate next step
 
-Write the **Phase 2 detailed plan** (base sprites + faction colors on the world map).
+Implement **Phase 4 chrome** per [ui-chrome.md](ui-chrome.md) (`extract_ui.py`, style/view
+wiring, typography RE, base name position). Phase 5 units next after that.
+
+## Later exploration
+
+- **UI chrome stretch / scale:** Phase 4 draws chrome at native PNG size and retunes `style.json` layouts to fit. Explore later whether panels should stretch, uniformly scale, or 9-slice SMAC frames when the window aspect or layout ratios diverge from the extracted art.

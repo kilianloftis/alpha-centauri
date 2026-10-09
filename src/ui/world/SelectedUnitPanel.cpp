@@ -4,6 +4,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/SpriteLibrary.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
@@ -19,8 +21,9 @@ constexpr size_t k_UnitNameFirstCharCount = 1;
 
 } // namespace
 
-SelectedUnitPanel::SelectedUnitPanel(WindowLayout_t layout)
+SelectedUnitPanel::SelectedUnitPanel(WindowLayout_t layout, SpriteLibrary& rSprites)
     : UIElement(layout)
+    , m_rSprites(rSprites)
 {
 }
 
@@ -64,8 +67,8 @@ void SelectedUnitPanel::Render(Graphics& rGraphics)
 void SelectedUnitPanel::DrawBackground_(Graphics& rGraphics) const
 {
     const auto& s = Style().selectedUnitPanel;
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, s.backgroundColor, s.backgroundSprite,
+                    s.borderColor, 0.0f);
 }
 
 void SelectedUnitPanel::DrawEmptyState_(Graphics& rGraphics) const

@@ -14,6 +14,7 @@ struct LayoutsStyle_t
 {
     RatioLayout_t fullscreen{};
     RatioLayout_t map{};
+    RatioLayout_t console{};
     RatioLayout_t topPanel{};
     RatioLayout_t leftPanel{};
     RatioLayout_t locationPanel{};
@@ -99,7 +100,10 @@ struct MapRendererStyle_t
     // Extra height above the tile footprint for faction base sprites (100×75 on a 100×50 cell).
     float baseSpriteOverhangRatio{};
     float baseNameFontSizeRatio{};
-    float baseTextOffsetRatio{};
+    // Offset of the base name from FootprintOrigin, as a fraction of tile width (SMAC: under
+    // the base sprite, not the footprint top-left).
+    float baseNameOffsetXRatio{};
+    float baseNameOffsetYRatio{};
     float baseNameWidthRatio{};
     Color_t baseNameColor{};
 };
@@ -148,6 +152,8 @@ struct SelectedUnitPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
+    // Empty: colour fill. Non-empty: native-size sprite via DrawPanelChrome when loaded.
+    std::string backgroundSprite{};
     Color_t mutedTextColor{};
     Color_t iconColor{};
     Color_t iconExhaustedColor{};
@@ -167,6 +173,7 @@ struct LocationPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t mutedTextColor{};
     Color_t bodyTextColor{};
     float paddingRatio{};
@@ -179,6 +186,7 @@ struct UnitStackPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t statTextColor{};
     float paddingRatio{};
     float slotGapRatio{};
@@ -190,6 +198,7 @@ struct InfoPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t defaultLineColor{};
     float textHeightEstimate{};
     float textVerticalCenterRatio{};
@@ -225,6 +234,18 @@ struct WorldViewStyle_t
     Color_t researchTextColor{};
     Color_t missionYearColor{};
     Color_t energyTextColor{};
+    // Native-size bottom console strip (console2.png); empty skips the sprite draw.
+    // Placement is layouts.console in style.json.
+    std::string consoleSprite{};
+    // Opaque fill for the full-width band under the map (covers console transparent holes).
+    Color_t consoleBackdropColor{};
+    // Content windows as ratios of the console layout rect (layouts.console).
+    RatioLayout_t consoleUnit{};
+    RatioLayout_t consoleLocation{};
+    RatioLayout_t consoleInfo{};
+    RatioLayout_t consoleStack{};
+    RatioLayout_t consoleMinimap{};
+    RatioLayout_t consoleCommlinks{};
 };
 
 struct CombatViewStyle_t
@@ -317,6 +338,7 @@ struct CurrentResearchPanelStyle_t
     RatioLayout_t iconLayout{};
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t labelColor{};
     Color_t targetColor{};
     Color_t progressColor{};
@@ -395,6 +417,7 @@ struct HurryProductionPopupStyle_t
 struct ResourceLinesPanelStyle_t
 {
     Color_t backgroundColor{};
+    std::string backgroundSprite{};
     Color_t textColor{};
     float headerFontSizeRatio{};
     float entryFontSizeRatio{};
@@ -439,6 +462,7 @@ struct SupportDisplayStyle_t
 struct BuildingsDisplayStyle_t
 {
     Color_t backgroundColor{};
+    std::string backgroundSprite{};
     Color_t textColor{};
     // Continuous GrantBuilding rows (and constructed copies that are also granted).
     Color_t grantedTextColor{};
@@ -471,6 +495,7 @@ struct NoticePopupStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t headerColor{};
     Color_t messageColor{};
     RatioLayout_t okButtonLayout{};
@@ -489,6 +514,7 @@ struct ListSelectorPopupStyle_t
     float iconGapRatio{};
     Color_t backgroundColor{};
     Color_t borderColor{};
+    std::string backgroundSprite{};
     Color_t headerColor{};
     Color_t hintColor{};
     Color_t entryColor{};

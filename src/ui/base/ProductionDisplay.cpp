@@ -5,6 +5,7 @@
 #include "graphics/Graphics.h"
 #include "ui/SpriteLibrary.h"
 #include "ui/base/BaseDisplaySnapshot.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 #include <functional>
 #include <optional>
@@ -31,10 +32,8 @@ void ProductionDisplay::Render(Graphics& rGraphics)
 {
     const auto& style = Style().productionDisplay;
 
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        style.backgroundColor
-    );
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, style.backgroundColor,
+                    style.backgroundSprite, Color_t::Black(), 0.0f);
 
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
     const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);

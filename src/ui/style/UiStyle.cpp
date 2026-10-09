@@ -57,6 +57,7 @@ LayoutsStyle_t ParseLayoutsStyle_(const nlohmann::json& j)
     LayoutsStyle_t s{};
     s.fullscreen = ParseLayout_(j, "fullscreen");
     s.map = ParseLayout_(j, "map");
+    s.console = ParseLayout_(j, "console");
     s.topPanel = ParseLayout_(j, "top_panel");
     s.leftPanel = ParseLayout_(j, "left_panel");
     s.locationPanel = ParseLayout_(j, "location_panel");
@@ -182,7 +183,8 @@ MapRendererStyle_t ParseMapRendererStyle_(const nlohmann::json& j)
         throw std::runtime_error("map_renderer.base_sprite_overhang_ratio must be >= 0");
     }
     s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
-    s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
+    s.baseNameOffsetXRatio = j.at("base_name_offset_x_ratio").get<float>();
+    s.baseNameOffsetYRatio = j.at("base_name_offset_y_ratio").get<float>();
     s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
     return s;
@@ -247,6 +249,7 @@ SelectedUnitPanelStyle_t ParseSelectedUnitPanelStyle_(const nlohmann::json& j)
     SelectedUnitPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
     s.iconColor = ParseColor_(j, "icon_color");
     s.iconExhaustedColor = ParseColor_(j, "icon_exhausted_color");
@@ -268,6 +271,7 @@ LocationPanelStyle_t ParseLocationPanelStyle_(const nlohmann::json& j)
     LocationPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
     s.bodyTextColor = ParseColor_(j, "body_text_color");
     s.paddingRatio = j.at("padding_ratio").get<float>();
@@ -282,6 +286,7 @@ UnitStackPanelStyle_t ParseUnitStackPanelStyle_(const nlohmann::json& j)
     UnitStackPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.statTextColor = ParseColor_(j, "stat_text_color");
     s.paddingRatio = j.at("padding_ratio").get<float>();
     s.slotGapRatio = j.at("slot_gap_ratio").get<float>();
@@ -295,6 +300,7 @@ InfoPanelStyle_t ParseInfoPanelStyle_(const nlohmann::json& j)
     InfoPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.defaultLineColor = ParseColor_(j, "default_line_color");
     s.textHeightEstimate = j.at("text_height_estimate").get<float>();
     s.textVerticalCenterRatio = j.at("text_vertical_center_ratio").get<float>();
@@ -336,6 +342,15 @@ WorldViewStyle_t ParseWorldViewStyle_(const nlohmann::json& j)
     s.researchTextColor = ParseColor_(j, "research_text_color");
     s.missionYearColor = ParseColor_(j, "mission_year_color");
     s.energyTextColor = ParseColor_(j, "energy_text_color");
+    s.consoleSprite = j.value("console_sprite", "");
+    s.consoleBackdropColor = ParseColor_(j, "console_backdrop_color");
+    const auto& consoleLayouts = j.at("console_layouts");
+    s.consoleUnit = ParseLayout_(consoleLayouts, "unit");
+    s.consoleLocation = ParseLayout_(consoleLayouts, "location");
+    s.consoleInfo = ParseLayout_(consoleLayouts, "info");
+    s.consoleStack = ParseLayout_(consoleLayouts, "stack");
+    s.consoleMinimap = ParseLayout_(consoleLayouts, "minimap");
+    s.consoleCommlinks = ParseLayout_(consoleLayouts, "commlinks");
     return s;
 }
 
@@ -451,6 +466,7 @@ CurrentResearchPanelStyle_t ParseCurrentResearchPanelStyle_(const nlohmann::json
     s.iconLayout = ParseLayout_(j, "icon_layout");
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.labelColor = ParseColor_(j, "label_color");
     s.targetColor = ParseColor_(j, "target_color");
     s.progressColor = ParseColor_(j, "progress_color");
@@ -536,6 +552,7 @@ ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
 {
     ResourceLinesPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.textColor = ParseColor_(j, "text_color");
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
     s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
@@ -585,6 +602,7 @@ BuildingsDisplayStyle_t ParseBuildingsDisplayStyle_(const nlohmann::json& j)
 {
     BuildingsDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.textColor = ParseColor_(j, "text_color");
     s.grantedTextColor = ParseColor_(j, "granted_text_color");
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
@@ -613,6 +631,7 @@ NoticePopupStyle_t ParseNoticePopupStyle_(const nlohmann::json& j)
     NoticePopupStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.headerColor = ParseColor_(j, "header_color");
     s.messageColor = ParseColor_(j, "message_color");
     s.okButtonLayout = ParseLayout_(j, "ok_button_layout");
@@ -632,6 +651,7 @@ ListSelectorPopupStyle_t ParseListSelectorPopupStyle_(const nlohmann::json& j)
     s.iconGapRatio = j.value("icon_gap_ratio", 0.01f);
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
+    s.backgroundSprite = j.value("background_sprite", "");
     s.headerColor = ParseColor_(j, "header_color");
     s.hintColor = ParseColor_(j, "hint_color");
     s.entryColor = ParseColor_(j, "entry_color");

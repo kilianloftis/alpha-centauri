@@ -3,6 +3,7 @@
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include "ui/SpriteLibrary.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
@@ -95,10 +96,8 @@ void ListSelectorPopup::Render(Graphics& rGraphics)
     const float iconSize = lineHeight * m_rStyle.iconSizeRatio;
     const float iconGap = m_layout.width * m_rStyle.iconGapRatio;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-                             m_rStyle.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-                       m_rStyle.borderColor, m_rStyle.borderWidth);
+    DrawPanelChrome(rGraphics, m_pSprites, m_layout, m_rStyle.backgroundColor,
+                    m_rStyle.backgroundSprite, m_rStyle.borderColor, m_rStyle.borderWidth);
     rGraphics.DrawText(m_title, m_layout.x + padding, m_layout.y + padding, headerFontSize,
                        m_rStyle.headerColor);
 

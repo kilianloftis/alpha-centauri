@@ -3,6 +3,7 @@
 #include "game/research/TechRegistry.h"
 #include "graphics/Graphics.h"
 #include "ui/SpriteLibrary.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
@@ -24,8 +25,8 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
 {
     const auto& style = Style().currentResearchPanel;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, style.backgroundColor,
+                    style.backgroundSprite, style.borderColor);
 
     const WindowLayout_t labelArea    = ResolveLayout(m_layout, style.labelLayout);
     const WindowLayout_t targetArea   = ResolveLayout(m_layout, style.targetLayout);

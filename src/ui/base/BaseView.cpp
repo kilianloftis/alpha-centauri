@@ -137,7 +137,7 @@ BaseView::BaseView(
 
     // BottomPanel: Unit stack (same component / slot as WorldView)
     auto pUnitStack = std::make_unique<UnitStackPanel>(
-        ResolveLayout(m_layout, Style().layouts.bottomPanel),
+        ResolveLayout(m_layout, Style().layouts.bottomPanel), m_rSprites,
         [this](Unit& rUnit) { HandleUnitStackClicked_(rUnit); });
     m_pUnitStackPanel = pUnitStack.get();
     m_elements.push_back(std::move(pUnitStack));
@@ -284,7 +284,7 @@ void BaseView::HandlePopClick_(Pop& rPop)
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Select Pop Type", "No pop types available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
 }
 
 void BaseView::HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig)
@@ -361,7 +361,9 @@ void BaseView::HandleHurryConfirmed_(int credits)
         m_elements.push_back(std::make_unique<NoticePopup>(
             ResolveLayout(m_layout, Style().layouts.popupSmall),
             "Hurry",
-            "Not enough energy credits."));
+            "Not enough energy credits.",
+            nullptr,
+            &m_rSprites));
         return;
     }
 
@@ -387,7 +389,7 @@ void BaseView::HandleBuildingClicked_(const BuildingConfig_t& rBuilding)
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         rBuilding.GetName(), "This building cannot be scrapped", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
 }
 
 void BaseView::HandleScrapChoice_(const BuildingId_t& buildingId, bool bAllBases)
@@ -408,7 +410,9 @@ void BaseView::HandleScrapChoice_(const BuildingId_t& buildingId, bool bAllBases
         m_elements.push_back(std::make_unique<NoticePopup>(
             ResolveLayout(m_layout, Style().layouts.popupSmall),
             "Scrap",
-            "This building cannot be scrapped."));
+            "This building cannot be scrapped.",
+            nullptr,
+            &m_rSprites));
         return;
     }
 
@@ -437,7 +441,9 @@ void BaseView::HandleScrapConfirmed_(const BuildingId_t& buildingId, bool bAllBa
         m_elements.push_back(std::make_unique<NoticePopup>(
             ResolveLayout(m_layout, Style().layouts.popupSmall),
             "Scrap",
-            "This building cannot be scrapped."));
+            "This building cannot be scrapped.",
+            nullptr,
+            &m_rSprites));
         return;
     }
 

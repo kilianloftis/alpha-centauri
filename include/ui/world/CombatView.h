@@ -13,6 +13,7 @@ namespace ac
 
 class WorldDisplay;
 class InfoPanelElement;
+class SpriteLibrary;
 
 // Overlay shown while CombatPresentation plays back a resolved fight. Covers the world
 // dashboard with combat panels, swallows all input, and closes itself when playback ends.
@@ -28,6 +29,7 @@ public:
                std::string defenderName,
                WorldDisplay& rWorldDisplay,
                WindowLayout_t mapLayout,
+               SpriteLibrary& rSprites,
                std::function<void()> onFinished);
 
     void Render(Graphics& rGraphics) override;
@@ -42,7 +44,9 @@ private:
     void FinishIfDone_();
 
     WorldDisplay& m_rWorldDisplay;
+    SpriteLibrary& m_rSprites;
     WindowLayout_t m_mapLayout;
+    WindowLayout_t m_consoleLayout;
     std::function<void()> m_onFinished;
     std::string m_attackerName;
     std::string m_defenderName;

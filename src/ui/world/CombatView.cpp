@@ -2,6 +2,7 @@
 
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/WorldDisplay.h"
@@ -36,23 +37,30 @@ CombatView::CombatView(WindowLayout_t layout,
                        std::string defenderName,
                        WorldDisplay& rWorldDisplay,
                        WindowLayout_t mapLayout,
+                       SpriteLibrary& rSprites,
                        std::function<void()> onFinished)
     : IGameView(layout)
     , m_rWorldDisplay(rWorldDisplay)
+    , m_rSprites(rSprites)
     , m_mapLayout(mapLayout)
+    , m_consoleLayout(ResolveLayout(layout, Style().layouts.console))
     , m_onFinished(std::move(onFinished))
     , m_attackerName(std::move(attackerName))
     , m_defenderName(std::move(defenderName))
 {
-    auto pAttacker = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.leftPanel));
+    const auto& console = Style().worldView;
+    auto pAttacker = std::make_unique<InfoPanelElement>(
+        ResolveLayout(m_consoleLayout, console.consoleUnit), rSprites);
     m_pAttackerPanel = pAttacker.get();
     m_elements.push_back(std::move(pAttacker));
 
-    auto pRound = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.bottomPanel));
+    auto pRound = std::make_unique<InfoPanelElement>(
+        ResolveLayout(m_consoleLayout, console.consoleInfo), rSprites);
     m_pRoundPanel = pRound.get();
     m_elements.push_back(std::move(pRound));
 
-    auto pDefender = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.rightPanel));
+    auto pDefender = std::make_unique<InfoPanelElement>(
+        ResolveLayout(m_consoleLayout, console.consoleMinimap), rSprites);
     m_pDefenderPanel = pDefender.get();
     m_elements.push_back(std::move(pDefender));
 
@@ -80,6 +88,14 @@ bool CombatView::NeedsContinuousRedraw() const
 void CombatView::Render(Graphics& rGraphics)
 {
     m_presentation.Render(rGraphics, m_rWorldDisplay);
+    const auto& console = Style().worldView;
+    const float bandHeight = (m_layout.y + m_layout.height) - m_consoleLayout.y;
+    rGraphics.DrawFilledRect(
+        m_layout.x, m_consoleLayout.y, m_layout.width, bandHeight, console.consoleBackdropColor);
+    if (!console.consoleSprite.empty() && m_rSprites.Ensure(console.consoleSprite))
+    {
+        rGraphics.DrawSprite(console.consoleSprite, m_consoleLayout.x, m_consoleLayout.y);
+    }
     IGameView::Render(rGraphics);
 }
 

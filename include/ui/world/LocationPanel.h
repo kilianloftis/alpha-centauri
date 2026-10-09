@@ -9,6 +9,7 @@ class GameState;
 class Graphics;
 class MapAppearance;
 class MapRenderer;
+class SpriteLibrary;
 class Tile;
 
 // Dashboard location column: preview of the selected map tile, drawn by MapRenderer as the
@@ -17,7 +18,8 @@ class Tile;
 class LocationPanel : public UIElement
 {
 public:
-    LocationPanel(const GameState& rGameState, MapRenderer& rMapRenderer, WindowLayout_t layout);
+    LocationPanel(const GameState& rGameState, MapRenderer& rMapRenderer, SpriteLibrary& rSprites,
+                  WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
@@ -34,6 +36,7 @@ private:
 
     const GameState& m_rGameState;
     MapRenderer& m_rMapRenderer;
+    SpriteLibrary& m_rSprites;
     const Tile* m_pSelectedTile = nullptr;
 };
 

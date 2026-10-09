@@ -345,6 +345,7 @@ add_library(ac-ui STATIC
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp
     ui/style/UiStyle.cpp
+    ui/style/DrawPanelChrome.cpp
     ui/world/WorldView.cpp
     ui/ListSelectorPopup.cpp
     ui/NoticePopup.cpp

@@ -63,6 +63,7 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
         m_rHotkeys,
         m_rGameState.GetWorldMap(),
         m_rMapRenderer,
+        m_rSprites,
         layout,
         std::move(onProcessTurn),
         std::move(onRequestExit),
@@ -180,6 +181,7 @@ std::unique_ptr<CombatView> ViewFactory::CreateCombatView(
         std::move(defenderName),
         rWorldDisplay,
         mapLayout,
+        m_rSprites,
         std::move(onFinished));
 }
 

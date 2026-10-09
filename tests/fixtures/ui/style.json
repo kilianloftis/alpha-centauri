@@ -4,7 +4,10 @@
       0.0, 0.0, 1.0, 1.0
     ],
     "map": [
-      0.0, 0.0, 1.0, 0.7
+      0.0, 0.0, 1.0, 0.7144
+    ],
+    "console": [
+      0.1, 0.7144, 0.8, 0.2856
     ],
     "top_panel": [
       0.2, 0.05, 0.6, 0.6
@@ -31,7 +34,7 @@
       0.5, 0.75, 0.25, 0.125
     ],
     "popup_small": [
-      0.3, 0.3, 0.4, 0.4
+      0.3, 0.3, 0.4004, 0.3997
     ]
   },
   "view_factory": {
@@ -59,7 +62,9 @@
     "coast_sprite_dir": "tests/fixtures/sprites/coast",
     "palette_path": "tests/fixtures/sprites/palette.png",
     "water_shading": {
-      "depth_shades": [3, 2, 1, 0],
+      "depth_shades": [
+        3, 2, 1, 0
+      ],
       "coast_shades": "OceanShelf",
       "detail_meters": 1000,
       "deep_landform": "Ocean",
@@ -72,8 +77,12 @@
       "full_shade_rise_meters": 250,
       "altitude_light_steps": 0
     },
-    "missing_art_color": [255, 0, 255, 255],
-    "missing_art_alt_color": [0, 0, 0, 255],
+    "missing_art_color": [
+      255, 0, 255, 255
+    ],
+    "missing_art_alt_color": [
+      0, 0, 0, 255
+    ],
     "missing_art_size_ratio": 0.3,
     "shroud_color": [
       0, 0, 0, 255
@@ -89,11 +98,12 @@
     "grid_line_width": 1.0,
     "base_sprite_overhang_ratio": 0.21,
     "base_name_font_size_ratio": 0.25,
-    "base_text_offset_ratio": 0.1,
     "base_name_width_ratio": 0.8,
     "base_name_color": [
       255, 255, 0, 255
-    ]
+    ],
+    "base_name_offset_x_ratio": 0.05,
+    "base_name_offset_y_ratio": 0.62
   },
   "world_display": {
     "default_tile_scale": 0.1,
@@ -101,15 +111,13 @@
       255, 0, 0, 220
     ],
     "path_preview_line_thickness_ratio": 0.08,
-    "airdrop_cursor_path": "",
+    "airdrop_cursor_path": "assets/ui/cursors/airdrop.png",
     "airdrop_cursor_hotspot": [
-      0,
-      0
+      16, 28
     ],
-    "bombard_cursor_path": "",
+    "bombard_cursor_path": "assets/ui/cursors/bombard.png",
     "bombard_cursor_hotspot": [
-      0,
-      0
+      16, 16
     ]
   },
   "minimap_display": {
@@ -151,13 +159,13 @@
   },
   "selected_unit_panel": {
     "background_color": [
-      20, 20, 40, 255
+      0, 0, 0, 0
     ],
     "border_color": [
-      100, 100, 160, 255
+      0, 0, 0, 0
     ],
     "muted_text_color": [
-      100, 100, 120, 255
+      180, 180, 180, 255
     ],
     "icon_color": [
       0, 220, 255, 255
@@ -178,17 +186,18 @@
     "text_gap_ratio": 0.04,
     "icon_initial_offset_x_ratio": 0.3,
     "icon_initial_offset_y_ratio": 0.25,
-    "icon_center_ratio": 0.5
+    "icon_center_ratio": 0.5,
+    "background_sprite": ""
   },
   "location_panel": {
     "background_color": [
-      20, 20, 40, 255
+      0, 0, 0, 0
     ],
     "border_color": [
-      100, 100, 160, 255
+      0, 0, 0, 0
     ],
     "muted_text_color": [
-      100, 100, 120, 255
+      180, 180, 180, 255
     ],
     "body_text_color": [
       255, 255, 255, 255
@@ -196,14 +205,15 @@
     "padding_ratio": 0.06,
     "preview_size_ratio": 0.4,
     "text_font_ratio": 0.055,
-    "text_gap_ratio": 0.025
+    "text_gap_ratio": 0.025,
+    "background_sprite": ""
   },
   "unit_stack_panel": {
     "background_color": [
-      20, 20, 40, 255
+      0, 0, 0, 0
     ],
     "border_color": [
-      100, 100, 160, 255
+      0, 0, 0, 0
     ],
     "stat_text_color": [
       255, 255, 255, 255
@@ -211,14 +221,15 @@
     "padding_ratio": 0.04,
     "slot_gap_ratio": 0.02,
     "icon_height_ratio": 0.55,
-    "stat_font_ratio": 0.22
+    "stat_font_ratio": 0.22,
+    "background_sprite": ""
   },
   "info_panel": {
     "background_color": [
-      20, 20, 40, 255
+      0, 0, 0, 0
     ],
     "border_color": [
-      100, 100, 160, 255
+      0, 0, 0, 0
     ],
     "default_line_color": [
       255, 255, 255, 255
@@ -226,7 +237,8 @@
     "text_height_estimate": 20.0,
     "text_vertical_center_ratio": 0.5,
     "text_horizontal_padding": 10.0,
-    "font_size": 18
+    "font_size": 18,
+    "background_sprite": ""
   },
   "end_turn_button": {
     "idle_fill_color": [
@@ -274,7 +286,31 @@
     ],
     "energy_text_color": [
       255, 255, 0, 255
-    ]
+    ],
+    "console_sprite": "assets/ui/chrome/console2.png",
+    "console_backdrop_color": [
+      0, 0, 0, 255
+    ],
+    "console_layouts": {
+      "unit": [
+        0.0049, 0.2218, 0.2334, 0.4125
+      ],
+      "location": [
+        0.0049, 0.6342, 0.2334, 0.3424
+      ],
+      "info": [
+        0.2568, 0.2607, 0.4873, 0.4047
+      ],
+      "stack": [
+        0.2568, 0.7354, 0.4873, 0.2412
+      ],
+      "minimap": [
+        0.7617, 0.2218, 0.2334, 0.7549
+      ],
+      "commlinks": [
+        0.9, 0.0139, 0.1, 0.0896
+      ]
+    }
   },
   "combat_view": {
     "side_name_color": [
@@ -348,10 +384,7 @@
     "row_pad_x": 0.05,
     "status_pad_x": 0.55,
     "council_button_layout": [
-      0.1,
-      0.88,
-      0.8,
-      0.08
+      0.1, 0.88, 0.8, 0.08
     ]
   },
   "council_vote_view": {
@@ -388,10 +421,7 @@
     "padding_ratio": 0.04,
     "line_height_ratio": 0.12,
     "vote_button_layout": [
-      0.3,
-      0.72,
-      0.4,
-      0.22
+      0.3, 0.72, 0.4, 0.22
     ]
   },
   "current_research_panel": {
@@ -414,17 +444,18 @@
       80, 80, 120, 255
     ],
     "label_color": [
-      255, 255, 255, 255
+      200, 220, 255, 255
     ],
     "target_color": [
-      255, 255, 0, 255
+      255, 255, 255, 255
     ],
     "progress_color": [
-      0, 255, 0, 255
+      255, 255, 255, 255
     ],
     "label_font_size": 14,
     "target_font_size": 16,
-    "progress_font_size": 13
+    "progress_font_size": 13,
+    "background_sprite": "assets/ui/chrome/iface/panel_frame.png"
   },
   "settings_panel": {
     "background_color": [
@@ -522,7 +553,8 @@
     "production_line_index": 3.0,
     "turns_line_index": 4.0,
     "icon_size_ratio": 0.12,
-    "icon_gap_ratio": 0.015
+    "icon_gap_ratio": 0.015,
+    "background_sprite": "assets/ui/chrome/iface/panel_frame.png"
   },
   "build_queue_display": {
     "background_color": [
@@ -597,7 +629,8 @@
     "left_padding_ratio": 0.02,
     "header_line_offset": 1.0,
     "icon_size_ratio": 0.85,
-    "icon_gap_ratio": 0.01
+    "icon_gap_ratio": 0.01,
+    "background_sprite": "assets/ui/chrome/iface/panel_frame.png"
   },
   "support_display": {
     "background_color": [
@@ -641,14 +674,15 @@
       255, 255, 0, 255
     ],
     "header_color": [
-      255, 255, 0, 255
+      255, 220, 120, 255
     ],
     "hint_color": [
-      255, 255, 255, 255
+      180, 180, 180, 255
     ],
     "entry_color": [
       255, 255, 255, 255
-    ]
+    ],
+    "background_sprite": "assets/ui/chrome/dialog_panel.png"
   },
   "social_engineering_display": {
     "background_color": [
@@ -768,10 +802,10 @@
       100, 100, 180, 255
     ],
     "header_color": [
-      255, 255, 0, 255
+      255, 220, 120, 255
     ],
     "hint_color": [
-      255, 255, 255, 255
+      180, 180, 180, 255
     ],
     "entry_color": [
       255, 255, 255, 255
@@ -781,7 +815,8 @@
     "entry_font_size_ratio": 0.04,
     "line_height_ratio": 0.07,
     "padding_ratio": 0.03,
-    "header_line_offset": 2.0
+    "header_line_offset": 2.0,
+    "background_sprite": "assets/ui/chrome/dialog_panel.png"
   },
   "design_stats_display": {
     "background_color": [
@@ -876,14 +911,15 @@
       80, 80, 120, 255
     ],
     "header_color": [
-      255, 255, 255, 255
+      255, 220, 120, 255
     ],
     "message_color": [
       255, 255, 255, 255
     ],
     "ok_button_layout": [
-      0.30, 0.72, 0.40, 0.18
-    ]
+      0.3, 0.72, 0.4, 0.18
+    ],
+    "background_sprite": "assets/ui/chrome/dialog_panel.png"
   },
   "hurry_production_popup": {
     "background_color": [
@@ -926,10 +962,10 @@
       0.08, 0.42, 0.84, 0.16
     ],
     "ok_button_layout": [
-      0.08, 0.72, 0.40, 0.18
+      0.08, 0.72, 0.4, 0.18
     ],
     "cancel_button_layout": [
-      0.52, 0.72, 0.40, 0.18
+      0.52, 0.72, 0.4, 0.18
     ]
   },
   "satellite_view": {
@@ -977,13 +1013,13 @@
       0.02, 0.16, 0.96, 0.82
     ],
     "attack_button_layout": [
-      0.30, 0.20, 0.40, 0.12
+      0.3, 0.2, 0.4, 0.12
     ],
     "attacker_list_layout": [
       0.06, 0.18, 0.88, 0.54
     ],
     "attacker_confirm_layout": [
-      0.10, 0.78, 0.36, 0.14
+      0.1, 0.78, 0.36, 0.14
     ],
     "attacker_cancel_layout": [
       0.54, 0.78, 0.36, 0.14

@@ -29,6 +29,7 @@
 #include "game/units/AirdropRules.h"
 #include "game/units/AttackRules.h"
 #include "ui/HotkeyConfig.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/world/AirdropFailMessages.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
@@ -61,6 +62,7 @@ WorldView::WorldView(
     const HotkeyConfig& rHotkeys,
     const WorldMap& rWorldMap,
     MapRenderer& rMapRenderer,
+    SpriteLibrary& rSprites,
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
@@ -71,6 +73,8 @@ WorldView::WorldView(
 : IWorldView(layout)
 , m_rGameState(rGameState)
 , m_rHotkeys(rHotkeys)
+, m_rSprites(rSprites)
+, m_consoleLayout(ResolveLayout(layout, Style().layouts.console))
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, rMapRenderer, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
@@ -82,30 +86,35 @@ WorldView::WorldView(
       *m_pWorldDisplay, rWorldMap, m_mapLayout, rHotkeys))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys))
 {
-    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
+    const auto& console = Style().worldView;
+
+    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(
+        ResolveLayout(m_consoleLayout, console.consoleUnit), m_rSprites);
     m_pSelectedUnitPanel = pSelectedUnit.get();
     m_elements.push_back(std::move(pSelectedUnit));
 
     auto pLocation = std::make_unique<LocationPanel>(
-        rGameState, rMapRenderer, ResolveLayout(m_layout, Style().layouts.locationPanel));
+        rGameState, rMapRenderer, m_rSprites,
+        ResolveLayout(m_consoleLayout, console.consoleLocation));
     m_pLocationPanel = pLocation.get();
     m_elements.push_back(std::move(pLocation));
 
-    auto pInfo = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.centerPanel));
+    auto pInfo = std::make_unique<InfoPanelElement>(
+        ResolveLayout(m_consoleLayout, console.consoleInfo), m_rSprites);
     m_pInfoPanel = pInfo.get();
     m_elements.push_back(std::move(pInfo));
 
     auto pUnitStack = std::make_unique<UnitStackPanel>(
-        ResolveLayout(m_layout, Style().layouts.bottomPanel),
+        ResolveLayout(m_consoleLayout, console.consoleStack), m_rSprites,
         [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); });
     m_pUnitStackPanel = pUnitStack.get();
     m_elements.push_back(std::move(pUnitStack));
 
     m_elements.push_back(std::make_unique<CommlinksButton>(
-        ResolveLayout(m_layout, Style().layouts.rightButton),
+        ResolveLayout(m_consoleLayout, console.consoleCommlinks),
         [this]() { m_onOpenCommlinks(); }));
 
-    const WindowLayout_t rightPanel = ResolveLayout(m_layout, Style().layouts.rightPanel);
+    const WindowLayout_t rightPanel = ResolveLayout(m_consoleLayout, console.consoleMinimap);
     m_elements.push_back(std::make_unique<MinimapDisplay>(
         m_rGameState,
         rMapRenderer,
@@ -152,6 +161,7 @@ void WorldView::Render(Graphics& rGraphics)
     m_pWorldDisplay->Render(rGraphics);
     if (!m_bSuppressDashboard)
     {
+        DrawConsoleChrome_(rGraphics);
         IWorldView::Render(rGraphics);
     }
 }
@@ -526,7 +536,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             m_elements.push_back(std::make_unique<ListSelectorPopup>(
                 "Supply Crawl", "No resources available", std::move(choices),
                 ResolveLayout(m_layout, Style().layouts.popupSmall),
-                Style().listSelectorPopup));
+                Style().listSelectorPopup, &m_rSprites));
             return true;
         }
         else if (m_pUnitOrderInputController->WasDisbandRequested() && pControllable)
@@ -993,7 +1003,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Probe Actions", "No actions available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
@@ -1078,7 +1088,7 @@ void WorldView::OpenDisbandMenu_(Unit& rUnit)
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Disband Units", "", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
 }
 
 void WorldView::HandleDisbandChoice_(Unit& rUnit)
@@ -1091,7 +1101,9 @@ void WorldView::HandleDisbandChoice_(Unit& rUnit)
         m_elements.push_back(std::make_unique<NoticePopup>(
             ResolveLayout(m_layout, Style().layouts.popupSmall),
             "Disband",
-            "This unit cannot be disbanded."));
+            "This unit cannot be disbanded.",
+            nullptr,
+            &m_rSprites));
         return;
     }
 
@@ -1120,7 +1132,9 @@ void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
         m_elements.push_back(std::make_unique<NoticePopup>(
             ResolveLayout(m_layout, Style().layouts.popupSmall),
             "Disband",
-            "This unit cannot be disbanded."));
+            "This unit cannot be disbanded.",
+            nullptr,
+            &m_rSprites));
         return;
     }
 
@@ -1134,7 +1148,9 @@ void WorldView::ShowSelfDestructStub_()
     m_elements.push_back(std::make_unique<NoticePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         "Self Destruct",
-        "Self Destruct is not implemented."));
+        "Self Destruct is not implemented.",
+        nullptr,
+        &m_rSprites));
 }
 
 void WorldView::ClearAirdropTargeting_()
@@ -1145,6 +1161,20 @@ void WorldView::ClearAirdropTargeting_()
 void WorldView::ClearBombardTargeting_()
 {
     m_bBombardTargeting = false;
+}
+
+void WorldView::DrawConsoleChrome_(Graphics& rGraphics) const
+{
+    const auto& console = Style().worldView;
+    const float bandHeight = (m_layout.y + m_layout.height) - m_consoleLayout.y;
+    rGraphics.DrawFilledRect(
+        m_layout.x, m_consoleLayout.y, m_layout.width, bandHeight, console.consoleBackdropColor);
+
+    if (console.consoleSprite.empty() || !m_rSprites.Ensure(console.consoleSprite))
+    {
+        return;
+    }
+    rGraphics.DrawSprite(console.consoleSprite, m_consoleLayout.x, m_consoleLayout.y);
 }
 
 void WorldView::SyncTargetingCursor_(Graphics& rGraphics)
@@ -1194,7 +1224,9 @@ void WorldView::ShowAirdropNotice_(std::string message)
     m_elements.push_back(std::make_unique<NoticePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         "Airdrop",
-        std::move(message)));
+        std::move(message),
+        nullptr,
+        &m_rSprites));
 }
 
 void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)

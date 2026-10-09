@@ -5,6 +5,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "graphics/Graphics.h"
 #include "ui/SpriteLibrary.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 
 #include <string>
@@ -97,8 +98,8 @@ void BuildingsDisplay::Render(Graphics& rGraphics)
 {
     const auto& style = Style().buildingsDisplay;
 
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, style.backgroundColor,
+                    style.backgroundSprite, Color_t::Black(), 0.0f);
 
     const unsigned int headerFontSize =
         static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);

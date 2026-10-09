@@ -39,6 +39,7 @@ EXTRACTORS = (
         lambda game, out: ["--game-dir", str(game), "--out", str(out / "ui" / "fonts")],
     ),
     ("icons", "extract_icons", lambda game, out: ["--game-dir", str(game), "--out", str(out)]),
+    ("ui", "extract_ui", lambda game, out: ["--game-dir", str(game), "--out", str(out)]),
 )
 
 
@@ -61,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip",
         default="",
-        help="comma-separated extractor names to skip (terrain,faction,fonts,icons)",
+        help="comma-separated extractor names to skip (terrain,faction,fonts,icons,ui)",
     )
     args = parser.parse_args(argv)
 

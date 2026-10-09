@@ -4,7 +4,9 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/MapRenderer.h"
+#include "ui/SpriteLibrary.h"
 #include "ui/TileShapeGeometry.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
 #include <algorithm>
@@ -16,10 +18,11 @@ namespace ac
 {
 
 LocationPanel::LocationPanel(const GameState& rGameState, MapRenderer& rMapRenderer,
-                             WindowLayout_t layout)
+                             SpriteLibrary& rSprites, WindowLayout_t layout)
     : UIElement(layout)
     , m_rGameState(rGameState)
     , m_rMapRenderer(rMapRenderer)
+    , m_rSprites(rSprites)
 {
 }
 
@@ -57,8 +60,8 @@ void LocationPanel::Render(Graphics& rGraphics)
 void LocationPanel::DrawBackground_(Graphics& rGraphics) const
 {
     const auto& s = Style().locationPanel;
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, s.backgroundColor, s.backgroundSprite,
+                    s.borderColor, 0.0f);
 }
 
 void LocationPanel::DrawEmptyState_(Graphics& rGraphics) const

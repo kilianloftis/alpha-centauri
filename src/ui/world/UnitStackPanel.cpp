@@ -3,6 +3,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/SpriteLibrary.h"
+#include "ui/style/DrawPanelChrome.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/UnitMarkerRenderer.h"
 
@@ -12,8 +14,10 @@
 namespace ac
 {
 
-UnitStackPanel::UnitStackPanel(WindowLayout_t layout, UnitClickCallback_t onUnitClicked)
+UnitStackPanel::UnitStackPanel(WindowLayout_t layout, SpriteLibrary& rSprites,
+                               UnitClickCallback_t onUnitClicked)
     : UIElement(layout)
+    , m_rSprites(rSprites)
     , m_onUnitClicked(std::move(onUnitClicked))
 {
 }
@@ -116,8 +120,8 @@ void UnitStackPanel::Render(Graphics& rGraphics)
 void UnitStackPanel::DrawBackground_(Graphics& rGraphics) const
 {
     const auto& s = Style().unitStackPanel;
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    DrawPanelChrome(rGraphics, &m_rSprites, m_layout, s.backgroundColor, s.backgroundSprite,
+                    s.borderColor, 0.0f);
 }
 
 void UnitStackPanel::DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const

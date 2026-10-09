@@ -807,12 +807,12 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     CHECK(gridLineCount >= 12);
 
     // No faction art for test_faction: the base's name marks its tile, as on the world map.
-    const float nameOffset = k_TileWidth * Style().mapRenderer.baseTextOffsetRatio;
+    const float nameX = k_BaseX + k_TileWidth * Style().mapRenderer.baseNameOffsetXRatio;
+    const float nameY = k_BaseY + k_TileWidth * Style().mapRenderer.baseNameOffsetYRatio;
     const RecordingGraphics::TextDraw_t* pBaseName = nullptr;
     for (const RecordingGraphics::TextDraw_t& rText : fixture.graphics.texts)
     {
-        if (std::abs(rText.x - (k_BaseX + nameOffset)) < 0.01f
-            && std::abs(rText.y - (k_BaseY + nameOffset)) < 0.01f)
+        if (std::abs(rText.x - nameX) < 0.01f && std::abs(rText.y - nameY) < 0.01f)
         {
             pBaseName = &rText;
             break;
@@ -918,11 +918,12 @@ TEST_CASE("The base view shows every base in its radius, as the world map does",
 
     // tileWidth 100: the base's footprint starts at (150, 75), the neighbor's two half-steps
     // right and down at (250, 125). Each name sits at its footprint plus the label offset.
-    const float nameOffset = 100.0f * Style().mapRenderer.baseTextOffsetRatio;
+    const float nameOffsetX = 100.0f * Style().mapRenderer.baseNameOffsetXRatio;
+    const float nameOffsetY = 100.0f * Style().mapRenderer.baseNameOffsetYRatio;
     const auto drawsNameAt = [&](float x, float y) {
         return std::ranges::any_of(fixture.graphics.texts, [&](const auto& rText) {
-            return std::abs(rText.x - (x + nameOffset)) < 0.01f
-                   && std::abs(rText.y - (y + nameOffset)) < 0.01f;
+            return std::abs(rText.x - (x + nameOffsetX)) < 0.01f
+                   && std::abs(rText.y - (y + nameOffsetY)) < 0.01f;
         });
     };
     CHECK(drawsNameAt(150.0f, 75.0f));
