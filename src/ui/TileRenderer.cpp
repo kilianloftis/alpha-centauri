@@ -346,6 +346,19 @@ TileShape_t TileRenderer::TerrainShape_(const TileShape_t& rShape, const Tile& r
     return cover == TileCover_t::Fog ? UniformShade_(rShape, m_rStyle.fogLandShade) : rShape;
 }
 
+// SMAC draws keyed overlays (fungus, forest, jungle, landmark cells) with shade 0; only the
+// moisture base, rockiness and river take slope light. Fog still darkens them flatly.
+TileShape_t TileRenderer::OverlayShape_(const TileShape_t& rShape, const Tile& rTile,
+                                        TileCover_t cover) const
+{
+    if (!rTile.IsLand())
+    {
+        return UniformShade_(rShape, 0.0f);
+    }
+    return cover == TileCover_t::Fog ? UniformShade_(rShape, m_rStyle.fogLandShade)
+                                    : UniformShade_(rShape, 0.0f);
+}
+
 const std::string& TileRenderer::CoastSpritePath_(std::size_t part,
                                                   const CoastCornerArt_t& rArt) const
 {
@@ -630,6 +643,10 @@ void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, Art
             return;
         }
     }
+    const TileShape_t overlay =
+        (layer == ArtLayer_t::Landmark || layer == ArtLayer_t::Vegetation)
+            ? OverlayShape_(rShape, rTile, rAppearance.CoverOf(rTile))
+            : rTerrain;
     rAppearance.OccupantsOf(rTile).ForEach([&](const ImprovementConfig_t& rOccupant) {
         if (!HasLayerArt_(rOccupant, layer))
         {
@@ -642,7 +659,7 @@ void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, Art
         }
         else
         {
-            (void)TryDrawLayerSprite_(rGraphics, rTile, rOccupant, rAppearance, rTerrain);
+            (void)TryDrawLayerSprite_(rGraphics, rTile, rOccupant, rAppearance, overlay);
         }
         return false;
     });

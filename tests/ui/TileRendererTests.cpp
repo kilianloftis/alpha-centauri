@@ -1096,11 +1096,13 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
     EnsureStyleLoaded_();
     Rig_t rig;
     actest::FactionFixture world;
-    for (const char* id : {"Moist", "OceanShelf", "Nutrients"})
+    for (const char* id : {"Moist", "Fungus", "OceanShelf", "Nutrients"})
     {
         rig.AddOccupant(world.improvements.Get(id));
     }
     const std::string moistPrefix = TilePrefix_(TileSet_(world.improvements.Get("Moist")).paths.land);
+    const std::string fungusPrefix =
+        TilePrefix_(TileSet_(world.improvements.Get("Fungus")).paths.land);
 
     // A raised, shaded tile: the centre 30 px up and the N corner 10 px up.
     TileShape_t shape = FlatTileShape(10.0f, 20.0f, 100.0f);
@@ -1136,6 +1138,22 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         CHECK(drawn.center.shade == -1.5f);
         CHECK(drawn.west.shade == 0.5f);
         CHECK(drawn.south.shade == -0.5f);
+    }
+
+    SECTION("fungus keeps the raised shape but draws unshaded, as in SMAC")
+    {
+        rLand.AddTerrainFeature(world.improvements.Get("Fungus"));
+        RecordingGraphics graphics;
+        Draw_(rig.renderer, graphics, rLand, shape, Live_(world.map));
+        const TileShape_t moist = drawnShape(graphics, moistPrefix);
+        const TileShape_t fungus = drawnShape(graphics, fungusPrefix);
+        CHECK(moist.center.shade == -1.5f);
+        CHECK(fungus.center.y == shape.center.y);
+        CHECK(fungus.north.y == shape.north.y);
+        CHECK(fungus.center.shade == 0.0f);
+        CHECK(fungus.west.shade == 0.0f);
+        CHECK(fungus.east.shade == 0.0f);
+        CHECK(fungus.south.shade == 0.0f);
     }
 
     SECTION("every tile sprite draws through the style's palette")

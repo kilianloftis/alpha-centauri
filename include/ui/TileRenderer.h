@@ -38,8 +38,10 @@ const std::string& PickSpritePath(const std::vector<std::string>& paths, int til
 // tiles out of sight. Elevation and surface (coast, water shading) are always the live tile's.
 // The appearance's cover decides the rest: shroud draws only the shroud colour; fog draws land
 // art fog_land_shade steps darker under a haze, with object sprites clear on top. Terrain art is
-// palette indices shaded as SMAC does: land by its relief shades, water per vertex by depth. Art
-// that fails to load draws nothing under terrain (the fill shows) and a checker for objects.
+// palette indices shaded as SMAC does: moisture, rockiness and river by relief shades; fungus,
+// forest and other keyed overlays as painted (fog still applies fog_land_shade); water per vertex
+// by depth. Art that fails to load draws nothing under terrain (the fill shows) and a checker for
+// objects.
 // Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
 // When an art's variants list multiple assets, PickSpritePath chooses one per tile. Sprites load
 // through the SpriteLibrary the renderer was built over; the style is the one it was built with.
@@ -83,6 +85,8 @@ private:
     bool TryDrawTileSprite_(Graphics& rGraphics, const std::string& path,
                             const TileShape_t& rShape) const;
     TileShape_t TerrainShape_(const TileShape_t& rShape, const Tile& rTile,
+                              TileCover_t cover) const;
+    TileShape_t OverlayShape_(const TileShape_t& rShape, const Tile& rTile,
                               TileCover_t cover) const;
     const std::string& CoastSpritePath_(std::size_t part, const CoastCornerArt_t& rArt) const;
     void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
