@@ -23,6 +23,7 @@
 #include "ui/world/UnitMarkerRenderer.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
 #include <array>
@@ -40,6 +41,7 @@
 using namespace ac;
 using actest::RecordingGraphics;
 using actest::ViewFixture;
+using Catch::Matchers::WithinAbs;
 
 namespace
 {
@@ -212,7 +214,15 @@ TEST_CASE("Bases draw over every tile with their names, and only the bases the c
               return rSprite.textureId == spritePath;
           })
           == 1);
-    CHECK(baseSprite->x == tiles[0].shape.west.x);
+    const auto [originX, originY] = FootprintOrigin(tiles[0].shape);
+    const float spriteHeight =
+        k_TileWidth * k_IsoHeightRatio * (1.0f + Style().mapRenderer.baseSpriteOverhangRatio);
+    // Fixture size1 origin_y_ratio (-0.20) lifts the cell off the south tip.
+    constexpr float k_Size1OriginYRatio = -0.20f;
+    CHECK(baseSprite->x == originX);
+    CHECK_THAT(baseSprite->y, WithinAbs(originY + k_TileWidth * k_Size1OriginYRatio, 0.01f));
+    CHECK_THAT(baseSprite->destWidth, WithinAbs(k_TileWidth, 0.01f));
+    CHECK_THAT(baseSprite->destHeight, WithinAbs(spriteHeight, 0.01f));
     // Every tile's terrain and grid come first, so a tile in front cannot cover the overhang.
     for (const RecordingGraphics::RectDraw_t& rRect : graphics.rects)
     {
@@ -271,6 +281,57 @@ TEST_CASE("Units draw last, as the content filters them, and Render reports wher
     CHECK(std::ranges::any_of(graphics.rects, [](const auto& rRect) {
         return !rRect.bFilled && SameColor_(rRect.color, Style().unitMarker.selectionBorderColor);
     }));
+}
+
+TEST_CASE("A tile shows one unit, and a base shows one only when it is selected",
+          "[ui][map][units]")
+{
+    ViewFixture fixture;
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    WorldMap& rMap = fixture.pState->GetWorldMap();
+    std::deque<UnitDesign> designs;
+    const Unit& rFirst = MakeUnit_(fixture, 8, 8, designs);
+    const Unit& rSecond = MakeUnit_(fixture, 8, 8, designs);
+    const PlacedTile_t placed{rMap.GetTile(8, 8), FlatTileShape(0.0f, 0.0f, k_TileWidth)};
+
+    const auto render = [&](const Unit* pSelected, bool bShowBases) {
+        MapContent_t content;
+        content.showsBase = [bShowBases](const BaseManager&) { return bShowBases; };
+        content.showsUnit = [](const Unit&) { return true; };
+        content.pSelectedUnit = pSelected;
+        RecordingGraphics graphics;
+        const UnitMarkerRects_t markers = fixture.pMapRenderer->Render(
+            graphics, std::span(&placed, 1), MapAppearance::Fogged(rMap, fixture.pPlayer),
+            content);
+        return markers;
+    };
+
+    SECTION("two units and no base show the first")
+    {
+        const UnitMarkerRects_t markers = render(nullptr, true);
+        CHECK(markers.size() == 1);
+        CHECK(markers.contains(rFirst.GetUnitId()));
+        CHECK_FALSE(markers.contains(rSecond.GetUnitId()));
+    }
+
+    SECTION("the selected unit is the one drawn")
+    {
+        const UnitMarkerRects_t markers = render(&rSecond, true);
+        CHECK(markers.size() == 1);
+        CHECK(markers.contains(rSecond.GetUnitId()));
+        CHECK_FALSE(markers.contains(rFirst.GetUnitId()));
+    }
+
+    SECTION("a base hides every unit until one is selected")
+    {
+        fixture.MakeBase(8, 8);
+        const UnitMarkerRects_t hidden = render(nullptr, true);
+        CHECK(hidden.empty());
+
+        const UnitMarkerRects_t selected = render(&rSecond, true);
+        CHECK(selected.size() == 1);
+        CHECK(selected.contains(rSecond.GetUnitId()));
+    }
 }
 
 TEST_CASE("The location preview shows a remembered tile without fog, its farm by the tile's yield",

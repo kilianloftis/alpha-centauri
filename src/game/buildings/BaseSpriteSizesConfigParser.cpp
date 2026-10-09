@@ -35,7 +35,7 @@ BaseSpriteSizeStage_t ParseSizeStage_(const nlohmann::json& rEntry, size_t index
     {
         throw std::runtime_error(context + " must be an object");
     }
-    RejectUnknownKeys_(rEntry, {"min_population"}, context);
+    RejectUnknownKeys_(rEntry, {"min_population", "origin_y_ratio"}, context);
     if (!rEntry.contains("min_population") || !rEntry.at("min_population").is_number_integer())
     {
         throw std::runtime_error(context + ": 'min_population' must be an integer");
@@ -49,7 +49,17 @@ BaseSpriteSizeStage_t ParseSizeStage_(const nlohmann::json& rEntry, size_t index
     {
         throw std::runtime_error(context + ": 'min_population' must be strictly increasing");
     }
-    return BaseSpriteSizeStage_t{minPopulation};
+    BaseSpriteSizeStage_t stage;
+    stage.minPopulation = minPopulation;
+    if (rEntry.contains("origin_y_ratio"))
+    {
+        if (!rEntry.at("origin_y_ratio").is_number())
+        {
+            throw std::runtime_error(context + ": 'origin_y_ratio' must be a number");
+        }
+        stage.originYRatio = rEntry.at("origin_y_ratio").get<float>();
+    }
+    return stage;
 }
 
 std::vector<BaseSpriteSizeStage_t> ParseSizeStages_(const nlohmann::json& rJson)

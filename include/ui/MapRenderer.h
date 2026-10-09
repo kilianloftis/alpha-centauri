@@ -41,7 +41,8 @@ using UnitMarkerRects_t = std::unordered_map<UnitId_t, Rectangle_t>;
 // preview, and the minimap's colours. A display passes the tiles it placed (back to front), the
 // MapAppearance of the viewer it shows, and the content it shows on them. Render draws in SMAC's
 // order: each tile's terrain, grid edges and objects; then each tile's base, art and name, so
-// nothing in front covers its overhang; then the units.
+// nothing in front covers its overhang; then one unit marker per tile (none on a drawn base
+// unless that unit is selected).
 class MapRenderer
 {
 public:

@@ -201,15 +201,23 @@ void MapRenderer::DrawBase_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
     DrawBaseName_(rGraphics, *pBase, rPlaced.shape);
 }
 
-// The bare base and its building map overlays, seated like TileRenderer object sprites. A base
-// whose art does not load draws none; its name still marks it.
+// The bare base and its building map overlays, seated like SMAC: from FootprintOrigin down, one
+// cell size for every stage (100×75 on a 100×50 footprint). Optional per-stage origin_y_ratio
+// lifts stages that sit low in the faction sheet. A base whose art does not load draws none;
+// its name still marks it.
 void MapRenderer::DrawBaseArt_(Graphics& rGraphics, const BaseManager& rBase,
                                const TileShape_t& rShape)
 {
     const float tileWidth = WidthOf_(rShape);
     const float spriteHeight =
         tileWidth * k_IsoHeightRatio * (1.0f + m_rStyle.baseSpriteOverhangRatio);
-    const auto [spriteX, spriteY] = FootprintOrigin(rShape);
+    const int sizeStage =
+        BaseSpriteSizeStage(rBase.GetPopulation().GetSize(), rBase, m_rBaseSpriteSizes);
+    const BaseSpriteSizeStage_t& rStage =
+        m_rBaseSpriteSizes.sizeStages[static_cast<size_t>(sizeStage - 1)];
+    const auto [originX, originY] = FootprintOrigin(rShape);
+    const float spriteX = originX;
+    const float spriteY = originY + tileWidth * rStage.originYRatio;
 
     const Faction& rFaction = rBase.GetFaction();
     const auto barePath = m_baseArt.EnsureBareBaseSprite(rFaction, rBase, m_rBaseSpriteSizes);
@@ -220,8 +228,6 @@ void MapRenderer::DrawBaseArt_(Graphics& rGraphics, const BaseManager& rBase,
     rGraphics.DrawSprite(*barePath, spriteX, spriteY, tileWidth, spriteHeight);
     if (const auto stem = FactionSheetStem(rFaction))
     {
-        const int sizeStage =
-            BaseSpriteSizeStage(rBase.GetPopulation().GetSize(), rBase, m_rBaseSpriteSizes);
         const auto overlays = ResolveBaseMapOverlays(
             rBase, *stem, rBase.GetTile().IsWater(), sizeStage, m_rMapOverlayChannels);
         for (const std::string& rOverlayPath : m_baseArt.EnsureOverlaySprites(overlays))
@@ -254,29 +260,54 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
         originY + tileWidth * s.baseNameOffsetYRatio, fontSize, nameColor);
 }
 
-// The tile's units the content shows, side by side from the tile's centre. Units keep their own
-// visibility rule (the content's filter), so they draw even on a shrouded tile when it allows.
+// One marker per tile. The selected unit wins when it stands here and the content shows it;
+// otherwise the first unit the content shows. A tile whose base is drawn shows nothing unless
+// that selected unit is the one. Units keep their own visibility rule, so they draw even on a
+// shrouded tile when the content allows — a shrouded base is not drawn, so it does not hide them.
 void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
                              const MapAppearance& rAppearance, const MapContent_t& rContent,
                              UnitMarkerRects_t& rMarkers) const
 {
-    const float tileWidth = WidthOf_(rPlaced.shape);
-    const auto [tileX, tileY] = FootprintOrigin(rPlaced.shape);
-    std::size_t slot = 0;
-    for (const Unit* pUnit : rAppearance.Map().GetAllUnitsOnTile(*rPlaced.pTile))
+    const Tile& rTile = *rPlaced.pTile;
+    bool bBaseDrawn = false;
+    if (rAppearance.CoverOf(rTile) != TileCover_t::Shroud && rContent.showsBase)
+    {
+        if (const BaseManager* pBase = m_rGameState.FindBaseAt(rTile.GetX(), rTile.GetY()))
+        {
+            bBaseDrawn = rContent.showsBase(*pBase);
+        }
+    }
+
+    const Unit* pShown = nullptr;
+    for (const Unit* pUnit : rAppearance.Map().GetAllUnitsOnTile(rTile))
     {
         if (!pUnit || !rContent.showsUnit(*pUnit))
         {
             continue;
         }
-        const Rectangle_t marker =
-            UnitMarkerRenderer::MarkerRectOnTile(tileX, tileY, tileWidth, slot++);
-        rMarkers[pUnit->GetUnitId()] = marker;
-        UnitMarkerRenderer::DrawMarker(rGraphics, *pUnit, marker);
         if (pUnit == rContent.pSelectedUnit)
         {
-            UnitMarkerRenderer::DrawSelection(rGraphics, marker);
+            pShown = pUnit;
+            break;
         }
+        if (!pShown && !bBaseDrawn)
+        {
+            pShown = pUnit;
+        }
+    }
+    if (!pShown)
+    {
+        return;
+    }
+
+    const float tileWidth = WidthOf_(rPlaced.shape);
+    const auto [tileX, tileY] = FootprintOrigin(rPlaced.shape);
+    const Rectangle_t marker = UnitMarkerRenderer::MarkerRectOnTile(tileX, tileY, tileWidth, 0);
+    rMarkers[pShown->GetUnitId()] = marker;
+    UnitMarkerRenderer::DrawMarker(rGraphics, *pShown, marker);
+    if (pShown == rContent.pSelectedUnit)
+    {
+        UnitMarkerRenderer::DrawSelection(rGraphics, marker);
     }
 }
 

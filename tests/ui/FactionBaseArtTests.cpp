@@ -13,6 +13,7 @@
 #include "game/map/Tile.h"
 #include "ui/world/FactionBaseArt.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -178,6 +179,15 @@ TEST_CASE("BaseSpriteSizesConfigParser rejects non-increasing thresholds",
     CHECK_THROWS_WITH(BaseSpriteSizesConfigParser{}.ParseConfig(path),
                       Catch::Matchers::ContainsSubstring("strictly increasing"));
     std::filesystem::remove_all("assets/factions/_test_bad_sizes");
+}
+
+TEST_CASE("BaseSpriteSizesConfigParser reads optional origin_y_ratio per stage",
+          "[ui][faction-art][parser]")
+{
+    const BaseSpriteSizesConfig_t sizes = StockSizes_();
+    REQUIRE(sizes.sizeStages.size() >= 2);
+    CHECK(sizes.sizeStages[0].originYRatio == Catch::Approx(-0.20f));
+    CHECK(sizes.sizeStages[1].originYRatio == Catch::Approx(-0.12f));
 }
 
 TEST_CASE("LoadFactionColorsFile reads text and faction primary colours", "[ui][faction-art]")

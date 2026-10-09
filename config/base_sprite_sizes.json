@@ -1,9 +1,9 @@
 {
   "size_stages": [
-    { "min_population": 1 },
-    { "min_population": 4 },
-    { "min_population": 8 },
-    { "min_population": 15 }
+    { "min_population": 1, "origin_y_ratio": -0.20 },
+    { "min_population": 4, "origin_y_ratio": -0.12 },
+    { "min_population": 8, "origin_y_ratio": -0.12 },
+    { "min_population": 15, "origin_y_ratio": -0.10 }
   ],
   "stage_bump_buildings": [
     "Childrens_Creche"
