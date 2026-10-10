@@ -44,7 +44,7 @@ private:
                             const WorldGenPresetConfig_t& rPreset);
     void GenerateMoisture_(WorldMap& rWorld,
                            const MoistureDecorationConfig_t& rMoisture,
-                           int maxElevationMeters);
+                           Rainfall_t rainfall);
     void GenerateRockiness_(WorldMap& rWorld,
                             ErosiveForces_t erosiveForces,
                             const RockinessDecorationConfig_t& rRockiness);

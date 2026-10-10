@@ -1,106 +1,44 @@
 #pragma once
 
-#include "game/map/MapUtils.h"
-#include "game/map/Tile.h"
+#include "game/map/MapGenerationConfig.h"
 #include "game/map/WorldGenDecorationConfig.h"
 #include "game/map/WorldMap.h"
-
-#include <algorithm>
-#include <stdexcept>
 
 namespace ac
 {
 namespace moisture_gen
 {
 
-// Slight coastal humidity: Chebyshev distance to nearest water within coastalRadius.
-// Land only; falls off with distance (peak at adjacent).
-inline float CoastalMoistureBonus(const Tile& rTile,
-                                  const WorldMap& rWorld,
-                                  const MoistureDecorationConfig_t& rConfig)
-{
-    if (!rTile.IsLand())
-    {
-        return 0.0f;
-    }
+// SMAC altitude bands used by world_rainfall (TerrainAltitude).
+constexpr int k_AltOceanShelf = 2;
+constexpr int k_AltShoreLine = 3;
+constexpr int k_AltOneAboveSea = 4;
+constexpr int k_AltTwoAboveSea = 5;
+constexpr int k_AltThreeAboveSea = 6;
+constexpr int k_AltFourAboveSea = 7;
 
-    int nearestWaterDist = rConfig.coastalRadius + 1;
-    ForEachTileInChebyshevRadius(rTile, rWorld, rConfig.coastalRadius, /*includeOrigin=*/false,
-        [&](const Tile* pNeighbor, int distance)
-        {
-            if (pNeighbor->IsWater() && distance < nearestWaterDist)
-            {
-                nearestWaterDist = distance;
-            }
-        });
+// Mark-pass bitflags (Thinker MAP::unk_1 during world_rainfall).
+constexpr int k_FlagLeeDry = 0x10;       // east of peak / rain shadow
+constexpr int k_FlagWindwardWet = 0x20;  // west of peak
+constexpr int k_FlagOceanMoisture = 0x80;
 
-    if (nearestWaterDist > rConfig.coastalRadius)
-    {
-        return 0.0f;
-    }
+// Map continuous elevation (meters) onto SMAC altitude bands using decoration hill/peak
+// thresholds. Water below oceanLevel maps to shelf-or-deeper (≤ k_AltOceanShelf).
+int AltitudeBand(int elevationMeters,
+                 int oceanLevelMeters,
+                 const MoistureDecorationConfig_t& rConfig);
 
-    // dist 1 → full peak; farther → linearly less (for radius R).
-    return rConfig.coastalPeakBonus *
-           (static_cast<float>(rConfig.coastalRadius + 1 - nearestWaterDist) /
-            static_cast<float>(rConfig.coastalRadius));
-}
+// Lat-based temperature stub (0..2) so rainfall temp gates still fire. Not a port of
+// world_temperature (solar/thermal/orbit/council); do not persist on Tile.
+int StubTemperature(int y, int mapHeight);
 
-// Equator (mid-map Y) is wetter; falls off smoothly inside the tropical band.
-inline float TropicalMoistureBonus(int y, int height, const MoistureDecorationConfig_t& rConfig)
-{
-    if (height <= 1)
-    {
-        return rConfig.tropicalPeakBonus;
-    }
-
-    const float ny = static_cast<float>(y) / static_cast<float>(height - 1) * 2.0f - 1.0f;
-    const float absLat = std::abs(ny);
-    if (absLat >= rConfig.tropicalHalfWidth)
-    {
-        return 0.0f;
-    }
-    return rConfig.tropicalPeakBonus * (1.0f - absLat / rConfig.tropicalHalfWidth);
-}
-
-// Western slopes (rising toward the east) are wetter; eastern slopes more arid.
-// Elevation weight is local meters / the preset max, so a legal peak reaches full strength.
-// Water → 0.
-inline float OrographicMoistureBias(int localElev,
-                                    int elevWest,
-                                    int elevEast,
-                                    const MoistureDecorationConfig_t& rConfig,
-                                    int maxElevationMeters)
-{
-    if (maxElevationMeters <= 0)
-    {
-        throw std::invalid_argument("orographic moisture requires a preset max_elevation > 0");
-    }
-    if (localElev < 0)
-    {
-        return 0.0f;
-    }
-
-    const float grad = static_cast<float>(elevEast - elevWest);
-    const float clampedGrad =
-        std::clamp(grad / rConfig.orographicElevScale, -1.0f, 1.0f);
-    const float elevWeight = std::clamp(
-        static_cast<float>(localElev) / static_cast<float>(maxElevationMeters), 0.0f, 1.0f);
-    return rConfig.orographicStrength * clampedGrad * elevWeight;
-}
-
-inline Moisture_t QuantizeMoistureScore(float score, const MoistureDecorationConfig_t& rConfig)
-{
-    score = std::clamp(score, 0.0f, 1.0f);
-    if (score < rConfig.aridThreshold)
-    {
-        return Moisture_t::Arid;
-    }
-    if (score < rConfig.moistThreshold)
-    {
-        return Moisture_t::Moist;
-    }
-    return Moisture_t::Wet;
-}
+// Port of Thinker world_rainfall (vanilla 0x5C4470): cloudmass west-wet / east-dry belts,
+// ocean moisture blown east, rain-belt row scan, neighbor smooth to moist.
+// Call after rivers (and landmarks) so BIT_RIVER / jungle / dunes / unity match SMAC.
+// Condenser bits stay in RecomputeMoisture; forest humidity omitted (no world-gen forests).
+void GenerateRainfall(WorldMap& rWorld,
+                      const MoistureDecorationConfig_t& rConfig,
+                      Rainfall_t rainfall);
 
 } // namespace moisture_gen
 } // namespace ac

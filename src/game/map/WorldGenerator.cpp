@@ -64,17 +64,15 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 
     // Landmarks run before aquifers because they are the last stage that changes elevation
     // (the Mount Planet sculpt) or stamps a terminates_river feature (BoreholeCluster), and
-    // RecomputeRivers has to see both. Bonuses stay last so @resource_bonus excludes apply.
-    // TODO: orographic moisture is still derived from pre-sculpt elevation. Re-running moisture
-    // after landmarks would re-roll the moisture tiers that landmark anchors were chosen
-    // against - moisture ids are themselves CanBuildImprovement features - so the resolution
-    // needs a rule, not a reorder.
+    // RecomputeRivers has to see both. Rainfall follows rivers (SMAC world_climate order) so
+    // river tiles seed rain belts; it also sees post-sculpt elevation for cloudmass. Bonuses
+    // stay last so @resource_bonus excludes apply. Landmark anchors do not filter on moisture.
     GenerateElevation_(*pWorld, rConfig, rPreset);
-    GenerateMoisture_(*pWorld, rDecoration.moisture, rules.maxElevationMeters);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);
     GenerateLandmarks_(*pWorld, rLandmarks, rOccupants);
     GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
+    GenerateMoisture_(*pWorld, rDecoration.moisture, rConfig.rainfall);
     GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rOccupants);
 
     return pWorld;
@@ -209,36 +207,9 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
 
 void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
                                        const MoistureDecorationConfig_t& rMoisture,
-                                       int maxElevationMeters)
+                                       Rainfall_t rainfall)
 {
-    const int height = rWorld.GetHeight();
-
-    for (const auto& pOwnedTile : rWorld.GetTiles())
-    {
-        Tile* pTile = pOwnedTile.get();
-        const int x = pTile->GetX();
-        const int y = pTile->GetY();
-
-        // Mid-band base so unaided tiles still produce a mix of tiers.
-        float score = rMoisture.baseMin + RandomFloat_() * rMoisture.baseRange;
-        score += moisture_gen::TropicalMoistureBonus(y, height, rMoisture);
-
-        if (pTile->IsLand())
-        {
-            score += moisture_gen::CoastalMoistureBonus(*pTile, rWorld, rMoisture);
-
-            const Tile* pWest = rWorld.GetTile(x - 2, y);
-            const Tile* pEast = rWorld.GetTile(x + 2, y);
-            const int elevWest = pWest ? pWest->GetElevation() : pTile->GetElevation();
-            const int elevEast = pEast ? pEast->GetElevation() : pTile->GetElevation();
-            score += moisture_gen::OrographicMoistureBias(
-                pTile->GetElevation(), elevWest, elevEast, rMoisture, maxElevationMeters);
-        }
-
-        const Moisture_t moisture = moisture_gen::QuantizeMoistureScore(score, rMoisture);
-        pTile->SetBaseMoisture(moisture);
-        pTile->SetMoisture(moisture);
-    }
+    moisture_gen::GenerateRainfall(rWorld, rMoisture, rainfall);
 }
 
 void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,

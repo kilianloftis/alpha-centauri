@@ -80,6 +80,10 @@ void LoadMapGeneration_(const nlohmann::json& rJson, MapGenerationConfig_t& rCon
     {
         rConfig.erosiveForces = ParseErosiveForces(rMap.at("erosive_forces").get<std::string>());
     }
+    if (rMap.contains("rainfall"))
+    {
+        rConfig.rainfall = ParseRainfall(rMap.at("rainfall").get<std::string>());
+    }
     rConfig.presetId = rMap.value("preset_id", rConfig.presetId);
     rConfig.seed = rMap.value("seed", rConfig.seed);
 }
@@ -231,6 +235,7 @@ nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
         {"height", rConfig.height},
         {"ocean_coverage", rConfig.oceanCoverage},
         {"erosive_forces", ToString(rConfig.erosiveForces)},
+        {"rainfall", ToString(rConfig.rainfall)},
         {"preset_id", rConfig.presetId},
         {"seed", rConfig.seed},
     };

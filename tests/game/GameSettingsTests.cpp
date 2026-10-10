@@ -37,6 +37,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetMapGeneration().height == 300);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
     CHECK(settings.GetMapGeneration().erosiveForces == ErosiveForces_t::Average);
+    CHECK(settings.GetMapGeneration().rainfall == Rainfall_t::Average);
     CHECK(settings.GetMapGeneration().presetId == "islands");
     // Empty, not a hard-coded level: difficulty.json's "default" owns the shipping choice.
     CHECK(settings.GetGameRules().difficultyId.empty());
@@ -181,6 +182,7 @@ TEST_CASE("GameSettings Save and Load round-trip map_generation subsection", "[G
         mapGen.height = 48;
         mapGen.oceanCoverage = 0.45f;
         mapGen.erosiveForces = ErosiveForces_t::Low;
+        mapGen.rainfall = Rainfall_t::Wet;
         mapGen.presetId = "archipelago";
         mapGen.seed = 42;
         settings.SetMapGeneration(mapGen);
@@ -193,6 +195,7 @@ TEST_CASE("GameSettings Save and Load round-trip map_generation subsection", "[G
     CHECK(loaded.GetMapGeneration().height == 48);
     CHECK(loaded.GetMapGeneration().oceanCoverage == Approx(0.45f));
     CHECK(loaded.GetMapGeneration().erosiveForces == ErosiveForces_t::Low);
+    CHECK(loaded.GetMapGeneration().rainfall == Rainfall_t::Wet);
     CHECK(loaded.GetMapGeneration().presetId == "archipelago");
     CHECK(loaded.GetMapGeneration().seed == 42u);
 

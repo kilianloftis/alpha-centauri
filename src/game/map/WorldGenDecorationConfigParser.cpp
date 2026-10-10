@@ -14,42 +14,56 @@ namespace ac
 namespace
 {
 
+int RequireNonNegInt_(const nlohmann::json& rJson, const char* key)
+{
+    if (!rJson.contains(key))
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration moisture missing required field '") + key + "'");
+    }
+    const int value = rJson.at(key).get<int>();
+    if (value < 0)
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration moisture.") + key + " must be >= 0");
+    }
+    return value;
+}
+
 MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
 {
     MoistureDecorationConfig_t config;
-    config.baseMin = rJson.value("base_min", config.baseMin);
-    config.baseRange = rJson.value("base_range", config.baseRange);
-    config.coastalPeakBonus = rJson.value("coastal_peak_bonus", config.coastalPeakBonus);
-    config.coastalRadius = rJson.value("coastal_radius", config.coastalRadius);
-    config.tropicalPeakBonus = rJson.value("tropical_peak_bonus", config.tropicalPeakBonus);
-    config.tropicalHalfWidth = rJson.value("tropical_half_width", config.tropicalHalfWidth);
-    config.orographicStrength = rJson.value("orographic_strength", config.orographicStrength);
-    config.orographicElevScale = rJson.value("orographic_elev_scale", config.orographicElevScale);
-    config.aridThreshold = rJson.value("arid_threshold", config.aridThreshold);
-    config.moistThreshold = rJson.value("moist_threshold", config.moistThreshold);
+    config.cloudmassPeaks = RequireNonNegInt_(rJson, "cloudmass_peaks");
+    config.cloudmassHills = RequireNonNegInt_(rJson, "cloudmass_hills");
+    config.rainfallCoeff = RequireNonNegInt_(rJson, "rainfall_coeff");
+    config.hillMinElevationMeters = RequireNonNegInt_(rJson, "hill_min_elevation_meters");
+    config.peakMinElevationMeters = RequireNonNegInt_(rJson, "peak_min_elevation_meters");
 
-    if (config.coastalRadius < 1)
-    {
-        throw std::runtime_error("world gen decoration moisture.coastal_radius must be >= 1");
-    }
-    if (config.baseRange < 0.0f)
-    {
-        throw std::runtime_error("world gen decoration moisture.base_range must be >= 0");
-    }
-    if (config.tropicalHalfWidth <= 0.0f || config.tropicalHalfWidth > 1.0f)
+    if (config.cloudmassPeaks > 20)
     {
         throw std::runtime_error(
-            "world gen decoration moisture.tropical_half_width must be in (0, 1]");
+            "world gen decoration moisture.cloudmass_peaks must be <= 20");
     }
-    if (config.orographicElevScale <= 0.0f)
+    if (config.cloudmassHills > 20)
     {
         throw std::runtime_error(
-            "world gen decoration moisture.orographic_elev_scale must be > 0");
+            "world gen decoration moisture.cloudmass_hills must be <= 20");
     }
-    if (config.aridThreshold >= config.moistThreshold)
+    if (config.rainfallCoeff > 8)
     {
         throw std::runtime_error(
-            "world gen decoration moisture.arid_threshold must be < moist_threshold");
+            "world gen decoration moisture.rainfall_coeff must be <= 8");
+    }
+    if (config.hillMinElevationMeters <= 0)
+    {
+        throw std::runtime_error(
+            "world gen decoration moisture.hill_min_elevation_meters must be > 0");
+    }
+    if (config.peakMinElevationMeters <= config.hillMinElevationMeters)
+    {
+        throw std::runtime_error(
+            "world gen decoration moisture.peak_min_elevation_meters must be > "
+            "hill_min_elevation_meters");
     }
 
     return config;
@@ -198,10 +212,12 @@ WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
 
     const nlohmann::json json = nlohmann::json::parse(file);
     WorldGenDecorationConfig_t config;
-    if (json.contains("moisture"))
+    if (!json.contains("moisture") || !json.at("moisture").is_object())
     {
-        config.moisture = ParseMoisture_(json.at("moisture"));
+        throw std::runtime_error(
+            "world gen decoration config missing required object 'moisture'");
     }
+    config.moisture = ParseMoisture_(json.at("moisture"));
     if (!json.contains("rockiness") || !json.at("rockiness").is_object())
     {
         throw std::runtime_error(

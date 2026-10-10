@@ -203,6 +203,7 @@ add_library(ac-core STATIC
     game/map/Explosion.cpp
     game/map/TileBonusGeneration.cpp
     game/map/MapGenerationConfig.cpp
+    game/map/MoistureGeneration.cpp
     game/map/RiverGeneration.cpp
     game/map/FbmNoise.cpp
     game/map/WorldMap.cpp

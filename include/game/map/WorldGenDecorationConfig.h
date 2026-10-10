@@ -3,23 +3,16 @@
 namespace ac
 {
 
-// Moisture climate knobs for world generation (coastal / tropical / orographic).
+// Moisture climate knobs for world generation (SMAC world_rainfall / alphax #WORLDBUILDER).
+// Parser requires every key; struct defaults match vanilla alphax for in-code fixtures.
 struct MoistureDecorationConfig_t
 {
-    float baseMin = 0.25f;
-    float baseRange = 0.50f;
-
-    float coastalPeakBonus = 0.12f;
-    int coastalRadius = 2;
-
-    float tropicalPeakBonus = 0.10f;
-    float tropicalHalfWidth = 0.35f;
-
-    float orographicStrength = 0.45f;
-    float orographicElevScale = 1000.0f;
-
-    float aridThreshold = 0.40f;
-    float moistThreshold = 0.70f;
+    int cloudmassPeaks = 5;
+    int cloudmassHills = 3;
+    int rainfallCoeff = 1;
+    // Meters above ocean: ALT_TWO_ABOVE_SEA / ALT_THREE_ABOVE_SEA trap thresholds.
+    int hillMinElevationMeters = 2000;
+    int peakMinElevationMeters = 3000;
 };
 
 // Relative frequencies for Flat / Rolling / Rocky at one erosive-forces level.

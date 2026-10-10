@@ -64,6 +64,10 @@ TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing
     {
         std::ofstream file(path);
         file << R"({
+  "moisture": {
+    "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
+    "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
+  },
   "rockiness": {
     "low": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },
     "average": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },

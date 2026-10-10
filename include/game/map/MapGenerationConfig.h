@@ -17,6 +17,17 @@ enum class ErosiveForces_t
 std::string ToString(ErosiveForces_t erosiveForces);
 ErosiveForces_t ParseErosiveForces(const std::string& value);
 
+// Planet rainfall / MapCloudCover (0..2). Drives cloudmass belt asymmetry in world_rainfall.
+enum class Rainfall_t
+{
+    Arid,
+    Average,
+    Wet,
+};
+
+std::string ToString(Rainfall_t rainfall);
+Rainfall_t ParseRainfall(const std::string& value);
+
 // Player/session knobs for world generation. Landmass recipe knobs live on
 // WorldGenPresetConfig_t (loaded from config/worldGen/presets.json).
 struct MapGenerationConfig_t
@@ -26,6 +37,7 @@ struct MapGenerationConfig_t
     unsigned int seed = 0;              // 0 = random
     float oceanCoverage = 0.6f;         // target water fraction [0,1]
     ErosiveForces_t erosiveForces = ErosiveForces_t::Average;
+    Rainfall_t rainfall = Rainfall_t::Average;
     std::string presetId = "islands";
 
     bool operator==(const MapGenerationConfig_t&) const = default;
