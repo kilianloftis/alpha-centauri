@@ -1,5 +1,6 @@
 #include "game/units/FoundBaseRules.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
@@ -75,8 +76,9 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const World
     return true;
 }
 
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const GameState& rGameState)
+bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId)
 {
+    const GameState& rGameState = CurrentGameState();
     return CanFoundBaseAt(rTile, founderFactionId, rGameState.GetWorldMap(),
                           CollectAllBases_(rGameState));
 }

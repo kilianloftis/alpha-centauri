@@ -1,5 +1,6 @@
 #include "game/orbital/OrbitalCensus.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/faction/base/BaseManager.h"
@@ -33,8 +34,9 @@ std::unordered_map<BuildingId_t, int> TallyOrbitalBuildings_(const Faction& rFac
 
 } // namespace
 
-std::vector<OrbitalCensusEntry_t> BuildOrbitalCensus(const GameState& rGameState)
+std::vector<OrbitalCensusEntry_t> BuildOrbitalCensus()
 {
+    const GameState& rGameState = CurrentGameState();
     std::vector<OrbitalCensusEntry_t> census;
     for (const Faction& rFaction : rGameState.Factions())
     {
@@ -46,10 +48,9 @@ std::vector<OrbitalCensusEntry_t> BuildOrbitalCensus(const GameState& rGameState
     return census;
 }
 
-int CountFactionOrbitalBuildings(const GameState& rGameState,
-                                 FactionId_t factionId,
-                                 const BuildingId_t& buildingId)
+int CountFactionOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId)
 {
+    const GameState& rGameState = CurrentGameState();
     const Faction* pFaction = rGameState.FindFaction(factionId);
     if (!pFaction)
     {

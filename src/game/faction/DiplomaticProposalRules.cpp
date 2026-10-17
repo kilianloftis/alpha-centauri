@@ -1,5 +1,6 @@
 #include "game/faction/DiplomaticProposalRules.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -130,8 +131,9 @@ bool IsValidStatusRequest_(const DiplomacyLedger& rLedger, const DiplomaticPropo
 
 } // namespace
 
-bool IsValidProposal(const GameState& rGameState, const DiplomaticProposal_t& rProposal)
+bool IsValidProposal(const DiplomaticProposal_t& rProposal)
 {
+    const GameState& rGameState = CurrentGameState();
     const Faction* pProposer = rGameState.FindFaction(rProposal.proposer);
     const Faction* pRecipient = rGameState.FindFaction(rProposal.recipient);
     if (!pProposer || !pRecipient || pProposer == pRecipient)

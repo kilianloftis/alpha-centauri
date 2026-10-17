@@ -65,9 +65,9 @@ public:
     // it, and bumps the revision. Expelling a faction that is not a member does nothing.
     void Expel(const Faction& rFaction);
 
-    bool HasCommlinksToAllMembers(const GameState& rGameState, const Faction& rFaction) const;
+    bool HasCommlinksToAllMembers(const Faction& rFaction) const;
     int ProposeCooldownYears(const Faction& rFaction) const;
-    int YearsUntilCanPropose(const GameState& rGameState, const Faction& rFaction) const;
+    int YearsUntilCanPropose(const Faction& rFaction) const;
     // Mission year of this faction's last Propose, or nullopt if they have never proposed.
     std::optional<int> LastProposedYear(const Faction& rFaction) const;
     const CouncilRulesConfig_t& GetRules() const { return m_rRules; }

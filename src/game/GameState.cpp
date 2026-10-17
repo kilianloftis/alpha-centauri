@@ -711,7 +711,7 @@ UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 
 void GameState::ConsiderHoldLink(Unit& rUnit)
 {
-    if (!UnitHasHoldLink(*this, rUnit))
+    if (!UnitHasHoldLink(rUnit))
     {
         return;
     }
@@ -830,12 +830,12 @@ bool GameState::IsSecretProjectDestroyed(const std::string& buildingId) const
 
 std::vector<OrbitalCensusEntry_t> GameState::GetOrbitalCensus() const
 {
-    return BuildOrbitalCensus(*this);
+    return BuildOrbitalCensus();
 }
 
 int GameState::CountOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId) const
 {
-    return CountFactionOrbitalBuildings(*this, factionId, buildingId);
+    return CountFactionOrbitalBuildings(factionId, buildingId);
 }
 
 std::vector<OrbitalAttackerOption_t> GameState::ListReadyOrbitalAttackers(

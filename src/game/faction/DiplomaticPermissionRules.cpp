@@ -16,11 +16,11 @@
 namespace ac
 {
 
-const DiplomaticStatusRules_t& StatusRulesFor(const GameState& rGameState, FactionId_t a,
-                                              FactionId_t b)
+const DiplomaticStatusRules_t& StatusRulesFor(FactionId_t a, FactionId_t b)
 {
-    return rGameState.GetGameData().diplomacyConfig->For(
-        rGameState.GetDiplomacyLedger().GetStatus(a, b));
+    const GameState& rGameState = CurrentGameState();
+    const DiplomaticStatus_t status = rGameState.GetDiplomacyLedger().GetStatus(a, b);
+    return rGameState.GetGameData().diplomacyConfig->For(status);
 }
 
 bool HasDiplomacy(const Faction& rFaction)
@@ -28,14 +28,14 @@ bool HasDiplomacy(const Faction& rFaction)
     return !IsNativeLifeFaction(rFaction.GetDefinition().identity.species);
 }
 
-bool IsObligedToDefend(const GameState& rGameState, FactionId_t partner, FactionId_t ally,
-                       FactionId_t aggressor)
+bool IsObligedToDefend(FactionId_t partner, FactionId_t ally, FactionId_t aggressor)
 {
+    const GameState& rGameState = CurrentGameState();
     if (partner == ally || partner == aggressor)
     {
         return false;
     }
-    return StatusRulesFor(rGameState, partner, ally).bDefensiveObligation
+    return StatusRulesFor(partner, ally).bDefensiveObligation
         && !rGameState.GetDiplomacyLedger().HasVendetta(partner, aggressor);
 }
 
@@ -48,7 +48,7 @@ bool MayEnterTerritoryOf(const Unit& rGuest, FactionId_t territoryOwner)
     {
         return true;
     }
-    return StatusRulesFor(CurrentGameState(), guestId, territoryOwner).bEnterTerritory;
+    return StatusRulesFor(guestId, territoryOwner).bEnterTerritory;
 }
 
 bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase)
@@ -59,7 +59,7 @@ bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase)
     {
         return true;
     }
-    return StatusRulesFor(CurrentGameState(), rGuest.GetFactionId(), hostId).bRepairAtBases;
+    return StatusRulesFor(rGuest.GetFactionId(), hostId).bRepairAtBases;
 }
 
 bool MayShareTiles(const Faction& rA, FactionId_t b)
@@ -68,7 +68,7 @@ bool MayShareTiles(const Faction& rA, FactionId_t b)
     {
         return true;
     }
-    return StatusRulesFor(CurrentGameState(), rA.GetFactionId(), b).bShareTiles;
+    return StatusRulesFor(rA.GetFactionId(), b).bShareTiles;
 }
 
 } // namespace ac

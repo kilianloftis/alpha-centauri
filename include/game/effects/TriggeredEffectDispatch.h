@@ -226,12 +226,12 @@ void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const Te
 
 // True when rUnit has a Hold order at a base its faction owns, and its design's
 // on_hold_effects contain an entry whose condition matches that base.
-bool UnitHasHoldLink(const GameState& rGameState, const Unit& rUnit);
+bool UnitHasHoldLink(const Unit& rUnit);
 
 // Display name of the place that satisfied the first matching hold entry. Empty when
 // UnitHasHoldLink is false. A BaseHasBuilding condition names that facility; otherwise
 // the base's own name.
-std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit);
+std::string HoldLinkHostName(const Unit& rUnit);
 
 // Run the design's on_hold_effects. A DestroyUnit entry in that list removes the subject.
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit);

@@ -20,7 +20,6 @@ class Tile;
 class WorldMap;
 class TileEffectsContext;
 class Unit;
-class GameState;
 struct TriggeredEffectConfig_t;
 
 // A Former project resolved from either a buildable improvement or a terrain operation.
@@ -47,11 +46,9 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
 // These read the elevation rules of the world the tile or unit stands in.
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap);
 
-bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
-                       const GameState& rGameState);
+bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
-int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
-                        const GameState& rGameState);
+int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 
 // Place the project's improvement and fire its on_complete_effects against the Former's tile.
 // An improvement refuses before it removes anything when terrain would still conflict, and

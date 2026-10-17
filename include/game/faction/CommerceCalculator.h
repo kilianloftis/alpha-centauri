@@ -11,7 +11,6 @@ namespace ac
 
 class BaseManager;
 class Faction;
-class GameState;
 struct CommerceConfig_t;
 class LuaRuntime;
 
@@ -41,19 +40,17 @@ public:
     // so this is the entry point to prefer over calling ComputeForBase in a loop.
     // Bases with no eligible pair are absent rather than present-and-empty.
     std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeAllLines(
-        const Faction& rOwner, const GameState& rGameState) const;
+        const Faction& rOwner) const;
 
     // Per-base commerce energy for rOwner this turn (missing keys mean 0).
-    std::unordered_map<BaseId_t, int> ComputeForFaction(const Faction& rOwner,
-                                                        const GameState& rGameState) const;
+    std::unordered_map<BaseId_t, int> ComputeForFaction(const Faction& rOwner) const;
 
     // Partner breakdown for one base (UI). Empty when unpaired or on no eligible treaty, and
     // for a base not (yet) in its faction's list — mid CreateBaseFromSnapshot / RebindFaction
     // a base is momentarily ownerless, which is simply no commerce, not an error.
     // Runs a whole ComputeAllLines pass; per-base callers should go through CommerceManager,
     // which memoizes it.
-    std::vector<CommercePartnerLine_t> ComputeForBase(const BaseManager& rBase,
-                                                      const GameState& rGameState) const;
+    std::vector<CommercePartnerLine_t> ComputeForBase(const BaseManager& rBase) const;
 
 private:
     const CommerceConfig_t* m_pConfig;

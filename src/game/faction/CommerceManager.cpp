@@ -62,14 +62,13 @@ void CommerceManager::Validate_() const
         return;
     }
 
-    const GameState* pState = FindCurrentGameState();
-    if (pState == nullptr)
+    if (FindCurrentGameState() == nullptr)
     {
         m_cached.clear();
     }
     else
     {
-        m_cached = m_calculator.ComputeAllLines(m_rOwner, *pState);
+        m_cached = m_calculator.ComputeAllLines(m_rOwner);
     }
     m_cachedStamp = m_scratchRevisions;
 }

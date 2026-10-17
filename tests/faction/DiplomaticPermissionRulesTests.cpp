@@ -73,10 +73,10 @@ TEST_CASE("A Pact partner must defend its ally until it is at Vendetta with the 
     const FactionId_t c = game.pC->GetFactionId();
     game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Pact);
 
-    CHECK(IsObligedToDefend(*game.pState, a, b, c));
+    CHECK(IsObligedToDefend(a, b, c));
 
     game.Ledger().SetStatus(a, c, DiplomaticStatus_t::Vendetta);
-    CHECK_FALSE(IsObligedToDefend(*game.pState, a, b, c));
+    CHECK_FALSE(IsObligedToDefend(a, b, c));
 }
 
 TEST_CASE("Only a status carrying defensive_obligation obliges, and never the ally or aggressor",
@@ -88,9 +88,9 @@ TEST_CASE("Only a status carrying defensive_obligation obliges, and never the al
     const FactionId_t c = game.pC->GetFactionId();
 
     game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Treaty);
-    CHECK_FALSE(IsObligedToDefend(*game.pState, a, b, c));
+    CHECK_FALSE(IsObligedToDefend(a, b, c));
 
     game.Ledger().SetStatus(b, c, DiplomaticStatus_t::Pact);
-    CHECK_FALSE(IsObligedToDefend(*game.pState, b, b, c));
-    CHECK_FALSE(IsObligedToDefend(*game.pState, c, b, c));
+    CHECK_FALSE(IsObligedToDefend(b, b, c));
+    CHECK_FALSE(IsObligedToDefend(c, b, c));
 }

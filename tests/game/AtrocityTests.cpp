@@ -96,7 +96,7 @@ struct AtrocityGame_
                 Diplomacy().SetKnown(rProposer.GetFactionId(), pOther->GetFactionId());
             }
         }
-        const int wait = rCouncil.YearsUntilCanPropose(*pState, rProposer);
+        const int wait = rCouncil.YearsUntilCanPropose(rProposer);
         if (wait > 0)
         {
             pState->SetMissionYear(pState->GetMissionYear() + wait);

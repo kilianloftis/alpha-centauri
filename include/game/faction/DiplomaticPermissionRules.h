@@ -8,20 +8,17 @@ namespace ac
 
 class BaseManager;
 class Faction;
-class GameState;
 class Unit;
 
 // The rules of the status a and b currently hold.
-const DiplomaticStatusRules_t& StatusRulesFor(const GameState& rGameState, FactionId_t a,
-                                              FactionId_t b);
+const DiplomaticStatusRules_t& StatusRulesFor(FactionId_t a, FactionId_t b);
 
 // False for native life: it is never met and never holds a diplomatic status.
 bool HasDiplomacy(const Faction& rFaction);
 
 // partner's status with ally carries defensive_obligation, and partner is not already at
 // Vendetta with aggressor. False when partner is ally or aggressor.
-bool IsObligedToDefend(const GameState& rGameState, FactionId_t partner, FactionId_t ally,
-                       FactionId_t aggressor);
+bool IsObligedToDefend(FactionId_t partner, FactionId_t ally, FactionId_t aggressor);
 
 // Whether rGuest may stand in territory owned by territoryOwner. Always true for unowned tiles,
 // the guest's own territory, and an owner that does not know whose unit rGuest is (Covert).

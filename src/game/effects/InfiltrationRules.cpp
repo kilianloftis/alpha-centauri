@@ -1,5 +1,6 @@
 #include "game/effects/InfiltrationRules.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/council/PlanetaryCouncil.h"
@@ -13,8 +14,9 @@ namespace ac
 namespace
 {
 
-bool IsCouncilMemberTarget_(const GameState& rState, FactionId_t candidate)
+bool IsCouncilMemberTarget_(FactionId_t candidate)
 {
+    const GameState& rState = CurrentGameState();
     const Faction* pCandidate = rState.FindFaction(candidate);
     if (!pCandidate)
     {
@@ -32,14 +34,13 @@ bool IsCouncilMemberTarget_(const GameState& rState, FactionId_t candidate)
 
 bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
                                          FactionId_t infiltrator,
-                                         FactionId_t target,
-                                         const GameState& rState)
+                                         FactionId_t target)
 {
     if (!std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
     {
         return false;
     }
-    return FactionFilterCoversTarget(*rEffect.config, infiltrator, target, rState);
+    return FactionFilterCoversTarget(*rEffect.config, infiltrator, target);
 }
 
 } // namespace
@@ -48,7 +49,6 @@ bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
                                bool bDefaultCoversAllOthers,
                                FactionId_t beneficiary,
                                FactionId_t candidate,
-                               const GameState& rState,
                                std::optional<FactionId_t> actionTarget)
 {
     if (candidate == beneficiary)
@@ -66,10 +66,10 @@ bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
         case FactionFilterKind_t::ActionTarget:
             return actionTarget.has_value() && *actionTarget == candidate;
         case FactionFilterKind_t::CouncilMembers:
-            return IsCouncilMemberTarget_(rState, candidate);
+            return IsCouncilMemberTarget_(candidate);
         case FactionFilterKind_t::PlayerType:
         {
-            const Faction* pCandidate = rState.FindFaction(candidate);
+            const Faction* pCandidate = CurrentGameState().FindFaction(candidate);
             if (!pCandidate)
             {
                 return false;
@@ -84,18 +84,18 @@ bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
 bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
                                FactionId_t beneficiary,
                                FactionId_t candidate,
-                               const GameState& rState,
                                std::optional<FactionId_t> actionTarget)
 {
     // Default for a continuous effect: WorldGlobal reaches every other faction; any other
     // scope needs an explicit filter.
     return FactionFilterCoversTarget(rConfig.factionFilter,
                                      rConfig.scope == EffectScope_t::WorldGlobal, beneficiary,
-                                     candidate, rState, actionTarget);
+                                     candidate, actionTarget);
 }
 
-bool HasInfiltration(const GameState& rState, FactionId_t infiltrator, FactionId_t target)
+bool HasInfiltration(FactionId_t infiltrator, FactionId_t target)
 {
+    const GameState& rState = CurrentGameState();
     if (infiltrator == target)
     {
         return false;
@@ -113,7 +113,7 @@ bool HasInfiltration(const GameState& rState, FactionId_t infiltrator, FactionId
 
     for (const ActiveEffect_t& rEffect : pInfiltrator->GetActiveEffects().effects)
     {
-        if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target, rState))
+        if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target))
         {
             return true;
         }
@@ -123,7 +123,7 @@ bool HasInfiltration(const GameState& rState, FactionId_t infiltrator, FactionId
     {
         for (const ActiveEffect_t& rEffect : pCouncil->CollectFactionEffects(*pInfiltrator))
         {
-            if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target, rState))
+            if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target))
             {
                 return true;
             }

@@ -1,6 +1,7 @@
 #include "game/units/TerraformRules.h"
 #include "game/units/IUnitOrderWorld.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/CoexistenceResolve.h"
@@ -196,9 +197,9 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
     return elevBand * 8 + nearest * 2;
 }
 
-int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
-                        const GameState& rGameState)
+int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
 {
+    const GameState& rGameState = CurrentGameState();
     if (rProject.energyCostSource == EnergyCostSource_t::RaiseLowerQuote)
     {
         return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId(),
@@ -207,8 +208,7 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
     return rProject.project.energyCost;
 }
 
-bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
-                       const GameState& rGameState)
+bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::Terraform))
     {
@@ -234,7 +234,7 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject,
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, rProject, rGameState);
+    const int cost = TerraformEnergyCost(rUnit, rProject);
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 

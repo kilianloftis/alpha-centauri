@@ -313,7 +313,7 @@ void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitIntera
 void InteractionPresenter::PresentArtifactLink_(const ArtifactLinkInteraction_t& rLink)
 {
     Unit* pUnit = FindUnit_(rLink.unitId);
-    const std::string hostName = pUnit ? HoldLinkHostName(m_rGameState, *pUnit) : std::string{};
+    const std::string hostName = pUnit ? HoldLinkHostName(*pUnit) : std::string{};
     if (!pUnit || hostName.empty())
     {
         CompleteAndAdvance_();
@@ -346,7 +346,7 @@ void InteractionPresenter::PresentPactObligation_(const PactObligationInteractio
     const Faction* pAlly = m_rGameState.FindFaction(rObligation.allyId);
     const Faction* pAggressor = m_rGameState.FindFaction(rObligation.aggressorId);
     if (!pPlayer || !pAlly || !pAggressor
-        || !IsObligedToDefend(m_rGameState, pPlayer->GetFactionId(), rObligation.allyId,
+        || !IsObligedToDefend(pPlayer->GetFactionId(), rObligation.allyId,
                               rObligation.aggressorId))
     {
         CompleteAndAdvance_();

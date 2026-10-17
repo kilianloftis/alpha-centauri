@@ -1,5 +1,6 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -164,8 +165,7 @@ bool SetInfiltration_(TriggeredEffectContext_t& rCtx, const TriggeredEffectConfi
         const FactionId_t candidateId = rFaction.GetFactionId();
         // No scope to consult, so an absent filter means every other faction.
         if (FactionFilterCoversTarget(rConfig.factionFilter, /*bDefaultCoversAllOthers=*/true,
-                                      beneficiaryId, candidateId, rCtx.rGameState,
-                                      rCtx.actionTarget))
+                                      beneficiaryId, candidateId, rCtx.actionTarget))
         {
             rDiplomacy.SetInfiltration(beneficiaryId, candidateId, true);
             set.targets.push_back(candidateId);
@@ -991,8 +991,9 @@ std::string HostNameForEffect_(const TriggeredEffectConfig_t& rEffect, const Bas
 
 } // namespace
 
-bool UnitHasHoldLink(const GameState& rGameState, const Unit& rUnit)
+bool UnitHasHoldLink(const Unit& rUnit)
 {
+    const GameState& rGameState = CurrentGameState();
     if (!HoldOrderActive_(rUnit))
     {
         return false;
@@ -1012,8 +1013,9 @@ bool UnitHasHoldLink(const GameState& rGameState, const Unit& rUnit)
     return false;
 }
 
-std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit)
+std::string HoldLinkHostName(const Unit& rUnit)
 {
+    const GameState& rGameState = CurrentGameState();
     if (!HoldOrderActive_(rUnit))
     {
         return {};
@@ -1035,7 +1037,7 @@ std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit)
 
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
 {
-    if (!UnitHasHoldLink(rGameState, rUnit))
+    if (!UnitHasHoldLink(rUnit))
     {
         return;
     }

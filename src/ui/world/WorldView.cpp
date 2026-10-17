@@ -828,7 +828,7 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
                 continue;
             }
             if (!m_rGameState.GetUnitOrderExecutor().CanStartTerraformProject(
-                    rUnit, rBinding.projectId, m_rGameState))
+                    rUnit, rBinding.projectId))
             {
                 continue;
             }

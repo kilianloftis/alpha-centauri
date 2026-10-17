@@ -7,7 +7,6 @@ namespace ac
 {
 
 class BaseManager;
-class GameState;
 class Tile;
 class Unit;
 class WorldMap;
@@ -29,7 +28,7 @@ bool IsInForeignTerritory(const Tile& rTile, FactionId_t founderFactionId,
 bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const WorldMap& rWorldMap,
                     const std::vector<const BaseManager*>& rBases);
 
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const GameState& rGameState);
+bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId);
 
 // Resolve StartingMinerals for a newly created base: base-level effects (SE, secret
 // projects, …) plus the founding unit's live effects when provided. Floored at 0.

@@ -1,5 +1,6 @@
 #include "game/faction/CommerceCalculator.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -162,8 +163,9 @@ int CommercePairValue_(const Faction& rBeneficiary,
 } // namespace
 
 std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>>
-CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGameState) const
+CommerceCalculator::ComputeAllLines(const Faction& rOwner) const
 {
+    const GameState& rGameState = CurrentGameState();
     if (m_pConfig == nullptr || m_pLua == nullptr)
     {
         throw std::runtime_error("CommerceCalculator: config or Lua runtime is null");
@@ -230,10 +232,10 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
 }
 
 std::unordered_map<BaseId_t, int> CommerceCalculator::ComputeForFaction(
-    const Faction& rOwner, const GameState& rGameState) const
+    const Faction& rOwner) const
 {
     std::unordered_map<BaseId_t, int> result;
-    for (const auto& [baseId, rLines] : ComputeAllLines(rOwner, rGameState))
+    for (const auto& [baseId, rLines] : ComputeAllLines(rOwner))
     {
         int total = 0;
         for (const CommercePartnerLine_t& rLine : rLines)
@@ -252,10 +254,10 @@ std::unordered_map<BaseId_t, int> CommerceCalculator::ComputeForFaction(
 }
 
 std::vector<CommercePartnerLine_t> CommerceCalculator::ComputeForBase(
-    const BaseManager& rBase, const GameState& rGameState) const
+    const BaseManager& rBase) const
 {
     const std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> lines =
-        ComputeAllLines(rBase.GetFaction(), rGameState);
+        ComputeAllLines(rBase.GetFaction());
     const auto it = lines.find(rBase.GetBaseId());
     if (it == lines.end())
     {

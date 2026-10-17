@@ -1,5 +1,6 @@
 #include "game/council/PlanetaryCouncil.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalRegistry.h"
@@ -118,9 +119,9 @@ void PlanetaryCouncil::Expel(const Faction& rFaction)
     m_revision.Bump();
 }
 
-bool PlanetaryCouncil::HasCommlinksToAllMembers(const GameState& rGameState,
-                                                const Faction& rFaction) const
+bool PlanetaryCouncil::HasCommlinksToAllMembers(const Faction& rFaction) const
 {
+    const GameState& rGameState = CurrentGameState();
     const DiplomacyLedger& rDiplomacy = rGameState.GetDiplomacyLedger();
     const FactionId_t factionId = rFaction.GetFactionId();
     for (const Faction* pMember : m_members)
@@ -147,9 +148,9 @@ int PlanetaryCouncil::ProposeCooldownYears(const Faction& rFaction) const
     return m_rRules.memberProposeIntervalYears;
 }
 
-int PlanetaryCouncil::YearsUntilCanPropose(const GameState& rGameState,
-                                          const Faction& rFaction) const
+int PlanetaryCouncil::YearsUntilCanPropose(const Faction& rFaction) const
 {
+    const GameState& rGameState = CurrentGameState();
     const auto it = m_lastProposedYear.find(rFaction.GetFactionId());
     if (it == m_lastProposedYear.end())
     {
@@ -368,12 +369,12 @@ void PlanetaryCouncil::Propose(GameState& rGameState, Faction& rProposer,
         throw std::invalid_argument(
             "PlanetaryCouncil::Propose: proposal not available '" + rProposalId + "'");
     }
-    if (!HasCommlinksToAllMembers(rGameState, rProposer))
+    if (!HasCommlinksToAllMembers(rProposer))
     {
         throw std::invalid_argument(
             "PlanetaryCouncil::Propose: missing commlinks to all members");
     }
-    if (YearsUntilCanPropose(rGameState, rProposer) > 0)
+    if (YearsUntilCanPropose(rProposer) > 0)
     {
         throw std::invalid_argument("PlanetaryCouncil::Propose: on cooldown");
     }

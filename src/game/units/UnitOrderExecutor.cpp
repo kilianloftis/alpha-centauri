@@ -559,7 +559,7 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
     {
         return nullptr;
     }
-    if (!CanFoundBaseAt(rUnitTile, rFaction.GetFactionId(), rGameState))
+    if (!CanFoundBaseAt(rUnitTile, rFaction.GetFactionId()))
     {
         return nullptr;
     }
@@ -591,25 +591,25 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
     return pBase;
 }
 
-bool UnitOrderExecutor::CanStartTerraformProject(const Unit& rUnit, const std::string& projectId,
-                                                 const GameState& rGameState) const
+bool UnitOrderExecutor::CanStartTerraformProject(const Unit& rUnit,
+                                                 const std::string& projectId) const
 {
     const std::optional<TerraformProject_t> resolved =
         FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
-    return resolved && CanStartTerraform(rUnit, *resolved, rGameState);
+    return resolved && CanStartTerraform(rUnit, *resolved);
 }
 
 bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& projectId,
                                           GameState& rGameState)
 {
-    if (!CanStartTerraformProject(rUnit, projectId, rGameState))
+    if (!CanStartTerraformProject(rUnit, projectId))
     {
         return false;
     }
     const TerraformProject_t resolved =
         *FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
 
-    const int cost = TerraformEnergyCost(rUnit, resolved, rGameState);
+    const int cost = TerraformEnergyCost(rUnit, resolved);
     rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
     rUnit.SetOrder(TerraformOrder_t{projectId, resolved.project.turnsRequired});
     rUnit.SpendRemainingMoveFragments();

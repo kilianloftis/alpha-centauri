@@ -64,7 +64,7 @@ void CommlinksView::OpenCouncilCooldownPopup_()
         rRules.governorProposeIntervalYears,
         pCouncil->ProposeCooldownYears(*pPlayer),
         pCouncil->LastProposedYear(*pPlayer),
-        pCouncil->YearsUntilCanPropose(m_rGameState, *pPlayer),
+        pCouncil->YearsUntilCanPropose(*pPlayer),
         [this]() { m_bShouldClose = true; }));
 }
 
@@ -124,12 +124,12 @@ void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal
         ShowNotice_("The council is already considering a proposal.");
         return;
     }
-    if (pCouncil->YearsUntilCanPropose(m_rGameState, *pPlayer) > 0)
+    if (pCouncil->YearsUntilCanPropose(*pPlayer) > 0)
     {
         OpenCouncilCooldownPopup_();
         return;
     }
-    if (!pCouncil->HasCommlinksToAllMembers(m_rGameState, *pPlayer))
+    if (!pCouncil->HasCommlinksToAllMembers(*pPlayer))
     {
         ShowNotice_("You must have commlinks with every council member to propose.");
         return;

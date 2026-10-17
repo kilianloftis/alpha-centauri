@@ -76,7 +76,7 @@ void RaiseDefensiveObligations_(GameState& rGameState, FactionId_t aggressor, Fa
     for (const Faction& rPartner : rGameState.Factions())
     {
         const FactionId_t partner = rPartner.GetFactionId();
-        if (!IsObligedToDefend(rGameState, partner, ally, aggressor))
+        if (!IsObligedToDefend(partner, ally, aggressor))
         {
             continue;
         }
@@ -186,7 +186,7 @@ void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct)
     {
         return;
     }
-    if (!StatusRulesFor(rGameState, rAct.aggressor, rAct.victim).bMayAttack)
+    if (!StatusRulesFor(rAct.aggressor, rAct.victim).bMayAttack)
     {
         DeclareVendetta_(rGameState, rAct.aggressor, rAct.victim, VendettaKind_t::SneakAttack);
     }
@@ -208,7 +208,7 @@ void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, Factio
 
 void DeclineDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally)
 {
-    if (!StatusRulesFor(rGameState, partner, ally).bDefensiveObligation)
+    if (!StatusRulesFor(partner, ally).bDefensiveObligation)
     {
         throw std::logic_error("DeclineDefensiveObligation: no defensive obligation to decline");
     }

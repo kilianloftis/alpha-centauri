@@ -119,8 +119,7 @@ public:
 
     // Whether rUnit may start projectId (a buildable improvement or a terrain operation) on
     // its tile now, under the rules of the world it stands in.
-    bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId,
-                                  const GameState& rGameState) const;
+    bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId) const;
 
     // Begin a Former terraform project for projectId (a buildable improvement or a terrain
     // operation). Spends energy up front and

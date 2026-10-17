@@ -11,7 +11,7 @@ namespace ac
 DiplomaticProposeResult_t DiplomaticActionExecutor::Propose(GameState& rState,
                                                           const DiplomaticProposal_t& rProposal)
 {
-    if (!IsValidProposal(rState, rProposal))
+    if (!IsValidProposal(rProposal))
     {
         return DiplomaticProposeResult_t::Invalid;
     }
@@ -43,7 +43,7 @@ bool DiplomaticActionExecutor::Accept(GameState& rState)
     }
     DiplomaticProposal_t proposal = *m_pending;
     m_pending.reset();
-    if (!IsValidProposal(rState, proposal))
+    if (!IsValidProposal(proposal))
     {
         return false;
     }

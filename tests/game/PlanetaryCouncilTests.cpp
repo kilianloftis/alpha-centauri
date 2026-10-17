@@ -104,7 +104,7 @@ struct CouncilGame_
     void AdvancePastProposeCooldown(Faction& rFaction)
     {
         PlanetaryCouncil& rCouncil = *pState->GetPlanetaryCouncil();
-        const int wait = rCouncil.YearsUntilCanPropose(*pState, rFaction);
+        const int wait = rCouncil.YearsUntilCanPropose(rFaction);
         if (wait > 0)
         {
             pState->SetMissionYear(pState->GetMissionYear() + wait);
@@ -321,7 +321,7 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
     rCouncil.CastElectionVote(*game.pC, game.pA);
     REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
-    CHECK(rCouncil.YearsUntilCanPropose(*game.pState, *game.pA) == 10);
+    CHECK(rCouncil.YearsUntilCanPropose(*game.pA) == 10);
     REQUIRE(rCouncil.LastProposedYear(*game.pA).has_value());
     CHECK(*rCouncil.LastProposedYear(*game.pA) == proposedYear);
     CHECK_THROWS_AS(
@@ -329,7 +329,7 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
         std::invalid_argument);
 
     game.pState->SetMissionYear(game.pState->GetMissionYear() + 10);
-    CHECK(rCouncil.YearsUntilCanPropose(*game.pState, *game.pA) == 0);
+    CHECK(rCouncil.YearsUntilCanPropose(*game.pA) == 0);
     rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
     CHECK(rCouncil.GetPending());
 }
@@ -368,8 +368,8 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
         return std::get_if<InfiltrationEffect_t>(&rEffect.config->effect) != nullptr;
     }));
 
-    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId(), state));
-    CHECK_FALSE(HasInfiltration(state, rA.GetFactionId(), rB.GetFactionId()));
+    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId()));
+    CHECK_FALSE(HasInfiltration(rA.GetFactionId(), rB.GetFactionId()));
 }
 
 TEST_CASE("Non-participating factions are excluded from the council", "[council]")
@@ -697,8 +697,8 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
     REQUIRE(rCouncil.GetPlanetaryGovernor());
     CHECK(rCouncil.GetPlanetaryGovernor() == game.pA);
     // Continuous governor Infiltration + CouncilMembers — query-time, not ledger sticky.
-    CHECK(HasInfiltration(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId()));
-    CHECK(HasInfiltration(*game.pState, game.pA->GetFactionId(), game.pC->GetFactionId()));
+    CHECK(HasInfiltration(game.pA->GetFactionId(), game.pB->GetFactionId()));
+    CHECK(HasInfiltration(game.pA->GetFactionId(), game.pC->GetFactionId()));
     CHECK_FALSE(game.pState->GetDiplomacyLedger().HasInfiltration(game.pA->GetFactionId(),
                                                                   game.pB->GetFactionId()));
 
