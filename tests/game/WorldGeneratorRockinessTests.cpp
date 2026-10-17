@@ -27,6 +27,13 @@ TEST_CASE("WorldGenDecorationConfigParser throws when a rockiness level is missi
     {
         std::ofstream file(path);
         file << R"({
+  "moisture": {
+    "cloudmass_peaks": 5,
+    "cloudmass_hills": 3,
+    "rainfall_coeff": 1,
+    "hill_min_elevation_meters": 2000,
+    "peak_min_elevation_meters": 3000
+  },
   "rockiness": {
     "low": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },
     "high": { "flat": 0.7, "rolling": 0.2, "rocky": 0.1 }
@@ -47,12 +54,15 @@ TEST_CASE("WorldGenDecorationConfigParser throws when rockiness object is missin
     const std::filesystem::path path = TempDecorationPath_("ac_decoration_no_rockiness.json");
     {
         std::ofstream file(path);
-        file << R"({ "moisture": { "base_min": 0.25, "base_range": 0.5,
-            "coastal_peak_bonus": 0.12, "coastal_radius": 2,
-            "tropical_peak_bonus": 0.1, "tropical_half_width": 0.35,
-            "orographic_strength": 0.45, "orographic_elev_scale": 1000.0,
-            "arid_threshold": 0.4,
-            "moist_threshold": 0.7 } })" << '\n';
+        file << R"({
+  "moisture": {
+    "cloudmass_peaks": 5,
+    "cloudmass_hills": 3,
+    "rainfall_coeff": 1,
+    "hill_min_elevation_meters": 2000,
+    "peak_min_elevation_meters": 3000
+  }
+})" << '\n';
     }
 
     WorldGenDecorationConfigParser parser;

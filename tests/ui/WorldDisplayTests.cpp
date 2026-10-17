@@ -210,6 +210,7 @@ TEST_CASE("A Perimeter Defense base draws bare base then the perimeter overlay",
         "assets/factions/hive/bases/overlays/perimeter_size1.png";
     fixture.pSprites->existing.insert(barePath);
     fixture.pSprites->existing.insert(overlayPath);
+    std::filesystem::create_directories("assets/factions/hive");
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
     const auto bare = std::ranges::find_if(graphics.sprites, [&](const auto& rSprite) {
