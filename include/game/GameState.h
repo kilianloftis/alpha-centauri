@@ -230,7 +230,9 @@ public:
 
 private:
     void OnVisibilitySettingsChanged_();
-    void AppendStandingWorldRules_(std::vector<ActiveEffect_t>& rOut) const;
+    // One source list for both collectors, so the session set and a faction's extras cannot
+    // drift. pFor composes its own pool itself, and alone gets the council's faction effects.
+    void AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffect_t>& rOut) const;
     // All session wiring for one faction (back-pointer + observers), applied by AddFaction
     // after the faction is in m_factions — the observers iterate Factions(), so the order is
     // load-bearing. Ends with a territory/visibility sweep so a faction that arrives already

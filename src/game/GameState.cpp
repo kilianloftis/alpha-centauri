@@ -298,58 +298,47 @@ uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
 std::vector<ActiveEffect_t> GameState::CollectSessionWorldEffects() const
 {
     std::vector<ActiveEffect_t> result;
-    for (const auto& pFaction : m_factions)
-    {
-        auto worldEffects =
-            FilterByScope(pFaction->GetLocalActiveEffects().effects, EffectScope_t::WorldGlobal);
-        result.insert(result.end(), worldEffects.begin(), worldEffects.end());
-    }
-    if (m_pCouncil)
-    {
-        const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
-        result.insert(result.end(), councilWorld.begin(), councilWorld.end());
-    }
-    if (m_pWorldEvents)
-    {
-        m_pWorldEvents->AppendActiveEffects(result);
-    }
-    AppendStandingWorldRules_(result);
+    AppendWorldSources_(nullptr, result);
     return result;
 }
 
 std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) const
 {
     std::vector<ActiveEffect_t> result;
+    AppendWorldSources_(&rFor, result);
+    return result;
+}
+
+void GameState::AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffect_t>& rOut) const
+{
     for (const auto& pFaction : m_factions)
     {
-        if (pFaction.get() == &rFor)
+        if (pFaction.get() == pFor)
         {
             continue;
         }
         // Peer *local* pool only: composed GetActiveEffects would re-emit council extras.
-        auto worldEffects =
-            FilterByScope(pFaction->GetLocalActiveEffects().effects, EffectScope_t::WorldGlobal);
-        result.insert(result.end(), worldEffects.begin(), worldEffects.end());
+        const std::vector<ActiveEffect_t>& rLocal = pFaction->GetLocalActiveEffects().effects;
+        auto worldEffects = FilterByScope(rLocal, EffectScope_t::WorldGlobal);
+        rOut.insert(rOut.end(), worldEffects.begin(), worldEffects.end());
     }
     if (m_pCouncil)
     {
         // CouncilEffects keeps config addresses stable across rebuilds; revision bumps still
         // force composed-pool caches to pick up the new active set.
         const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
-        result.insert(result.end(), councilWorld.begin(), councilWorld.end());
-        const std::vector<ActiveEffect_t>& councilFaction = m_pCouncil->CollectFactionEffects(rFor);
-        result.insert(result.end(), councilFaction.begin(), councilFaction.end());
+        rOut.insert(rOut.end(), councilWorld.begin(), councilWorld.end());
+        if (pFor != nullptr)
+        {
+            const std::vector<ActiveEffect_t>& councilFaction =
+                m_pCouncil->CollectFactionEffects(*pFor);
+            rOut.insert(rOut.end(), councilFaction.begin(), councilFaction.end());
+        }
     }
     if (m_pWorldEvents)
     {
-        m_pWorldEvents->AppendActiveEffects(result);
+        m_pWorldEvents->AppendActiveEffects(rOut);
     }
-    AppendStandingWorldRules_(result);
-    return result;
-}
-
-void GameState::AppendStandingWorldRules_(std::vector<ActiveEffect_t>& rOut) const
-{
     AppendActiveEffects(m_rGameData.worldRules, nullptr, "world_rules", rOut);
 }
 
