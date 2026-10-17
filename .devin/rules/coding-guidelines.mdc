@@ -6,8 +6,40 @@ trigger: always_on
 
 # Coding Guidelines
 
+## Readable code: hard rules
+
+These six rules apply to every new or changed line. Existing code is not rewritten to meet them
+unless a change touches it. A change that breaks one is not finished.
+
+1. **One call deep.** A call may take another call's result as an argument, but not a call of a
+   call. Casts count as calls. Name the intermediate value instead.
+   ```cpp
+   // No
+   return static_cast<int>(std::lround(ResolveFactionStat(rFaction.GetActiveEffects(),
+       StatId_t::RebelJoinWeight, static_cast<double>(rConfig.baseJoinWeight))));
+   // Yes
+   const double seed = static_cast<double>(rConfig.baseJoinWeight);
+   const double weight =
+       ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed);
+   return static_cast<int>(std::lround(weight));
+   ```
+2. **Comments say why, in two lines or fewer.** Never what the code does. Never history: no "used
+   to", "now", "no longer", "was a bug" or "replaces". Never a reference to a plan, review or
+   finding. History belongs in the commit message.
+3. **No guards for cases that cannot happen.** Do not null-check a reference, or a pointer the code
+   already guarantees. Do not re-check what a parser validated at load. A pointer that must not be
+   null throws; never `continue` or `return` past it silently.
+4. **No pass-through functions.** Do not add a function whose body only calls another, unless it
+   implements an interface. When logic moves, its callers call the new home.
+5. **No flag parameters.** A `bool` that chooses what a function does becomes an enum or two
+   functions. A `bool` that describes the input, like `bNowWater`, is fine.
+6. **Nothing speculative.** No function, getter, setter, type, interface or template without a
+   caller that needs it now. A struct is a return type only when a function returns more than one
+   thing.
+
+## General
+
 Do not make up game rules or mechanics. Leave TODOs instead.
-Only create functions if they are needed for the current implementation. Do not add functinos, getters, or setters, without an immediate requirement.
 Use references whenever possible.
 Use smart pointers if you are unable to use a reference.
 Use range-based for loops whenever possible.
@@ -25,9 +57,6 @@ supported; use Y". That shim is for shipped external mods after launch — not f
 still control end-to-end. Unknown leftover keys may fail a known-key whitelist or be ignored
 like any other typo; do not special-case the retired name.
 When asked to address review findings or implement a review/plan, treat every finding as in-scope unless the user explicitly defers it. Severity ranks order of work, not whether it gets done — do not park fixes as "optional polish" or "leave as-is."
-
-## Commmenting
-Keep comments to a minimum. Code should be self-documenting. We don't need comments explainging why something was changed.
 
 ## UI style JSON
 `config/ui/style.json` and `tests/fixtures/ui/style.json` keep scalar arrays compact (one
