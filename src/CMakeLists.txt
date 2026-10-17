@@ -97,7 +97,6 @@ add_library(ac-core STATIC
     game/population/calculators/GrowthCalculator.cpp
     game/population/calculators/GoldenAgeCalculator.cpp
     game/population/calculators/PopTypeAvailabilityCalculator.cpp
-    game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
     lib/LuaRuntime.cpp
