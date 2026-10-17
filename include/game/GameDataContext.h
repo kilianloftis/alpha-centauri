@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/production/ProductionConfigParser.h"
 #include "game/GameDataPaths.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionGridsConfig.h"

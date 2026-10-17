@@ -1,5 +1,5 @@
 #include "ui/base/BaseNameDisplay.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

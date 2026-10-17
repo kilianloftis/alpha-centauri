@@ -2,7 +2,7 @@
 
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainOperationRegistry.h"
-#include "game/units/TerraformRules.h"
+#include "game/terraform/TerraformRules.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 

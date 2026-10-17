@@ -5,11 +5,11 @@
 
 #include "GameFixtures.h"
 
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorkedTileIndex.h"
-#include "game/population/pop-types/Pop.h"
+#include "game/population/Pop.h"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -6,8 +6,8 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/world-events/WorldEventTracker.h"
 
 #include <catch2/catch_approx.hpp>

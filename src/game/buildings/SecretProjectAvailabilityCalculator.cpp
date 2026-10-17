@@ -1,8 +1,8 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 
 namespace ac
 {

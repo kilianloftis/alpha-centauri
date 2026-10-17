@@ -39,3 +39,8 @@ Full text: "Code kinds" in `docs/architecture/high-level.md`.
 - The switch is a field on the subsystem's config struct, required by its existing parser.
 - The rule reads the field and dispatches; each version is its own function in that Rules file.
 - The rule reads the switch from a config struct it already takes, or from `CurrentGameState().GetGameData()`. Adding a switch never changes a signature.
+
+## Layout
+
+- One directory under `include/game/` and `src/game/` per domain (listed in "Layout" in `high-level.md`).
+- The filename suffix says the kind, so there are no kind directories and no ownership nesting.

@@ -1,14 +1,14 @@
 #include "game/stages/BaseProduction.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/IConstructable.h"
+#include "game/production/IConstructable.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/ProductionManager.h"
+#include "game/base/BaseManager.h"
+#include "game/production/ProductionManager.h"
 #include "game/map/Tile.h"
-#include "game/TurnStageRegistrar.h"
+#include "game/stages/TurnStageRegistrar.h"
 
 #include <iostream>
 #include <utility>

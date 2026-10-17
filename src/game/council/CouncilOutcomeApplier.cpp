@@ -1,6 +1,6 @@
 #include "game/council/CouncilOutcomeApplier.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilRulesConfig.h"

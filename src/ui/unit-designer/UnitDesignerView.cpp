@@ -4,7 +4,7 @@
 #include "ui/unit-designer/DesignStatsDisplay.h"
 #include "ui/unit-designer/DesignListPanel.h"
 #include "ui/unit-designer/UnitStatusPanel.h"
-#include "game/faction/Military.h"
+#include "game/units/Military.h"
 #include "game/units/UnitDesign.h"
 #include "input/Input.h"
 #include "ui/style/UiStyle.h"

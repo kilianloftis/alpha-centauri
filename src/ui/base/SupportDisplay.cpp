@@ -1,7 +1,7 @@
 #include "ui/base/SupportDisplay.h"
 
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/HomeBaseIndex.h"
+#include "game/base/BaseManager.h"
+#include "game/base/HomeBaseIndex.h"
 #include "game/units/Unit.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"

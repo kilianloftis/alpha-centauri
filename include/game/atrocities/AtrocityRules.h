@@ -2,7 +2,7 @@
 
 #include "game/atrocities/AtrocityConfig.h"
 #include "game/faction/FactionConfig.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 
 #include <optional>
 #include <vector>

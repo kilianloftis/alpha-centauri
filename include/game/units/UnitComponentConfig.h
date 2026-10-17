@@ -2,7 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
-#include "game/faction/base/production/ScrapConfig.h"
+#include "game/production/ScrapConfig.h"
 #include "game/units/UnitDomain.h"
 
 #include <algorithm>

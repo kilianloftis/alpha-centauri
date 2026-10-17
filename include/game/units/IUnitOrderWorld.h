@@ -1,9 +1,9 @@
 #pragma once
 
-#include "game/units/BaseConquestEffects.h"
-#include "game/faction/DiplomaticTransitionRules.h"
-#include "game/faction/base/BaseTypes.h"
-#include "game/units/CombatResolver.h"
+#include "game/base/BaseConquestEffects.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/base/BaseTypes.h"
+#include "game/combat/CombatResolver.h"
 
 #include <optional>
 #include <random>

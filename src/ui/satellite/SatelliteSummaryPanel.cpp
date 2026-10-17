@@ -1,9 +1,9 @@
 #include "ui/satellite/SatelliteSummaryPanel.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/orbital/OrbitalCensus.h"
+#include "game/buildings/OrbitalCensus.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

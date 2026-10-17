@@ -4,7 +4,7 @@
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
-#include "game/faction/base/production/ScrapConfigParser.h"
+#include "game/production/ScrapConfigParser.h"
 
 #include <stdexcept>
 

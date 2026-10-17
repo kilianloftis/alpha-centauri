@@ -4,10 +4,10 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
-#include "game/faction/UnitManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/HomeBaseIndex.h"
+#include "game/faction/Faction.h"
+#include "game/units/UnitManager.h"
+#include "game/base/BaseManager.h"
+#include "game/base/HomeBaseIndex.h"
 #include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>

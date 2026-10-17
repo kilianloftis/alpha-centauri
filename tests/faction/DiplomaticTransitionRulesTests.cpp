@@ -1,5 +1,5 @@
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomaticTransitionRules.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -4,7 +4,7 @@
 #include "ui/commlinks/CouncilCooldownPopup.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"

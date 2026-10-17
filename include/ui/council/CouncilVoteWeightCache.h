@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/council/CouncilProposalConfig.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 
 #include <cstdint>
 #include <unordered_map>

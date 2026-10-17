@@ -1,7 +1,7 @@
 #include "game/units/AdHocDesign.h"
 
-#include "game/Faction.h"
-#include "game/faction/Military.h"
+#include "game/faction/Faction.h"
+#include "game/units/Military.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"

@@ -1,7 +1,7 @@
 #include "TestHelpers.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
-#include "game/map/TileBonusGeneration.h"
+#include "game/worldgen/TileBonusGeneration.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

@@ -2,7 +2,7 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
 

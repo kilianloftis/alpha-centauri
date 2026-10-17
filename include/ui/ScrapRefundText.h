@@ -1,9 +1,9 @@
 #pragma once
 
-#include "game/Faction.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/ScrapConfig.h"
-#include "game/faction/base/production/ScrapPayout.h"
+#include "game/faction/Faction.h"
+#include "game/base/BaseManager.h"
+#include "game/production/ScrapConfig.h"
+#include "game/production/ScrapPayout.h"
 
 #include <stdexcept>
 #include <string>

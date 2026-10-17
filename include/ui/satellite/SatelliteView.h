@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/buildings/BuildingConfig.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "ui/IGameView.h"
 
 #include <optional>

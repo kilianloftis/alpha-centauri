@@ -2,9 +2,9 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
-#include "game/faction/FactionTileMemory.h"
-#include "game/faction/VisibilityRules.h"
+#include "game/faction/Faction.h"
+#include "game/visibility/FactionTileMemory.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

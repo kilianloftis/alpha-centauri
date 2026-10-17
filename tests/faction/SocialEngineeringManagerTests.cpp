@@ -3,7 +3,7 @@
 // the registry. The starting ids used to be compiled in, so a mod shipping its own policy set
 // hard-failed every faction constructor.
 
-#include "game/faction/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/effects/EffectEnums.h"
 

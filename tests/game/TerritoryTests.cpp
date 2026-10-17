@@ -3,7 +3,7 @@
 
 #include "GameFixtures.h"
 
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"

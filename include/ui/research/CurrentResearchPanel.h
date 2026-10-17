@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ui/UIElement.h"
-#include "game/faction/ResearchManager.h"
+#include "game/research/ResearchManager.h"
 #include <string>
 
 namespace ac

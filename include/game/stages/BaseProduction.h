@@ -2,8 +2,8 @@
 
 #include "game/stages/YieldingPerFactionTurnStage.h"
 #include "game/PlayerInteraction.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/ProductionApplyResult.h"
+#include "game/base/BaseManager.h"
+#include "game/production/ProductionApplyResult.h"
 
 #include <unordered_set>
 

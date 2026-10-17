@@ -1,9 +1,9 @@
 #include "ui/world/MapAppearance.h"
 
-#include "game/Faction.h"
-#include "game/faction/FactionExploredMap.h"
-#include "game/faction/FactionTileMemory.h"
-#include "game/faction/FactionVisibleMap.h"
+#include "game/faction/Faction.h"
+#include "game/visibility/FactionExploredMap.h"
+#include "game/visibility/FactionTileMemory.h"
+#include "game/visibility/FactionVisibleMap.h"
 #include "game/map/Tile.h"
 
 namespace ac

@@ -3,10 +3,10 @@
 #include "game/GameDataPaths.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/ElevationRulesConfigParser.h"
-#include "game/map/MapGenerationConfig.h"
-#include "game/map/WorldGenPresetConfigParser.h"
+#include "game/worldgen/MapGenerationConfig.h"
+#include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/effects/EffectConfig.h"
-#include "game/population/pop-types/GrowthConfigParser.h"
+#include "game/population/GrowthConfigParser.h"
 
 #include <stdexcept>
 

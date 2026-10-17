@@ -1,9 +1,9 @@
 #include "ui/social-engineering/SocialEngineeringDisplay.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/faction/FactionConfig.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/SocialEngineeringManager.h"
+#include "game/research/ResearchManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingConfig.h"

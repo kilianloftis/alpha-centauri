@@ -11,32 +11,32 @@ add_library(ac-core STATIC
     game/DifficultyConfigParser.cpp
     game/EffectReferenceValidator.cpp
     game/RequiredTechValidator.cpp
-    game/Faction.cpp
+    game/faction/Faction.cpp
     game/faction/FactionEffectsPool.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
     game/faction/FactionFlavor.cpp
-    game/faction/Military.cpp
-    game/faction/UnitManager.cpp
-    game/faction/RebelFactionPicker.cpp
+    game/units/Military.cpp
+    game/units/UnitManager.cpp
+    game/base/RebelFactionPicker.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp
-    game/faction/ResearchManager.cpp
-    game/faction/ResearchSelector.cpp
+    game/research/ResearchManager.cpp
+    game/research/ResearchSelector.cpp
     game/GameCategory.cpp
-    game/faction/DiplomaticStatus.cpp
-    game/faction/DiplomacyConfigParser.cpp
-    game/faction/DiplomacyLedger.cpp
-    game/faction/DiplomaticPermissionRules.cpp
-    game/faction/DiplomacyActions.cpp
-    game/faction/DiplomaticTransitionEffects.cpp
-    game/faction/DiplomaticTransitionRules.cpp
-    game/faction/TradeItem.cpp
-    game/faction/DiplomaticActionExecutor.cpp
-    game/faction/DiplomaticProposalEffects.cpp
-    game/faction/DiplomaticProposalRules.cpp
-    game/faction/FirstContactResolver.cpp
+    game/diplomacy/DiplomaticStatus.cpp
+    game/diplomacy/DiplomacyConfigParser.cpp
+    game/diplomacy/DiplomacyLedger.cpp
+    game/diplomacy/DiplomaticPermissionRules.cpp
+    game/diplomacy/DiplomacyActions.cpp
+    game/diplomacy/DiplomaticTransitionEffects.cpp
+    game/diplomacy/DiplomaticTransitionRules.cpp
+    game/diplomacy/TradeItem.cpp
+    game/diplomacy/DiplomaticActionExecutor.cpp
+    game/diplomacy/DiplomaticProposalEffects.cpp
+    game/diplomacy/DiplomaticProposalRules.cpp
+    game/diplomacy/FirstContactResolver.cpp
     game/council/CouncilAiStub.cpp
     game/council/CouncilEffects.cpp
     game/council/CouncilOutcomeApplier.cpp
@@ -48,56 +48,56 @@ add_library(ac-core STATIC
     game/atrocities/AtrocityEffects.cpp
     game/atrocities/AtrocityLedger.cpp
     game/atrocities/AtrocityRules.cpp
-    game/mind-control/MindControlLedger.cpp
+    game/probes/MindControlLedger.cpp
     game/ecology/EcologyLedger.cpp
     game/ecology/EcoDamageConfigParser.cpp
     game/ecology/EcoDamageCalculator.cpp
     game/ecology/BaseEcology.cpp
-    game/NativeLifeLevelConfig.cpp
+    game/natives/NativeLifeLevelConfig.cpp
     game/world-events/WorldEventConfig.cpp
     game/world-events/WorldEventTracker.cpp
-    game/faction/SocialEngineeringManager.cpp
-    game/faction/base/BaseManager.cpp
-    game/faction/base/HomeBaseIndex.cpp
-    game/faction/base/buildings/BuildingManager.cpp
-    game/faction/base/production/ProductionManager.cpp
-    game/faction/base/production/ProductionConfigParser.cpp
-    game/faction/base/production/ProductionCostCalculator.cpp
-    game/faction/base/production/HurryProductionCalculator.cpp
-    game/faction/base/production/ScrapConfigParser.cpp
-    game/faction/base/production/ScrapPayout.cpp
-    game/faction/base/production/ScrapRefundCalculator.cpp
-    game/faction/base/resources/ResourceManager.cpp
-    game/faction/base/resources/MineralSupport.cpp
-    game/faction/base/resources/WorkerAssignmentManager.cpp
-    game/faction/EconomyManager.cpp
-    game/faction/CommerceConfigParser.cpp
-    game/faction/CommerceCalculator.cpp
-    game/faction/CommerceManager.cpp
-    game/faction/base/BaseEffectsCache.cpp
-    game/faction/base/BuildingDestruction.cpp
-    game/faction/base/BaseMoodEffects.cpp
-    game/faction/base/BaseRules.cpp
-    game/faction/base/production/ProductionCompletion.cpp
-    game/faction/base/production/ProductionPauseGates.cpp
-    game/faction/base/population/AwayFromHomeDrones.cpp
-    game/faction/base/population/CompositionInputs.cpp
-    game/faction/base/population/GarrisonPolice.cpp
-    game/faction/base/population/PopulationManager.cpp
-    game/faction/base/population/AssimilationTracker.cpp
-    game/faction/base/population/PopContainer.cpp
-    game/population/pop-types/Pop.cpp
-    game/population/pop-types/PopTypeConfigParser.cpp
-    game/population/pop-types/PopCompositionConfigParser.cpp
-    game/population/pop-types/GrowthConfigParser.cpp
-    game/population/calculators/DroneCalculator.cpp
-    game/population/calculators/PopCompositionCalculator.cpp
-    game/population/calculators/MoodLatch.cpp
-    game/population/calculators/RiotCalculator.cpp
-    game/population/calculators/GrowthCalculator.cpp
-    game/population/calculators/GoldenAgeCalculator.cpp
-    game/population/calculators/PopTypeAvailabilityCalculator.cpp
-    game/TurnProcessor.cpp
+    game/social-engineering/SocialEngineeringManager.cpp
+    game/base/BaseManager.cpp
+    game/base/HomeBaseIndex.cpp
+    game/buildings/BuildingManager.cpp
+    game/production/ProductionManager.cpp
+    game/production/ProductionConfigParser.cpp
+    game/production/ProductionCostCalculator.cpp
+    game/production/HurryProductionCalculator.cpp
+    game/production/ScrapConfigParser.cpp
+    game/production/ScrapPayout.cpp
+    game/production/ScrapRefundCalculator.cpp
+    game/economy/ResourceManager.cpp
+    game/economy/MineralSupport.cpp
+    game/economy/WorkerAssignmentManager.cpp
+    game/economy/EconomyManager.cpp
+    game/economy/CommerceConfigParser.cpp
+    game/economy/CommerceCalculator.cpp
+    game/economy/CommerceManager.cpp
+    game/base/BaseEffectsCache.cpp
+    game/buildings/BuildingDestruction.cpp
+    game/base/BaseMoodEffects.cpp
+    game/base/BaseRules.cpp
+    game/production/ProductionCompletion.cpp
+    game/production/ProductionPauseGates.cpp
+    game/population/AwayFromHomeDrones.cpp
+    game/population/CompositionInputs.cpp
+    game/population/GarrisonPolice.cpp
+    game/population/PopulationManager.cpp
+    game/population/AssimilationTracker.cpp
+    game/population/PopContainer.cpp
+    game/population/Pop.cpp
+    game/population/PopTypeConfigParser.cpp
+    game/population/PopCompositionConfigParser.cpp
+    game/population/GrowthConfigParser.cpp
+    game/population/DroneCalculator.cpp
+    game/population/PopCompositionCalculator.cpp
+    game/population/MoodLatch.cpp
+    game/population/RiotCalculator.cpp
+    game/population/GrowthCalculator.cpp
+    game/population/GoldenAgeCalculator.cpp
+    game/population/PopTypeAvailabilityCalculator.cpp
+    game/stages/TurnProcessor.cpp
     lib/EventBus.cpp
     lib/LuaRuntime.cpp
     lib/config/ConfigFields.cpp
@@ -105,69 +105,69 @@ add_library(ac-core STATIC
     game/PlayerInteractionQueue.cpp
     game/effects/ActiveEffect.cpp
     game/effects/EffectConfigParser.cpp
-    game/effects/InfiltrationRules.cpp
+    game/diplomacy/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
     game/effects/TriggeredEffectDispatch.cpp
     game/effects/TriggeredEffectParser.cpp
     game/effects/TileYieldRulesConfigParser.cpp
     game/effects/InteractionGridsConfigParser.cpp
     game/effects/InteractionResolve.cpp
-    game/effects/PoliceRulesConfigParser.cpp
+    game/population/PoliceRulesConfigParser.cpp
     game/effects/WorldRulesConfigParser.cpp
-    game/TurnStageFactory.cpp
-    game/TurnStageConfigParser.cpp
-    game/HookContext.cpp
+    game/stages/TurnStageFactory.cpp
+    game/stages/TurnStageConfigParser.cpp
+    game/stages/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
-    game/buildings/MapOverlayChannelsConfigParser.cpp
-    game/buildings/BaseSpriteSizesConfigParser.cpp
+    game/display/MapOverlayChannelsConfigParser.cpp
+    game/display/BaseSpriteSizesConfigParser.cpp
     game/buildings/BuildingUpkeep.cpp
     game/buildings/SecretProjectAvailabilityCalculator.cpp
-    game/stockpiles/StockpileConfigParser.cpp
-    game/stockpiles/StockpileConversion.cpp
-    game/orbital/OrbitalAttack.cpp
-    game/orbital/OrbitalCensus.cpp
+    game/production/StockpileConfigParser.cpp
+    game/production/StockpileConversion.cpp
+    game/buildings/OrbitalAttack.cpp
+    game/buildings/OrbitalCensus.cpp
     game/units/Unit.cpp
     game/units/IDesign.cpp
     game/units/UnitDesign.cpp
-    game/units/NativeDesign.cpp
-    game/units/NativeUnitConfigParser.cpp
-    game/units/NativeUnitRegistry.cpp
-    game/units/EnsureNativeDesign.cpp
+    game/natives/NativeDesign.cpp
+    game/natives/NativeUnitConfigParser.cpp
+    game/natives/NativeUnitRegistry.cpp
+    game/natives/EnsureNativeDesign.cpp
     game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
-    game/units/CombatResolver.cpp
-    game/units/CombatStrength.cpp
-    game/units/StackCollateral.cpp
-    game/units/PlanetPearls.cpp
-    game/units/MoraleConfig.cpp
-    game/units/MoraleConfigParser.cpp
-    game/units/MoraleCalculator.cpp
-    game/units/DisengageRules.cpp
-    game/units/EvacuateTerritoryRules.cpp
-    game/units/EvacuateTerritoryEffects.cpp
-    game/units/TerritoryEntryEffects.cpp
-    game/units/InterceptRules.cpp
-    game/units/ScrambleRules.cpp
-    game/units/MovementRules.cpp
-    game/units/TransportRules.cpp
-    game/units/FuelRules.cpp
-    game/units/AttackRules.cpp
-    game/units/FoundBaseRules.cpp
-    game/units/AirdropRules.cpp
-    game/units/TerraformRules.cpp
+    game/combat/CombatResolver.cpp
+    game/combat/CombatStrength.cpp
+    game/combat/StackCollateral.cpp
+    game/combat/PlanetPearls.cpp
+    game/combat/MoraleConfig.cpp
+    game/combat/MoraleConfigParser.cpp
+    game/combat/MoraleCalculator.cpp
+    game/combat/DisengageRules.cpp
+    game/movement/EvacuateTerritoryRules.cpp
+    game/movement/EvacuateTerritoryEffects.cpp
+    game/movement/TerritoryEntryEffects.cpp
+    game/combat/InterceptRules.cpp
+    game/combat/ScrambleRules.cpp
+    game/movement/MovementRules.cpp
+    game/movement/TransportRules.cpp
+    game/movement/FuelRules.cpp
+    game/combat/AttackRules.cpp
+    game/base/FoundBaseRules.cpp
+    game/movement/AirdropRules.cpp
+    game/terraform/TerraformRules.cpp
     game/units/AdHocDesign.cpp
-    game/units/BaseConquestConfigParser.cpp
-    game/units/BaseConquestRules.cpp
-    game/units/BaseConquestEffects.cpp
-    game/units/ProbeActionConfigParser.cpp
-    game/units/ProbeActionEffects.cpp
-    game/units/ProbeActionExecutor.cpp
-    game/units/ProbeRules.cpp
-    game/units/ProbeTarget.cpp
-    game/units/StepEvaluator.cpp
-    game/units/Pathfinder.cpp
-    game/units/MoveCostCalculator.cpp
+    game/base/BaseConquestConfigParser.cpp
+    game/base/BaseConquestRules.cpp
+    game/base/BaseConquestEffects.cpp
+    game/probes/ProbeActionConfigParser.cpp
+    game/probes/ProbeActionEffects.cpp
+    game/probes/ProbeActionExecutor.cpp
+    game/probes/ProbeRules.cpp
+    game/probes/ProbeTarget.cpp
+    game/movement/StepEvaluator.cpp
+    game/movement/Pathfinder.cpp
+    game/movement/MoveCostCalculator.cpp
     game/units/UnitComponentConfigParser.cpp
     game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp
@@ -176,38 +176,38 @@ add_library(ac-core STATIC
     game/social-engineering/SocialRatingConfigParser.cpp
     game/social-engineering/SocialRatingResolver.cpp
     game/map/Tile.cpp
-    game/map/OccupantArtParser.cpp
+    game/display/OccupantArtParser.cpp
     game/map/UnitPositionIndex.cpp
     game/map/WorkedTileIndex.cpp
     game/map/TileFlagMap.cpp
     game/map/TerritoryMap.cpp
-    game/faction/FactionVisibleMap.cpp
-    game/faction/FactionTileMemory.cpp
-    game/faction/VisibilityRules.cpp
-    game/faction/UnitVisibility.cpp
+    game/visibility/FactionVisibleMap.cpp
+    game/visibility/FactionTileMemory.cpp
+    game/visibility/VisibilityRules.cpp
+    game/visibility/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/OccupantCoexistence.cpp
     game/map/TerrainConfigParser.cpp
     game/effects/CoexistenceResolve.cpp
     game/map/ElevationRulesConfigParser.cpp
-    game/map/ElevationChange.cpp
-    game/map/SurfaceOccupancy.cpp
+    game/terraform/ElevationChange.cpp
+    game/terraform/SurfaceOccupancy.cpp
     game/map/TerrainFeatureValidation.cpp
-    game/map/TerraformSpread.cpp
-    game/map/WorldGenPresetConfigParser.cpp
-    game/map/WorldGenDecorationConfigParser.cpp
-    game/map/LandmarkConfigParser.cpp
-    game/map/LandmarkGeneration.cpp
-    game/map/FungusGeneration.cpp
-    game/map/FungalBloom.cpp
-    game/map/Explosion.cpp
-    game/map/TileBonusGeneration.cpp
-    game/map/MapGenerationConfig.cpp
-    game/map/MoistureGeneration.cpp
+    game/terraform/TerraformSpread.cpp
+    game/worldgen/WorldGenPresetConfigParser.cpp
+    game/worldgen/WorldGenDecorationConfigParser.cpp
+    game/worldgen/LandmarkConfigParser.cpp
+    game/worldgen/LandmarkGeneration.cpp
+    game/worldgen/FungusGeneration.cpp
+    game/ecology/FungalBloom.cpp
+    game/combat/Explosion.cpp
+    game/worldgen/TileBonusGeneration.cpp
+    game/worldgen/MapGenerationConfig.cpp
+    game/worldgen/MoistureGeneration.cpp
     game/map/RiverGeneration.cpp
-    game/map/FbmNoise.cpp
+    game/worldgen/FbmNoise.cpp
     game/map/WorldMap.cpp
-    game/map/WorldGenerator.cpp
+    game/worldgen/WorldGenerator.cpp
     game/stages/CustomTurnStage.cpp
     lib/Rational.cpp
     input/BufferedInput.cpp

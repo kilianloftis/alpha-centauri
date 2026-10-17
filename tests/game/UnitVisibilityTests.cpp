@@ -3,9 +3,9 @@
 
 #include "GameFixtures.h"
 
-#include "game/faction/UnitVisibility.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/visibility/UnitVisibility.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/units/Unit.h"
 

@@ -1,6 +1,6 @@
 #include "game/map/TerritoryMap.h"
 
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

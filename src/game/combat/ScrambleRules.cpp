@@ -1,0 +1,132 @@
+#include "game/combat/ScrambleRules.h"
+
+#include "game/faction/Faction.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
+#include "game/effects/TileEffectsContext.h"
+#include "game/units/UnitManager.h"
+#include "game/map/MapUtils.h"
+#include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
+#include "game/movement/Pathfinder.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
+
+#include <optional>
+
+namespace ac
+{
+
+namespace
+{
+
+// Max Scramble.range among ThisUnit effects whose condition matches the attacker.
+std::optional<int> MatchingScrambleRange_(const Unit& rCandidate, const Unit& rAttacker)
+{
+    std::optional<int> best;
+    EffectContext_t ctx;
+    ctx.pAttacker = &rAttacker;
+    for (const ActiveEffect_t& rEffect : rCandidate.GetDesign().CollectEffects())
+    {
+        if (rEffect.config->scope != EffectScope_t::ThisUnit)
+        {
+            continue;
+        }
+        const ScrambleEffect_t* pScramble =
+            std::get_if<ScrambleEffect_t>(&rEffect.config->effect);
+        if (!pScramble)
+        {
+            continue;
+        }
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        {
+            continue;
+        }
+        if (!best || pScramble->range > *best)
+        {
+            best = pScramble->range;
+        }
+    }
+    return best;
+}
+
+bool BetterScrambleCandidate_(const Unit& rCandidate, const Unit& rBest)
+{
+    const int candidateAttack = ResolveStat(rCandidate, StatId_t::Attack);
+    const int bestAttack = ResolveStat(rBest, StatId_t::Attack);
+    if (candidateAttack != bestAttack)
+    {
+        return candidateAttack > bestAttack;
+    }
+    if (rCandidate.GetCurrentHp() != rBest.GetCurrentHp())
+    {
+        return rCandidate.GetCurrentHp() > rBest.GetCurrentHp();
+    }
+    return rCandidate.GetUnitId() < rBest.GetUnitId();
+}
+
+bool CanScrambleTo_(const Unit& rCandidate,
+                    int range,
+                    const Tile& rDest,
+                    const WorldMap& rWorldMap,
+                    const Pathfinder& rPathfinder)
+{
+    if (range <= 0)
+    {
+        return false;
+    }
+    if (ChebyshevDistance(rCandidate.GetTile(), rDest, rWorldMap.GetWidth()) > range)
+    {
+        return false;
+    }
+    if (&rCandidate.GetTile() == &rDest)
+    {
+        return false;
+    }
+
+    // A scramble is an automatic reaction, so it never crosses territory its faction may not
+    // enter: that would need the player's decision to break the agreement.
+    const Path_t path = rPathfinder.FindPath(rCandidate, rDest);
+    if (!path.bReachable || path.tiles.empty() || path.forbiddenTerritoryTiles > 0)
+    {
+        return false;
+    }
+    return path.totalCostFragments <= rCandidate.GetMoveFragmentsRemaining();
+}
+
+} // namespace
+
+Unit* FindScrambler(const Unit& rAttacker,
+                              Unit& rOriginalDefender,
+                              const WorldMap& rWorldMap,
+                              const TileEffectsContext& /*rTileEffects*/,
+                              const Pathfinder& rPathfinder)
+{
+    const Tile& rDest = rOriginalDefender.GetTile();
+
+    Unit* pBest = nullptr;
+    for (Unit& rCandidate : rOriginalDefender.GetFaction().GetUnitManager().Units())
+    {
+        if (&rCandidate == &rOriginalDefender)
+        {
+            continue;
+        }
+        const std::optional<int> range = MatchingScrambleRange_(rCandidate, rAttacker);
+        if (!range)
+        {
+            continue;
+        }
+        if (!CanScrambleTo_(rCandidate, *range, rDest, rWorldMap, rPathfinder))
+        {
+            continue;
+        }
+        if (!pBest || BetterScrambleCandidate_(rCandidate, *pBest))
+        {
+            pBest = &rCandidate;
+        }
+    }
+    return pBest;
+}
+
+} // namespace ac

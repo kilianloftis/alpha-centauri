@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/units/Unit.h"
-#include "game/units/Pathfinder.h"
+#include "game/movement/Pathfinder.h"
 #include "input/Input.h"
 
 #include <chrono>

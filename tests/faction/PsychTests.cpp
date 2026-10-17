@@ -4,14 +4,14 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/resources/ResourceManager.h"
-#include "game/population/pop-types/Pop.h"
+#include "game/economy/EconomyManager.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/economy/ResourceManager.h"
+#include "game/population/Pop.h"
 
 #include <catch2/catch_test_macros.hpp>
 

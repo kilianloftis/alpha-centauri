@@ -1,12 +1,12 @@
 #include "game/council/PlanetaryCouncil.h"
 
 #include "game/CurrentGameState.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/ResearchManager.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/research/ResearchManager.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>

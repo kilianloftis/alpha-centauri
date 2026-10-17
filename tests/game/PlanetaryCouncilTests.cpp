@@ -9,12 +9,12 @@
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/InfiltrationRules.h"
+#include "game/diplomacy/InfiltrationRules.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/economy/EconomyManager.h"
+#include "game/research/ResearchManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/WorldMap.h"
 
 #include <algorithm>

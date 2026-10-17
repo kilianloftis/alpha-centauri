@@ -1,7 +1,7 @@
 #include "game/effects/TileEffectsContext.h"
 
-#include "game/Faction.h"
-#include "game/IWorldEffectsSource.h"
+#include "game/faction/Faction.h"
+#include "game/effects/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementIds.h"

@@ -1,13 +1,13 @@
 #include "game/ecology/BaseEcology.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/CurrentGameState.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/research/ResearchManager.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 

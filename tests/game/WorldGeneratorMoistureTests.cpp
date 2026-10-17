@@ -1,9 +1,9 @@
 #include "TestHelpers.h"
-#include "game/map/MapGenerationConfig.h"
+#include "game/worldgen/MapGenerationConfig.h"
 #include "game/map/MapUtils.h"
-#include "game/map/MoistureGeneration.h"
+#include "game/worldgen/MoistureGeneration.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldGenDecorationConfig.h"
+#include "game/worldgen/WorldGenDecorationConfig.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

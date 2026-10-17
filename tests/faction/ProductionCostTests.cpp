@@ -1,8 +1,8 @@
-#include "game/faction/base/production/ProductionCostCalculator.h"
-#include "game/faction/base/production/ProductionManager.h"
-#include "game/faction/base/production/ProductionApplyResult.h"
-#include "game/Faction.h"
-#include "game/IConstructable.h"
+#include "game/production/ProductionCostCalculator.h"
+#include "game/production/ProductionManager.h"
+#include "game/production/ProductionApplyResult.h"
+#include "game/faction/Faction.h"
+#include "game/production/IConstructable.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 

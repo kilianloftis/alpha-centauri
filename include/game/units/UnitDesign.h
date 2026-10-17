@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/IConstructable.h"
+#include "game/production/IConstructable.h"
 #include "game/units/IDesign.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"

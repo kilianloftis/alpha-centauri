@@ -1,10 +1,10 @@
 #include "TestHelpers.h"
-#include "game/map/FungusGeneration.h"
+#include "game/worldgen/FungusGeneration.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldGenDecorationConfigParser.h"
+#include "game/worldgen/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

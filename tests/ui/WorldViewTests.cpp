@@ -3,11 +3,11 @@
 
 #include "ViewFixture.h"
 
-#include "game/Faction.h"
-#include "game/faction/UnitManager.h"
-#include "game/faction/UnitVisibility.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/Faction.h"
+#include "game/units/UnitManager.h"
+#include "game/visibility/UnitVisibility.h"
+#include "game/base/BaseManager.h"
+#include "game/production/ProductionManager.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"

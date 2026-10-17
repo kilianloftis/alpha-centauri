@@ -1,6 +1,6 @@
 #include "game/stages/UnitSupport.h"
-#include "game/Faction.h"
-#include "game/TurnStageRegistrar.h"
+#include "game/faction/Faction.h"
+#include "game/stages/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac

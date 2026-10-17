@@ -1,4 +1,4 @@
-#include "game/faction/base/population/AssimilationTracker.h"
+#include "game/population/AssimilationTracker.h"
 
 #include <catch2/catch_test_macros.hpp>
 

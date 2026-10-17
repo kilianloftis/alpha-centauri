@@ -1,10 +1,10 @@
 #pragma once
 
 #include "game/GameCategory.h"
-#include "game/IConstructable.h"
+#include "game/production/IConstructable.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
-#include "game/faction/base/production/ScrapConfig.h"
+#include "game/production/ScrapConfig.h"
 #include <algorithm>
 #include <optional>
 #include <string>

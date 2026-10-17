@@ -1,12 +1,12 @@
 #include "ui/world/FactionBaseArt.h"
 
-#include "game/Faction.h"
-#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/faction/Faction.h"
+#include "game/display/BaseSpriteSizesConfig.h"
 #include "game/buildings/BuildingConfig.h"
-#include "game/buildings/MapOverlayChannelsConfig.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/display/MapOverlayChannelsConfig.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "ui/SpriteLibrary.h"
 

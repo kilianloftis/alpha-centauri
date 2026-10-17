@@ -1,15 +1,15 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/population/calculators/GrowthCalculator.h"
-#include "game/population/pop-types/GrowthConfigParser.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/population/GrowthCalculator.h"
+#include "game/population/GrowthConfigParser.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/population/pop-types/Pop.h"
+#include "game/economy/WorkerAssignmentManager.h"
+#include "game/population/Pop.h"
 #include "game/map/Tile.h"
 #include <catch2/catch_test_macros.hpp>
 #include <limits>

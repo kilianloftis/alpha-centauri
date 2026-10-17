@@ -1,7 +1,7 @@
 #include "ui/base/PopulationDisplay.h"
 #include "graphics/Graphics.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/population/pop-types/Pop.h"
+#include "game/population/PopulationManager.h"
+#include "game/population/Pop.h"
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>

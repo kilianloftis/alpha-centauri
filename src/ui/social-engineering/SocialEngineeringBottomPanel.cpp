@@ -1,6 +1,6 @@
 #include "ui/social-engineering/SocialEngineeringBottomPanel.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

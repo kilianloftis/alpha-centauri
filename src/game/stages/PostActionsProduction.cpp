@@ -1,6 +1,6 @@
 #include "game/stages/PostActionsProduction.h"
 
-#include "game/TurnStageRegistrar.h"
+#include "game/stages/TurnStageRegistrar.h"
 
 #include <utility>
 

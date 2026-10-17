@@ -1,8 +1,8 @@
 #include "game/units/Unit.h"
 
-#include "game/Faction.h"
-#include "game/faction/Military.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/faction/Faction.h"
+#include "game/units/Military.h"
+#include "game/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
@@ -10,8 +10,8 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/units/MovementConstants.h"
-#include "game/units/TransportRules.h"
+#include "game/movement/MovementConstants.h"
+#include "game/movement/TransportRules.h"
 
 #include <algorithm>
 #include <stdexcept>

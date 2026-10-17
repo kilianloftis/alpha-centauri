@@ -1,6 +1,6 @@
 #include "ui/base/GrowthDisplay.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
 #include "graphics/Graphics.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/style/UiStyle.h"

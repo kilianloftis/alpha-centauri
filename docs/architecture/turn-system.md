@@ -121,7 +121,7 @@ graph TB
 ## Component Overview
 
 ### TurnStageBase / GlobalTurnStage / PerFactionTurnStage
-(`include/game/TurnStages.h`)
+(`include/game/stages/TurnStages.h`)
 
 A turn stage never receives a parameter it cannot use: rather than one interface with
 nullable `GameState*`/`Faction*` arguments, there are two narrow interfaces:

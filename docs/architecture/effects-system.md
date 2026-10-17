@@ -578,13 +578,13 @@ both name the right faction with no extra plumbing. `severity` is `AtrocitySever
 `config/atrocities.json`. See `atrocity-system.md`.
 
 `Earthquake` raises the context tile through `ApplyEarthquake`
-(`include/game/map/ElevationChange.h`): `levels` rolls of `[level_min_meters,
+(`include/game/terraform/ElevationChange.h`): `levels` rolls of `[level_min_meters,
 level_max_meters]` from `config/map_rules.json`, then the neighbor slope relaxation. Exactly
 one magnitude source is authored — `levels` is a literal (a scripted quake), `levels_stat`
 names a **unit** stat resolved off the subject the trigger stamped. The rules come from the
 tile's own bound `ElevationRulesConfig_t`, so the effect needs no `GameDataContext`.
 
-`FungalBloom` (`include/game/map/FungalBloom.h`) sets fungus on the origin when it is not a
+`FungalBloom` (`include/game/ecology/FungalBloom.h`) sets fungus on the origin when it is not a
 base, then on a random sample of Chebyshev-1 neighbors that are not bases and do not already
 have fungus, up to the resolved tile count (the full count when the origin is a base). Setting
 fungus removes improvements that cannot coexist with it. A nutrient bonus stays. A uniform draw of
@@ -593,7 +593,7 @@ fungus removes improvements that cannot coexist with it. A nutrient bonus stays.
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
 
-`Explosion` (`include/game/map/Explosion.h`) wipes a Chebyshev disk and then lowers it.
+`Explosion` (`include/game/combat/Explosion.h`) wipes a Chebyshev disk and then lowers it.
 Radius 1 is the origin plus its neighbors (9 tiles). On each tile it destroys every unit
 except the detonating subject, razes a base, and removes built improvements. Optional terrain,
 aquifers, rockiness, and moisture stay. The subject is spared so the payload's following

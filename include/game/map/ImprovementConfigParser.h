@@ -2,7 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
-#include "game/map/OccupantArt.h"
+#include "game/display/OccupantArt.h"
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>

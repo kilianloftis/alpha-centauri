@@ -1,6 +1,6 @@
 #include "game/PlayerInteractionQueue.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
 
 #include <stdexcept>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/atrocities/AtrocityConfig.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "lib/Revision.h"
 
 #include <cstdint>

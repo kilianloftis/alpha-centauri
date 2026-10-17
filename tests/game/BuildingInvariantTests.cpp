@@ -5,16 +5,16 @@
 #include "GameFixtures.h"
 
 #include "game/CurrentGameState.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
-#include "game/faction/base/production/ProductionManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

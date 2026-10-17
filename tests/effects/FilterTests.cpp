@@ -6,7 +6,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"

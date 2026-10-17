@@ -1,7 +1,7 @@
 #include "ui/commlinks/CommlinksPanel.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/faction/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomacyLedger.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

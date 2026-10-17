@@ -303,7 +303,7 @@ graph TB
 - **Who holds it**: `Engine` owns the context and holds it `const`. `GameState`, `Faction` and `ViewFactory` receive `const GameDataContext&` at construction, and `GameState::GetGameData()` is the only accessor that hands it back out.
   - Free rule functions and turn stages read it from the `GameState&` they take, or from `CurrentGameState().GetGameData()` when they take none. They never reach it through a faction, base or unit.
   - The classes those owners build take the pieces they use as constructor references. `MoraleCalculator` (a stateless view over `moraleConfig`, owned here beside `TechCostCalculator`) reaches `Unit` via `Faction` → `UnitManager` without appearing in any create/transfer signature — `UnitManager::CreateUnit` and `Faction::TransferUnitTo` take no morale argument.
-  - A class that needs many pieces takes a named bundle of references: `BaseManager` takes `BaseRules_t` (`include/game/faction/base/BaseRules.h`), which `MakeBaseRules` builds from the context and which the constructor unpacks without keeping.
+  - A class that needs many pieces takes a named bundle of references: `BaseManager` takes `BaseRules_t` (`include/game/base/BaseRules.h`), which `MakeBaseRules` builds from the context and which the constructor unpacks without keeping.
   - Only the loader, the validators and `MakeBaseRules` take the context as a function parameter.
 - **Not changed after loading**: rules for one world live on its `WorldMap`, not here. The world's elevation rules carry the preset's range; the context keeps `map_rules.json` as parsed.
 - **Outlives all live state**: `GameState`, every `Faction`, `BaseManager`, and `TileEffectsContext` hold non-owning references into this object, so `Engine` declares `m_gameDataContext` *before* `m_pGameState`. Members are destroyed in reverse declaration order, so the whole faction/base/unit graph is torn down while the definition data is still alive.
@@ -407,6 +407,36 @@ Every file and class is one kind. The kind says what the code may read, change a
   - Each version is its own function in that Rules file.
 - A rule reads a switch from a config struct it already takes, or else from `CurrentGameState().GetGameData()`. Adding a switch never changes its signature.
 - Rules keep the smallest signature that answers the question. They take the objects the question is about, and read anything else from the current game state.
+
+### Layout
+One directory under `include/game/` and `src/game/` per domain. The filename suffix says the kind, so domains are flat: no kind directories and no ownership nesting.
+
+- (root): session and ruleset plumbing — `Engine`, `GameState`, `CurrentGameState`, `GameDataContext`, `GameSettings` and its setting structs, difficulty, player interactions, cross-domain validators, `GameCategory`
+- `atrocities/`: atrocity records, sanctions and their consequences
+- `base/`: the base aggregate, its ruleset bundle and effects cache, founding, conquest and rebellion
+- `buildings/`: facility and secret-project definitions, a base's buildings, upkeep, destruction, orbital facilities
+- `combat/`: attack legality, combat resolution, morale, interception, scramble, collateral, explosions
+- `council/`: the Planetary Council, proposals and votes
+- `diplomacy/`: statuses, the ledger, proposals and trade, transitions, permissions, first contact, infiltration
+- `display/`: presentation data the ruleset loads — occupant art, base sprite sizes, overlay channels
+- `ecology/`: eco-damage and fungal blooms
+- `economy/`: base resource production, worker assignment, inefficiency, mineral support, energy allocation, commerce
+- `effects/`: the effects system — effect and triggered-effect definitions, collection, resolution and dispatch, tile effects, interaction grids
+- `faction/`: the faction aggregate, its definition, identity, flavour, AI profile, effects pool
+- `map/`: the world map, tiles, territory, spatial indexes, occupants, rivers
+- `movement/`: move costs, step legality, pathfinding, transport, airdrop, fuel, territory entry and evacuation
+- `natives/`: native life designs, registry and native-life levels
+- `population/`: pops and pop types, growth, drones, composition, police, mood latches, assimilation
+- `probes/`: probe actions, targets, mind control
+- `production/`: production, costs, completion, hurry, scrap, stockpiles, the constructable interface
+- `research/`: techs, tech cost, research progress and selection
+- `social-engineering/`: policies, social ratings, a faction's choices
+- `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
+- `terraform/`: terraform projects, elevation change, terraform spread, surface flips
+- `units/`: the unit aggregate, designs, components and slots, orders, the order executor
+- `visibility/`: exploration, fog, tile memory, revealed units, visibility settings
+- `world-events/`: scheduled world events
+- `worldgen/`: world generation, presets, decoration
 
 ### Composition root phases
 `Engine::Initialize_` runs three explicit phases, in order:

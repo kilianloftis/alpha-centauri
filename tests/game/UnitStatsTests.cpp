@@ -10,7 +10,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
-#include "game/units/MovementConstants.h"
+#include "game/movement/MovementConstants.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 

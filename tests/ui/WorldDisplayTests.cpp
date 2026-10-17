@@ -1,9 +1,9 @@
 #include "ViewFixture.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameSettings.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "ui/style/UiStyle.h"

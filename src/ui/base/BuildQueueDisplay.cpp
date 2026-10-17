@@ -1,6 +1,6 @@
 #include "ui/base/BuildQueueDisplay.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/base/BaseManager.h"
+#include "game/production/HurryProductionCalculator.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

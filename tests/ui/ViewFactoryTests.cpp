@@ -4,16 +4,16 @@
 
 #include "ViewFixture.h"
 
-#include "game/Faction.h"
-#include "game/faction/Military.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/SocialEngineeringManager.h"
+#include "game/faction/Faction.h"
+#include "game/units/Military.h"
+#include "game/research/ResearchManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/GameSettings.h"
 #include "game/map/Tile.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/economy/WorkerAssignmentManager.h"
+#include "game/base/BaseManager.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_test_macros.hpp>

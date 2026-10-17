@@ -1,7 +1,7 @@
 #include "DiplomacyFixture.h"
 
-#include "game/faction/DiplomaticPermissionRules.h"
-#include "game/units/MovementRules.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
+#include "game/movement/MovementRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 

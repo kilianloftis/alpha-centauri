@@ -1,0 +1,188 @@
+#include "game/production/ProductionConfigParser.h"
+#include "game/production/ScrapConfigParser.h"
+#include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
+#include "game/production/ConstructableKind.h"
+#include "lib/config/JsonConfigLoader.h"
+#include <nlohmann/json.hpp>
+#include <algorithm>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace ac
+{
+
+ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& configPath)
+{
+    return JsonConfigLoader::LoadObjectFile<ProductionConfig_t>(
+        configPath, "production", [&configPath](const nlohmann::json& rJson) {
+            const auto fail = [&](const std::string& rMessage) {
+                throw std::runtime_error("Production config '" + configPath + "': " + rMessage);
+            };
+
+            static const std::vector<std::string> knownKeys = {
+                "retool_penalty_threshold", "retool_penalty_percent",
+                "prototype_surcharge_percent", "kinds", "effects",
+                "on_unit_produced_effects",
+            };
+            for (const auto& [rKey, rUnused] : rJson.items())
+            {
+                if (std::find(knownKeys.begin(), knownKeys.end(), rKey) == knownKeys.end())
+                {
+                    fail("unknown key '" + rKey + "'");
+                }
+            }
+
+            const auto read = [&](const char* key, int minimum, int maximum = -1) {
+                if (!rJson.contains(key))
+                {
+                    fail("'" + std::string(key) + "' is required");
+                }
+                if (!rJson.at(key).is_number_integer())
+                {
+                    fail("'" + std::string(key) + "' must be an integer");
+                }
+                const int value = rJson.at(key).get<int>();
+                if (value < minimum)
+                {
+                    fail("'" + std::string(key) + "' must be >= " + std::to_string(minimum)
+                         + ", got " + std::to_string(value));
+                }
+                if (maximum >= 0 && value > maximum)
+                {
+                    fail("'" + std::string(key) + "' must be <= " + std::to_string(maximum)
+                         + ", got " + std::to_string(value));
+                }
+                return value;
+            };
+
+            ProductionConfig_t config;
+            config.retoolPenaltyThreshold = read("retool_penalty_threshold", 0);
+            config.retoolPenaltyPercent = read("retool_penalty_percent", 0, 100);
+            // No upper bound: unlike the retool penalty (a percentage *of* a stockpile, so
+            // >100 is meaningless), a surcharge above 100% is a coherent thing for a mod to ask
+            // for — a prototype that costs triple.
+            config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0);
+
+            if (!rJson.contains("kinds") || !rJson.at("kinds").is_object())
+            {
+                fail("'kinds' object is required");
+            }
+
+            const auto parseHurry = [&](const std::string& rKindPath, const nlohmann::json& rValue)
+                -> HurryKindConfig_t {
+                const auto failHurry = [&](const std::string& rMessage) {
+                    fail(rKindPath + ".hurry " + rMessage);
+                };
+                if (!rValue.is_object())
+                {
+                    failHurry("must be an object with formula, mineral_threshold, and "
+                              "below_threshold_multiplier");
+                }
+                for (const auto& [rKey, rUnused] : rValue.items())
+                {
+                    if (rKey != "formula" && rKey != "mineral_threshold"
+                        && rKey != "below_threshold_multiplier")
+                    {
+                        failHurry("unknown key '" + rKey + "'");
+                    }
+                }
+                const auto readKindInt = [&](const char* key, int minimum) {
+                    if (!rValue.contains(key) || !rValue.at(key).is_number_integer())
+                    {
+                        failHurry(std::string(key) + " must be an integer");
+                    }
+                    const int value = rValue.at(key).get<int>();
+                    if (value < minimum)
+                    {
+                        failHurry(std::string(key) + " must be >= " + std::to_string(minimum)
+                                  + ", got " + std::to_string(value));
+                    }
+                    return value;
+                };
+                if (!rValue.contains("formula") || !rValue.at("formula").is_string()
+                    || rValue.at("formula").get<std::string>().empty())
+                {
+                    failHurry("formula must be a non-empty string");
+                }
+                HurryKindConfig_t kind;
+                kind.formula = rValue.at("formula").get<std::string>();
+                kind.mineralThreshold = readKindInt("mineral_threshold", 0);
+                kind.belowThresholdMultiplier = readKindInt("below_threshold_multiplier", 1);
+                return kind;
+            };
+
+            // An empty object is legal: it turns hurrying and scrap off entirely. Each remaining
+            // key is a constructable kind; stockpile is rejected because those items never
+            // complete.
+            for (const auto& [rKind, rValue] : rJson.at("kinds").items())
+            {
+                const std::string kindPath = "kinds." + rKind;
+                if (rKind.empty())
+                {
+                    fail("kinds: kind must be a non-empty string");
+                }
+                ConstructableKind_t kindId = ConstructableKind_t::Building;
+                try
+                {
+                    kindId = ParseConstructableKind(rKind);
+                }
+                catch (const std::runtime_error&)
+                {
+                    fail(kindPath + " is not a known constructable kind");
+                }
+                if (kindId == ConstructableKind_t::Stockpile)
+                {
+                    fail(kindPath + " cannot be hurried or scrapped; omit it from kinds");
+                }
+                if (!rValue.is_object())
+                {
+                    fail(kindPath + " must be an object with hurry and/or default_scrap");
+                }
+                for (const auto& [rKey, rUnused] : rValue.items())
+                {
+                    if (rKey != "hurry" && rKey != "default_scrap")
+                    {
+                        fail(kindPath + " unknown key '" + rKey + "'");
+                    }
+                }
+                ProductionKindConfig_t kindConfig;
+                if (rValue.contains("hurry"))
+                {
+                    kindConfig.hurry = parseHurry(kindPath, rValue.at("hurry"));
+                }
+                if (rValue.contains("default_scrap"))
+                {
+                    if (kindId == ConstructableKind_t::SecretProject)
+                    {
+                        fail(kindPath
+                             + ".default_scrap cannot be configured; secret projects cannot be "
+                               "scrapped");
+                    }
+                    try
+                    {
+                        kindConfig.defaultScrap = ScrapConfigParser::ParseKindConfig(
+                            rValue.at("default_scrap"), kindPath + ".default_scrap");
+                    }
+                    catch (const std::runtime_error& rError)
+                    {
+                        fail(rError.what());
+                    }
+                }
+                if (!kindConfig.hurry && !kindConfig.defaultScrap)
+                {
+                    fail(kindPath + " must include hurry or default_scrap");
+                }
+                config.kinds.emplace(kindId, std::move(kindConfig));
+            }
+
+            config.effects = EffectConfigParser::ParseEffects(
+                rJson, EffectSourceKind_t::Production, "production");
+            config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+                rJson, "on_unit_produced_effects", "production");
+            return config;
+        });
+}
+
+} // namespace ac

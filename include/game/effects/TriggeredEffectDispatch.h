@@ -4,7 +4,7 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffect.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "game/research/TechConfigParser.h"
 #include "game/units/Unit.h"
 

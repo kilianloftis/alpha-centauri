@@ -10,19 +10,19 @@
 #include "GameFixtures.h"
 
 #include "game/CurrentGameState.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/buildings/BaseSpriteSizesConfig.h"
+#include "game/display/BaseSpriteSizesConfig.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/buildings/MapOverlayChannelsConfig.h"
-#include "game/stockpiles/StockpileRegistry.h"
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/display/MapOverlayChannelsConfig.h"
+#include "game/production/StockpileRegistry.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
-#include "game/units/MoraleCalculator.h"
+#include "game/combat/MoraleCalculator.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

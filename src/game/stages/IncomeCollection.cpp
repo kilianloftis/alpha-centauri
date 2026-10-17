@@ -1,8 +1,8 @@
 #include "game/stages/IncomeCollection.h"
 #include "game/GameState.h"
-#include "game/Faction.h"
-#include "game/faction/EconomyManager.h"
-#include "game/TurnStageRegistrar.h"
+#include "game/faction/Faction.h"
+#include "game/economy/EconomyManager.h"
+#include "game/stages/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac

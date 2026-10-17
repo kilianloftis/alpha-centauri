@@ -1,0 +1,284 @@
+#include "game/worldgen/WorldGenerator.h"
+#include "game/worldgen/WorldGenPresetConfigParser.h"
+#include "game/worldgen/FbmNoise.h"
+#include "game/worldgen/FungusGeneration.h"
+#include "game/worldgen/TileBonusGeneration.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/worldgen/LandmarkGeneration.h"
+#include "game/map/OccupantCoexistence.h"
+#include "game/worldgen/MoistureGeneration.h"
+#include "game/map/RiverGeneration.h"
+#include "game/map/MapUtils.h"
+#include "game/worldgen/RockinessGeneration.h"
+
+#include <algorithm>
+#include <string>
+#include <chrono>
+#include <cmath>
+#include <vector>
+
+namespace ac
+{
+
+namespace
+{
+
+float Remap_(float value, float inMin, float inMax, float outMin, float outMax)
+{
+    if (inMax <= inMin)
+    {
+        return outMin;
+    }
+    const float t = (value - inMin) / (inMax - inMin);
+    return outMin + t * (outMax - outMin);
+}
+
+} // namespace
+
+WorldGenerator::WorldGenerator() = default;
+
+WorldGenerator::~WorldGenerator() = default;
+
+std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& rConfig,
+                                                   const WorldGenPresetConfig_t& rPreset,
+                                                   const WorldGenDecorationConfig_t& rDecoration,
+                                                   const std::vector<LandmarkConfig_t>& rLandmarks,
+                                                   const ImprovementRegistry& rOccupants,
+                                                   const ElevationRulesConfig_t& rMapRules,
+                                                   unsigned int seed)
+{
+    m_rng.seed(seed);
+
+    ElevationRulesConfig_t rules = rMapRules;
+    WorldGenPresetConfigParser::ApplyElevationRange(rules, rPreset);
+    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules);
+
+    // Bound before any stage runs: CanBuildImprovement reads a tile's terrain-feature configs
+    // to enforce the incumbent side of `excludes`, and those are empty until binding. An
+    // unbound tile answers a coexistence question differently from the same tile in play.
+    for (const auto& pTile : pWorld->GetTiles())
+    {
+        pTile->BindOccupants(rOccupants);
+    }
+
+    // Landmarks run before aquifers because they are the last stage that changes elevation
+    // (the Mount Planet sculpt) or stamps a terminates_river feature (BoreholeCluster), and
+    // RecomputeRivers has to see both. Rainfall follows rivers (SMAC world_climate order) so
+    // river tiles seed rain belts; it also sees post-sculpt elevation for cloudmass. Bonuses
+    // stay last so @resource_bonus excludes apply. Landmark anchors do not filter on moisture.
+    GenerateElevation_(*pWorld, rConfig, rPreset);
+    GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
+    GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);
+    GenerateLandmarks_(*pWorld, rLandmarks, rOccupants);
+    GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
+    GenerateMoisture_(*pWorld, rDecoration.moisture, rConfig.rainfall);
+    GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rOccupants);
+
+    return pWorld;
+}
+
+void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
+                                        const MapGenerationConfig_t& rConfig,
+                                        const WorldGenPresetConfig_t& rPreset)
+{
+    const int width = rWorld.GetWidth();
+    const int height = rWorld.GetHeight();
+    const int tileCount = static_cast<int>(rWorld.GetTiles().size());
+
+    // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
+    // session seed, never of rConfig.seed (the request, where 0 means "pick one").
+    FbmNoise noise(static_cast<int>(m_rng()), rPreset);
+
+    const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
+    const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
+    const float scale = std::max(rPreset.continentScale, 0.001f);
+    // One map unit is √½ lattice lengths; sample on a cylinder so x wraps in noise space.
+    constexpr float kTwoPi = 6.283185307179586f;
+    constexpr float kSqrtHalf = 0.7071067811865476f;
+    const float cylinderRadius =
+        (static_cast<float>(width) * kSqrtHalf * scale) / kTwoPi;
+
+    std::vector<float> field(static_cast<size_t>(tileCount));
+    float minValue = 0.0f;
+    float maxValue = 0.0f;
+
+    for (const auto& pTile : rWorld.GetTiles())
+    {
+        const int x = pTile->GetX();
+        const int y = pTile->GetY();
+        const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
+        const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
+        const float angle = (static_cast<float>(x) / static_cast<float>(width)) * kTwoPi;
+        const float sampleX = std::cos(angle) * cylinderRadius;
+        const float sampleZ = std::sin(angle) * cylinderRadius;
+        const float sampleY = static_cast<float>(y) * kSqrtHalf * scale;
+        const float masked =
+            ApplyLandmassMask_(noise.Sample(sampleX, sampleY, sampleZ), nx, ny, rPreset);
+
+        const size_t index = static_cast<size_t>(TileIndex(x, y, width));
+        field[index] = masked;
+        if (index == 0 || masked < minValue)
+        {
+            minValue = masked;
+        }
+        if (index == 0 || masked > maxValue)
+        {
+            maxValue = masked;
+        }
+    }
+
+    float oceanCoverage = std::clamp(rConfig.oceanCoverage, 0.0f, 1.0f);
+    size_t waterCount = static_cast<size_t>(oceanCoverage * static_cast<float>(tileCount));
+    if (waterCount >= static_cast<size_t>(tileCount))
+    {
+        waterCount = static_cast<size_t>(tileCount) - 1;
+    }
+
+    std::vector<float> sorted = field;
+    std::nth_element(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(waterCount),
+                     sorted.end());
+    const float threshold = sorted[waterCount];
+
+    for (const auto& pTile : rWorld.GetTiles())
+    {
+        const size_t index =
+            static_cast<size_t>(TileIndex(pTile->GetX(), pTile->GetY(), width));
+        const float value = field[index];
+        int elevation = 0;
+        if (value < threshold)
+        {
+            const float belowWaterline =
+                Remap_(value, minValue, threshold, 1.0f, 0.0f);
+            const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
+            elevation = static_cast<int>(std::lround(
+                -1.0f + depth * static_cast<float>(rPreset.minElevation + 1)));
+        }
+        else
+        {
+            elevation = static_cast<int>(std::lround(
+                Remap_(value, threshold, maxValue,
+                       0.0f, static_cast<float>(rPreset.maxElevation))));
+        }
+        pTile->SetElevation(elevation);
+    }
+}
+
+float WorldGenerator::ApplyLandmassMask_(float noiseValue,
+                                         float nx,
+                                         float ny,
+                                         const WorldGenPresetConfig_t& rPreset) const
+{
+    const float dist = std::sqrt(nx * nx + ny * ny);
+    // Cylinder: only north/south are true edges; east/west wrap and must not be depressed.
+    const float edge = std::abs(ny);
+    float value = noiseValue;
+
+    switch (rPreset.type)
+    {
+    case WorldGenPreset_t::Pangea:
+    case WorldGenPreset_t::Continents:
+    case WorldGenPreset_t::Islands:
+    case WorldGenPreset_t::Archipelago:
+        value += rPreset.centerBias * (1.0f - dist);
+        value -= rPreset.edgeFalloff * edge;
+        break;
+
+    case WorldGenPreset_t::Ring:
+    {
+        // Peak landmass around mid-radius; depress map center and outer rim.
+        constexpr float kRingRadius = 0.65f;
+        const float ring = 1.0f - std::min(std::abs(dist - kRingRadius) * 2.5f, 1.0f);
+        value += rPreset.centerBias * ring;
+        value -= rPreset.edgeFalloff * edge;
+        value -= rPreset.centerBias * 0.5f * std::max(0.0f, 1.0f - dist * 2.0f);
+        break;
+    }
+
+    case WorldGenPreset_t::Lakes:
+        // Prefer land near the rim and depress the interior for inland seas/lakes.
+        value -= rPreset.centerBias * (1.0f - dist);
+        value -= rPreset.edgeFalloff * edge * 0.5f;
+        break;
+    }
+
+    return value;
+}
+
+void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
+                                       const MoistureDecorationConfig_t& rMoisture,
+                                       Rainfall_t rainfall)
+{
+    moisture_gen::GenerateRainfall(rWorld, rMoisture, rainfall);
+}
+
+void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
+                                        ErosiveForces_t erosiveForces,
+                                        const RockinessDecorationConfig_t& rRockiness)
+{
+    using namespace rockiness_gen;
+
+    const RockinessWeights_t& rWeights = WeightsForLevel(rRockiness, erosiveForces);
+
+    for (const auto& pTile : rWorld.GetTiles())
+    {
+        pTile->SetRockiness(SampleRockiness(rWeights, RandomFloat_()));
+    }
+}
+
+void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
+                                       const AquiferDecorationConfig_t& rAquifers,
+                                       const ImprovementRegistry& rOccupants)
+{
+    const ImprovementConfig_t& rAquifer = rOccupants.Get("Aquifer");
+    std::vector<Tile*> candidates;
+    for (auto& pTile : rWorld.GetTiles())
+    {
+        if (pTile && !pTile->GetHasAquifer() && CanBuildImprovement(*pTile, rAquifer))
+        {
+            candidates.push_back(pTile.get());
+        }
+    }
+
+    if (!candidates.empty() && rAquifers.fraction > 0.0f)
+    {
+        std::shuffle(candidates.begin(), candidates.end(), m_rng);
+        const size_t target = static_cast<size_t>(
+            std::lround(rAquifers.fraction * static_cast<float>(candidates.size())));
+        const size_t count = std::min(target, candidates.size());
+        for (size_t i = 0; i < count; ++i)
+        {
+            candidates[i]->SetHasAquifer(true);
+        }
+    }
+
+    RecomputeRivers(rWorld);
+}
+
+void WorldGenerator::GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
+                                     const ImprovementRegistry& rOccupants)
+{
+    PlaceFungus(rWorld, rFungus, rOccupants.Get(std::string(ImprovementIds::k_Fungus)), m_rng);
+}
+
+void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,
+                                        const std::vector<LandmarkConfig_t>& rLandmarks,
+                                        const ImprovementRegistry& rOccupants)
+{
+    PlaceLandmarks(rWorld, rLandmarks, rOccupants, m_rng);
+}
+
+void WorldGenerator::GenerateTileBonuses_(WorldMap& rWorld,
+                                          const TileBonusDecorationConfig_t& rBonuses,
+                                          const ImprovementRegistry& rOccupants)
+{
+    PlaceTileBonuses(rWorld, rBonuses, rOccupants, m_rng);
+}
+
+float WorldGenerator::RandomFloat_()
+{
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    return dist(m_rng);
+}
+
+} // namespace ac

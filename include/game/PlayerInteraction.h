@@ -1,7 +1,7 @@
 #pragma once
 
-#include "game/faction/DiplomaticStatus.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/diplomacy/DiplomaticStatus.h"
+#include "game/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
 #include "game/units/Unit.h"
 #include "lib/GameEvent.h"

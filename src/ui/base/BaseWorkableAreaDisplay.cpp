@@ -1,6 +1,6 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/base/BaseManager.h"
+#include "game/economy/WorkerAssignmentManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/units/CombatResolver.h"
+#include "game/combat/CombatResolver.h"
 #include "graphics/Graphics.h"
 #include "ui/UIElement.h"
 #include "ui/style/UiStyle.h"

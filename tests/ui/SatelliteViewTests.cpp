@@ -5,8 +5,8 @@
 
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "ui/satellite/SatelliteButtonListPanel.h"
 #include "ui/satellite/SatelliteLabeledButton.h"
 #include "ui/satellite/SatelliteSummaryPanel.h"

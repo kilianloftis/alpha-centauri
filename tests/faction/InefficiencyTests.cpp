@@ -3,10 +3,10 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/Inefficiency.h"
-#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/Faction.h"
+#include "game/base/BaseManager.h"
+#include "game/economy/Inefficiency.h"
+#include "game/economy/ResourceManager.h"
 #include "game/map/MapUtils.h"
 
 #include <catch2/catch_test_macros.hpp>

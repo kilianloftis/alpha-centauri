@@ -1,6 +1,6 @@
 #include "game/buildings/BuildingUpkeep.h"
 
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 
 #include <algorithm>
 #include <unordered_map>

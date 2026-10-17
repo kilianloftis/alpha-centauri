@@ -1,5 +1,5 @@
 #include "game/council/CouncilAiStub.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/PlanetaryCouncil.h"

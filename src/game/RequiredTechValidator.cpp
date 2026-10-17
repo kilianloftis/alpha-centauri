@@ -6,8 +6,8 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainOperationRegistry.h"
-#include "game/population/pop-types/PopTypeConfigParser.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/PopTypeConfigParser.h"
+#include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
@@ -15,7 +15,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/UnitSlotRegistry.h"
-#include "game/units/ProbeActionConfig.h"
+#include "game/probes/ProbeActionConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 
 #include <memory>

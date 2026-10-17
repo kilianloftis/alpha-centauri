@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/OccupantArt.h"
+#include "game/display/OccupantArt.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "graphics/Graphics.h"

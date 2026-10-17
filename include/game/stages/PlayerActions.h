@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/stages/YieldingPerFactionTurnStage.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "game/units/Unit.h"
 #include <unordered_set>
 

@@ -1,10 +1,10 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/ResourceManager.h"
+#include "game/base/BaseManager.h"
+#include "game/economy/ResourceManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/units/Unit.h"

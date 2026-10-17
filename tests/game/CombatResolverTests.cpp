@@ -1,12 +1,12 @@
 #include "GameFixtures.h"
 
-#include "game/units/CombatResolver.h"
-#include "game/units/MoraleCalculator.h"
-#include "game/units/MovementConstants.h"
-#include "game/units/MoraleConfig.h"
-#include "game/units/MoveCostCalculator.h"
-#include "game/units/Pathfinder.h"
-#include "game/units/StepEvaluator.h"
+#include "game/combat/CombatResolver.h"
+#include "game/combat/MoraleCalculator.h"
+#include "game/movement/MovementConstants.h"
+#include "game/combat/MoraleConfig.h"
+#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/Pathfinder.h"
+#include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/effects/ActiveEffect.h"
@@ -15,7 +15,7 @@
 #include "game/map/Tile.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

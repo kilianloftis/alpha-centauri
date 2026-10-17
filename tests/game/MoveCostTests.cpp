@@ -3,8 +3,8 @@
 
 #include "GameFixtures.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/units/MoveCostCalculator.h"
-#include "game/units/MovementConstants.h"
+#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MovementConstants.h"
 #include "lib/Rational.h"
 
 #include <filesystem>

@@ -3,13 +3,13 @@
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/LandmarkConfig.h"
-#include "game/map/LandmarkConfigParser.h"
-#include "game/map/LandmarkGeneration.h"
+#include "game/worldgen/LandmarkConfig.h"
+#include "game/worldgen/LandmarkConfigParser.h"
+#include "game/worldgen/LandmarkGeneration.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldGenPresetConfigParser.h"
-#include "game/map/WorldGenerator.h"
+#include "game/worldgen/WorldGenPresetConfigParser.h"
+#include "game/worldgen/WorldGenerator.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

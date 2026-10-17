@@ -4,9 +4,9 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/faction/base/BaseTypes.h"
-#include "game/population/pop-types/Pop.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/base/BaseTypes.h"
+#include "game/population/Pop.h"
+#include "game/population/PopTypeRegistry.h"
 #include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_test_macros.hpp>

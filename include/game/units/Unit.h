@@ -3,9 +3,9 @@
 #include <set>
 
 #include "game/effects/ActiveEffect.h"
-#include "game/faction/base/HomeBaseIndex.h"
+#include "game/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
-#include "game/units/MoraleCalculator.h"
+#include "game/combat/MoraleCalculator.h"
 #include "game/units/IDesign.h"
 #include "game/units/UnitOrder.h"
 #include <array>

@@ -1,6 +1,6 @@
 #include "ViewFixture.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

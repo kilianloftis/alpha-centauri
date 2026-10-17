@@ -1,5 +1,5 @@
 #include "ui/unit-designer/UnitStatusPanel.h"
-#include "game/faction/UnitManager.h"
+#include "game/units/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"

@@ -1,9 +1,9 @@
 #include "TestHelpers.h"
 
-#include "game/TurnStageConfigParser.h"
-#include "game/TurnStageFactory.h"
+#include "game/stages/TurnStageConfigParser.h"
+#include "game/stages/TurnStageFactory.h"
 #include "game/stages/CustomTurnStage.h"
-#include "game/HookContext.h"
+#include "game/stages/HookContext.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <fstream>

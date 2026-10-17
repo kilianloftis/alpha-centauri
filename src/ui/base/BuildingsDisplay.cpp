@@ -1,8 +1,8 @@
 #include "ui/base/BuildingsDisplay.h"
 
 #include "game/buildings/BuildingConfig.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "graphics/Graphics.h"
 #include "ui/SpriteLibrary.h"
 #include "ui/style/DrawPanelChrome.h"

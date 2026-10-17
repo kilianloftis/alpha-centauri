@@ -3,11 +3,11 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/Faction.h"
+#include "game/economy/EconomyManager.h"
+#include "game/research/ResearchManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/effects/ActiveEffect.h"

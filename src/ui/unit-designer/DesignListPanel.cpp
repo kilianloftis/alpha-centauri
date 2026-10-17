@@ -1,5 +1,5 @@
 #include "ui/unit-designer/DesignListPanel.h"
-#include "game/faction/Military.h"
+#include "game/units/Military.h"
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"

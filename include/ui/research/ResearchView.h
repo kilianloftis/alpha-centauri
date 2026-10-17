@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ui/IGameView.h"
-#include "game/faction/ResearchManager.h"
+#include "game/research/ResearchManager.h"
 #include "input/Input.h"
 
 namespace ac

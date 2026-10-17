@@ -1,12 +1,12 @@
 #include "ui/base/BaseDisplaySnapshot.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/HomeBaseIndex.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/production/ProductionManager.h"
-#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/base/BaseManager.h"
+#include "game/base/HomeBaseIndex.h"
+#include "game/population/PopulationManager.h"
+#include "game/production/ProductionManager.h"
+#include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/WorldMap.h"
 

@@ -7,8 +7,8 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/units/AttackRules.h"
-#include "game/units/AirdropRules.h"
+#include "game/combat/AttackRules.h"
+#include "game/movement/AirdropRules.h"
 #include "ui/style/UiStyle.h"
 
 #include <magic_enum.hpp>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/map/Tile.h"

@@ -1,6 +1,6 @@
 #include "GameFixtures.h"
 
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
 

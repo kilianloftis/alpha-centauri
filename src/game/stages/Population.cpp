@@ -1,9 +1,9 @@
 #include "game/stages/Population.h"
-#include "game/Faction.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/Faction.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/GameState.h"
-#include "game/TurnStageRegistrar.h"
+#include "game/stages/TurnStageRegistrar.h"
 
 namespace ac
 {

@@ -5,10 +5,10 @@
 #include "SpriteRig.h"
 
 #include "game/CurrentGameState.h"
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitSlotRegistry.h"

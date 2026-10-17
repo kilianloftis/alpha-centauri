@@ -1,6 +1,6 @@
 #include "ui/council/CouncilVoteWeightCache.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/council/PlanetaryCouncil.h"
 
 namespace ac

@@ -4,7 +4,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectConfigParser.h"
-#include "game/units/MovementConstants.h"
+#include "game/movement/MovementConstants.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/EffectReferenceValidator.h"
 #include "game/effects/TriggeredEffectParser.h"

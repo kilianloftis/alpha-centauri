@@ -4,9 +4,9 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/PopTypeRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"

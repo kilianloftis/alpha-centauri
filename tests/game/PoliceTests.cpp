@@ -2,13 +2,13 @@
 
 #include "GameFixtures.h"
 
-#include "game/Faction.h"
+#include "game/faction/Faction.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/SocialEngineeringManager.h"
-#include "game/faction/UnitManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/AwayFromHomeDrones.h"
-#include "game/faction/base/population/GarrisonPolice.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/units/UnitManager.h"
+#include "game/base/BaseManager.h"
+#include "game/population/AwayFromHomeDrones.h"
+#include "game/population/GarrisonPolice.h"
 #include "game/map/TerritoryMap.h"
 #include "game/units/Unit.h"
 

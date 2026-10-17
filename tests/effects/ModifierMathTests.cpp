@@ -11,7 +11,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileYieldRulesConfig.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
 
 #include <catch2/catch_approx.hpp>

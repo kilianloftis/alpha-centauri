@@ -1,12 +1,12 @@
 #include "GameFixtures.h"
 
-#include "game/faction/base/BaseManager.h"
+#include "game/base/BaseManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
-#include "game/units/EvacuateTerritoryEffects.h"
-#include "game/units/EvacuateTerritoryRules.h"
-#include "game/units/MovementRules.h"
+#include "game/movement/EvacuateTerritoryEffects.h"
+#include "game/movement/EvacuateTerritoryRules.h"
+#include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 

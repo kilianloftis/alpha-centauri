@@ -1,10 +1,10 @@
 #include "ui/base/CommerceDisplay.h"
 
-#include "game/Faction.h"
-#include "game/faction/CommerceCalculator.h"
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/Faction.h"
+#include "game/economy/CommerceCalculator.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/base/BaseManager.h"
+#include "game/economy/ResourceManager.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 

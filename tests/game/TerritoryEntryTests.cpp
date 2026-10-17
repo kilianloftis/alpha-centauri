@@ -1,8 +1,8 @@
 #include "DiplomacyFixture.h"
 
-#include "game/units/Pathfinder.h"
-#include "game/units/StepEvaluator.h"
-#include "game/units/TerritoryEntryEffects.h"
+#include "game/movement/Pathfinder.h"
+#include "game/movement/StepEvaluator.h"
+#include "game/movement/TerritoryEntryEffects.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 

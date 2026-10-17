@@ -1,6 +1,6 @@
 #include "ui/world/SelectedUnitPanel.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/units/MovementConstants.h"
+#include "game/base/BaseManager.h"
+#include "game/movement/MovementConstants.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "game/faction/base/BaseTypes.h"
+#include "game/base/BaseTypes.h"
 #include "game/map/MapUtils.h"
-#include "game/map/OccupantArt.h"
+#include "game/display/OccupantArt.h"
 #include "graphics/Graphics.h"
 #include "ui/world/MapAppearance.h"
 

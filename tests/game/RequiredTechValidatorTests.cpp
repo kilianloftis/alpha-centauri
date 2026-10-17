@@ -9,10 +9,10 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainOperationRegistry.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
-#include "game/units/ProbeActionConfig.h"
+#include "game/probes/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 

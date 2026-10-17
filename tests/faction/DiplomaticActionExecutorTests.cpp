@@ -1,17 +1,17 @@
 #include "DiplomacyFixture.h"
 
-#include "game/faction/DiplomaticActionExecutor.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/FactionExploredMap.h"
-#include "game/faction/FactionTileMemory.h"
+#include "game/diplomacy/DiplomaticActionExecutor.h"
+#include "game/economy/EconomyManager.h"
+#include "game/visibility/FactionExploredMap.h"
+#include "game/visibility/FactionTileMemory.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
-#include "game/faction/ResearchManager.h"
-#include "game/faction/TradeItem.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
-#include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/production/ProductionManager.h"
+#include "game/research/ResearchManager.h"
+#include "game/diplomacy/TradeItem.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/production/ProductionManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 

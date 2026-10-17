@@ -1,7 +1,7 @@
-#include "game/faction/DiplomacyActions.h"
-#include "game/faction/DiplomacyLedger.h"
-#include "game/faction/DiplomaticTransitionRules.h"
-#include "game/faction/TradeItem.h"
+#include "game/diplomacy/DiplomacyActions.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/diplomacy/TradeItem.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <magic_enum.hpp>

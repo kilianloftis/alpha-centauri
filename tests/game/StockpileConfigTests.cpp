@@ -7,8 +7,8 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
-#include "game/stockpiles/StockpileConfig.h"
-#include "game/stockpiles/StockpileRegistry.h"
+#include "game/production/StockpileConfig.h"
+#include "game/production/StockpileRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

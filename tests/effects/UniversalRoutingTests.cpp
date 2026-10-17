@@ -11,17 +11,17 @@
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/InteractionResolve.h"
-#include "game/units/MoveCostCalculator.h"
-#include "game/units/MovementConstants.h"
-#include "game/units/MovementRules.h"
+#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MovementConstants.h"
+#include "game/movement/MovementRules.h"
 
 #include <variant>
 

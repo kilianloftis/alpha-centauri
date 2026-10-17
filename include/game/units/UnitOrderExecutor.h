@@ -1,10 +1,10 @@
 #pragma once
 
-#include "game/faction/DiplomaticTransitionRules.h"
-#include "game/units/AirdropRules.h"
-#include "game/units/CombatResolver.h"
-#include "game/units/MoraleCalculator.h"
-#include "game/units/StepEvaluator.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/movement/AirdropRules.h"
+#include "game/combat/CombatResolver.h"
+#include "game/combat/MoraleCalculator.h"
+#include "game/movement/StepEvaluator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 

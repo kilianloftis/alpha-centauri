@@ -3,7 +3,7 @@
 #include "TempConfigFile.h"
 #include "TestHelpers.h"
 
-#include "game/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeLevelConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

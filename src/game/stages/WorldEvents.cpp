@@ -1,8 +1,8 @@
 #include "game/stages/WorldEvents.h"
 #include "game/GameState.h"
 #include "game/effects/TriggeredEffectDispatch.h"
-#include "game/map/TerraformSpread.h"
-#include "game/TurnStageRegistrar.h"
+#include "game/terraform/TerraformSpread.h"
+#include "game/stages/TurnStageRegistrar.h"
 
 #include <vector>
 

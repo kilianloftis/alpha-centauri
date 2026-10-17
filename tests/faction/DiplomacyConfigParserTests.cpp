@@ -1,7 +1,7 @@
 #include "TestHelpers.h"
 
 #include "game/effects/EffectEnums.h"
-#include "game/faction/DiplomacyConfigParser.h"
+#include "game/diplomacy/DiplomacyConfigParser.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>

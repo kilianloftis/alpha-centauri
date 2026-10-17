@@ -1,8 +1,8 @@
 #pragma once
 
 #include "game/PlayerInteraction.h"
-#include "game/TurnStages.h"
-#include "game/faction/base/BaseTypes.h"
+#include "game/stages/TurnStages.h"
+#include "game/base/BaseTypes.h"
 
 #include <optional>
 

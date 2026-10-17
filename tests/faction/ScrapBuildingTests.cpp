@@ -3,9 +3,9 @@
 // destruction does not refund.
 
 #include "game/CurrentGameState.h"
-#include "game/faction/base/production/ScrapRefundCalculator.h"
-#include "game/faction/base/production/ProductionConfigParser.h"
-#include "game/faction/base/production/ScrapConfigParser.h"
+#include "game/production/ScrapRefundCalculator.h"
+#include "game/production/ProductionConfigParser.h"
+#include "game/production/ScrapConfigParser.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "lib/LuaRuntime.h"
@@ -14,14 +14,14 @@
 #include "TempConfigFile.h"
 
 #include "game/buildings/BuildingConfig.h"
-#include "game/ConstructableKind.h"
-#include "game/Faction.h"
+#include "game/production/ConstructableKind.h"
+#include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/faction/EconomyManager.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/economy/EconomyManager.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>

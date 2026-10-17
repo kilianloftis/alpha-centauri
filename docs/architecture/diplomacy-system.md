@@ -182,11 +182,11 @@ sets: a pair is either in them or not.
   `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
   maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
-  `JoinVendetta` (`game/faction/DiplomaticTransitionEffects.h`) for living AI factions only, and
+  `JoinVendetta` (`game/diplomacy/DiplomaticTransitionEffects.h`) for living AI factions only, and
   never native life. See
   `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
   `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
-- **Every status change goes through `ApplyStatusChange`** (`game/faction/DiplomaticTransitionEffects.h`):
+- **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionEffects.h`):
   proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
   hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
 
