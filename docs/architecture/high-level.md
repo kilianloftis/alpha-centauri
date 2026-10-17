@@ -301,7 +301,7 @@ graph TB
 ### GameDataContext
 - **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityCalculator` below, which lives on `GameState` instead.
 - **Who holds it**: `Engine` owns the context and holds it `const`. `GameState`, `Faction` and `ViewFactory` receive `const GameDataContext&` at construction, and `GameState::GetGameData()` is the only accessor that hands it back out.
-  - Free rule functions and turn stages read it from the `GameState&` they already take. They never reach it through a faction, base or unit.
+  - Free rule functions and turn stages read it from the `GameState&` they take, or from `CurrentGameState().GetGameData()` when they take none. They never reach it through a faction, base or unit.
   - The classes those owners build take the pieces they use as constructor references. `MoraleCalculator` (a stateless view over `moraleConfig`, owned here beside `TechCostCalculator`) reaches `Unit` via `Faction` → `UnitManager` without appearing in any create/transfer signature — `UnitManager::CreateUnit` and `Faction::TransferUnitTo` take no morale argument.
   - A class that needs many pieces takes a named bundle of references: `BaseManager` takes `BaseRules_t` (`include/game/faction/base/BaseRules.h`), which `MakeBaseRules` builds from the context and which the constructor unpacks without keeping.
   - Only the loader, the validators and `MakeBaseRules` take the context as a function parameter.
@@ -331,6 +331,25 @@ graph TB
   constructors are what stop them building a half-valid object from it. `FixtureDataPaths()`
   gives `LoadGameData` a complete fixture set. Tests never read `config/`: the shipped config is
   checked when the game loads it at startup.
+
+### Current game state
+Each thread has a current game state (`include/game/CurrentGameState.h`), so code that only reads the game does not need a `GameState` passed down to it.
+
+1. **Each thread has a current game state.** `CurrentGameState()` returns it as `const GameState&` and throws when the thread has none. `FindCurrentGameState()` returns it, or null.
+2. **`GameStateScope` installs a game state on the current thread for the scope's lifetime.** Its destructor restores whatever was current before. Scopes are stack objects and nest.
+3. **Constructors never install a scope.** `Engine` installs one for the game it runs. A test installs one for the game state it exercises. Work on another thread installs one for the game state it reads.
+4. **Reads.**
+   - Code that is not handed a `GameState` reads it through `CurrentGameState()`.
+   - Public functions and methods that only read the game take no `GameState` parameter.
+   - A free function that needs ruleset data it is not handed reads `CurrentGameState().GetGameData()`. Classes take the ruleset pieces they use in their constructors.
+   - Code that runs outside a game (loading, validators, world generation) takes `GameDataContext` explicitly.
+   - Exception: `ProbeActionExecutor`'s queries keep `GameState&`, because they build `ProbeTarget_t`, which holds mutable references for `TryProbeAction`.
+5. **Writes.** Code that changes state outside its own object takes `GameState&`. A `GameState&` parameter means the function may write.
+6. **Game objects never hold a `GameState`.** That covers factions, bases, units and their parts.
+   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator`, the executors and `SecretProjectAvailabilityCalculator`.
+   - One exception stays for now: the unit-id allocator callback that `GameState` binds into each faction (`BindUnitSpawnServices`).
+7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
+8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
 
 ### Composition root phases
 `Engine::Initialize_` runs three explicit phases, in order:

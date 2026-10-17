@@ -4,6 +4,7 @@
 # ---------------------------------------------------------------------------
 add_library(ac-core STATIC
     game/GameState.cpp
+    game/CurrentGameState.cpp
     game/GameSettings.cpp
     game/GameDataContext.cpp
     game/DifficultyConfig.cpp

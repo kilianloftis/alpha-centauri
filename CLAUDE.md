@@ -8,6 +8,7 @@ so Claude Code loads the same rules every other agent uses.
 @.devin/rules/bd-build.mdc
 @.devin/rules/calculator-config.mdc
 @.devin/rules/coding-guidelines.mdc
+@.devin/rules/game-state-access.mdc
 @.devin/rules/notify-on-tool-failures.mdc
 @.devin/rules/planning.mdc
 @.devin/rules/testing.mdc

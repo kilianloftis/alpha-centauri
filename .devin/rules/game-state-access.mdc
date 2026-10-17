@@ -1,0 +1,14 @@
+---
+description: How code reaches the game state — read through CurrentGameState(), write through GameState&
+alwaysApply: true
+---
+
+# Game state access
+
+- Code that is not handed a `GameState` reads it through `CurrentGameState()` (`include/game/CurrentGameState.h`).
+- A function or method that only reads the game takes no `GameState` parameter. A `GameState&` parameter means the function may write.
+- A free function that needs ruleset data it is not handed reads `CurrentGameState().GetGameData()`. Classes take the ruleset pieces they use in their constructors.
+- Code that runs outside a game (loading, validators, world generation) takes `GameDataContext` explicitly.
+- Game objects (factions, bases, units and their parts) never hold a `GameState`.
+- Nothing crosses game states by pointer: name factions, bases and units by id. Only the thread that installed a game state writes to it.
+- Constructors never install a `GameStateScope`. `Engine`, tests and worker threads do.

@@ -47,6 +47,7 @@ add_executable(effects-tests
     faction/ResearchSelectorTests.cpp
     faction/SocialEngineeringManagerTests.cpp
     game/GameCategoryParserTests.cpp
+    game/CurrentGameStateTests.cpp
     game/UnitPositionTests.cpp
     game/UnitStatsTests.cpp
     game/CombatRatingTests.cpp
