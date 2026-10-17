@@ -21,14 +21,14 @@ class Faction;
 // EnsureCompositionCurrent key and every base-screen frame land here. The memo is validated
 // the way FactionEffectsPool validates its pool — an element-wise compare of the revisions
 // it was built from, never a hash of them.
-class CommerceManager
+class CommerceCache
 {
 public:
-    CommerceManager(const Faction& rOwner, const CommerceConfig_t& rConfig, LuaRuntime& rLua);
-    ~CommerceManager() = default;
+    CommerceCache(const Faction& rOwner, const CommerceConfig_t& rConfig, LuaRuntime& rLua);
+    ~CommerceCache() = default;
 
-    CommerceManager(const CommerceManager&) = delete;
-    CommerceManager& operator=(const CommerceManager&) = delete;
+    CommerceCache(const CommerceCache&) = delete;
+    CommerceCache& operator=(const CommerceCache&) = delete;
 
     // Partner breakdown for rBase. Empty when the owner has no bound GameState or no
     // Trading pairs that include this base.

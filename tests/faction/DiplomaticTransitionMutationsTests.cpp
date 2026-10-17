@@ -1,8 +1,8 @@
 #include "DiplomacyFixture.h"
 
 #include "game/diplomacy/DiplomacyConfig.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
-#include "game/movement/EvacuateTerritoryEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
+#include "game/movement/EvacuateTerritoryMutations.h"
 #include "game/units/UnitOrderExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>

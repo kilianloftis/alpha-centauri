@@ -1,7 +1,7 @@
 #include "ui/world/WorldDisplay.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/Pathfinder.h"

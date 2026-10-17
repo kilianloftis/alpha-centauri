@@ -2,7 +2,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

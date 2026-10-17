@@ -19,7 +19,7 @@
 namespace ac
 {
 
-class MoveCostCalculator;
+class MoveCostRules;
 class WorldMap;
 class Tile;
 class Pathfinder;
@@ -38,7 +38,7 @@ struct StepResult_t
     bool bMoverDestroyed = false;
 };
 
-// Applies step/attack/order/use actions using shared MoveCostCalculator, StepEvaluator, and
+// Applies step/attack/order/use actions using shared MoveCostRules, StepEvaluator, and
 // Pathfinder references. Path search and step legality are shared world queries owned by
 // GameState; this class owns only the mutation logic. SingleUse expenditure lives here
 // (ExpendIfSingleUse_), not in CombatResolver or FoundBaseRules.
@@ -48,7 +48,7 @@ public:
     // pWorld supplies the session-scoped queries (base lookup, intercept, conquest) that the
     // map and pathfinder cannot answer; GameState passes itself. Movement-only harnesses may
     // pass nullptr, which disables intercept and base conquest.
-    UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
+    UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
                       TileEffectsContext& rTileEffects,
@@ -201,7 +201,7 @@ private:
                                    Unit& rOriginalDefender,
                                    std::vector<const Tile*>& rOutPath);
 
-    const MoveCostCalculator& m_rMoveCosts;
+    const MoveCostRules& m_rMoveCosts;
     const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;

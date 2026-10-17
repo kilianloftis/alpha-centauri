@@ -21,7 +21,7 @@ graph TB
         TradeKind[TradeKind_t<br/>+ TradeKindOf trait, TradeKinds]
     end
 
-    subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalEffects)"
+    subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalMutations)"
         IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals; StepUp only]
         ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item]
     end
@@ -35,7 +35,7 @@ graph TB
         PermissionRules[StatusRulesFor / MayEnterTerritoryOf unit<br/>MayShareTiles / MayRepairAt<br/>HasDiplomacy / IsObligedToDefend]
     end
 
-    subgraph "Owner identity (UnitVisibility)"
+    subgraph "Owner identity (VisibilityRules)"
         OwnerKnown[IsOwnerKnownTo<br/>false for another faction's Covert unit]
     end
 
@@ -45,7 +45,7 @@ graph TB
         HostileActAgainst[HostileAct_t / HostileActAgainst<br/>attributed unless a side is covert]
     end
 
-    subgraph "Transition effects (DiplomaticTransitionEffects)"
+    subgraph "Transition effects (DiplomaticTransitionMutations)"
         ApplyStatusChange[ApplyStatusChange<br/>status + commlink + eviction]
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
         CancelTreaty[CancelTreaty<br/>one-sided StepDown]
@@ -107,8 +107,8 @@ graph TB
     ApplyProposal -->|TradeDeclareVendetta_t:<br/>the giver declares| DeclareVendetta
     CancelTreaty -->|StepDown| ApplyStatusChange
     CanPropose --> StepUpDown
-    AtrocityEffects[AtrocityEffects<br/>universal Vendetta] -->|living AI only| JoinVendetta
-    TerritoryEntry[TerritoryEntryEffects<br/>BreakAgreementAndContinue] --> DeclareVendetta
+    AtrocityMutations[AtrocityMutations<br/>universal Vendetta] -->|living AI only| JoinVendetta
+    TerritoryEntry[TerritoryEntryMutations<br/>BreakAgreementAndContinue] --> DeclareVendetta
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
@@ -145,7 +145,7 @@ graph TB
     style IsValidProposal fill:#bfb,stroke:#333,stroke-width:2px
     style ApplyStatusChange fill:#fbf,stroke:#333,stroke-width:3px
     style DiplomacyConfig fill:#bfb,stroke:#333,stroke-width:2px
-    style AtrocityEffects fill:#eee,stroke:#999,stroke-width:1px
+    style AtrocityMutations fill:#eee,stroke:#999,stroke-width:1px
 ```
 
 ## Why diplomacy is world-scoped
@@ -182,11 +182,11 @@ sets: a pair is either in them or not.
   `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
 - **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
   maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
-  `JoinVendetta` (`game/diplomacy/DiplomaticTransitionEffects.h`) for living AI factions only, and
+  `JoinVendetta` (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions only, and
   never native life. See
   `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
   `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
-- **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionEffects.h`):
+- **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionMutations.h`):
   proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
   hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
 
@@ -240,7 +240,7 @@ side has nothing to accept.
 
 | Rule | Read by |
 |---|---|
-| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `units/TerritoryEntryEffects.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
+| `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `movement/TerritoryEntryMutations.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceCalculator` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
@@ -343,7 +343,7 @@ A `HostileAct_t` is built before the act resolves, because combat may destroy ei
 it is reported. `HostileActAgainst` (`DiplomaticTransitionRules.h`) builds it from the acting unit
 and either the targeted unit or the faction whose bases or improvements were hit. It is
 **attributed** when each owner knows whose unit the other is (`IsOwnerKnownTo` in
-`UnitVisibility.h`).
+`VisibilityRules.h`).
 
 A unit with the `Covert` rule flag (shipping: Probe Team) has an owner no other faction knows.
 Acting against one is not a hostile act against its owner, and its own attacks, bombards and probe
@@ -411,7 +411,7 @@ load-bearing:
 `CanDeliver_` and `ApplyProposal`'s `Deliver_` are visitors with one `operator()` per alternative,
 so a new `TradeItem_t` alternative fails to compile until both handle it.
 
-`ApplyProposal` (`DiplomaticProposalEffects`) applies the requested status, then `give`, then
+`ApplyProposal` (`DiplomaticProposalMutations`) applies the requested status, then `give`, then
 `demand`. Credits go through `EconomyManager::SpendEnergy`, so the class that owns the treasury is
 the second line of defence.
 
@@ -429,11 +429,11 @@ save-game serialisation work to exist first. Recorded in
 | Does this faction take part in diplomacy at all? | `DiplomaticPermissionRules::HasDiplomacy` |
 | Must this faction defend its ally? | `DiplomaticPermissionRules::IsObligedToDefend` |
 | Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` |
-| What does changing a status do? | `DiplomaticTransitionEffects::ApplyStatusChange`, and the Vendetta, cancel and obligation entry points around it |
+| What does changing a status do? | `DiplomaticTransitionMutations::ApplyStatusChange`, and the Vendetta, cancel and obligation entry points around it |
 | Is this proposal valid? | `DiplomaticProposalRules::IsValidProposal` |
 | Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_` |
 | Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
-| What does accepting change? | `DiplomaticProposalEffects::ApplyProposal` |
+| What does accepting change? | `DiplomaticProposalMutations::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 

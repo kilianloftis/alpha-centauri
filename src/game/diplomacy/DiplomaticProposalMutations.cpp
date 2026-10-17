@@ -1,9 +1,9 @@
-#include "game/diplomacy/DiplomaticProposalEffects.h"
+#include "game/diplomacy/DiplomaticProposalMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/visibility/FactionExploredMap.h"
 #include "game/research/ResearchManager.h"

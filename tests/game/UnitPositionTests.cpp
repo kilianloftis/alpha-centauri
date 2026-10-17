@@ -8,7 +8,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/movement/MovementRules.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/TransportRules.h"
@@ -36,7 +36,7 @@ namespace
 
 struct MovementHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

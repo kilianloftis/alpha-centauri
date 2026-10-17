@@ -4,7 +4,7 @@
 #include "game/combat/MoraleCalculator.h"
 #include "game/movement/MovementConstants.h"
 #include "game/combat/MoraleConfig.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
@@ -31,7 +31,7 @@ namespace
 
 struct CombatHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     std::mt19937 rng;
     CombatResolver combat;
@@ -47,7 +47,7 @@ struct CombatHarness_
 
 struct OrderHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

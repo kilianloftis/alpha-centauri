@@ -1,12 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include "GameFixtures.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -53,7 +53,7 @@ void ExploreAll_(Faction& rFaction, WorldMap& rMap)
 
 struct PathHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

@@ -5,7 +5,7 @@
 
 #include "game/buildings/BuildingConfig.h"
 #include "game/faction/Faction.h"
-#include "game/economy/CommerceManager.h"
+#include "game/economy/CommerceCache.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/economy/EconomyManager.h"
 #include "game/faction/FactionConfig.h"

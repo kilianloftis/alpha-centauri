@@ -11,7 +11,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionManager.h"
@@ -139,7 +139,7 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
     // — wrong for any caller that wants ownership (a UI label, a victory check, diplomacy).
     BuildingGame_ game;
     BaseManager& base = game.MakeBase(*game.pPlayer, 8, 4);
-    const SecretProjectAvailabilityCalculator& rAvailability =
+    const SecretProjectAvailabilityRules& rAvailability =
         game.pState->GetSecretProjectAvailability();
 
     CHECK_FALSE(rAvailability.IsUnavailable("test_secret_project"));

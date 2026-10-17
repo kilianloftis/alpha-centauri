@@ -9,7 +9,7 @@
 #include "game/visibility/FactionExploredMap.h"
 #include "game/visibility/FactionVisibleMap.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/VisibilityRules.h"
+#include "game/visibility/VisibilityMutations.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"

@@ -2,7 +2,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/diplomacy/DiplomaticProposalEffects.h"
+#include "game/diplomacy/DiplomaticProposalMutations.h"
 #include "game/diplomacy/DiplomaticProposalRules.h"
 
 namespace ac

@@ -1,4 +1,4 @@
-#include "game/visibility/VisibilityRules.h"
+#include "game/visibility/VisibilityMutations.h"
 #include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -8,15 +8,15 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/economy/CommerceManager.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
+#include "game/economy/CommerceCache.h"
 #include "game/DifficultyConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/population/GrowthConfigParser.h"
 #include "game/base/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
-#include "game/base/BaseRules.h"
+#include "game/base/BaseRuleset.h"
 #include "game/production/ScrapRefundCalculator.h"
 #include "game/production/ScrapPayout.h"
 #include "game/economy/ResourceManager.h"
@@ -70,7 +70,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     // Distinct sub-streams from one seed, so flavor and research picks do not correlate.
     , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity, seed))
     , m_pEconomy(std::make_unique<EconomyManager>())
-    , m_pCommerce(std::make_unique<CommerceManager>(*this, *rDataContext.commerceConfig,
+    , m_pCommerce(std::make_unique<CommerceCache>(*this, *rDataContext.commerceConfig,
                                                     *rDataContext.luaRuntime))
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(*rDataContext.techRegistry,
@@ -132,12 +132,12 @@ const EconomyManager& Faction::GetEconomy() const
     return *m_pEconomy;
 }
 
-CommerceManager& Faction::GetCommerce()
+CommerceCache& Faction::GetCommerce()
 {
     return *m_pCommerce;
 }
 
-const CommerceManager& Faction::GetCommerce() const
+const CommerceCache& Faction::GetCommerce() const
 {
     return *m_pCommerce;
 }
@@ -399,7 +399,7 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
 BaseManager* Faction::CreateBaseFromSnapshot(
     const BaseSnapshot_t& rSnapshot,
     TileEffectsContext& rTileEffects,
-    const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
+    const SecretProjectAvailabilityRules& rSecretProjectAvailability)
 {
     if (!rSnapshot.pTile)
     {
@@ -408,7 +408,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
-        MakeBaseRules(m_rDataContext),
+        MakeBaseRuleset(m_rDataContext),
         &rSecretProjectAvailability,
         rTileEffects,
         rSnapshot.populationSize,
@@ -851,7 +851,7 @@ const BaseManager* Faction::FindNearestBase(const Tile& rFrom) const
 
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   TileEffectsContext& rTileEffects,
-                                  const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
+                                  const SecretProjectAvailabilityRules& rSecretProjectAvailability,
                                   std::optional<int> initialPopulation,
                                   bool bMayOccupyWater)
 {
@@ -861,7 +861,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     }
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
-        MakeBaseRules(m_rDataContext),
+        MakeBaseRuleset(m_rDataContext),
         &rSecretProjectAvailability,
         rTileEffects,
         initialPopulation,

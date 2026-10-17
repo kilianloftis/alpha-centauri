@@ -1,5 +1,5 @@
 #include "game/economy/ResourceManager.h"
-#include "game/economy/CommerceManager.h"
+#include "game/economy/CommerceCache.h"
 #include "game/economy/EconomyManager.h"
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
@@ -81,7 +81,7 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
 ResourceManager::ResourceManager(
     const WorkerAssignmentManager& rWorkerAssignments,
     const EconomyManager& rEconomy,
-    const CommerceManager& rCommerce,
+    const CommerceCache& rCommerce,
     const BaseManager& rBase,
     const SocialRatingRegistry& rSocialRatings,
     const Tile& rBaseTile,
@@ -103,7 +103,7 @@ void ResourceManager::RebindEconomy(const EconomyManager& rEconomy)
     m_pEconomy = &rEconomy;
 }
 
-void ResourceManager::RebindCommerce(const CommerceManager& rCommerce)
+void ResourceManager::RebindCommerce(const CommerceCache& rCommerce)
 {
     m_pCommerce = &rCommerce;
 }

@@ -4,9 +4,9 @@
 #include "game/units/Military.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/natives/EnsureNativeDesign.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitConfigParser.h"
 #include "game/natives/NativeUnitRegistry.h"
@@ -98,7 +98,7 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
     Unit& rSpore = rFaction.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, *pSpore, fixture.map.GetUnitPositions(), fixture.At(7, 9));
 
-    const MoveCostCalculator calc(fixture.improvements);
+    const MoveCostRules calc(fixture.improvements);
     for (const Unit* pUnit : {&rWorm, &rSpore})
     {
         const auto costs = calc.ForUnit(*pUnit, fixture.map);
@@ -144,7 +144,7 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
         fixture.nextUnitId++, *pLurk, fixture.map.GetUnitPositions(), fixture.At(8, 10));
     Unit& rShip = fixture.MakeUnit(rFaction, 7, 11, {"test_sea_chassis"});
 
-    const MoveCostCalculator calc(fixture.improvements);
+    const MoveCostRules calc(fixture.improvements);
     const EntryTerms_t shipOpen = calc.ForUnit(rShip, fixture.map).EntryTerms(rOpenSea);
     const EntryTerms_t shipFungus = calc.ForUnit(rShip, fixture.map).EntryTerms(rSeaFungus);
     CHECK(shipFungus.costFragments > shipOpen.costFragments);

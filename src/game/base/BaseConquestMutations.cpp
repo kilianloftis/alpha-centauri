@@ -1,4 +1,4 @@
-#include "game/base/BaseConquestEffects.h"
+#include "game/base/BaseConquestMutations.h"
 
 #include "game/units/AdHocDesign.h"
 

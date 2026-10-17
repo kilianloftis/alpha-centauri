@@ -4,7 +4,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InteractionResolve.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"

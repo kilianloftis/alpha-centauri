@@ -12,7 +12,7 @@
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/diplomacy/DiplomaticActionExecutor.h"
 #include "game/units/UnitManager.h"
 #include "game/research/ResearchManager.h"
@@ -28,8 +28,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitComponentConfig.h"
-#include "game/base/BaseConquestEffects.h"
-#include "game/combat/InterceptRules.h"
+#include "game/base/BaseConquestMutations.h"
+#include "game/combat/InterceptMutations.h"
 #include "game/GameDataContext.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/council/CouncilProposalRegistry.h"
@@ -156,7 +156,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
         rGameData.tileYieldRules, rGameData.interactionGrids);
     m_pTileEffects->BindWorldEffects(*this);
-    m_pMoveCosts = std::make_unique<MoveCostCalculator>(*rGameData.improvementRegistry);
+    m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pFirstContact = std::make_unique<FirstContactResolver>(
@@ -794,7 +794,7 @@ void GameState::RebuildTerritory()
     m_worldMap->GetTerritory().Rebuild(*m_worldMap, bases);
 }
 
-const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const
+const SecretProjectAvailabilityRules& GameState::GetSecretProjectAvailability() const
 {
     return m_secretProjectAvailability;
 }

@@ -5,7 +5,7 @@
 #include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/visibility/FactionVisibleMap.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/units/Unit.h"
 

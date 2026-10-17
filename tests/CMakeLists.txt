@@ -30,7 +30,7 @@ add_executable(effects-tests
     faction/DiplomacyLedgerTests.cpp
     faction/DiplomaticPermissionRulesTests.cpp
     faction/DiplomaticStatusCommerceTests.cpp
-    faction/DiplomaticTransitionEffectsTests.cpp
+    faction/DiplomaticTransitionMutationsTests.cpp
     faction/DiplomaticTransitionRulesTests.cpp
     faction/DiplomacyActionsTests.cpp
     faction/DiplomaticActionExecutorTests.cpp
@@ -91,7 +91,7 @@ add_executable(effects-tests
     game/PopulationCalculatorTests.cpp
     game/VisibilityTests.cpp
     game/FactionTileMemoryTests.cpp
-    game/UnitVisibilityTests.cpp
+    game/VisibilityRulesTests.cpp
     game/NativeUnitsTests.cpp
     game/ArtifactLinkTests.cpp
     game/MovementTests.cpp

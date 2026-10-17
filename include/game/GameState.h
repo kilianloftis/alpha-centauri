@@ -6,7 +6,7 @@
 #include "game/probes/MindControlLedger.h"
 #include "game/ecology/EcologyLedger.h"
 #include "game/world-events/WorldEventTracker.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticActionExecutor.h"
 #include "game/diplomacy/FirstContactResolver.h"
@@ -14,7 +14,7 @@
 #include "game/buildings/OrbitalAttack.h"
 #include "game/buildings/OrbitalCensus.h"
 #include "game/PlayerInteractionQueue.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/Pathfinder.h"
 #include "game/units/IUnitOrderWorld.h"
@@ -201,7 +201,7 @@ public:
     // mutable faction data — an "immutable definition data" object referencing it would be
     // constructible only after GameState exists, and would dangle if GameState were ever
     // rebuilt (new game / load game).
-    const SecretProjectAvailabilityCalculator& GetSecretProjectAvailability() const;
+    const SecretProjectAvailabilityRules& GetSecretProjectAvailability() const;
 
     // Secret Projects lost when a base is razed (pop → 0). Tombstoned so they can never be
     // rebuilt by any faction.
@@ -251,7 +251,7 @@ private:
     // reverse declaration order, so m_factions is destroyed before these two.
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
-    std::unique_ptr<MoveCostCalculator> m_pMoveCosts;
+    std::unique_ptr<MoveCostRules> m_pMoveCosts;
     std::unique_ptr<StepEvaluator> m_pSteps;
     std::unique_ptr<Pathfinder> m_pPathfinder;
     std::unique_ptr<DiplomacyLedger> m_pDiplomacy;
@@ -273,7 +273,7 @@ private:
     IdAllocator m_unitIdAllocator;
     // Constructed with *this: only stores the reference, never dereferences it during
     // GameState's own construction, so binding it before m_factions is populated is safe.
-    SecretProjectAvailabilityCalculator m_secretProjectAvailability;
+    SecretProjectAvailabilityRules m_secretProjectAvailability;
     std::unordered_set<std::string> m_destroyedSecretProjects;
     // Idempotent session wiring for production on_complete + mood notices (transfer-safe).
     std::unordered_set<BaseManager*> m_sessionWiredBases;

@@ -5,7 +5,7 @@
 namespace ac
 {
 
-// The pending -> active latch shared by RiotCalculator and GoldenAgeCalculator.
+// The pending -> active latch shared by RiotLatch and GoldenAgeLatch.
 //
 // Both mood conditions run the same two-phase lifecycle across a turn:
 //   Forecast (Population stage) — condition holds, so warn the player and set pending. No

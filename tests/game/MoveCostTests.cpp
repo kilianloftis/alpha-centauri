@@ -3,7 +3,7 @@
 
 #include "GameFixtures.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "lib/Rational.h"
 
@@ -94,7 +94,7 @@ TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
     CHECK(pClamp->amount == MovementConstants_t::k_moveFragmentsPerPoint / 3);
 }
 
-TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
+TEST_CASE("MoveCostRules takes max cost or min override", "[move-cost]")
 {
     FactionFixture fixture;
     for (auto& pTile : fixture.map.GetTiles())
@@ -102,7 +102,7 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostCalculator calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
@@ -166,7 +166,7 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     CHECK(costs.EntryTerms(lowTile).costFragments == k_point);
 }
 
-TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
+TEST_CASE("MoveCostRules honours UnitMoveProfile flags", "[move-cost]")
 {
     FactionFixture fixture;
     for (auto& pTile : fixture.map.GetTiles())
@@ -174,7 +174,7 @@ TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostCalculator calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
 
@@ -213,7 +213,7 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
         pTile->SetElevation(100);
     }
 
-    MoveCostCalculator calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
@@ -265,7 +265,7 @@ TEST_CASE("PlannedCostFragments values end-turn entries in whole turns", "[move-
         pTile->SetElevation(100);
     }
 
-    MoveCostCalculator calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     for (const auto& pTile : fixture.map.GetTiles())
@@ -307,7 +307,7 @@ TEST_CASE("PlannedCostFragments hides tile detail under shroud", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostCalculator calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});

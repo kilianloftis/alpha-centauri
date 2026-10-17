@@ -10,7 +10,7 @@
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleConfig.h"
 #include "game/combat/MoraleConfigParser.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/movement/Pathfinder.h"
@@ -271,7 +271,7 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     // Glass cannon defender: 0 armor so attacker wins quickly.
     attacker.SetCurrentHp(attacker.GetStat(StatId_t::HitPoints));
 
-    MoveCostCalculator moveCosts(fixture.improvements);
+    MoveCostRules moveCosts(fixture.improvements);
     StepEvaluator steps(fixture.map, *fixture.ctx);
     Pathfinder pathfinder(moveCosts, steps, fixture.map);
     std::mt19937 rng(/*seed*/ 42);

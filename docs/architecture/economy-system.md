@@ -6,7 +6,7 @@ graph TB
         Faction[Faction]
         EconomyManager[EconomyManager]
         EnergyAllocation[EnergyAllocation_t<br/>econPercent<br/>labsPercent<br/>psychPercent]
-        CommerceManager[CommerceManager]
+        CommerceCache[CommerceCache]
         CommerceCalculator[CommerceCalculator<br/>pure pairing math]
     end
 
@@ -19,8 +19,8 @@ graph TB
 
     Faction --> EconomyManager
     EconomyManager --> EnergyAllocation
-    CommerceManager -->|"injected into"| ResourceManager
-    CommerceManager --> CommerceCalculator
+    CommerceCache -->|"injected into"| ResourceManager
+    CommerceCache --> CommerceCalculator
 
     Faction --> BaseManager
     BaseManager --> ResourceManager
@@ -30,7 +30,7 @@ graph TB
 
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
     style EconomyManager fill:#bfb,stroke:#333,stroke-width:3px
-    style CommerceManager fill:#bfb,stroke:#333,stroke-width:3px
+    style CommerceCache fill:#bfb,stroke:#333,stroke-width:3px
     style CommerceCalculator fill:#bfb,stroke:#333,stroke-width:2px
     style ResourceManager fill:#bfb,stroke:#333,stroke-width:2px
     style EnergyAllocation fill:#bbf,stroke:#333,stroke-width:2px
@@ -64,14 +64,14 @@ graph TB
 - **Purpose**: Calculates and caches per-base resource production.
 - **Responsibilities**:
   - Read energy from worked tiles (plus crawlers / base center / Energy StatModifiers).
-  - Add per-base **commerce** energy (from the injected `CommerceManager`) to that
+  - Add per-base **commerce** energy (from the injected `CommerceCache`) to that
     pre-inefficiency total during `ProduceResources` / production getters.
   - Apply inefficiency, then ask the faction's `EconomyManager` how to split energy into econ, labs, and psych.
   - Add the split amounts to the base's stockpiles.
 - **Interaction**: Holds a `const EconomyManager*` so it can query the split without mutating it.
 - **`GetEnergyProduction()`**: pre-commerce raw energy only (used for commerce pairing ranks).
 
-### CommerceManager
+### CommerceCache
 - **Purpose**: Faction-owned façade for commerce queries; injected into each base
   `ResourceManager` (like `EconomyManager`) and used by `CommerceDisplay`.
 - **API**: `ComputeForBase(base)` — partner lines (our/their energy + treaty);
@@ -99,7 +99,7 @@ graph TB
 - **Entry point**: `ComputeAllLines(owner, state)` — one planet-wide pass that ranks each
   faction's bases once and reuses the ranking for every pair. `ComputeForFaction` (energy per
   base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base
-  of every partner, so per-base callers belong behind `CommerceManager`'s memo rather than in
+  of every partner, so per-base callers belong behind `CommerceCache`'s memo rather than in
   a loop over `ComputeForBase`.
 - **Config**: `config/commerce.json` — `pair_multiplier` and a single Lua `formula` (same
   pattern as hurry). Inputs: `energy_ours`, `energy_theirs`, `pair_multiplier`,
@@ -125,7 +125,7 @@ graph TB
   selector, and not already retired by `removed_by_tech` — and the denominator is clamped to
   at least 1, so negative `commerce_rating` Adds cannot zero or invert it.
 - **Wiring**: `ResourceCollection` → `Faction::ProduceBaseResources()` → each base
-  `ResourceManager` resolves commerce via the injected `CommerceManager` and adds it to raw
+  `ResourceManager` resolves commerce via the injected `CommerceCache` and adds it to raw
   energy before inefficiency. Commerce that becomes econ reaches the treasury only through
   `IncomeCollection` / `CollectIncome`.
 - **UI**: `ResourceManager::GetCommercePartners` (via the injected manager) feeds

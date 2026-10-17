@@ -7,7 +7,7 @@
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/atrocities/AtrocityConfigParser.h"
-#include "game/atrocities/AtrocityEffects.h"
+#include "game/atrocities/AtrocityMutations.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/atrocities/AtrocityRules.h"
 #include "game/council/PlanetaryCouncil.h"

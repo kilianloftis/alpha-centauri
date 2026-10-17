@@ -42,8 +42,8 @@ class SocialRatingRegistry;
 class IEffectsProvider;
 class Tile;
 class Faction;
-struct BaseRules_t;
-class SecretProjectAvailabilityCalculator;
+struct BaseRuleset_t;
+class SecretProjectAvailabilityRules;
 class Unit;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
@@ -112,8 +112,8 @@ public:
         BaseId_t baseId,
         std::string name,
         Tile& tile,
-        const BaseRules_t& rRules,
-        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+        const BaseRuleset_t& rRules,
+        const SecretProjectAvailabilityRules* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
         std::optional<int> initialPopulation = std::nullopt,
         bool bMayOccupyWater = false);
@@ -164,7 +164,7 @@ public:
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
     // Does not include commerce.
     int GetEnergyProduction() const;
-    // Post-split production; commerce is resolved inside ResourceManager via CommerceManager.
+    // Post-split production; commerce is resolved inside ResourceManager via CommerceCache.
     int GetEconProduction() const;
     int GetLabsProduction() const;
     // Local energy-psych share + this base's Psych StatModifiers.
@@ -261,7 +261,7 @@ public:
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BaseEffectsCache memo).
-    // Commerce is resolved inside ResourceManager via the injected CommerceManager.
+    // Commerce is resolved inside ResourceManager via the injected CommerceCache.
     void ProduceResources();
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.

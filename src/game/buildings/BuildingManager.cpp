@@ -1,6 +1,6 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/research/ResearchManager.h"
 #include <algorithm>
 #include <stdexcept>
@@ -9,7 +9,7 @@ namespace ac
 {
 
 BuildingManager::BuildingManager(const BuildingRegistry& rBuildingRegistry,
-                                 const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+                                 const SecretProjectAvailabilityRules* pSecretProjectCalculator,
                                  const ResearchManager& rResearchManager)
     : m_rRegistry(rBuildingRegistry)
     , m_pResearch(&rResearchManager)
@@ -39,7 +39,7 @@ bool BuildingManager::CanAddBuilding(const BuildingId_t& buildingId) const
         {
             throw std::runtime_error(
                 "BuildingManager::CanAddBuilding: '" + buildingId + "' is a secret project, but "
-                "this base has no SecretProjectAvailabilityCalculator to check uniqueness");
+                "this base has no SecretProjectAvailabilityRules to check uniqueness");
         }
         return !m_pSecretProjectCalculator->IsUnavailable(buildingId);
     }
@@ -122,7 +122,7 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
         // guessing would offer the player a project that cannot be constructed.
         throw std::runtime_error(
             "BuildingManager::GetBuildingsAvailableForConstruction: this base has no "
-            "SecretProjectAvailabilityCalculator, so build availability cannot be resolved");
+            "SecretProjectAvailabilityRules, so build availability cannot be resolved");
     }
 
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();

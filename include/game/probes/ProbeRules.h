@@ -41,7 +41,7 @@ struct ProbeRollResult_t
 // Pure probe mechanics: eligibility, cost quotes, chance/roll math, and effect-stat
 // resolves against an already-resolved ProbeTarget_t. Order gates (moves, adjacency),
 // payment, mission orchestration, and world mutations belong to ProbeActionExecutor /
-// ProbeActionEffects.
+// ProbeActionMutations.
 
 // Does the target carry flag, via its own effects, its faction pool, or any of that
 // faction's bases? Pool-sourced FactionWide flags (e.g. HSA BlocksProbeTeams) are visible

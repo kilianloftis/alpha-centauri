@@ -1,13 +1,13 @@
-#include "game/base/BaseRules.h"
+#include "game/base/BaseRuleset.h"
 
 #include "game/GameDataContext.h"
 
 namespace ac
 {
 
-BaseRules_t MakeBaseRules(const GameDataContext& rData)
+BaseRuleset_t MakeBaseRuleset(const GameDataContext& rData)
 {
-    return BaseRules_t{
+    return BaseRuleset_t{
         .rBuildings = *rData.buildingRegistry,
         .rStockpiles = *rData.stockpileRegistry,
         .rSocialRatings = *rData.socialRatingRegistry,

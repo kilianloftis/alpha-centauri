@@ -1,4 +1,4 @@
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
@@ -8,7 +8,7 @@
 #include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/PlayerInteractionQueue.h"
-#include "game/movement/EvacuateTerritoryEffects.h"
+#include "game/movement/EvacuateTerritoryMutations.h"
 
 #include <optional>
 #include <stdexcept>

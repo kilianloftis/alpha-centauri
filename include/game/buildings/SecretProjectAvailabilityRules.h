@@ -10,11 +10,11 @@ class GameState;
 // Whether a secret project can still be built. Two distinct questions, deliberately separate:
 // a project that was built and later razed is *unavailable* forever (tombstoned) but is owned by
 // nobody, and conflating the two mislabels a destroyed project as somebody's.
-class SecretProjectAvailabilityCalculator
+class SecretProjectAvailabilityRules
 {
 public:
-    explicit SecretProjectAvailabilityCalculator(const GameState& rGameState);
-    ~SecretProjectAvailabilityCalculator() = default;
+    explicit SecretProjectAvailabilityRules(const GameState& rGameState);
+    ~SecretProjectAvailabilityRules() = default;
 
     // Can no longer be built: some base holds it, or it was built and destroyed. This is the
     // availability question — what the build menu and AddBuilding need.

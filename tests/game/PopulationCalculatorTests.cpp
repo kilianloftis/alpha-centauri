@@ -1,4 +1,4 @@
-// Direct tests for the three calculators that had none: RiotCalculator, GoldenAgeCalculator and
+// Direct tests for the three calculators that had none: RiotLatch, GoldenAgeLatch and
 // PopTypeAvailabilityCalculator, plus the two rules that moved into config (pop roles and the
 // obsolescence graph).
 
@@ -8,14 +8,14 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/population/GoldenAgeCalculator.h"
+#include "game/population/GoldenAgeLatch.h"
 #include "game/population/GrowthCalculator.h"
 #include "game/population/DroneCalculator.h"
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/GrowthConfigParser.h"
 #include "lib/LuaRuntime.h"
 #include "game/population/PopTypeAvailabilityCalculator.h"
-#include "game/population/RiotCalculator.h"
+#include "game/population/RiotLatch.h"
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
 #include "lib/Signal.h"
@@ -35,7 +35,7 @@ using namespace ac;
 namespace
 {
 
-// The three signals a RiotCalculator drives, with counters, so transitions can be asserted.
+// The three signals a RiotLatch drives, with counters, so transitions can be asserted.
 struct RiotSignals_
 {
     Signal<> willRiot;
@@ -81,7 +81,7 @@ TEST_CASE("An incited riot survives the Mood commit that follows it", "[populati
     // ForceRiot is pending until Mood Commit; the forced counter keeps it alive even when
     // the composition is calm.
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     REQUIRE_FALSE(riot.IsActive());
     riot.ForceRiot(/*turns=*/1);
@@ -103,7 +103,7 @@ TEST_CASE("An incited riot survives the Mood commit that follows it", "[populati
 TEST_CASE("A forced riot lasts its configured number of Mood commits", "[population][riot]")
 {
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     riot.ForceRiot(/*turns=*/3);
     for (int turn = 0; turn < 3; ++turn)
@@ -118,7 +118,7 @@ TEST_CASE("A forced riot lasts its configured number of Mood commits", "[populat
 TEST_CASE("Forcing a riot extends but never shortens one already running", "[population][riot]")
 {
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     riot.ForceRiot(/*turns=*/5);
     riot.ForceRiot(/*turns=*/1);
@@ -134,7 +134,7 @@ TEST_CASE("Forcing a riot extends but never shortens one already running", "[pop
 TEST_CASE("The natural riot condition still drives itself", "[population][riot]")
 {
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     riot.Forecast(Unrest_());
     CHECK(riot.IsPending());
@@ -157,7 +157,7 @@ TEST_CASE("The natural riot condition still drives itself", "[population][riot]"
 TEST_CASE("NotifyPopGrown warns only when a riot is not already running", "[population][riot]")
 {
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     riot.NotifyPopGrown(Calm_());
     CHECK(signals.willRiotCount == 0);
@@ -173,7 +173,7 @@ TEST_CASE("NotifyPopGrown warns only when a riot is not already running", "[popu
 TEST_CASE("The riot threshold moves what counts as unrest", "[population][riot]")
 {
     RiotSignals_ signals;
-    RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
+    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     // Net unrest of 1 riots at the shipping threshold (1); threshold 2 needs two net drones.
     RiotConditionInputs_t inputs;
@@ -190,7 +190,7 @@ TEST_CASE("The riot threshold moves what counts as unrest", "[population][riot]"
     CHECK(riot.IsActive());
 }
 
-TEST_CASE("GoldenAgeCalculator starts and ends on its condition", "[population][golden-age]")
+TEST_CASE("GoldenAgeLatch starts and ends on its condition", "[population][golden-age]")
 {
     Signal<> started;
     Signal<> ended;
@@ -201,10 +201,10 @@ TEST_CASE("GoldenAgeCalculator starts and ends on its condition", "[population][
         started.ConnectScoped([&]() { ++startedCount; });
     const Signal<>::ScopedConnection endedConn = ended.ConnectScoped([&]() { ++endedCount; });
 
-    GoldenAgeCalculator goldenAge(started, ended, willStart);
+    GoldenAgeLatch goldenAge(started, ended, willStart);
     CHECK_FALSE(goldenAge.IsActive());
 
-    GoldenAgeCalculator::Inputs_t inputs;
+    GoldenAgeLatch::Inputs_t inputs;
     inputs.goldenAgeSum = 1;
     inputs.threshold = 0;
     inputs.droneCount = 0;

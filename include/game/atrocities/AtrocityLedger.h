@@ -31,7 +31,7 @@ struct AtrocityRecord_t
 };
 
 // World-scoped register of committed atrocities and the standing penalties they carry.
-// Sibling of DiplomacyLedger: GameState owns one, and AtrocityEffects is what writes to it.
+// Sibling of DiplomacyLedger: GameState owns one, and AtrocityMutations is what writes to it.
 class AtrocityLedger
 {
 public:
@@ -68,7 +68,7 @@ public:
     // Housekeeping: drops entries IsSanctioned already reports as lifted.
     void ExpireSanctions(int missionYear);
 
-    // Moves on every Record and every sanction change. CommerceManager validates its per-base
+    // Moves on every Record and every sanction change. CommerceCache validates its per-base
     // memo against this the way it does the diplomacy revision.
     uint64_t GetRevision() const { return m_revision.Get(); }
 

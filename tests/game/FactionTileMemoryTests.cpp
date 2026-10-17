@@ -4,7 +4,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/visibility/FactionTileMemory.h"
-#include "game/visibility/VisibilityRules.h"
+#include "game/visibility/VisibilityMutations.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

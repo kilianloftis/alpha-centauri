@@ -12,7 +12,7 @@
 namespace ac
 {
 
-class MoveCostCalculator;
+class MoveCostRules;
 class StepEvaluator;
 class Tile;
 class TileEffectsContext;
@@ -104,7 +104,7 @@ public:
     // Placeholder until weapon / reactor damage tables exist.
     static constexpr int k_roundDamage = 1;
 
-    CombatResolver(const MoveCostCalculator& rMoveCosts,
+    CombatResolver(const MoveCostRules& rMoveCosts,
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap,
                    const TileEffectsContext& rTileEffects,

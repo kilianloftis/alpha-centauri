@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/atrocities/AtrocityEffects.h"
+#include "game/atrocities/AtrocityMutations.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffect.h"

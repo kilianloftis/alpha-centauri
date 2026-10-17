@@ -1,8 +1,8 @@
-#include "game/movement/EvacuateTerritoryEffects.h"
+#include "game/movement/EvacuateTerritoryMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"

@@ -6,7 +6,7 @@
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"

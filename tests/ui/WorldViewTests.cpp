@@ -5,7 +5,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/Tile.h"

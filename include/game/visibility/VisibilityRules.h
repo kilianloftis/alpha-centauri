@@ -1,21 +1,30 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
+
 namespace ac
 {
 
 class Faction;
-class GameSettings;
+class TileEffectsContext;
+class Unit;
 
-// Permanently mark the entire map explored for this faction (e.g. launching a satellite).
-void ApplyRemoveShroud(Faction& rFaction);
+// Whether rObserver can see rSubject as a unit (distinct from tile fog-of-war).
+// Own units are always visible. Units in the observer's FactionRevealedUnits (contact
+// reveal) are visible. Otherwise the subject's tile must be currently visible, or the
+// subject must carry VisibleInFog and the tile must already be explored. Shroud (never
+// explored) still hides a VisibleInFog unit. Every active concealment channel on the
+// unit must be covered by a matching Detect effect that reaches that tile for the
+// observer. Detect sources must carry a stamped ownerFaction at collection
+// (territory-owned improvements or unit-projected auras); unattributed Detect never
+// pierces. Tile-area Conceal is gated by AppliesForFaction for the subject (terrain
+// Conceal stays universal via unset owner). Map markers, tile picking, and attack all
+// use this check.
+bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
+                     const TileEffectsContext& rTileEffects);
 
-// Stickily remove fog of war for this faction (e.g. completing a secret project).
-// Survives visibility rebuilds until cleared; also sets the visible-map bypass immediately.
-void ApplyRemoveFog(Faction& rFaction);
-
-// Re-apply continuous RemoveShroud / RemoveFog from RuleFlags and session settings.
-// Call after FactionVisibleMap::RebuildFromSources. Settings are a Faction constructor
-// dependency, so there is no "no settings" mode to degrade to.
-void ApplyVisibilityRules(Faction& rFaction, const GameSettings& rSettings);
+// Whether observer knows which faction owns rSubject: its own units, and any unit without Covert.
+// TODO: detection — a covert unit's owner becomes known to an observer that detects it.
+bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject);
 
 } // namespace ac

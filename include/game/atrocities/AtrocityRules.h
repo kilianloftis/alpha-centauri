@@ -10,7 +10,7 @@
 namespace ac
 {
 
-// Pure atrocity decisions. World mutations live in AtrocityEffects.
+// Pure atrocity decisions. World mutations live in AtrocityMutations.
 // Each of these has its own reason to change — the escalation rule, the legality gate, and the
 // duration curve are three separate game rules that happen to be consulted together.
 

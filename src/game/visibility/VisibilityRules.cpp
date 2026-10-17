@@ -1,57 +1,128 @@
 #include "game/visibility/VisibilityRules.h"
 
 #include "game/faction/Faction.h"
-#include "game/GameSettings.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectEnums.h"
-#include "game/visibility/FactionExploredMap.h"
+#include "game/effects/EffectConfig.h"
+#include "game/effects/TileEffectsContext.h"
+#include "game/visibility/FactionRevealedUnits.h"
 #include "game/visibility/FactionVisibleMap.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
+
+#include <span>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace ac
 {
 
-void ApplyRemoveShroud(Faction& rFaction)
+namespace
 {
-    FactionExploredMap& rExplored = rFaction.GetExploredMap();
-    for (const auto& pOwnedTile : rFaction.GetWorldMap().GetTiles())
+
+void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEffect_t> areaEffects,
+                                 std::unordered_set<std::string>& rOut)
+{
+    const EffectContext_t ctx{&rSubject.GetTile()};
+
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject).effects)
     {
-        if (pOwnedTile && !rExplored.IsExplored(*pOwnedTile))
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
-            rFaction.GetTileMemory().Record(*pOwnedTile);
+            continue;
+        }
+        const ConcealEffect_t* pConceal = std::get_if<ConcealEffect_t>(&rEffect.config->effect);
+        if (pConceal)
+        {
+            rOut.insert(pConceal->channel);
         }
     }
-    // TODO: confirm in terranx.exe what a faction sees on tiles explored by map trade or shroud removal
-    rExplored.MarkAll();
+
+    // Tile-area Conceal: terrain (unset owner) applies to everyone; unit/territory auras
+    // only conceal subjects matching ownerFaction.
+    const FactionId_t subjectId = rSubject.GetFaction().GetFactionId();
+    for (const ActiveEffect_t& rEffect : areaEffects)
+    {
+        if (!AppliesForFaction(rEffect, subjectId)
+            || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        {
+            continue;
+        }
+        const ConcealEffect_t* pConceal = std::get_if<ConcealEffect_t>(&rEffect.config->effect);
+        if (pConceal)
+        {
+            rOut.insert(pConceal->channel);
+        }
+    }
 }
 
-void ApplyRemoveFog(Faction& rFaction)
+bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const std::string& rChannel,
+                           std::span<const ActiveEffect_t> areaEffects)
 {
-    rFaction.SetFogRemoved(true);
-    rFaction.GetVisibleMap().SetRemoveFog(true);
-    rFaction.GetVisibleMap().MarkAll();
+    const FactionId_t observerId = rObserver.GetFactionId();
+    const EffectContext_t ctx{&rTile};
+    for (const ActiveEffect_t& rEffect : areaEffects)
+    {
+        // Detect fails closed without a stamped owner — unset never pierces for every faction.
+        if (!rEffect.ownerFaction.has_value()
+            || !AppliesForFaction(rEffect, observerId)
+            || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        {
+            continue;
+        }
+        const DetectEffect_t* pDetect = std::get_if<DetectEffect_t>(&rEffect.config->effect);
+        if (pDetect && pDetect->channel == rChannel)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
-void ApplyVisibilityRules(Faction& rFaction, const GameSettings& rSettings)
+} // namespace
+
+bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
+                     const TileEffectsContext& rTileEffects)
 {
-    const bool bRemoveFog =
-        rFaction.IsFogRemoved()
-        || ResolveFlag(rFaction, RuleFlagId_t::RemoveFog)
-        || (rFaction.IsPlayerControlled() && rSettings.GetVisibility().removeFog);
-    rFaction.GetVisibleMap().SetRemoveFog(bRemoveFog);
-    if (bRemoveFog)
+    if (rSubject.GetFaction().GetFactionId() == rObserver.GetFactionId())
     {
-        rFaction.GetVisibleMap().MarkAll();
+        return true;
     }
 
-    const bool bRemoveShroud =
-        ResolveFlag(rFaction, RuleFlagId_t::RemoveShroud)
-        || rSettings.GetVisibility().removeShroud;
-    if (bRemoveShroud)
+    // Contact reveal (blocked move / ZOC bump) pierces fog and Conceal for this observer.
+    if (rObserver.GetRevealedUnits().IsRevealed(rSubject))
     {
-        ApplyRemoveShroud(rFaction);
+        return true;
     }
+
+    const Tile& rTile = rSubject.GetTile();
+    if (!rObserver.GetVisibleMap().IsVisible(rTile))
+    {
+        const bool bVisibleInFog = ResolveFlag(rSubject, RuleFlagId_t::VisibleInFog)
+            && rObserver.GetExploredMap().IsExplored(rTile);
+        if (!bVisibleInFog)
+        {
+            return false;
+        }
+    }
+
+    const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);
+    std::unordered_set<std::string> channels;
+    CollectConcealmentChannels_(rSubject, areaEffects, channels);
+    for (const std::string& rChannel : channels)
+    {
+        if (!HasDetectionCovering_(rObserver, rTile, rChannel, areaEffects))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject)
+{
+    return rSubject.GetFaction().GetFactionId() == observer
+        || !rSubject.GetFlag(RuleFlagId_t::Covert);
 }
 
 } // namespace ac

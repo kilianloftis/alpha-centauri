@@ -1,4 +1,4 @@
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
@@ -28,7 +28,7 @@ constexpr std::string_view k_FungusId = ImprovementIds::k_Fungus;
 
 // --- Query -------------------------------------------------------------------
 
-MoveCostCalculator::Query::Query(const MoveCostCalculator& rCalc,
+MoveCostRules::Query::Query(const MoveCostRules& rCalc,
                                  const Unit& rUnit,
                                  const WorldMap& rWorldMap)
     : m_rCalc(rCalc)
@@ -38,7 +38,7 @@ MoveCostCalculator::Query::Query(const MoveCostCalculator& rCalc,
     m_profile.ignoresDifficultTerrain = ResolveFlag(rUnit, RuleFlagId_t::IgnoreDifficultTerrain);
 }
 
-EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
+EntryTerms_t MoveCostRules::Query::EntryTerms(const Tile& rTile) const
 {
     const int seed = m_rCalc.MaxFeatureCost_(rTile, m_profile)
                          .value_or(m_rCalc.m_constants.DefaultMoveCostFragments());
@@ -77,7 +77,7 @@ EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
     return terms;
 }
 
-int MoveCostCalculator::Query::PlannedCostFragments(const Tile& rTile) const
+int MoveCostRules::Query::PlannedCostFragments(const Tile& rTile) const
 {
     const FactionExploredMap& rExplored = m_rUnit.GetFaction().GetExploredMap();
     if (rExplored.IsSized() && !rExplored.IsExplored(rTile))
@@ -102,22 +102,22 @@ int MoveCostCalculator::Query::PlannedCostFragments(const Tile& rTile) const
     return turns * allotment;
 }
 
-// --- MoveCostCalculator ------------------------------------------------------
+// --- MoveCostRules ------------------------------------------------------
 
-MoveCostCalculator::MoveCostCalculator(const ImprovementRegistry& rImprovements,
+MoveCostRules::MoveCostRules(const ImprovementRegistry& rImprovements,
                                        MovementConstants_t constants)
     : m_rImprovements(rImprovements)
     , m_constants(std::move(constants))
 {
 }
 
-MoveCostCalculator::Query MoveCostCalculator::ForUnit(const Unit& rUnit,
+MoveCostRules::Query MoveCostRules::ForUnit(const Unit& rUnit,
                                                       const WorldMap& rWorldMap) const
 {
     return Query(*this, rUnit, rWorldMap);
 }
 
-int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rConfig,
+int MoveCostRules::FeatureMoveCostFragments_(const ImprovementConfig_t& rConfig,
                                                   const Query::UnitMoveProfile_t& rProfile,
                                                   int defaultFragments) const
 {
@@ -131,7 +131,7 @@ int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rCo
     return cost;
 }
 
-std::optional<int> MoveCostCalculator::MaxFeatureCost_(
+std::optional<int> MoveCostRules::MaxFeatureCost_(
     const Tile& rTile, const Query::UnitMoveProfile_t& rProfile) const
 {
     const int defaultFragments = m_constants.DefaultMoveCostFragments();

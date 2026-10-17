@@ -538,9 +538,9 @@ void PopulationManager::AdvanceAssimilation()
     m_assimilation.Advance();
 }
 
-GoldenAgeCalculator::Inputs_t PopulationManager::BuildGoldenAgeInputs_() const
+GoldenAgeLatch::Inputs_t PopulationManager::BuildGoldenAgeInputs_() const
 {
-    GoldenAgeCalculator::Inputs_t inputs;
+    GoldenAgeLatch::Inputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
     inputs.goldenAgeSum = m_container.GetMoodWeightSums().goldenAge;
     inputs.threshold = GetCompositionConfig().goldenAgeThreshold;

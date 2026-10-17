@@ -1,4 +1,4 @@
-#include "game/probes/ProbeActionEffects.h"
+#include "game/probes/ProbeActionMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"

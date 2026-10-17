@@ -54,7 +54,7 @@ struct ActiveEffect_t
     // the host tile's territory at collection time. Also set for unit-projected ThisTile auras
     // from the projecting unit's faction. When set, tile defense / fog vision / area Conceal
     // only apply for that faction (unset = universal, e.g. Rocky defense, Fungus Conceal).
-    // Detect requires a stamped owner — see AppliesForFaction vs UnitVisibility's fail-closed
+    // Detect requires a stamped owner — see AppliesForFaction vs VisibilityRules's fail-closed
     // Detect gate. Unowned territory stores k_NoFactionOwner (has_value, matches nobody).
     std::optional<FactionId_t> ownerFaction;
     // Set for FactionPair effects: the other faction of the pair. They match only a context

@@ -1,4 +1,4 @@
-#include "game/economy/CommerceManager.h"
+#include "game/economy/CommerceCache.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
@@ -20,13 +20,13 @@ const std::vector<CommercePartnerLine_t>& NoLines_()
 
 } // namespace
 
-CommerceManager::CommerceManager(const Faction& rOwner, const CommerceConfig_t& rConfig,
+CommerceCache::CommerceCache(const Faction& rOwner, const CommerceConfig_t& rConfig,
                                  LuaRuntime& rLua)
     : m_rOwner(rOwner)
     , m_calculator(rConfig, rLua)
 {}
 
-void CommerceManager::CollectRevisions_(std::vector<uint64_t>& rOut) const
+void CommerceCache::CollectRevisions_(std::vector<uint64_t>& rOut) const
 {
     rOut.clear();
 
@@ -54,7 +54,7 @@ void CommerceManager::CollectRevisions_(std::vector<uint64_t>& rOut) const
     }
 }
 
-void CommerceManager::Validate_() const
+void CommerceCache::Validate_() const
 {
     CollectRevisions_(m_scratchRevisions);
     if (m_scratchRevisions == m_cachedStamp)
@@ -73,7 +73,7 @@ void CommerceManager::Validate_() const
     m_cachedStamp = m_scratchRevisions;
 }
 
-const std::vector<CommercePartnerLine_t>& CommerceManager::ComputeForBase(
+const std::vector<CommercePartnerLine_t>& CommerceCache::ComputeForBase(
     const BaseManager& rBase) const
 {
     Validate_();
@@ -85,7 +85,7 @@ const std::vector<CommercePartnerLine_t>& CommerceManager::ComputeForBase(
     return it->second;
 }
 
-int CommerceManager::GetCommerceEnergy(const BaseManager& rBase) const
+int CommerceCache::GetCommerceEnergy(const BaseManager& rBase) const
 {
     int total = 0;
     for (const CommercePartnerLine_t& rLine : ComputeForBase(rBase))

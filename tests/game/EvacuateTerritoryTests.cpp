@@ -4,7 +4,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
-#include "game/movement/EvacuateTerritoryEffects.h"
+#include "game/movement/EvacuateTerritoryMutations.h"
 #include "game/movement/EvacuateTerritoryRules.h"
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"

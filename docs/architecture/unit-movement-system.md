@@ -1,9 +1,9 @@
 # Unit Movement System
 
 Movement is split into components with one-way dependencies: rule resolution
-(`MoveCostCalculator`), legality checks (`StepEvaluator` + the free functions in
+(`MoveCostRules`), legality checks (`StepEvaluator` + the free functions in
 `MovementRules.h` and `TransportRules.h`), planning (`Pathfinder`), and execution
-(`UnitOrderExecutor`). All entry-cost and fungus rules live in `MoveCostCalculator`; the
+(`UnitOrderExecutor`). All entry-cost and fungus rules live in `MoveCostRules`; the
 executor and pathfinder only consume its output and never inspect tile features themselves.
 
 ```mermaid
@@ -11,25 +11,25 @@ graph TD
     subgraph Rules
         MovementRules[MovementRules<br/>terrain / hold / CanEnterTile,<br/>ZOC, friendly occupant / base]
         TransportRules[TransportRules<br/>carries / capacity / harbor load,<br/>boarding, CanUnloadTo]
-        MoveCostCalculator[MoveCostCalculator<br/>tile costs + fungus entry rules]
+        MoveCostRules[MoveCostRules<br/>tile costs + fungus entry rules]
         EntryTerms[EntryTerms_t<br/>costFragments,<br/>bRequiresFullCost, bEndsTurn]
-        MoveCostCalculator -->|resolves per unit + tile| EntryTerms
+        MoveCostRules -->|resolves per unit + tile| EntryTerms
         MovementRules --> TransportRules
         AttackRules[AttackRules<br/>CanAttackTile / targeting /<br/>FindAttackableHostileOnTile]
-        InterceptRules[InterceptRules<br/>Intercept % kill]
+        InterceptMutations[InterceptMutations<br/>Intercept % kill]
         ScrambleRules[ScrambleRules<br/>FindScrambler]
         AttackRules --> MovementRules
         EvacuateTerritoryRules[EvacuateTerritoryRules<br/>on-host / nearest own tile]
-        EvacuateTerritoryEffects[EvacuateTerritoryEffects<br/>ClearOrder + MoveUnit]
-        EvacuateTerritoryEffects --> EvacuateTerritoryRules
+        EvacuateTerritoryMutations[EvacuateTerritoryMutations<br/>ClearOrder + MoveUnit]
+        EvacuateTerritoryMutations --> EvacuateTerritoryRules
     end
 
     subgraph Conquest
         BaseConquestRules[BaseConquestRules<br/>pure predicates: garrison,<br/>capture veto, species]
-        BaseConquestEffects[BaseConquestEffects<br/>world mutation: pop loss, facility<br/>destruction, capture, raze, raid]
+        BaseConquestMutations[BaseConquestMutations<br/>world mutation: pop loss, facility<br/>destruction, capture, raze, raid]
         BaseConquestConfig[BaseConquestConfig_t<br/>config/base_conquest.json]
-        BaseConquestEffects --> BaseConquestRules
-        BaseConquestEffects --> BaseConquestConfig
+        BaseConquestMutations --> BaseConquestRules
+        BaseConquestMutations --> BaseConquestConfig
     end
 
     subgraph Combat
@@ -49,19 +49,19 @@ graph TD
     Pathfinder[Pathfinder<br/>Dijkstra over PlannedCostFragments<br/>+ CanPlanStep]
     UnitOrderExecutor[UnitOrderExecutor<br/>TryStep / TryAttack / order loop,<br/>spends fragments, banks charges]
     UnitOrderExecutor --> AttackRules
-    UnitOrderExecutor --> InterceptRules
+    UnitOrderExecutor --> InterceptMutations
     UnitOrderExecutor --> ScrambleRules
     IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, conquest]
     GameState[GameState]
-    TerritoryEntryEffects[TerritoryEntryEffects<br/>BreakAgreementAndContinue at a forbidden border:<br/>Vendetta and resume]
-    TerritoryEntryEffects -->|resume the order| UnitOrderExecutor
+    TerritoryEntryMutations[TerritoryEntryMutations<br/>BreakAgreementAndContinue at a forbidden border:<br/>Vendetta and resume]
+    TerritoryEntryMutations -->|resume the order| UnitOrderExecutor
 
     StepEvaluator --> MovementRules
     StepEvaluator --> TransportRules
-    MoveCostCalculator --> MovementRules
+    MoveCostRules --> MovementRules
     Pathfinder --> StepEvaluator
-    Pathfinder -->|PlannedCostFragments| MoveCostCalculator
-    UnitOrderExecutor -->|EntryTerms| MoveCostCalculator
+    Pathfinder -->|PlannedCostFragments| MoveCostRules
+    UnitOrderExecutor -->|EntryTerms| MoveCostRules
     UnitOrderExecutor --> StepEvaluator
     UnitOrderExecutor --> Pathfinder
     UnitOrderExecutor --> TransportRules
@@ -69,10 +69,10 @@ graph TD
     UnitOrderExecutor --> CombatResolver
     UnitOrderExecutor -->|optional, ctor-injected| IUnitOrderWorld
     GameState -.->|implements| IUnitOrderWorld
-    IUnitOrderWorld --> BaseConquestEffects
+    IUnitOrderWorld --> BaseConquestMutations
 ```
 
-## MoveCostCalculator — the single home of entry rules
+## MoveCostRules — the single home of entry rules
 
 `ForUnit(unit, map)` returns a `Query` that caches the unit's rule flags
 (`IgnoreDifficultTerrain`). A `Query` resolves each tile into an
@@ -137,7 +137,7 @@ destination inside. The objective step check reports `StepOutcome_t::BlockedByTe
 When the next step of a move order is refused that way, `Execute_` stops before it: a
 player unit keeps its order and `IUnitOrderWorld::OnTerritoryEntryRefused` queues one
 `TerritoryEntryInteraction_t` (declare Vendetta on the owner and continue, or cancel the
-order; `BreakAgreementAndContinue` in `TerritoryEntryEffects.h`). Any other unit drops the order. Unloading checks the same
+order; `BreakAgreementAndContinue` in `TerritoryEntryMutations.h`). Any other unit drops the order. Unloading checks the same
 outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`).
 
 `MayEnterTerritoryOf` takes the unit, not its faction. A unit with the `Covert` rule flag
@@ -330,7 +330,7 @@ Conquest is split so the predicates stay testable without a live world:
   (`CannotCaptureBases` is the sole veto — Needlejet/Missile chassis, noncombat modules),
   and the species tests. Land assault legality lives in `AttackRules` /
   `MovementRules::CanEnterTile`.
-- `BaseConquestEffects` — every world mutation, returning a `BaseConquestResult_t` tally
+- `BaseConquestMutations` — every world mutation, returning a `BaseConquestResult_t` tally
   (population lost, facilities destroyed, escape pods, razed, actor destroyed).
 
 Two entry points, reached from `UnitOrderExecutor`:

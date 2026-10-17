@@ -40,13 +40,13 @@ class FactionIdentity;
 class AIProfile;
 class FactionFlavor;
 class EconomyManager;
-class CommerceManager;
+class CommerceCache;
 class Military;
 class ResearchManager;
 class ResearchSelector;
 class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
-class SecretProjectAvailabilityCalculator;
+class SecretProjectAvailabilityRules;
 class UnitManager;
 class UnitPositionIndex;
 class MoraleCalculator;
@@ -121,7 +121,7 @@ public:
     // TransferBaseTo).
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
                                         TileEffectsContext& rTileEffects,
-                                        const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
+                                        const SecretProjectAvailabilityRules& rSecretProjectAvailability);
     // Identity-preserving ownership move: ReleaseBase → rebind owner → rReceiver.AddBase.
     // Same BaseManager object and baseId end up owned by rReceiver; no destroy/recreate, no
     // fake events. Recalculates composition and worker assignment under the new owner
@@ -134,7 +134,7 @@ public:
     // that building (first-base / rebuilt-HQ founding).
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             TileEffectsContext& rTileEffects,
-                            const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
+                            const SecretProjectAvailabilityRules& rSecretProjectAvailability,
                             std::optional<int> initialPopulation = std::nullopt,
                             bool bMayOccupyWater = false);
     // Iterate live bases by reference without exposing the owning unique_ptrs. Razed bases are
@@ -222,8 +222,8 @@ public:
     const EconomyManager& GetEconomy() const;
 
     // Commerce subsystem: Treaty/Pact pairing queries for produce, net income, and UI.
-    CommerceManager& GetCommerce();
-    const CommerceManager& GetCommerce() const;
+    CommerceCache& GetCommerce();
+    const CommerceCache& GetCommerce() const;
 
     // Consume every base's accumulated econ stockpile into the treasury.
     // Returns the amount collected this call.
@@ -428,7 +428,7 @@ private:
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<FactionFlavor> m_pFlavor;
     std::unique_ptr<EconomyManager> m_pEconomy;
-    std::unique_ptr<CommerceManager> m_pCommerce;
+    std::unique_ptr<CommerceCache> m_pCommerce;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<ResearchSelector> m_pResearchSelector;

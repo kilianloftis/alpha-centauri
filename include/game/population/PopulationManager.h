@@ -8,8 +8,8 @@
 #include "game/population/AssimilationTracker.h"
 #include "game/population/PopCompositionCalculator.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/population/RiotCalculator.h"
-#include "game/population/GoldenAgeCalculator.h"
+#include "game/population/RiotLatch.h"
+#include "game/population/GoldenAgeLatch.h"
 #include "lib/Revision.h"
 
 #include <functional>
@@ -251,14 +251,14 @@ private:
     std::optional<CompositionInputKey_t> m_appliedCompositionInputKey;
     std::function<int(const Pop&)> m_popValuator;
 
-    RiotCalculator m_riot;
-    GoldenAgeCalculator m_goldenAge;
+    RiotLatch m_riot;
+    GoldenAgeLatch m_goldenAge;
     AssimilationTracker m_assimilation;
     Revision m_moodRevision;
 
     CompositionEffectInputs_t BuildCompositionInputs_() const;
     RiotConditionInputs_t BuildRiotInputs_() const;
-    GoldenAgeCalculator::Inputs_t BuildGoldenAgeInputs_() const;
+    GoldenAgeLatch::Inputs_t BuildGoldenAgeInputs_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();

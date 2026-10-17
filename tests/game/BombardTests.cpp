@@ -5,7 +5,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/visibility/FactionRevealedUnits.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -13,7 +13,7 @@
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatStrength.h"
 #include "game/combat/MoraleCalculator.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
@@ -34,7 +34,7 @@ namespace
 
 struct CombatHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     std::mt19937 rng;
     CombatResolver combat;
@@ -50,7 +50,7 @@ struct CombatHarness_
 
 struct OrderHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

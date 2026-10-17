@@ -77,7 +77,7 @@ enum class StatId_t
     CargoCapacity,
     DifficultTerrainCost,
     // Ceiling on tile entry price. JSON amount is a move-point rational ("1/3", 1, 0);
-    // the parsed amount is move fragments. Only MaxClamp is legal. MoveCostCalculator
+    // the parsed amount is move fragments. Only MaxClamp is legal. MoveCostRules
     // seeds with the tile's highest move_cost and applies the tightest matching clamp
     // from ThisTile feature effects and the entering unit. A clamp does not raise a
     // lower cost. A matching clamp cancels fungus entry rules.
@@ -661,7 +661,7 @@ enum class RuleFlagId_t
     OrbitalInsertion,
 
     // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
-    // clears current fog while active (secret project). See VisibilityRules helpers.
+    // clears current fog while active (secret project). See VisibilityMutations helpers.
     RemoveShroud,
     RemoveFog,
     // This unit stays visible on tiles the observer has explored, including while those

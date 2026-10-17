@@ -1,4 +1,4 @@
-#include "game/atrocities/AtrocityEffects.h"
+#include "game/atrocities/AtrocityMutations.h"
 
 #include "game/DifficultyConfig.h"
 #include "game/faction/Faction.h"
@@ -10,7 +10,7 @@
 #include "game/atrocities/AtrocityRules.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 
 #include <stdexcept>
 #include <string>

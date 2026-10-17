@@ -5,7 +5,7 @@
 namespace ac
 {
 
-class MoveCostCalculator;
+class MoveCostRules;
 class StepEvaluator;
 class Tile;
 class Unit;
@@ -29,7 +29,7 @@ class WorldMap;
 class DisengageRules
 {
 public:
-    DisengageRules(const MoveCostCalculator& rMoveCosts,
+    DisengageRules(const MoveCostRules& rMoveCosts,
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap);
 
@@ -37,7 +37,7 @@ public:
     std::vector<const Tile*> CollectRetreatTiles(const Unit& rUnit) const;
 
 private:
-    const MoveCostCalculator& m_rMoveCosts;
+    const MoveCostRules& m_rMoveCosts;
     const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;
 };

@@ -12,7 +12,7 @@ namespace ac
 
 class WorkerAssignmentManager;
 class EconomyManager;
-class CommerceManager;
+class CommerceCache;
 class BuildingManager;
 class BaseManager;
 class HomeBaseIndex;
@@ -43,7 +43,7 @@ public:
     ResourceManager(
         const WorkerAssignmentManager& rWorkerAssignments,
         const EconomyManager& rEconomy,
-        const CommerceManager& rCommerce,
+        const CommerceCache& rCommerce,
         const BaseManager& rBase,
         const SocialRatingRegistry& rSocialRatings,
         const Tile& rBaseTile,
@@ -57,7 +57,7 @@ public:
     int GetMineralProduction(const BaseEffects_t& rBaseEffects) const;
     // Raw energy after Energy effects, before inefficiency. Does not include commerce.
     int GetEnergyProduction(const BaseEffects_t& rBaseEffects) const;
-    // Post-split production; includes commerce from the injected CommerceManager when the
+    // Post-split production; includes commerce from the injected CommerceCache when the
     // owning faction has a bound GameState.
     int GetEconProduction(const BaseEffects_t& rBaseEffects) const;
     int GetLabsProduction(const BaseEffects_t& rBaseEffects) const;
@@ -103,23 +103,23 @@ public:
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base from the ResourceCollection stage. Commerce energy is
-    // resolved from the injected CommerceManager.
+    // resolved from the injected CommerceCache.
     void ProduceResources(const BaseEffects_t& rBaseEffects);
 
     // Partner commerce lines for this base (UI). Empty when unbound / unpaired. Borrowed
-    // from the owner's CommerceManager memo; valid until the next commerce-input change.
+    // from the owner's CommerceCache memo; valid until the next commerce-input change.
     const std::vector<CommercePartnerLine_t>& GetCommercePartners() const;
 
     // Ownership transfer (BaseManager::RebindFaction): energy split and commerce are
     // per-faction, so a transferred base must read the new owner's managers.
     void RebindEconomy(const EconomyManager& rEconomy);
-    void RebindCommerce(const CommerceManager& rCommerce);
+    void RebindCommerce(const CommerceCache& rCommerce);
 
 private:
     const WorkerAssignmentManager& m_rWorkerAssignments;
     // Re-pointed by RebindEconomy / RebindCommerce on ownership transfer.
     const EconomyManager* m_pEconomy;
-    const CommerceManager* m_pCommerce;
+    const CommerceCache* m_pCommerce;
     const BaseManager& m_rBase;
     const SocialRatingRegistry& m_rSocialRatings;
     const Tile& m_rBaseTile;

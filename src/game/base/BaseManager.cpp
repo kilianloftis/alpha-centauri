@@ -1,6 +1,6 @@
 #include "game/base/BaseManager.h"
 #include "game/base/BaseEffectsCache.h"
-#include "game/base/BaseRules.h"
+#include "game/base/BaseRuleset.h"
 #include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
@@ -92,8 +92,8 @@ BaseManager::BaseManager(
     BaseId_t baseId,
     std::string name,
     Tile& tile,
-    const BaseRules_t& rRules,
-    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+    const BaseRuleset_t& rRules,
+    const SecretProjectAvailabilityRules* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
     std::optional<int> initialPopulation,
     bool bMayOccupyWater)

@@ -48,7 +48,7 @@ public:
     // Partner breakdown for one base (UI). Empty when unpaired or on no eligible treaty, and
     // for a base not (yet) in its faction's list — mid CreateBaseFromSnapshot / RebindFaction
     // a base is momentarily ownerless, which is simply no commerce, not an error.
-    // Runs a whole ComputeAllLines pass; per-base callers should go through CommerceManager,
+    // Runs a whole ComputeAllLines pass; per-base callers should go through CommerceCache,
     // which memoizes it.
     std::vector<CommercePartnerLine_t> ComputeForBase(const BaseManager& rBase) const;
 

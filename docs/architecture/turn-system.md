@@ -208,7 +208,7 @@ about a pending riot without being a yielding stage.
   it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
   loop reaches it (see "Object lifetime" in `high-level.md`).
 - **`ResourceCollection`**: `ProduceBaseResources(GameState&)` — computes Treaty/Pact
-  commerce from the injected `CommerceManager`, then each base's `ProduceResources` adds that commerce to
+  commerce from the injected `CommerceCache`, then each base's `ProduceResources` adds that commerce to
   raw energy before inefficiency and the econ/labs/psych split.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband. A native-life home unit

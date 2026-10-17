@@ -299,12 +299,12 @@ graph TB
   - TurnStageFactory depends on TurnStages and config/turn_stages.json
 
 ### GameDataContext
-- **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityCalculator` below, which lives on `GameState` instead.
+- **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityRules` below, which lives on `GameState` instead.
 - **Who holds it**: `Engine` owns the context and holds it `const`. `GameState`, `Faction` and `ViewFactory` receive `const GameDataContext&` at construction, and `GameState::GetGameData()` is the only accessor that hands it back out.
   - Free rule functions and turn stages read it from the `GameState&` they take, or from `CurrentGameState().GetGameData()` when they take none. They never reach it through a faction, base or unit.
   - The classes those owners build take the pieces they use as constructor references. `MoraleCalculator` (a stateless view over `moraleConfig`, owned here beside `TechCostCalculator`) reaches `Unit` via `Faction` → `UnitManager` without appearing in any create/transfer signature — `UnitManager::CreateUnit` and `Faction::TransferUnitTo` take no morale argument.
-  - A class that needs many pieces takes a named bundle of references: `BaseManager` takes `BaseRules_t` (`include/game/base/BaseRules.h`), which `MakeBaseRules` builds from the context and which the constructor unpacks without keeping.
-  - Only the loader, the validators and `MakeBaseRules` take the context as a function parameter.
+  - A class that needs many pieces takes a named bundle of references: `BaseManager` takes `BaseRuleset_t` (`include/game/base/BaseRuleset.h`), which `MakeBaseRuleset` builds from the context and which the constructor unpacks without keeping.
+  - Only the loader, the validators and `MakeBaseRuleset` take the context as a function parameter.
 - **Not changed after loading**: rules for one world live on its `WorldMap`, not here. The world's elevation rules carry the preset's range; the context keeps `map_rules.json` as parsed.
 - **Outlives all live state**: `GameState`, every `Faction`, `BaseManager`, and `TileEffectsContext` hold non-owning references into this object, so `Engine` declares `m_gameDataContext` *before* `m_pGameState`. Members are destroyed in reverse declaration order, so the whole faction/base/unit graph is torn down while the definition data is still alive.
 - **Components**:
@@ -317,7 +317,7 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
-  - `CommerceManager` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Treaty/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
+  - `CommerceCache` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Treaty/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
@@ -346,7 +346,7 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
    - Exception: `ProbeActionExecutor`'s queries keep `GameState&`, because they build `ProbeTarget_t`, which holds mutable references for `TryProbeAction`.
 5. **Writes.** Code that changes state outside its own object takes `GameState&`. A `GameState&` parameter means the function may write.
 6. **Game objects never hold a `GameState`.** That covers factions, bases, units and their parts.
-   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator`, the executors and `SecretProjectAvailabilityCalculator`.
+   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator`, the executors and `SecretProjectAvailabilityRules`.
    - One exception stays for now: the unit-id allocator callback that `GameState` binds into each faction (`BindUnitSpawnServices`).
 7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
 8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
@@ -456,7 +456,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Faction System
 - **Purpose**: Manages all factions and their mutable save-game state
 - **Components**:
-  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `SecretProjectAvailabilityCalculator` lives here too, since it scans the live faction vector — as an owned member of the object it queries, it cannot dangle the way a `GameDataContext`-owned reference into it could. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
+  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `SecretProjectAvailabilityRules` lives here too, since it scans the live faction vector — as an owned member of the object it queries, it cannot dangle the way a `GameDataContext`-owned reference into it could. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `Faction`: Represents a single faction with all its subsystems
   - `Faction Subsystems`: FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy
@@ -483,7 +483,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
     drone formula.
   - `PopCompositionCalculator`: phase 1 — the psych ladder, drone/talent annihilation, and
     lightest-type-first seating. Works on counts only.
-  - `MoodLatch` + `RiotCalculator` / `GoldenAgeCalculator`: both moods are a sum of per-pop
+  - `MoodLatch` + `RiotLatch` / `GoldenAgeLatch`: both moods are a sum of per-pop
     weights against a threshold, over the composition pool rather than base size, and both run
     the same forecast (Population stage) / commit (Mood stage) lifecycle.
   - `BaseMoodEffects`: the one place a riot tier's effect array is split between the base lane
@@ -593,20 +593,20 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Unit Movement System
 - **Purpose**: Tile entry costs, step legality, path planning, move-order execution, cargo transport, and base conquest
 - **Components**:
-  - `MoveCostCalculator`: Single home of the tile-entry rules — resolves a unit + tile into `EntryTerms_t` (fragment cost, fungus full-cost banking, forced end-of-turn) and a shroud-aware planning weight
+  - `MoveCostRules`: Single home of the tile-entry rules — resolves a unit + tile into `EntryTerms_t` (fragment cost, fungus full-cost banking, forced end-of-turn) and a shroud-aware planning weight
   - `MovementRules`: Free functions for enter-grid terrain, unaided occupancy, full `CanEnterTile` (asks TransportRules only for boarding), ZOC grid, friendly occupant/base, and stacking
   - `TransportRules`: Cargo domains, capacity, load sites (`TransportParams`), boarding/unload helpers (`FindBoardableTransport`, `CanUnloadTo`, attach)
   - `AttackRules`: Attack legality — enterability (`CanAttackTile` = enter), targeting (`FindVisibleHostileOnTile`), declare gate (`FindAttackableHostileOnTile` + `attack_unit` resolve). Bombard legality is `IsWithinBombardRange` (any fragments, Chebyshev `bombard_range`, no visibility or entry requirement). `CollectBombardTargets` chooses a duel or per-unit strikes from the shared hostile census. `TileHasUnits` and `NonBaseImprovementIds` are the empty-tile wreck query
   - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
   - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
   - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
-  - `TerritoryEntryEffects`: `BreakAgreementAndContinue`, the player's choice to break the agreement when a move order stops at territory its faction may not enter — declare Vendetta on the owner and resume the order
-  - `BaseConquestRules` / `BaseConquestEffects`: Pure conquest predicates (garrison, capture veto, species) split from the world mutations they gate (population loss, facility destruction, capture, raze, native raid)
+  - `TerritoryEntryMutations`: `BreakAgreementAndContinue`, the player's choice to break the agreement when a move order stops at territory its faction may not enter — declare Vendetta on the owner and resume the order
+  - `BaseConquestRules` / `BaseConquestMutations`: Pure conquest predicates (garrison, capture veto, species) split from the world mutations they gate (population loss, facility destruction, capture, raze, native raid)
   - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest — that `GameState` implements and injects into `UnitOrderExecutor`; nullable so movement-only harnesses need no `GameState`
 - **Dependencies**:
   - GameState owns UnitOrderExecutor and implements `IUnitOrderWorld` for it; all bind the live WorldMap
-  - MoveCostCalculator reads ImprovementRegistry configs (`move_cost`, and `move_cost` MaxClamp effects)
-  - BaseConquestEffects reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
+  - MoveCostRules reads ImprovementRegistry configs (`move_cost`, and `move_cost` MaxClamp effects)
+  - BaseConquestMutations reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
 - **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture.
   Native life designs: `docs/architecture/native-units-system.md`.
 
@@ -674,7 +674,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Components**:
   - `AtrocityLedger`: Append-only record of committed atrocities plus the standing commerce-sanction expiry per faction. World-scoped, owned by `GameState` (`std::unique_ptr`), sibling of `DiplomacyLedger`.
   - `AtrocityRules`: Pure decisions — effective severity after Simple-count escalation, whether penalties apply, sanction expiry year, and which faction a blast is answered to.
-  - `AtrocityEffects` (`CommitAtrocity`): Records the commission, then charges a counted act — sanctions, universal Vendetta (living AI only, via `ApplyStatusChange`), council expulsion, player notice. Victim memory is the record.
+  - `AtrocityMutations` (`CommitAtrocity`): Records the commission, then charges a counted act — sanctions, universal Vendetta (living AI only, via `ApplyStatusChange`), council expulsion, player notice. Victim memory is the record.
   - `AtrocitiesConfig_t`: `config/atrocities.json`. Severities are the closed enum `Simple` and `Major`, each with its own consequences. A counted Simple act that would pass the session level's atrocity threshold is answered for as Major. Landing exactly on the threshold stays Simple. A Major act does not add to that counter and carries no commerce sanction. The Charter gates both tiers. Either party being a Progenitor excuses the act. The threshold itself lives in `difficulty.json`, which states `player_atrocity_threshold` and `ai_atrocity_threshold` per level.
 - **Dependencies**:
   - `CommitAtrocity` is authored in trigger lists (`genetic_plague`'s `on_success_effects`; the Planet Buster `on_detonate_effects`). Planet Buster victim comes from `AtrocityRules::BlastVictim` over what `Explosion` destroyed (first foreign base, else first foreign unit), handed over in `derivedVictim` rather than territory

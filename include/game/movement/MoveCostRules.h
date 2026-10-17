@@ -16,7 +16,7 @@ struct ImprovementConfig_t;
 struct EntryTerms_t
 {
     // Fragments charged on entry: the highest move_cost among the tile's features, then
-    // the tightest matching move_cost MaxClamp (see MoveCostCalculator).
+    // the tightest matching move_cost MaxClamp (see MoveCostRules).
     int costFragments = 0;
 
     // The full cost must be banked — possibly across turns — before the unit may enter
@@ -42,10 +42,10 @@ struct EntryTerms_t
 // requires banking the full cost before the move and always ends the unit's turn. A
 // friendly occupant on the tile waives the banking requirement (immediate entry) but not
 // the forced end of turn.
-class MoveCostCalculator
+class MoveCostRules
 {
 public:
-    explicit MoveCostCalculator(const ImprovementRegistry& rImprovements,
+    explicit MoveCostRules(const ImprovementRegistry& rImprovements,
                                 MovementConstants_t constants = {});
 
     // Pre-cached cost context for a specific unit. Avoids repeated flag resolution
@@ -64,15 +64,15 @@ public:
         int PlannedCostFragments(const Tile& rTile) const;
 
     private:
-        friend class MoveCostCalculator;
-        Query(const MoveCostCalculator& rCalc, const Unit& rUnit, const WorldMap& rWorldMap);
+        friend class MoveCostRules;
+        Query(const MoveCostRules& rCalc, const Unit& rUnit, const WorldMap& rWorldMap);
 
         struct UnitMoveProfile_t
         {
             bool ignoresDifficultTerrain = false;
         };
 
-        const MoveCostCalculator& m_rCalc;
+        const MoveCostRules& m_rCalc;
         const Unit& m_rUnit;
         const WorldMap& m_rWorldMap;
         UnitMoveProfile_t m_profile;

@@ -45,7 +45,7 @@ public:
     bool HasInfiltration(FactionId_t infiltrator, FactionId_t target) const;
     void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated = true);
 
-    // Moves on every status change. Commerce pairing is treaty-gated, so CommerceManager
+    // Moves on every status change. Commerce pairing is treaty-gated, so CommerceCache
     // memoizes against this rather than re-deriving pairs on every query.
     uint64_t GetRevision() const { return m_statusRevision.Get(); }
 

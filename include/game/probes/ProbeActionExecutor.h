@@ -24,7 +24,7 @@ class Tile;
 
 // Orchestrates probe missions: order-domain gates (moves, adjacency), energy payment,
 // chance/roll setup, effect application, promote, and probe destruction.
-// Pure eligibility/math live in ProbeRules; world mutations live in ProbeActionEffects.
+// Pure eligibility/math live in ProbeRules; world mutations live in ProbeActionMutations.
 //
 // Targets are addressed by tile and resolved per call (see ProbeTarget.h), so callers
 // never hold a base or unit pointer across turns or UI interactions.

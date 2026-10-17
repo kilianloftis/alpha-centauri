@@ -1,7 +1,7 @@
 #include "game/movement/Pathfinder.h"
 
 #include "game/map/MapUtils.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -26,7 +26,7 @@ bool IsDesiredContactCandidate_(StepOutcome_t outcome)
 
 } // namespace
 
-Pathfinder::Pathfinder(const MoveCostCalculator& rMoveCosts,
+Pathfinder::Pathfinder(const MoveCostRules& rMoveCosts,
                        const StepEvaluator& rSteps,
                        WorldMap& rWorldMap)
     : m_rMoveCosts(rMoveCosts)

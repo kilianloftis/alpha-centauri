@@ -8,7 +8,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/CombatStrength.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/combat/PlanetPearls.h"
 #include "game/combat/StackCollateral.h"
 #include "game/movement/StepEvaluator.h"
@@ -22,7 +22,7 @@
 namespace ac
 {
 
-CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
+CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
                                const TileEffectsContext& rTileEffects,

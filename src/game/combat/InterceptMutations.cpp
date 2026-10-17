@@ -1,4 +1,4 @@
-#include "game/combat/InterceptRules.h"
+#include "game/combat/InterceptMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"

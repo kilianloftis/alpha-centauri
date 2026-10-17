@@ -1,4 +1,4 @@
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
@@ -7,12 +7,12 @@
 namespace ac
 {
 
-SecretProjectAvailabilityCalculator::SecretProjectAvailabilityCalculator(const GameState& rGameState)
+SecretProjectAvailabilityRules::SecretProjectAvailabilityRules(const GameState& rGameState)
     : m_rGameState(rGameState)
 {
 }
 
-bool SecretProjectAvailabilityCalculator::IsUnavailable(const std::string& rBuildingId) const
+bool SecretProjectAvailabilityRules::IsUnavailable(const std::string& rBuildingId) const
 {
     // TODO(difficulty): when rules.ai_secret_projects_require_human_prereq, AI may not start
     // an SP until a human faction has the prerequisite tech.
@@ -21,7 +21,7 @@ bool SecretProjectAvailabilityCalculator::IsUnavailable(const std::string& rBuil
            || IsOwnedByAnyFaction(rBuildingId);
 }
 
-bool SecretProjectAvailabilityCalculator::IsOwnedByAnyFaction(const std::string& rBuildingId) const
+bool SecretProjectAvailabilityRules::IsOwnedByAnyFaction(const std::string& rBuildingId) const
 {
     for (const Faction& rFaction : m_rGameState.Factions())
     {

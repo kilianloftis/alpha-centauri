@@ -12,7 +12,7 @@ graph TB
     end
 
     subgraph "Mutation"
-        AtrocityEffects[AtrocityEffects<br/>CommitAtrocity]
+        AtrocityMutations[AtrocityMutations<br/>CommitAtrocity]
     end
 
     subgraph "Definition Data (immutable)"
@@ -48,13 +48,13 @@ graph TB
     ExplosionArm -->|owners it destroyed| AtrocityRules
     AtrocityRules -->|BlastVictim| DerivedVictim
     DerivedVictim -->|victim, outranks actionTarget| CommitArm
-    CommitArm -->|dispatch arm| AtrocityEffects
+    CommitArm -->|dispatch arm| AtrocityMutations
 
-    AtrocityEffects --> AtrocityRules
-    AtrocityEffects -->|Record / ExtendSanction| AtrocityLedger
-    AtrocityEffects -->|ApplyStatusChange| DiplomacyLedger
-    AtrocityEffects -->|Expel| PlanetaryCouncil
-    AtrocityEffects -->|EnqueueForPlayer| Notices
+    AtrocityMutations --> AtrocityRules
+    AtrocityMutations -->|Record / ExtendSanction| AtrocityLedger
+    AtrocityMutations -->|ApplyStatusChange| DiplomacyLedger
+    AtrocityMutations -->|Expel| PlanetaryCouncil
+    AtrocityMutations -->|EnqueueForPlayer| Notices
 
     AtrocityRules --> AtrocitiesConfig
     AtrocitiesConfig --> SeverityConfig
@@ -65,7 +65,7 @@ graph TB
     TurnStart -->|ExpireSanctions| AtrocityLedger
 
     style AtrocityLedger fill:#f9f,stroke:#333,stroke-width:4px
-    style AtrocityEffects fill:#fbf,stroke:#333,stroke-width:3px
+    style AtrocityMutations fill:#fbf,stroke:#333,stroke-width:3px
     style AtrocityRules fill:#bfb,stroke:#333,stroke-width:2px
     style AtrocitiesConfig fill:#ffd,stroke:#333,stroke-width:2px
     style SeverityConfig fill:#ffd,stroke:#333,stroke-width:2px
@@ -136,7 +136,7 @@ not in `game/map/` — `ApplyExplosion` reports the owners it cost something (`b
 `unitOwnersDestroyed`, each in blast order with no faction twice) and holds no opinion about
 which of them answers for it.
 
-### AtrocityEffects (mutation)
+### AtrocityMutations (mutation)
 
 `CommitAtrocity` orchestrates: gather config, decide whether the authored act is counted, classify
 the severity from the simple counter, write the record, then — only if it was counted — charge for
@@ -153,7 +153,7 @@ notice states the reason rather than re-deriving it from world state that may ha
 World-scoped, `GameState`-owned, sibling of `DiplomacyLedger`. Records are append-only. It also
 holds the standing commerce sanction: the mission year each sanctioned faction's sanction lifts.
 
-`GetRevision()` moves on every record and sanction change; `CommerceManager` folds it into its
+`GetRevision()` moves on every record and sanction change; `CommerceCache` folds it into its
 per-base memo key, because a sanction zeroes a pair without touching any treaty or effect pool.
 
 `EcoVirtualMinerals` takes the config (the weight is authored there) and sums counted records
@@ -163,7 +163,7 @@ ones that were not counted.
 `IsSanctioned(faction, missionYear)` answers from the stored expiry rather than from the entry
 existing, so a reader is right whether or not `ExpireSanctions` has swept yet this turn.
 `ExpireSanctions` is housekeeping — it drops entries the query already reports as lifted, and
-its revision bump is what invalidates `CommerceManager`'s memo.
+its revision bump is what invalidates `CommerceCache`'s memo.
 
 ## Consequences
 

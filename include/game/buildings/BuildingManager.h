@@ -13,7 +13,7 @@ namespace ac
 class BaseManager;
 class BuildingRegistry;
 class ResearchManager;
-class SecretProjectAvailabilityCalculator;
+class SecretProjectAvailabilityRules;
 
 // BuildingManager tracks all buildings present in a single base.
 // Buildings are added by id (looked up via BuildingRegistry) and destroyed by id.
@@ -24,14 +24,14 @@ public:
     // pSecretProjectCalculator is the one optional dependency (it reads live session state, so
     // it only exists inside a GameState); the others always come from the composition root.
     BuildingManager(const BuildingRegistry& rBuildingRegistry,
-                    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+                    const SecretProjectAvailabilityRules* pSecretProjectCalculator,
                     const ResearchManager& rResearchManager);
     ~BuildingManager();
 
     // Whether buildingId may be added here: unknown ids and duplicates of a non-allowMultiple
     // building are rejected, as is a secret project already built or destroyed anywhere in the
     // world. Throws only if the id is unknown, or a secret project is queried without a
-    // SecretProjectAvailabilityCalculator.
+    // SecretProjectAvailabilityRules.
     bool CanAddBuilding(const BuildingId_t& buildingId) const;
 
     // Add a building by id. Throws unless CanAddBuilding holds — callers that can legitimately
@@ -78,7 +78,7 @@ private:
 
     const BuildingRegistry& m_rRegistry;
     const ResearchManager* m_pResearch;
-    const SecretProjectAvailabilityCalculator* m_pSecretProjectCalculator;
+    const SecretProjectAvailabilityRules* m_pSecretProjectCalculator;
     std::vector<const BuildingConfig_t*> m_buildings;
     Revision m_revision;
 };

@@ -3,14 +3,14 @@
 #include "game/CurrentGameState.h"
 #include "game/movement/MovementRules.h"
 #include "game/combat/AttackRules.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/TransportRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/MapUtils.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/EffectEnums.h"
@@ -34,7 +34,7 @@ constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
 
 struct MovementHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

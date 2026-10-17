@@ -1,8 +1,8 @@
-#include "game/movement/TerritoryEntryEffects.h"
+#include "game/movement/TerritoryEntryMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrderExecutor.h"
 

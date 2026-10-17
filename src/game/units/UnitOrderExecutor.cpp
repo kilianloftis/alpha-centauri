@@ -1,9 +1,9 @@
 #include "game/units/UnitOrderExecutor.h"
 
-#include "game/combat/InterceptRules.h"
+#include "game/combat/InterceptMutations.h"
 #include "game/combat/ScrambleRules.h"
 #include "game/units/UnitOrder.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
 #include "game/combat/AttackRules.h"
@@ -15,7 +15,7 @@
 #include "game/terraform/TerraformRules.h"
 #include "game/visibility/FactionRevealedUnits.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/economy/EconomyManager.h"
 #include "game/map/ImprovementRegistry.h"
@@ -41,7 +41,7 @@
 namespace ac
 {
 
-UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
+UnitOrderExecutor::UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                                      const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
                                      TileEffectsContext& rTileEffects,

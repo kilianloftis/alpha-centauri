@@ -30,11 +30,11 @@ add_library(ac-core STATIC
     game/diplomacy/DiplomacyLedger.cpp
     game/diplomacy/DiplomaticPermissionRules.cpp
     game/diplomacy/DiplomacyActions.cpp
-    game/diplomacy/DiplomaticTransitionEffects.cpp
+    game/diplomacy/DiplomaticTransitionMutations.cpp
     game/diplomacy/DiplomaticTransitionRules.cpp
     game/diplomacy/TradeItem.cpp
     game/diplomacy/DiplomaticActionExecutor.cpp
-    game/diplomacy/DiplomaticProposalEffects.cpp
+    game/diplomacy/DiplomaticProposalMutations.cpp
     game/diplomacy/DiplomaticProposalRules.cpp
     game/diplomacy/FirstContactResolver.cpp
     game/council/CouncilAiStub.cpp
@@ -45,7 +45,7 @@ add_library(ac-core STATIC
     game/council/PlanetaryCouncil.cpp
     game/atrocities/AtrocityConfig.cpp
     game/atrocities/AtrocityConfigParser.cpp
-    game/atrocities/AtrocityEffects.cpp
+    game/atrocities/AtrocityMutations.cpp
     game/atrocities/AtrocityLedger.cpp
     game/atrocities/AtrocityRules.cpp
     game/probes/MindControlLedger.cpp
@@ -73,11 +73,11 @@ add_library(ac-core STATIC
     game/economy/EconomyManager.cpp
     game/economy/CommerceConfigParser.cpp
     game/economy/CommerceCalculator.cpp
-    game/economy/CommerceManager.cpp
+    game/economy/CommerceCache.cpp
     game/base/BaseEffectsCache.cpp
     game/buildings/BuildingDestruction.cpp
     game/base/BaseMoodEffects.cpp
-    game/base/BaseRules.cpp
+    game/base/BaseRuleset.cpp
     game/production/ProductionCompletion.cpp
     game/production/ProductionPauseGates.cpp
     game/population/AwayFromHomeDrones.cpp
@@ -93,9 +93,9 @@ add_library(ac-core STATIC
     game/population/DroneCalculator.cpp
     game/population/PopCompositionCalculator.cpp
     game/population/MoodLatch.cpp
-    game/population/RiotCalculator.cpp
+    game/population/RiotLatch.cpp
     game/population/GrowthCalculator.cpp
-    game/population/GoldenAgeCalculator.cpp
+    game/population/GoldenAgeLatch.cpp
     game/population/PopTypeAvailabilityCalculator.cpp
     game/stages/TurnProcessor.cpp
     lib/EventBus.cpp
@@ -121,7 +121,7 @@ add_library(ac-core STATIC
     game/display/MapOverlayChannelsConfigParser.cpp
     game/display/BaseSpriteSizesConfigParser.cpp
     game/buildings/BuildingUpkeep.cpp
-    game/buildings/SecretProjectAvailabilityCalculator.cpp
+    game/buildings/SecretProjectAvailabilityRules.cpp
     game/production/StockpileConfigParser.cpp
     game/production/StockpileConversion.cpp
     game/buildings/OrbitalAttack.cpp
@@ -145,9 +145,9 @@ add_library(ac-core STATIC
     game/combat/MoraleCalculator.cpp
     game/combat/DisengageRules.cpp
     game/movement/EvacuateTerritoryRules.cpp
-    game/movement/EvacuateTerritoryEffects.cpp
-    game/movement/TerritoryEntryEffects.cpp
-    game/combat/InterceptRules.cpp
+    game/movement/EvacuateTerritoryMutations.cpp
+    game/movement/TerritoryEntryMutations.cpp
+    game/combat/InterceptMutations.cpp
     game/combat/ScrambleRules.cpp
     game/movement/MovementRules.cpp
     game/movement/TransportRules.cpp
@@ -159,15 +159,15 @@ add_library(ac-core STATIC
     game/units/AdHocDesign.cpp
     game/base/BaseConquestConfigParser.cpp
     game/base/BaseConquestRules.cpp
-    game/base/BaseConquestEffects.cpp
+    game/base/BaseConquestMutations.cpp
     game/probes/ProbeActionConfigParser.cpp
-    game/probes/ProbeActionEffects.cpp
+    game/probes/ProbeActionMutations.cpp
     game/probes/ProbeActionExecutor.cpp
     game/probes/ProbeRules.cpp
     game/probes/ProbeTarget.cpp
     game/movement/StepEvaluator.cpp
     game/movement/Pathfinder.cpp
-    game/movement/MoveCostCalculator.cpp
+    game/movement/MoveCostRules.cpp
     game/units/UnitComponentConfigParser.cpp
     game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp
@@ -183,8 +183,8 @@ add_library(ac-core STATIC
     game/map/TerritoryMap.cpp
     game/visibility/FactionVisibleMap.cpp
     game/visibility/FactionTileMemory.cpp
+    game/visibility/VisibilityMutations.cpp
     game/visibility/VisibilityRules.cpp
-    game/visibility/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/OccupantCoexistence.cpp
     game/map/TerrainConfigParser.cpp

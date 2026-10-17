@@ -18,7 +18,7 @@
 #include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/economy/EconomyManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"

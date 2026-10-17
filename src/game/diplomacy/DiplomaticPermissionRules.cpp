@@ -6,7 +6,7 @@
 #include "game/CurrentGameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/faction/FactionConfig.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/units/Unit.h"
 #include "game/map/TerritoryMap.h"

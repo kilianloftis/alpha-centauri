@@ -20,7 +20,7 @@ struct GameDataContext;
 
 // The ruleset pieces a base reads. BaseManager copies each reference into the member or part
 // that uses it and never keeps the bundle, so a caller may pass a temporary.
-struct BaseRules_t
+struct BaseRuleset_t
 {
     const BuildingRegistry& rBuildings;
     const StockpileRegistry& rStockpiles;
@@ -37,6 +37,6 @@ struct BaseRules_t
     const AtrocitiesConfig_t& rAtrocities;
 };
 
-BaseRules_t MakeBaseRules(const GameDataContext& rData);
+BaseRuleset_t MakeBaseRuleset(const GameDataContext& rData);
 
 } // namespace ac

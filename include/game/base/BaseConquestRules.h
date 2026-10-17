@@ -9,7 +9,7 @@ class Tile;
 class WorldMap;
 enum class FactionSpecies_t;
 
-// Pure conquest predicates. World mutations live in BaseConquestEffects.
+// Pure conquest predicates. World mutations live in BaseConquestMutations.
 
 // Owner units that still hold the base against capture.
 bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap);

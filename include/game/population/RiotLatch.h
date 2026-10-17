@@ -15,18 +15,18 @@ struct RiotConditionInputs_t
 };
 
 // Tracks drone riot state for a base population. See MoodLatch for the Forecast / Commit
-// lifecycle this shares with GoldenAgeCalculator.
+// lifecycle this shares with GoldenAgeLatch.
 //
 // Two independent sources keep a riot alive once committed:
 //   - the natural condition (riotSum >= riot_threshold), recomputed on every Commit
 //   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of Mood commits
 //     and which the natural condition cannot sustain, since the action does not change
 //     composition
-class RiotCalculator : public MoodLatch
+class RiotLatch : public MoodLatch
 {
 public:
-    RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded);
-    ~RiotCalculator() = default;
+    RiotLatch(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded);
+    ~RiotLatch() = default;
 
     // Call after a pop is added, so growth into a riot warns immediately rather than waiting
     // for the next Population stage.

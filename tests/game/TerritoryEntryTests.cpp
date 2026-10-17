@@ -2,7 +2,7 @@
 
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
-#include "game/movement/TerritoryEntryEffects.h"
+#include "game/movement/TerritoryEntryMutations.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 

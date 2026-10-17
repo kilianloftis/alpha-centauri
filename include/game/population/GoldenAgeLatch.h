@@ -13,14 +13,14 @@ namespace ac
 // specialists neither helping nor hindering. Neither this nor the riot condition is a function
 // of base size; both range over the composition pool only.
 //
-// See MoodLatch for the Forecast / Commit lifecycle this shares with RiotCalculator. Nothing
+// See MoodLatch for the Forecast / Commit lifecycle this shares with RiotLatch. Nothing
 // forces a golden age, so it adds no bookkeeping of its own.
-class GoldenAgeCalculator : public MoodLatch
+class GoldenAgeLatch : public MoodLatch
 {
 public:
-    GoldenAgeCalculator(Signal<>& rWillGoldenAge, Signal<>& rGoldenAgeStarted,
+    GoldenAgeLatch(Signal<>& rWillGoldenAge, Signal<>& rGoldenAgeStarted,
                         Signal<>& rGoldenAgeEnded);
-    ~GoldenAgeCalculator() = default;
+    ~GoldenAgeLatch() = default;
 
     struct Inputs_t
     {

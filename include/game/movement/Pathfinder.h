@@ -7,7 +7,7 @@
 namespace ac
 {
 
-class MoveCostCalculator;
+class MoveCostRules;
 class Tile;
 class Unit;
 class WorldMap;
@@ -30,7 +30,7 @@ struct Path_t
 class Pathfinder
 {
 public:
-    Pathfinder(const MoveCostCalculator& rMoveCosts,
+    Pathfinder(const MoveCostRules& rMoveCosts,
                const StepEvaluator& rSteps,
                WorldMap& rWorldMap);
 
@@ -50,7 +50,7 @@ public:
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
 
 private:
-    const MoveCostCalculator& m_rMoveCosts;
+    const MoveCostRules& m_rMoveCosts;
     const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;
 };

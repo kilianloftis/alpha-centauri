@@ -6,7 +6,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -33,7 +33,7 @@ bool HasHoldFamilyOrder_(const Unit& rUnit)
 
 } // namespace
 
-DisengageRules::DisengageRules(const MoveCostCalculator& rMoveCosts,
+DisengageRules::DisengageRules(const MoveCostRules& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap)
     : m_rMoveCosts(rMoveCosts)
@@ -86,7 +86,7 @@ bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent)
 std::vector<const Tile*> DisengageRules::CollectRetreatTiles(const Unit& rUnit) const
 {
     std::vector<const Tile*> candidates;
-    const MoveCostCalculator::Query costs = m_rMoveCosts.ForUnit(rUnit, m_rWorldMap);
+    const MoveCostRules::Query costs = m_rMoveCosts.ForUnit(rUnit, m_rWorldMap);
     ForEachTileInChebyshevRadius(rUnit.GetTile(), m_rWorldMap, /*radius=*/1,
                                  /*includeOrigin=*/false,
         [&](const Tile* pTile, int /*distance*/)

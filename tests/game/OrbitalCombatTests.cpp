@@ -6,7 +6,7 @@
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/buildings/OrbitalAttack.h"
 #include "game/buildings/OrbitalCensus.h"
-#include "game/combat/InterceptRules.h"
+#include "game/combat/InterceptMutations.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"

@@ -8,7 +8,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/CombatResolver.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitComponentConfigParser.h"
@@ -79,7 +79,7 @@ int UnitCount_(const Faction& rFaction)
 
 struct OrderHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

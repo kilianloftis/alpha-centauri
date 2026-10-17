@@ -23,7 +23,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
-#include "game/base/BaseRules.h"
+#include "game/base/BaseRuleset.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionManager.h"
@@ -99,8 +99,8 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
                            const BuildingRegistry& rBuildings,
                            const StockpileRegistry& rStockpiles)
 {
-    const BaseRules_t fixture = MakeBaseRules(rFixtures.dataContext);
-    const BaseRules_t rules{
+    const BaseRuleset_t fixture = MakeBaseRuleset(rFixtures.dataContext);
+    const BaseRuleset_t rules{
         .rBuildings = rBuildings,
         .rStockpiles = rStockpiles,
         .rSocialRatings = fixture.rSocialRatings,

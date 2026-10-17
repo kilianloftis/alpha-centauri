@@ -15,7 +15,7 @@
 #include "game/GameSettings.h"
 #include "game/faction/Faction.h"
 #include "game/visibility/FactionExploredMap.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
 #include "game/production/IConstructable.h"

@@ -5,7 +5,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/economy/CommerceCalculator.h"
-#include "game/economy/CommerceManager.h"
+#include "game/economy/CommerceCache.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/economy/EconomyManager.h"
@@ -435,12 +435,12 @@ TEST_CASE("A base detached from its faction reports no commerce instead of throw
     CHECK(pDetached->GetResources().GetCommercePartners().empty());
 }
 
-TEST_CASE("CommerceManager recomputes when a treaty changes", "[commerce]")
+TEST_CASE("CommerceCache recomputes when a treaty changes", "[commerce]")
 {
     CommerceGame_ game;
     BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
     game.MakeHqBase(*game.pB, 12, 8);
-    const CommerceManager& rCommerce = game.pA->GetCommerce();
+    const CommerceCache& rCommerce = game.pA->GetCommerce();
 
     CHECK(rCommerce.GetCommerceEnergy(a1) == 0);
 
@@ -500,7 +500,7 @@ TEST_CASE("Atrocity sanctions zero commerce for both sides of the pair", "[comme
     CHECK(game.calculator.ComputeForBase(b1).size() == 1);
 }
 
-TEST_CASE("CommerceManager recomputes when a sanction lands", "[commerce][atrocity]")
+TEST_CASE("CommerceCache recomputes when a sanction lands", "[commerce][atrocity]")
 {
     // The memo keys on treaties and effect pools, neither of which a sanction touches. Without
     // the atrocity revision in that key, an atrocity kept paying commerce for the rest of the
@@ -508,7 +508,7 @@ TEST_CASE("CommerceManager recomputes when a sanction lands", "[commerce][atroci
     CommerceGame_ game;
     BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
     game.MakeHqBase(*game.pB, 12, 8);
-    const CommerceManager& rCommerce = game.pA->GetCommerce();
+    const CommerceCache& rCommerce = game.pA->GetCommerce();
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     REQUIRE(rCommerce.GetCommerceEnergy(a1) > 0);

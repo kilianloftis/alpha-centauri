@@ -2,7 +2,7 @@
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/stages/TurnStageRegistrar.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/units/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrderExecutor.h"

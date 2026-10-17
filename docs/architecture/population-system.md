@@ -125,7 +125,7 @@ are plain integers in `pop_composition.json` (`riot_threshold`, `golden_age_thre
 ### Forecast and commit
 
 Both moods run a two-phase lifecycle across the turn, shared by `MoodLatch` and specialised by
-`RiotCalculator` / `GoldenAgeCalculator`:
+`RiotLatch` / `GoldenAgeLatch`:
 
 ```mermaid
 sequenceDiagram

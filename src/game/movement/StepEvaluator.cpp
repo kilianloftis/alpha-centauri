@@ -3,7 +3,7 @@
 #include "game/faction/Faction.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/visibility/FactionExploredMap.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"

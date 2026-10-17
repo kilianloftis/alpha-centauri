@@ -5,7 +5,7 @@
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/FirstContactResolver.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"

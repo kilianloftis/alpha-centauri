@@ -8,7 +8,7 @@
 #include "game/combat/AttackRules.h"
 #include "game/movement/FuelRules.h"
 #include "game/movement/MovementConstants.h"
-#include "game/movement/MoveCostCalculator.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/TransportRules.h"
@@ -45,7 +45,7 @@ void MakeWater_(Tile& rTile)
 
 struct FuelHarness_
 {
-    MoveCostCalculator moveCosts;
+    MoveCostRules moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;

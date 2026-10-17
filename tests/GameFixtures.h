@@ -18,7 +18,7 @@
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
-#include "game/base/BaseRules.h"
+#include "game/base/BaseRuleset.h"
 #include "game/production/HurryProductionCalculator.h"
 #include "game/production/ScrapRefundCalculator.h"
 #include "game/production/ProductionConfigParser.h"
@@ -347,7 +347,7 @@ struct BaseFixture : WorldFixture
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
-            ac::MakeBaseRules(dataContext),
+            ac::MakeBaseRuleset(dataContext),
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
             /*secretProjectCalculator*/ nullptr,
@@ -476,7 +476,7 @@ struct FactionFixture : BaseFixture
     {
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
-            ac::MakeBaseRules(dataContext),
+            ac::MakeBaseRuleset(dataContext),
             /*secretProjectCalculator*/ nullptr,
             *ctx,
             initialPopulation);

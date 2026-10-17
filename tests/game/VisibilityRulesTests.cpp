@@ -3,7 +3,7 @@
 
 #include "GameFixtures.h"
 
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/map/TerritoryMap.h"

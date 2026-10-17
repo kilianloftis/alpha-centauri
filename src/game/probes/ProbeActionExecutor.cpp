@@ -1,10 +1,10 @@
 #include "game/probes/ProbeActionExecutor.h"
 
-#include "game/probes/ProbeActionEffects.h"
+#include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/diplomacy/DiplomaticTransitionEffects.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"

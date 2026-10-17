@@ -2,7 +2,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/visibility/UnitVisibility.h"
+#include "game/visibility/VisibilityRules.h"
 #include "game/units/Unit.h"
 
 namespace ac
