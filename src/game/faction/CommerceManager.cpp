@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/WorldMap.h"
@@ -29,14 +30,16 @@ void CommerceManager::CollectRevisions_(std::vector<uint64_t>& rOut) const
 {
     rOut.clear();
 
-    const GameState* pState = m_rOwner.GetGameState();
+    const GameState* pState = FindCurrentGameState();
     if (pState == nullptr)
     {
-        // Unbound faction: no commerce, and nothing to key on. Distinct from the seeded
-        // stamp, so the first query still builds (into an empty map) and settles.
+        // No game: no commerce, and nothing to key on. Distinct from the seeded stamp, so the
+        // first query still builds (into an empty map) and settles.
         return;
     }
 
+    // A different current game state must not hit this cache.
+    rOut.push_back(reinterpret_cast<uintptr_t>(pState));
     const WorldMap& rMap = pState->GetWorldMap();
     rOut.push_back(rMap.GetWorkedTiles().GetRevision());
     rOut.push_back(rMap.GetAppearanceRevision());
@@ -59,7 +62,7 @@ void CommerceManager::Validate_() const
         return;
     }
 
-    const GameState* pState = m_rOwner.GetGameState();
+    const GameState* pState = FindCurrentGameState();
     if (pState == nullptr)
     {
         m_cached.clear();

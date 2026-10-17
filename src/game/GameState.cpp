@@ -21,6 +21,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/units/TerraformRules.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
@@ -386,8 +387,6 @@ void GameState::AttachToSession_(Faction& rFaction)
     // The whole session wiring for one faction, in one place. World map and settings are
     // constructor dependencies (see Faction's constructor); what remains is the container
     // back-pointer and the observers, which necessarily close over this GameState.
-    rFaction.BindWorldEffects(*this);
-    rFaction.BindGameState(*this);
     rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
                                    GetWorldMap().GetUnitPositions());
     rFaction.OnSecretProjectDestroyed.Connect([this](const BuildingId_t& rBuildingId)
@@ -671,6 +670,18 @@ void GameState::OnHostileAct(const HostileAct_t& rAct)
 void GameState::OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner)
 {
     EnqueueForPlayer(*this, TerritoryEntryInteraction_t{rUnit.GetUnitId(), territoryOwner});
+}
+
+bool GameState::ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
+                                              Unit& rFormer, std::mt19937& rRng)
+{
+    TriggeredEffectContext_t context(*this, rFormer.GetFaction());
+    context.pUnit = &rFormer;
+    context.pTile = &rTile;
+    context.pRng = &rRng;
+    const std::vector<TriggeredEffectResult_t> results =
+        ApplyTriggeredEffects(rProject.onCompleteEffects, context);
+    return !results.empty();
 }
 
 TileEffectsContext& GameState::GetTileEffects()

@@ -164,10 +164,10 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
 }
 
-// End-to-end for the whole dispatch path: GameState::AddFaction binds the session, so
-// completing production reaches the SetInfiltration arm without the caller passing anything.
-// Drives TryCompleteReadyProduction rather than ApplyTriggeredEffects so that dropping either
-// BindGameState or the dispatch call in BaseManager's completion handler fails here.
+// End-to-end for the whole dispatch path: with the session's scope installed, completing
+// production reaches the SetInfiltration arm without the caller passing anything. Drives
+// TryCompleteReadyProduction rather than ApplyTriggeredEffects so that dropping the dispatch
+// call in BaseManager's completion handler fails here.
 TEST_CASE("Production completion writes on_complete SetInfiltration into the DiplomacyLedger",
           "[effects][base][triggered][infiltration]")
 {
@@ -186,7 +186,7 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
     REQUIRE(pInfiltrator != nullptr);
-    REQUIRE(beneficiary.GetGameState() == &state);
+    REQUIRE(ac::FindCurrentGameState() == &state);
     REQUIRE_FALSE(state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
 
@@ -206,7 +206,7 @@ TEST_CASE("Building production without spawn services completes without on_compl
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(8, 8);
-    REQUIRE(fixture.pOwnerFaction->GetGameState() == nullptr);
+    REQUIRE(ac::FindCurrentGameState() == nullptr);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);

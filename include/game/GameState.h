@@ -152,6 +152,8 @@ public:
     BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) override;
     void OnHostileAct(const HostileAct_t& rAct) override;
     void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
+    bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
+                                       Unit& rFormer, std::mt19937& rRng) override;
 
     // IWorldEffectsSource — peer WorldGlobal (from local pools) + council extras for rFor.
     // Bound onto each Faction in AddFaction so GetActiveEffects composes one pool.

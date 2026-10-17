@@ -43,7 +43,7 @@ int AtrocityThreshold_(const GameState& rGameState, const Faction& rPerpetrator)
     }
     const DifficultyRules_t& rRules =
         rData.difficultyConfig
-            ->RequireForSession(rPerpetrator.GetSettings().GetGameRules().difficultyId)
+            ->RequireForSession(rGameState.GetSettings().GetGameRules().difficultyId)
             .rules;
     // Handicapping the player is what difficulty is for, so the two sides read separate
     // numbers off the same level.

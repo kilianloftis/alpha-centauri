@@ -157,7 +157,7 @@ explored/visible maps from the world map and takes a first visibility reading.
   seed and derives a sub-stream per faction.
 
 `GameState::AddFaction` is **registration, not construction**. It pushes the faction into
-`m_factions` *first*, then calls `AttachToSession_` to install the session back-pointer and the
+`m_factions` *first*, then calls `AttachToSession_` to install the unit spawn services and the
 observers (which necessarily close over `GameState`), and finishes with a territory/visibility
 catch-up sweep plus a full first-contact pass. The order is load-bearing: the observers iterate
 `Factions()`, so wiring before the push meant a faction arriving with bases already on the map

@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -48,7 +49,7 @@ BaseEcology::BaseEcology(const BaseManager& rBase, const EcoDamageCalculator& rC
 
 int BaseEcology::GetDamage() const
 {
-    const GameState& rGameState = RequireGameState_();
+    const GameState& rGameState = CurrentGameState();
     CollectRevisions_(rGameState, m_scratchRevisions);
     if (m_scratchRevisions != m_cachedStamp)
     {
@@ -56,16 +57,6 @@ int BaseEcology::GetDamage() const
         m_cachedStamp = m_scratchRevisions;
     }
     return m_cachedDamage;
-}
-
-const GameState& BaseEcology::RequireGameState_() const
-{
-    const GameState* pGameState = m_rBase.GetFaction().GetGameState();
-    if (!pGameState)
-    {
-        throw std::logic_error("BaseEcology: the owning faction is not bound to a GameState");
-    }
-    return *pGameState;
 }
 
 EcoDamageInputs_t BaseEcology::CollectInputs_(const GameState& rGameState) const
@@ -118,6 +109,8 @@ void BaseEcology::CollectRevisions_(const GameState& rGameState, std::vector<uin
     const Faction& rFaction = m_rBase.GetFaction();
     const WorldMap& rMap = m_rBase.GetTileEffects().GetWorldMap();
     rOut.clear();
+    // A different current game state must not hit this cache.
+    rOut.push_back(reinterpret_cast<uintptr_t>(&rGameState));
     rOut.push_back(rFaction.GetFactionId());
     rOut.push_back(rFaction.GetEffectsVersion());
     rOut.push_back(rFaction.GetResearch().GetRevision());

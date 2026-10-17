@@ -75,8 +75,8 @@ graph TB
 - **Purpose**: Faction-owned façade for commerce queries; injected into each base
   `ResourceManager` (like `EconomyManager`) and used by `CommerceDisplay`.
 - **API**: `ComputeForBase(base)` — partner lines (our/their energy + treaty);
-  `GetCommerceEnergy(base)` — those lines summed, negatives dropped. Reads the owner's bound
-  `GameState` (empty when unbound).
+  `GetCommerceEnergy(base)` — those lines summed, negatives dropped. Reads the current game
+  state (empty when there is none).
 - **Owned by**: `Faction` (`GetCommerce()`). Rebound onto bases on ownership transfer.
 - **Memo**: caches the owner's whole per-base breakdown, because the pass underneath is
   planet-wide while the callers are per-base and hot — `AllocatableEnergy_` backs

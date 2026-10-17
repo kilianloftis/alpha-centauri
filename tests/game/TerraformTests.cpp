@@ -305,16 +305,19 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
         FindTerraformProject("LowerLand", game.pState->GetTileEffects().GetImprovements(),
                              *game.fixtures.dataContext.terrainOperationRegistry);
     REQUIRE(lowerLand);
-    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng));
+    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng,
+                               game.pState.get()));
     CHECK(tile.GetElevation() == floor);
 
     tile.SetElevation(floor + 1000);
-    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng));
+    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng,
+                               game.pState.get()));
     CHECK(tile.GetElevation() == floor);
 
     // Already on the floor: nothing to lower, and no exception.
     CHECK_FALSE(
-        ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng));
+        ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), seaFormer, rng,
+                               game.pState.get()));
     CHECK(tile.GetElevation() == floor);
 }
 
@@ -337,7 +340,8 @@ TEST_CASE("A land Former's lower stops at ocean level instead of failing the ord
         FindTerraformProject("LowerLand", game.pState->GetTileEffects().GetImprovements(),
                              *game.fixtures.dataContext.terrainOperationRegistry);
     REQUIRE(lowerLand);
-    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), former, rng));
+    CHECK(ApplyTerraformResult(tile, *lowerLand, game.pState->GetTileEffects(), former, rng,
+                               game.pState.get()));
     CHECK(tile.GetElevation() == rules.oceanLevelMeters);
     CHECK(tile.IsLand());
 }
@@ -354,7 +358,8 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
                              *game.fixtures.dataContext.terrainOperationRegistry);
     REQUIRE(farm);
     std::mt19937 rng(1);
-    REQUIRE(ApplyTerraformResult(tile, *farm, game.pState->GetTileEffects(), former, rng));
+    REQUIRE(ApplyTerraformResult(tile, *farm, game.pState->GetTileEffects(), former, rng,
+                               game.pState.get()));
     CHECK(tile.HasImprovement("Farm"));
 }
 
@@ -421,7 +426,8 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
 
     std::mt19937 rng(1);
     REQUIRE(
-        ApplyTerraformResult(rFungusTile, *plant, game.pState->GetTileEffects(), former, rng));
+        ApplyTerraformResult(rFungusTile, *plant, game.pState->GetTileEffects(), former, rng,
+                               game.pState.get()));
     CHECK(rFungusTile.HasFeature("Fungus"));
     CHECK_FALSE(rFungusTile.HasImprovement("Farm"));
     CHECK_FALSE(rFungusTile.HasImprovement("Road"));
@@ -559,7 +565,8 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
     REQUIRE(farm);
     std::mt19937 rng(3);
     CHECK_FALSE(
-        ApplyTerraformResult(tile, *farm, game.pState->GetTileEffects(), former, rng));
+        ApplyTerraformResult(tile, *farm, game.pState->GetTileEffects(), former, rng,
+                               game.pState.get()));
     CHECK(tile.HasImprovement("Road"));
     CHECK_FALSE(tile.HasImprovement("Farm"));
 }

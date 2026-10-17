@@ -347,8 +347,6 @@ public:
     FactionRevealedUnits& GetRevealedUnits();
     const FactionRevealedUnits& GetRevealedUnits() const;
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
-    // Session world/council extras for IEffectsProvider composition (GameState binds itself).
-    void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
     void RebuildVisibility();
 
     // Coalesces visibility rebuilds. While any scope is open, RebuildVisibility only marks the
@@ -378,15 +376,10 @@ public:
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
     const GameSettings& GetSettings() const { return m_rSettings; }
 
-    // Optional session back-pointer (GameState::AttachToSession). Required for triggered
-    // Infiltration dispatch on production completion; null when the faction is unbound.
-    void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
-    GameState* GetGameState() { return m_pGameState; }
-    // Const read for commerce / projections; writers use the non-const overload.
-    const GameState* GetGameState() const { return m_pGameState; }
-
     // Optional session spawn services (GameState::AttachToSession). Required to complete
     // unit production; null when the faction is unbound.
+    // TODO: Re-examine; this callback is the faction's last link to its GameState.
+    // Suggestion: move the unit-id counter onto WorldMap and allocate through the map.
     void BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
                                UnitPositionIndex& rPositions);
     UnitId_t AllocateUnitId() const;
@@ -453,8 +446,6 @@ private:
     FactionRevealedUnits m_revealedUnits;
     WorldMap& m_rWorldMap; // constructor-injected; RebuildVisibility can never be a no-op
     const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected
-    IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
-    GameState* m_pGameState = nullptr; // set by BindGameState; optional session back-pointer
     std::function<UnitId_t()> m_allocateUnitId;
     UnitPositionIndex* m_pUnitPositions = nullptr;
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
@@ -466,6 +457,7 @@ private:
     mutable FactionEffects_t m_composedEffects;
     mutable uint64_t m_composedLocalVersion = UINT64_MAX;
     mutable uint64_t m_composedWorldStamp = UINT64_MAX;
+    mutable const IWorldEffectsSource* m_pComposedWorld = nullptr;
     mutable uint64_t m_composedVersion = 0;
     // Recomputed with m_composedEffects, so it can never go stale independently.
     mutable InteractionGridMask_t m_composedInteractionMask = 0;

@@ -58,6 +58,7 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject,
 // records on the tile any pair the Former's coexistence override waived. Returns whether
 // anything actually changed.
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
-                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng);
+                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
+                          IUnitOrderWorld* pWorld);
 
 } // namespace ac

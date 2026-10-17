@@ -1,4 +1,5 @@
 #include "game/units/TerraformRules.h"
+#include "game/units/IUnitOrderWorld.h"
 
 #include "game/Faction.h"
 #include "game/GameState.h"
@@ -267,30 +268,11 @@ bool PlaceImprovement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
     return rTile.HasImprovement(rPlaced.id);
 }
 
-// The project's own effects, fired against the Former's tile. A project that declares any
-// needs a session: the effects mutate world state through GameState, which a movement-only
-// harness does not have.
-bool RunCompleteEffects_(Tile& rTile, const TerraformProject_t& rProject, Unit& rFormer,
-                         std::mt19937& rRng)
-{
-    GameState* pGameState = rFormer.GetFaction().GetGameState();
-    if (!pGameState)
-    {
-        throw std::runtime_error("Terraform project '" + rProject.id
-                                 + "' declares on_complete_effects but the former's faction is "
-                                   "not attached to a session");
-    }
-    TriggeredEffectContext_t context(*pGameState, rFormer.GetFaction());
-    context.pUnit = &rFormer;
-    context.pTile = &rTile;
-    context.pRng = &rRng;
-    return !ApplyTriggeredEffects(rProject.onCompleteEffects, context).empty();
-}
-
 } // namespace
 
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
-                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng)
+                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
+                          IUnitOrderWorld* pWorld)
 {
     bool bDidAnything = false;
     if (rProject.pPlaces)
@@ -301,7 +283,16 @@ bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
     }
     if (!rProject.onCompleteEffects.empty())
     {
-        bDidAnything = RunCompleteEffects_(rTile, rProject, rFormer, rRng) || bDidAnything;
+        // The effects mutate world state, which a movement-only harness has no session for.
+        if (!pWorld)
+        {
+            throw std::runtime_error("Terraform project '" + rProject.id
+                                     + "' declares on_complete_effects but there is no session "
+                                       "to apply them");
+        }
+        const bool bEffectsApplied =
+            pWorld->ApplyTerraformCompleteEffects(rTile, rProject, rFormer, rRng);
+        bDidAnything = bEffectsApplied || bDidAnything;
     }
     return bDidAnything;
 }

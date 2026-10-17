@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/DifficultyConfig.h"
 #include "game/NativeLifeLevelConfig.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -218,7 +219,7 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectEcoDamageEffects_() const
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectDiplomaticStatusEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    const GameState* pState = m_rFaction.GetGameState();
+    const GameState* pState = FindCurrentGameState();
     if (!pState)
     {
         return result;
@@ -281,8 +282,10 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
     // the pool.
     rOut.push_back(m_rFaction.GetSettings().GetGameRulesRevision().Get());
     // Pair effects follow every status change and every faction that joins the session.
-    if (const GameState* pState = m_rFaction.GetGameState())
+    if (const GameState* pState = FindCurrentGameState())
     {
+        // A different current game state must not hit this cache.
+        rOut.push_back(reinterpret_cast<uintptr_t>(pState));
         rOut.push_back(pState->GetDiplomacyLedger().GetRevision());
         rOut.push_back(static_cast<uint64_t>(pState->GetNumFactions()));
     }

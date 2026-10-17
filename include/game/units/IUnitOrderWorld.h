@@ -15,6 +15,7 @@ class BaseManager;
 class Tile;
 class TileEffectsContext;
 class Unit;
+struct TerraformProject_t;
 
 // Narrow session surface UnitOrderExecutor needs beyond the map / pathfinder it already
 // holds. GameState implements it; movement-only harnesses construct the executor with a
@@ -41,6 +42,11 @@ public:
     // A player unit's move order reached the border of territoryOwner's territory, which its
     // faction may not enter. The order is kept until the player decides.
     virtual void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) = 0;
+
+    // Fires the project's on_complete_effects against the Former's tile. Returns whether any
+    // effect applied.
+    virtual bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
+                                               Unit& rFormer, std::mt19937& rRng) = 0;
 };
 
 } // namespace ac

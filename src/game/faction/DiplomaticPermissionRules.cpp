@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/UnitVisibility.h"
@@ -14,22 +15,6 @@
 
 namespace ac
 {
-
-namespace
-{
-
-const GameState& SessionOf_(const Faction& rFaction)
-{
-    const GameState* pState = rFaction.GetGameState();
-    if (!pState)
-    {
-        throw std::logic_error(
-            "Diplomatic permission rules: faction is not attached to a game session");
-    }
-    return *pState;
-}
-
-} // namespace
 
 const DiplomaticStatusRules_t& StatusRulesFor(const GameState& rGameState, FactionId_t a,
                                               FactionId_t b)
@@ -63,7 +48,7 @@ bool MayEnterTerritoryOf(const Unit& rGuest, FactionId_t territoryOwner)
     {
         return true;
     }
-    return StatusRulesFor(SessionOf_(rGuestFaction), guestId, territoryOwner).bEnterTerritory;
+    return StatusRulesFor(CurrentGameState(), guestId, territoryOwner).bEnterTerritory;
 }
 
 bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase)
@@ -74,7 +59,7 @@ bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase)
     {
         return true;
     }
-    return StatusRulesFor(SessionOf_(rGuest), rGuest.GetFactionId(), hostId).bRepairAtBases;
+    return StatusRulesFor(CurrentGameState(), rGuest.GetFactionId(), hostId).bRepairAtBases;
 }
 
 bool MayShareTiles(const Faction& rA, FactionId_t b)
@@ -83,7 +68,7 @@ bool MayShareTiles(const Faction& rA, FactionId_t b)
     {
         return true;
     }
-    return StatusRulesFor(SessionOf_(rA), rA.GetFactionId(), b).bShareTiles;
+    return StatusRulesFor(CurrentGameState(), rA.GetFactionId(), b).bShareTiles;
 }
 
 } // namespace ac

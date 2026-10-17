@@ -354,7 +354,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     pool's `FactionUnits` effects (so a building or policy can boost every unit).
   - `FactionGlobal` — the whole faction.
   - `WorldGlobal` — the session. A faction's own `FactionEffectsPool` carries its own
-    `WorldGlobal` effects; `Faction::GetActiveEffects()` (when bound to `IWorldEffectsSource`)
+    `WorldGlobal` effects; `Faction::GetActiveEffects()` (when a game state is current)
     also appends peer WorldGlobal and council extras. `GetLocalActiveEffects()` is the
     uncomposed pool used when harvesting peers. `CollectSessionWorldEffects()` is that set
     once: every faction's local `WorldGlobal` effects, then council world laws, then

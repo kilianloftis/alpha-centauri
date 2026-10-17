@@ -28,7 +28,6 @@ public:
     int GetDamage() const;
 
 private:
-    const GameState& RequireGameState_() const;
     EcoDamageInputs_t CollectInputs_(const GameState& rGameState) const;
     double TerraformRaw_() const;
     void CollectRevisions_(const GameState& rGameState, std::vector<uint64_t>& rOut) const;

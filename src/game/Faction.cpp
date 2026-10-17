@@ -2,6 +2,7 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/GameDataContext.h"
 
 #include "game/buildings/BuildingRegistry.h"
@@ -1069,14 +1070,6 @@ const FactionRevealedUnits& Faction::GetRevealedUnits() const
     return m_revealedUnits;
 }
 
-void Faction::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
-{
-    m_pWorldEffects = &rWorldEffects;
-    // Force recomposition on next GetActiveEffects.
-    m_composedLocalVersion = UINT64_MAX;
-    m_composedWorldStamp = UINT64_MAX;
-}
-
 Faction::VisibilityRebuildScope::VisibilityRebuildScope(Faction& rFaction)
     : m_pFaction(&rFaction)
 {
@@ -1146,18 +1139,19 @@ void Faction::EnsureComposedEffects_() const
     // GetWorldCompositionStamp sweeps every peer faction's pool, so both public accessors
     // funnel through here rather than each recomputing it — one sweep per query, and the
     // returned list and version can never describe different compositions.
+    const IWorldEffectsSource* pWorld = FindCurrentGameState();
     const uint64_t localVersion = GetLocalEffectsVersion();
-    const uint64_t worldStamp =
-        m_pWorldEffects ? m_pWorldEffects->GetWorldCompositionStamp(*this) : 0;
-    if (localVersion == m_composedLocalVersion && worldStamp == m_composedWorldStamp)
+    const uint64_t worldStamp = pWorld ? pWorld->GetWorldCompositionStamp(*this) : 0;
+    if (localVersion == m_composedLocalVersion && worldStamp == m_composedWorldStamp
+        && pWorld == m_pComposedWorld)
     {
         return;
     }
 
     m_composedEffects = GetLocalActiveEffects();
-    if (m_pWorldEffects)
+    if (pWorld)
     {
-        const std::vector<ActiveEffect_t> extras = m_pWorldEffects->CollectWorldExtras(*this);
+        const std::vector<ActiveEffect_t> extras = pWorld->CollectWorldExtras(*this);
         m_composedEffects.effects.insert(m_composedEffects.effects.end(), extras.begin(),
                                          extras.end());
     }
@@ -1166,6 +1160,7 @@ void Faction::EnsureComposedEffects_() const
     m_composedInteractionMask = InteractionMaskOf(std::span{m_composedEffects.effects});
     m_composedLocalVersion = localVersion;
     m_composedWorldStamp = worldStamp;
+    m_pComposedWorld = pWorld;
     // Monotonic, so consumers comparing versions for equality (BaseManager's base-effect
     // memo, ResearchManager's cost cache) cannot be fooled by a collision the way a hash of
     // (localVersion, worldStamp) could. Starts at 1: never equal to a default-initialized 0.

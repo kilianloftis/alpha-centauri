@@ -455,8 +455,6 @@ struct FactionFixture : BaseFixture
             }
             map.GetTerritory().Rebuild(map, bases);
         });
-        rFaction.BindWorldEffects(*pBindState);
-        rFaction.BindGameState(*pBindState);
         rFaction.OnSecretProjectDestroyed.Connect([this](const ac::BuildingId_t& rId)
         {
             pBindState->MarkSecretProjectDestroyed(rId);

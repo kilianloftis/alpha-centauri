@@ -808,7 +808,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Complete;
     }
 
-    if (!ApplyTerraformResult(*pTile, *project, m_rTileEffects, rUnit, m_rRng))
+    if (!ApplyTerraformResult(*pTile, *project, m_rTileEffects, rUnit, m_rRng, m_pWorld))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.projectId
                   << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()

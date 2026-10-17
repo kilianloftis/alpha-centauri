@@ -106,7 +106,8 @@ stage caps the roll at `eco_damage.json`'s `fungal_pop.max_chance_percent`.
   `EcologyLedger` and counted atrocities from `AtrocityLedger::EcoVirtualMinerals`, and hands
   `EcoDamageInputs_t` to the calculator. The result is memoized on the faction effects version,
   research, population and mood revisions, the base map's worked-tile and appearance revisions,
-  and both ledgers' revisions. Throws when the faction is not bound to a `GameState`.
+  both ledgers' revisions and which game state is current. Reads the current game state, and
+  throws when there is none.
 - **`EcologyLedger`** (owned by `GameState`): per-faction fungal blooms, clean-mineral grants
   and virtual minerals, each permanent. Every write bumps its revision.
 - **`GrantCleanMinerals`**: authored in eco facilities' `on_complete_effects`, so a captured or
