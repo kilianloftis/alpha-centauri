@@ -95,9 +95,7 @@ Nothing reads the current game state yet, so this commit cannot change behaviour
   - New member `std::unique_ptr<GameStateScope> m_pGameStateScope`, declared after `m_pGameState` so it is destroyed first.
   - `StartNewGame_` creates it right after `m_pGameState`, before any faction is created.
 - **`FactionFixture`**: a `GameStateScope` member for `pBindState`, declared after it and created right after it in the constructor.
-- **`MakeLandSession`** returns a new `TestSession_t`. It holds the `std::unique_ptr<GameState>` and then its `GameStateScope`, so the scope is destroyed first.
-  - The four callers update.
-  - `DiplomacyFixture` holds a `TestSession_t`.
+- **`MakeLandSession`** is unchanged. Its four callers, `DiplomacyFixture` among them, install a scope beside the state they keep, as every other test does.
 - **`ViewFixture`**: a scope member for `pState`, declared after it.
 - **Every other test that constructs a `GameState`** installs a `GameStateScope` on the next line.
   - At `96119e2`, tests construct a `GameState` 53 times in 34 files. Three of those are the helpers above.

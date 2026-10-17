@@ -2,6 +2,7 @@
 // formula over listed mineral cost, paid as energy credits. Combat / probe / raze
 // destruction does not refund.
 
+#include "game/CurrentGameState.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/production/ScrapConfigParser.h"
@@ -244,6 +245,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
     }
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
+    const GameStateScope scope(*pState);
     Faction& faction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));

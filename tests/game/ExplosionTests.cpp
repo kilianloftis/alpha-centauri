@@ -1,6 +1,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/atrocities/AtrocityLedger.h"
@@ -57,6 +58,7 @@ struct BlastGame_
 {
     FactionFixture fixtures;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     EffectPool pool;
     UnitComponentConfig_t warhead;
@@ -71,6 +73,7 @@ struct BlastGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, fixtures.settings, k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
         pPlayer = &pState->AddFaction(std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
             pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));

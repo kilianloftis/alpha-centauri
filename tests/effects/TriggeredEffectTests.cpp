@@ -3,6 +3,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/PlayerInteraction.h"
@@ -50,6 +51,7 @@ struct TriggerGame_
     FactionFixture fixtures;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
 
     TriggerGame_()
@@ -61,6 +63,7 @@ struct TriggerGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
         pFaction = &pState->AddFaction(std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
             pState->GetWorldMap(), settings, actest::k_TestFactionSeed));

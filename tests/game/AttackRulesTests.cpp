@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
@@ -47,6 +48,7 @@ struct AttackGame_
     FactionConfig_t playerDefinition;
     FactionConfig_t aiDefinition;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
@@ -56,6 +58,7 @@ struct AttackGame_
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";

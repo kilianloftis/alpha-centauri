@@ -3,6 +3,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/faction/FactionExploredMap.h"
@@ -266,6 +267,7 @@ TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[v
 
     auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState gameState(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     auto pFaction = std::make_unique<Faction>(
         gameState.AllocateFactionId(), true, fixture.factionDefinition,

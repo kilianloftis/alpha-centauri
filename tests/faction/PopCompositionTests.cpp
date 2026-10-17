@@ -5,6 +5,7 @@
 #include "TempConfigFile.h"
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -856,6 +857,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
     }
     auto pState = std::make_unique<ac::GameState>(
         std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(*pState);
     ac::Faction& rFaction = pState->AddFaction(std::make_unique<ac::Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));

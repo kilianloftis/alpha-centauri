@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -39,6 +40,7 @@ struct PlayerActionsGame_
     FactionFixture fixtures;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
 
     PlayerActionsGame_()
@@ -48,6 +50,7 @@ struct PlayerActionsGame_
                                        actest::TestMapRules()),
             fixtures.dataContext,
             settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -323,6 +326,7 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
                                        actest::TestMapRules()),
             fixtures.dataContext,
             settings, actest::k_TestRngSeed);
+        const GameStateScope scope(*pState);
         pState->GetRng().seed(seed);
         pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);
         return pState;

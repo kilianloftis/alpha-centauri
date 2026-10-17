@@ -9,6 +9,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
@@ -101,6 +102,7 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, k_TestRngSeed);
+    const GameStateScope scope(state);
 
     FactionConfig_t definition;
     definition.id = "already_populated";
@@ -133,6 +135,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, k_TestRngSeed);
+    const GameStateScope scope(state);
 
     // The sighting must be one-way, or the newcomer's own sweep would establish contact and
     // the test would pass either way. A Sensor (vision 2, territory-owned) extends the

@@ -1,6 +1,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/EffectConfig.h"
@@ -72,6 +73,7 @@ struct BloomSession_
 {
     FactionFixture fixtures;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlanet = nullptr;
     EffectPool pool;
     UnitComponentConfig_t warhead;
@@ -83,6 +85,7 @@ struct BloomSession_
         InstallNativeUnits(fixtures.dataContext, lifeMin, lifeMax);
 
         pState = MakeLandSession(fixtures);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         if (bPlanet)
         {

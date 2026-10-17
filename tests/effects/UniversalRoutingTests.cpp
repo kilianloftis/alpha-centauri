@@ -8,6 +8,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
 #include "game/faction/base/BaseManager.h"
@@ -205,6 +206,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,
@@ -265,6 +267,7 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
         1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
@@ -291,6 +294,7 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
         1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include "GameFixtures.h"
+#include "game/CurrentGameState.h"
 #include "game/units/MovementRules.h"
 #include "game/units/AttackRules.h"
 #include "game/units/MoveCostCalculator.h"
@@ -591,6 +592,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});
@@ -613,6 +615,7 @@ TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs ord
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixture.dataContext,
                     settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
     Faction& rOwned = state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

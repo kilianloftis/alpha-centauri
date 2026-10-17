@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/atrocities/AtrocityLedger.h"
 
 #include "game/GameSettings.h"
@@ -48,6 +49,7 @@ struct ProbeGame_
     FactionFixture fixtures;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
     std::unique_ptr<TechCostConfig_t> pTechCostConfig;
@@ -74,6 +76,7 @@ struct ProbeGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,

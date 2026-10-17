@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/council/CouncilAiStub.h"
@@ -37,6 +38,7 @@ struct CouncilGame_
     FactionFixture fixtures;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
     Faction* pC = nullptr;
@@ -53,6 +55,7 @@ struct CouncilGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -349,6 +352,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
 
     Faction& rA = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

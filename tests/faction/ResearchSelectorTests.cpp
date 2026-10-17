@@ -1,3 +1,4 @@
+#include "game/CurrentGameState.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/ResearchSelector.h"
 #include "game/GameCategory.h"
@@ -191,6 +192,7 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
     Faction& faction = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));

@@ -4,6 +4,7 @@
 #include "RecordingGraphics.h"
 #include "SpriteRig.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -33,6 +34,7 @@ struct ViewFixture : WorldFixture
     RecordingGraphics graphics;
     ac::FactionConfig_t factionDefinition;
     std::unique_ptr<ac::GameState> pState;
+    std::unique_ptr<ac::GameStateScope> pScope;
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<SpriteRig> pSprites;
@@ -78,6 +80,7 @@ struct ViewFixture : WorldFixture
 
         pState = std::make_unique<ac::GameState>(std::move(pMap), dataContext, settings,
                                                  k_TestRngSeed);
+        pScope = std::make_unique<ac::GameStateScope>(*pState);
 
         if (bWithPlayerFaction)
         {

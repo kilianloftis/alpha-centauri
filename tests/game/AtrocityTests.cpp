@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/DifficultyConfig.h"
 #include "game/DifficultyConfigParser.h"
 #include "game/GameSettings.h"
@@ -38,6 +39,7 @@ struct AtrocityGame_
     FactionFixture fixtures;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
     Faction* pC = nullptr;
@@ -53,6 +55,7 @@ struct AtrocityGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         pA = &AddFaction_(fixtures.factionDefinition, true);
         pB = &AddFaction_(fixtures.factionDefinition, false);

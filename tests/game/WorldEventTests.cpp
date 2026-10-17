@@ -4,6 +4,7 @@
 #include "GameFixtures.h"
 #include "TempConfigFile.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/faction/EconomyManager.h"
@@ -32,11 +33,13 @@ struct WorldEventSession_
 {
     FactionFixture fixtures;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     WorldEventSession_()
         : pState(MakeLandSession(fixtures))
+        , pScope(std::make_unique<GameStateScope>(*pState))
     {
         pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);

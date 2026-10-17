@@ -2,6 +2,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -28,6 +29,7 @@ struct DiplomacyFixture
 {
     FactionFixture fixtures;
     std::unique_ptr<ac::GameState> pState;
+    std::unique_ptr<ac::GameStateScope> pScope;
     ac::Faction* pA = nullptr;
     ac::Faction* pB = nullptr;
     ac::Faction* pC = nullptr;
@@ -36,6 +38,7 @@ struct DiplomacyFixture
 
     DiplomacyFixture()
         : pState(MakeLandSession(fixtures))
+        , pScope(std::make_unique<ac::GameStateScope>(*pState))
     {
         pA = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, true);
         pB = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, false);

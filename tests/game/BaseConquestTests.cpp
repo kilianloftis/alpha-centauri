@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
@@ -61,6 +62,7 @@ struct ConquestGame_
     FactionConfig_t playerDefinition;
     FactionConfig_t aiDefinition;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
@@ -71,6 +73,7 @@ struct ConquestGame_
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
                                     StatId_t::CaptureFacilitiesDestroyedMin, 1);

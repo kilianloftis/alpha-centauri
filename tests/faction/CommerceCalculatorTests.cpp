@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -30,6 +31,7 @@ struct CommerceGame_
     CommerceCalculator calculator;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
@@ -47,6 +49,7 @@ struct CommerceGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
+        pScope = std::make_unique<GameStateScope>(*pState);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

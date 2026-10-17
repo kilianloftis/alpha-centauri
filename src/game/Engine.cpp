@@ -1,5 +1,6 @@
 #include "game/Engine.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
 #include "game/council/CouncilAiStub.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
@@ -436,6 +437,7 @@ void Engine::StartNewGame_()
         // Distinct sub-stream from world generation, so changing map size does not shift
         // combat rolls (and vice versa).
         static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
+    m_pGameStateScope = std::make_unique<GameStateScope>(*m_pGameState);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());

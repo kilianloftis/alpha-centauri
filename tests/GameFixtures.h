@@ -2,6 +2,7 @@
 
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -373,6 +374,7 @@ struct FactionFixture : BaseFixture
     // throwaway 1×1 map so it does not steal FactionFixture::map; GrantXp never touches it.
     std::unique_ptr<ac::WorldMap> pBindMap;
     std::unique_ptr<ac::GameState> pBindState;
+    std::unique_ptr<ac::GameStateScope> pBindScope;
     int nextFactionId = 1;
     int nextUnitId = 1;
 
@@ -401,6 +403,7 @@ struct FactionFixture : BaseFixture
         pBindMap = std::make_unique<ac::WorldMap>(2, 1, actest::TestMapRules());
         pBindState = std::make_unique<ac::GameState>(std::move(pBindMap), dataContext, settings,
                                                      k_TestRngSeed);
+        pBindScope = std::make_unique<ac::GameStateScope>(*pBindState);
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }

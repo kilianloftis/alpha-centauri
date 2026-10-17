@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/TurnProcessor.h"
 #include "game/TurnStages.h"
 #include "game/HookContext.h"
@@ -112,6 +113,7 @@ TEST_CASE("TurnProcessor throws instead of silently skipping a stage id missing 
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     TurnProcessor processor(GlobalTurnStageRegistry_t{}, PerFactionTurnStageRegistry_t{},
                              {"NoSuchStage"});
@@ -129,6 +131,7 @@ TEST_CASE("TurnProcessor executes stages until a yield, including per-faction st
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -162,6 +165,7 @@ TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     GlobalTurnStageRegistry_t global;
     auto pStage = std::make_unique<YieldOnceGlobalStage>();
@@ -197,6 +201,7 @@ TEST_CASE("TurnProcessor wraps to the start of the stage order after the last st
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     // Yields once, then Continues and resets so the next cycle yields again.
     class YieldEachCycleStage : public GlobalTurnStage
@@ -252,6 +257,7 @@ TEST_CASE("TurnProcessor resumes the same faction after a per-faction stage yiel
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -284,6 +290,7 @@ TEST_CASE("TurnProcessor throws if the stage order has no yielding stage",
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     GlobalTurnStageRegistry_t global;
     global["OnlyContinue"] = std::make_unique<CountingGlobalStage>();
@@ -299,6 +306,7 @@ TEST_CASE("TurnProcessor Reset recovers after a no-yield stage order throw",
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     class YieldAfterContinue : public GlobalTurnStage
     {
@@ -337,6 +345,7 @@ TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     class ThrowingStage : public GlobalTurnStage
     {
@@ -378,6 +387,7 @@ TEST_CASE("TurnProcessor unbound replace hook does not skip ExecuteImpl",
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     HookContext hooks;
     Hook_t replace;
@@ -421,6 +431,7 @@ TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id o
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
                         settings, actest::k_TestRngSeed);
+    const GameStateScope scope(gameState);
 
     // Burn a low id so the first added faction is not id 1 contiguous-only assumption.
     (void)gameState.AllocateFactionId();

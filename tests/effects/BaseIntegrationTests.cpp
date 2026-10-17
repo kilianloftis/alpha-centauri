@@ -4,6 +4,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfig.h"
@@ -134,6 +135,7 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
     Faction& faction = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
         state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
@@ -173,6 +175,7 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
+    const GameStateScope scope(state);
     Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
         state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));

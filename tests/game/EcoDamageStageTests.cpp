@@ -3,6 +3,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
@@ -43,6 +44,7 @@ struct EcoSession_
 {
     FactionFixture fixtures;
     std::unique_ptr<GameState> pState;
+    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
     Faction* pPlanet = nullptr;
@@ -51,6 +53,7 @@ struct EcoSession_
     {
         InstallNativeUnits(fixtures.dataContext, k_LifeformsPerBloom, k_LifeformsPerBloom);
         pState = MakeLandSession(fixtures);
+        pScope = std::make_unique<GameStateScope>(*pState);
         pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);
         pAi = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
