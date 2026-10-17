@@ -1,0 +1,41 @@
+---
+description: Every file is one kind (state owner, calculator, rules, mutations, executor, cache, coordinator, definition); rules make every mechanic decision
+alwaysApply: true
+---
+
+# Code kinds
+
+Full text: "Code kinds" in `docs/architecture/high-level.md`.
+
+## One kind per file
+
+- **State owners** (`*Manager`, `*Ledger`, entities, indexes, trackers, latches) hold save data. They change only their own state, never take or hold `GameState`, and never draw from an RNG.
+- **Calculators** (`*Calculator`) evaluate configured formulas. `GameDataContext` owns them. Their methods are `const` and take plain values. They never read the game and never draw from an RNG.
+- **Rules** (`*Rules`) answer questions about the game. Inputs are `const`. They read the game through `CurrentGameState()`, never mutate, and never draw from an RNG.
+- **Mutations** (`*Mutations`) carry out an outcome. They take `GameState&` when they change state across owners.
+- **Executors** (`*Executor`) run a multi-step command: check rules, then call mutations. A one-mutation command has no executor.
+- **Caches** (`*Cache`) memoise a view of state and own no save data.
+- **Coordinators** are the turn stages. **Definitions** are `*Config_t`, `*ConfigParser`, `*Registry` and the validators.
+- The effects system follows the same split: resolving effects is rules, dispatching triggered effects is mutations.
+
+## Names
+
+- `Manager`, `Ledger`, `Calculator`, `Rules`, `Mutations`, `Executor` and `Cache` name only files and classes of that kind.
+- A mechanic with its own files names them for the mechanic (`FuelRules`, `FuelMutations`). Small mechanics share their domain's file (`ProductionRules`).
+- New logic goes into the matching file.
+
+## Decisions
+
+- **A rules function makes every mechanic decision**: whether something may happen, which thing is chosen, how much is gained, lost or kept, and what follows. A configured formula is a calculator's job.
+- State owners, mutations and executors call that rule and apply what it returns. They hold no mechanic branches or thresholds of their own.
+- A rule that decides several things returns one outcome struct; the mutation applies it.
+- Forecasts call the same rule as the turn.
+- A mutation draws from the RNG only within limits a rule set: a range, a chance, a candidate list.
+- A consequence with no condition, choice or amount stays in its mutation until a switch needs it.
+
+## Switches
+
+- **A new mechanic switch goes in the Rules function that makes the decision.**
+- The switch is a field on the subsystem's config struct, required by its existing parser.
+- The rule reads the field and dispatches; each version is its own function in that Rules file.
+- The rule reads the switch from a config struct it already takes, or from `CurrentGameState().GetGameData()`. Adding a switch never changes a signature.

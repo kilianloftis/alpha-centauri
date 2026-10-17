@@ -1,7 +1,6 @@
 ---
 description: Write requirement-based tests against fixtures, not shipping config; report failures
 alwaysApply: true
-trigger: always_on
 ---
 
 # Testing

@@ -351,6 +351,63 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
 7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
 8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
 
+### Code kinds
+Every file and class is one kind. The kind says what the code may read, change and draw from.
+
+**Kinds.**
+
+- **State owners** hold save data and keep it valid:
+  - managers (`ProductionManager`), ledgers (`DiplomacyLedger`), entities (`Unit`, `Tile`), indexes, trackers and latches
+  - change only the state they own and their own parts
+  - never take or hold `GameState`
+  - never draw from an RNG
+- **Calculators** evaluate a subsystem's configured formulas:
+  - `LoadGameData` builds them once and `GameDataContext` owns them
+  - hold config, the Lua runtime and tables derived from config
+  - methods are `const` and take plain values: numbers, ids, input structs, effect lists
+  - never read the game: no `GameState`, no `CurrentGameState()`, no faction, base, unit or tile
+  - never draw from an RNG and never mutate
+- **Rules** answer a question about the game: legality, eligibility, targets, costs, derived values:
+  - free functions, or a class that binds session-stable dependencies (`StepEvaluator`, `DisengageRules`)
+  - inputs are `const`
+  - never take `GameState`: they read it through `CurrentGameState()`
+  - never mutate and never draw from an RNG, because the UI, the AI and the pathfinder ask them speculatively
+- **Mutations** carry out an outcome:
+  - change state across owners, and take `GameState&` when they do
+  - free functions, or a class that binds session-stable dependencies (`CombatResolver`)
+- **Executors** run a multi-step command and hold its in-flight state (`UnitOrderExecutor`, `DiplomaticActionExecutor`, `ProbeActionExecutor`):
+  - check rules, then call mutations
+  - a command that is one mutation has no executor: its caller checks the rule and calls the mutation
+- **Caches** memoise a view derived from state (`FactionEffectsPool`, `BaseEffectsCache`, `BaseEcology`). They own no save data.
+- **Coordinators** are the turn stages.
+- **Definitions** are `*Config_t`, `*ConfigParser`, `*Registry` and the validators.
+- **The effects system** (`effects/`) follows the same split: resolving effects is rules, and dispatching triggered effects is mutations.
+
+**Names.**
+
+- `Manager`, `Ledger`, `Calculator`, `Rules`, `Mutations`, `Executor` and `Cache` name only files and classes of that kind. Every file holds one kind.
+- A mechanic with its own files names them for the mechanic (`FuelRules`, `FuelMutations`).
+- Small mechanics share their domain's file (`ProductionRules`, `ProductionMutations`).
+- New logic goes into the matching file.
+
+**Decisions.**
+
+- A rules function makes every decision a player would call a mechanic: whether something may happen, which thing is chosen, how much is gained, lost or kept, and what follows. When the decision is a configured formula, a calculator makes it.
+- State owners, mutations and executors call that function and apply what it returns. They hold no mechanic branches or thresholds of their own.
+- A rule that decides several things at once returns them as one outcome struct, and the mutation applies it. `PredictModifyPopulationDelta` / `ApplyModifyPopulation` and `PlanScrapPayout` / `CreditScrapRefund` work this way.
+- Forecasts call the same rule as the turn, so a preview cannot disagree with what happens.
+- A mutation draws from the RNG only within limits a rule set: a range, a chance, a candidate list.
+- A consequence with no condition, choice or amount stays in the mutation that applies it. An example is a transferred base resetting its riot ladder. The change that adds a switch for one extracts its rule.
+
+**Switches and signatures.**
+
+- A switch between two versions of a mechanic is a field on its subsystem's config struct.
+  - The subsystem's existing parser requires the field.
+  - The rule that makes the decision reads the field and dispatches.
+  - Each version is its own function in that Rules file.
+- A rule reads a switch from a config struct it already takes, or else from `CurrentGameState().GetGameData()`. Adding a switch never changes its signature.
+- Rules keep the smallest signature that answers the question. They take the objects the question is about, and read anything else from the current game state.
+
 ### Composition root phases
 `Engine::Initialize_` runs three explicit phases, in order:
 1. `InitializeApp_` — process-wide and session-independent: user settings, UI style, and

@@ -176,13 +176,13 @@ Moved code keeps its body unless the move already touches a line. Each commit's 
 
 - Delete `include/game/faction/Specialist.h` and `src/game/faction/Specialist.cpp`, and its line in `src/CMakeLists.txt`.
 - `GameState` lists its world-effect sources once [EFF-1].
-  - New private `AppendWorldSources_(const Faction* pExcluded, std::vector<ActiveEffect_t>&)` appends, in today's order:
-    - every faction's `WorldGlobal` effects except `pExcluded`'s
-    - the council's world effects
+  - New private `AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffect_t>&)` appends, in today's order:
+    - every faction's `WorldGlobal` effects except `pFor`'s
+    - the council's world effects, then the council's faction effects for `pFor` when it is set
     - the world events
     - the standing world rules
-  - `CollectSessionWorldEffects` calls it with no exclusion.
-  - `CollectWorldExtras(rFor)` calls it excluding `rFor`, and adds the council's faction effects for `rFor` after the council's world effects, as today.
+  - `CollectSessionWorldEffects` calls it with null.
+  - `CollectWorldExtras(rFor)` calls it with `&rFor`.
 
 ### 3. One directory per domain
 
