@@ -10,6 +10,7 @@
 #include "game/ecology/EcoDamageCalculator.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/ecology/EcologyLedger.h"
+#include "game/ecology/EcologyRules.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -499,4 +500,52 @@ TEST_CASE("EcoDamageConfigParser requires the script to name damage_formula", "[
     CHECK_THROWS_WITH(EcoDamageConfigParser{}.ParseConfig(FixturePath("eco_damage.json"),
                                                           script.Path(), lua),
                       ContainsSubstring("damage_formula"));
+}
+
+TEST_CASE("Eco damage reads the base's terraforming, the faction's cap and the session ledgers",
+          "[ecology][inputs]")
+{
+    EcoFixture_ eco;
+    eco.Improve(9, 9, "ThermalBorehole");
+    eco.Work(*eco.pBase, 9, 9);
+    const FactionId_t factionId = eco.pFaction->GetFactionId();
+    eco.Ecology().RecordFungalBloom(factionId);
+    eco.Ecology().AddVirtualMinerals(factionId, 5);
+
+    const EcoDamageInputs_t inputs = EcoDamageInputs(*eco.pBase);
+    CHECK(inputs.terraformRaw == 18.0);
+    CHECK(inputs.cleanMinerals == 16);
+    CHECK(inputs.fungalBlooms == 1);
+    CHECK(inputs.virtualMinerals == 5);
+    CHECK(inputs.minerals == eco.pBase->GetMineralProduction());
+}
+
+TEST_CASE("The fungal pop chance is the eco damage, capped by max_chance_percent",
+          "[ecology][pop]")
+{
+    EcoFixture_ eco;
+    eco.Formula("terraform_raw");
+    eco.Improve(9, 9, "ThermalBorehole");
+    REQUIRE(eco.pBase->GetEcologicalDamage() == 9);
+
+    CHECK(FungalPopChance(*eco.pBase) == 9);
+    eco.fixtures.dataContext.ecoDamageConfig->maxChancePercent = 5;
+    CHECK(FungalPopChance(*eco.pBase) == 5);
+}
+
+TEST_CASE("A fungal pop lands on a workable tile that is neither a base nor fungus",
+          "[ecology][pop]")
+{
+    EcoFixture_ eco;
+    eco.fixtures.At(9, 9).AddTerrainFeature(eco.fixtures.improvements.Get("Fungus"));
+    eco.Improve(7, 7, "Base");
+    const std::vector<const Tile*>& rArea = eco.pBase->GetWorkerAssignments().GetWorkableTiles();
+
+    const std::vector<const Tile*> tiles = FungalPopTiles(*eco.pBase);
+    CHECK(tiles.size() == rArea.size() - 2);
+    for (const Tile* pTile : tiles)
+    {
+        CHECK(pTile != &eco.fixtures.At(9, 9));
+        CHECK(pTile != &eco.fixtures.At(7, 7));
+    }
 }

@@ -10,6 +10,7 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/effects/EffectConfig.h"
 #include "game/social-engineering/SocialEngineeringRules.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/LuaRuntime.h"
@@ -235,4 +236,31 @@ TEST_CASE("A policy is available once its tech is known", "[research][social-eng
     CHECK_FALSE(PolicyAvailable(faction, policy));
     faction.GetResearch().AddDiscoveredTech("build_tech");
     CHECK(PolicyAvailable(faction, policy));
+}
+
+TEST_CASE("Tech cost reads the known-tech count and the tech's own TechCost",
+          "[research][cost]")
+{
+    actest::FactionFixture fixtures;
+    Faction& faction = fixtures.MakeFaction();
+    ResearchManager& research = faction.GetResearch();
+    REQUIRE(research.GetDiscoveredTechs().empty());
+    research.AddDiscoveredTech("build_tech");
+    research.AddDiscoveredTech("grow_tech");
+
+    TechConfig_t tech;
+    tech.id = "priced";
+    EffectConfig_t ownCost;
+    ownCost.scope = EffectScope_t::ThisTech;
+    StatModifierEffect_t modifier;
+    modifier.stat = StatId_t::TechCost;
+    modifier.amount = 25;
+    modifier.op = ModifierOp_t::Add;
+    ownCost.effect = modifier;
+    tech.effects.push_back(ownCost);
+
+    const TechCostInputs_t inputs = TechCostInputs(research, &faction, tech);
+    CHECK(inputs.techs == 2);
+    CHECK(inputs.techTechCostModifier == 25);
+    CHECK(inputs.factionTechCostModifier == 0);
 }

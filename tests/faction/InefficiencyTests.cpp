@@ -5,6 +5,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
+#include "game/economy/EconomyRules.h"
 #include "game/economy/Inefficiency.h"
 #include "game/economy/ResourceManager.h"
 #include "game/map/MapUtils.h"
@@ -152,4 +153,36 @@ TEST_CASE("Efficiency SE rating changes remote-base inefficiency loss",
     CHECK(remote.GetEconProduction() == 4);
     CHECK(remote.GetLabsProduction() == 4);
     CHECK(remote.GetPsychProduction() == 0);
+}
+
+TEST_CASE("Inefficiency spares the headquarters, and counts distance 16 when there is none",
+          "[economy][inefficiency]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 12, 8);
+
+    // Efficiency 0 divides by 32: distance 16 loses half, distance 4 loses an eighth.
+    CHECK(EnergyAfterInefficiency(remote, 16) == 8);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
+    CHECK(EnergyAfterInefficiency(hq, 16) == 16);
+    CHECK(EnergyAfterInefficiency(remote, 16) == 14);
+}
+
+TEST_CASE("Allocation is inefficiency, then the faction's split, then the base's modifiers",
+          "[economy][allocation]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& hq = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 12, 8);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
+    remote.GetBuildingManager().AddBuilding("labs_amplifier");
+
+    // 10 loses 1 at distance 4, the 40/50/10 split of 9 is 5/4/0, and +50% Labs makes the 4 a 6.
+    const EnergySplit_t split = AllocateBaseEnergy(remote, 10);
+    CHECK(split.econ == 5);
+    CHECK(split.labs == 6);
+    CHECK(split.psych == 0);
 }

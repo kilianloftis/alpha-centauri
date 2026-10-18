@@ -306,3 +306,20 @@ TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "
         CHECK(pTile != &session.At_(7, 7));
     }
 }
+
+TEST_CASE("Only lifeforms whose domain can stand on a tile appear there", "[map][fungus]")
+{
+    BloomSession_ session(1, 1, false, false);
+    const NativeUnitRegistry& rNatives = *session.fixtures.dataContext.nativeUnitRegistry;
+    Tile& sea = session.At_(10, 10);
+    sea.SetElevation(-100);
+    REQUIRE(sea.IsWater());
+
+    const std::vector<const NativeUnitConfig_t*> onLand =
+        EligibleLifeforms(session.At_(8, 8), rNatives);
+    REQUIRE(onLand.size() == 1);
+    CHECK(onLand.front()->id == "Mind_Worm");
+    const std::vector<const NativeUnitConfig_t*> atSea = EligibleLifeforms(sea, rNatives);
+    REQUIRE(atSea.size() == 1);
+    CHECK(atSea.front()->id == "Isle_of_the_Deep");
+}

@@ -10,6 +10,7 @@
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
+#include "game/economy/EconomyRules.h"
 #include "game/economy/ResourceManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
@@ -421,4 +422,42 @@ TEST_CASE("SpendMinerals rejects overspend", "[unit][support][resources]")
     CHECK_THROWS(base.GetResources().SpendMinerals(2));
     CHECK_THROWS(base.GetResources().SpendMinerals(-1));
     CHECK(base.GetResources().GetMineralBank() == 1);
+}
+
+TEST_CASE("Native life on fungus costs no support, and every other unit its upkeep",
+          "[unit][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    fixture.At(9, 9).AddTerrainFeature(fixture.improvements.Get("Fungus"));
+    fixture.At(11, 11).AddTerrainFeature(fixture.improvements.Get("Fungus"));
+
+    const Unit& onFungus =
+        fixture.MakeUnit(faction, 9, 9, {"native_life_chassis", "test_chassis"}, &base);
+    const Unit& offFungus =
+        fixture.MakeUnit(faction, 10, 10, {"native_life_chassis", "test_chassis"}, &base);
+    const Unit& machine = fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
+
+    CHECK(UnitSupportCost(onFungus) == 0);
+    CHECK(UnitSupportCost(offFungus) == 1);
+    CHECK(UnitSupportCost(machine) == 1);
+}
+
+TEST_CASE("Support disbands the newest charged unit until the charges fit the bank",
+          "[unit][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    // Support 0: the first two units are free and the last two are charged.
+    fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
+    const Unit& newest = fixture.MakeUnit(faction, 12, 12, {"test_chassis"}, &base);
+
+    LeaveMineralBank_(base, 1);
+    CHECK(UnitToDisbandForSupport(base) == &newest);
+    LeaveMineralBank_(base, 2);
+    CHECK(UnitToDisbandForSupport(base) == nullptr);
 }
