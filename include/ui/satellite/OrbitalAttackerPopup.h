@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/OrbitalAttack.h"
+#include "game/buildings/BuildingRules.h"
 #include "ui/UIElement.h"
 
 #include <functional>

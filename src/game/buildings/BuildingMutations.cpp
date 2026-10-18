@@ -1,32 +1,21 @@
-#include "game/buildings/OrbitalAttack.h"
+#include "game/buildings/BuildingMutations.h"
 
-#include "game/faction/Faction.h"
 #include "game/GameState.h"
-#include "game/effects/DeployCooldown.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRules.h"
+#include "game/effects/DeployCooldown.h"
+#include "game/faction/Faction.h"
 #include "lib/RandomRoll.h"
 
+#include <algorithm>
 #include <stdexcept>
-#include <unordered_set>
 
 namespace ac
 {
 
 namespace
 {
-
-const OrbitalAttackEffect_t* FindOrbitalAttackEffect_(const BuildingConfig_t& rBuilding)
-{
-    for (const EffectConfig_t& rEffect : rBuilding.effects)
-    {
-        if (const auto* pAttack = std::get_if<OrbitalAttackEffect_t>(&rEffect.effect))
-        {
-            return pAttack;
-        }
-    }
-    return nullptr;
-}
 
 void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
 {
@@ -42,39 +31,37 @@ void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
 
 } // namespace
 
-std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction,
-                                                               int missionYear)
+void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuilding)
 {
-    std::vector<OrbitalAttackerOption_t> options;
-    std::unordered_set<BuildingId_t> seen;
-    for (const BaseManager& rBase : rFaction.Bases())
+    rBase.GetBuildingManager().DestroyBuilding(rBuilding.id);
+}
+
+std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
+                                                  bool bExcludeSecretProjects, std::mt19937& rRng)
+{
+    if (count <= 0)
     {
-        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
-        {
-            if (!pBuilding || !seen.insert(pBuilding->id).second)
-            {
-                continue;
-            }
-            const OrbitalAttackEffect_t* pEffect = FindOrbitalAttackEffect_(*pBuilding);
-            if (!pEffect)
-            {
-                continue;
-            }
-            const int ready = rFaction.CountReadyBuildings(pBuilding->id, missionYear);
-            if (ready <= 0)
-            {
-                continue;
-            }
-            OrbitalAttackerOption_t option;
-            option.buildingId = pBuilding->id;
-            option.pConfig = pBuilding;
-            option.readyCount = ready;
-            option.chance = pEffect->chance;
-            option.cooldownTurns = pEffect->cooldownTurns;
-            options.push_back(option);
-        }
+        return {};
     }
-    return options;
+
+    std::vector<const BuildingConfig_t*> candidates =
+        CollectDestroyableFacilities(rBase, bExcludeHq, bExcludeSecretProjects);
+    if (candidates.empty())
+    {
+        return {};
+    }
+
+    const int toDestroy = std::min(count, static_cast<int>(candidates.size()));
+    std::shuffle(candidates.begin(), candidates.end(), rRng);
+    std::vector<BuildingId_t> destroyed;
+    destroyed.reserve(static_cast<size_t>(toDestroy));
+    for (int i = 0; i < toDestroy; ++i)
+    {
+        const BuildingConfig_t& rBuilding = *candidates[static_cast<size_t>(i)];
+        destroyed.push_back(rBuilding.id);
+        DestroyBuildingAndNotify(rBase, rBuilding);
+    }
+    return destroyed;
 }
 
 OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
@@ -102,7 +89,7 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
     const BuildingConfig_t* pAttackerBuilding =
         rAttacker.FindOwnedBuildingConfig(attackerBuildingId);
     const OrbitalAttackEffect_t* pEffect =
-        pAttackerBuilding ? FindOrbitalAttackEffect_(*pAttackerBuilding) : nullptr;
+        pAttackerBuilding ? FindOrbitalAttackEffect(*pAttackerBuilding) : nullptr;
     const int year = rGameState.GetMissionYear();
     if (!pEffect || rAttacker.CountReadyBuildings(attackerBuildingId, year) <= 0)
     {

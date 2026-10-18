@@ -63,7 +63,7 @@ graph TB
         HurryProductionCalculator[HurryProductionCalculator]
         ScrapRefundCalculator[ScrapRefundCalculator]
         CommerceConfig_t[CommerceConfig_t]
-        ScrapPayout[ScrapPayout<br/>plan + credit]
+        ScrapPayout[PlanScrapPayout / CreditScrapRefund<br/>plan + credit]
         LuaRuntime[LuaRuntime]
     end
 
@@ -316,7 +316,7 @@ graph TB
   - `PopCompositionConfig_t`: Composition formula config loaded via Lua
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
-  - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
+  - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is the job of `PlanScrapPayout` (`ProductionRules`) and `CreditScrapRefund` (`ProductionMutations`), not the calculator's
   - `CommerceCache` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Treaty/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
@@ -489,7 +489,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `BaseMoodEffects`: the one place a riot tier's effect array is split between the base lane
     (`BaseEffectsCache`) and the faction lane (`FactionEffectsPool`), so a `FactionUnits`
     penalty declared by a rioting base actually reaches its units.
-  - `BuildingDestruction` / `RebelFactionPicker`: shared consequences of riot escalation, also
+  - `BuildingMutations` / `RebelFactionPicker`: shared consequences of riot escalation, also
     used by conquest and probe sabotage.
   - `PopTypeRegistry`: derives each type's `PopClass_t` from the promotion graph at load, and
     rejects a graph that is not a single chain through `is_default`.

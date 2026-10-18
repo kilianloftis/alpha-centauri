@@ -9,7 +9,7 @@
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
-#include "game/buildings/BuildingDestruction.h"
+#include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/production/ProductionManager.h"

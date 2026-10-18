@@ -1,41 +1,17 @@
-#include "game/production/ScrapPayout.h"
+#include "game/production/ProductionMutations.h"
 
-#include "game/faction/Faction.h"
+#include "game/base/BaseManager.h"
 #include "game/economy/EconomyManager.h"
+#include "game/economy/ResourceManager.h"
+#include "game/faction/Faction.h"
 #include "game/production/ProductionManager.h"
 #include "game/production/ScrapConfig.h"
-#include "game/production/ScrapRefundCalculator.h"
-#include "game/economy/ResourceManager.h"
 
 #include <stdexcept>
 #include <string>
 
 namespace ac
 {
-
-ScrapPayout_t PlanScrapPayout(const ScrapQuote_t& rQuote, std::optional<BaseId_t> destBaseId)
-{
-    if (!rQuote.bAvailable)
-    {
-        throw std::invalid_argument("PlanScrapPayout: quote is unavailable");
-    }
-    if (!IsScrapRefundStat(rQuote.refundType))
-    {
-        throw std::invalid_argument("PlanScrapPayout: refund type is not a scrap payout");
-    }
-
-    ScrapPayout_t payout;
-    payout.refundType = rQuote.refundType;
-    if (!ScrapRefundNeedsBase(rQuote.refundType))
-    {
-        payout.amount = rQuote.amount;
-        return payout;
-    }
-
-    payout.destBaseId = destBaseId;
-    payout.amount = destBaseId ? rQuote.amount : 0;
-    return payout;
-}
 
 int CreditScrapRefund(const ScrapPayout_t& rPayout, Faction& rFaction)
 {

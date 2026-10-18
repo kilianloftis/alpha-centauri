@@ -65,17 +65,19 @@ add_library(ac-core STATIC
     game/production/ProductionCostCalculator.cpp
     game/production/HurryProductionCalculator.cpp
     game/production/ScrapConfigParser.cpp
-    game/production/ScrapPayout.cpp
+    game/production/ProductionRules.cpp
+    game/production/ProductionMutations.cpp
     game/production/ScrapRefundCalculator.cpp
     game/economy/ResourceManager.cpp
-    game/economy/MineralSupport.cpp
+    game/economy/EconomyRules.cpp
+    game/economy/EconomyMutations.cpp
     game/economy/WorkerAssignmentManager.cpp
     game/economy/EconomyManager.cpp
     game/economy/CommerceConfigParser.cpp
     game/economy/CommerceCalculator.cpp
     game/economy/CommerceCache.cpp
     game/base/BaseEffectsCache.cpp
-    game/buildings/BuildingDestruction.cpp
+    game/buildings/BuildingMutations.cpp
     game/base/BaseMoodEffects.cpp
     game/base/BaseRuleset.cpp
     game/production/ProductionCompletion.cpp
@@ -124,7 +126,7 @@ add_library(ac-core STATIC
     game/buildings/SecretProjectAvailabilityRules.cpp
     game/production/StockpileConfigParser.cpp
     game/production/StockpileConversion.cpp
-    game/buildings/OrbitalAttack.cpp
+    game/buildings/BuildingRules.cpp
     game/buildings/OrbitalCensus.cpp
     game/units/Unit.cpp
     game/units/IDesign.cpp

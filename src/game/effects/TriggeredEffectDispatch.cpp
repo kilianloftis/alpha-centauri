@@ -15,7 +15,7 @@
 #include "game/research/ResearchManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
-#include "game/buildings/BuildingDestruction.h"
+#include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionConfigParser.h"
 #include "game/terraform/ElevationChange.h"

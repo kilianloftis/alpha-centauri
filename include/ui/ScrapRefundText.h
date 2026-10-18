@@ -3,7 +3,7 @@
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ScrapConfig.h"
-#include "game/production/ScrapPayout.h"
+#include "game/production/ProductionRules.h"
 
 #include <stdexcept>
 #include <string>

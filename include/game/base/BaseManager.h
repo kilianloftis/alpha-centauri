@@ -10,7 +10,7 @@
 #include "game/production/ProductionConfigParser.h"
 #include "game/production/HurryProductionCalculator.h"
 #include "game/production/ScrapRefundCalculator.h"
-#include "game/production/ScrapPayout.h"
+#include "game/production/ProductionRules.h"
 #include "game/base/BaseEffectsCache.h"
 #include "game/base/HomeBaseIndex.h"
 #include "game/ecology/BaseEcology.h"

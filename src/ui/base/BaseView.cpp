@@ -22,7 +22,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/production/HurryProductionCalculator.h"
 #include "game/production/ScrapConfig.h"
-#include "game/production/ScrapPayout.h"
+#include "game/production/ProductionRules.h"
 #include "game/production/ProductionManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/economy/EconomyManager.h"
