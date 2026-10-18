@@ -71,6 +71,18 @@ int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig
 // (0 on the first playable year).
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
+struct TerraformSpread_t
+{
+    const Tile* pTarget = nullptr;
+    const ImprovementConfig_t* pImprovement = nullptr;
+};
+
+// Forest spreads from land and KelpFarm from sea onto the best-scoring neighbour (arid and flat
+// first): the same surface, past the altitude gate, not rocky land, holding neither a base nor
+// a copy, and buildable. Empty when rOrigin holds neither or no neighbour qualifies.
+std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const WorldMap& rWorldMap,
+                                                  const ImprovementRegistry& rImprovements);
+
 struct ElevationSeed_t
 {
     const Tile* pTile = nullptr;

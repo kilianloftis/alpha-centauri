@@ -809,3 +809,33 @@ TEST_CASE("SpreadTerraformImprovements eventually spreads from a sampled Forest"
     }
     CHECK(spread);
 }
+
+TEST_CASE("Forest spread prefers the arid, flat neighbour and changes nothing while choosing",
+          "[terraform][spread]")
+{
+    actest::WorldFixture world;
+    Tile& origin = world.At(8, 8);
+    origin.SetElevation(100);
+    world.ctx->AddOccupantWithEffects(origin, "Forest");
+    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            pNeighbor->SetElevation(-1000);
+        });
+
+    Tile& wet = world.At(7, 7);
+    wet.SetElevation(100);
+    wet.SetRockiness(Rockiness_t::Flat);
+    wet.SetMoisture(Moisture_t::Wet);
+    Tile& arid = world.At(9, 9);
+    arid.SetElevation(100);
+    arid.SetRockiness(Rockiness_t::Flat);
+    arid.SetMoisture(Moisture_t::Arid);
+
+    const std::optional<TerraformSpread_t> spread =
+        PickSpreadTarget(origin, world.map, world.ctx->GetImprovements());
+    REQUIRE(spread.has_value());
+    CHECK(spread->pTarget == &arid);
+    CHECK(spread->pImprovement->id == "Forest");
+    CHECK_FALSE(arid.HasImprovement("Forest"));
+}

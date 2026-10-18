@@ -9,9 +9,8 @@ class Tile;
 class TileEffectsContext;
 class WorldMap;
 
-// If rOrigin is Forest (land) or KelpFarm (sea), spread once into the best-scoring
-// eligible neighbor. Forest spread clears fungus on the destination. Returns true
-// if an improvement was placed.
+// Spread once onto the neighbour PickSpreadTarget chooses. Returns true if an improvement was
+// placed.
 bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
                                 TileEffectsContext& rTileEffects);
 
