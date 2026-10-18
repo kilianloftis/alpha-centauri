@@ -6,6 +6,7 @@
 #include "game/base/BaseManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
+#include "game/map/TerritoryRules.h"
 #include "game/map/Tile.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -206,4 +207,22 @@ TEST_CASE("Contested tiles prefer the wrap-short base", "[territory][wrap]")
 
     // (width-2,4) is wrap-adjacent to A and farther from B.
     CHECK(fixture.map.GetTerritory().GetOwner(width - 2, 4) == a.GetFactionId());
+}
+
+TEST_CASE("Each tile goes to its nearest claimant, then the lower BaseId", "[territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& a = fixture.MakeFaction();
+    Faction& b = fixture.MakeFaction();
+    const BaseManager& baseA = fixture.MakeFactionBase(a, 5, 5);
+    const BaseManager& baseB = fixture.MakeFactionBase(b, 11, 11);
+    REQUIRE(baseA.GetBaseId() < baseB.GetBaseId());
+
+    // Listed with the higher id first, so the midpoint is settled by id rather than order.
+    const std::vector<FactionId_t> owners = ClaimTerritory(fixture.map, {&baseB, &baseA});
+    const int width = fixture.map.GetWidth();
+    CHECK(owners[TileIndex(6, 6, width)] == a.GetFactionId());
+    CHECK(owners[TileIndex(10, 10, width)] == b.GetFactionId());
+    CHECK(owners[TileIndex(8, 8, width)] == a.GetFactionId());
+    CHECK(owners[TileIndex(24, 4, width)] == k_NoFactionOwner);
 }
