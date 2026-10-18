@@ -9,6 +9,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/diplomacy/InfiltrationRules.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/economy/EconomyManager.h"
 #include "game/base/RebelFactionPicker.h"
@@ -29,6 +30,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/population/PopCompositionConfigParser.h"
+#include "game/population/PopulationManager.h"
 #include "game/units/AdHocDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/movement/MovementRules.h"
@@ -104,13 +106,15 @@ bool AddTech_(TriggeredEffectContext_t& rCtx, Faction& rFaction, const GrantTech
     }
     else
     {
-        const std::optional<TechId> picked =
-            rFaction.GetResearch().PickRandomAvailableTech(rCtx.Rng());
-        if (!picked)
+        const std::vector<const TechConfig_t*> available =
+            rFaction.GetResearch().GetAvailableTechs();
+        if (available.empty())
         {
             return false;
         }
-        techId = *picked;
+        std::uniform_int_distribution<std::size_t> dist(0, available.size() - 1);
+        const std::size_t picked = dist(rCtx.Rng());
+        techId = available[picked]->id;
     }
 
     // Granting what the faction already knows is an ordinary outcome — two facilities can
@@ -569,6 +573,40 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
         rEffect);
 }
 
+// Apply one ModifyPopulation. Returns the signed size delta actually applied (negative when
+// pops were removed). Honors minSize when shrinking; stops adding when CanGrow() is false.
+int ApplyModifyPopulation_(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect)
+{
+    PopulationManager& rPops = rBase.GetPopulation();
+    const int size = rPops.GetSize();
+    const int delta = PredictModifyPopulationDelta(size, rEffect);
+
+    if (delta < 0)
+    {
+        const int toRemove = -delta;
+        int removed = 0;
+        while (removed < toRemove && rPops.GetSize() > rEffect.minSize)
+        {
+            rPops.RemovePop();
+            ++removed;
+        }
+        return -removed;
+    }
+
+    if (delta > 0)
+    {
+        int added = 0;
+        while (added < delta && rPops.CanGrow())
+        {
+            rPops.AddPop();
+            ++added;
+        }
+        return added;
+    }
+
+    return 0;
+}
+
 // Returns whether the entry actually changed anything. A `oncePer` key is only spent on a
 // true — an entry that found nothing to do (no eligible facility, no placeable tile, a tech
 // the faction already knew) has not been used up and may fire again later.
@@ -645,7 +683,7 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 {
                     return false;
                 }
-                const int delta = ApplyModifyPopulation(*rCtx.pBase, rConcrete);
+                const int delta = ApplyModifyPopulation_(*rCtx.pBase, rConcrete);
                 rOut.push_back(PopulationChanged_t{delta});
                 return delta != 0;
             }
@@ -856,16 +894,6 @@ void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& 
     }
 }
 
-bool HostHasVisit_(const ImprovementConfig_t& rHost)
-{
-    return !rHost.onVisitEffects.empty();
-}
-
-bool TileHasVisitEffects(const Tile& rTile)
-{
-    return rTile.ForEachOccupant(HostHasVisit_);
-}
-
 void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
 {
     Tile* pTile = rGameState.GetWorldMap().GetTile(rMover.GetTile().GetX(), rMover.GetTile().GetY());
@@ -878,7 +906,7 @@ void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
     // Config pointers stay valid (registry-owned) even after the tile loses the improvement.
     std::vector<const ImprovementConfig_t*> hosts;
     pTile->ForEachOccupant([&](const ImprovementConfig_t& rHost) {
-        if (HostHasVisit_(rHost))
+        if (ImprovementHasVisitEffects(rHost))
         {
             hosts.push_back(&rHost);
         }
@@ -913,129 +941,6 @@ void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const Te
     ApplyTriggeredEffects(pTech->onDiscoverEffects, context);
 }
 
-namespace
-{
-
-bool HoldOrderActive_(const Unit& rUnit)
-{
-    const std::optional<UnitOrder_t>& rOrder = rUnit.GetOrder();
-    return rOrder.has_value() && std::holds_alternative<HoldOrder_t>(*rOrder);
-}
-
-const BaseManager* OwnBaseAt_(const GameState& rGameState, const Unit& rUnit)
-{
-    const BaseManager* pBase =
-        rGameState.FindBaseAt(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
-    if (!pBase || pBase->GetFaction().GetFactionId() != rUnit.GetFaction().GetFactionId())
-    {
-        return nullptr;
-    }
-    return pBase;
-}
-
-bool HoldEffectMatches_(const TriggeredEffectConfig_t& rEffect, const Unit& rUnit,
-                        const BaseManager& rBase)
-{
-    if (!rEffect.condition)
-    {
-        return true;
-    }
-    EffectContext_t ctx;
-    ctx.pUnit = &rUnit;
-    ctx.pBase = &rBase;
-    ctx.pFaction = &rUnit.GetFaction();
-    ctx.targetTile = &rUnit.GetTile();
-    return ConditionSatisfied(*rEffect.condition, ctx);
-}
-
-void CollectBaseHasBuilding_(const Condition_t& rCondition, std::vector<std::string>& rIds)
-{
-    std::visit(
-        [&](const auto& rAlt)
-        {
-            using T = std::decay_t<decltype(rAlt)>;
-            if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
-            {
-                rIds.push_back(rAlt.buildingId);
-            }
-            else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
-            {
-                for (const Condition_t& rNested : rAlt.conditions)
-                {
-                    CollectBaseHasBuilding_(rNested, rIds);
-                }
-            }
-            else
-            {
-                (void)rAlt;
-            }
-        },
-        rCondition.AsVariant());
-}
-
-std::string HostNameForEffect_(const TriggeredEffectConfig_t& rEffect, const BaseManager& rBase)
-{
-    if (rEffect.condition)
-    {
-        std::vector<std::string> buildingIds;
-        CollectBaseHasBuilding_(*rEffect.condition, buildingIds);
-        for (const std::string& rId : buildingIds)
-        {
-            if (const BuildingConfig_t* pBuilding = rBase.GetBuildingManager().FindBuilding(rId))
-            {
-                return pBuilding->name.empty() ? pBuilding->id : pBuilding->name;
-            }
-        }
-    }
-    return rBase.GetName();
-}
-
-} // namespace
-
-bool UnitHasHoldLink(const Unit& rUnit)
-{
-    const GameState& rGameState = CurrentGameState();
-    if (!HoldOrderActive_(rUnit))
-    {
-        return false;
-    }
-    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
-    if (!pBase)
-    {
-        return false;
-    }
-    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
-    {
-        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::string HoldLinkHostName(const Unit& rUnit)
-{
-    const GameState& rGameState = CurrentGameState();
-    if (!HoldOrderActive_(rUnit))
-    {
-        return {};
-    }
-    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
-    if (!pBase)
-    {
-        return {};
-    }
-    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
-    {
-        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
-        {
-            return HostNameForEffect_(rEffect, *pBase);
-        }
-    }
-    return {};
-}
-
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
 {
     if (!UnitHasHoldLink(rUnit))
@@ -1056,11 +961,6 @@ void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
 
     const std::vector<TriggeredEffectConfig_t> effects = rUnit.GetDesign().CollectOnHoldEffects();
     ApplyTriggeredEffects(effects, context);
-}
-
-bool UnitCanDetonate(const Unit& rUnit)
-{
-    return !rUnit.GetDesign().CollectOnDetonateEffects().empty();
 }
 
 bool ApplyDetonation(GameState& rGameState, Unit& rUnit)

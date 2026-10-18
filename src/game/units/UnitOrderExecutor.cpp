@@ -30,6 +30,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/map/TerrainOperationRegistry.h"

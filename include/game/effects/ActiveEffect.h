@@ -657,20 +657,4 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 
-// Apply one ModifyPopulation. Returns the signed size delta actually applied (negative when
-// pops were removed). Honors minSize when shrinking; stops adding when CanGrow() is false.
-int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect);
-
-// Signed size delta for one ModifyPopulation against a base of `size` (no mutation). The one
-// place the op is interpreted — ApplyModifyPopulation applies exactly this. Shrinks honor
-// minSize; growth is uncapped here (only the applying side knows CanGrow, and the completion
-// gates below only care about emptying).
-int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect);
-
-// Final population size after applying every ModifyPopulation in order.
-int PredictTriggeredPopulationSize(std::span<const TriggeredEffectConfig_t> rEffects, int size);
-
-// Same for a unit design's filled components (production pop costs).
-int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size);
-
 } // namespace ac

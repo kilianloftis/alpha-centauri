@@ -7,6 +7,7 @@
 #include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"

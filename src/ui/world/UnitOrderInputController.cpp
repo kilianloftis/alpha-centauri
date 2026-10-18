@@ -3,7 +3,7 @@
 #include "ui/HotkeyConfig.h"
 #include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
-#include "game/effects/TriggeredEffectDispatch.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

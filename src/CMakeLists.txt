@@ -110,6 +110,7 @@ add_library(ac-core STATIC
     game/diplomacy/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
     game/effects/TriggeredEffectDispatch.cpp
+    game/effects/TriggeredEffectRules.cpp
     game/effects/TriggeredEffectParser.cpp
     game/effects/TileYieldRulesConfigParser.cpp
     game/effects/InteractionGridsConfigParser.cpp

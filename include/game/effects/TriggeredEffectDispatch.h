@@ -218,27 +218,11 @@ void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& 
 // Stamps pUnit / pTile / hostImprovementId per list. Investigate (or AI auto) only.
 void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng);
 
-// True when any improvement on the tile carries a non-empty on_visit_effects list.
-bool TileHasVisitEffects(const Tile& rTile);
-
 // Tech on_discover_effects for rTechId.
 void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const TechId& rTechId);
 
-// True when rUnit has a Hold order at a base its faction owns, and its design's
-// on_hold_effects contain an entry whose condition matches that base.
-bool UnitHasHoldLink(const Unit& rUnit);
-
-// Display name of the place that satisfied the first matching hold entry. Empty when
-// UnitHasHoldLink is false. A BaseHasBuilding condition names that facility; otherwise
-// the base's own name.
-std::string HoldLinkHostName(const Unit& rUnit);
-
 // Run the design's on_hold_effects. A DestroyUnit entry in that list removes the subject.
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit);
-
-// True when rUnit's design carries any on_detonate_effects. The capability is the list's
-// presence, so a new warhead is config alone.
-bool UnitCanDetonate(const Unit& rUnit);
 
 // Run the design's on_detonate_effects against the unit's own tile. This is how a missile
 // that cannot declare an attack delivers its payload; a DestroyUnit entry in that list spends

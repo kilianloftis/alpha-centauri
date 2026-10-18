@@ -21,6 +21,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/probes/ProbeActionExecutor.h"

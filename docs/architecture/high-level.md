@@ -394,7 +394,7 @@ Every file and class is one kind. The kind says what the code may read, change a
 
 - A rules function makes every decision a player would call a mechanic: whether something may happen, which thing is chosen, how much is gained, lost or kept, and what follows. When the decision is a configured formula, a calculator makes it.
 - State owners, mutations and executors call that function and apply what it returns. They hold no mechanic branches or thresholds of their own.
-- A rule that decides several things at once returns them as one outcome struct, and the mutation applies it. `PredictModifyPopulationDelta` / `ApplyModifyPopulation` and `PlanScrapPayout` / `CreditScrapRefund` work this way.
+- A rule that decides several things at once returns them as one outcome struct, and the mutation applies it. `PredictModifyPopulationDelta` / the `ModifyPopulation` dispatch and `PlanScrapPayout` / `CreditScrapRefund` work this way.
 - Forecasts call the same rule as the turn, so a preview cannot disagree with what happens.
 - A mutation draws from the RNG only within limits a rule set: a range, a chance, a candidate list.
 - A consequence with no condition, choice or amount stays in the mutation that applies it. An example is a transferred base resetting its riot ladder. The change that adds a switch for one extracts its rule.

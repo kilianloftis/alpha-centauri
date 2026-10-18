@@ -31,6 +31,7 @@
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
