@@ -19,9 +19,8 @@ enum class CombatSide_t
 enum class CombatEngagement_t
 {
     Standard,
-    // One round. An attacker loss records the roll and nominal damage and does not
-    // change attacker HP. Defender HP cannot fall below the bombard floor, and a unit
-    // already under that floor is not healed.
+    // One round that never hurts the attacker; the defender stops at the bombard floor, and one
+    // already under it is not healed.
     ArtilleryStrike,
     // Full fight, no disengage. The defender is rated with Attack. Either side can reach 0.
     ArtilleryDuel,

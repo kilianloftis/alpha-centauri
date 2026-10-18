@@ -68,11 +68,8 @@ struct CombatResolveOptions_t
     CombatEngagement_t engagement = CombatEngagement_t::Standard;
 };
 
-// Rolls each side's [0, strength) pool round by round, applying ResolveCombatRound, until a
-// unit is destroyed or disengages. After a round the side that just took damage is offered
-// withdrawal first. A killed defender's stack takes ApplyStackCollateral, and
-// GrantPlanetPearls pays for the defender before DestroyUnit. RNG is injected (typically
-// GameState's shared stream) so combat, promotion and probe rolls share one sequence.
+// Rolls each side's [0, strength) pool until a unit dies or withdraws, offering withdrawal to the
+// side just damaged first. The RNG is shared so combat, promotion and probe rolls are one stream.
 class CombatResolver
 {
 public:

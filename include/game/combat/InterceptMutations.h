@@ -12,9 +12,8 @@ class GameState;
 class TileEffectsContext;
 class Unit;
 
-// Before CombatResolver::Resolve: each ready source from CollectInterceptSources deploys and
-// rolls its chance; a miss may lose the source. A hit destroys the attacker and returns a
-// CombatResult_t with combat skipped. Returns nullopt when no intercept fires.
+// Before combat each ready CollectInterceptSources entry deploys and rolls; a miss may lose it.
+// A hit destroys the attacker and returns the result with combat skipped; otherwise nullopt.
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
                                                  Unit& rAttacker,
                                                  Unit& rDefender,

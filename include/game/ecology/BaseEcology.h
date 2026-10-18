@@ -11,9 +11,8 @@ namespace ac
 class BaseManager;
 class GameState;
 
-// One base's eco-damage score: EcoDamageInputs (EcologyRules) through the GameDataContext's
-// EcoDamageCalculator. Memoized on every revision an input reads — including the atrocity and
-// ecology ledgers, which move the score without touching any effect pool.
+// Memoized on every revision an EcoDamageInputs input reads, including the atrocity and ecology
+// ledgers, which move the score without touching any effect pool.
 class BaseEcology
 {
 public:

@@ -62,9 +62,8 @@ public:
               uint32_t rngSeed);
     ~GameState();
 
-    // Build the Planetary Council, and the executor that runs its votes, from factions currently
-    // in this GameState that participate in the council. Call after the starting factions have
-    // been added. Throws if already created.
+    // Builds the council and its vote executor from the participating factions, once the
+    // starting factions are in. Throws if already created.
     void CreatePlanetaryCouncil();
 
     // Registries, configs and calculators: the rules every stage, rule module and view reads.

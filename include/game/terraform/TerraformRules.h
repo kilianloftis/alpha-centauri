@@ -89,9 +89,8 @@ struct TerraformSpread_t
     const ImprovementConfig_t* pImprovement = nullptr;
 };
 
-// Forest spreads from land and KelpFarm from sea onto the best-scoring neighbour (arid and flat
-// first): the same surface, past the altitude gate, not rocky land, holding neither a base nor
-// a copy, and buildable. Empty when rOrigin holds neither or no neighbour qualifies.
+// Forest spreads from land, KelpFarm from sea, onto the best eligible neighbour (arid and flat
+// first). Empty when rOrigin holds neither or no neighbour qualifies.
 std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const WorldMap& rWorldMap,
                                                   const ImprovementRegistry& rImprovements);
 
@@ -107,10 +106,8 @@ struct ElevationWrite_t
     int elevation = 0;
 };
 
-// Every elevation write a change makes, in order. Each seed moves by deltaMeters within
-// [floorMeters, ceilingMeters] and Planet's range; then every moved tile pulls its Chebyshev
-// neighbours to within max_adjacent_difference_meters, clamped only to Planet's range. Empty
-// when no seed moves. Throws when the band excludes Planet's range.
+// Every write a change makes, in order: seeds move within the band and Planet's range, then each
+// moved tile pulls its neighbours within the slope limit. Throws on a band outside Planet's range.
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
                                                   int floorMeters, int ceilingMeters,
                                                   const WorldMap& rWorldMap,

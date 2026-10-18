@@ -18,10 +18,8 @@ namespace ac
 class CouncilProposalRegistry;
 class Faction;
 
-// The Planetary Council's standing state: membership, the governor, laws in force and the
-// history of what has passed. CouncilVoteExecutor runs the votes that change it.
-// Member factions are seated at construction (non-owning) and must outlive the council;
-// Expel is the one way out, for a faction that commits a major atrocity.
+// The council's standing state: members (seated at construction, outliving it; Expel is the one
+// way out), the governor, and the laws in force with their history.
 class PlanetaryCouncil
 {
 public:

@@ -24,8 +24,7 @@ enum class ResolveProposalResult_t
     SupremeLeaderVictoryStub,
 };
 
-// Runs a council vote: Propose opens it (there is no separate convene stage), members cast
-// ballots, Resolve tallies it through CouncilRules and applies the outcome. GameState owns it
+// Runs a council vote from Propose to Resolve, deciding through CouncilRules. GameState owns it
 // beside the council it acts on.
 class CouncilVoteExecutor
 {

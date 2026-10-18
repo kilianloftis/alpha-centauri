@@ -78,9 +78,8 @@ public:
     // faction's econ/labs/psych split. For stockpile conversion, which happens after
     // ProduceResources has already allocated this turn's tile energy. `energy` must be >= 0.
     //
-    // Applies the split only — not the flat Econ/Labs/Psych StatModifiers AllocateBaseEnergy
-    // adds. Those were already applied this turn; running them again here would pay every
-    // facility's flat bonus twice.
+    // The split only: AllocateBaseEnergy's flat Econ/Labs/Psych modifiers were already paid this
+    // turn, and paying them again would double every facility's flat bonus.
     void AddAllocatedEnergy(int energy);
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
