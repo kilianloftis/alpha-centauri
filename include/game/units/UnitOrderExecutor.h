@@ -177,12 +177,6 @@ private:
     bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
     CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
                                            CombatEngagement_t engagement);
-    // One act per faction the shot will hit: units it strikes, or the territory owner of an
-    // empty tile's improvements. Attributed when any of that faction's targets is.
-    std::vector<HostileAct_t> BombardHostileActs_(
-        const Unit& rAttacker, const Tile& rTargetTile, const Unit* pDuelTarget,
-        const std::vector<Unit*>& rStrikeTargets,
-        const std::vector<std::string>& rImprovementTargets) const;
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).

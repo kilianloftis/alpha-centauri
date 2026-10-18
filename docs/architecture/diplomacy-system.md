@@ -43,6 +43,7 @@ graph TB
         StepUpDown[StepUp / StepDown]
         CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
         HostileActAgainst[HostileAct_t / HostileActAgainst<br/>attributed unless a side is covert]
+        VendettaRules[VendettaFromHostileAct / VendettaWithdrawsTerritory<br/>HonoredObligationCascades / BombardHostileActs]
     end
 
     subgraph "Transition effects (DiplomaticTransitionMutations)"
@@ -116,8 +117,9 @@ graph TB
     Combat --> HostileActAgainst
     Probe --> HostileActAgainst
     HostileActAgainst --> OwnerKnown
+    ApplyHostileAct -->|VendettaFromHostileAct| VendettaRules
+    VendettaRules -->|may_attack| PermissionRules
     ApplyHostileAct -->|SneakAttack| VendettaImpl
-    ApplyHostileAct -->|may_attack| PermissionRules
     DeclareVendetta -->|Declaration| VendettaImpl
     JoinVendetta -->|Declaration| VendettaImpl
     VendettaImpl -->|HasDiplomacy| PermissionRules
@@ -312,7 +314,7 @@ After a conflict starts, every faction obliged to defend the **target** must cho
 (`IsObligedToDefend`: its status with the target carries `defensive_obligation`, and it is not
 already at Vendetta with the **declarer**):
 
-- **Honor:** `HonorDefensiveObligation`, by `DefensiveObligationMode_t`:
+- **Honor:** `HonorDefensiveObligation`, by `DefensiveObligationMode_t` (`HonoredObligationCascades` reads it):
   - `JoinAsDefender` — enter the conflict against the declarer; nobody further is obliged.
   - `SeparateDeclaration` — start a conflict with the declarer, which obliges the declarer's own
     partners in turn; the chain ends because a pair already at Vendetta is never asked again.

@@ -399,44 +399,6 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     return result;
 }
 
-std::vector<HostileAct_t> UnitOrderExecutor::BombardHostileActs_(
-    const Unit& rAttacker, const Tile& rTargetTile, const Unit* pDuelTarget,
-    const std::vector<Unit*>& rStrikeTargets,
-    const std::vector<std::string>& rImprovementTargets) const
-{
-    std::vector<HostileAct_t> acts;
-    const auto addAct = [&](const HostileAct_t& rAct)
-    {
-        if (rAct.victim == rAct.aggressor || rAct.victim == k_NoFactionOwner)
-        {
-            return;
-        }
-        const auto it = std::find_if(acts.begin(), acts.end(), [&](const HostileAct_t& rKnown)
-                                     { return rKnown.victim == rAct.victim; });
-        if (it == acts.end())
-        {
-            acts.push_back(rAct);
-        }
-        else
-        {
-            it->bAttributed = it->bAttributed || rAct.bAttributed;
-        }
-    };
-    if (pDuelTarget)
-    {
-        addAct(HostileActAgainst(rAttacker, *pDuelTarget));
-    }
-    for (const Unit* pTarget : rStrikeTargets)
-    {
-        addAct(HostileActAgainst(rAttacker, *pTarget));
-    }
-    if (!rImprovementTargets.empty())
-    {
-        addAct(HostileActAgainst(rAttacker, m_rWorldMap.GetTerritory().GetOwner(rTargetTile)));
-    }
-    return acts;
-}
-
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     Unit& rAttacker, const Tile& rTargetTile)
 {
@@ -452,8 +414,8 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
         BombardStrikeTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
     const std::vector<std::string> improvementTargets =
         BombardImprovementTargets(rTargetTile, m_rWorldMap);
-    const std::vector<HostileAct_t> acts = BombardHostileActs_(
-        rAttacker, rTargetTile, pDuelTarget, strikeTargets, improvementTargets);
+    const std::vector<HostileAct_t> acts =
+        BombardHostileActs(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
 
     if (pDuelTarget)
     {

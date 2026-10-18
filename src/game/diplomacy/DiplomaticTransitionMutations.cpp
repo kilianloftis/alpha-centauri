@@ -60,7 +60,7 @@ bool EnterVendetta_(GameState& rGameState, FactionId_t a, FactionId_t b, Vendett
         return false;
     }
     ApplyStatusChange(rGameState, a, b, DiplomaticStatus_t::Vendetta);
-    if (kind == VendettaKind_t::Declaration)
+    if (VendettaWithdrawsTerritory(kind))
     {
         WithdrawFromTerritories_(rA, rB, rGameState.GetWorldMap(),
                                  rGameState.GetGameData().interactionGrids);
@@ -182,28 +182,21 @@ void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggre
 
 void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct)
 {
-    if (!rAct.bAttributed)
+    if (const std::optional<VendettaKind_t> kind = VendettaFromHostileAct(rAct))
     {
-        return;
-    }
-    if (!StatusRulesFor(rAct.aggressor, rAct.victim).bMayAttack)
-    {
-        DeclareVendetta_(rGameState, rAct.aggressor, rAct.victim, VendettaKind_t::SneakAttack);
+        DeclareVendetta_(rGameState, rAct.aggressor, rAct.victim, *kind);
     }
 }
 
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
                               VendettaKind_t kind)
 {
-    switch (rGameState.GetGameData().diplomacyConfig->defensiveObligationMode)
+    if (HonoredObligationCascades())
     {
-    case DefensiveObligationMode_t::JoinAsDefender:
-        EnterVendetta_(rGameState, partner, aggressor, kind);
-        return;
-    case DefensiveObligationMode_t::SeparateDeclaration:
         DeclareVendetta_(rGameState, partner, aggressor, kind);
         return;
     }
+    EnterVendetta_(rGameState, partner, aggressor, kind);
 }
 
 void DeclineDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally)
