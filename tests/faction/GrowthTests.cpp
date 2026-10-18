@@ -4,6 +4,7 @@
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/population/GrowthRules.h"
+#include "game/population/PopulationRules.h"
 #include "game/population/GrowthConfigParser.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -158,7 +159,7 @@ TEST_CASE("Losing a pop announces it while it is still valid", "[population][gro
     int sizeWhenAnnounced = -1;
     int sizeAtPopLost = -1;
 
-    rPopulation.OnPopRemoved.Connect([&](ac::Pop& rPop)
+    rPopulation.OnPopRemoved.Connect([&](const ac::Pop& rPop)
     {
         pAnnounced = &rPop;
         // Still present: the observer can read it, not just learn that something went.
@@ -295,6 +296,30 @@ TEST_CASE("Specialists are the last pops lost", "[population][growth]")
         bSurvivorIsSpecialist = rPop.IsPlayerChoiceType();
     }
     CHECK(bSurvivorIsSpecialist);
+}
+
+TEST_CASE("SelectPopToRemove picks an idle worker before a producing one", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    ac::BaseManager& rBase = fixture.MakeBase(8, 8);
+    ac::PopulationManager& rPopulation = rBase.GetPopulation();
+    rBase.GetWorkerAssignments().UnassignAll();
+    fixture.At(8, 6).SetMoisture(ac::Moisture_t::Wet);
+
+    ac::Pop* pProductive = nullptr;
+    for (ac::Pop& rPop : rPopulation.Pops())
+    {
+        if (rPop.IsWorker())
+        {
+            pProductive = &rPop;
+        }
+    }
+    REQUIRE(pProductive != nullptr);
+    REQUIRE(rBase.GetWorkerAssignments().AssignWorker(*pProductive, &fixture.At(8, 6)));
+
+    const ac::Pop& rChosen = ac::SelectPopToRemove(rBase);
+    CHECK(&rChosen != pProductive);
+    CHECK(rChosen.GetTile() == nullptr);
 }
 
 TEST_CASE("Falling max size does not trim existing pops", "[population][growth]")

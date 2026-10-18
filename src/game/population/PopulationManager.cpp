@@ -2,6 +2,7 @@
 #include "game/population/CompositionInputs.h"
 #include "game/base/BaseManager.h"
 #include "game/population/GrowthRules.h"
+#include "game/population/PopulationRules.h"
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/PopTypeAvailabilityCalculator.h"
 #include "game/population/PopTypeConfigParser.h"
@@ -81,40 +82,9 @@ void PopulationManager::AddPop(const std::string& typeId)
     m_riot.NotifyPopGrown(BuildRiotInputs_());
 }
 
-void PopulationManager::SetPopValuator(std::function<int(const Pop&)> valuator)
-{
-    m_popValuator = std::move(valuator);
-}
-
-Pop& PopulationManager::SelectDoomedPop_()
-{
-    // Pops the player deliberately chose are taken last, so the comparison key leads with
-    // "is a player-choice type" — false sorts first. Within a group the pop producing the least
-    // total resource goes; ties keep the earliest, which makes the choice deterministic rather
-    // than allocation-order dependent. Default workers are assignable but not player-choice:
-    // they are what composition converts from.
-    Pop* pDoomed = nullptr;
-    std::pair<bool, int> worst;
-    for (Pop& rPop : m_container.Pops())
-    {
-        const std::pair<bool, int> key{rPop.IsPlayerChoiceType(),
-                                       m_popValuator ? m_popValuator(rPop) : 0};
-        if (!pDoomed || key < worst)
-        {
-            pDoomed = &rPop;
-            worst = key;
-        }
-    }
-    if (!pDoomed)
-    {
-        throw std::runtime_error("PopulationManager::RemovePop: base has no population");
-    }
-    return *pDoomed;
-}
-
 void PopulationManager::RemovePop()
 {
-    Pop& rDoomed = SelectDoomedPop_();
+    const Pop& rDoomed = SelectPopToRemove(m_rBase);
     OnPopRemoved.Emit(rDoomed);
     m_container.Remove(rDoomed);
 

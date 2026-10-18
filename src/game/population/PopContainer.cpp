@@ -78,7 +78,7 @@ void PopContainer::AddPop(const PopTypeConfig_t& rConfig)
     m_revision.Bump();
 }
 
-void PopContainer::Remove(Pop& rPop)
+void PopContainer::Remove(const Pop& rPop)
 {
     const auto it = std::find_if(m_pops.begin(), m_pops.end(),
         [&rPop](const std::unique_ptr<Pop>& pPop) { return pPop.get() == &rPop; });

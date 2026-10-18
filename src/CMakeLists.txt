@@ -86,6 +86,7 @@ add_library(ac-core STATIC
     game/population/CompositionInputs.cpp
     game/population/GarrisonPolice.cpp
     game/population/PopulationManager.cpp
+    game/population/PopulationRules.cpp
     game/population/AssimilationTracker.cpp
     game/population/PopContainer.cpp
     game/population/Pop.cpp

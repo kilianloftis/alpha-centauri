@@ -147,25 +147,6 @@ BaseManager::BaseManager(
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 
-    // What a pop is worth right now, so shrinking a base takes the least productive one.
-    // Only BaseManager can resolve a worked tile's yield, which is why the rule is injected
-    // rather than living in PopulationManager.
-    m_pPopulation->SetPopValuator([this](const Pop& rPop) {
-        if (!rPop.IsWorker())
-        {
-            const SpecialistOutput_t output = rPop.GetSpecialistOutput();
-            return output.econ + output.labs + output.psych;
-        }
-        const Tile* pTile = rPop.GetTile();
-        if (!pTile)
-        {
-            // An unassigned worker produces nothing, so it is the first to go.
-            return 0;
-        }
-        const TileResources_t yield = GetWorkedTileYield(*pTile).effective;
-        return yield.nutrients + yield.minerals + yield.energy;
-    });
-
     m_pPopulation->OnGrowth.Connect([this]() {
         m_pPopulation->AddPop();
     });

@@ -35,7 +35,7 @@ public:
 
     // Remove a specific pop. Which pop dies is population *policy* and lives in
     // PopulationManager; the container only owns the storage.
-    void Remove(Pop& rPop);
+    void Remove(const Pop& rPop);
 
     // Population counts by type.
     // GetWorkerCount is every tile-capable pop — plain workers *and* drones *and* talents — so

@@ -13,7 +13,6 @@
 #include "game/population/GrowthRules.h"
 #include "lib/Revision.h"
 
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -211,12 +210,7 @@ public:
     // Emitted with the pop about to be removed, while it is still valid, so an observer can
     // drop its reference — the guarantee UnitManager::OnUnitDestroyed already provides.
     // OnPopLost follows with the new size once the pop is gone.
-    Signal<Pop&> OnPopRemoved;
-
-    // How much a pop is currently worth, for deciding which one is lost when the base shrinks.
-    // Injected because the answer needs tile yields, which only BaseManager can resolve — the
-    // same shape as WorkerAssignmentManager::SetTileScorer. Unset means every pop scores equal.
-    void SetPopValuator(std::function<int(const Pop&)> valuator);
+    Signal<const Pop&> OnPopRemoved;
 
     // Riot signals
     Signal<> OnWillRiot;    // Forecast: conditions met, riot not yet active
@@ -248,7 +242,6 @@ private:
     int m_compositionBatchDepth = 0;
     bool m_bCompositionDirty = false;
     std::optional<CompositionInputKey_t> m_appliedCompositionInputKey;
-    std::function<int(const Pop&)> m_popValuator;
 
     RiotLatch m_riot;
     GoldenAgeLatch m_goldenAge;
@@ -266,9 +259,6 @@ private:
     // Always re-runs phase 1+2 (or marks the batch dirty). Used when seating may have diverged
     // without CompositionInputKey_t changing — ConvertTo of pool members.
     void ForceRecalculateComposition_();
-    // Specialists / player-choice pops last; within a group, the pop producing the least. See
-    // docs/game-rules-decisions.md, "Which pop is lost when a base shrinks".
-    Pop& SelectDoomedPop_();
     const std::string& GetDefaultPopType_() const;
     // Requested type id -> the type a pop actually becomes, walking the obsolescence chain
     // against currently discovered techs. The one place that rule is applied.
