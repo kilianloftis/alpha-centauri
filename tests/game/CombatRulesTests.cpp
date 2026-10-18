@@ -117,7 +117,7 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
     CHECK(open.front().damage == 2);
     CHECK(inOpen.GetCurrentHp() == 10);
 
-    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
     const std::vector<CollateralHit_t> inBase =
         PlanStackCollateral(attacker, defender, fixture.map);
     REQUIRE(inBase.size() == 1);

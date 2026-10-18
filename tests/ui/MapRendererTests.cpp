@@ -69,11 +69,11 @@ Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, std::deque<UnitDesign>& rDe
     rDesigns.emplace_back(std::vector<UnitSlotConfig_t>{slot},
                           std::unordered_map<std::string, const UnitComponentConfig_t*>{
                               {slot.id, pChassis}});
-    Tile* pTile = rFixture.pState->GetWorldMap().GetTile(x, y);
+    Tile* pTile = rFixture.state.GetWorldMap().GetTile(x, y);
     REQUIRE(pTile);
     return rFixture.pPlayer->GetUnitManager().CreateUnit(
-        rFixture.pState->AllocateUnitId(), rDesigns.back(),
-        rFixture.pState->GetWorldMap().GetUnitPositions(), *pTile, nullptr);
+        rFixture.state.AllocateUnitId(), rDesigns.back(),
+        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, nullptr);
 }
 
 // Every coast overlay extract_terrain.py writes, so a coast that is drawn shows up.
@@ -113,14 +113,14 @@ TEST_CASE("A shrouded tile shows only the shroud and land-coloured edges", "[ui]
     enemyDefinition = fixture.factionDefinition;
     enemyDefinition.id = "enemy_faction";
     enemyDefinition.identity.name = "Enemy";
-    Faction& enemy = fixture.pState->AddFaction(std::make_unique<Faction>(
-        fixture.pState->AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
-        fixture.pState->GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
+    Faction& enemy = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
+        fixture.state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
 
-    WorldMap& rMap = fixture.pState->GetWorldMap();
+    WorldMap& rMap = fixture.state.GetWorldMap();
     Tile& rTile = *rMap.GetTile(8, 8);
-    REQUIRE(enemy.CreateBase(fixture.pState->AllocateBaseId(), "Hidden", &rTile,
-                             fixture.pState->GetTileEffects()));
+    REQUIRE(enemy.CreateBase(fixture.state.AllocateBaseId(), "Hidden", &rTile,
+                             fixture.state.GetTileEffects()));
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus);
     rTile.AddTerrainFeature(*pBonus);
@@ -154,7 +154,7 @@ TEST_CASE("An edge between placed tiles draws once, and a partial scene keeps a 
           "[ui][map][grid]")
 {
     ViewFixture fixture(false);
-    const WorldMap& rMap = fixture.pState->GetWorldMap();
+    const WorldMap& rMap = fixture.state.GetWorldMap();
     const Tile& rBack = *rMap.GetTile(8, 8);
     // Lattice (1, 0) is map (+1, +1): the tile in front, down and to the right.
     const Tile* pFront = GetTileAtLatticeOffset(rMap, rBack, 1, 0);
@@ -191,7 +191,7 @@ TEST_CASE("Bases draw over every tile with their names, and only the bases the c
     BaseManager& rShown = fixture.MakeBase(8, 8);
     BaseManager& rOther = fixture.MakeBase(20, 8);
 
-    const WorldMap& rMap = fixture.pState->GetWorldMap();
+    const WorldMap& rMap = fixture.state.GetWorldMap();
     const Tile* pFront = GetTileAtLatticeOffset(rMap, rShown.GetTile(), 1, 0);
     REQUIRE(pFront);
     const std::array<PlacedTile_t, 3> tiles{
@@ -258,7 +258,7 @@ TEST_CASE("Units draw last, as the content filters them, and Render reports wher
     RecordingGraphics graphics;
     const UnitMarkerRects_t markers = fixture.pMapRenderer->Render(
         graphics, std::span(&placed, 1),
-        MapAppearance::Fogged(fixture.pState->GetWorldMap(), fixture.pPlayer), content);
+        MapAppearance::Fogged(fixture.state.GetWorldMap(), fixture.pPlayer), content);
 
     CHECK_FALSE(markers.contains(rHidden.GetUnitId()));
     REQUIRE(markers.contains(rShown.GetUnitId()));
@@ -287,7 +287,7 @@ TEST_CASE("A tile shows one unit, and a base shows one only when it is selected"
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    WorldMap& rMap = fixture.pState->GetWorldMap();
+    WorldMap& rMap = fixture.state.GetWorldMap();
     std::deque<UnitDesign> designs;
     const Unit& rFirst = MakeUnit_(fixture, 8, 8, designs);
     const Unit& rSecond = MakeUnit_(fixture, 8, 8, designs);
@@ -337,7 +337,7 @@ TEST_CASE("The location preview shows a remembered tile without fog, its farm by
           "[ui][map][location]")
 {
     ViewFixture fixture;
-    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 8);
+    Tile& rTile = *fixture.state.GetWorldMap().GetTile(8, 8);
     const ImprovementConfig_t& rFarm = fixture.improvements.Get("Farm");
     rTile.AddImprovement(rFarm);
     const std::vector<std::string>& rRows =
@@ -347,11 +347,11 @@ TEST_CASE("The location preview shows a remembered tile without fog, its farm by
     fixture.pPlayer->GetTileMemory().Record(rTile);
     REQUIRE_FALSE(fixture.pPlayer->GetVisibleMap().IsVisible(rTile));
     const int nutrients =
-        fixture.pState->GetTileEffects().ResolveTileYield(rTile).effective.nutrients;
+        fixture.state.GetTileEffects().ResolveTileYield(rTile).effective.nutrients;
     // A yield past the first row, so the row shows the yield was read.
     REQUIRE(nutrients >= 2);
 
-    LocationPanel panel(*fixture.pState, *fixture.pMapRenderer, fixture.pSprites->sprites,
+    LocationPanel panel(fixture.state, *fixture.pMapRenderer, fixture.pSprites->sprites,
                         WindowLayout_t{0.0f, 0.0f, 300.0f, 400.0f});
     panel.SetSelectedTile(&rTile);
     RecordingGraphics graphics;

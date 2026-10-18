@@ -58,7 +58,7 @@ struct PresenterHarness_
         ui.SetWorldView(std::move(pWorld));
 
         pPresenter = std::make_unique<InteractionPresenter>(
-            *fixture.pState,
+            fixture.state,
             ui,
             *fixture.pFactory,
             *pWorldView,
@@ -70,7 +70,7 @@ struct PresenterHarness_
         QueuedInteraction_t item;
         item.payload = std::move(payload);
         item.audience = fixture.pPlayer->GetFactionId();
-        fixture.pState->GetPlayerInteractions().Enqueue(std::move(item));
+        fixture.state.GetPlayerInteractions().Enqueue(std::move(item));
     }
 };
 
@@ -98,9 +98,9 @@ const UnitDesign& AddPodDesign_(ViewFixture& rFixture)
 
 Faction& AddAiFaction_(ViewFixture& rFixture)
 {
-    return rFixture.pState->AddFaction(std::make_unique<Faction>(
-        rFixture.pState->AllocateFactionId(), /*bIsPlayerControlled*/ false,
-        rFixture.factionDefinition, rFixture.dataContext, rFixture.pState->GetWorldMap(),
+    return rFixture.state.AddFaction(std::make_unique<Faction>(
+        rFixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false,
+        rFixture.factionDefinition, rFixture.dataContext, rFixture.state.GetWorldMap(),
         rFixture.settings, actest::k_TestFactionSeed));
 }
 
@@ -116,11 +116,11 @@ TEST_CASE("Disabled facility-built notice completes without a modal and advances
 
     harness.Enqueue(NoticeInteraction_t{
         PauseOnEventId_t::NewFacilityBuilt, "Title", "Body", std::nullopt});
-    REQUIRE(harness.fixture.pState->GetPlayerInteractions().Size() == 1);
+    REQUIRE(harness.fixture.state.GetPlayerInteractions().Size() == 1);
 
     harness.pPresenter->Update();
 
-    CHECK(harness.fixture.pState->GetPlayerInteractions().Empty());
+    CHECK(harness.fixture.state.GetPlayerInteractions().Empty());
     CHECK(harness.advanceCount == 1);
     CHECK_FALSE(harness.pWorldView->HasModalElement());
 }
@@ -145,7 +145,7 @@ TEST_CASE("Disabled combat-unit-built skips the completion prompt",
 
     harness.pPresenter->Update();
 
-    CHECK(harness.fixture.pState->GetPlayerInteractions().Empty());
+    CHECK(harness.fixture.state.GetPlayerInteractions().Empty());
     CHECK(harness.advanceCount == 1);
     CHECK_FALSE(harness.pWorldView->HasModalElement());
 }
@@ -171,7 +171,7 @@ TEST_CASE("Prototype combat still pauses when only combat-unit-built is enabled"
 
     harness.pPresenter->Update();
 
-    CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
     CHECK(harness.advanceCount == 0);
     CHECK(harness.pWorldView->HasModalElement());
 }
@@ -196,7 +196,7 @@ TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
 
     harness.pPresenter->Update();
 
-    CHECK(harness.fixture.pState->GetPlayerInteractions().Empty());
+    CHECK(harness.fixture.state.GetPlayerInteractions().Empty());
     CHECK(harness.advanceCount == 1);
     CHECK_FALSE(harness.pWorldView->HasModalElement());
 }
@@ -242,7 +242,7 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     CHECK(rBase.HasPendingProductionConfirmation());
     CHECK(harness.advanceCount == 0);
     CHECK(harness.pWorldView->HasModalElement());
-    CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
 }
 
 TEST_CASE("A Pact obligation the player no longer owes completes without a prompt",
@@ -253,7 +253,7 @@ TEST_CASE("A Pact obligation the player no longer owes completes without a promp
     const FactionId_t playerId = rFixture.pPlayer->GetFactionId();
     const FactionId_t allyId = AddAiFaction_(rFixture).GetFactionId();
     const FactionId_t aggressorId = AddAiFaction_(rFixture).GetFactionId();
-    DiplomacyLedger& rLedger = rFixture.pState->GetDiplomacyLedger();
+    DiplomacyLedger& rLedger = rFixture.state.GetDiplomacyLedger();
     rLedger.SetStatus(playerId, allyId, DiplomaticStatus_t::Pact);
     // The aggressor attacked the player too before the prompt came up.
     rLedger.SetStatus(playerId, aggressorId, DiplomaticStatus_t::Vendetta);
@@ -261,7 +261,7 @@ TEST_CASE("A Pact obligation the player no longer owes completes without a promp
     harness.Enqueue(PactObligationInteraction_t{allyId, aggressorId, VendettaKind_t::SneakAttack});
     harness.pPresenter->Update();
 
-    CHECK(rFixture.pState->GetPlayerInteractions().Empty());
+    CHECK(rFixture.state.GetPlayerInteractions().Empty());
     CHECK(harness.advanceCount == 1);
     CHECK_FALSE(harness.pWorldView->HasModalElement());
     CHECK(rLedger.GetStatus(playerId, allyId) == DiplomaticStatus_t::Pact);
@@ -275,12 +275,12 @@ TEST_CASE("A Pact obligation the player still owes asks for an answer",
     const FactionId_t playerId = rFixture.pPlayer->GetFactionId();
     const FactionId_t allyId = AddAiFaction_(rFixture).GetFactionId();
     const FactionId_t aggressorId = AddAiFaction_(rFixture).GetFactionId();
-    rFixture.pState->GetDiplomacyLedger().SetStatus(playerId, allyId, DiplomaticStatus_t::Pact);
+    rFixture.state.GetDiplomacyLedger().SetStatus(playerId, allyId, DiplomaticStatus_t::Pact);
 
     harness.Enqueue(PactObligationInteraction_t{allyId, aggressorId, VendettaKind_t::SneakAttack});
     harness.pPresenter->Update();
 
     CHECK(harness.pWorldView->HasModalElement());
     CHECK(harness.advanceCount == 0);
-    CHECK(rFixture.pState->GetPlayerInteractions().Size() == 1);
+    CHECK(rFixture.state.GetPlayerInteractions().Size() == 1);
 }

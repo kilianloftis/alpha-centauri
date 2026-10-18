@@ -119,7 +119,7 @@ TEST_CASE("A Sensor reveals Chebyshev radius-2 for its territory owner only",
     // Center the base so its vision-2 square does not reach the Sensor; Sensor alone
     // must supply the far-ring checks below.
     fixture.MakeFactionBase(owner, 8, 8);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(11, 5), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(11, 5), "Sensor");
     owner.RebuildVisibility();
     other.RebuildVisibility();
 
@@ -187,7 +187,7 @@ TEST_CASE("Sensor vision wraps horizontally across the map seam",
     const int width = fixture.map.GetWidth();
     // Base far enough that only the Sensor supplies seam vision.
     fixture.MakeFactionBase(owner, 4, 8);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
     owner.RebuildVisibility();
 
     REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == owner.GetFactionId());

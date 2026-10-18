@@ -89,10 +89,10 @@ struct OrderHarness_
 
     explicit OrderHarness_(FactionFixture& rFixture)
         : moveCosts(rFixture.improvements)
-        , steps(rFixture.map, *rFixture.ctx)
+        , steps(rFixture.map, rFixture.ctx)
         , pathfinder(moveCosts, steps, rFixture.map)
         , rng(k_TestRngSeed)
-        , orders(moveCosts, steps, rFixture.map, *rFixture.ctx, pathfinder, rFixture.morale(),
+        , orders(moveCosts, steps, rFixture.map, rFixture.ctx, pathfinder, rFixture.morale(),
                  *rFixture.dataContext.terrainOperationRegistry, rng)
     {
     }

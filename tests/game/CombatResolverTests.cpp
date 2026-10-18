@@ -39,9 +39,9 @@ struct CombatHarness_
 
     CombatHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , rng(seed)
-        , combat(moveCosts, steps, fixture.map, *fixture.ctx, fixture.morale(), rng)
+        , combat(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng)
     {
     }
 };
@@ -56,10 +56,10 @@ struct OrderHarness_
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder,
+        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder,
                  fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng)
     {
     }
@@ -387,7 +387,7 @@ TEST_CASE("Tile defense multiplier scales defender strength", "[combat]")
 
     fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
     const double mult =
-        fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(9, 9), enemy.GetFactionId());
+        fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), enemy.GetFactionId());
     REQUIRE(mult == Catch::Approx(1.25));
 
     const int defenseRating = ResolveStat(defender, StatId_t::Defense);
@@ -752,7 +752,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender on a tile with a prevents_disengage feature (Bunker)")
     {
         DisengageSetup_ setup;
-        setup.fixture.ctx->AddOccupantWithEffects(setup.fixture.At(8, 8), "Bunker");
+        setup.fixture.ctx.AddOccupantWithEffects(setup.fixture.At(8, 8), "Bunker");
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -933,7 +933,7 @@ TEST_CASE("Base and bunker clamp collateral susceptibility to zero; an airbase d
         FillLand_(fixture);
         Faction& player = fixture.MakeFaction();
         Faction& enemy = fixture.MakeFaction();
-        fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), improvementId);
+        fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), improvementId);
 
         Unit& attacker =
             fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_2"});
@@ -1028,7 +1028,7 @@ TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][co
     wildDefinition.id = "wild_life";
     wildDefinition.identity.species = FactionSpecies_t::NativeLife;
     Faction& wild = fixture.MakeFaction(wildDefinition);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
     Unit& attacker =
         fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
@@ -1180,7 +1180,7 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& wild = MakeWildFaction_(fixture);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender =
@@ -1348,7 +1348,7 @@ TEST_CASE("A non-combatant in a base survives the defender's death", "[combat][c
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Base");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
 
     Unit& attacker =
         fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});

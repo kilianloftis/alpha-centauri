@@ -31,10 +31,10 @@ constexpr float k_PixelH = 10.0f;
 struct MinimapRig_t
 {
     ViewFixture fixture{false};
-    WorldDisplay display{*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen()};
+    WorldDisplay display{fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen()};
     WindowLayout_t layout{100.0f, 50.0f, 720.0f, 170.0f};
     std::vector<std::pair<int, int>> centered;
-    MinimapDisplay minimap{*fixture.pState, *fixture.pMapRenderer, layout,
+    MinimapDisplay minimap{fixture.state, *fixture.pMapRenderer, layout,
                            display.GetViewport(),
                            [this](int x, int y) { centered.emplace_back(x, y); }};
 
@@ -64,7 +64,7 @@ struct MinimapRig_t
 TEST_CASE("Minimap draws the map as a brick with 2:1 texels", "[ui][minimap]")
 {
     MinimapRig_t rig;
-    const WorldMap& rMap = rig.fixture.pState->GetWorldMap();
+    const WorldMap& rMap = rig.fixture.state.GetWorldMap();
 
     SECTION("a layout that fits exactly fills it")
     {
@@ -82,7 +82,7 @@ TEST_CASE("Minimap draws the map as a brick with 2:1 texels", "[ui][minimap]")
     SECTION("a narrow layout keeps the 2:1 texel aspect and centres the image")
     {
         const WindowLayout_t narrow{0.0f, 0.0f, 300.0f, 400.0f};
-        MinimapDisplay minimap(*rig.fixture.pState, *rig.fixture.pMapRenderer, narrow,
+        MinimapDisplay minimap(rig.fixture.state, *rig.fixture.pMapRenderer, narrow,
                                rig.display.GetViewport(), [](int, int) {});
         RecordingGraphics graphics;
         minimap.Render(graphics);
@@ -99,7 +99,7 @@ TEST_CASE("Minimap draws the map as a brick with 2:1 texels", "[ui][minimap]")
 TEST_CASE("Minimap click resolves to the tile under the pixel", "[ui][minimap]")
 {
     MinimapRig_t rig;
-    const int width = rig.fixture.pState->GetWorldMap().GetWidth();
+    const int width = rig.fixture.state.GetWorldMap().GetWidth();
 
     SECTION("either half of a tile's two pixels picks that tile")
     {
@@ -126,7 +126,7 @@ TEST_CASE("Minimap click resolves to the tile under the pixel", "[ui][minimap]")
         rig.ClickPixel(-1, 2);
         rig.ClickPixel(2, -1);
         rig.ClickPixel(width, 2);
-        rig.ClickPixel(2, rig.fixture.pState->GetWorldMap().GetHeight());
+        rig.ClickPixel(2, rig.fixture.state.GetWorldMap().GetHeight());
         rig.ClickPixel(6, 2, MouseButton_t::Right);
         CHECK(rig.centered.empty());
     }
@@ -136,7 +136,7 @@ TEST_CASE("Minimap viewport frame splits at the seam", "[ui][minimap]")
 {
     MinimapRig_t rig;
     MapViewport& rViewport = rig.display.GetViewport();
-    const int width = rig.fixture.pState->GetWorldMap().GetWidth();
+    const int width = rig.fixture.state.GetWorldMap().GetWidth();
     const int cols = rViewport.VisibleCols();
     REQUIRE(cols < width);
 
@@ -167,11 +167,11 @@ TEST_CASE("Minimap viewport frame splits at the seam", "[ui][minimap]")
 TEST_CASE("Minimap redraws when the player's tile memory changes", "[ui][minimap][memory]")
 {
     ViewFixture fixture;
-    WorldDisplay display{*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen()};
-    MinimapDisplay minimap{*fixture.pState, *fixture.pMapRenderer,
+    WorldDisplay display{fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen()};
+    MinimapDisplay minimap{fixture.state, *fixture.pMapRenderer,
                            WindowLayout_t{100.0f, 50.0f, 720.0f, 170.0f}, display.GetViewport(),
                            [](int, int) {}};
-    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 6);
+    Tile& rTile = *fixture.state.GetWorldMap().GetTile(8, 6);
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus != nullptr);
     rTile.AddTerrainFeature(*pBonus);

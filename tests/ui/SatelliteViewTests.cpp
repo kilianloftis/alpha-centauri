@@ -33,7 +33,7 @@ TEST_CASE("The summary grid is cached, and Refresh is what updates it", "[ui][sa
     ViewFixture fixture;
     BaseManager& rBase = fixture.MakeBase(8, 8);
 
-    SatelliteSummaryPanel panel(*fixture.pState, *fixture.dataContext.buildingRegistry,
+    SatelliteSummaryPanel panel(fixture.state, *fixture.dataContext.buildingRegistry,
                                 ViewFixture::FullScreen());
     panel.Render(fixture.graphics);
     // One faction, one row: the cell for the orbital type reads exactly "0".

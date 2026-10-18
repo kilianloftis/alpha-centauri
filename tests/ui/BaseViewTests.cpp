@@ -717,22 +717,22 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
     FactionConfig_t partnerDef = fixture.factionDefinition;
     partnerDef.id = "partner_faction";
     partnerDef.identity.name = "Gaian";
-    Faction& rPartner = fixture.pState->AddFaction(std::make_unique<Faction>(
-        fixture.pState->AllocateFactionId(), /*bIsPlayerControlled*/ false, partnerDef,
-        fixture.dataContext, fixture.pState->GetWorldMap(), fixture.settings,
+    Faction& rPartner = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false, partnerDef,
+        fixture.dataContext, fixture.state.GetWorldMap(), fixture.settings,
         actest::k_TestFactionSeed));
 
     BaseManager& rBase = fixture.MakeBase(8, 4);
     rBase.GetBuildingManager().AddBuilding("world_beacon");
 
     BaseManager* pPartnerBase = rPartner.CreateBase(
-        fixture.pState->AllocateBaseId(), "PartnerBase",
-        fixture.pState->GetWorldMap().GetTile(12, 8),
-        fixture.pState->GetTileEffects());
+        fixture.state.AllocateBaseId(), "PartnerBase",
+        fixture.state.GetWorldMap().GetTile(12, 8),
+        fixture.state.GetTileEffects());
     REQUIRE(pPartnerBase != nullptr);
     pPartnerBase->GetBuildingManager().AddBuilding("world_beacon");
 
-    fixture.pState->GetDiplomacyLedger().SetStatus(
+    fixture.state.GetDiplomacyLedger().SetStatus(
         fixture.pPlayer->GetFactionId(), rPartner.GetFactionId(), DiplomaticStatus_t::Pact);
 
     const auto lines = rBase.GetResources().GetCommercePartners();
@@ -757,7 +757,7 @@ TEST_CASE("Base workable diamonds match the world-map brick orientation", "[ui][
     // Even parity tile so SMAC neighbors exist around it.
     BaseManager& rBase = fixture.MakeBase(8, 8);
     const Tile& rBaseTile = rBase.GetTile();
-    WorldMap& rMap = fixture.pState->GetWorldMap();
+    WorldMap& rMap = fixture.state.GetWorldMap();
     const Tile* pSe = GetTileAtLatticeOffset(rMap, rBaseTile, 1, 0);
     const Tile* pNw = GetTileAtLatticeOffset(rMap, rBaseTile, -1, 0);
     REQUIRE(pSe);

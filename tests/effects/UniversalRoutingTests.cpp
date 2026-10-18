@@ -364,22 +364,22 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"sensor_pod"}); // +25% defense, radius 2
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.25)); // own tile
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 12), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(11, 11), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.25)); // own tile
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 12), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(11, 11), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {
         fixture.MoveUnit(unit, 0, 8);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.0));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 9), faction.GetFactionId()) == Approx(1.25));
+        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.0));
+        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(1, 9), faction.GetFactionId()) == Approx(1.25));
     }
 
     SECTION("the aura disappears with the unit")
     {
             faction.GetUnitManager().DestroyUnit(unit);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
+        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
     }
 }
 
@@ -391,8 +391,8 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
 
     fixture.MakeUnit(faction, 8, 8, {"test_weapon", "test_chassis"});
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
-    const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(8, 8)).effective;
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
+    const TileResources_t yield = fixture.ctx.ResolveTileYield(fixture.At(8, 8)).effective;
     CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);
@@ -407,10 +407,10 @@ TEST_CASE("Unit aura wraps horizontally across the map seam",
 
     fixture.MakeUnit(faction, 0, 4, {"sensor_pod"}); // +25% defense, radius 2
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
           == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), faction.GetFactionId())
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), faction.GetFactionId())
           == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), faction.GetFactionId())
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), faction.GetFactionId())
           == Approx(1.0));
 }

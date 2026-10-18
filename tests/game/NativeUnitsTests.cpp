@@ -201,7 +201,7 @@ TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[nativ
     rObserver.RebuildVisibility();
     REQUIRE_FALSE(rObserver.GetExploredMap().IsExplored(rTowerTile));
     REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rTowerTile));
-    CHECK_FALSE(IsUnitVisibleTo(rObserver, rTower, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(rObserver, rTower, fixture.ctx));
 
     rObserver.GetExploredMap().Mark(rTowerTile);
     rObserver.GetExploredMap().Mark(rWormTile);
@@ -209,8 +209,8 @@ TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[nativ
     REQUIRE(rObserver.GetExploredMap().IsExplored(rTowerTile));
     REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rTowerTile));
     REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rWormTile));
-    CHECK(IsUnitVisibleTo(rObserver, rTower, *fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(rObserver, rWorm, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(rObserver, rTower, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(rObserver, rWorm, fixture.ctx));
 }
 
 TEST_CASE("Alien Artifact is non-combat", "[native]")
@@ -277,10 +277,10 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
-    CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(observer, subject, fixture.ctx));
 
     fixture.At(9, 9).SetElevation(100);
-    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(observer, subject, fixture.ctx));
 }
 
 namespace

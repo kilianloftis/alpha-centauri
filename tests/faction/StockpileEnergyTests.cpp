@@ -116,7 +116,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         .rEcoDamage = fixture.rEcoDamage,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.nextBaseId++, "TestBase",
-                                               rFixtures.At(8, 8), rules, *rFixtures.ctx);
+                                               rFixtures.At(8, 8), rules, rFixtures.ctx);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;

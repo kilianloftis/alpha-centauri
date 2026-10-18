@@ -60,11 +60,11 @@ Unit& MakeUnit_(ViewFixture& rFixture, Faction& rOwner, int x, int y, BaseManage
     }
     rDesigns.emplace_back(slots, assigned);
 
-    Tile* pTile = rFixture.pState->GetWorldMap().GetTile(x, y);
+    Tile* pTile = rFixture.state.GetWorldMap().GetTile(x, y);
     REQUIRE(pTile);
     return rOwner.GetUnitManager().CreateUnit(
-        rFixture.pState->AllocateUnitId(), rDesigns.back(),
-        rFixture.pState->GetWorldMap().GetUnitPositions(), *pTile, pHome);
+        rFixture.state.AllocateUnitId(), rDesigns.back(),
+        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, pHome);
 }
 
 Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,
@@ -361,14 +361,14 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     enemyDefinition = fixture.factionDefinition;
     enemyDefinition.id = "enemy_faction";
     enemyDefinition.identity.name = "Enemy";
-    Faction& enemy = fixture.pState->AddFaction(std::make_unique<Faction>(
-        fixture.pState->AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
-        fixture.pState->GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
+    Faction& enemy = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
+        fixture.state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
     Unit& shrouded = MakeUnit_(fixture, enemy, 10, 2, nullptr, {"test_chassis"}, designs);
     fixture.pPlayer->RebuildVisibility();
-    CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.pState->GetTileEffects()));
+    CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.state.GetTileEffects()));
 
-    WorldDisplay display(*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen());
+    WorldDisplay display(fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen());
     display.Render(fixture.graphics);
     CHECK_FALSE(display.MarkerRectOf(shrouded.GetUnitId()).has_value());
 
@@ -387,7 +387,7 @@ TEST_CASE("F builds a Farm for a former", "[ui][world][bombard]")
 {
     ViewFixture fixture;
     fixture.pPlayer->GetEconomy().AddEnergy(100);
-    Tile* pTile = fixture.pState->GetWorldMap().GetTile(8, 8);
+    Tile* pTile = fixture.state.GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);
     pTile->SetElevation(100);
     pTile->SetRockiness(Rockiness_t::Flat);
@@ -438,7 +438,7 @@ TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]
 {
     ViewFixture fixture;
     fixture.pPlayer->GetEconomy().AddEnergy(100);
-    Tile* pTile = fixture.pState->GetWorldMap().GetTile(8, 0);
+    Tile* pTile = fixture.state.GetWorldMap().GetTile(8, 0);
     REQUIRE(pTile);
     pTile->SetElevation(100);
     pTile->SetRockiness(Rockiness_t::Flat);

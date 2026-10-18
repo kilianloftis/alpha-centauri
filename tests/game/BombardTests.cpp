@@ -42,9 +42,9 @@ struct CombatHarness_
 
     CombatHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , rng(seed)
-        , combat(moveCosts, steps, fixture.map, *fixture.ctx, fixture.morale(), rng)
+        , combat(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng)
     {
     }
 };
@@ -59,10 +59,10 @@ struct OrderHarness_
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(),
+        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
                  *fixture.dataContext.terrainOperationRegistry, rng)
     {
     }
@@ -81,14 +81,9 @@ std::vector<EffectConfig_t> LoadWorldRules_()
     return WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
 }
 
-void BindFloors_(FactionFixture& fixture)
-{
-    fixture.ctx->BindWorldEffects(*fixture.pBindState);
-}
-
 int ResolvedFloorPercent_(const FactionFixture& fixture, const Tile& rTile)
 {
-    const std::vector<ActiveEffect_t> effects = fixture.ctx->CollectAreaEffects(rTile);
+    const std::vector<ActiveEffect_t> effects = fixture.ctx.CollectAreaEffects(rTile);
     return FinalizeResolvedStat(ResolveStatModifiers(
         FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0).total);
 }
@@ -153,7 +148,6 @@ TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP fl
 {
     FactionFixture fixture(actest::k_TestMapWidth, actest::k_TestMapHeight, LoadWorldRules_());
     FillLand_(fixture);
-    BindFloors_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -252,7 +246,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     defender.SetMoveFragmentsRemaining(1);
 
     const CombatStrength_t expected = ResolveCombatStrength(
-        attacker, defender, *fixture.ctx, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
+        attacker, defender, fixture.ctx, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     EffectContext_t defenderAttack = defenseCtx;
     defenderAttack.pAttacker = &attacker;
@@ -316,7 +310,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     attacker.SetMoveFragmentsRemaining(point * 2 / 3);
 
     const CombatStrength_t expectedStrike =
-        ResolveCombatStrength(attacker, defender, *fixture.ctx, fixture.morale(),
+        ResolveCombatStrength(attacker, defender, fixture.ctx, fixture.morale(),
                               CombatEngagement_t::ArtilleryStrike);
     OrderHarness_ orders(fixture, 1);
     const auto strike = orders.orders.TryBombard(attacker, defender.GetTile());
@@ -332,7 +326,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     duelAttacker.SetMoveFragmentsRemaining(point * 2 / 3);
     duelDefender.SetMoveFragmentsRemaining(1);
     const CombatStrength_t expectedDuel = ResolveCombatStrength(
-        duelAttacker, duelDefender, *fixture.ctx, fixture.morale(),
+        duelAttacker, duelDefender, fixture.ctx, fixture.morale(),
         CombatEngagement_t::ArtilleryDuel);
     const auto duel = orders.orders.TryBombard(duelAttacker, duelDefender.GetTile());
     REQUIRE(duel);
@@ -421,14 +415,14 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     player.RebuildVisibility();
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(fogged));
-    CHECK_FALSE(IsUnitVisibleTo(player, fogged, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, fogged, fixture.ctx));
 
     OrderHarness_ orders(fixture, 1);
     const auto strike = orders.orders.TryBombard(attacker, fogged.GetTile());
     REQUIRE(strike);
     REQUIRE(strike->combats.size() == 1);
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(fogged));
-    CHECK_FALSE(IsUnitVisibleTo(player, fogged, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, fogged, fixture.ctx));
     CHECK_FALSE(fogged.GetOrder().has_value());
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
 
@@ -438,7 +432,7 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     bystander.SetOrder(HoldOrder_t{});
     player.RebuildVisibility();
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(artillery));
-    CHECK_FALSE(IsUnitVisibleTo(player, artillery, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, artillery, fixture.ctx));
 
     Unit& second = fixture.MakeUnit(player, 6, 10, {"test_chassis", "bombard"});
     const auto duel = orders.orders.TryBombard(second, artillery.GetTile());
@@ -447,8 +441,8 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK(duel->combats.front().defenderId == artillery.GetUnitId());
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(artillery));
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(bystander));
-    CHECK_FALSE(IsUnitVisibleTo(player, artillery, *fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(player, bystander, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, artillery, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, bystander, fixture.ctx));
     CHECK_FALSE(artillery.GetOrder().has_value());
     CHECK(bystander.GetOrder().has_value());
 }
@@ -464,13 +458,13 @@ TEST_CASE("A bombard-capable hostile answers with a duel and no unit takes a str
     Unit& infantry = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const Tile& rTarget = fixture.At(9, 9);
 
-    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, *fixture.ctx) == nullptr);
-    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, *fixture.ctx)
+    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, fixture.ctx) == nullptr);
+    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, fixture.ctx)
           == std::vector<Unit*>{&infantry});
 
     Unit& artillery = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "bombard"});
-    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, *fixture.ctx) == &artillery);
-    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, *fixture.ctx).empty());
+    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, fixture.ctx) == &artillery);
+    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, fixture.ctx).empty());
 }
 
 TEST_CASE("Only an empty tile offers improvements to wreck, never its base", "[bombard]")

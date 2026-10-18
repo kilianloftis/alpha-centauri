@@ -41,7 +41,7 @@ std::size_t CountLines_(const RecordingGraphics& rGraphics, const Color_t& color
 RecordingGraphics Render_(ViewFixture& rFixture, ReliefMode_t relief, bool bOceanGrid)
 {
     rFixture.settings.SetMapDisplay(MapDisplayConfig_t{relief, bOceanGrid});
-    WorldDisplay display(*rFixture.pState, *rFixture.pMapRenderer,
+    WorldDisplay display(rFixture.state, *rFixture.pMapRenderer,
                          ViewFixture::FullScreen());
     RecordingGraphics graphics;
     display.Render(graphics);
@@ -55,7 +55,7 @@ TEST_CASE("The map grid draws land edges and adds water edges with the ocean gri
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    fixture.pState->GetWorldMap().GetTile(8, 8)->SetElevation(-500);
+    fixture.state.GetWorldMap().GetTile(8, 8)->SetElevation(-500);
     const auto& s = Style().mapRenderer;
 
     const RecordingGraphics withoutOcean = Render_(fixture, ReliefMode_t::Flat, false);
@@ -70,7 +70,7 @@ TEST_CASE("The map grid draws land edges and adds water edges with the ocean gri
 TEST_CASE("Grid edges next to unexplored ground use the land colour", "[ui][world][grid]")
 {
     ViewFixture fixture;
-    WorldMap& rMap = fixture.pState->GetWorldMap();
+    WorldMap& rMap = fixture.state.GetWorldMap();
     Tile& rWater = *rMap.GetTile(8, 8);
     rWater.SetElevation(-500);
     for (const auto& pTile : rMap.GetTiles())
@@ -89,7 +89,7 @@ TEST_CASE("Grid lines run through the raised corners", "[ui][world][grid][relief
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    WorldMap& rMap = fixture.pState->GetWorldMap();
+    WorldMap& rMap = fixture.state.GetWorldMap();
     for (const auto& pTile : rMap.GetTiles())
     {
         pTile->SetElevation(2000);
@@ -98,7 +98,7 @@ TEST_CASE("Grid lines run through the raised corners", "[ui][world][grid][relief
 
     const RecordingGraphics flat = Render_(fixture, ReliefMode_t::Flat, false);
     const RecordingGraphics raised = Render_(fixture, ReliefMode_t::Smooth, false);
-    const WorldDisplay display(*fixture.pState, *fixture.pMapRenderer,
+    const WorldDisplay display(fixture.state, *fixture.pMapRenderer,
                                ViewFixture::FullScreen());
     // Inland corners all sit two levels up.
     const float lift = 2.0f * s.relief.liftPerLevelRatio * display.GetViewport().TileWidth();
@@ -120,7 +120,7 @@ TEST_CASE("A tile's grid lines draw over its terrain and under its objects", "[u
 {
     ViewFixture fixture;
     fixture.pPlayer->GetExploredMap().MarkAll();
-    Tile& rTile = *fixture.pState->GetWorldMap().GetTile(8, 6);
+    Tile& rTile = *fixture.state.GetWorldMap().GetTile(8, 6);
     REQUIRE(rTile.IsLand());
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus != nullptr);
@@ -148,8 +148,8 @@ TEST_CASE("Missing faction base art keeps the name-only marker", "[ui][world][ba
     fixture.pPlayer->GetExploredMap().MarkAll();
     // Short name so map-label truncation cannot hide it.
     BaseManager* pBase = fixture.pPlayer->CreateBase(
-        fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
-        fixture.pState->GetTileEffects());
+        fixture.state.AllocateBaseId(), "HQ", fixture.state.GetWorldMap().GetTile(8, 8),
+        fixture.state.GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
@@ -167,8 +167,8 @@ TEST_CASE("Faction base sprites and colors.json label colour draw when assets ex
     fixture.factionDefinition.id = "gaian";
     fixture.pPlayer->GetExploredMap().MarkAll();
     BaseManager* pBase = fixture.pPlayer->CreateBase(
-        fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
-        fixture.pState->GetTileEffects());
+        fixture.state.AllocateBaseId(), "HQ", fixture.state.GetWorldMap().GetTile(8, 8),
+        fixture.state.GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     const std::string spritePath = BareBaseSpritePath("gaian", false, 1);

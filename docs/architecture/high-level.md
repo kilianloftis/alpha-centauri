@@ -340,7 +340,7 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
 
 1. **Each thread has a current game state.** `CurrentGameState()` returns it as `const GameState&` and throws when the thread has none. `FindCurrentGameState()` returns it, or null.
 2. **`GameStateScope` installs a game state on the current thread for the scope's lifetime.** Its destructor restores whatever was current before. Scopes are stack objects and nest.
-3. **Constructors never install a scope.** `Engine` installs one for the game it runs. A test installs one for the game state it exercises. Work on another thread installs one for the game state it reads.
+3. **Constructors never install a scope.** `Engine` installs one for the game it runs. A test's fixture installs the scope for its session. Work on another thread installs one for the game state it reads.
 4. **Reads.**
    - Code that is not handed a `GameState` reads it through `CurrentGameState()`.
    - Public functions and methods that only read the game take no `GameState` parameter.

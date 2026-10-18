@@ -55,9 +55,9 @@ struct FuelHarness_
 
     explicit FuelHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(),
+        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
                  *fixture.dataContext.terrainOperationRegistry, rng)
     {
     }
@@ -142,7 +142,7 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     REQUIRE(harness.orders.TryAttack(jet, fixture.At(9, 9)).has_value());
     CHECK(jet.GetMoveFragmentsRemaining() == 0);
     CHECK(jet.GetCurrentFuel() == 4);
-    CHECK_FALSE(CanDeclareAttack(jet, fixture.At(9, 9), fixture.map, *fixture.ctx));
+    CHECK_FALSE(CanDeclareAttack(jet, fixture.At(9, 9), fixture.map, fixture.ctx));
 }
 
 TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage", "[fuel]")
@@ -165,7 +165,7 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
     {
         // Territory comes from a nearby base; the Airbase on this tile supplies harbors(air).
         fixture.MakeFactionBase(faction, 5, 5);
-        fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Airbase");
+        fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Airbase");
         Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet, fixture.map);

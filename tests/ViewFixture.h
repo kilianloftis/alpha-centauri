@@ -26,15 +26,11 @@ namespace actest
 
 // A live session and a ViewFactory over it, so views can be built and rendered the way Engine
 // builds them. Views were unreachable from tests until ac-ui (backend-free) let the test target
-// link them; this supplies the GameState, registries and loaded style they need.
-//
-// WorldFixture's own map goes unused here: GameState owns the map the views read.
+// link them; this supplies the registries and loaded style they need. The WorldFixture session
+// is the game state the views read.
 struct ViewFixture : WorldFixture
 {
     RecordingGraphics graphics;
-    ac::FactionConfig_t factionDefinition;
-    std::unique_ptr<ac::GameState> pState;
-    std::unique_ptr<ac::GameStateScope> pScope;
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<SpriteRig> pSprites;
@@ -54,6 +50,7 @@ struct ViewFixture : WorldFixture
     }
 
     explicit ViewFixture(bool bWithPlayerFaction = true, int mapHeight = k_TestMapHeight)
+        : WorldFixture(k_TestMapWidth, mapHeight)
     {
         EnsureStyleLoaded();
 
@@ -64,29 +61,23 @@ struct ViewFixture : WorldFixture
         factionDefinition.id = "test_faction";
         factionDefinition.identity.name = "Test Faction";
 
-        // ViewFactory reads the slot registry off the data context; WorldFixture does not
+        // ViewFactory reads the slot registry off the data context; SessionInputs does not
         // load one.
         dataContext.unitSlotRegistry = std::make_unique<ac::UnitSlotRegistry>();
         dataContext.unitSlotRegistry->Load(FixturePath("unit_slots.json"));
 
-        auto pMap = std::make_unique<ac::WorldMap>(k_TestMapWidth, mapHeight,
-                                                   TestMapRules());
         // Moist tiles so worked tiles actually yield something: a default WorldMap produces
         // zero nutrients everywhere, which makes every yield assertion vacuously true.
-        for (const auto& pTile : pMap->GetTiles())
+        for (const auto& pTile : map.GetTiles())
         {
             pTile->SetMoisture(ac::Moisture_t::Wet);
         }
 
-        pState = std::make_unique<ac::GameState>(std::move(pMap), dataContext, settings,
-                                                 k_TestRngSeed);
-        pScope = std::make_unique<ac::GameStateScope>(*pState);
-
         if (bWithPlayerFaction)
         {
-            pPlayer = &pState->AddFaction(std::make_unique<ac::Faction>(
-                pState->AllocateFactionId(), /*bIsPlayerControlled*/ true, factionDefinition,
-                dataContext, pState->GetWorldMap(), settings, k_TestFactionSeed));
+            pPlayer = &state.AddFaction(std::make_unique<ac::Faction>(
+                state.AllocateFactionId(), /*bIsPlayerControlled*/ true, factionDefinition,
+                dataContext, map, settings, k_TestFactionSeed));
         }
 
         // WorldView reads player hotkeys from this path; relative defaults break under ctest's
@@ -98,17 +89,17 @@ struct ViewFixture : WorldFixture
 
         pSprites = std::make_unique<SpriteRig>(graphics, ac::Style().tileRenderer);
         pMapRenderer = std::make_unique<ac::MapRenderer>(
-            pSprites->sprites, *pState, ac::Style().tileRenderer, ac::Style().mapRenderer);
+            pSprites->sprites, state, ac::Style().tileRenderer, ac::Style().mapRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            *pState, dataContext, *pHotkeys, graphics, *pMapRenderer, pSprites->sprites,
+            state, dataContext, *pHotkeys, graphics, *pMapRenderer, pSprites->sprites,
             settings);
     }
 
     ac::BaseManager& MakeBase(int x, int y)
     {
         ac::BaseManager* pBase = pPlayer->CreateBase(
-            pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects());
+            state.AllocateBaseId(), "TestBase", map.GetTile(x, y),
+            ctx);
         if (!pBase)
         {
             throw std::runtime_error("ViewFixture: base creation failed");

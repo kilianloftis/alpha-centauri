@@ -62,7 +62,7 @@ struct EcoFixture_
 
     void Improve(int x, int y, const char* pId)
     {
-        fixtures.ctx->AddOccupantWithEffects(fixtures.At(x, y), pId);
+        fixtures.ctx.AddOccupantWithEffects(fixtures.At(x, y), pId);
     }
 
     void Work(BaseManager& rBase, int x, int y)
@@ -70,7 +70,7 @@ struct EcoFixture_
         REQUIRE(rBase.UserAssignBestAvailableWorker(&fixtures.At(x, y)));
     }
 
-    EcologyLedger& Ecology() { return fixtures.pBindState->GetEcologyLedger(); }
+    EcologyLedger& Ecology() { return fixtures.state.GetEcologyLedger(); }
 };
 
 EcoDamageConfig_t LoadFixtureConfig_(LuaRuntime& rLua)
@@ -276,7 +276,7 @@ TEST_CASE("Virtual minerals sum counted atrocities and the ecology ledger", "[ec
     EcoFixture_ eco;
     eco.Formula("virtual_minerals");
     const FactionId_t perpetrator = eco.pFaction->GetFactionId();
-    AtrocityLedger& rAtrocities = eco.fixtures.pBindState->GetAtrocityLedger();
+    AtrocityLedger& rAtrocities = eco.fixtures.state.GetAtrocityLedger();
     CHECK(eco.pBase->GetEcologicalDamage() == 0);
 
     AtrocityRecord_t major;
@@ -319,19 +319,30 @@ TEST_CASE("AddVirtualMinerals is ungated by the Charter and records no atrocity"
 
         TriggeredEffectConfig_t tectonic;
         tectonic.effect = AddVirtualMineralsEffect_t{5};
-        TriggeredEffectContext_t context(*eco.fixtures.pBindState, *eco.pFaction);
+        TriggeredEffectContext_t context(eco.fixtures.state, *eco.pFaction);
         ApplyTriggeredEffects(std::vector<TriggeredEffectConfig_t>{tectonic}, context);
 
         CHECK(eco.Ecology().VirtualMinerals(eco.pFaction->GetFactionId()) == 5);
-        CHECK(eco.fixtures.pBindState->GetAtrocityLedger().Records().empty());
+        CHECK(eco.fixtures.state.GetAtrocityLedger().Records().empty());
     }
 }
 
 TEST_CASE("The score needs the faction bound to a session", "[ecology]")
 {
-    BaseFixture fixture;
-    BaseManager& rBase = fixture.MakeBase(8, 8);
-    CHECK_THROWS_AS(rBase.GetEcologicalDamage(), std::logic_error);
+    // No WorldFixture: scoring reads CurrentGameState(), which must be absent here.
+    SessionInputs inputs;
+    WorldMap map(k_TestMapWidth, k_TestMapHeight, TestMapRules());
+    TileEffectsContext ctx(map, inputs.improvements, &inputs.unitComponents,
+                           inputs.dataContext.tileYieldRules,
+                           inputs.dataContext.interactionGrids);
+    inputs.ownerDefinition.id = "test_base_owner";
+    Faction owner(/*factionId*/ 1, /*bIsPlayerControlled*/ true, inputs.ownerDefinition,
+                  inputs.dataContext, map, inputs.settings, k_TestFactionSeed);
+    Tile& rTile = *map.GetTile(8, 8);
+    BaseManager base(owner, /*baseId*/ 1, "TestBase", rTile, MakeBaseRuleset(inputs.dataContext),
+                     ctx, /*initialPopulation*/ 3);
+    REQUIRE(FindCurrentGameState() == nullptr);
+    CHECK_THROWS_AS(base.GetEcologicalDamage(), std::logic_error);
 }
 
 TEST_CASE("Eco damage formula: a base under its cap scores 0", "[ecology][formula]")

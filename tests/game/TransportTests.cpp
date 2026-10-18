@@ -58,9 +58,9 @@ struct TransportHarness_
 
     explicit TransportHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
-        , steps(fixture.map, *fixture.ctx)
+        , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(),
+        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
                  *fixture.dataContext.terrainOperationRegistry, rng)
     {
     }

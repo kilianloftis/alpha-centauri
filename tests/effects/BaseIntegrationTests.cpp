@@ -42,7 +42,7 @@ TEST_CASE("Founding a base registers the Base improvement and its defense bonus 
     CHECK(tile.HasImprovement("Base"));
     CHECK(tile.HasFeature("Base"));
     // Fixture Base entry: +100% defense through the same mechanism as Bunker/Rocky.
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, /*forFaction*/ 1) == Approx(2.0));
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, /*forFaction*/ 1) == Approx(2.0));
 }
 
 TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the owning base",
@@ -199,14 +199,20 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
     // Ledger forbids self-pairs; FactionFilterCoversTarget also excludes the beneficiary.
 }
 
-// Building completion no longer needs session spawn services; on_complete effects only run
-// when a session subscriber is wired (GameState::AttachToSession_).
+// on_complete effects only run when a session subscriber is wired (GameState::AttachToSession_).
+// A faction built against the fixture map but never added has no such subscriber.
 TEST_CASE("Building production without spawn services completes without on_complete effects",
           "[effects][base][triggered]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(8, 8);
-    REQUIRE(ac::FindCurrentGameState() == nullptr);
+    actest::FactionFixture fixture;
+    Faction unaffiliated(/*factionId*/ 99, /*bIsPlayerControlled*/ false,
+                         fixture.factionDefinition, fixture.dataContext, fixture.map,
+                         fixture.settings, actest::k_TestFactionSeed);
+    auto pBase = std::make_unique<BaseManager>(
+        unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
+        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
+    BaseManager& base = *pBase;
+    REQUIRE(fixture.state.Factions().empty());
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
@@ -280,7 +286,7 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     Tile& farmTile = fixture.At(9, 9);
     farmTile.SetBaseMoisture(Moisture_t::Wet);
     farmTile.SetMoisture(Moisture_t::Wet);
-    fixture.ctx->AddOccupantWithEffects(farmTile, "Farm");
+    fixture.ctx.AddOccupantWithEffects(farmTile, "Farm");
 
     // Buildings: +2 flat nutrients, +1 nutrients on each worked Farm.
     base.GetBuildingManager().AddBuilding("flat_nutrient");

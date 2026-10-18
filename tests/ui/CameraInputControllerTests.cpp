@@ -22,8 +22,8 @@ constexpr int k_TallMapHeight = 100;
 struct CameraRig_t
 {
     ViewFixture fixture{false, k_TallMapHeight};
-    WorldDisplay display{*fixture.pState, *fixture.pMapRenderer, ViewFixture::FullScreen()};
-    CameraInputController controller{display, fixture.pState->GetWorldMap(),
+    WorldDisplay display{fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen()};
+    CameraInputController controller{display, fixture.state.GetWorldMap(),
                                      ViewFixture::FullScreen(), *fixture.pHotkeys};
 
     MapViewport& Viewport() { return display.GetViewport(); }
@@ -73,7 +73,7 @@ TEST_CASE("Camera pans move along the screen axes", "[ui][camera]")
     {
         rig.Viewport().SetCamera(0, 20);
         CHECK(rig.Press(Key_t::ArrowLeft));
-        CHECK(rig.Viewport().CameraX() == rig.fixture.pState->GetWorldMap().GetWidth() - step);
+        CHECK(rig.Viewport().CameraX() == rig.fixture.state.GetWorldMap().GetWidth() - step);
     }
 }
 

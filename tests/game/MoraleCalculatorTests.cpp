@@ -296,10 +296,10 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     attacker.SetCurrentHp(attacker.GetStat(StatId_t::HitPoints));
 
     MoveCostRules moveCosts(fixture.improvements);
-    StepEvaluator steps(fixture.map, *fixture.ctx);
+    StepEvaluator steps(fixture.map, fixture.ctx);
     Pathfinder pathfinder(moveCosts, steps, fixture.map);
     std::mt19937 rng(/*seed*/ 42);
-    UnitOrderExecutor orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder,
+    UnitOrderExecutor orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder,
                              fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng);
 
     const int xpBefore = attacker.GetXp();

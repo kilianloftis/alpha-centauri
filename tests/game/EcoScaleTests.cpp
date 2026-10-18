@@ -91,8 +91,8 @@ TEST_CASE("An active Perihelion doubles the multiplier until it ends", "[ecology
     FactionFixture fixtures;
     Faction& rFaction = fixtures.MakeFaction();
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 8, 8);
-    fixtures.pBindState->CreateWorldEvents();
-    WorldEventTracker& rEvents = *fixtures.pBindState->GetWorldEvents();
+    fixtures.state.CreateWorldEvents();
+    WorldEventTracker& rEvents = *fixtures.state.GetWorldEvents();
 
     const double before = EcoScale_(rBase);
     rEvents.Advance(0);

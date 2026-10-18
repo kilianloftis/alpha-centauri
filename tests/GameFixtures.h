@@ -132,9 +132,6 @@ struct PopTypeRegistryOnly
     PopTypeRegistryOnly() { popTypes.Load(FixturePath("pop_types.json")); }
 };
 
-// A small world with the fixture improvement and unit-component registries loaded and a
-// TileEffectsContext over them. Note: TileEffectsContext caches the max effect radius at
-// construction, so the registries must be loaded first — hence the unique_ptr.
 // Every base_conquest tunable is a baseline Add in its effects list, so tests set one by
 // rewriting that Add's amount in place. Replacing BaseConquestConfig_t wholesale would
 // dangle the reference FactionEffectsPool holds into `effects`, so never do that; editing an
@@ -171,17 +168,21 @@ struct OccupantFiles_t
 inline const OccupantFiles_t k_ExcludesOccupantFiles{"improvements_excludes.json",
                                                      "terrain_excludes.json"};
 
-struct WorldFixture
+// Everything a session's factions and units reference, so it outlives the session.
+// TileEffectsContext caches the max effect radius at construction, so the registries must
+// be loaded here before WorldFixture builds the GameState that owns the context.
+struct SessionInputs
 {
-    // Declared first so it is destroyed last: factions, bases, and units created by the
-    // derived fixtures hold references into it, exactly as in Engine.
     ac::GameDataContext dataContext;
-    ac::GameSettings settings; // session prefs; a Faction constructor dependency
-    ac::WorldMap map;
-    // The context's own registries, so a session built on dataContext sees the same ones.
+    ac::GameSettings settings;
     ac::ImprovementRegistry& improvements;
     ac::UnitComponentRegistry& unitComponents;
-    std::unique_ptr<ac::TileEffectsContext> ctx;
+    ac::FactionConfig_t factionDefinition;
+    ac::FactionConfig_t ownerDefinition;
+    // designs must outlive factions: units hold UnitDesign& into this deque.
+    std::deque<ac::UnitDesign> designs;
+    // Heap copies so a faction can outlive a caller-supplied definition.
+    std::vector<std::unique_ptr<ac::FactionConfig_t>> extraDefinitions;
 
     template <typename T>
     static T& CreateInContext(std::unique_ptr<T>& pSlot)
@@ -196,10 +197,9 @@ struct WorldFixture
     // bases used to be built with a null rating registry and null research manager, so they
     // resolved social ratings to nothing while the real game resolved them, with no
     // diagnostic. A fixture that diverges from Engine is not a fixture.
-    explicit WorldFixture(int width = k_TestMapWidth, int height = k_TestMapHeight,
-                          const OccupantFiles_t& rOccupants = {})
-        : map(width, height, TestMapRules())
-        , improvements(CreateInContext(dataContext.improvementRegistry))
+    explicit SessionInputs(const OccupantFiles_t& rOccupants = {},
+                           std::vector<ac::EffectConfig_t> worldRules = {})
+        : improvements(CreateInContext(dataContext.improvementRegistry))
         , unitComponents(CreateInContext(dataContext.unitComponentRegistry))
     {
         // As LoadGameData leaves it: the preset's elevation range belongs to the map.
@@ -211,15 +211,13 @@ struct WorldFixture
         ac::LoadMapOccupants(FixturePath(rOccupants.improvements), FixturePath(rOccupants.terrain),
                              improvements, *dataContext.terrainOperationRegistry);
         unitComponents.Load(FixturePath("unit_components.json"));
-        // Before the TileEffectsContext: it holds the yield rules by reference and stamps
+        // Before any TileEffectsContext: it holds the yield rules by reference and stamps
         // them into every per-tile resolve (ElevationEnergy reads the step from here).
         dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
         dataContext.interactionGrids = ac::InteractionGridsConfigParser{}.ParseConfig(
             FixturePath("interaction_grids.json"));
-        ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents,
-                                                       dataContext.tileYieldRules,
-                                                       dataContext.interactionGrids);
+        dataContext.worldRules = std::move(worldRules);
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         // Same morale table Engine loads, and the one calculator built from it.
         dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
@@ -306,19 +304,40 @@ struct WorldFixture
     }
 
     ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }
+};
+
+// One game session: GameState owns the map and tile effects; the scope is current for the
+// fixture's lifetime. Declared so SessionInputs outlives state.
+struct WorldFixture : SessionInputs
+{
+    ac::GameState state;
+    ac::GameStateScope scope;
+    ac::WorldMap& map;
+    ac::TileEffectsContext& ctx;
+
+    explicit WorldFixture(int width = k_TestMapWidth, int height = k_TestMapHeight,
+                          const OccupantFiles_t& rOccupants = {},
+                          std::vector<ac::EffectConfig_t> worldRules = {})
+        : SessionInputs(rOccupants, std::move(worldRules))
+        , state(std::make_unique<ac::WorldMap>(width, height, TestMapRules()), dataContext,
+                settings, k_TestRngSeed)
+        , scope(state)
+        , map(state.GetWorldMap())
+        , ctx(state.GetTileEffects())
+    {
+    }
 
     ac::Tile& At(int x, int y) { return *map.GetTile(x, y); }
 };
 
 // WorldFixture plus the ability to found real bases (the registries themselves are loaded by
-// WorldFixture, since Faction now requires them). Each base starts with 3 default Worker pops
+// SessionInputs, since Faction now requires them). Each base starts with 3 default Worker pops
 // when MakeBase / MakeFactionBase omit an override (shipping CreateBase resolves StartingSize,
 // currently 1). Registers the "Base" improvement on its tile, exactly as in the game.
 struct BaseFixture : WorldFixture
 {
     ac::EconomyManager economy; // default 40/50/10 energy split
     // Stub owner for MakeBase standalone bases (declared before bases so bases destroy first).
-    ac::FactionConfig_t ownerDefinition;
     std::unique_ptr<ac::Faction> pOwnerFaction;
     std::vector<std::unique_ptr<ac::BaseManager>> bases;
     int nextBaseId = 1;
@@ -328,8 +347,9 @@ struct BaseFixture : WorldFixture
     {
     }
 
-    explicit BaseFixture(int width, int height, const OccupantFiles_t& rOccupants = {})
-        : WorldFixture(width, height, rOccupants)
+    explicit BaseFixture(int width, int height, const OccupantFiles_t& rOccupants = {},
+                         std::vector<ac::EffectConfig_t> worldRules = {})
+        : WorldFixture(width, height, rOccupants, std::move(worldRules))
     {
         ownerDefinition.id = "test_base_owner";
         pOwnerFaction = std::make_unique<ac::Faction>(
@@ -351,7 +371,7 @@ struct BaseFixture : WorldFixture
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
-            *ctx,
+            ctx,
             initialPopulation));
         return *bases.back();
     }
@@ -361,20 +381,9 @@ struct BaseFixture : WorldFixture
 // (FactionUnits, WorldGlobal, two-level ratings, unit auras).
 struct FactionFixture : BaseFixture
 {
-    ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
-    // designs must outlive factions: units hold UnitDesign& into this deque.
     // Units are destroyed before bases (~Faction member order), so crawler claim
     // release can reach WorkerAssignmentManager while the home base is still alive.
-    std::deque<ac::UnitDesign> designs;
-    // Heap copies so a faction can outlive a caller-supplied definition. Declared before
-    // factions: ~Faction must not outlive the config it references.
-    std::vector<std::unique_ptr<ac::FactionConfig_t>> extraDefinitions;
     std::vector<std::unique_ptr<ac::Faction>> factions;
-    // Session back-pointer for CreateUnit's on_unit_produced_effects (GrantXp). Owns a
-    // throwaway 1×1 map so it does not steal FactionFixture::map; GrantXp never touches it.
-    std::unique_ptr<ac::WorldMap> pBindMap;
-    std::unique_ptr<ac::GameState> pBindState;
-    std::unique_ptr<ac::GameStateScope> pBindScope;
     int nextFactionId = 1;
     int nextUnitId = 1;
 
@@ -386,24 +395,9 @@ struct FactionFixture : BaseFixture
     explicit FactionFixture(int width, int height,
                             std::vector<ac::EffectConfig_t> worldRules = {},
                             const OccupantFiles_t& rOccupants = {})
-        : BaseFixture(width, height, rOccupants)
+        : BaseFixture(width, height, rOccupants, std::move(worldRules))
     {
         factionDefinition.id = "test_faction";
-        // NOTE: do not (re)load dataContext.tileYieldRules here. WorldFixture already parsed
-        // it, and BaseFixture's pOwnerFaction has by now cached ActiveEffect_t entries holding
-        // EffectConfig_t* into that vector's buffer. Reassigning it frees the buffer those
-        // pointers reference, and no revision the effects pool samples changes, so the stale
-        // cache is never rebuilt — a use-after-free on the next base-effects query.
-        // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
-        map.GetUnitPositions().OnUnitMoved.Connect([](ac::Unit& rMoved)
-        {
-            rMoved.GetFaction().RebuildVisibility();
-        });
-        dataContext.worldRules = std::move(worldRules);
-        pBindMap = std::make_unique<ac::WorldMap>(2, 1, actest::TestMapRules());
-        pBindState = std::make_unique<ac::GameState>(std::move(pBindMap), dataContext, settings,
-                                                     k_TestRngSeed);
-        pBindScope = std::make_unique<ac::GameStateScope>(*pBindState);
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
@@ -457,7 +451,7 @@ struct FactionFixture : BaseFixture
         });
         rFaction.OnSecretProjectDestroyed.Connect([this](const ac::BuildingId_t& rId)
         {
-            pBindState->MarkSecretProjectDestroyed(rId);
+            state.MarkSecretProjectDestroyed(rId);
         });
         // Mirror GameState::AttachToSession_: CreateUnit no longer applies produced triggers.
         rFaction.GetUnitManager().OnUnitCreated.Connect(
@@ -465,7 +459,7 @@ struct FactionFixture : BaseFixture
             {
                 if (pBuiltAt)
                 {
-                    ac::ApplyUnitProducedTriggers(*pBindState, rCreated, *pBuiltAt);
+                    ac::ApplyUnitProducedTriggers(state, rCreated, *pBuiltAt);
                 }
             });
         return rFaction;
@@ -477,7 +471,7 @@ struct FactionFixture : BaseFixture
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
-            *ctx,
+            ctx,
             initialPopulation);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
@@ -553,7 +547,7 @@ inline void InstallCouncil(ac::GameDataContext& rData,
 }
 
 // A live GameState on its own all-land default-size map over rFixtures' data, for tests that
-// need session factions rather than FactionFixture's bind state.
+// need a second session beside the fixture's.
 inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures)
 {
     auto pMap = std::make_unique<ac::WorldMap>(k_TestMapWidth, k_TestMapHeight,

@@ -26,8 +26,8 @@ TEST_CASE("Cloaked units are hidden on lit tiles until a cloak detector exists",
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    CHECK(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(owner, cloaked, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, fixture.ctx));
 }
 
 TEST_CASE("Fungus grants terrain concealment; Sensor Detect pierces it within radius 2",
@@ -40,7 +40,7 @@ TEST_CASE("Fungus grants terrain concealment; Sensor Detect pierces it within ra
     // Base claims Sensor territory; Sensor at (6,4) — base at (1,4) so base vision
     // does not cover the fungus unit at (8,4).
     fixture.MakeFactionBase(owner, 5, 5);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(10, 10), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(10, 10), "Sensor");
     owner.RebuildVisibility();
 
     fixture.At(12, 12).AddTerrainFeature(fixture.improvements.Get("Fungus"));
@@ -48,14 +48,14 @@ TEST_CASE("Fungus grants terrain concealment; Sensor Detect pierces it within ra
 
     // Owner sees the tile via Sensor vision and Detects terrain within Chebyshev 2.
     REQUIRE(owner.GetVisibleMap().IsVisible(12, 12));
-    CHECK(IsUnitVisibleTo(owner, hidden, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(owner, hidden, fixture.ctx));
 
     // Scout lights the fungus tile without terrain Detect.
     Faction& scoutFaction = fixture.MakeFaction();
     fixture.MakeUnit(scoutFaction, 11, 11, {"test_chassis"});
     scoutFaction.RebuildVisibility();
     REQUIRE(scoutFaction.GetVisibleMap().IsVisible(12, 12));
-    CHECK_FALSE(IsUnitVisibleTo(scoutFaction, hidden, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(scoutFaction, hidden, fixture.ctx));
 }
 
 TEST_CASE("Sensor terrain Detect does not reach Chebyshev distance 3",
@@ -67,7 +67,7 @@ TEST_CASE("Sensor terrain Detect does not reach Chebyshev distance 3",
 
     // Sensor at (4,4); fungus unit at (7,4) is Chebyshev 3 — outside Detect radius 2.
     fixture.MakeFactionBase(owner, 5, 5);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
     // Scout lights (7,4); Sensor vision alone would not reach that far.
     fixture.MakeUnit(owner, 10, 10, {"test_chassis"});
     owner.RebuildVisibility();
@@ -76,7 +76,7 @@ TEST_CASE("Sensor terrain Detect does not reach Chebyshev distance 3",
     Unit& far = fixture.MakeUnit(other, 11, 11, {"test_chassis"});
 
     REQUIRE(owner.GetVisibleMap().IsVisible(11, 11)); // scout vision
-    CHECK_FALSE(IsUnitVisibleTo(owner, far, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(owner, far, fixture.ctx));
 }
 
 TEST_CASE("Sensor Detect requires territory ownership",
@@ -87,7 +87,7 @@ TEST_CASE("Sensor Detect requires territory ownership",
     Faction& other = fixture.MakeFaction();
 
     // No base → Sensor tile unowned → Detect applies to nobody.
-    fixture.ctx->AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
     fixture.At(8, 8).AddTerrainFeature(fixture.improvements.Get("Fungus"));
 
     fixture.MakeUnit(other, 7, 7, {"test_chassis"});
@@ -96,7 +96,7 @@ TEST_CASE("Sensor Detect requires territory ownership",
 
     REQUIRE(other.GetVisibleMap().IsVisible(8, 8));
     REQUIRE(fixture.map.GetTerritory().GetOwner(8, 8) == k_NoFactionOwner);
-    CHECK_FALSE(IsUnitVisibleTo(other, hidden, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(other, hidden, fixture.ctx));
 }
 
 TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change",
@@ -110,7 +110,7 @@ TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change"
     // A claims Sensor at (5,4). Probe tile (5,6) is Chebyshev 2 from the Sensor but
     // outside both bases' vision-2 squares (A at (0,4), later B at (8,4)).
     fixture.MakeFactionBase(a, 4, 4);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(9, 9), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Sensor");
     a.RebuildVisibility();
     b.RebuildVisibility();
 
@@ -119,9 +119,9 @@ TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change"
 
     REQUIRE(fixture.map.GetTerritory().GetOwner(9, 9) == a.GetFactionId());
     REQUIRE(a.GetVisibleMap().IsVisible(7, 11));
-    CHECK(IsUnitVisibleTo(a, hidden, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(a, hidden, fixture.ctx));
     CHECK_FALSE(b.GetVisibleMap().IsVisible(7, 11));
-    CHECK_FALSE(IsUnitVisibleTo(b, hidden, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(b, hidden, fixture.ctx));
 
     // Closer base flips Sensor territory to B; vision and Detect retarget on rebuild.
     fixture.MakeFactionBase(b, 12, 12);
@@ -130,9 +130,9 @@ TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change"
     b.RebuildVisibility();
 
     CHECK(b.GetVisibleMap().IsVisible(7, 11));
-    CHECK(IsUnitVisibleTo(b, hidden, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(b, hidden, fixture.ctx));
     CHECK_FALSE(a.GetVisibleMap().IsVisible(7, 11));
-    CHECK_FALSE(IsUnitVisibleTo(a, hidden, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(a, hidden, fixture.ctx));
 }
 
 TEST_CASE("Cloaked unit inside Sensor radius stays hidden (no cloak detector)",
@@ -143,12 +143,12 @@ TEST_CASE("Cloaked unit inside Sensor radius stays hidden (no cloak detector)",
     Faction& other = fixture.MakeFaction();
 
     fixture.MakeFactionBase(owner, 5, 5);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(10, 10), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(10, 10), "Sensor");
     owner.RebuildVisibility();
 
     Unit& cloaked = fixture.MakeUnit(other, 11, 11, {"test_chassis", "Cloaking_Device"});
     REQUIRE(owner.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, fixture.ctx));
 }
 
 TEST_CASE("Contact reveal pierces cloak for the bumping faction only",
@@ -164,10 +164,10 @@ TEST_CASE("Contact reveal pierces cloak for the bumping faction only",
     observer.RebuildVisibility();
     bystander.RebuildVisibility();
 
-    REQUIRE_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(observer, cloaked, fixture.ctx));
     observer.GetRevealedUnits().Reveal(cloaked);
-    CHECK(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(bystander, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(observer, cloaked, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(bystander, cloaked, fixture.ctx));
 }
 
 // WorldDisplay / WorldView both gate unit draw & pick on IsUnitVisibleTo — these cases
@@ -188,11 +188,11 @@ TEST_CASE("IsUnitVisibleTo is the UI gate for concealed vs contact-revealed unit
     REQUIRE(player.GetVisibleMap().IsVisible(plain.GetTile()));
 
     // Concealed: hidden to the player. Visible hostile: shown.
-    CHECK_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
-    CHECK(IsUnitVisibleTo(player, plain, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, plain, fixture.ctx));
 
     player.GetRevealedUnits().Reveal(cloaked);
-    CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, cloaked, fixture.ctx));
 }
 
 TEST_CASE("FactionUnits Conceal from a cloaking project hides live units",
@@ -208,10 +208,10 @@ TEST_CASE("FactionUnits Conceal from a cloaking project hides live units",
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
-    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(observer, subject, fixture.ctx));
 
     base.GetBuildingManager().AddBuilding("cloaking_project");
-    CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(observer, subject, fixture.ctx));
 }
 
 TEST_CASE("Conditional Conceal applies only when TargetTileHas is satisfied",
@@ -228,10 +228,10 @@ TEST_CASE("Conditional Conceal applies only when TargetTileHas is satisfied",
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
     // Water tile: Deep Pressure Hull Conceal is active → hidden.
-    CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(observer, subject, fixture.ctx));
 
     fixture.At(9, 9).SetElevation(100);
-    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(observer, subject, fixture.ctx));
 }
 
 TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
@@ -244,7 +244,7 @@ TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
 
     // Detector at (6,4) pierces cloak only on River tiles within radius 2.
     fixture.MakeFactionBase(owner, 5, 5);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(10, 10), "conditional_cloak_detector");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(10, 10), "conditional_cloak_detector");
     fixture.MakeUnit(owner, 10, 10, {"test_chassis"}); // light (7,4) and surrounds
     owner.RebuildVisibility();
     // Third faction lights the same tile; the detector is not on its territory.
@@ -255,14 +255,14 @@ TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
     REQUIRE(owner.GetVisibleMap().IsVisible(11, 11));
     REQUIRE(third.GetVisibleMap().IsVisible(11, 11));
     // Cloak active; Detect condition fails off-river → still hidden.
-    CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, fixture.ctx));
 
     fixture.At(11, 11).SetHasRiver(true);
     // Same unit, same detector: condition now met → cloak pierced.
-    CHECK(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(owner, cloaked, fixture.ctx));
     // The detector is owned_by_territory: only the territory owner pierces, condition or not.
     REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == owner.GetFactionId());
-    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, fixture.ctx));
 }
 
 TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
@@ -274,7 +274,7 @@ TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
     const int width = fixture.map.GetWidth();
 
     fixture.MakeFactionBase(owner, 4, 8);
-    fixture.ctx->AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
     owner.RebuildVisibility();
 
     fixture.At(width - 2, 4).AddTerrainFeature(fixture.improvements.Get("Fungus"));
@@ -283,14 +283,14 @@ TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
     Unit& hiddenFar = fixture.MakeUnit(other, width - 6, 4, {"test_chassis"});
 
     REQUIRE(owner.GetVisibleMap().IsVisible(width - 2, 4));
-    CHECK(IsUnitVisibleTo(owner, hiddenNear, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(owner, hiddenNear, fixture.ctx));
 
     // Light the far tile with a scout so concealment (not fog) is what hides it.
     // Chebyshev 3 across the wrap — Detect radius 2 does not reach.
     fixture.MakeUnit(owner, width - 5, 5, {"test_chassis"});
     owner.RebuildVisibility();
     REQUIRE(owner.GetVisibleMap().IsVisible(width - 6, 4));
-    CHECK_FALSE(IsUnitVisibleTo(owner, hiddenFar, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(owner, hiddenFar, fixture.ctx));
 }
 
 TEST_CASE("Unit ThisTile Detect pierces cloak only for the projecting faction",
@@ -311,8 +311,8 @@ TEST_CASE("Unit ThisTile Detect pierces cloak only for the projecting faction",
 
     REQUIRE(detectorOwner.GetVisibleMap().IsVisible(cloaked.GetTile()));
     REQUIRE(third.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    CHECK(IsUnitVisibleTo(detectorOwner, cloaked, *fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(detectorOwner, cloaked, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, fixture.ctx));
 }
 
 TEST_CASE("Unit ThisTile Conceal hides only friendly subjects in radius",
@@ -334,9 +334,9 @@ TEST_CASE("Unit ThisTile Conceal hides only friendly subjects in radius",
     REQUIRE(scout.GetVisibleMap().IsVisible(friendly.GetTile()));
     REQUIRE(scout.GetVisibleMap().IsVisible(hostile.GetTile()));
     // Friendly subject gets the aura Conceal → hidden from scout without Detect.
-    CHECK_FALSE(IsUnitVisibleTo(scout, friendly, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(scout, friendly, fixture.ctx));
     // Enemy subject does not gain the aura → visible.
-    CHECK(IsUnitVisibleTo(scout, hostile, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(scout, hostile, fixture.ctx));
 }
 
 TEST_CASE("Detect without ownerFaction never pierces cloak",
@@ -347,13 +347,13 @@ TEST_CASE("Detect without ownerFaction never pierces cloak",
     Faction& owner = fixture.MakeFaction();
 
     // Improvement Detect with no owned_by_territory → no stamp → fail closed.
-    fixture.ctx->AddOccupantWithEffects(fixture.At(10, 10), "unowned_cloak_detector");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(10, 10), "unowned_cloak_detector");
     fixture.MakeUnit(observer, 10, 10, {"test_chassis"});
     Unit& cloaked = fixture.MakeUnit(owner, 11, 11, {"test_chassis", "Cloaking_Device"});
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, fixture.ctx));
 }
 
 TEST_CASE("A covert unit's owner is known only to its own faction", "[visibility][covert]")
