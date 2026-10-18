@@ -12,4 +12,5 @@ so Claude Code loads the same rules every other agent uses.
 @.devin/rules/game-state-access.mdc
 @.devin/rules/notify-on-tool-failures.mdc
 @.devin/rules/planning.mdc
+@.devin/rules/smac-reverse-engineering.mdc
 @.devin/rules/testing.mdc

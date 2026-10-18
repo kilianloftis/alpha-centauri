@@ -1,0 +1,43 @@
+---
+description: How to answer "what does the original game do" from terranx.exe, using Thinker as the address map
+alwaysApply: true
+---
+
+# Reading the original game (`terranx.exe`)
+
+When a question is "what does SMAC do", answer it from the binary, not from the wiki or memory.
+
+## Setup
+
+- **Binary:** the GOG Alpha Centauri install, Alien Crossfire v2.0. Under Wine it is
+  `~/.wine/drive_c/Program Files/GOG Galaxy/Games/Alpha Centauri/terranx.exe`. Check
+  `sha1sum terranx.exe` = `4b19c1fe3266b5ebc4305cd182ed6e864e3a1c4a`. Every address below and in
+  Thinker is for that build only.
+- **Thinker** ([induktio/thinker](https://github.com/induktio/thinker)) supplies names for the
+  binary's functions, globals and structs. Check it out into the gitignored `refs/` folder:
+
+  ```bash
+  git clone https://github.com/induktio/thinker refs/thinker   # first time
+  git -C refs/thinker pull                                       # later
+  ```
+
+  Where to look in `refs/thinker/src/`: `engine.cpp` (address of every function and global),
+  `engine_types.h` / `engine_base.h` (struct layouts), `base.cpp` and friends (`mod_*` rewrites
+  of the original functions).
+- **Disassembler:** `objdump -d -M intel --start-address=A --stop-address=B terranx.exe`. A
+  function ends at the next address in Thinker's table. Write the output to a scratch file and
+  grep it.
+
+## Rules
+
+- **Thinker is a lead, not the source.** Its `mod_*` functions follow the original flow but
+  change some behaviour, marked `// Fix:`, and config options change more. Confirm every
+  conclusion in the disassembly. Note where Thinker differs.
+- **Check the map first.** [`docs/thinker/terranx-map.md`](docs/thinker/terranx-map.md) records
+  what has already been confirmed, with addresses. Add to it whenever you confirm something.
+  Record the address, what the code does, and where Thinker differs.
+- **Branch direction is easy to misread.** A flipped `jl` / `jge` reads plausibly and tests
+  written from the same reading won't catch it. For a rule that selects art, say which cell the
+  extreme inputs should pick and confirm it from the art and an in-game screenshot.
+- **Art palette values are shifted.** SMAC loads PCX art 10 slots up, so a byte the code writes
+  is `palette.pcx` index + 10 (see `docs/thinker/smac-palette-lighting.md`).

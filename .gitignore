@@ -13,3 +13,5 @@ assets/ui/chrome/
 assets/ui/cursors/
 assets/ui/thumbs/
 assets/ui/artboxes/
+# Reference checkouts for reverse engineering (see .devin/rules/smac-reverse-engineering.mdc).
+refs/
