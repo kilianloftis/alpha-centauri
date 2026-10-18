@@ -237,21 +237,13 @@ TEST_CASE("Scrap of a building at another faction's base is an error", "[buildin
 TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-project]")
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<GameState>(
-        std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    Faction& faction = pState->AddFaction(std::make_unique<Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    FillLand(fixtures.map);
+    Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
-        pState->GetTileEffects());
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
+        fixtures.ctx);
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("test_secret_project");
@@ -264,7 +256,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
     CHECK(pBase->GetBuildingManager().HasBuilding("test_secret_project"));
     CHECK(faction.GetEconomy().GetEnergy() == 0);
     CHECK(IsSecretProjectOwned("test_secret_project"));
-    CHECK_FALSE(pState->IsSecretProjectDestroyed("test_secret_project"));
+    CHECK_FALSE(fixtures.state.IsSecretProjectDestroyed("test_secret_project"));
 }
 
 TEST_CASE("Headquarters cannot be scrapped", "[building][scrap][hq]")

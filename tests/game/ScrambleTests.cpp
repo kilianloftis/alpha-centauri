@@ -48,22 +48,14 @@ void FillLand_(WorldMap& rMap)
 struct ScrambleGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
     FactionConfig_t playerDefinition;
     FactionConfig_t aiDefinition;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     ScrambleGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
-                                                   actest::TestMapRules());
-        FillLand_(*pMap);
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand_(fixtures.map);
 
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";
@@ -71,13 +63,13 @@ struct ScrambleGame_
         aiDefinition.id = "ai";
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
-        pPlayer = &pState->AddFaction(std::move(pFactionA));
-        pAi = &pState->AddFaction(std::move(pFactionB));
+            fixtures.state.AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+        pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
+        pAi = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
     Unit& MakeUnit(Faction& rFaction, int x, int y,
@@ -100,11 +92,11 @@ struct ScrambleGame_
         }
         fixtures.designs.emplace_back(slots, assigned);
 
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), fixtures.designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile, nullptr);
+            fixtures.state.AllocateUnitId(), fixtures.designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, nullptr);
     }
 
     void FullMoves(Unit& rUnit)
@@ -143,7 +135,7 @@ TEST_CASE("Parse Scramble requires condition and range", "[effects][parser][scra
 TEST_CASE("Air Superiority scrambler becomes combat defender", "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
@@ -157,7 +149,7 @@ TEST_CASE("Air Superiority scrambler becomes combat defender", "[unit][scramble]
     const UnitId_t scramblerId = scrambler.GetUnitId();
     const UnitId_t groundId = ground.GetUnitId();
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, rGroundTile);
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, rGroundTile);
     REQUIRE(result);
     CHECK(result->defenderId == scramblerId);
     CHECK(result->defenderId != groundId);
@@ -187,9 +179,9 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
           "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
-    auto& rEffects = game.pState->GetTileEffects();
-    const Pathfinder& rPathfinder = game.pState->GetPathfinder();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+    auto& rEffects = game.fixtures.state.GetTileEffects();
+    const Pathfinder& rPathfinder = game.fixtures.state.GetPathfinder();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
 
@@ -244,7 +236,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
 
         const UnitId_t groundId = ground.GetUnitId();
         auto result =
-            game.pState->GetUnitOrderExecutor().TryAttack(landAttacker, ground.GetTile());
+            game.fixtures.state.GetUnitOrderExecutor().TryAttack(landAttacker, ground.GetTile());
         REQUIRE(result);
         CHECK(result->defenderId == groundId);
         CHECK(result->scramblePath.empty());
@@ -255,9 +247,9 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
 TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
-    auto& rEffects = game.pState->GetTileEffects();
-    const Pathfinder& rPathfinder = game.pState->GetPathfinder();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+    auto& rEffects = game.fixtures.state.GetTileEffects();
+    const Pathfinder& rPathfinder = game.fixtures.state.GetPathfinder();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& attacker =
@@ -297,7 +289,7 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
 TEST_CASE("Scramble MoveOrder walks hop by hop via Execute", "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
@@ -317,7 +309,7 @@ TEST_CASE("Scramble MoveOrder walks hop by hop via Execute", "[unit][scramble]")
             }
         });
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, ground.GetTile());
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, ground.GetTile());
     REQUIRE(result);
     REQUIRE(result->scramblePath.size() == 2);
     CHECK(tilesSeen == result->scramblePath);
@@ -330,9 +322,9 @@ TEST_CASE("Scramble never routes into territory its faction may not enter", "[un
     ScrambleGame_ game;
     FactionConfig_t thirdDefinition = game.fixtures.factionDefinition;
     thirdDefinition.id = "third";
-    Faction& rThird = AddSessionFaction(game.fixtures, *game.pState, thirdDefinition, false);
-    MakeSessionBase(game.fixtures, *game.pState, rThird, 10, 8);
-    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(8, 10) == rThird.GetFactionId());
+    Faction& rThird = AddSessionFaction(game.fixtures, thirdDefinition, false);
+    MakeSessionBase(game.fixtures, rThird, 10, 8);
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(8, 10) == rThird.GetFactionId());
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& scrambler =
@@ -343,14 +335,14 @@ TEST_CASE("Scramble never routes into territory its faction may not enter", "[un
 
     const auto findScrambler = [&]
     {
-        return FindScrambler(attacker, ground, game.pState->GetWorldMap(),
-                             game.pState->GetTileEffects(), game.pState->GetPathfinder());
+        return FindScrambler(attacker, ground, game.fixtures.state.GetWorldMap(),
+                             game.fixtures.state.GetTileEffects(), game.fixtures.state.GetPathfinder());
     };
 
     CHECK(findScrambler() == &scrambler);
 
     // The defender already stands there (it entered before the Treaty); the scrambler may not.
-    game.pState->GetDiplomacyLedger().SetStatus(game.pAi->GetFactionId(), rThird.GetFactionId(),
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(game.pAi->GetFactionId(), rThird.GetFactionId(),
                                                 DiplomaticStatus_t::Treaty);
     CHECK(findScrambler() == nullptr);
 }

@@ -50,33 +50,23 @@ namespace
 struct TriggerGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
 
     TriggerGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-        pFaction = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed));
+        FillLand(fixtures.map);
+        pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(int x, int y)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = pFaction->CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", pTile,
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
@@ -143,11 +133,11 @@ Unit& MakeUnitOn_(TriggerGame_& rGame, Faction& rFaction, int x, int y,
         slots.push_back(slot);
     }
     rGame.fixtures.designs.emplace_back(slots, assigned);
-    Tile* pTile = rGame.pState->GetWorldMap().GetTile(x, y);
+    Tile* pTile = rGame.fixtures.state.GetWorldMap().GetTile(x, y);
     REQUIRE(pTile);
     return rFaction.GetUnitManager().CreateUnit(
-        rGame.pState->AllocateUnitId(), rGame.fixtures.designs.back(),
-        rGame.pState->GetWorldMap().GetUnitPositions(), *pTile);
+        rGame.fixtures.state.AllocateUnitId(), rGame.fixtures.designs.back(),
+        rGame.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile);
 }
 
 Unit& MakeUnitOn_(TriggerGame_& rGame, int x, int y,
@@ -170,7 +160,7 @@ TEST_CASE("ApplyTriggeredEffects reports what each entry did", "[effects][trigge
         Effect_(DestroyFacilityEffect_t{1, true, false}),
     };
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
 
     REQUIRE(results.size() == 3);
@@ -197,7 +187,7 @@ TEST_CASE("ApplyTriggeredEffects skips entries whose subject the context lacks",
         Effect_(GrantTechEffect_t{"some_tech"}),
     };
 
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction); // no pBase
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction); // no pBase
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
 
     REQUIRE(results.size() == 1);
@@ -210,9 +200,9 @@ TEST_CASE("A multi-faction context repeats faction-subject effects only",
           "[effects][triggered]")
 {
     TriggerGame_ game;
-    Faction& second = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
-        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+    Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
         actest::k_TestFactionSeed));
     BaseManager& base = game.MakeBase(8, 8);
 
@@ -222,7 +212,7 @@ TEST_CASE("A multi-faction context repeats faction-subject effects only",
     };
     const int sizeBefore = base.GetPopulation().GetSize();
 
-    TriggeredEffectContext_t context(*game.pState, {game.pFaction, &second});
+    TriggeredEffectContext_t context(game.fixtures.state, {game.pFaction, &second});
     context.pBase = &base;
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
 
@@ -246,7 +236,7 @@ TEST_CASE("oncePer fires an entry once per subject and lets its siblings repeat"
         Effect_(ModifyPopulationEffect_t{1, ModifierOp_t::Add, 0}),
     };
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     CHECK(ApplyTriggeredEffects(effects, context).size() == 2);
 
     // Second visit: the grant is spent, the repeatable effect still applies.
@@ -267,7 +257,7 @@ TEST_CASE("oncePer entries sharing a key consume each other", "[effects][trigger
         OnceEffect_(ModifyPopulationEffect_t{1, ModifierOp_t::Add, 0}, OnceScope_t::Base, "gift"),
     };
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     CHECK(ApplyTriggeredEffects(effects, context).size() == 1);
 }
 
@@ -283,7 +273,7 @@ TEST_CASE("A unit-scoped oncePer is skipped when the trigger has no unit",
         OnceEffect_(GrantTechEffect_t{"some_tech"}, OnceScope_t::Unit, "monolith_xp"),
     };
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     CHECK(ApplyTriggeredEffects(effects, context).empty());
     CHECK_FALSE(game.pFaction->GetResearch().HasDiscoveredTech("some_tech"));
 }
@@ -296,7 +286,7 @@ TEST_CASE("Granting an already-discovered tech is a no-op, not a throw", "[effec
     BaseManager& base = game.MakeBase(8, 8);
     const std::vector<TriggeredEffectConfig_t> effects = {Effect_(GrantTechEffect_t{"some_tech"})};
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     CHECK(ApplyTriggeredEffects(effects, context).size() == 1);
     CHECK_NOTHROW(ApplyTriggeredEffects(effects, context));
     CHECK(ApplyTriggeredEffects(effects, context).empty());
@@ -315,7 +305,7 @@ TEST_CASE("oncePer is not spent when the entry found nothing to do",
         OnceEffect_(DestroyFacilityEffect_t{1, true, false}, OnceScope_t::Base, "sabotage"),
     };
 
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     const std::vector<TriggeredEffectResult_t> first = ApplyTriggeredEffects(effects, context);
     REQUIRE(first.size() == 1);
     CHECK(std::get<FacilitiesDestroyed_t>(first[0]).buildingIds.empty());
@@ -338,7 +328,7 @@ TEST_CASE("GrantUnit spawns at the context base and homes the unit there",
     REQUIRE(game.pFaction->GetUnitManager().Units().empty());
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
     REQUIRE(results.size() == 1);
@@ -364,11 +354,11 @@ TEST_CASE("GrantUnit spills onto a neighbouring tile when the base tile is occup
     TriggerGame_ game;
     // Only meaningful under the single-unit-per-tile rule; with stacking on, the second unit
     // simply joins the first on the base tile.
-    game.pState->GetWorldMap().GetUnitPositions().SetSingleUnitPerTile(true);
+    game.fixtures.state.GetWorldMap().GetUnitPositions().SetSingleUnitPerTile(true);
     BaseManager& base = game.MakeBase(8, 8);
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     ApplyTriggeredEffects(grant, context);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
@@ -389,7 +379,7 @@ TEST_CASE("GrantUnit resolves an anchor base when the context has none",
     BaseManager& base = game.MakeBase(8, 8);
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction); // no pBase / pTile
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction); // no pBase / pTile
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
     REQUIRE(std::get<UnitsGranted_t>(results[0]).count == 1);
@@ -403,7 +393,7 @@ TEST_CASE("GrantUnit grants nothing when the faction holds no base",
     TriggerGame_ game;
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
     REQUIRE(results.size() == 1);
@@ -423,7 +413,7 @@ TEST_CASE("GrantUnit reports a short count when there is nowhere left to stand",
     many.count = 64;
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_(many);
-    TriggeredEffectContext_t context(*game.pState, base);
+    TriggeredEffectContext_t context(game.fixtures.state, base);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
     const int spawned = std::get<UnitsGranted_t>(results[0]).count;
@@ -436,29 +426,29 @@ TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
           "[effects][triggered][visit][monolith]")
 {
     TriggerGame_ game;
-    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         pTile->SetElevation(100);
     }
-    Tile& rMonoA = *game.pState->GetWorldMap().GetTile(8, 8);
-    Tile& rMonoB = *game.pState->GetWorldMap().GetTile(9, 9);
-    game.pState->GetTileEffects().AddOccupantWithEffects(rMonoA, "Monolith");
-    game.pState->GetTileEffects().AddOccupantWithEffects(rMonoB, "Monolith");
+    Tile& rMonoA = *game.fixtures.state.GetWorldMap().GetTile(8, 8);
+    Tile& rMonoB = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMonoA, "Monolith");
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMonoB, "Monolith");
 
     Unit& unit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
     const int maxHp = unit.GetStat(StatId_t::HitPoints);
     unit.SetCurrentHp(1);
     const int xpBefore = unit.GetXp();
 
-    ApplyVisitEffects(*game.pState, unit, game.pState->GetRng());
+    ApplyVisitEffects(game.fixtures.state, unit, game.fixtures.state.GetRng());
     CHECK(unit.GetCurrentHp() == maxHp);
     CHECK(unit.GetXp() == xpBefore + 1);
     CHECK(unit.ConsumedTriggerKeys().count("monolith_xp") == 1);
 
     // Relocate onto the second monolith without re-entering (direct MoveUnit).
-    game.pState->GetWorldMap().GetUnitPositions().MoveUnit(unit, rMonoB);
+    game.fixtures.state.GetWorldMap().GetUnitPositions().MoveUnit(unit, rMonoB);
     unit.SetCurrentHp(1);
-    ApplyVisitEffects(*game.pState, unit, game.pState->GetRng());
+    ApplyVisitEffects(game.fixtures.state, unit, game.fixtures.state.GetRng());
     CHECK(unit.GetCurrentHp() == maxHp);
     CHECK(unit.GetXp() == xpBefore + 1);
 }
@@ -467,22 +457,22 @@ TEST_CASE("GrantXp remove_host_chance removes the visit host when the roll succe
           "[effects][triggered][visit]")
 {
     TriggerGame_ game;
-    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         pTile->SetElevation(100);
     }
-    Tile& rTile = *game.pState->GetWorldMap().GetTile(8, 8);
-    game.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Monolith");
+    Tile& rTile = *game.fixtures.state.GetWorldMap().GetTile(8, 8);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Monolith");
     Unit& unit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
 
     TriggeredEffectConfig_t grant;
     grant.effect = GrantXpEffect_t{1, ModifierOp_t::Add, Rational_t{1, 1}};
     grant.oncePer = OncePer_t{OnceScope_t::Unit, "force_remove"};
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     context.pUnit = &unit;
     context.pTile = &rTile;
     context.hostImprovementId = "Monolith";
-    context.pRng = &game.pState->GetRng();
+    context.pRng = &game.fixtures.state.GetRng();
 
     REQUIRE(rTile.HasFeature("Monolith"));
     ApplyTriggeredEffects(std::span{&grant, 1}, context);
@@ -493,45 +483,45 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
           "[effects][triggered][visit][movement]")
 {
     TriggerGame_ game;
-    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         pTile->SetElevation(100);
     }
 
-    Tile& rMono = *game.pState->GetWorldMap().GetTile(9, 9);
-    game.pState->GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
+    Tile& rMono = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
 
     Unit& playerUnit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
     playerUnit.SetCurrentHp(1);
     const int xpBefore = playerUnit.GetXp();
     MoveOrder_t move;
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     CHECK(std::holds_alternative<ImprovementVisitInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
     CHECK(playerUnit.GetCurrentHp() == 1);
     CHECK(playerUnit.GetXp() == xpBefore);
 
-    ApplyVisitEffects(*game.pState, playerUnit, game.pState->GetRng());
+    ApplyVisitEffects(game.fixtures.state, playerUnit, game.fixtures.state.GetRng());
     CHECK(playerUnit.GetCurrentHp() == playerUnit.GetStat(StatId_t::HitPoints));
     CHECK(playerUnit.GetXp() == xpBefore + 1);
 
     // AI faction auto-Investigate on arrival (no queue item).
     FactionConfig_t aiDef = game.fixtures.factionDefinition;
     aiDef.id = "ai";
-    Faction* pAi = &game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed));
+    Faction* pAi = &game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
 
-    Tile& rMono2 = *game.pState->GetWorldMap().GetTile(7, 7);
-    game.pState->GetTileEffects().AddOccupantWithEffects(rMono2, "Monolith");
+    Tile& rMono2 = *game.fixtures.state.GetWorldMap().GetTile(7, 7);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMono2, "Monolith");
     Unit& aiMover = MakeUnitOn_(game, *pAi, 6, 6, {"test_chassis", "test_weapon"});
     aiMover.SetCurrentHp(1);
     const int aiXp = aiMover.GetXp();
-    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
+    const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
     MoveOrder_t aiMove;
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(aiMover, rMono2, aiMove).bEntered);
-    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
+    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(aiMover, rMono2, aiMove).bEntered);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
     CHECK(aiMover.GetCurrentHp() == aiMover.GetStat(StatId_t::HitPoints));
     CHECK(aiMover.GetXp() == aiXp + 1);
 }
@@ -540,22 +530,22 @@ TEST_CASE("Unset visit handler skips Investigate enqueue and auto-apply",
           "[effects][triggered][visit][movement]")
 {
     TriggerGame_ game;
-    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         pTile->SetElevation(100);
     }
-    game.pState->GetUnitOrderExecutor().SetImprovementVisitHandler({});
+    game.fixtures.state.GetUnitOrderExecutor().SetImprovementVisitHandler({});
 
-    Tile& rMono = *game.pState->GetWorldMap().GetTile(9, 9);
-    game.pState->GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
+    Tile& rMono = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
 
     Unit& playerUnit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
     playerUnit.SetCurrentHp(1);
     const int xpBefore = playerUnit.GetXp();
-    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
+    const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
     MoveOrder_t move;
-    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
-    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
+    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
     CHECK(playerUnit.GetCurrentHp() == 1);
     CHECK(playerUnit.GetXp() == xpBefore);
 }
@@ -571,13 +561,13 @@ TEST_CASE("First discoverer of Secrets gets Available GrantTech; second does not
     rResearch.AddDiscoveredTech("secrets_of_the_human_brain");
     CHECK(rResearch.HasDiscoveredTech("secrets_of_the_human_brain"));
     CHECK(rResearch.GetDiscoveredTechs().size() == before + 2);
-    CHECK(game.pState->ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 1);
+    CHECK(game.fixtures.state.ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 1);
 
     FactionConfig_t aiDef = game.fixtures.factionDefinition;
     aiDef.id = "ai";
-    Faction* pAi = &game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed));
+    Faction* pAi = &game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
     const std::size_t aiBefore = pAi->GetResearch().GetDiscoveredTechs().size();
     pAi->GetResearch().AddDiscoveredTech("secrets_of_the_human_brain");
     CHECK(pAi->GetResearch().GetDiscoveredTechs().size() == aiBefore + 1);
@@ -606,7 +596,7 @@ TEST_CASE("Available GrantTech leaves world oncePer unspent when the pool is emp
     const std::size_t before = rResearch.GetDiscoveredTechs().size();
     rResearch.AddDiscoveredTech("secrets_of_the_human_brain");
     CHECK(rResearch.GetDiscoveredTechs().size() == before + 1);
-    CHECK(game.pState->ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 0);
+    CHECK(game.fixtures.state.ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 0);
 }
 
 TEST_CASE("on_discover_effects nest when GrantTech discovers another tech",
@@ -624,10 +614,10 @@ TEST_CASE("RecordMindControl adds to the subject faction's total and reports it"
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(RecordMindControlEffect_t{4}),
     };
-    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    const MindControlLedger& rLedger = game.fixtures.state.GetMindControlLedger();
     const FactionId_t factionId = game.pFaction->GetFactionId();
 
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(effects, context);
 
     REQUIRE(results.size() == 1);
@@ -642,18 +632,18 @@ TEST_CASE("A multi-faction context records mind control for each faction once",
           "[effects][triggered][mind-control]")
 {
     TriggerGame_ game;
-    Faction& second = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
-        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+    Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
         actest::k_TestFactionSeed));
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(RecordMindControlEffect_t{3}),
     };
 
-    TriggeredEffectContext_t context(*game.pState, {game.pFaction, &second});
+    TriggeredEffectContext_t context(game.fixtures.state, {game.pFaction, &second});
     CHECK(ApplyTriggeredEffects(effects, context).size() == 2);
 
-    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    const MindControlLedger& rLedger = game.fixtures.state.GetMindControlLedger();
     CHECK(rLedger.Total(game.pFaction->GetFactionId()) == 3);
     CHECK(rLedger.Total(second.GetFactionId()) == 3);
 }
@@ -664,28 +654,28 @@ TEST_CASE("In a probe mission context RecordMindControl credits the actor, not t
           "[effects][triggered][mind-control]")
 {
     TriggerGame_ game;
-    Faction& victim = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
-        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+    Faction& victim = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
         actest::k_TestFactionSeed));
-    Tile* pTile = game.pState->GetWorldMap().GetTile(8, 8);
+    Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
-        game.pState->AllocateBaseId(), "Target", pTile,
-        game.pState->GetTileEffects());
+        game.fixtures.state.AllocateBaseId(), "Target", pTile,
+        game.fixtures.state.GetTileEffects());
     REQUIRE(pVictimBase);
 
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(RecordMindControlEffect_t{4}),
     };
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     context.pBase = pVictimBase;
     context.pTile = pTile;
     context.pFaction = &victim;
     context.actionTarget = victim.GetFactionId();
     ApplyTriggeredEffects(effects, context);
 
-    const MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    const MindControlLedger& rLedger = game.fixtures.state.GetMindControlLedger();
     CHECK(rLedger.Total(game.pFaction->GetFactionId()) == 4);
     CHECK(rLedger.Total(victim.GetFactionId()) == 0);
 }
@@ -697,10 +687,10 @@ TEST_CASE("A oncePer RecordMindControl fires once", "[effects][triggered][mind-c
         OnceEffect_(RecordMindControlEffect_t{4}, OnceScope_t::Faction, "first_mind_control"),
     };
 
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     CHECK(ApplyTriggeredEffects(effects, context).size() == 1);
     CHECK(ApplyTriggeredEffects(effects, context).empty());
-    CHECK(game.pState->GetMindControlLedger().Total(game.pFaction->GetFactionId()) == 4);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pFaction->GetFactionId()) == 4);
 }
 
 TEST_CASE("GrantCleanMinerals gated on the first bloom credits nothing until the faction blooms",
@@ -711,10 +701,10 @@ TEST_CASE("GrantCleanMinerals gated on the first bloom credits nothing until the
         OnceEffect_(GrantCleanMineralsEffect_t{1, /*bRequiresFirstBloom=*/true},
                     OnceScope_t::Faction, "eco_grant"),
     };
-    EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    EcologyLedger& rLedger = game.fixtures.state.GetEcologyLedger();
     const FactionId_t factionId = game.pFaction->GetFactionId();
 
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     CHECK(ApplyTriggeredEffects(effects, context).empty());
     CHECK(rLedger.CleanMineralGrants(factionId) == 0);
     // A withheld grant has changed nothing, so its oncePer key is still unspent.
@@ -734,9 +724,9 @@ TEST_CASE("GrantCleanMinerals without the bloom gate credits before any bloom",
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(GrantCleanMineralsEffect_t{2, /*bRequiresFirstBloom=*/false}),
     };
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     ApplyTriggeredEffects(effects, context);
-    CHECK(game.pState->GetEcologyLedger().CleanMineralGrants(game.pFaction->GetFactionId())
+    CHECK(game.fixtures.state.GetEcologyLedger().CleanMineralGrants(game.pFaction->GetFactionId())
           == 2);
 }
 
@@ -744,19 +734,19 @@ TEST_CASE("Ecology ledger effects credit each faction in a multi-faction context
           "[effects][triggered][ecology]")
 {
     TriggerGame_ game;
-    Faction& second = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
-        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+    Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
         actest::k_TestFactionSeed));
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(AddVirtualMineralsEffect_t{5}),
         Effect_(GrantCleanMineralsEffect_t{1, /*bRequiresFirstBloom=*/false}),
     };
 
-    TriggeredEffectContext_t context(*game.pState, {game.pFaction, &second});
+    TriggeredEffectContext_t context(game.fixtures.state, {game.pFaction, &second});
     CHECK(ApplyTriggeredEffects(effects, context).size() == 4);
 
-    const EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    const EcologyLedger& rLedger = game.fixtures.state.GetEcologyLedger();
     for (const Faction* pFaction : {game.pFaction, &second})
     {
         CHECK(rLedger.VirtualMinerals(pFaction->GetFactionId()) == 5);
@@ -768,18 +758,18 @@ TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not 
           "[effects][triggered][ecology]")
 {
     TriggerGame_ game;
-    Faction& victim = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.fixtures.factionDefinition,
-        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+    Faction& victim = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
         actest::k_TestFactionSeed));
-    Tile* pTile = game.pState->GetWorldMap().GetTile(8, 8);
+    Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
-        game.pState->AllocateBaseId(), "Target", pTile,
-        game.pState->GetTileEffects());
+        game.fixtures.state.AllocateBaseId(), "Target", pTile,
+        game.fixtures.state.GetTileEffects());
     REQUIRE(pVictimBase);
 
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
     context.pBase = pVictimBase;
     context.pTile = pTile;
     context.pFaction = &victim;
@@ -789,7 +779,7 @@ TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not 
 
     REQUIRE(results.size() == 1);
     CHECK(std::get<VirtualMineralsAdded_t>(results[0]).amount == 5);
-    const EcologyLedger& rLedger = game.pState->GetEcologyLedger();
+    const EcologyLedger& rLedger = game.fixtures.state.GetEcologyLedger();
     CHECK(rLedger.VirtualMinerals(game.pFaction->GetFactionId()) == 5);
     CHECK(rLedger.VirtualMinerals(victim.GetFactionId()) == 0);
 }

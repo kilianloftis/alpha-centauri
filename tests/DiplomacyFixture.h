@@ -2,8 +2,6 @@
 
 #include "GameFixtures.h"
 
-#include "game/CurrentGameState.h"
-#include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
@@ -16,7 +14,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
@@ -24,12 +21,10 @@
 namespace actest
 {
 
-// Player A (base at 1,4), AI B (base at 7,4), AI C (no base) on an all-land 9x9 map.
+// Player A (base at 5,5), AI B (base at 11,11), AI C (no base) on an all-land map.
 struct DiplomacyFixture
 {
     FactionFixture fixtures;
-    std::unique_ptr<ac::GameState> pState;
-    std::unique_ptr<ac::GameStateScope> pScope;
     ac::Faction* pA = nullptr;
     ac::Faction* pB = nullptr;
     ac::Faction* pC = nullptr;
@@ -37,24 +32,23 @@ struct DiplomacyFixture
     ac::BaseManager* pBaseB = nullptr;
 
     DiplomacyFixture()
-        : pState(MakeLandSession(fixtures))
-        , pScope(std::make_unique<ac::GameStateScope>(*pState))
     {
-        pA = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, true);
-        pB = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, false);
-        pC = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition, false);
-        pBaseA = &MakeSessionBase(fixtures, *pState, *pA, 5, 5);
-        pBaseB = &MakeSessionBase(fixtures, *pState, *pB, 11, 11);
+        FillLand(fixtures.map);
+        pA = &AddSessionFaction(fixtures, fixtures.factionDefinition, true);
+        pB = &AddSessionFaction(fixtures, fixtures.factionDefinition, false);
+        pC = &AddSessionFaction(fixtures, fixtures.factionDefinition, false);
+        pBaseA = &MakeSessionBase(fixtures, *pA, 5, 5);
+        pBaseB = &MakeSessionBase(fixtures, *pB, 11, 11);
     }
 
-    ac::DiplomacyLedger& Ledger() { return pState->GetDiplomacyLedger(); }
-    ac::WorldMap& Map() { return pState->GetWorldMap(); }
+    ac::DiplomacyLedger& Ledger() { return fixtures.state.GetDiplomacyLedger(); }
+    ac::WorldMap& Map() { return fixtures.map; }
     ac::Tile& At(int x, int y) { return *Map().GetTile(x, y); }
     ac::FactionId_t Owner(int x, int y) { return Map().GetTerritory().GetOwner(x, y); }
 
     void Set(ac::Faction& rX, ac::Faction& rY, ac::DiplomaticStatus_t status)
     {
-        ac::ApplyStatusChange(*pState, rX.GetFactionId(), rY.GetFactionId(), status);
+        ac::ApplyStatusChange(fixtures.state, rX.GetFactionId(), rY.GetFactionId(), status);
     }
 
     ac::DiplomaticStatus_t Status(ac::Faction& rX, ac::Faction& rY)
@@ -65,7 +59,7 @@ struct DiplomacyFixture
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
                    const std::vector<std::string>& rComponentIds = {"test_chassis"})
     {
-        return MakeSessionUnit(fixtures, *pState, rFaction, x, y, rComponentIds);
+        return MakeSessionUnit(fixtures, rFaction, x, y, rComponentIds);
     }
 
     void MeetAll()
@@ -94,7 +88,7 @@ struct DiplomacyFixture
     std::vector<Interaction_t> Queued()
     {
         std::vector<Interaction_t> found;
-        pState->GetPlayerInteractions().AnyOf([&](const ac::QueuedInteraction_t& rQueued)
+        fixtures.state.GetPlayerInteractions().AnyOf([&](const ac::QueuedInteraction_t& rQueued)
         {
             if (const auto* pFound = std::get_if<Interaction_t>(&rQueued.payload))
             {

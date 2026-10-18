@@ -41,9 +41,6 @@ constexpr AtrocitySeverityId_t k_Major = AtrocitySeverityId_t::Major;
 struct AtrocityGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
     Faction* pC = nullptr;
@@ -52,14 +49,7 @@ struct AtrocityGame_
     {
         InstallCouncil(fixtures.dataContext);
 
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
         pA = &AddFaction_(fixtures.factionDefinition, true);
         pB = &AddFaction_(fixtures.factionDefinition, false);
@@ -69,31 +59,31 @@ struct AtrocityGame_
         fixtures.MakeFactionBase(*pB, 12, 8);
         fixtures.MakeFactionBase(*pC, 6, 10);
 
-        pState->CreatePlanetaryCouncil();
-        pState->SetMissionYear(k_StartYear);
+        fixtures.state.CreatePlanetaryCouncil();
+        fixtures.state.SetMissionYear(k_StartYear);
     }
 
     Faction& AddFaction_(const FactionConfig_t& rDefinition, bool bPlayer)
     {
         auto pFaction = std::make_unique<Faction>(
-            pState->AllocateFactionId(), bPlayer, rDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
-        return pState->AddFaction(std::move(pFaction));
+            fixtures.state.AllocateFactionId(), bPlayer, rDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+        return fixtures.state.AddFaction(std::move(pFaction));
     }
 
-    AtrocityLedger& Ledger() { return pState->GetAtrocityLedger(); }
+    AtrocityLedger& Ledger() { return fixtures.state.GetAtrocityLedger(); }
     bool Sanctioned(FactionId_t faction)
     {
-        return Ledger().IsSanctioned(faction, pState->GetMissionYear());
+        return Ledger().IsSanctioned(faction, fixtures.state.GetMissionYear());
     }
-    DiplomacyLedger& Diplomacy() { return pState->GetDiplomacyLedger(); }
+    DiplomacyLedger& Diplomacy() { return fixtures.state.GetDiplomacyLedger(); }
     const AtrocitiesConfig_t& Config() const { return *fixtures.dataContext.atrocitiesConfig; }
 
     // Every member votes Yea on rProposalId, which is how the Charter gets repealed here.
     void PassStandard(Faction& rProposer, const std::string& rProposalId)
     {
-        PlanetaryCouncil& rCouncil = *pState->GetPlanetaryCouncil();
-        CouncilVoteExecutor& rVotes = *pState->GetCouncilVotes();
+        PlanetaryCouncil& rCouncil = *fixtures.state.GetPlanetaryCouncil();
+        CouncilVoteExecutor& rVotes = *fixtures.state.GetCouncilVotes();
         for (Faction* pOther : rCouncil.Members())
         {
             if (pOther->GetFactionId() != rProposer.GetFactionId())
@@ -104,14 +94,14 @@ struct AtrocityGame_
         const int wait = YearsUntilCanPropose(rCouncil, rProposer);
         if (wait > 0)
         {
-            pState->SetMissionYear(pState->GetMissionYear() + wait);
+            fixtures.state.SetMissionYear(fixtures.state.GetMissionYear() + wait);
         }
-        rVotes.Propose(*pState, rProposer, rProposalId);
+        rVotes.Propose(fixtures.state, rProposer, rProposalId);
         for (Faction* pMember : rCouncil.Members())
         {
             rVotes.CastVote(*pMember, CouncilBallot_t::Yea);
         }
-        const ResolveProposalResult_t result = rVotes.Resolve(*pState);
+        const ResolveProposalResult_t result = rVotes.Resolve(fixtures.state);
         REQUIRE((result == ResolveProposalResult_t::Passed
                  || result == ResolveProposalResult_t::VetoOverruled));
     }
@@ -125,7 +115,7 @@ struct AtrocityGame_
             rProposer.GetResearch().AddDiscoveredTech("advanced_military_algorithms");
         }
         PassStandard(rProposer, "repeal_un_charter");
-        REQUIRE_FALSE(pState->GetPlanetaryCouncil()->HasActiveRuleFlag(
+        REQUIRE_FALSE(fixtures.state.GetPlanetaryCouncil()->HasActiveRuleFlag(
             RuleFlagId_t::AtrocitiesForbidden));
     }
 };
@@ -138,7 +128,7 @@ TEST_CASE("A Simple atrocity under the Charter sanctions and the victim remember
     AtrocityGame_ game;
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
 
     CHECK(committed.severity == k_Simple);
     CHECK(committed.PenaltiesApplied());
@@ -155,21 +145,21 @@ TEST_CASE("A Simple atrocity under the Charter sanctions and the victim remember
     // vendetta from bystanders, and the seat is kept.
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
     CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("A sanction lapses on its expiry year, not the turn before", "[atrocity]")
 {
     AtrocityGame_ game;
     const std::optional<int> until =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple).sanctionUntilYear;
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple).sanctionUntilYear;
     REQUIRE(until.has_value());
     const FactionId_t id = game.pA->GetFactionId();
 
-    game.pState->SetMissionYear(*until - 1);
+    game.fixtures.state.SetMissionYear(*until - 1);
     CHECK(game.Sanctioned(id));
 
-    game.pState->SetMissionYear(*until);
+    game.fixtures.state.SetMissionYear(*until);
     CHECK_FALSE(game.Sanctioned(id));
 
     // The sweep only drops the entry the query already reports as lifted.
@@ -189,7 +179,7 @@ TEST_CASE("Simple sanctions stack as the coefficient times the simple count", "[
     {
         expected += per * count;
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         CHECK(committed.sanctionUntilYear == expected);
     }
     CHECK(game.Ledger().SanctionUntilYear(game.pA->GetFactionId()) == k_StartYear + 15 * per);
@@ -201,11 +191,11 @@ TEST_CASE("A Major atrocity carries no commerce sanction", "[atrocity]")
     const FactionId_t id = game.pA->GetFactionId();
 
     const std::optional<int> untilSimple =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple).sanctionUntilYear;
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple).sanctionUntilYear;
     REQUIRE(untilSimple == k_StartYear + game.Config().sanctionYearsPerAtrocity);
 
     const AtrocityCommitted_t major =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     CHECK(major.PenaltiesApplied());
     CHECK(major.sanctionUntilYear.has_value() == false);
     CHECK(game.Ledger().SanctionUntilYear(id) == untilSimple);
@@ -217,7 +207,7 @@ TEST_CASE("Lesser atrocities escalate to Major once their count reaches the thre
 {
     AtrocityGame_ game;
     const DifficultyLevel_t& rLevel = game.fixtures.dataContext.difficultyConfig->RequireForSession(
-        game.settings.GetGameRules().difficultyId);
+        game.fixtures.settings.GetGameRules().difficultyId);
     const int threshold = rLevel.rules.playerAtrocityThreshold;
     // The act that lands exactly on the threshold is still Simple; the next one is Major.
     REQUIRE(threshold == 6);
@@ -225,26 +215,26 @@ TEST_CASE("Lesser atrocities escalate to Major once their count reaches the thre
     for (int i = 0; i < threshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         REQUIRE(committed.severity == k_Simple);
     }
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t escalated =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(escalated.severity == k_Major);
     // Universal Vendetta covers living AI bystanders; the victim is at Vendetta from the act.
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), game.pA->GetFactionId())
           == DiplomaticStatus_t::Vendetta);
-    CHECK_FALSE(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("Transcend escalates lesser atrocities at its stated threshold", "[atrocity]")
 {
     AtrocityGame_ game;
-    GameRulesConfig_t rules = game.settings.GetGameRules();
+    GameRulesConfig_t rules = game.fixtures.settings.GetGameRules();
     rules.difficultyId = "transcend";
-    game.settings.SetGameRules(rules);
+    game.fixtures.settings.SetGameRules(rules);
 
     const int threshold = game.fixtures.dataContext.difficultyConfig
                               ->RequireForSession("transcend")
@@ -254,18 +244,18 @@ TEST_CASE("Transcend escalates lesser atrocities at its stated threshold", "[atr
     for (int i = 0; i < threshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         REQUIRE(committed.severity == k_Simple);
     }
-    CHECK(CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple).severity == k_Major);
+    CHECK(CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple).severity == k_Major);
 }
 
 TEST_CASE("An AI faction escalates at the configured AI level, not the session one", "[atrocity]")
 {
     AtrocityGame_ game;
-    GameRulesConfig_t rules = game.settings.GetGameRules();
+    GameRulesConfig_t rules = game.fixtures.settings.GetGameRules();
     rules.difficultyId = "transcend";
-    game.settings.SetGameRules(rules);
+    game.fixtures.settings.SetGameRules(rules);
 
     const DifficultyRules_t& rRules =
         game.fixtures.dataContext.difficultyConfig->RequireForSession("transcend").rules;
@@ -278,10 +268,10 @@ TEST_CASE("An AI faction escalates at the configured AI level, not the session o
     for (int i = 0; i < aiThreshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pB, game.pC, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pB, game.pC, k_Simple);
         REQUIRE(committed.severity == k_Simple);
     }
-    CHECK(CommitAtrocity(*game.pState, *game.pB, game.pC, k_Simple).severity == k_Major);
+    CHECK(CommitAtrocity(game.fixtures.state, *game.pB, game.pC, k_Simple).severity == k_Major);
 }
 
 TEST_CASE("An excused Simple act is recorded and does not escalate", "[atrocity]")
@@ -290,21 +280,21 @@ TEST_CASE("An excused Simple act is recorded and does not escalate", "[atrocity]
     game.RepealCharter(*game.pA);
 
     const int threshold = game.fixtures.dataContext.difficultyConfig
-                              ->RequireForSession(game.settings.GetGameRules().difficultyId)
+                              ->RequireForSession(game.fixtures.settings.GetGameRules().difficultyId)
                               .rules.playerAtrocityThreshold;
     REQUIRE(threshold > 0);
 
     for (int i = 0; i < threshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         CHECK(committed.severity == k_Simple);
         CHECK_FALSE(committed.PenaltiesApplied());
         CHECK_FALSE(game.Ledger().Records().back().bCounted);
     }
 
     CHECK(game.Ledger().SimpleCount(game.pA->GetFactionId()) == 0);
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
     // Excused from penalties, but still an attack on the victim.
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
     CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
@@ -319,14 +309,14 @@ TEST_CASE("A Simple act against another species does not move the simple counter
     Faction& rAlien = game.AddFaction_(alien, false);
 
     const int threshold = game.fixtures.dataContext.difficultyConfig
-                              ->RequireForSession(game.settings.GetGameRules().difficultyId)
+                              ->RequireForSession(game.fixtures.settings.GetGameRules().difficultyId)
                               .rules.playerAtrocityThreshold;
     REQUIRE(threshold > 0);
 
     for (int i = 0; i < threshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, &rAlien, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Simple);
         CHECK(committed.severity == k_Simple);
         CHECK_FALSE(committed.PenaltiesApplied());
     }
@@ -334,10 +324,10 @@ TEST_CASE("A Simple act against another species does not move the simple counter
 
     // The same-species act is the first one that counts, so it is still Simple.
     const AtrocityCommitted_t counted =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(counted.severity == k_Simple);
     CHECK(counted.PenaltiesApplied());
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("A Major atrocity does not fill the Simple counter", "[atrocity]")
@@ -345,12 +335,12 @@ TEST_CASE("A Major atrocity does not fill the Simple counter", "[atrocity]")
     AtrocityGame_ game;
     const FactionId_t id = game.pA->GetFactionId();
     const int threshold = game.fixtures.dataContext.difficultyConfig
-                              ->RequireForSession(game.settings.GetGameRules().difficultyId)
+                              ->RequireForSession(game.fixtures.settings.GetGameRules().difficultyId)
                               .rules.playerAtrocityThreshold;
     REQUIRE(threshold == 6);
 
     const AtrocityCommitted_t major =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     CHECK(major.severity == k_Major);
     CHECK(major.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Sanctioned(id));
@@ -362,11 +352,11 @@ TEST_CASE("A Major atrocity does not fill the Simple counter", "[atrocity]")
     for (int i = 0; i < threshold; ++i)
     {
         const AtrocityCommitted_t committed =
-            CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+            CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         REQUIRE(committed.severity == k_Simple);
     }
     CHECK(game.Ledger().SimpleCount(id) == threshold);
-    CHECK(CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple).severity == k_Major);
+    CHECK(CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple).severity == k_Major);
 }
 
 TEST_CASE("An uncounted atrocity does not lengthen the next sanction", "[atrocity]")
@@ -381,18 +371,18 @@ TEST_CASE("An uncounted atrocity does not lengthen the next sanction", "[atrocit
     REQUIRE(per == 7);
 
     const AtrocityCommitted_t first =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(first.sanctionUntilYear == k_StartYear + per);
 
     const AtrocityCommitted_t excused =
-        CommitAtrocity(*game.pState, *game.pA, &rAlien, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Simple);
     CHECK_FALSE(excused.PenaltiesApplied());
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
     CHECK(game.Ledger().SanctionUntilYear(game.pA->GetFactionId()) == first.sanctionUntilYear);
 
     // The excused act is not in the simple count, so this one adds per × 2 onto the per left.
     const AtrocityCommitted_t third =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(third.sanctionUntilYear == k_StartYear + per + per * 2);
 }
 
@@ -402,7 +392,7 @@ TEST_CASE("A repealed Charter records a Simple atrocity but charges nothing for 
     game.RepealCharter(*game.pA);
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
 
     CHECK_FALSE(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
@@ -418,12 +408,12 @@ TEST_CASE("A repealed Charter lifts Major penalties and the victim still remembe
     const FactionId_t id = game.pA->GetFactionId();
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
 
     CHECK_FALSE(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), id));
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
@@ -453,36 +443,36 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
     const FactionId_t humanId = game.pA->GetFactionId();
 
     const AtrocityCommitted_t simple =
-        CommitAtrocity(*game.pState, *game.pA, &rAlien, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Simple);
     CHECK_FALSE(simple.PenaltiesApplied());
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
     CHECK_FALSE(game.Sanctioned(humanId));
     CHECK(game.Ledger().HasVictimized(humanId, rAlien.GetFactionId()));
     CHECK(game.Diplomacy().HasVendetta(rAlien.GetFactionId(), humanId));
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t major =
-        CommitAtrocity(*game.pState, *game.pA, &rAlien, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Major);
     CHECK_FALSE(major.PenaltiesApplied());
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
     CHECK(game.Ledger().HasCommittedMajorAgainst(humanId, rAlien.GetFactionId()));
     CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), humanId)
           != DiplomaticStatus_t::Vendetta);
-    CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t progenitorPerp =
-        CommitAtrocity(*game.pState, rAlien, game.pA, k_Major);
+        CommitAtrocity(game.fixtures.state, rAlien, game.pA, k_Major);
     CHECK_FALSE(progenitorPerp.PenaltiesApplied());
     CHECK(game.Ledger().HasCommittedMajorAgainst(rAlien.GetFactionId(), humanId));
     CHECK(game.Diplomacy().HasVendetta(humanId, rAlien.GetFactionId()));
 
     const AtrocityCommitted_t bothProgenitors =
-        CommitAtrocity(*game.pState, rUsurper, &rAlien, k_Major);
+        CommitAtrocity(game.fixtures.state, rUsurper, &rAlien, k_Major);
     CHECK_FALSE(bothProgenitors.PenaltiesApplied());
     CHECK(game.Ledger().HasCommittedMajorAgainst(rUsurper.GetFactionId(), rAlien.GetFactionId()));
 
     const AtrocityCommitted_t againstLife =
-        CommitAtrocity(*game.pState, *game.pA, &rWorms, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, &rWorms, k_Simple);
     CHECK(againstLife.PenaltiesApplied());
     CHECK(game.Sanctioned(humanId));
 }
@@ -492,12 +482,12 @@ TEST_CASE("A victimless Major atrocity is still answered for", "[atrocity]")
     AtrocityGame_ game;
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, nullptr, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, nullptr, k_Major);
 
     CHECK(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Sanctioned(game.pA->GetFactionId()));
-    CHECK_FALSE(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
     CHECK(game.Ledger().Records().back().victim.has_value() == false);
     // No victim to exclude: every living AI declares Vendetta. The human player is not forced.
     CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), game.pA->GetFactionId())
@@ -517,7 +507,7 @@ TEST_CASE("Universal Vendetta skips humans and existing Vendettas", "[atrocity]"
     game.Diplomacy().SetStatus(rAlready.GetFactionId(), rHuman.GetFactionId(),
                                DiplomaticStatus_t::Vendetta);
 
-    CommitAtrocity(*game.pState, rHuman, &rVictim, k_Major);
+    CommitAtrocity(game.fixtures.state, rHuman, &rVictim, k_Major);
 
     CHECK(game.Diplomacy().GetStatus(rBystander.GetFactionId(), rHuman.GetFactionId())
           == DiplomaticStatus_t::Vendetta);
@@ -528,7 +518,7 @@ TEST_CASE("Universal Vendetta skips humans and existing Vendettas", "[atrocity]"
     // An AI Major does not force the human player into Vendetta.
     Faction& rAiPerp =
         game.AddFaction_(game.fixtures.factionDefinition, /*bPlayer=*/false);
-    CommitAtrocity(*game.pState, rAiPerp, &rVictim, k_Major);
+    CommitAtrocity(game.fixtures.state, rAiPerp, &rVictim, k_Major);
     CHECK(game.Diplomacy().GetStatus(rHuman.GetFactionId(), rAiPerp.GetFactionId())
           != DiplomaticStatus_t::Vendetta);
 }
@@ -536,9 +526,9 @@ TEST_CASE("Universal Vendetta skips humans and existing Vendettas", "[atrocity]"
 TEST_CASE("Native life does not join a universal Vendetta", "[atrocity]")
 {
     AtrocityGame_ game;
-    Faction& rPlanet = AddNativeLifeFaction(game.fixtures, *game.pState);
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures);
 
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
 
     REQUIRE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
     CHECK(game.Diplomacy().GetStatus(rPlanet.GetFactionId(), game.pA->GetFactionId())
@@ -560,14 +550,14 @@ TEST_CASE("A Major atrocity's universal Vendetta obliges nobody to defend the pe
     game.Diplomacy().SetStatus(rPartner.GetFactionId(), rPerpetrator.GetFactionId(),
                                DiplomaticStatus_t::Pact);
 
-    CommitAtrocity(*game.pState, rPerpetrator, &rVictim, k_Major);
+    CommitAtrocity(game.fixtures.state, rPerpetrator, &rVictim, k_Major);
 
     // The AI partner joins the world against the perpetrator, ending its Pact; the human
     // partner is never forced and is not asked to defend the perpetrator either.
     CHECK(game.Diplomacy().HasVendetta(rPartner.GetFactionId(), rPerpetrator.GetFactionId()));
     CHECK(game.Diplomacy().GetStatus(rHuman.GetFactionId(), rPerpetrator.GetFactionId())
           == DiplomaticStatus_t::Pact);
-    CHECK_FALSE(game.pState->GetPlayerInteractions().AnyOf(
+    CHECK_FALSE(game.fixtures.state.GetPlayerInteractions().AnyOf(
         [](const QueuedInteraction_t& rQueued)
         { return std::holds_alternative<PactObligationInteraction_t>(rQueued.payload); }));
 }
@@ -583,24 +573,24 @@ TEST_CASE("An atrocity sneak-attacks its victim while the world declares on the 
         game.AddFaction_(game.fixtures.factionDefinition, /*bPlayer=*/false);
     game.Diplomacy().SetStatus(rVictim.GetFactionId(), rVictimPartner.GetFactionId(),
                                DiplomaticStatus_t::Pact);
-    MakeSessionBase(game.fixtures, *game.pState, rPerpetrator, 8, 2);
-    MakeSessionBase(game.fixtures, *game.pState, rVictim, 14, 8);
-    MakeSessionBase(game.fixtures, *game.pState, rBystander, 2, 8);
-    MakeSessionBase(game.fixtures, *game.pState, rVictimPartner, 8, 14);
+    MakeSessionBase(game.fixtures, rPerpetrator, 8, 2);
+    MakeSessionBase(game.fixtures, rVictim, 14, 8);
+    MakeSessionBase(game.fixtures, rBystander, 2, 8);
+    MakeSessionBase(game.fixtures, rVictimPartner, 8, 14);
 
-    const TerritoryMap& rTerritory = game.pState->GetWorldMap().GetTerritory();
+    const TerritoryMap& rTerritory = game.fixtures.state.GetWorldMap().GetTerritory();
     REQUIRE(rTerritory.GetOwner(13, 7) == rVictim.GetFactionId());
     REQUIRE(rTerritory.GetOwner(3, 7) == rBystander.GetFactionId());
     REQUIRE(rTerritory.GetOwner(9, 3) == rPerpetrator.GetFactionId());
     REQUIRE(rTerritory.GetOwner(7, 3) == rPerpetrator.GetFactionId());
     REQUIRE(rTerritory.GetOwner(8, 4) == rPerpetrator.GetFactionId());
-    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 13, 7);
-    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictim, 9, 3);
-    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, *game.pState, rPerpetrator, 3, 7);
-    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, *game.pState, rBystander, 7, 3);
-    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, *game.pState, rVictimPartner, 8, 4);
+    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, rPerpetrator, 13, 7);
+    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, rVictim, 9, 3);
+    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, rPerpetrator, 3, 7);
+    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, rBystander, 7, 3);
+    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, rVictimPartner, 8, 4);
 
-    CommitAtrocity(*game.pState, rPerpetrator, &rVictim, k_Major);
+    CommitAtrocity(game.fixtures.state, rPerpetrator, &rVictim, k_Major);
 
     REQUIRE(game.Diplomacy().HasVendetta(rPerpetrator.GetFactionId(), rVictim.GetFactionId()));
     REQUIRE(game.Diplomacy().HasVendetta(rBystander.GetFactionId(), rPerpetrator.GetFactionId()));
@@ -620,7 +610,7 @@ TEST_CASE("Nuking your own ground is an atrocity with nobody to resent you for i
     AtrocityGame_ game;
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pA, k_Major);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pA, k_Major);
 
     CHECK(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
@@ -637,24 +627,24 @@ TEST_CASE("The eco term counts Major atrocities committed under the Charter only
     const int majorWeight = game.Config().For(k_Major).ecoVirtualMinerals;
     REQUIRE(majorWeight > 0);
 
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
 
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == majorWeight);
 
     // Two warheads under the Charter, two contributions.
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 
     // "Any atrocities after lifting the UN-charter do not count." pA is off the council by now,
     // so a faction that still holds a seat has to move the repeal.
     game.RepealCharter(*game.pC);
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 
     // Another faction's record is not ours.
-    CommitAtrocity(*game.pState, *game.pB, game.pC, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pB, game.pC, k_Major);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 }
 
@@ -846,11 +836,11 @@ TEST_CASE("The atrocities parser rejects a severity outside the closed set", "[a
 TEST_CASE("Committing an atrocity tells the player what it cost", "[atrocity][notice]")
 {
     AtrocityGame_ game;
-    PlayerInteractionQueue& rQueue = game.pState->GetPlayerInteractions();
+    PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
     REQUIRE(rQueue.Empty());
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     REQUIRE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());
@@ -864,9 +854,9 @@ TEST_CASE("Committing an atrocity tells the player what it cost", "[atrocity][no
 TEST_CASE("The notice names the tier in prose, not as the enumerator", "[atrocity][notice]")
 {
     AtrocityGame_ game;
-    PlayerInteractionQueue& rQueue = game.pState->GetPlayerInteractions();
+    PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
 
-    CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
     const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
     CHECK(pNotice->body.find("major atrocity") != std::string::npos);
@@ -879,14 +869,14 @@ TEST_CASE("An unpunished atrocity says so rather than naming a sanction", "[atro
     AtrocityGame_ game;
     game.RepealCharter(*game.pA);
 
-    PlayerInteractionQueue& rQueue = game.pState->GetPlayerInteractions();
+    PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
     while (!rQueue.Empty())
     {
         rQueue.CompleteFront();
     }
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     REQUIRE_FALSE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());
@@ -904,11 +894,11 @@ TEST_CASE("An atrocity with a Progenitor party names that exemption", "[atrocity
     alien.identity.species = FactionSpecies_t::Progenitor;
     Faction& rAlien = game.AddFaction_(alien, false);
 
-    PlayerInteractionQueue& rQueue = game.pState->GetPlayerInteractions();
+    PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
     REQUIRE(rQueue.Empty());
 
     const AtrocityCommitted_t committed =
-        CommitAtrocity(*game.pState, *game.pA, &rAlien, k_Simple);
+        CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Simple);
     REQUIRE_FALSE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());

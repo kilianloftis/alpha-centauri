@@ -29,9 +29,6 @@ namespace
 struct CommerceGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
@@ -41,37 +38,30 @@ struct CommerceGame_
         // here rather than added to the shared fixture, which several tests count.
         fixtures.dataContext.techRegistry->Load(FixturePath("techs_commerce.json"));
 
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed);
 
-        pA = &pState->AddFaction(std::move(pFactionA));
-        pB = &pState->AddFaction(std::move(pFactionB));
+        pA = &fixtures.state.AddFaction(std::move(pFactionA));
+        pB = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
     Faction& AddFaction()
     {
         auto pFaction = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed);
-        return pState->AddFaction(std::move(pFaction));
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed);
+        return fixtures.state.AddFaction(std::move(pFaction));
     }
 
     void SetStatus(const Faction& rOther, DiplomaticStatus_t status)
     {
-        pState->GetDiplomacyLedger().SetStatus(pA->GetFactionId(), rOther.GetFactionId(), status);
+        fixtures.state.GetDiplomacyLedger().SetStatus(pA->GetFactionId(), rOther.GetFactionId(), status);
     }
 
     BaseManager& MakeHqBase(Faction& rFaction, int x, int y)
@@ -96,7 +86,7 @@ TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[
     BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
     BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const auto lines = ComputeCommerceForBase(a1);
@@ -132,7 +122,7 @@ TEST_CASE("Faction GetCommerce matches CommerceRules for the same pair", "[comme
     BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
     game.MakeHqBase(*game.pB, 12, 8);
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const auto viaManager = game.pA->GetCommerce().ComputeForBase(a1);
@@ -152,7 +142,7 @@ TEST_CASE("ComputeForBase is empty for surplus bases and non-commerce treaties",
     a1.GetBuildingManager().AddBuilding("energy_tap");
     REQUIRE(a1.GetEnergyProduction() > a2.GetEnergyProduction());
 
-    DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
+    DiplomacyLedger& rDiplomacy = game.fixtures.state.GetDiplomacyLedger();
     rDiplomacy.SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
     CHECK(ComputeCommerceForBase(a2).empty());
@@ -172,7 +162,7 @@ TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[comm
     a1.GetBuildingManager().AddBuilding("energy_tap");
     REQUIRE(a1.GetEnergyProduction() > a2.GetEnergyProduction());
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const auto commerce = ComputeCommerceForFaction(*game.pA);
@@ -192,7 +182,7 @@ TEST_CASE("A Treaty's commerce effects halve the pair; a Pact trades at full rat
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
     REQUIRE(pairRaw >= 2);
 
-    DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
+    DiplomacyLedger& rDiplomacy = game.fixtures.state.GetDiplomacyLedger();
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                          DiplomaticStatus_t::Treaty);
     CHECK(ComputeCommerceForFaction(*game.pA).at(a1.GetBaseId())
@@ -209,7 +199,7 @@ TEST_CASE("No commerce for Truce, Neutral, or Vendetta", "[commerce]")
     game.MakeHqBase(*game.pA, 8, 4);
     game.MakeHqBase(*game.pB, 12, 8);
 
-    DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
+    DiplomacyLedger& rDiplomacy = game.fixtures.state.GetDiplomacyLedger();
 
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Truce);
     CHECK(ComputeCommerceForFaction(*game.pA).empty());
@@ -229,7 +219,7 @@ TEST_CASE("CommerceRate doubles pair value when present", "[commerce]")
     BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_rate_doubler");
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
@@ -245,7 +235,7 @@ TEST_CASE("A Treaty's halving stacks multiplicatively with a faction CommerceRat
     BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_rate_doubler");
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Treaty);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
@@ -264,7 +254,7 @@ TEST_CASE("commerce_rating and economic techs feed the tech ratio; total ignores
     game.pA->GetResearch().AddDiscoveredTech("industrial_automation"); // +1 economic tech
     game.pB->GetResearch().AddDiscoveredTech("planetary_economics");   // +1 economic tech (total)
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     // commerceTech = Resolve(CommerceRating) = shrine +2 + tech +1 = 3
@@ -282,7 +272,7 @@ TEST_CASE("CommerceEnergyBonus adds at the end of each pair", "[commerce]")
     BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
     a1.GetBuildingManager().AddBuilding("commerce_energy_bonus_shrine");
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
@@ -296,7 +286,7 @@ TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[c
     BaseManager& a1 = game.MakeHqBase(*game.pA, 8, 4);
     BaseManager& b1 = game.MakeHqBase(*game.pB, 12, 8);
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int commerce =
@@ -304,12 +294,12 @@ TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[c
     REQUIRE(commerce > 0);
 
     const int econWithCommerce = a1.GetEconProduction();
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Neutral);
     const int econWithout = a1.GetEconProduction();
     CHECK(econWithCommerce > econWithout);
 
-    game.pState->GetDiplomacyLedger().SetStatus(
+    game.fixtures.state.GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
     const int treasuryBefore = game.pA->GetEconomy().GetEnergy();
     game.pA->ProduceBaseResources();
@@ -497,16 +487,16 @@ TEST_CASE("Atrocity sanctions zero commerce for both sides of the pair", "[comme
 
     // Sanctioning the owner strips the line entirely rather than pricing it at zero, so the
     // base screen shows the partner gone.
-    const int start = game.pState->GetMissionYear();
+    const int start = game.fixtures.state.GetMissionYear();
     const int until =
-        game.pState->GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
+        game.fixtures.state.GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
     CHECK(ComputeCommerceForBase(a1).empty());
     // And it costs the innocent partner the pair too: "sanctions in effect against either
     // faction".
     CHECK(ComputeCommerceForBase(b1).empty());
 
     // Time passing is what lifts it, whether or not the expiry sweep has run.
-    game.pState->SetMissionYear(until);
+    game.fixtures.state.SetMissionYear(until);
     CHECK(ComputeCommerceForBase(a1).size() == 1);
     CHECK(ComputeCommerceForBase(b1).size() == 1);
 }
@@ -524,10 +514,10 @@ TEST_CASE("CommerceCache recomputes when a sanction lands", "[commerce][atrocity
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     REQUIRE(rCommerce.GetCommerceEnergy(a1) > 0);
 
-    const int start = game.pState->GetMissionYear();
-    game.pState->GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
+    const int start = game.fixtures.state.GetMissionYear();
+    game.fixtures.state.GetAtrocityLedger().ExtendSanction(game.pA->GetFactionId(), start, 10);
     CHECK(rCommerce.GetCommerceEnergy(a1) == 0);
 
-    game.pState->GetAtrocityLedger().ExpireSanctions(start + 10);
+    game.fixtures.state.GetAtrocityLedger().ExpireSanctions(start + 10);
     CHECK(rCommerce.GetCommerceEnergy(a1) > 0);
 }

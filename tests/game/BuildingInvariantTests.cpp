@@ -49,36 +49,26 @@ std::string WriteTempBuildings_(const std::string& rContents)
 struct BuildingGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     BuildingGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
-        pPlayer = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
-        pAi = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed + 1));
+        pPlayer = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+        pAi = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed + 1));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", fixtures.state.GetWorldMap().GetTile(x, y),
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

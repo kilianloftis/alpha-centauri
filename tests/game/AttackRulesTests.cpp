@@ -45,21 +45,14 @@ void FillWater_(WorldMap& rMap)
 struct AttackGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
     FactionConfig_t playerDefinition;
     FactionConfig_t aiDefinition;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     AttackGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        FillWater_(*pMap);
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillWater_(fixtures.map);
 
         playerDefinition = fixtures.factionDefinition;
         playerDefinition.id = "player";
@@ -67,22 +60,22 @@ struct AttackGame_
         aiDefinition.id = "ai";
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
-        pPlayer = &pState->AddFaction(std::move(pFactionA));
-        pAi = &pState->AddFaction(std::move(pFactionB));
+            fixtures.state.AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+        pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
+        pAi = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y, int pop = 1)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", pTile,
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         while (pBase->GetPopulation().GetSize() < pop)
         {
@@ -111,11 +104,11 @@ struct AttackGame_
         }
         fixtures.designs.emplace_back(slots, assigned);
 
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), fixtures.designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile, pHomeBase);
+            fixtures.state.AllocateUnitId(), fixtures.designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, pHomeBase);
     }
 };
 
@@ -160,7 +153,7 @@ const AttackCase_t k_AttackMatrix[] = {
 
 const Tile& PlaceTarget_(AttackGame_& game, TargetKind_t target, int tx, int ty)
 {
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
     switch (target)
     {
         case TargetKind_t::EnemySeaBase:
@@ -189,7 +182,7 @@ Unit& PlaceAttacker_(AttackGame_& game, AttackerStance_t stance, bool bPods, int
     {
         components.push_back("test_amphibious");
     }
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
 
     switch (stance)
     {
@@ -226,8 +219,8 @@ void CheckMatrixCase_(const AttackCase_t& rCase, bool bPods)
     Unit& rAttacker = PlaceAttacker_(game, rCase.from, bPods, 8, 8);
     const bool bExpected = bPods ? rCase.bAllowedWithPods : rCase.bAllowedWithoutPods;
     const InteractionGridsConfig_t& rGrids =
-        game.pState->GetTileEffects().GetInteractionGrids();
-    CHECK(CanAttackTile(rAttacker, rTarget, game.pState->GetWorldMap(), rGrids) == bExpected);
+        game.fixtures.state.GetTileEffects().GetInteractionGrids();
+    CHECK(CanAttackTile(rAttacker, rTarget, game.fixtures.state.GetWorldMap(), rGrids) == bExpected);
 }
 
 } // namespace
@@ -252,9 +245,9 @@ TEST_CASE("CanAttackTile implies CanEnterTile; amphibious assault still needs po
           "[unit][attack][coherence]")
 {
     AttackGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
     const InteractionGridsConfig_t& rGrids =
-        game.pState->GetTileEffects().GetInteractionGrids();
+        game.fixtures.state.GetTileEffects().GetInteractionGrids();
     rMap.GetTile(8, 8)->SetElevation(100);
     Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& pods = game.MakeUnit(*game.pPlayer, 7, 7,
@@ -274,9 +267,9 @@ TEST_CASE("CanAttackTile implies CanEnterTile; amphibious assault still needs po
 TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
 {
     AttackGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
     const InteractionGridsConfig_t& rGrids =
-        game.pState->GetTileEffects().GetInteractionGrids();
+        game.fixtures.state.GetTileEffects().GetInteractionGrids();
     rMap.GetTile(8, 8)->SetElevation(100);
     rMap.GetTile(8, 10)->SetElevation(-100);
     Unit& sea = game.MakeUnit(*game.pPlayer, 8, 10, {"test_sea_chassis", "test_weapon"});
@@ -294,8 +287,8 @@ TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
 TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit][attack]")
 {
     AttackGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
-    auto& rEffects = game.pState->GetTileEffects();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+    auto& rEffects = game.fixtures.state.GetTileEffects();
     rMap.GetTile(8, 8)->SetElevation(100);
     rMap.GetTile(9, 9)->SetElevation(100);
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
@@ -314,7 +307,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
           "[unit][attack][defense][transport]")
 {
     AttackGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
 
     SECTION("open-sea transport: cargo not selectable")
     {
@@ -326,7 +319,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         Unit& attacker = game.MakeUnit(*game.pPlayer, 7, 9,
                                        {"test_chassis", "test_weapon", "test_amphibious"});
 
-        auto& rEffects = game.pState->GetTileEffects();
+        auto& rEffects = game.fixtures.state.GetTileEffects();
         Unit* pTarget =
             FindVisibleHostileOnTile(attacker, *rMap.GetTile(8, 10), rMap, rEffects);
         REQUIRE(pTarget == &transport);
@@ -345,7 +338,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         rMap.GetTile(8, 8)->SetElevation(100);
         Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8,
                                        {"test_chassis", "test_weapon", "test_amphibious"});
-        auto& rEffects = game.pState->GetTileEffects();
+        auto& rEffects = game.fixtures.state.GetTileEffects();
 
         Unit* pTarget = FindVisibleHostileOnTile(attacker, rBase.GetTile(), rMap, rEffects);
         REQUIRE(pTarget == &transport);
@@ -361,8 +354,8 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
           "[unit][attack][air-superiority]")
 {
     AttackGame_ game;
-    WorldMap& rMap = game.pState->GetWorldMap();
-    auto& rEffects = game.pState->GetTileEffects();
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+    auto& rEffects = game.fixtures.state.GetTileEffects();
     rMap.GetTile(8, 8)->SetElevation(100);
     rMap.GetTile(9, 9)->SetElevation(100);
     rMap.GetTile(10, 10)->SetElevation(100);

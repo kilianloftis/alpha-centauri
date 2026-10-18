@@ -412,24 +412,14 @@ struct DetonateGame_
     EffectPool pool;
     UnitComponentConfig_t warhead;
     std::deque<UnitDesign> designs;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
 
     DetonateGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-        pFaction = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed));
+        FillLand(fixtures.map);
+        pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     }
 
     // A missile-shaped design: the warhead detonates for levelsStat and spends the carrier.
@@ -461,11 +451,11 @@ struct DetonateGame_
         };
         designs.emplace_back(slots, assigned);
 
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return pFaction->GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile, /*pHome=*/nullptr,
+            fixtures.state.AllocateUnitId(), designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, /*pHome=*/nullptr,
             /*pProducedAt=*/nullptr);
     }
 };
@@ -481,14 +471,14 @@ TEST_CASE("Detonating a warhead raises its own tile and spends the carrier",
     REQUIRE(UnitCanDetonate(warhead));
     REQUIRE(warhead.GetStat(StatId_t::EarthquakeLevels) == 2);
 
-    const int before = At_(game.pState->GetWorldMap(), 8, 8).GetElevation();
-    REQUIRE(ApplyDetonation(*game.pState, warhead));
+    const int before = At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation();
+    REQUIRE(ApplyDetonation(game.fixtures.state, warhead));
 
     // Two levels of [500, 1500] each, so the origin rises by at least 1000m.
-    CHECK(At_(game.pState->GetWorldMap(), 8, 8).GetElevation() >= before + 1000);
+    CHECK(At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation() >= before + 1000);
     // The neighbor relaxation kept the slope inside the configured limit.
-    const int origin = At_(game.pState->GetWorldMap(), 8, 8).GetElevation();
-    CHECK(origin - At_(game.pState->GetWorldMap(), 7, 9).GetElevation()
+    const int origin = At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation();
+    CHECK(origin - At_(game.fixtures.state.GetWorldMap(), 7, 9).GetElevation()
           <= actest::TestMapRules().maxAdjacentDifferenceMeters);
     // The DestroyUnit entry spent the missile.
     CHECK(UnitCount_(*game.pFaction) == 0);
@@ -498,14 +488,14 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
           "[unit][elevation][surface]")
 {
     DetonateGame_ game;
-    Tile& tile = At_(game.pState->GetWorldMap(), 8, 8);
+    Tile& tile = At_(game.fixtures.state.GetWorldMap(), 8, 8);
     tile.SetElevation(-100);
     REQUIRE(tile.IsWater());
-    game.pState->GetTileEffects().AddOccupantWithEffects(tile, "KelpFarm");
-    game.pState->GetTileEffects().AddOccupantWithEffects(tile, "Road");
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "KelpFarm");
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "Road");
 
     Unit& warhead = game.MakeWarhead(8, 8, /*reactorLevels=*/1);
-    REQUIRE(ApplyDetonation(*game.pState, warhead));
+    REQUIRE(ApplyDetonation(game.fixtures.state, warhead));
 
     CHECK(tile.IsLand());
     CHECK_FALSE(tile.HasImprovement("KelpFarm"));
@@ -515,7 +505,7 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
 TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation][detonate]")
 {
     DetonateGame_ game;
-    Tile* pTile = game.pState->GetWorldMap().GetTile(8, 4);
+    Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(8, 4);
     REQUIRE(pTile);
 
     const UnitComponentConfig_t* pChassis = game.fixtures.unitComponents.Find("test_chassis");
@@ -527,12 +517,12 @@ TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation]
         slots, std::unordered_map<std::string, const UnitComponentConfig_t*>{
                    {"chassis", pChassis}});
     Unit& plain = game.pFaction->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), game.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), *pTile);
+        game.fixtures.state.AllocateUnitId(), game.designs.back(),
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile);
     const int before = pTile->GetElevation();
 
     CHECK_FALSE(UnitCanDetonate(plain));
-    CHECK_FALSE(ApplyDetonation(*game.pState, plain));
+    CHECK_FALSE(ApplyDetonation(game.fixtures.state, plain));
     CHECK(pTile->GetElevation() == before);
 }
 

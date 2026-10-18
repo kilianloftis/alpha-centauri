@@ -43,8 +43,6 @@ constexpr int k_LifeformsPerBloom = 1;
 struct EcoSession_
 {
     FactionFixture fixtures;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
     Faction* pPlanet = nullptr;
@@ -52,42 +50,41 @@ struct EcoSession_
     EcoSession_()
     {
         InstallNativeUnits(fixtures.dataContext, k_LifeformsPerBloom, k_LifeformsPerBloom);
-        pState = MakeLandSession(fixtures);
-        pScope = std::make_unique<GameStateScope>(*pState);
-        pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
+        FillLand(fixtures.map);
+        pPlayer = &AddSessionFaction(fixtures, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);
-        pAi = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
+        pAi = &AddSessionFaction(fixtures, fixtures.factionDefinition,
                                  /*bIsPlayerControlled=*/false);
-        pPlanet = &AddNativeLifeFaction(fixtures, *pState);
+        pPlanet = &AddNativeLifeFaction(fixtures);
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
-        return MakeSessionBase(fixtures, *pState, rFaction, x, y);
+        return MakeSessionBase(fixtures, rFaction, x, y);
     }
 
-    Tile* At(int x, int y) { return pState->GetWorldMap().GetTile(x, y); }
+    Tile* At(int x, int y) { return fixtures.state.GetWorldMap().GetTile(x, y); }
 
     EcoDamageConfig_t& Eco() { return *fixtures.dataContext.ecoDamageConfig; }
-    const EcologyLedger& Ecology() const { return pState->GetEcologyLedger(); }
+    const EcologyLedger& Ecology() const { return fixtures.state.GetEcologyLedger(); }
 
     void RunEcoDamage(Faction& rFaction)
     {
         EcoDamage stage(HookContext("EcoDamage"));
-        REQUIRE(stage.Execute(*pState, rFaction) == StageResult_t::Continue);
+        REQUIRE(stage.Execute(fixtures.state, rFaction) == StageResult_t::Continue);
     }
 
     void RunWorldEvents(int yearsSinceFirstPlayable)
     {
-        pState->SetMissionYear(GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
+        fixtures.state.SetMissionYear(GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
         WorldEvents stage(HookContext("WorldEvents"));
-        REQUIRE(stage.Execute(*pState) == StageResult_t::Continue);
+        REQUIRE(stage.Execute(fixtures.state) == StageResult_t::Continue);
     }
 
     std::vector<const Tile*> FungusTiles() const
     {
         std::vector<const Tile*> result;
-        for (const auto& pTile : pState->GetWorldMap().GetTiles())
+        for (const auto& pTile : fixtures.state.GetWorldMap().GetTiles())
         {
             if (pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
             {
@@ -123,7 +120,7 @@ TEST_CASE("A base at 100% eco damage blooms inside its radius", "[ecology][stage
     session.Eco().damageFormula = "100";
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     std::vector<EvFungalBloom> events;
-    session.pState->GetEventBus().Subscribe<EvFungalBloom>(
+    session.fixtures.state.GetEventBus().Subscribe<EvFungalBloom>(
         std::function<void(const EvFungalBloom&)>(
             [&events](const EvFungalBloom& rEvent) { events.push_back(rEvent); }));
     const int lifeformsBefore = session.UnitCount(*session.pPlanet);
@@ -141,7 +138,7 @@ TEST_CASE("A base at 100% eco damage blooms inside its radius", "[ecology][stage
     CHECK(InWorkableArea_(rBase, *fungus[0]));
     CHECK(session.UnitCount(*session.pPlanet) >= lifeformsBefore + k_LifeformsPerBloom);
 
-    PlayerInteractionQueue& rQueue = session.pState->GetPlayerInteractions();
+    PlayerInteractionQueue& rQueue = session.fixtures.state.GetPlayerInteractions();
     REQUIRE_FALSE(rQueue.Empty());
     const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
@@ -159,7 +156,7 @@ TEST_CASE("A base at 0% eco damage never blooms", "[ecology][stage]")
 
     CHECK(session.Ecology().FungalBlooms(session.pPlayer->GetFactionId()) == 0);
     CHECK(session.FungusTiles().empty());
-    CHECK(session.pState->GetPlayerInteractions().Empty());
+    CHECK(session.fixtures.state.GetPlayerInteractions().Empty());
 }
 
 TEST_CASE("max_chance_percent caps the pop roll", "[ecology][stage]")
@@ -183,7 +180,7 @@ TEST_CASE("An AI bloom is recorded but not announced to the player", "[ecology][
     session.RunEcoDamage(*session.pAi);
 
     CHECK(session.Ecology().FungalBlooms(session.pAi->GetFactionId()) == 1);
-    CHECK(session.pState->GetPlayerInteractions().Empty());
+    CHECK(session.fixtures.state.GetPlayerInteractions().Empty());
 }
 
 TEST_CASE("The pop tile is never one that already has fungus", "[ecology][stage]")
@@ -196,7 +193,7 @@ TEST_CASE("The pop tile is never one that already has fungus", "[ecology][stage]
     {
         if (pTile != pFree)
         {
-            session.pState->GetTileEffects().AddOccupantWithEffects(
+            session.fixtures.state.GetTileEffects().AddOccupantWithEffects(
                 *session.At(pTile->GetX(), pTile->GetY()), std::string(ImprovementIds::k_Fungus));
         }
     }
@@ -213,7 +210,7 @@ TEST_CASE("on_pop_effects applied without a pop tile plant nothing", "[ecology][
     EcoSession_ session;
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
 
-    TriggeredEffectContext_t context(*session.pState, rBase);
+    TriggeredEffectContext_t context(session.fixtures.state, rBase);
     context.pTile = nullptr;
     CHECK(ApplyTriggeredEffects(session.Eco().onPopEffects, context).empty());
     CHECK(session.FungusTiles().empty());
@@ -237,7 +234,7 @@ TEST_CASE("A Perihelion starting this turn is in the stack when EcoDamage rolls"
           "[ecology][stage][world-events]")
 {
     EcoSession_ session;
-    session.pState->CreateWorldEvents();
+    session.fixtures.state.CreateWorldEvents();
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     const double baseline = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
                                             SeedFor(StatId_t::EcologicalDamage));
@@ -273,7 +270,7 @@ TEST_CASE("Each eco facility completed after the first bloom grants one clean mi
         complete(rBefore);
         CHECK(session.Ecology().CleanMineralGrants(factionId) == 0);
 
-        session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
+        session.fixtures.state.GetEcologyLedger().RecordFungalBloom(factionId);
         BaseManager& rAfter = session.MakeBase(*session.pPlayer, 8, 12);
         complete(rAfter);
         CHECK(session.Ecology().CleanMineralGrants(factionId) == 1);
@@ -288,7 +285,7 @@ TEST_CASE("A facility that arrives without being built grants nothing", "[ecolog
 {
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
-    session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
+    session.fixtures.state.GetEcologyLedger().RecordFungalBloom(factionId);
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
 
     // The direct add behind base capture and granted buildings.
@@ -297,7 +294,7 @@ TEST_CASE("A facility that arrives without being built grants nothing", "[ecolog
 
     TriggeredEffectConfig_t add;
     add.effect = AddBuildingEffect_t{"test_hybrid_forest"};
-    TriggeredEffectContext_t context(*session.pState, rBase);
+    TriggeredEffectContext_t context(session.fixtures.state, rBase);
     ApplyTriggeredEffects(std::vector<TriggeredEffectConfig_t>{add}, context);
     REQUIRE(rBase.GetBuildingManager().HasBuilding("test_hybrid_forest"));
     CHECK(session.Ecology().CleanMineralGrants(factionId) == 0);
@@ -308,7 +305,7 @@ TEST_CASE("A Nanoreplicator raises EcoDamageReduction but never the cap",
 {
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
-    session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
+    session.fixtures.state.GetEcologyLedger().RecordFungalBloom(factionId);
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     session.Eco().damageFormula = "damage_reduction";
     const BuildingConfig_t* pNano =
@@ -327,7 +324,7 @@ TEST_CASE("A grant credited mid-turn moves the score", "[ecology][clean-minerals
 {
     EcoSession_ session;
     const FactionId_t factionId = session.pPlayer->GetFactionId();
-    session.pState->GetEcologyLedger().RecordFungalBloom(factionId);
+    session.fixtures.state.GetEcologyLedger().RecordFungalBloom(factionId);
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     BaseManager& rBuilder = session.MakeBase(*session.pPlayer, 8, 14);
     session.Eco().damageFormula = "clean_mineral_grants";

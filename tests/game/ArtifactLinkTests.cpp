@@ -44,9 +44,6 @@ struct LinkGame_
 {
     FactionFixture fixtures;
     std::deque<UnitDesign> designs;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
 
     LinkGame_()
@@ -54,26 +51,19 @@ struct LinkGame_
         fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
         fixtures.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
 
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-        pFaction = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, actest::k_TestFactionSeed));
+        FillLand(fixtures.map);
+        pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", pTile,
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
@@ -84,7 +74,7 @@ struct LinkGame_
             rFaction, *fixtures.dataContext.nativeUnitRegistry, "Alien_Artifact");
         REQUIRE(pDesign);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), *pDesign, pState->GetWorldMap().GetUnitPositions(), rTile,
+            fixtures.state.AllocateUnitId(), *pDesign, fixtures.state.GetWorldMap().GetUnitPositions(), rTile,
             pHome, /*pProducedAt=*/nullptr);
     }
 
@@ -100,7 +90,7 @@ struct LinkGame_
         std::unordered_map<std::string, const UnitComponentConfig_t*> assigned{{slot.id, pChassis}};
         designs.emplace_back(std::vector<UnitSlotConfig_t>{slot}, assigned);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), designs.back(), pState->GetWorldMap().GetUnitPositions(),
+            fixtures.state.AllocateUnitId(), designs.back(), fixtures.state.GetWorldMap().GetUnitPositions(),
             rTile, nullptr, /*pProducedAt=*/nullptr);
     }
 };
@@ -131,7 +121,7 @@ TEST_CASE("SubjectDesign matches the unit's design id and fails closed without a
     LinkGame_ game;
     BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
-    Unit& scout = game.MakeScout(*game.pFaction, *game.pState->GetWorldMap().GetTile(8, 4));
+    Unit& scout = game.MakeScout(*game.pFaction, *game.fixtures.state.GetWorldMap().GetTile(8, 4));
 
     EffectContext_t artifactCtx;
     artifactCtx.pUnit = &artifact;
@@ -168,15 +158,15 @@ TEST_CASE("Holding an Alien Artifact at a Network Node prompts; Link grants a te
     artifact.SetOrder(HoldOrder_t{});
 
     const std::size_t techsBefore = game.pFaction->GetResearch().GetDiscoveredTechs().size();
-    game.pState->ConsiderHoldLink(artifact);
+    game.fixtures.state.ConsiderHoldLink(artifact);
 
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     CHECK(std::holds_alternative<ArtifactLinkInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
     CHECK(UnitCount_(*game.pFaction) == 1);
     CHECK(game.pFaction->GetResearch().GetDiscoveredTechs().size() == techsBefore);
 
-    ApplyHoldLink(*game.pState, artifact);
+    ApplyHoldLink(game.fixtures.state, artifact);
     CHECK(UnitCount_(*game.pFaction) == 0);
     CHECK(game.pFaction->GetResearch().GetDiscoveredTechs().size() > techsBefore);
 }
@@ -191,16 +181,16 @@ TEST_CASE("Declining the artifact link leaves the artifact Holding",
     artifact.SetOrder(HoldOrder_t{});
 
     const std::size_t techsBefore = game.pFaction->GetResearch().GetDiscoveredTechs().size();
-    game.pState->ConsiderHoldLink(artifact);
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
 
     CHECK(UnitCount_(*game.pFaction) == 1);
     REQUIRE(artifact.GetOrder().has_value());
     CHECK(std::holds_alternative<HoldOrder_t>(*artifact.GetOrder()));
     CHECK(game.pFaction->GetResearch().GetDiscoveredTechs().size() == techsBefore);
 
-    game.pState->ConsiderHoldLink(artifact);
-    CHECK(game.pState->GetPlayerInteractions().Size() == 2);
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Size() == 2);
 }
 
 TEST_CASE("Hold does not offer a link without a Network Node or without an Alien Artifact",
@@ -210,20 +200,20 @@ TEST_CASE("Hold does not offer a link without a Network Node or without an Alien
     BaseManager& bare = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, bare.GetTile(), &bare);
     artifact.SetOrder(HoldOrder_t{});
-    game.pState->ConsiderHoldLink(artifact);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 
     BaseManager& nodeBase = game.MakeBase(*game.pFaction, 8, 12);
     nodeBase.GetBuildingManager().AddBuilding("Network_Node");
     Unit& scout = game.MakeScout(*game.pFaction, nodeBase.GetTile());
     scout.SetOrder(HoldOrder_t{});
-    game.pState->ConsiderHoldLink(scout);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.ConsiderHoldLink(scout);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 
     Unit& healed = game.MakeArtifact(*game.pFaction, nodeBase.GetTile(), &nodeBase);
     healed.SetOrder(HoldUntilHealedOrder_t{});
-    game.pState->ConsiderHoldLink(healed);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.ConsiderHoldLink(healed);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 }
 
 TEST_CASE("An artifact Holding at a foreign base is not offered a link",
@@ -232,15 +222,15 @@ TEST_CASE("An artifact Holding at a foreign base is not offered a link",
     LinkGame_ game;
     FactionConfig_t aiDef = game.fixtures.factionDefinition;
     aiDef.id = "ai";
-    Faction& ai = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed + 1));
+    Faction& ai = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed + 1));
     BaseManager& aiBase = game.MakeBase(ai, 8, 6);
     aiBase.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, aiBase.GetTile(), nullptr);
     artifact.SetOrder(HoldOrder_t{});
-    game.pState->ConsiderHoldLink(artifact);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 }
 
 TEST_CASE("Completing a Network Node under a Holding artifact prompts to link",
@@ -250,8 +240,8 @@ TEST_CASE("Completing a Network Node under a Holding artifact prompts to link",
     BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     Unit& artifact = game.MakeArtifact(*game.pFaction, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
-    game.pState->ConsiderHoldLink(artifact);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 
     const BuildingConfig_t* pNode = game.fixtures.buildings().Find("Network_Node");
     REQUIRE(pNode);
@@ -259,9 +249,9 @@ TEST_CASE("Completing a Network Node under a Holding artifact prompts to link",
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
 
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     CHECK(std::holds_alternative<ArtifactLinkInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
     CHECK(UnitCount_(*game.pFaction) == 1);
 }
 
@@ -276,7 +266,7 @@ TEST_CASE("Linking an artifact spends it even when the research pool is empty",
     DiscoverEverything_(game.pFaction->GetResearch());
     const std::size_t techsBefore = game.pFaction->GetResearch().GetDiscoveredTechs().size();
 
-    ApplyHoldLink(*game.pState, artifact);
+    ApplyHoldLink(game.fixtures.state, artifact);
     CHECK(UnitCount_(*game.pFaction) == 0);
     CHECK(game.pFaction->GetResearch().GetDiscoveredTechs().size() == techsBefore);
 }
@@ -287,18 +277,18 @@ TEST_CASE("An AI artifact Holding at a Network Node is linked without a prompt",
     LinkGame_ game;
     FactionConfig_t aiDef = game.fixtures.factionDefinition;
     aiDef.id = "ai";
-    Faction& ai = game.pState->AddFaction(std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed + 1));
+    Faction& ai = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed + 1));
     BaseManager& base = game.MakeBase(ai, 8, 10);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(ai, base.GetTile(), &base);
     artifact.SetOrder(HoldOrder_t{});
     const std::size_t techsBefore = ai.GetResearch().GetDiscoveredTechs().size();
-    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
+    const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
 
-    game.pState->ConsiderHoldLink(artifact);
-    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
+    game.fixtures.state.ConsiderHoldLink(artifact);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
     CHECK(UnitCount_(ai) == 0);
     CHECK(ai.GetResearch().GetDiscoveredTechs().size() > techsBefore);
 }
@@ -337,17 +327,17 @@ TEST_CASE("A GrantTech hold entry prompts and leaves the unit alive",
     BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& holder = game.pFaction->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), game.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), base.GetTile(), &base,
+        game.fixtures.state.AllocateUnitId(), game.designs.back(),
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), base.GetTile(), &base,
         /*pProducedAt=*/nullptr);
     holder.SetOrder(HoldOrder_t{});
-    game.pState->ConsiderHoldLink(holder);
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    game.fixtures.state.ConsiderHoldLink(holder);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     CHECK(std::holds_alternative<ArtifactLinkInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
 
     const std::size_t techsBefore = game.pFaction->GetResearch().GetDiscoveredTechs().size();
-    ApplyHoldLink(*game.pState, holder);
+    ApplyHoldLink(game.fixtures.state, holder);
     CHECK(UnitCount_(*game.pFaction) == 1);
     CHECK(game.pFaction->GetResearch().GetDiscoveredTechs().size() > techsBefore);
 }

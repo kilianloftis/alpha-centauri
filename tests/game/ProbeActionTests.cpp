@@ -50,9 +50,6 @@ namespace
 struct ProbeGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
     std::unique_ptr<TechCostConfig_t> pTechCostConfig;
@@ -72,33 +69,26 @@ struct ProbeGame_
                 *pTechCostConfig, *fixtures.dataContext.luaRuntime);
         }
 
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext, pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition,
+            fixtures.dataContext, fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext, pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition,
+            fixtures.dataContext, fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
 
-        pPlayer = &pState->AddFaction(std::move(pFactionA));
-        pAi = &pState->AddFaction(std::move(pFactionB));
+        pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
+        pAi = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", pTile,
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
@@ -124,11 +114,11 @@ struct ProbeGame_
         }
         fixtures.designs.emplace_back(slots, assigned);
 
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), fixtures.designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile,
+            fixtures.state.AllocateUnitId(), fixtures.designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile,
             pHomeBase);
     }
 };
@@ -160,7 +150,7 @@ BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
 
 DiplomaticStatus_t PlayerStatusWithAi_(ProbeGame_& rGame)
 {
-    return rGame.pState->GetDiplomacyLedger().GetStatus(rGame.pPlayer->GetFactionId(),
+    return rGame.fixtures.state.GetDiplomacyLedger().GetStatus(rGame.pPlayer->GetFactionId(),
                                                         rGame.pAi->GetFactionId());
 }
 
@@ -168,7 +158,7 @@ DiplomaticStatus_t PlayerStatusWithAi_(ProbeGame_& rGame)
 // territory.
 void SignTreaty_(ProbeGame_& rGame)
 {
-    ApplyStatusChange(*rGame.pState, rGame.pPlayer->GetFactionId(), rGame.pAi->GetFactionId(),
+    ApplyStatusChange(rGame.fixtures.state, rGame.pPlayer->GetFactionId(), rGame.pAi->GetFactionId(),
                       DiplomaticStatus_t::Treaty);
 }
 
@@ -184,12 +174,12 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
 
     const int xpBefore = probe.GetXp();
     const ProbeActionResult_t result =
-        game.pState->GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    CHECK(game.pState->GetDiplomacyLedger().HasInfiltration(
+    CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
         game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
     if (result.outcome == ProbeActionOutcome_t::Succeeded)
     {
@@ -221,8 +211,8 @@ TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")
     const int aiBefore = game.pAi->GetEconomy().GetEnergy();
 
     const ProbeActionResult_t result =
-        game.pState->GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), *game.pState);
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -243,8 +233,8 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
     game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
 
     const ProbeActionResult_t result =
-        game.pState->GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -268,8 +258,8 @@ TEST_CASE("TryProbeAction steal_tech skips techs whose prerequisites the actor l
     game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
 
     const ProbeActionResult_t result =
-        game.pState->GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -297,12 +287,12 @@ TEST_CASE("steal_tech effect picks randomly among eligible techs", "[probe][acti
         REQUIRE(pAction);
 
         const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-            probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+            probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
         REQUIRE(target.has_value());
 
         ProbeActionResult_t result;
         std::mt19937 rng(seed);
-        REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+        REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                        {}, result, rng));
         const auto* pStolen = std::get_if<ProbeStolenTech_t>(&result.detail);
         REQUIRE(pStolen);
@@ -329,13 +319,13 @@ TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][acti
 
     // Two probes, so whether the first survives does not decide the second attempt.
     Unit& first = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
-    const ProbeActionResult_t firstResult = game.pState->GetProbeActions().TryProbeAction(
-        first, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
+    const ProbeActionResult_t firstResult = game.fixtures.state.GetProbeActions().TryProbeAction(
+        first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
     CHECK(firstResult.chances.risk == pAction->risk);
 
     Unit& second = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "Probe_Team"}, &home);
-    const ProbeActionResult_t secondResult = game.pState->GetProbeActions().TryProbeAction(
-        second, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState);
+    const ProbeActionResult_t secondResult = game.fixtures.state.GetProbeActions().TryProbeAction(
+        second, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
     CHECK(secondResult.chances.risk == *pAction->riskRepeat);
 }
 
@@ -362,12 +352,12 @@ TEST_CASE("Sabotage retires the destroyed copy's deploy record", "[probe][action
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageRandom);
     REQUIRE(pAction);
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
 
     ProbeActionResult_t result;
     std::mt19937 rng(7);
-    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                    {}, result, rng));
 
     // The sabotaged copy is gone and took its cooldown record with it, so the surviving copy in
@@ -392,13 +382,13 @@ TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][actio
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageFacility);
     REQUIRE(pAction);
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
 
     ProbeActionResult_t result;
     std::mt19937 rng(7);
     // Naming a facility this base does not have fails outright...
-    CHECK_FALSE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+    CHECK_FALSE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                        {"flat_nutrient"}, result, rng));
     CHECK(std::get_if<ProbeActionStatus_t>(&result.detail) != nullptr);
     // ...and does not quietly destroy the building it *does* have instead.
@@ -406,7 +396,7 @@ TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][actio
 
     // The legal case still works.
     ProbeActionResult_t hit;
-    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                    {"Command_Center"}, hit, rng));
     CHECK(game.pAi->CountBuildings("Command_Center") == 0);
 }
@@ -430,12 +420,12 @@ TEST_CASE("sabotage_random effect picks randomly among non-HQ buildings",
         REQUIRE(pAction);
 
         const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-            probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+            probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
         REQUIRE(target.has_value());
 
         ProbeActionResult_t result;
         std::mt19937 rng(seed);
-        REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+        REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                        {}, result, rng));
         const auto* pFacility = std::get_if<ProbeDestroyedFacility_t>(&result.detail);
         REQUIRE(pFacility);
@@ -464,12 +454,12 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
     REQUIRE(pAction);
 
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
 
     ProbeActionResult_t result;
     std::mt19937 rng(actest::k_TestRngSeed);
-    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                    {}, result, rng));
     CHECK(enemy.GetPopulation().GetSize() == 3);
     const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
@@ -477,12 +467,12 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
     CHECK(pKilled->count == 2);
 
     // Genetic warfare is a Simple atrocity, recorded against the target base's owner.
-    const AtrocityLedger& rLedger = game.pState->GetAtrocityLedger();
+    const AtrocityLedger& rLedger = game.fixtures.state.GetAtrocityLedger();
     REQUIRE(rLedger.Records().size() == 1);
     CHECK(rLedger.Records().front().perpetrator == game.pPlayer->GetFactionId());
     CHECK(rLedger.Records().front().victim == game.pAi->GetFactionId());
     CHECK(rLedger.Records().front().severity == AtrocitySeverityId_t::Simple);
-    CHECK(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.pState->GetMissionYear()));
+    CHECK(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.fixtures.state.GetMissionYear()));
 }
 
 TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][plague]")
@@ -502,12 +492,12 @@ TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][p
     REQUIRE(pAction);
 
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
 
     ProbeActionResult_t result;
     std::mt19937 rng(actest::k_TestRngSeed);
-    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                    {}, result, rng));
     CHECK(enemy.GetPopulation().GetSize() == 1);
     const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
@@ -528,16 +518,16 @@ TEST_CASE("Probe cannot target a concealed unit until contact reveals it",
     Unit& cloaked = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "Cloaking_Device"});
     const Tile& rTargetTile = cloaked.GetTile();
 
-    REQUIRE_FALSE(IsUnitVisibleTo(*game.pPlayer, cloaked, game.pState->GetTileEffects()));
-    CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Unit, *game.pState)
+    REQUIRE_FALSE(IsUnitVisibleTo(*game.pPlayer, cloaked, game.fixtures.state.GetTileEffects()));
+    CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Unit, game.fixtures.state)
                     .has_value());
-    CHECK_FALSE(game.pState->GetProbeActions().CanOpenProbeActions(
-        probe, rTargetTile, *game.pState));
+    CHECK_FALSE(game.fixtures.state.GetProbeActions().CanOpenProbeActions(
+        probe, rTargetTile, game.fixtures.state));
 
     game.pPlayer->GetRevealedUnits().Reveal(cloaked);
 
     const std::optional<ProbeTarget_t> target =
-        ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Unit, *game.pState);
+        ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Unit, game.fixtures.state);
     REQUIRE(target.has_value());
     CHECK(KindOf(target->ref) == ProbeTargetKind_t::Unit);
 }
@@ -554,11 +544,11 @@ TEST_CASE("Probe cannot target a base on a tile its faction has not explored",
     FactionExploredMap& rExplored = game.pPlayer->GetExploredMap();
     rExplored.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
     REQUIRE_FALSE(rExplored.IsExplored(rTargetTile));
-    CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, *game.pState)
+    CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, game.fixtures.state)
                     .has_value());
 
     rExplored.Mark(rTargetTile);
-    CHECK(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, *game.pState)
+    CHECK(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Base, game.fixtures.state)
               .has_value());
 }
 
@@ -571,13 +561,13 @@ TEST_CASE("Mind Control adds 4 to the actor's mind-control total, not the former
     game.pPlayer->GetEconomy().AddEnergy(10000);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&target.GetFaction() == game.pPlayer);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
 }
 
 TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
@@ -589,11 +579,11 @@ TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
     game.pPlayer->GetEconomy().AddEnergy(10000);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
 }
 
 // SMAC adds to the total when the cost is paid, before the success roll.
@@ -607,12 +597,12 @@ TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total"
     game.pPlayer->GetEconomy().AddEnergy(10000);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&target.GetFaction() == game.pAi);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
 }
 
 TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][action][mind-control]")
@@ -623,13 +613,13 @@ TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][acti
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&victim.GetFaction() == game.pPlayer);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 1);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 1);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pAi->GetFactionId()) == 0);
 }
 
 TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total",
@@ -642,12 +632,12 @@ TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total"
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&victim.GetFaction() == game.pAi);
-    CHECK(game.pState->GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
 }
 
 TEST_CASE("The mind-control quote adds the actor's total over the divisor to its first factor",
@@ -661,13 +651,13 @@ TEST_CASE("The mind-control quote adds the actor's total over the divisor to its
     REQUIRE(pAction);
     REQUIRE(pAction->cost->mindControlDivisor == 4);
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
     const auto quote = [&]
     {
         return QuoteProbeActionCost(*pAction, *game.pPlayer, *target,
-                                    game.pState->GetWorldMap(),
-                                    game.pState->GetMindControlLedger());
+                                    game.fixtures.state.GetWorldMap(),
+                                    game.fixtures.state.GetMindControlLedger());
     };
 
     // No garrison, so the first factor is the population alone.
@@ -677,7 +667,7 @@ TEST_CASE("The mind-control quote adds the actor's total over the divisor to its
     REQUIRE(*historyFree % population == 0);
     const int costPerFactorPoint = *historyFree / population;
 
-    MindControlLedger& rLedger = game.pState->GetMindControlLedger();
+    MindControlLedger& rLedger = game.fixtures.state.GetMindControlLedger();
     rLedger.Record(game.pPlayer->GetFactionId(), 7);
     CHECK(quote() == (population + 1) * costPerFactorPoint);
 
@@ -694,15 +684,15 @@ TEST_CASE("The mind-control quote ignores the target faction's total", "[probe][
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
     REQUIRE(pAction);
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
 
     const std::optional<int> before =
-        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
-                             game.pState->GetMindControlLedger());
-    game.pState->GetMindControlLedger().Record(game.pAi->GetFactionId(), 8);
-    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
-                               game.pState->GetMindControlLedger())
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
+                             game.fixtures.state.GetMindControlLedger());
+    game.fixtures.state.GetMindControlLedger().Record(game.pAi->GetFactionId(), 8);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
+                               game.fixtures.state.GetMindControlLedger())
           == before);
 }
 
@@ -715,16 +705,16 @@ TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][c
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SubvertUnit);
     REQUIRE(pAction);
     const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
-        probe, victim.GetTile(), ProbeTargetKind_t::Unit, *game.pState);
+        probe, victim.GetTile(), ProbeTargetKind_t::Unit, game.fixtures.state);
     REQUIRE(target.has_value());
 
     const std::optional<int> before =
-        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
-                             game.pState->GetMindControlLedger());
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
+                             game.fixtures.state.GetMindControlLedger());
     REQUIRE(before.has_value());
-    game.pState->GetMindControlLedger().Record(game.pPlayer->GetFactionId(), 8);
-    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.pState->GetWorldMap(),
-                               game.pState->GetMindControlLedger())
+    game.fixtures.state.GetMindControlLedger().Record(game.pPlayer->GetFactionId(), 8);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
+                               game.fixtures.state.GetMindControlLedger())
           == before);
 }
 
@@ -737,8 +727,8 @@ TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta
     SignTreaty_(game);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
@@ -753,8 +743,8 @@ TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy
     Unit& probe =
         game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
@@ -769,8 +759,8 @@ TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomac
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "covert"});
 
-    const ProbeActionResult_t result = game.pState->GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), *game.pState);
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
@@ -806,9 +796,9 @@ TEST_CASE("Mission risk is the repeat risk at a probed base, and at least 2 at a
     const Unit& atColony =
         game.MakeUnit(*game.pPlayer, 13, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeTarget_t hqTarget =
-        *ResolveProbeTarget(atHq, hq.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        *ResolveProbeTarget(atHq, hq.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     const ProbeTarget_t colonyTarget =
-        *ResolveProbeTarget(atColony, colony.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        *ResolveProbeTarget(atColony, colony.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
 
     const ProbeActionsConfig_t& rActions = *game.fixtures.dataContext.probeActionsConfig;
     // Fixture risks: steal_tech 0, repeated 1; sabotage_facility 1.
@@ -875,8 +865,8 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
     }
     const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
     const Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), rEnhancedDesign,
-        game.pState->GetWorldMap().GetUnitPositions(), *game.pState->GetWorldMap().GetTile(9, 9),
+        game.fixtures.state.AllocateUnitId(), rEnhancedDesign,
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9),
         &home);
 
     const MoraleCalculator& rMorale = game.fixtures.morale();
@@ -885,7 +875,7 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
     const auto successAgainstEnemy = [&](const Unit& rProbe)
     {
         const ProbeTarget_t target =
-            *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+            *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
         return ProbeChancesFor(rProbe, target, /*risk=*/1, rMorale, rFormula).successRate;
     };
     const int plainOpen = successAgainstEnemy(plain);

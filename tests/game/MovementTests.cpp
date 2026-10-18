@@ -583,20 +583,14 @@ TEST_CASE("TryStep spends tile move-cost fragments", "[movement][move-cost]")
 
 TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 {
-    FactionFixture fixture;
-    FillLand_(fixture);
-    Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    FactionFixture fixture(4, 4);
+    FillLand(fixture.map);
+    Faction& faction = AddSessionFaction(fixture, fixture.factionDefinition, true);
+    Unit& unit = MakeSessionUnit(fixture, faction, 2, 2, {"test_chassis"});
     unit.SetMoveFragmentsRemaining(0);
 
-    GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixture.dataContext,
-                    settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
-    state.AddFaction(std::move(fixture.factions[0]));
-
     TurnStart stage(HookContext{});
-    stage.Execute(state);
+    stage.Execute(fixture.state);
 
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 }
@@ -604,26 +598,20 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs orders again",
           "[movement][turn][unit-order]")
 {
-    FactionFixture fixture;
-    FillLand_(fixture);
-    Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    FactionFixture fixture(4, 4);
+    FillLand(fixture.map);
+    Faction& faction = AddSessionFaction(fixture, fixture.factionDefinition, true);
+    Unit& unit = MakeSessionUnit(fixture, faction, 2, 2, {"test_chassis"});
     REQUIRE(unit.GetMoveFragmentsRemaining() > 0);
     unit.SetOrder(SkipTurnOrder_t{});
     REQUIRE_FALSE(faction.GetUnitManager().HasUnitsRequiringOrders());
 
-    GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixture.dataContext,
-                    settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
-    Faction& rOwned = state.AddFaction(std::move(fixture.factions[0]));
-
     TurnStart stage(HookContext{});
-    stage.Execute(state);
+    stage.Execute(fixture.state);
 
     CHECK_FALSE(unit.GetOrder().has_value());
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point);
-    CHECK(rOwned.GetUnitManager().HasUnitsRequiringOrders());
+    CHECK(faction.GetUnitManager().HasUnitsRequiringOrders());
 }
 
 TEST_CASE("Fungus entry charges across turns until cost is paid", "[movement][fungus]")

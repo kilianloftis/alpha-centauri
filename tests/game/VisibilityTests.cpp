@@ -263,26 +263,21 @@ TEST_CASE("Visibility remove_fog applies to the player faction only", "[visibili
 TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[visibility][fog]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    GameState gameState(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
 
     auto pFaction = std::make_unique<Faction>(
-        gameState.AllocateFactionId(), true, fixture.factionDefinition,
-        fixture.dataContext, gameState.GetWorldMap(), settings, actest::k_TestFactionSeed);
-    Faction& player = gameState.AddFaction(std::move(pFaction));
+        fixture.state.AllocateFactionId(), true, fixture.factionDefinition,
+        fixture.dataContext, fixture.map, fixture.settings, actest::k_TestFactionSeed);
+    Faction& player = fixture.state.AddFaction(std::move(pFaction));
     player.RebuildVisibility();
     REQUIRE_FALSE(player.GetVisibleMap().IsVisible(8, 0));
 
     VisibilityConfig_t visibility;
     visibility.removeFog = true;
-    settings.SetVisibility(visibility);
+    fixture.settings.SetVisibility(visibility);
     CHECK(player.GetVisibleMap().IsVisible(8, 0));
 
     visibility.removeFog = false;
-    settings.SetVisibility(visibility);
+    fixture.settings.SetVisibility(visibility);
     CHECK_FALSE(player.GetVisibleMap().IsVisible(8, 0));
 }
 

@@ -28,40 +28,29 @@ namespace
 struct CouncilFixture_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
     CouncilFixture_()
     {
         InstallCouncil(fixtures.dataContext);
+        FillLand(fixtures.map);
 
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (const auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-
-        pA = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed));
-        pB = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed));
+        pA = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.map, fixtures.settings, k_TestFactionSeed));
+        pB = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.map, fixtures.settings, k_TestFactionSeed));
 
         fixtures.MakeFactionBase(*pA, 8, 4);
         fixtures.MakeFactionBase(*pB, 12, 8);
 
-        pState->CreatePlanetaryCouncil();
-        pState->SetMissionYear(2100);
+        fixtures.state.CreatePlanetaryCouncil();
+        fixtures.state.SetMissionYear(2100);
     }
 
-    PlanetaryCouncil& Council() { return *pState->GetPlanetaryCouncil(); }
+    PlanetaryCouncil& Council() { return *fixtures.state.GetPlanetaryCouncil(); }
 };
 
 } // namespace

@@ -39,40 +39,30 @@ constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
 struct OrbitalGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     OrbitalGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
-        pPlayer = &pState->AddFaction(std::move(pFactionA));
-        pAi = &pState->AddFaction(std::move(pFactionB));
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+        pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
+        pAi = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", pTile,
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
@@ -97,11 +87,11 @@ struct OrbitalGame_
             slots.push_back(slot);
         }
         fixtures.designs.emplace_back(slots, assigned);
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), fixtures.designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile, pHomeBase);
+            fixtures.state.AllocateUnitId(), fixtures.designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, pHomeBase);
     }
 };
 
@@ -140,13 +130,13 @@ TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbita
     // Non-orbital must not appear.
     playerBase.GetBuildingManager().AddBuilding("granted_hall");
 
-    CHECK(game.pState->CountOrbitalBuildings(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
           == 2);
-    CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
           == 1);
-    CHECK(game.pState->CountOrbitalBuildings(game.pPlayer->GetFactionId(), "granted_hall") == 0);
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pPlayer->GetFactionId(), "granted_hall") == 0);
 
-    const auto census = game.pState->GetOrbitalCensus();
+    const auto census = game.fixtures.state.GetOrbitalCensus();
     int sky = 0;
     int power = 0;
     for (const OrbitalCensusEntry_t& rEntry : census)
@@ -194,15 +184,15 @@ TEST_CASE("TryAttackSatellite hit destroys one orbital and deploys the pod", "[o
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const int year = game.pState->GetMissionYear();
+    const int year = game.fixtures.state.GetMissionYear();
     REQUIRE(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 1);
 
-    const OrbitalAttackResult_t result = game.pState->TryAttackSatellite(
+    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "test_odp_always_hit", "Sky_Hydroponics_Lab");
     CHECK(result.bAttempted);
     CHECK(result.bHit);
     CHECK(result.attackerBuildingId == "test_odp_always_hit");
-    CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 0);
     // Still unavailable early next year.
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year + 1) == 0);
@@ -217,14 +207,14 @@ TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const OrbitalAttackResult_t result = game.pState->TryAttackSatellite(
+    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "test_odp_always_miss", "Sky_Hydroponics_Lab");
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK_FALSE(result.bAttackerDestroyed);
-    CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
-    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.pState->GetMissionYear())
+    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.fixtures.state.GetMissionYear())
           == 0);
 }
 
@@ -236,12 +226,12 @@ TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbit
     attackerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const OrbitalAttackResult_t result = game.pState->TryAttackSatellite(
+    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "test_odp_miss_destroy", "Sky_Hydroponics_Lab");
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK(result.bAttackerDestroyed);
-    CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 
@@ -253,16 +243,16 @@ TEST_CASE("TryAttackSatellite fails without ready pods or non-orbital target", "
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("granted_hall");
 
-    OrbitalAttackResult_t noPod = game.pState->TryAttackSatellite(
+    OrbitalAttackResult_t noPod = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "test_odp_always_hit", "Sky_Hydroponics_Lab");
     CHECK_FALSE(noPod.bAttempted);
 
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
-    OrbitalAttackResult_t nonOrbital = game.pState->TryAttackSatellite(
+    OrbitalAttackResult_t nonOrbital = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "test_odp_always_hit", "granted_hall");
     CHECK_FALSE(nonOrbital.bAttempted);
 
-    OrbitalAttackResult_t badAttacker = game.pState->TryAttackSatellite(
+    OrbitalAttackResult_t badAttacker = game.fixtures.state.TryAttackSatellite(
         *game.pPlayer, *game.pAi, "Sky_Hydroponics_Lab", "Sky_Hydroponics_Lab");
     CHECK_FALSE(badAttacker.bAttempted);
 }
@@ -275,8 +265,8 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    REQUIRE(game.pState
-                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
+    REQUIRE(game.fixtures.state.
+                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
                                      "Sky_Hydroponics_Lab")
                 .bAttempted);
 
@@ -285,7 +275,7 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
     garrison.SetMoveFragmentsRemaining(garrison.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, garrison.GetTile());
     // Deployed ODP cannot intercept; combat proceeds (missile may die in combat or survive).
     REQUIRE(result);
@@ -305,13 +295,13 @@ TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital]
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, garrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
     CHECK(std::ranges::distance(game.pAi->GetUnitManager().Units()) == 0);
-    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", game.pState->GetMissionYear())
+    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", game.fixtures.state.GetMissionYear())
           == 0);
 }
 
@@ -325,10 +315,10 @@ TEST_CASE("An attack ended by interception is still a hostile act", "[orbital][i
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
     REQUIRE(result);
     REQUIRE(result->bAttackerDestroyed);
-    CHECK(game.pState->GetDiplomacyLedger().HasVendetta(game.pAi->GetFactionId(),
+    CHECK(game.fixtures.state.GetDiplomacyLedger().HasVendetta(game.pAi->GetFactionId(),
                                                         game.pPlayer->GetFactionId()));
 }
 
@@ -342,12 +332,12 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, garrison.GetTile());
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
-    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.pState->GetMissionYear())
+    CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.fixtures.state.GetMissionYear())
           == 0);
 }
 
@@ -361,7 +351,7 @@ TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, garrison.GetTile());
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
@@ -389,7 +379,7 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &defendingBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
     REQUIRE(result);
 
     // The base that actually fired lost its copy; the uninvolved base kept its own.
@@ -403,7 +393,7 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
     // And the survivor is usable: its deploy record was erased with the copy that spent it.
     // With deploy and destroy keyed on different bases, this reads 0.
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_thisbase_miss_destroy",
-                                            game.pState->GetMissionYear())
+                                            game.fixtures.state.GetMissionYear())
           == 1);
 }
 
@@ -417,15 +407,15 @@ TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][d
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     aiBase.GetBuildingManager().AddBuilding("Orbital_Power_Transmitter");
 
-    REQUIRE(game.pState
-                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
+    REQUIRE(game.fixtures.state.
+                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
                                      "Sky_Hydroponics_Lab")
                 .bHit);
-    const int year = game.pState->GetMissionYear();
+    const int year = game.fixtures.state.GetMissionYear();
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 1);
 
-    REQUIRE(game.pState
-                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
+    REQUIRE(game.fixtures.state.
+                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
                                      "Orbital_Power_Transmitter")
                 .bHit);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 0);
@@ -437,14 +427,14 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
     BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
     BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
-    CHECK(game.pState->ListReadyOrbitalAttackers(*game.pPlayer).empty());
+    CHECK(game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer).empty());
 
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
     attackerBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const auto options = game.pState->ListReadyOrbitalAttackers(*game.pPlayer);
+    const auto options = game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer);
     REQUIRE(options.size() == 2);
 
     const OrbitalAttackerOption_t* pHit = nullptr;
@@ -469,12 +459,12 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
     CHECK(pMiss->readyCount == 1);
     CHECK(pMiss->chance == 0);
 
-    REQUIRE(game.pState
-                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_miss",
+    REQUIRE(game.fixtures.state.
+                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_miss",
                                      "Sky_Hydroponics_Lab")
                 .bAttempted);
 
-    const auto after = game.pState->ListReadyOrbitalAttackers(*game.pPlayer);
+    const auto after = game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer);
     REQUIRE(after.size() == 1);
     CHECK(after.front().buildingId == "test_odp_always_hit");
     CHECK(after.front().readyCount == 2);
@@ -491,7 +481,7 @@ TEST_CASE("ThisUnit Intercept fires for the defending unit only", "[orbital][int
                       &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, samGarrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
@@ -502,14 +492,14 @@ TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]"
 {
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
-    game.pState->GetTileEffects().AddOccupantWithEffects(
-        *game.pState->GetWorldMap().GetTile(8, 8), "test_sam_battery");
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(
+        *game.fixtures.state.GetWorldMap().GetTile(8, 8), "test_sam_battery");
 
     Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
         missile, garrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
@@ -575,18 +565,18 @@ TEST_CASE("WorldGlobal building intercept fires for another faction and charges 
     BaseManager& grantorBase = game.MakeBase(*game.pPlayer, 8, 2);
     grantorBase.GetBuildingManager().AddBuilding("world_intercept_always_hit");
     CHECK(game.pPlayer->CountReadyBuildings("world_intercept_always_hit",
-                                            game.pState->GetMissionYear()) == 1);
+                                            game.fixtures.state.GetMissionYear()) == 1);
 
     Unit& defender = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_armor"});
     Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
     CHECK(game.pPlayer->CountReadyBuildings("world_intercept_always_hit",
-                                            game.pState->GetMissionYear()) == 0);
+                                            game.fixtures.state.GetMissionYear()) == 0);
     CHECK(game.pAi->CountBuildings("world_intercept_always_hit") == 0);
 }
 
@@ -595,13 +585,13 @@ TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
 {
     OrbitalGame_ game;
     InstallCouncil(game.fixtures.dataContext, "council/world_intercept.json");
-    game.pState->CreatePlanetaryCouncil();
+    game.fixtures.state.CreatePlanetaryCouncil();
 
     Unit& defender = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_armor"});
     Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
-    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
+    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -615,14 +605,14 @@ TEST_CASE("Intercept sources run faction pool, design, then tile, each charge re
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
-    game.pState->GetTileEffects().AddOccupantWithEffects(
-        *game.pState->GetWorldMap().GetTile(8, 8), "test_sam_battery");
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(
+        *game.fixtures.state.GetWorldMap().GetTile(8, 8), "test_sam_battery");
     Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
     Unit& escort = game.MakeUnit(*game.pPlayer, 8, 8,
                                  {"test_chassis", "test_armor", "test_sam_escort"}, &playerBase);
 
     const std::vector<InterceptSource_t> sources =
-        CollectInterceptSources(missile, escort, game.pState->GetTileEffects());
+        CollectInterceptSources(missile, escort, game.fixtures.state.GetTileEffects());
     REQUIRE(sources.size() == 3);
     CHECK(sources[0].deployKind == InterceptSourceKind_t::Building);
     CHECK(sources[0].sourceId == "test_odp_always_hit");
@@ -631,7 +621,7 @@ TEST_CASE("Intercept sources run faction pool, design, then tile, each charge re
     CHECK(sources[1].deployKind == InterceptSourceKind_t::None);
     CHECK(sources[2].sourceKind == InterceptSourceKind_t::None);
 
-    const int year = game.pState->GetMissionYear();
+    const int year = game.fixtures.state.GetMissionYear();
     CHECK(InterceptSourceReady(sources[0], escort, year));
     game.pPlayer->DeployBuilding(playerBase.GetBaseId(), "test_odp_always_hit", year + 1);
     CHECK_FALSE(InterceptSourceReady(sources[0], escort, year));
@@ -650,7 +640,7 @@ TEST_CASE("A satellite attack needs a ready copy and an orbital target the defen
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("granted_hall");
-    const int year = game.pState->GetMissionYear();
+    const int year = game.fixtures.state.GetMissionYear();
     const auto ready = [&](const char* pAttackerId, const char* pTargetId, int atYear)
     {
         return ReadyOrbitalAttack(*game.pPlayer, *game.pAi, pAttackerId, pTargetId, atYear)
@@ -663,8 +653,8 @@ TEST_CASE("A satellite attack needs a ready copy and an orbital target the defen
     CHECK_FALSE(ready("test_odp_always_hit", "granted_hall", year));
     CHECK_FALSE(ready("Sky_Hydroponics_Lab", "Sky_Hydroponics_Lab", year));
 
-    REQUIRE(game.pState
-                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
+    REQUIRE(game.fixtures.state.
+                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
                                      "Sky_Hydroponics_Lab")
                 .bAttempted);
     CHECK_FALSE(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
@@ -687,7 +677,7 @@ TEST_CASE("A defender lost to its own failed intercept ends the attack with no f
     const int popBefore = playerBase.GetPopulation().GetSize();
 
     const std::optional<CombatResult_t> result =
-        game.pState->GetUnitOrderExecutor().TryAttack(attacker, playerBase.GetTile());
+        game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, playerBase.GetTile());
     REQUIRE(result);
     CHECK(result->bDefenderDestroyed);
     CHECK_FALSE(result->bAttackerDestroyed);

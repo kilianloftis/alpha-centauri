@@ -411,21 +411,13 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
 {
     // Completing a hurried item fires on_complete_effects, which need a bound GameState.
     FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<GameState>(
-        std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    Faction& rFaction = pState->AddFaction(std::make_unique<Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    FillLand(fixtures.map);
+    Faction& rFaction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = rFaction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects());
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
+        fixtures.ctx);
     REQUIRE(pBase != nullptr);
 
     // A costed facility: the fixtures' default 0-mineral buildings finish in one mineral, and

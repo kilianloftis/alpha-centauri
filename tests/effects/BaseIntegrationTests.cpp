@@ -132,13 +132,9 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
           "[effects][base][triggered]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
-    Faction& faction = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
+    Faction& faction = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
@@ -146,7 +142,7 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
 
     // Simulate OnProductionCompleted for instant_grantor.
     base.GetBuildingManager().AddBuilding(pGrantor->id);
-    TriggeredEffectContext_t context(state, base);
+    TriggeredEffectContext_t context(fixture.state, base);
     ApplyTriggeredEffects(pGrantor->onCompleteEffects, context);
 
     bool hasGranted = false;
@@ -172,29 +168,25 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
           "[effects][base][triggered][infiltration]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    GameState state(std::move(pMap), fixture.dataContext, settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
-    Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
-    Faction& other = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext,
-        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
+    Faction& beneficiary = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+    Faction& other = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(beneficiary, 8, 8);
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
     REQUIRE(pInfiltrator != nullptr);
-    REQUIRE(ac::FindCurrentGameState() == &state);
-    REQUIRE_FALSE(state.GetDiplomacyLedger().HasInfiltration(
+    REQUIRE(ac::FindCurrentGameState() == &fixture.state);
+    REQUIRE_FALSE(fixture.state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
 
     base.GetProduction().SetProduction(pInfiltrator, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
 
-    CHECK(state.GetDiplomacyLedger().HasInfiltration(
+    CHECK(fixture.state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
     // Ledger forbids self-pairs; FactionFilterCoversTarget also excludes the beneficiary.
 }

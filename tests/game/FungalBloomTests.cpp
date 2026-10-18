@@ -73,8 +73,6 @@ int UnitCount_(const Faction& rFaction)
 struct BloomSession_
 {
     FactionFixture fixtures;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlanet = nullptr;
     EffectPool pool;
     UnitComponentConfig_t warhead;
@@ -85,21 +83,20 @@ struct BloomSession_
     {
         InstallNativeUnits(fixtures.dataContext, lifeMin, lifeMax);
 
-        pState = MakeLandSession(fixtures);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
         if (bPlanet)
         {
-            pPlanet = &AddNativeLifeFaction(fixtures, *pState);
+            pPlanet = &AddNativeLifeFaction(fixtures);
         }
     }
 
-    Tile& At_(int x, int y) { return *pState->GetWorldMap().GetTile(x, y); }
+    Tile& At_(int x, int y) { return *fixtures.state.GetWorldMap().GetTile(x, y); }
 
     FungalBloomResult_t Bloom_(int x, int y, int count)
     {
-        return ApplyFungalBloom(At_(x, y), pState->GetWorldMap(), count, pState->GetRng(),
-                                *pState);
+        return ApplyFungalBloom(At_(x, y), fixtures.state.GetWorldMap(), count, fixtures.state.GetRng(),
+                                fixtures.state);
     }
 };
 
@@ -113,14 +110,14 @@ TEST_CASE("A fungal bloom of 3 turns the origin and two neighbors to fungus", "[
 
     CHECK(result.tilesFungused == 3);
     CHECK(result.lifeforms == 0);
-    CHECK(FungusCount_(session.pState->GetWorldMap()) == 3);
+    CHECK(FungusCount_(session.fixtures.state.GetWorldMap()) == 3);
     CHECK(session.At_(8, 8).HasFeature("Fungus"));
-    for (const auto& pTile : session.pState->GetWorldMap().GetTiles())
+    for (const auto& pTile : session.fixtures.state.GetWorldMap().GetTiles())
     {
         if (pTile->HasFeature("Fungus"))
         {
             CHECK(ChebyshevDistance(session.At_(8, 8), *pTile,
-                                    session.pState->GetWorldMap().GetWidth())
+                                    session.fixtures.state.GetWorldMap().GetWidth())
                   <= 1);
         }
     }
@@ -130,13 +127,13 @@ TEST_CASE("A fungal bloom skips neighbors that already have fungus", "[map][fung
 {
     BloomSession_ session(0, 0, false, false);
     Tile& rOrigin = session.At_(8, 8);
-    ForEachTileInChebyshevRadius(rOrigin, session.pState->GetWorldMap(), 1, false,
+    ForEachTileInChebyshevRadius(rOrigin, session.fixtures.state.GetWorldMap(), 1, false,
         [&](Tile* pTile, int distance)
         {
             if (distance == 1 && !(pTile->GetX() == 9 && pTile->GetY() == 9))
             {
                 pTile->AddTerrainFeature(
-                    session.pState->GetTileEffects().GetImprovements().Get("Fungus"));
+                    session.fixtures.state.GetTileEffects().GetImprovements().Get("Fungus"));
             }
         });
 
@@ -149,7 +146,7 @@ TEST_CASE("A fungal bloom skips neighbors that already have fungus", "[map][fung
 TEST_CASE("A base tile is not a fungal bloom target", "[map][fungus]")
 {
     BloomSession_ session(0, 0, false, false);
-    session.pState->GetTileEffects().AddOccupantWithEffects(session.At_(9, 9),
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(session.At_(9, 9),
                                                               std::string(ImprovementIds::k_Base));
 
     const FungalBloomResult_t around = session.Bloom_(8, 8, 9);
@@ -158,21 +155,21 @@ TEST_CASE("A base tile is not a fungal bloom target", "[map][fungus]")
     CHECK(session.At_(8, 8).HasFeature("Fungus"));
 
     BloomSession_ onBase(0, 0, false, false);
-    onBase.pState->GetTileEffects().AddOccupantWithEffects(onBase.At_(8, 8),
+    onBase.fixtures.state.GetTileEffects().AddOccupantWithEffects(onBase.At_(8, 8),
                                                              std::string(ImprovementIds::k_Base));
     const FungalBloomResult_t fromBase = onBase.Bloom_(8, 8, 3);
     CHECK(fromBase.tilesFungused == 3);
     CHECK_FALSE(onBase.At_(8, 8).HasFeature("Fungus"));
-    CHECK(FungusCount_(onBase.pState->GetWorldMap()) == 3);
+    CHECK(FungusCount_(onBase.fixtures.state.GetWorldMap()) == 3);
 }
 
 TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
 {
     BloomSession_ session(0, 0, /*bExcludes=*/true, false);
     Tile& rTile = session.At_(8, 8);
-    session.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Farm");
-    session.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Road");
-    session.pState->GetTileEffects().AddOccupantWithEffects(rTile, "Nutrients");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Farm");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Road");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Nutrients");
 
     const FungalBloomResult_t result = session.Bloom_(8, 8, 1);
     CHECK(result.tilesFungused == 1);
@@ -232,9 +229,9 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
           "[map][fungus][detonate]")
 {
     BloomSession_ session(1, 1, false, true);
-    Faction& rPlayer = session.pState->AddFaction(std::make_unique<Faction>(
-        session.pState->AllocateFactionId(), true, session.fixtures.factionDefinition,
-        session.fixtures.dataContext, session.pState->GetWorldMap(), session.fixtures.settings,
+    Faction& rPlayer = session.fixtures.state.AddFaction(std::make_unique<Faction>(
+        session.fixtures.state.AllocateFactionId(), true, session.fixtures.factionDefinition,
+        session.fixtures.dataContext, session.fixtures.state.GetWorldMap(), session.fixtures.settings,
         k_TestFactionSeed));
 
     session.warhead.id = "fungal_warhead";
@@ -260,13 +257,13 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     };
     session.designs.emplace_back(slots, assigned);
     Unit& rMissile = rPlayer.GetUnitManager().CreateUnit(
-        session.pState->AllocateUnitId(), session.designs.back(),
-        session.pState->GetWorldMap().GetUnitPositions(), session.At_(8, 8),
+        session.fixtures.state.AllocateUnitId(), session.designs.back(),
+        session.fixtures.state.GetWorldMap().GetUnitPositions(), session.At_(8, 8),
         /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
 
     REQUIRE(rMissile.GetStat(StatId_t::FungalBloomTiles) == 5);
-    REQUIRE(ApplyDetonation(*session.pState, rMissile));
-    CHECK(FungusCount_(session.pState->GetWorldMap()) == 5);
+    REQUIRE(ApplyDetonation(session.fixtures.state, rMissile));
+    CHECK(FungusCount_(session.fixtures.state.GetWorldMap()) == 5);
     CHECK(UnitCount_(rPlayer) == 0);
     CHECK(UnitCount_(*session.pPlanet) == 1);
 }
@@ -291,13 +288,13 @@ TEST_CASE("Native units reject an inverted fungal lifeform range", "[map][fungus
 TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "[map][fungus]")
 {
     BloomSession_ session(0, 0, false, false);
-    TileEffectsContext& rEffects = session.pState->GetTileEffects();
+    TileEffectsContext& rEffects = session.fixtures.state.GetTileEffects();
     rEffects.AddOccupantWithEffects(session.At_(8, 8), std::string(ImprovementIds::k_Base));
     rEffects.AddOccupantWithEffects(session.At_(9, 9), std::string(ImprovementIds::k_Base));
     session.At_(7, 7).AddTerrainFeature(rEffects.GetImprovements().Get("Fungus"));
 
     const BloomCandidates_t candidates =
-        BloomCandidateTiles(session.At_(8, 8), session.pState->GetWorldMap());
+        BloomCandidateTiles(session.At_(8, 8), session.fixtures.state.GetWorldMap());
     CHECK(candidates.pOrigin == nullptr);
     CHECK(candidates.neighbours.size() == 6);
     for (const Tile* pTile : candidates.neighbours)

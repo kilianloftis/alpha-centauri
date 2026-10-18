@@ -316,21 +316,13 @@ TEST_CASE("A stockpile is not a building", "[production][stockpile]")
 TEST_CASE("Stockpile Energy appears in the constructable list", "[production][stockpile]")
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<GameState>(
-        std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    Faction& faction = pState->AddFaction(std::make_unique<Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    FillLand(fixtures.map);
+    Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
-        pState->GetTileEffects());
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
+        fixtures.ctx);
     REQUIRE(pBase != nullptr);
 
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
@@ -623,21 +615,13 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
           "[production][stockpile][stages]")
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<GameState>(
-        std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    Faction& faction = pState->AddFaction(std::make_unique<Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    FillLand(fixtures.map);
+    Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects());
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
+        fixtures.ctx);
     REQUIRE(pBase != nullptr);
     REQUIRE(pBase->GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
     pBase->GetBuildingManager().AddBuilding("mineral_cache");
@@ -657,7 +641,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
     const int mineralsPerTurn = pBase->GetMineralProduction();
     REQUIRE(mineralsPerTurn > 0);
 
-    processor.Advance(*pState);
+    processor.Advance(fixtures.state);
 
     // The whole bank converts (nothing else is queued) and lands in the treasury this turn.
     CHECK(pBase->GetResources().GetMineralBank() == 0);
@@ -668,21 +652,13 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
           "[production][stockpile][snapshot]")
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<GameState>(
-        std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    Faction& faction = pState->AddFaction(std::make_unique<Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+    FillLand(fixtures.map);
+    Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects());
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
+        fixtures.ctx);
     REQUIRE(pBase != nullptr);
     pBase->GetProduction().SetMineralStockpile(12);
 
@@ -692,7 +668,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     const std::optional<BaseSnapshot_t> extracted = faction.ExtractBase(pBase->GetBaseId());
     REQUIRE(extracted.has_value());
     BaseManager* pRestored = faction.CreateBaseFromSnapshot(
-        *extracted, pState->GetTileEffects());
+        *extracted, fixtures.ctx);
     REQUIRE(pRestored != nullptr);
 
     // Resolved through the stockpile registry, not the building registry.
@@ -724,7 +700,7 @@ TEST_CASE("ApplyProduction banks leftover minerals into a real production item",
 TEST_CASE("BankProduction accepts leftovers onto an already-funded item",
           "[production][stockpile]")
 {
-    // FactionFixture has no GameState, so bank without going through completion.
+    // Exercise BankProduction on a queued item without completing it.
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
     BaseManager& base = fixtures.MakeFactionBase(faction, 8, 8);

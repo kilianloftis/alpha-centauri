@@ -317,10 +317,11 @@ struct WorldFixture : SessionInputs
 
     explicit WorldFixture(int width = k_TestMapWidth, int height = k_TestMapHeight,
                           const OccupantFiles_t& rOccupants = {},
-                          std::vector<ac::EffectConfig_t> worldRules = {})
+                          std::vector<ac::EffectConfig_t> worldRules = {},
+                          const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
         : SessionInputs(rOccupants, std::move(worldRules))
-        , state(std::make_unique<ac::WorldMap>(width, height, TestMapRules()), dataContext,
-                settings, k_TestRngSeed)
+        , state(std::make_unique<ac::WorldMap>(width, height, rMapRules), dataContext, settings,
+                k_TestRngSeed)
         , scope(state)
         , map(state.GetWorldMap())
         , ctx(state.GetTileEffects())
@@ -348,8 +349,9 @@ struct BaseFixture : WorldFixture
     }
 
     explicit BaseFixture(int width, int height, const OccupantFiles_t& rOccupants = {},
-                         std::vector<ac::EffectConfig_t> worldRules = {})
-        : WorldFixture(width, height, rOccupants, std::move(worldRules))
+                         std::vector<ac::EffectConfig_t> worldRules = {},
+                         const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
+        : WorldFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
     {
         ownerDefinition.id = "test_base_owner";
         pOwnerFaction = std::make_unique<ac::Faction>(
@@ -394,8 +396,9 @@ struct FactionFixture : BaseFixture
 
     explicit FactionFixture(int width, int height,
                             std::vector<ac::EffectConfig_t> worldRules = {},
-                            const OccupantFiles_t& rOccupants = {})
-        : BaseFixture(width, height, rOccupants, std::move(worldRules))
+                            const OccupantFiles_t& rOccupants = {},
+                            const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
+        : BaseFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
     {
         factionDefinition.id = "test_faction";
     }
@@ -546,32 +549,27 @@ inline void InstallCouncil(ac::GameDataContext& rData,
         ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
 }
 
-// A live GameState on its own all-land default-size map over rFixtures' data, for tests that
-// need a second session beside the fixture's.
-inline std::unique_ptr<ac::GameState> MakeLandSession(FactionFixture& rFixtures)
+// Raise every tile so the map is all land. Call on the fixture's map before any AddFaction.
+inline void FillLand(ac::WorldMap& rMap)
 {
-    auto pMap = std::make_unique<ac::WorldMap>(k_TestMapWidth, k_TestMapHeight,
-                                                 TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
+    for (auto& pTile : rMap.GetTiles())
     {
         pTile->SetElevation(100);
     }
-    return std::make_unique<ac::GameState>(std::move(pMap), rFixtures.dataContext,
-                                           rFixtures.settings, k_TestRngSeed);
 }
 
 // rDefinition must outlive the session.
-inline ac::Faction& AddSessionFaction(FactionFixture& rFixtures, ac::GameState& rState,
+inline ac::Faction& AddSessionFaction(FactionFixture& rFixtures,
                                       const ac::FactionConfig_t& rDefinition,
                                       bool bIsPlayerControlled)
 {
-    return rState.AddFaction(std::make_unique<ac::Faction>(
-        rState.AllocateFactionId(), bIsPlayerControlled, rDefinition, rFixtures.dataContext,
-        rState.GetWorldMap(), rFixtures.settings, k_TestFactionSeed));
+    return rFixtures.state.AddFaction(std::make_unique<ac::Faction>(
+        rFixtures.state.AllocateFactionId(), bIsPlayerControlled, rDefinition,
+        rFixtures.dataContext, rFixtures.map, rFixtures.settings, k_TestFactionSeed));
 }
 
 // The native-life faction a fungal bloom spawns lifeforms for.
-inline ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures, ac::GameState& rState)
+inline ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures)
 {
     rFixtures.extraDefinitions.push_back(
         std::make_unique<ac::FactionConfig_t>(rFixtures.factionDefinition));
@@ -579,15 +577,15 @@ inline ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures, ac::GameStat
     rPlanet.id = "planet";
     rPlanet.identity.species = ac::FactionSpecies_t::NativeLife;
     rPlanet.identity.participatesInCouncil = false;
-    return AddSessionFaction(rFixtures, rState, rPlanet, /*bIsPlayerControlled=*/false);
+    return AddSessionFaction(rFixtures, rPlanet, /*bIsPlayerControlled=*/false);
 }
 
-inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState& rState,
-                                        ac::Faction& rFaction, int x, int y)
+inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& rFaction,
+                                        int x, int y)
 {
     ac::BaseManager* pBase = rFaction.CreateBase(
-        rState.AllocateBaseId(), "TestBase", rState.GetWorldMap().GetTile(x, y),
-        rState.GetTileEffects());
+        rFixtures.state.AllocateBaseId(), "TestBase", rFixtures.map.GetTile(x, y),
+        rFixtures.ctx);
     if (!pBase)
     {
         throw std::runtime_error("MakeSessionBase: CreateBase failed");
@@ -595,15 +593,13 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState
     return *pBase;
 }
 
-// A live unit of rFaction at (x, y) on rState's map.
-inline ac::Unit& MakeSessionUnit(FactionFixture& rFixtures, ac::GameState& rState,
-                                 ac::Faction& rFaction, int x, int y,
+// A live unit of rFaction at (x, y) on the fixture's map.
+inline ac::Unit& MakeSessionUnit(FactionFixture& rFixtures, ac::Faction& rFaction, int x, int y,
                                  const std::vector<std::string>& rComponentIds = {"test_chassis"})
 {
-    ac::WorldMap& rMap = rState.GetWorldMap();
-    return rFaction.GetUnitManager().CreateUnit(rState.AllocateUnitId(),
-                                                rFixtures.MakeDesign(rComponentIds),
-                                                rMap.GetUnitPositions(), *rMap.GetTile(x, y));
+    return rFaction.GetUnitManager().CreateUnit(
+        rFixtures.state.AllocateUnitId(), rFixtures.MakeDesign(rComponentIds),
+        rFixtures.map.GetUnitPositions(), *rFixtures.map.GetTile(x, y));
 }
 
 } // namespace actest

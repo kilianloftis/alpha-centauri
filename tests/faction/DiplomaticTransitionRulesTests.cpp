@@ -94,7 +94,7 @@ TEST_CASE("A bombard offends each struck owner once, or an empty improved tile's
     Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "bombard"});
     game.MakeUnit(*game.pB, 13, 5, {"test_chassis", "covert"});
     game.MakeUnit(*game.pB, 13, 5);
-    const TileEffectsContext& rTileEffects = game.pState->GetTileEffects();
+    const TileEffectsContext& rTileEffects = game.fixtures.state.GetTileEffects();
 
     const std::vector<HostileAct_t> struck =
         BombardHostileActs(rAttacker, game.At(13, 5), game.Map(), rTileEffects);

@@ -203,20 +203,16 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
           "[effects][routing][world]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
-                    settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
 
-    Faction& factionA = state.AddFaction(std::make_unique<Faction>(
-                                               1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,
+    Faction& factionA = fixture.state.AddFaction(std::make_unique<Faction>(
+                                               fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ true, fixture.factionDefinition,
                                                fixture.dataContext,
-                                               state.GetWorldMap(), fixture.settings,
+                                               fixture.map, fixture.settings,
                                                actest::k_TestFactionSeed));
-    Faction& factionB = state.AddFaction(std::make_unique<Faction>(
-                                               2, /*bIsPlayerControlled*/ false, fixture.factionDefinition,
+    Faction& factionB = fixture.state.AddFaction(std::make_unique<Faction>(
+                                               fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false, fixture.factionDefinition,
                                                fixture.dataContext,
-                                               state.GetWorldMap(), fixture.settings,
+                                               fixture.map, fixture.settings,
                                                actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
@@ -229,12 +225,12 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 
     SECTION("CollectWorldExtras gathers the other faction's WorldGlobal effects only")
     {
-        const auto forB = state.CollectWorldExtras(factionB);
+        const auto forB = fixture.state.CollectWorldExtras(factionB);
         CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId_t::Energy), 0.0).total == Approx(10.0));
 
         // Faction A's own pool already carries its WorldGlobal effects; the world pass
         // excludes them so they are not double-counted.
-        CHECK(state.CollectWorldExtras(factionA).empty());
+        CHECK(fixture.state.CollectWorldExtras(factionA).empty());
     }
 
     SECTION("faction B's base production includes faction A's WorldGlobal energy")
@@ -264,16 +260,12 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
           "[effects][routing][world][unit]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
-                    settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
 
-    Faction& factionA = state.AddFaction(std::make_unique<Faction>(
-        1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+    Faction& factionA = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext, fixture.map,
         fixture.settings, actest::k_TestFactionSeed));
-    Faction& factionB = state.AddFaction(std::make_unique<Faction>(
-        2, false, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+    Faction& factionB = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext, fixture.map,
         fixture.settings, actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
@@ -291,31 +283,27 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
           "[effects][routing][world][tile]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules()), fixture.dataContext,
-                    settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
 
-    Faction& factionA = state.AddFaction(std::make_unique<Faction>(
-        1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+    Faction& factionA = fixture.state.AddFaction(std::make_unique<Faction>(
+        fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext, fixture.map,
         fixture.settings, actest::k_TestFactionSeed));
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
 
-    Tile& tile = *state.GetWorldMap().GetTile(8, 8);
+    Tile& tile = *fixture.map.GetTile(8, 8);
     const TileResources_t yieldBefore =
-        state.GetTileEffects().ResolveTileYield(tile).effective;
-    CHECK(state.GetTileEffects().ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
+        fixture.ctx.ResolveTileYield(tile).effective;
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
           == Approx(1.0));
 
     baseA.GetBuildingManager().AddBuilding("world_beacon");
     baseA.GetBuildingManager().AddBuilding("world_tile_defense");
 
     const TileResources_t yieldAfter =
-        state.GetTileEffects().ResolveTileYield(tile).effective;
+        fixture.ctx.ResolveTileYield(tile).effective;
     CHECK(yieldAfter.nutrients == yieldBefore.nutrients);
     CHECK(yieldAfter.energy == yieldBefore.energy);
     CHECK(yieldAfter.minerals == yieldBefore.minerals);
-    CHECK(state.GetTileEffects().ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
+    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
           == Approx(1.5));
 }
 

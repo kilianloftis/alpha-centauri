@@ -32,31 +32,28 @@ namespace
 struct WorldEventSession_
 {
     FactionFixture fixtures;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     Faction* pAi = nullptr;
 
     WorldEventSession_()
-        : pState(MakeLandSession(fixtures))
-        , pScope(std::make_unique<GameStateScope>(*pState))
     {
-        pPlayer = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
+        FillLand(fixtures.map);
+        pPlayer = &AddSessionFaction(fixtures, fixtures.factionDefinition,
                                      /*bIsPlayerControlled=*/true);
-        pAi = &AddSessionFaction(fixtures, *pState, fixtures.factionDefinition,
+        pAi = &AddSessionFaction(fixtures, fixtures.factionDefinition,
                                  /*bIsPlayerControlled=*/false);
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
-        return MakeSessionBase(fixtures, *pState, rFaction, x, y);
+        return MakeSessionBase(fixtures, rFaction, x, y);
     }
 
     void RunWorldEvents(int yearsSinceFirstPlayable)
     {
-        pState->SetMissionYear(GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
+        fixtures.state.SetMissionYear(GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
         WorldEvents stage(HookContext("WorldEvents"));
-        REQUIRE(stage.Execute(*pState) == StageResult_t::Continue);
+        REQUIRE(stage.Execute(fixtures.state) == StageResult_t::Continue);
     }
 };
 
@@ -94,7 +91,7 @@ TEST_CASE("WorldEvents fires on_start and on_end once on each edge", "[world-eve
         "on_start_effects": [ { "type": "GrantEnergy", "parameters": { "amount": 10 } } ],
         "on_end_effects": [ { "type": "GrantEnergy", "parameters": { "amount": 1 } } ]
     } ] })");
-    session.pState->CreateWorldEvents();
+    session.fixtures.state.CreateWorldEvents();
     EconomyManager& rEconomy = session.pPlayer->GetEconomy();
     const int start = rEconomy.GetEnergy();
 
@@ -115,7 +112,7 @@ TEST_CASE("WorldEvents fires on_start and on_end once on each edge", "[world-eve
 TEST_CASE("An active event's effects reach every faction and leave with it", "[world-events]")
 {
     WorldEventSession_ session;
-    session.pState->CreateWorldEvents();
+    session.fixtures.state.CreateWorldEvents();
     const BaseManager& rPlayerBase = session.MakeBase(*session.pPlayer, 8, 4);
     const BaseManager& rAiBase = session.MakeBase(*session.pAi, 8, 12);
     const auto scale = [](const BaseManager& rBase) {

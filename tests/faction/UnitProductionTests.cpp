@@ -89,36 +89,26 @@ protected:
 struct UnitProductionGame_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
     Faction* pOther = nullptr;
 
     UnitProductionGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
+        FillLand(fixtures.map);
 
-        pFaction = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
-        pOther = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed + 1));
+        pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+        pOther = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed + 1));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
     {
         BaseManager* pBase = rFaction.CreateBase(
-            pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects(),
+            fixtures.state.AllocateBaseId(), "TestBase", fixtures.state.GetWorldMap().GetTile(x, y),
+            fixtures.state.GetTileEffects(),
             /*initialPopulation*/ 3);
         REQUIRE(pBase != nullptr);
         return *pBase;
@@ -199,7 +189,7 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     CHECK(base.GetPopulation().GetSize() == 2);
 
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetFlag(RuleFlagId_t::FoundBase));
 }
@@ -390,9 +380,9 @@ TEST_CASE("At Citizen a colony pod completes in a size-1 base, which keeps its c
           "[production][unit][population][abandon][difficulty]")
 {
     UnitProductionGame_ game;
-    GameRulesConfig_t rules = game.settings.GetGameRules();
+    GameRulesConfig_t rules = game.fixtures.settings.GetGameRules();
     rules.difficultyId = "citizen";
-    game.settings.SetGameRules(rules);
+    game.fixtures.settings.SetGameRules(rules);
     BaseManager& base = game.MakeBase(8, 8);
     while (base.GetPopulation().GetSize() > 1)
     {
@@ -441,7 +431,7 @@ TEST_CASE("CreateUnit without production does not apply on-complete component ef
     const UnitDesign& rPod =
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     game.pFaction->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), rPod, game.pState->GetWorldMap().GetUnitPositions(),
+        game.fixtures.state.AllocateUnitId(), rPod, game.fixtures.state.GetWorldMap().GetUnitPositions(),
         base.GetTile(), &base, &base);
 
     CHECK(base.GetPopulation().GetSize() == 3);
@@ -469,20 +459,20 @@ TEST_CASE("BaseProduction yields for the player's answer and resumes after a def
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"BaseProduction", "Stop"});
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
     CHECK(base.HasPendingProductionConfirmation());
     CHECK(base.GetPopulation().GetSize() == 1);
-    REQUIRE(game.pState->GetPlayerInteractions().Front());
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Front());
     CHECK(std::holds_alternative<ProductionWouldEmptyInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
 
     base.DeferProductionCompletion();
-    game.pState->GetPlayerInteractions().CompleteFront();
-    processor.Advance(*game.pState);
+    game.fixtures.state.GetPlayerInteractions().CompleteFront();
+    processor.Advance(game.fixtures.state);
 
     CHECK_FALSE(base.HasPendingProductionConfirmation());
     CHECK_FALSE(base.IsProductionDisabled());
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
     CHECK(base.GetProduction().HasProduction());
@@ -505,7 +495,7 @@ TEST_CASE("BaseProduction AI defers an abandoning completion without yielding",
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     BaseProduction stage(HookContext{});
-    CHECK(stage.Execute(*game.pState, *game.pOther) == StageResult_t::Continue);
+    CHECK(stage.Execute(game.fixtures.state, *game.pOther) == StageResult_t::Continue);
     CHECK_FALSE(base.HasPendingProductionConfirmation());
     CHECK_FALSE(base.IsProductionDisabled());
     CHECK(base.GetPopulation().GetSize() == 1);
@@ -530,12 +520,12 @@ TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues St
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"BaseProduction", "Stop"});
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
 
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     {
         const auto& rIdle = std::get<ProductionIdleInteraction_t>(
-            game.pState->GetPlayerInteractions().Front()->payload);
+            game.fixtures.state.GetPlayerInteractions().Front()->payload);
         CHECK(rIdle.afterCompletion);
         CHECK(rIdle.completedEvents.size() == 2);
         CHECK(std::find(rIdle.completedEvents.begin(), rIdle.completedEvents.end(),
@@ -549,9 +539,9 @@ TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues St
         CHECK(rIdle.completedItemName == rDesign.GetId());
     }
 
-    game.pState->GetPlayerInteractions().CompleteFront();
-    processor.Advance(*game.pState);
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    game.fixtures.state.GetPlayerInteractions().CompleteFront();
+    processor.Advance(game.fixtures.state);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
     CheckQueuedStockpileEnergy_(base, game);
 }
 
@@ -562,7 +552,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     const UnitDesign& rDesign = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
 
     REQUIRE(game.pFaction->GetUnitManager().Units().empty());
-    REQUIRE(game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile()).empty());
+    REQUIRE(game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile()).empty());
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     REQUIRE(base.GetMineralCost() >= 1);
@@ -574,7 +564,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     CheckQueuedStockpileEnergy_(base, game);
 
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     Unit& rUnit = *onTile.front();
     CHECK(&rUnit.GetTile() == &base.GetTile());
@@ -598,7 +588,7 @@ TEST_CASE("CreateBaseFromSnapshot restores a queued unit design", "[production][
     REQUIRE(game.pFaction->ExtractBase(base.GetBaseId()).has_value());
 
     BaseManager* pRestored = game.pFaction->CreateBaseFromSnapshot(
-        snapshot, game.pState->GetTileEffects());
+        snapshot, game.fixtures.state.GetTileEffects());
     REQUIRE(pRestored != nullptr);
     REQUIRE(pRestored->GetProduction().GetCurrentProduction() != nullptr);
     CHECK(pRestored->GetProduction().GetCurrentProduction()->GetId() == rDesign.GetId());
@@ -714,7 +704,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
 
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetXp() == 2);
 }
@@ -766,7 +756,7 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
     REQUIRE(withSkunk.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(withSkunk.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(withSkunk.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->IsPrototype());
     CHECK(onTile.front()->GetXp() == 2);
@@ -805,7 +795,7 @@ TEST_CASE("Prototype GrantXp stacks with on_unit_produced train bonuses",
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetXp() == 4);
 }
@@ -912,8 +902,8 @@ TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
     Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
-        *game.pState->GetWorldMap().GetTile(8, 0), &base, &base);
+        game.fixtures.state.AllocateUnitId(), rDesign, game.fixtures.state.GetWorldMap().GetUnitPositions(),
+        *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
     CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
@@ -934,8 +924,8 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
 
     // Home only — Engine starting units / gift path. Not "built".
     Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
-        *game.pState->GetWorldMap().GetTile(8, 0), &base);
+        game.fixtures.state.AllocateUnitId(), rDesign, game.fixtures.state.GetWorldMap().GetUnitPositions(),
+        *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
     CHECK_FALSE(gifted.IsPrototype());
     CHECK(gifted.GetXp() == 1);
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
@@ -971,12 +961,12 @@ TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"BaseProduction", "Stop"});
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
 
     CheckQueuedStockpileEnergy_(first, game);
     CheckQueuedStockpileEnergy_(second, game);
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
-    CHECK(game.pState->GetPlayerInteractions().Size() >= 1);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Size() >= 1);
 }
 
 TEST_CASE("A base that already ticked is not revisited when a sibling completion yields",
@@ -1008,13 +998,13 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"BaseProduction", "Stop"});
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
     CheckQueuedStockpileEnergy_(finisher, game);
     CheckQueuedStockpileEnergy_(laggard, game);
 
-    while (!game.pState->GetPlayerInteractions().Empty())
+    while (!game.fixtures.state.GetPlayerInteractions().Empty())
     {
-        game.pState->GetPlayerInteractions().CompleteFront();
+        game.fixtures.state.GetPlayerInteractions().CompleteFront();
     }
 
     REQUIRE(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
@@ -1031,7 +1021,7 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
     const int bankedBefore = finisher.GetResources().GetMineralBank();
     REQUIRE(bankedBefore >= standardCost);
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
 
     CHECK(finisher.GetResources().GetMineralBank() == bankedBefore);
     CHECK(finisher.GetProduction().GetMineralStockpile() == 0);
@@ -1052,7 +1042,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     const Unit& rPrototype = *onTile.front();
 
@@ -1068,7 +1058,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     REQUIRE(second.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onSecondTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(second.GetTile());
+        game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(second.GetTile());
     REQUIRE(onSecondTile.size() == 1);
     CHECK_FALSE(onSecondTile.front()->IsPrototype());
     CHECK(onSecondTile.front()->GetXp() == 1);
@@ -1111,14 +1101,14 @@ TEST_CASE("PostActionsProduction completes a funded queue without banking leftov
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"PostActionsProduction", "Stop"});
 
-    processor.Advance(*game.pState);
+    processor.Advance(game.fixtures.state);
 
     CHECK(base.GetResources().GetMineralBank() == leftoverBank);
     CheckQueuedStockpileEnergy_(base, game);
     CHECK(base.GetBuildingManager().HasBuilding(pFacility->id));
-    REQUIRE(game.pState->GetPlayerInteractions().Size() >= 1);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() >= 1);
     CHECK(std::holds_alternative<ProductionIdleInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
+        game.fixtures.state.GetPlayerInteractions().Front()->payload));
 }
 
 TEST_CASE("PostActionsProduction keeps a same-turn abandon deferral deferred",
@@ -1140,10 +1130,10 @@ TEST_CASE("PostActionsProduction keeps a same-turn abandon deferral deferred",
     REQUIRE_FALSE(base.HasPendingProductionConfirmation());
 
     PostActionsProduction stage(HookContext{});
-    CHECK(stage.Execute(*game.pState, *game.pFaction) == StageResult_t::Continue);
+    CHECK(stage.Execute(game.fixtures.state, *game.pFaction) == StageResult_t::Continue);
 
     CHECK_FALSE(base.HasPendingProductionConfirmation());
-    CHECK(game.pState->GetPlayerInteractions().Empty());
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().HasProduction());
     CHECK(base.GetProduction().GetCurrentProduction() == &rPod);

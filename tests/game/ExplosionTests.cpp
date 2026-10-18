@@ -58,8 +58,6 @@ bool StillAlive_(const Faction& rFaction, const Unit& rUnit)
 struct BlastGame_
 {
     FactionFixture fixtures;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pPlayer = nullptr;
     EffectPool pool;
     UnitComponentConfig_t warhead;
@@ -67,22 +65,18 @@ struct BlastGame_
 
     BlastGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, TestMapRules());
-        for (auto& pTile : pMap->GetTiles())
+        for (auto& pTile : fixtures.map.GetTiles())
         {
             pTile->SetElevation(3000);
         }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, fixtures.settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-        pPlayer = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+        pPlayer = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     }
 
     Tile& At_(int x, int y)
     {
-        Tile* pTile = pState->GetWorldMap().GetTile(x, y);
+        Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return *pTile;
     }
@@ -90,17 +84,17 @@ struct BlastGame_
     BaseManager& MakeBase_(int x, int y)
     {
         BaseManager* pBase = pPlayer->CreateBase(
-            pState->AllocateBaseId(), "TestBase", &At_(x, y),
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "TestBase", &At_(x, y),
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
 
     Faction& AddFaction_()
     {
-        return pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+        return fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     }
 
     Unit& MakeChassisUnit_(int x, int y)
@@ -120,7 +114,7 @@ struct BlastGame_
         };
         designs.emplace_back(slots, assigned);
         return rFaction.GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), designs.back(), pState->GetWorldMap().GetUnitPositions(),
+            fixtures.state.AllocateUnitId(), designs.back(), fixtures.state.GetWorldMap().GetUnitPositions(),
             At_(x, y), /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
     }
 
@@ -153,8 +147,8 @@ struct BlastGame_
         };
         designs.emplace_back(slots, assigned);
         return pPlayer->GetUnitManager().CreateUnit(
-            pState->AllocateUnitId(), designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), At_(x, y),
+            fixtures.state.AllocateUnitId(), designs.back(),
+            fixtures.state.GetWorldMap().GetUnitPositions(), At_(x, y),
             /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
     }
 };
@@ -173,8 +167,8 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     const Rockiness_t rockiness = rOrigin.GetRockiness();
     const Moisture_t moisture = rOrigin.GetMoisture();
 
-    game.pState->GetTileEffects().AddOccupantWithEffects(rFarm, std::string(ImprovementIds::k_Farm));
-    game.pState->GetTileEffects().AddOccupantWithEffects(rFungus, std::string(ImprovementIds::k_Fungus));
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFarm, std::string(ImprovementIds::k_Farm));
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungus, std::string(ImprovementIds::k_Fungus));
     rAquifer.SetHasAquifer(true);
     BaseManager& rBase = game.MakeBase_(7, 9);
     Unit& rVictim = game.MakeChassisUnit_(7, 7);
@@ -185,8 +179,8 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     REQUIRE(rFungus.HasFeature(ImprovementIds::k_Fungus));
 
     const ExplosionResult_t result =
-        ApplyExplosion(rOrigin, game.pState->GetWorldMap(), /*radius=*/1, game.pState->GetRng(),
-                       *game.pState, &rDetonator);
+        ApplyExplosion(rOrigin, game.fixtures.state.GetWorldMap(), /*radius=*/1, game.fixtures.state.GetRng(),
+                       game.fixtures.state, &rDetonator);
 
     CHECK(result.bChanged);
     CHECK(result.radius == 1);
@@ -203,9 +197,9 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     CHECK(rOrigin.GetMoisture() == moisture);
 
     const ElevationRulesConfig_t& rRules = rOrigin.MapRules();
-    for (const auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (const auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
-        const int distance = ChebyshevDistance(rOrigin, *pTile, game.pState->GetWorldMap().GetWidth());
+        const int distance = ChebyshevDistance(rOrigin, *pTile, game.fixtures.state.GetWorldMap().GetWidth());
         if (distance <= 1)
         {
             const int drop = 3000 - pTile->GetElevation();
@@ -228,21 +222,21 @@ TEST_CASE("An explosion at radius 0 and at Planet's floor changes nothing", "[ma
     Unit& rUnit = game.MakeChassisUnit_(8, 8);
 
     const ExplosionResult_t none =
-        ApplyExplosion(rOrigin, game.pState->GetWorldMap(), /*radius=*/0, game.pState->GetRng(),
-                       *game.pState, &rUnit);
+        ApplyExplosion(rOrigin, game.fixtures.state.GetWorldMap(), /*radius=*/0, game.fixtures.state.GetRng(),
+                       game.fixtures.state, &rUnit);
     CHECK_FALSE(none.bChanged);
     CHECK(none.tiles == 0);
     CHECK(rOrigin.GetElevation() == 3000);
     CHECK(StillAlive_(*game.pPlayer, rUnit));
 
-    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         pTile->SetElevation(pTile->MapRules().minElevationMeters);
     }
     const int floor = rOrigin.GetElevation();
     const ExplosionResult_t floored =
-        ApplyExplosion(rOrigin, game.pState->GetWorldMap(), /*radius=*/1, game.pState->GetRng(),
-                       *game.pState, &rUnit);
+        ApplyExplosion(rOrigin, game.fixtures.state.GetWorldMap(), /*radius=*/1, game.fixtures.state.GetRng(),
+                       game.fixtures.state, &rUnit);
     CHECK(floored.tiles == 9);
     CHECK_FALSE(floored.bChanged);
     CHECK(rOrigin.GetElevation() == floor);
@@ -276,14 +270,14 @@ TEST_CASE("Detonating a planet buster spends the missile after the blast",
     };
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), game.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), game.At_(8, 8),
+        game.fixtures.state.AllocateUnitId(), game.designs.back(),
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
         /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
     Unit& rOutsider = game.MakeChassisUnit_(10, 10);
     game.MakeChassisUnit_(7, 7);
 
     REQUIRE(rMissile.GetStat(StatId_t::ExplosionRadius) == 1);
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
     CHECK(UnitCount_(*game.pPlayer) == 1);
     CHECK(StillAlive_(*game.pPlayer, rOutsider));
     const int drop = 3000 - game.At_(8, 8).GetElevation();
@@ -299,23 +293,23 @@ TEST_CASE("Detonating a Planet Buster names the first foreign base destroyed",
     Faction& rBystander = game.AddFaction_();
 
     BaseManager* pVictimBase = rVictim.CreateBase(
-        game.pState->AllocateBaseId(), "VictimBase", &game.At_(8, 8),
-        game.pState->GetTileEffects());
+        game.fixtures.state.AllocateBaseId(), "VictimBase", &game.At_(8, 8),
+        game.fixtures.state.GetTileEffects());
     REQUIRE(pVictimBase);
 
     Unit& rMissile = game.MakePlanetBuster_(8, 8);
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
 
-    const AtrocityLedger& rLedger = game.pState->GetAtrocityLedger();
+    const AtrocityLedger& rLedger = game.fixtures.state.GetAtrocityLedger();
     REQUIRE(rLedger.Records().size() == 1);
     CHECK(rLedger.Records().front().perpetrator == game.pPlayer->GetFactionId());
     CHECK(rLedger.Records().front().victim == rVictim.GetFactionId());
     CHECK(rLedger.Records().front().severity == AtrocitySeverityId_t::Major);
-    CHECK_FALSE(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.pState->GetMissionYear()));
+    CHECK_FALSE(rLedger.IsSanctioned(game.pPlayer->GetFactionId(), game.fixtures.state.GetMissionYear()));
     // The victim is at Vendetta from the act itself; a living AI bystander declares it too.
-    CHECK(game.pState->GetDiplomacyLedger().HasVendetta(rVictim.GetFactionId(),
+    CHECK(game.fixtures.state.GetDiplomacyLedger().HasVendetta(rVictim.GetFactionId(),
                                                         game.pPlayer->GetFactionId()));
-    CHECK(game.pState->GetDiplomacyLedger().GetStatus(rBystander.GetFactionId(),
+    CHECK(game.fixtures.state.GetDiplomacyLedger().GetStatus(rBystander.GetFactionId(),
                                                       game.pPlayer->GetFactionId())
           == DiplomaticStatus_t::Vendetta);
 }
@@ -326,19 +320,19 @@ TEST_CASE("A Planet Buster next to a foreign base names that owner even off the 
     BlastGame_ game;
     Faction& rVictim = game.AddFaction_();
     BaseManager* pVictimBase = rVictim.CreateBase(
-        game.pState->AllocateBaseId(), "VictimBase", &game.At_(9, 9),
-        game.pState->GetTileEffects());
+        game.fixtures.state.AllocateBaseId(), "VictimBase", &game.At_(9, 9),
+        game.fixtures.state.GetTileEffects());
     REQUIRE(pVictimBase);
-    game.pState->RebuildTerritory();
+    game.fixtures.state.RebuildTerritory();
     // Detonation is on a neighboring tile, not the base tile itself. Territory may claim it;
     // the victim still comes from the razed base.
-    REQUIRE(game.pState->GetWorldMap().GetTerritory().HasOwner(game.At_(9, 9)));
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().HasOwner(game.At_(9, 9)));
 
     Unit& rMissile = game.MakePlanetBuster_(8, 8);
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
 
-    REQUIRE(game.pState->GetAtrocityLedger().Records().size() == 1);
-    CHECK(game.pState->GetAtrocityLedger().Records().front().victim == rVictim.GetFactionId());
+    REQUIRE(game.fixtures.state.GetAtrocityLedger().Records().size() == 1);
+    CHECK(game.fixtures.state.GetAtrocityLedger().Records().front().victim == rVictim.GetFactionId());
 }
 
 TEST_CASE("A Planet Buster on own land that kills foreign units names the enemy",
@@ -347,20 +341,20 @@ TEST_CASE("A Planet Buster on own land that kills foreign units names the enemy"
     BlastGame_ game;
     Faction& rEnemy = game.AddFaction_();
     game.pPlayer->CreateBase(
-        game.pState->AllocateBaseId(), "Home", &game.At_(8, 8),
-        game.pState->GetTileEffects());
-    game.pState->RebuildTerritory();
-    REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(game.At_(8, 8))
+        game.fixtures.state.AllocateBaseId(), "Home", &game.At_(8, 8),
+        game.fixtures.state.GetTileEffects());
+    game.fixtures.state.RebuildTerritory();
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(game.At_(8, 8))
             == game.pPlayer->GetFactionId());
 
     game.MakeChassisUnitFor_(rEnemy, 9, 9);
 
     Unit& rMissile = game.MakePlanetBuster_(8, 8);
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
 
-    REQUIRE(game.pState->GetAtrocityLedger().Records().size() == 1);
-    CHECK(game.pState->GetAtrocityLedger().Records().front().victim == rEnemy.GetFactionId());
-    CHECK_FALSE(game.pState->GetAtrocityLedger().HasVictimized(
+    REQUIRE(game.fixtures.state.GetAtrocityLedger().Records().size() == 1);
+    CHECK(game.fixtures.state.GetAtrocityLedger().Records().front().victim == rEnemy.GetFactionId());
+    CHECK_FALSE(game.fixtures.state.GetAtrocityLedger().HasVictimized(
         game.pPlayer->GetFactionId(), game.pPlayer->GetFactionId()));
 }
 
@@ -385,12 +379,12 @@ TEST_CASE("A warhead that authors no atrocity records none", "[map][explosion][d
     };
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), game.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), game.At_(8, 8),
+        game.fixtures.state.AllocateUnitId(), game.designs.back(),
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
         /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
 
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
-    CHECK(game.pState->GetAtrocityLedger().Records().empty());
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
+    CHECK(game.fixtures.state.GetAtrocityLedger().Records().empty());
 }
 
 TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
@@ -418,14 +412,14 @@ TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
     };
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
-        game.pState->AllocateUnitId(), game.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), game.At_(8, 8),
+        game.fixtures.state.AllocateUnitId(), game.designs.back(),
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
         /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
 
-    REQUIRE(ApplyDetonation(*game.pState, rMissile));
-    CHECK(game.pState->GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);
+    REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
+    CHECK(game.fixtures.state.GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);
     CHECK(UnitCount_(*game.pPlayer) == 0);
-    CHECK(game.pState->GetAtrocityLedger().Records().empty());
+    CHECK(game.fixtures.state.GetAtrocityLedger().Records().empty());
 }
 
 TEST_CASE("A blast sized by a unit stat needs a detonator; a fixed blast does not",

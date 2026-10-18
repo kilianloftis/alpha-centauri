@@ -14,6 +14,7 @@
 #include <vector>
 
 using namespace ac;
+using namespace actest;
 
 namespace
 {
@@ -109,31 +110,21 @@ TEST_CASE("TurnProcessor throws when constructed with an empty stage order",
 TEST_CASE("TurnProcessor throws instead of silently skipping a stage id missing from both registries",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     TurnProcessor processor(GlobalTurnStageRegistry_t{}, PerFactionTurnStageRegistry_t{},
                              {"NoSuchStage"});
 
-    CHECK_THROWS_AS(processor.Advance(gameState), std::runtime_error);
+    CHECK_THROWS_AS(processor.Advance(world.state), std::runtime_error);
 }
 
 TEST_CASE("TurnProcessor executes stages until a yield, including per-faction stages",
           "[TurnProcessor]")
 {
-    actest::FactionFixture fixtures;
-    fixtures.MakeFaction();
-    fixtures.MakeFaction();
-
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
-    gameState.AddFaction(std::move(fixtures.factions[0]));
-    gameState.AddFaction(std::move(fixtures.factions[1]));
+    actest::FactionFixture fixtures(4, 4);
+    FillLand(fixtures.map);
+    AddSessionFaction(fixtures, fixtures.factionDefinition, true);
+    AddSessionFaction(fixtures, fixtures.factionDefinition, false);
 
     GlobalTurnStageRegistry_t global;
     auto pGlobalStage = std::make_unique<CountingGlobalStage>();
@@ -151,7 +142,7 @@ TEST_CASE("TurnProcessor executes stages until a yield, including per-faction st
 
     TurnProcessor processor(std::move(global), std::move(perFaction),
                              {"GlobalOnce", "PerFactionEach", "Stop"});
-    processor.Advance(gameState);
+    processor.Advance(fixtures.state);
 
     CHECK(rGlobalStage.callCount == 1);
     CHECK(rPerFactionStage.callCount == 2);
@@ -161,11 +152,7 @@ TEST_CASE("TurnProcessor executes stages until a yield, including per-faction st
 TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     GlobalTurnStageRegistry_t global;
     auto pStage = std::make_unique<YieldOnceGlobalStage>();
@@ -183,12 +170,12 @@ TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{},
                              {"YieldOnce", "After", "Stop"});
 
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 1);
     CHECK(rAfter.callCount == 0);
     CHECK(rStop.callCount == 0);
 
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 2);
     CHECK(rAfter.callCount == 1);
     CHECK(rStop.callCount == 1);
@@ -197,11 +184,7 @@ TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
 TEST_CASE("TurnProcessor wraps to the start of the stage order after the last stage",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     // Yields once, then Continues and resets so the next cycle yields again.
     class YieldEachCycleStage : public GlobalTurnStage
@@ -237,12 +220,12 @@ TEST_CASE("TurnProcessor wraps to the start of the stage order after the last st
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{},
                              {"Cycle", "After"});
 
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 1);
     CHECK(rAfter.callCount == 0);
 
     // Resume: Cycle continues, After runs, wrap, Cycle yields again (third call).
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 3);
     CHECK(rAfter.callCount == 1);
 }
@@ -250,16 +233,10 @@ TEST_CASE("TurnProcessor wraps to the start of the stage order after the last st
 TEST_CASE("TurnProcessor resumes the same faction after a per-faction stage yields",
           "[TurnProcessor]")
 {
-    actest::FactionFixture fixtures;
-    fixtures.MakeFaction();
-    fixtures.MakeFaction();
-
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
-    gameState.AddFaction(std::move(fixtures.factions[0]));
-    gameState.AddFaction(std::move(fixtures.factions[1]));
+    actest::FactionFixture fixtures(4, 4);
+    FillLand(fixtures.map);
+    AddSessionFaction(fixtures, fixtures.factionDefinition, true);
+    AddSessionFaction(fixtures, fixtures.factionDefinition, false);
 
     PerFactionTurnStageRegistry_t perFaction;
     auto pStage = std::make_unique<YieldingPerFactionStage>();
@@ -272,41 +249,33 @@ TEST_CASE("TurnProcessor resumes the same faction after a per-faction stage yiel
 
     TurnProcessor processor(std::move(global), std::move(perFaction), {"YieldEach", "Stop"});
 
-    processor.Advance(gameState);
+    processor.Advance(fixtures.state);
     CHECK(rStage.callCount == 1);
 
-    processor.Advance(gameState);
+    processor.Advance(fixtures.state);
     CHECK(rStage.callCount == 3);
 
     // Faction 1 finished; Stop yields.
-    processor.Advance(gameState);
+    processor.Advance(fixtures.state);
     CHECK(rStage.callCount == 4);
 }
 
 TEST_CASE("TurnProcessor throws if the stage order has no yielding stage",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     GlobalTurnStageRegistry_t global;
     global["OnlyContinue"] = std::make_unique<CountingGlobalStage>();
 
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"OnlyContinue"});
-    CHECK_THROWS_AS(processor.Advance(gameState), std::logic_error);
+    CHECK_THROWS_AS(processor.Advance(world.state), std::logic_error);
 }
 
 TEST_CASE("TurnProcessor Reset recovers after a no-yield stage order throw",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     class YieldAfterContinue : public GlobalTurnStage
     {
@@ -330,22 +299,18 @@ TEST_CASE("TurnProcessor Reset recovers after a no-yield stage order throw",
     global["Flip"] = std::move(pStage);
 
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"Flip"});
-    CHECK_THROWS_AS(processor.Advance(gameState), std::logic_error);
+    CHECK_THROWS_AS(processor.Advance(world.state), std::logic_error);
     CHECK(rStage.callCount == 1);
 
     processor.Reset();
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 2);
 }
 
 TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     class ThrowingStage : public GlobalTurnStage
     {
@@ -370,24 +335,20 @@ TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
     global["Boom"] = std::make_unique<ThrowingStage>(std::move(hooks));
 
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"Boom"});
-    CHECK_THROWS_AS(processor.Advance(gameState), std::runtime_error);
+    CHECK_THROWS_AS(processor.Advance(world.state), std::runtime_error);
     CHECK(postCount == 1);
 
     // Not wedged mid-enter: Reset leaves a clean cursor (re-Advance throws again from the
     // stage body, which is defined recovery — not a stuck no-yield poison).
     processor.Reset();
-    CHECK_THROWS_AS(processor.Advance(gameState), std::runtime_error);
+    CHECK_THROWS_AS(processor.Advance(world.state), std::runtime_error);
     CHECK(postCount == 2);
 }
 
 TEST_CASE("TurnProcessor unbound replace hook does not skip ExecuteImpl",
           "[TurnProcessor]")
 {
-    actest::WorldFixture world;
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), world.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
+    actest::WorldFixture world(4, 4);
 
     HookContext hooks;
     Hook_t replace;
@@ -418,33 +379,26 @@ TEST_CASE("TurnProcessor unbound replace hook does not skip ExecuteImpl",
 
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{},
                             {"Hooked", "Stop"});
-    processor.Advance(gameState);
+    processor.Advance(world.state);
     CHECK(rStage.callCount == 1);
 }
 
 TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id order",
           "[TurnProcessor]")
 {
-    actest::FactionFixture fixtures;
-    // Allocate so the first living faction can have a higher id than the second insertion
-    // would under a naive "< resumeId" skip — use GameState allocators after construct.
-    GameSettings settings;
-    GameState gameState(std::make_unique<WorldMap>(4, 4, actest::TestMapRules()), fixtures.dataContext,
-                        settings, actest::k_TestRngSeed);
-    const GameStateScope scope(gameState);
-
+    actest::FactionFixture fixtures(4, 4);
     // Burn a low id so the first added faction is not id 1 contiguous-only assumption.
-    (void)gameState.AllocateFactionId();
-    (void)gameState.AllocateFactionId();
+    (void)fixtures.state.AllocateFactionId();
+    (void)fixtures.state.AllocateFactionId();
 
     auto pA = std::make_unique<Faction>(
-        gameState.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        gameState.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
     auto pB = std::make_unique<Faction>(
-        gameState.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-        gameState.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
-    gameState.AddFaction(std::move(pA));
-    gameState.AddFaction(std::move(pB));
+        fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
+    fixtures.state.AddFaction(std::move(pA));
+    fixtures.state.AddFaction(std::move(pB));
 
     class YieldFirstFactionOnce : public PerFactionTurnStage
     {
@@ -478,11 +432,11 @@ TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id o
 
     TurnProcessor processor(std::move(global), std::move(perFaction), {"YieldFirst", "Stop"});
 
-    processor.Advance(gameState);
+    processor.Advance(fixtures.state);
     REQUIRE(rStage.callCount == 1);
     REQUIRE(rStage.order.size() == 1);
 
-    processor.Advance(gameState); // resume first (Continue), then second (Continue), then Stop
+    processor.Advance(fixtures.state); // resume first (Continue), then second (Continue), then Stop
     CHECK(rStage.callCount == 3);
     REQUIRE(rStage.order.size() == 3);
     CHECK(rStage.order[0] == rStage.order[1]); // same faction resumed

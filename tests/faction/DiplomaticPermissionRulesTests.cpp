@@ -38,13 +38,13 @@ TEST_CASE("Only Pact partners may stand on the same tile", "[diplomacy][status][
 
     CHECK_FALSE(HasFriendlyOccupant(rMover, rOther.GetTile(), game.Map()));
     MoveOrder_t order;
-    CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
+    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
 
     game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                             DiplomaticStatus_t::Pact);
     CHECK(HasFriendlyOccupant(rMover, rOther.GetTile(), game.Map()));
     CHECK(HasFriendlyBase(rMover, game.pBaseB->GetTile(), game.Map()));
-    CHECK(game.pState->GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
+    CHECK(game.fixtures.state.GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
     CHECK(&rMover.GetTile() == &rOther.GetTile());
 }
 

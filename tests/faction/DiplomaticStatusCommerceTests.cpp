@@ -37,8 +37,7 @@ TEST_CASE("A faction's commerce rate follows its status with each partner",
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
     CHECK(rateToward(game.pB) == 0.0);
 
-    Faction& rLate = AddSessionFaction(game.fixtures, *game.pState,
-                                       game.fixtures.factionDefinition, false);
+    Faction& rLate = AddSessionFaction(game.fixtures, game.fixtures.factionDefinition, false);
     CHECK(rateToward(&rLate) == 0.0);
 }
 

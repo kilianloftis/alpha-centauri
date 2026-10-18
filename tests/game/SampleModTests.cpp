@@ -67,32 +67,21 @@ protected:
 struct ModHarness_
 {
     FactionFixture fixtures;
-    GameSettings settings;
-    std::unique_ptr<GameState> pState;
-    std::unique_ptr<GameStateScope> pScope;
     Faction* pFaction = nullptr;
 
     ModHarness_()
     {
-        auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-        for (const auto& pTile : pMap->GetTiles())
-        {
-            pTile->SetElevation(100);
-        }
-        pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.dataContext, settings, k_TestRngSeed);
-        pScope = std::make_unique<GameStateScope>(*pState);
-
-        pFaction = &pState->AddFaction(std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            pState->GetWorldMap(), settings, k_TestFactionSeed));
+        FillLand(fixtures.map);
+        pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
+            fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.map, fixtures.settings, k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(int x, int y)
     {
         BaseManager* pBase = pFaction->CreateBase(
-            pState->AllocateBaseId(), "ModBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects());
+            fixtures.state.AllocateBaseId(), "ModBase", fixtures.state.GetWorldMap().GetTile(x, y),
+            fixtures.state.GetTileEffects());
         REQUIRE(pBase != nullptr);
         return *pBase;
     }
@@ -151,7 +140,7 @@ TEST_CASE("A turn-stage hook is handed the game it is supposed to act on", "[mod
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"Population", "PlayerActions"});
 
-    processor.Advance(*harness.pState);
+    processor.Advance(harness.fixtures.state);
 
     CHECK(seenStages == std::vector<std::string>{"Population"});
     CHECK(seenBaseCount == 1);
@@ -165,14 +154,14 @@ TEST_CASE("A mod observing the EventBus sees tech, base and riot events", "[mod]
     // These three are declared in the mod-facing catalogue and were never published; the
     // architecture doc claimed they were bridged.
     ModHarness_ harness;
-    EventBridge bridge(harness.pState->GetEventBus());
+    EventBridge bridge(harness.fixtures.state.GetEventBus());
     bridge.WireFaction(*harness.pFaction);
 
     std::vector<TechId> discovered;
     std::vector<BaseId_t> built;
     int riots = 0;
 
-    harness.pState->GetEventBus().Subscribe([&](const GameEvent& rEvent)
+    harness.fixtures.state.GetEventBus().Subscribe([&](const GameEvent& rEvent)
     {
         if (const auto* pTech = std::get_if<EvTechDiscovered>(&rEvent))
         {
@@ -208,12 +197,12 @@ TEST_CASE("Wiring the same faction twice does not double-publish", "[mod][events
     // WireBase is idempotent by object; WireFaction must match, or a re-wired faction delivers
     // every event twice to every mod.
     ModHarness_ harness;
-    EventBridge bridge(harness.pState->GetEventBus());
+    EventBridge bridge(harness.fixtures.state.GetEventBus());
     bridge.WireFaction(*harness.pFaction);
     bridge.WireFaction(*harness.pFaction);
 
     int techEvents = 0;
-    harness.pState->GetEventBus().Subscribe([&](const GameEvent& rEvent)
+    harness.fixtures.state.GetEventBus().Subscribe([&](const GameEvent& rEvent)
     {
         if (std::get_if<EvTechDiscovered>(&rEvent))
         {

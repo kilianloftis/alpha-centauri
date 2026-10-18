@@ -34,7 +34,7 @@ DiplomaticProposal_t Proposal_(const Faction& rProposer, const Faction& rRecipie
 
 DiplomaticProposeResult_t Propose_(DiplomacyFixture& rGame, const DiplomaticProposal_t& rProposal)
 {
-    return rGame.pState->GetDiplomaticActionExecutor().Propose(*rGame.pState, rProposal);
+    return rGame.fixtures.state.GetDiplomaticActionExecutor().Propose(rGame.fixtures.state, rProposal);
 }
 
 } // namespace
@@ -80,7 +80,7 @@ TEST_CASE("An empty proposal is invalid", "[diplomacy][executor]")
     CHECK(Propose_(game, Proposal_(*game.pA, *game.pB)) == DiplomaticProposeResult_t::Invalid);
     // Nor does it take the player's one pending slot.
     CHECK(Propose_(game, Proposal_(*game.pB, *game.pA)) == DiplomaticProposeResult_t::Invalid);
-    CHECK_FALSE(game.pState->GetDiplomaticActionExecutor().GetPendingProposal().has_value());
+    CHECK_FALSE(game.fixtures.state.GetDiplomaticActionExecutor().GetPendingProposal().has_value());
 }
 
 TEST_CASE("Propose to player stays pending until Accept", "[diplomacy][executor]")
@@ -93,7 +93,7 @@ TEST_CASE("Propose to player stays pending until Accept", "[diplomacy][executor]
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::PendingPlayer);
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Neutral);
 
-    REQUIRE(game.pState->GetDiplomaticActionExecutor().Accept(*game.pState));
+    REQUIRE(game.fixtures.state.GetDiplomaticActionExecutor().Accept(game.fixtures.state));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
@@ -325,19 +325,19 @@ TEST_CASE("A second proposal to the player is refused, not silently dropped",
     DiplomaticProposal_t second = Proposal_(*game.pC, *game.pA);
     second.requestedStatus = DiplomaticStatus_t::Treaty;
 
-    DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
-    REQUIRE(rExecutor.Propose(*game.pState, first) == DiplomaticProposeResult_t::PendingPlayer);
-    CHECK(rExecutor.Propose(*game.pState, second) == DiplomaticProposeResult_t::Busy);
+    DiplomaticActionExecutor& rExecutor = game.fixtures.state.GetDiplomaticActionExecutor();
+    REQUIRE(rExecutor.Propose(game.fixtures.state, first) == DiplomaticProposeResult_t::PendingPlayer);
+    CHECK(rExecutor.Propose(game.fixtures.state, second) == DiplomaticProposeResult_t::Busy);
 
     // The first proposal is intact and is what Accept resolves.
     REQUIRE(rExecutor.GetPendingProposal().has_value());
     CHECK(rExecutor.GetPendingProposal()->proposer == game.pB->GetFactionId());
-    REQUIRE(rExecutor.Accept(*game.pState));
+    REQUIRE(rExecutor.Accept(game.fixtures.state));
     CHECK(game.Status(*game.pB, *game.pA) == DiplomaticStatus_t::Treaty);
     CHECK(game.Status(*game.pC, *game.pA) == DiplomaticStatus_t::Neutral);
 
     // The slot is free again once the player answers.
-    CHECK(rExecutor.Propose(*game.pState, second) == DiplomaticProposeResult_t::PendingPlayer);
+    CHECK(rExecutor.Propose(game.fixtures.state, second) == DiplomaticProposeResult_t::PendingPlayer);
 }
 
 TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
@@ -351,8 +351,8 @@ TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
     DiplomaticProposal_t proposal = Proposal_(*game.pB, *game.pA);
     proposal.give.push_back(TradeCredits_t{40});
 
-    DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
-    REQUIRE(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::PendingPlayer);
+    DiplomaticActionExecutor& rExecutor = game.fixtures.state.GetDiplomaticActionExecutor();
+    REQUIRE(rExecutor.Propose(game.fixtures.state, proposal) == DiplomaticProposeResult_t::PendingPlayer);
 
     rExecutor.Reject();
     CHECK_FALSE(rExecutor.GetPendingProposal().has_value());
@@ -360,7 +360,7 @@ TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
     CHECK(game.pB->GetEconomy().GetEnergy() == 40);
     CHECK(game.pA->GetEconomy().GetEnergy() == 0);
     // Accepting a rejected proposal is a no-op, not a replay.
-    CHECK_FALSE(rExecutor.Accept(*game.pState));
+    CHECK_FALSE(rExecutor.Accept(game.fixtures.state));
     // The slot is usable again.
-    CHECK(rExecutor.Propose(*game.pState, proposal) == DiplomaticProposeResult_t::PendingPlayer);
+    CHECK(rExecutor.Propose(game.fixtures.state, proposal) == DiplomaticProposeResult_t::PendingPlayer);
 }

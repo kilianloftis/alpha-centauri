@@ -193,13 +193,9 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
           "[research][selector][session]")
 {
     actest::FactionFixture fixtures;
-    GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    GameState state(std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-    const GameStateScope scope(state);
-    Faction& faction = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+    Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
 
     ResearchManager& research = faction.GetResearch();
     // Faction construction auto-picks a target; clear to exercise the idle-grant path.

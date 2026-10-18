@@ -849,21 +849,13 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
           "[population][composition][production]")
 {
     actest::FactionFixture fixtures;
-    ac::GameSettings settings;
-    auto pMap = std::make_unique<ac::WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight, actest::TestMapRules());
-    for (auto& pTile : pMap->GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    auto pState = std::make_unique<ac::GameState>(
-        std::move(pMap), fixtures.dataContext, settings, actest::k_TestRngSeed);
-    const GameStateScope scope(*pState);
-    ac::Faction& rFaction = pState->AddFaction(std::make_unique<ac::Faction>(
-        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+    actest::FillLand(fixtures.map);
+    ac::Faction& rFaction = fixtures.state.AddFaction(std::make_unique<ac::Faction>(
+        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rFaction.CreateBase(
-        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects(),
+        fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
+        fixtures.ctx,
         /*initialPopulation*/ 3);
     REQUIRE(pBase != nullptr);
 
