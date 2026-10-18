@@ -3,7 +3,7 @@
 namespace ac
 {
 
-void MoodLatch::Forecast_(bool bCondition, bool bHoldPending)
+void MoodLatch::Forecast(bool bCondition)
 {
     if (m_bActive)
     {
@@ -17,10 +17,7 @@ void MoodLatch::Forecast_(bool bCondition, bool bHoldPending)
         return;
     }
 
-    if (!bHoldPending)
-    {
-        m_bPending = false;
-    }
+    m_bPending = false;
 }
 
 MoodLatch::Transition_t MoodLatch::Commit_(bool bCondition)

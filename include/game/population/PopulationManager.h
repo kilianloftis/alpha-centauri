@@ -250,8 +250,8 @@ private:
 
     CompositionEffectInputs_t BuildCompositionInputs_() const;
     GrowthOutcome_t ResolveGrowth_(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
-    RiotConditionInputs_t BuildRiotInputs_() const;
-    GoldenAgeLatch::Inputs_t BuildGoldenAgeInputs_() const;
+    bool RiotConditionMet_() const;
+    bool GoldenAgeConditionMet_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();

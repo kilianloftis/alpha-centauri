@@ -1,5 +1,7 @@
 #include "game/population/RiotLatch.h"
 
+#include "game/population/PopulationRules.h"
+
 #include <algorithm>
 
 namespace ac
@@ -10,37 +12,24 @@ RiotLatch::RiotLatch(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotE
 {
 }
 
-bool RiotLatch::NaturalCondition_(const RiotConditionInputs_t& rInputs)
+void RiotLatch::NotifyPopGrown(bool bRiotCondition)
 {
-    return rInputs.riotSum >= rInputs.threshold;
-}
-
-void RiotLatch::NotifyPopGrown(const RiotConditionInputs_t& rInputs)
-{
-    if (NaturalCondition_(rInputs))
+    if (bRiotCondition)
     {
         SetPendingAndWarn_();
     }
 }
 
-void RiotLatch::Forecast(const RiotConditionInputs_t& rInputs)
+void RiotLatch::Commit(bool bRiotCondition)
 {
-    // A forced riot holds pending through a calm composition: the probe bought turns the
-    // natural condition was never going to supply.
-    Forecast_(NaturalCondition_(rInputs), /*bHoldPending=*/m_forcedTurnsRemaining > 0);
-}
-
-void RiotLatch::Commit(const RiotConditionInputs_t& rInputs)
-{
-    // This Mood pass is one of the turns the forced riot was bought for, so it counts before
-    // it is consumed: ForceRiot(1) survives exactly the next Commit.
-    const bool bForced = m_forcedTurnsRemaining > 0;
-    if (bForced)
+    // The condition was read before this pass consumes a forced turn, so ForceRiot(1)
+    // survives exactly the next Commit.
+    if (m_forcedTurnsRemaining > 0)
     {
         --m_forcedTurnsRemaining;
     }
 
-    if (Commit_(NaturalCondition_(rInputs) || bForced) == Transition_t::Ended)
+    if (Commit_(bRiotCondition) == Transition_t::Ended)
     {
         m_consecutiveTurns = 0;
         return;
@@ -54,7 +43,7 @@ void RiotLatch::Commit(const RiotConditionInputs_t& rInputs)
 
 void RiotLatch::ForceRiot(int turns)
 {
-    m_forcedTurnsRemaining = std::max(m_forcedTurnsRemaining, std::max(0, turns));
+    m_forcedTurnsRemaining = ForcedRiotTurns(m_forcedTurnsRemaining, turns);
     if (m_forcedTurnsRemaining > 0)
     {
         SetPendingAndWarn_();

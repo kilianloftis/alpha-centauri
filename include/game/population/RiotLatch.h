@@ -5,23 +5,11 @@
 namespace ac
 {
 
-// Inputs for the natural riot condition: the seated pops' riot weights against the base's
-// threshold. Drones weigh +1 (Super Drones too — a super absorbs two drones of *pressure*, but
-// riots like any single citizen), talents −1, and everything else 0.
-struct RiotConditionInputs_t
-{
-    int riotSum = 0;
-    int threshold = 0;
-};
-
 // Tracks drone riot state for a base population. See MoodLatch for the Forecast / Commit
 // lifecycle this shares with GoldenAgeLatch.
 //
-// Two independent sources keep a riot alive once committed:
-//   - the natural condition (riotSum >= riot_threshold), recomputed on every Commit
-//   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of Mood commits
-//     and which the natural condition cannot sustain, since the action does not change
-//     composition
+// The condition comes from RiotConditionMet, which counts a forced riot (probe Incite Drone
+// Riots) as well as the composition. This latch ages the forced timer and counts the turns.
 class RiotLatch : public MoodLatch
 {
 public:
@@ -30,12 +18,10 @@ public:
 
     // Call after a pop is added, so growth into a riot warns immediately rather than waiting
     // for the next Population stage.
-    void NotifyPopGrown(const RiotConditionInputs_t& rInputs);
-
-    void Forecast(const RiotConditionInputs_t& rInputs);
+    void NotifyPopGrown(bool bRiotCondition);
 
     // Additionally ages the forced timer by one pass and maintains the consecutive count.
-    void Commit(const RiotConditionInputs_t& rInputs);
+    void Commit(bool bRiotCondition);
 
     // Force a riot for the next `turns` Mood commits. Extends but never shortens an existing
     // forced timer. Does not activate until Commit — sets pending so the player is still
@@ -51,8 +37,6 @@ public:
                       int consecutiveTurns);
 
 private:
-    static bool NaturalCondition_(const RiotConditionInputs_t& rInputs);
-
     int m_forcedTurnsRemaining = 0;
     int m_consecutiveTurns = 0;
 };

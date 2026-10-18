@@ -4,8 +4,10 @@
 #include "game/base/BaseTypes.h"
 #include "game/map/Tile.h"
 #include "game/population/Pop.h"
+#include "game/population/PopCompositionConfigParser.h"
 #include "game/population/PopulationManager.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -52,6 +54,22 @@ const Pop& SelectPopToRemove(const BaseManager& rBase)
         throw std::runtime_error("SelectPopToRemove: base has no population");
     }
     return *pDoomed;
+}
+
+bool RiotConditionMet(const RiotConditionInputs_t& rInputs, const PopCompositionConfig_t& rConfig)
+{
+    return rInputs.riotSum >= rConfig.riotThreshold || rInputs.forcedTurnsRemaining > 0;
+}
+
+bool GoldenAgeConditionMet(const GoldenAgeConditionInputs_t& rInputs,
+                           const PopCompositionConfig_t& rConfig)
+{
+    return rInputs.droneCount == 0 && rInputs.goldenAgeSum >= rConfig.goldenAgeThreshold;
+}
+
+int ForcedRiotTurns(int remaining, int added)
+{
+    return std::max(remaining, std::max(0, added));
 }
 
 } // namespace ac

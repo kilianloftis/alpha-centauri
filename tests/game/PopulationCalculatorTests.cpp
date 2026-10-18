@@ -14,7 +14,9 @@
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/GrowthConfigParser.h"
 #include "lib/LuaRuntime.h"
+#include "game/population/PopCompositionConfigParser.h"
 #include "game/population/PopTypeAvailabilityCalculator.h"
+#include "game/population/PopulationRules.h"
 #include "game/population/RiotLatch.h"
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
@@ -58,20 +60,24 @@ struct RiotSignals_
     }
 };
 
-RiotConditionInputs_t Calm_()
+// The condition PopulationManager passes: the composition plus the latch's forced turns, at
+// the shipping threshold of 1.
+bool RiotCondition_(const RiotLatch& rRiot, int riotSum)
 {
     RiotConditionInputs_t inputs;
-    inputs.riotSum = 0;
-    inputs.threshold = 1;
-    return inputs;
+    inputs.riotSum = riotSum;
+    inputs.forcedTurnsRemaining = rRiot.GetForcedTurnsRemaining();
+    return RiotConditionMet(inputs, PopCompositionConfig_t{});
 }
 
-RiotConditionInputs_t Unrest_()
+bool Calm_(const RiotLatch& rRiot)
 {
-    RiotConditionInputs_t inputs;
-    inputs.riotSum = 2;
-    inputs.threshold = 1;
-    return inputs;
+    return RiotCondition_(rRiot, 0);
+}
+
+bool Unrest_(const RiotLatch& rRiot)
+{
+    return RiotCondition_(rRiot, 2);
 }
 
 } // namespace
@@ -90,12 +96,12 @@ TEST_CASE("An incited riot survives the Mood commit that follows it", "[populati
     CHECK(signals.isRiotingCount == 0);
 
     // Mood commit after the probe: activates, consuming the one forced turn.
-    riot.Commit(Calm_());
+    riot.Commit(Calm_(riot));
     CHECK(riot.IsActive());
     CHECK(signals.isRiotingCount == 1);
 
     // ...and it expires on the next Mood pass.
-    riot.Commit(Calm_());
+    riot.Commit(Calm_(riot));
     CHECK_FALSE(riot.IsActive());
     CHECK(signals.riotEndedCount == 1);
 }
@@ -108,10 +114,10 @@ TEST_CASE("A forced riot lasts its configured number of Mood commits", "[populat
     riot.ForceRiot(/*turns=*/3);
     for (int turn = 0; turn < 3; ++turn)
     {
-        riot.Commit(Calm_());
+        riot.Commit(Calm_(riot));
         CHECK(riot.IsActive());
     }
-    riot.Commit(Calm_());
+    riot.Commit(Calm_(riot));
     CHECK_FALSE(riot.IsActive());
 }
 
@@ -124,10 +130,10 @@ TEST_CASE("Forcing a riot extends but never shortens one already running", "[pop
     riot.ForceRiot(/*turns=*/1);
     for (int turn = 0; turn < 5; ++turn)
     {
-        riot.Commit(Calm_());
+        riot.Commit(Calm_(riot));
         CHECK(riot.IsActive());
     }
-    riot.Commit(Calm_());
+    riot.Commit(Calm_(riot));
     CHECK_FALSE(riot.IsActive());
 }
 
@@ -136,21 +142,21 @@ TEST_CASE("The natural riot condition still drives itself", "[population][riot]"
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    riot.Forecast(Unrest_());
+    riot.Forecast(Unrest_(riot));
     CHECK(riot.IsPending());
     CHECK_FALSE(riot.IsActive());
 
-    riot.Commit(Unrest_());
+    riot.Commit(Unrest_(riot));
     CHECK(riot.IsActive());
 
-    riot.Commit(Calm_());
+    riot.Commit(Calm_(riot));
     CHECK_FALSE(riot.IsActive());
     CHECK(signals.riotEndedCount == 1);
 
     // A natural riot outlives an expired forced one.
     riot.ForceRiot(/*turns=*/1);
-    riot.Commit(Unrest_());
-    riot.Commit(Unrest_());
+    riot.Commit(Unrest_(riot));
+    riot.Commit(Unrest_(riot));
     CHECK(riot.IsActive());
 }
 
@@ -159,14 +165,14 @@ TEST_CASE("NotifyPopGrown warns only when a riot is not already running", "[popu
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    riot.NotifyPopGrown(Calm_());
+    riot.NotifyPopGrown(Calm_(riot));
     CHECK(signals.willRiotCount == 0);
 
-    riot.NotifyPopGrown(Unrest_());
+    riot.NotifyPopGrown(Unrest_(riot));
     CHECK(signals.willRiotCount == 1);
 
-    riot.Commit(Unrest_());
-    riot.NotifyPopGrown(Unrest_());
+    riot.Commit(Unrest_(riot));
+    riot.NotifyPopGrown(Unrest_(riot));
     CHECK(signals.willRiotCount == 1);
 }
 
@@ -176,18 +182,33 @@ TEST_CASE("The riot threshold moves what counts as unrest", "[population][riot]"
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
     // Net unrest of 1 riots at the shipping threshold (1); threshold 2 needs two net drones.
+    PopCompositionConfig_t config;
+    config.riotThreshold = 2;
     RiotConditionInputs_t inputs;
     inputs.riotSum = 1;
-    inputs.threshold = 2;
 
-    riot.Forecast(inputs);
-    riot.Commit(inputs);
+    riot.Forecast(RiotConditionMet(inputs, config));
+    riot.Commit(RiotConditionMet(inputs, config));
     CHECK_FALSE(riot.IsActive());
 
     inputs.riotSum = 2;
-    riot.Forecast(inputs);
-    riot.Commit(inputs);
+    riot.Forecast(RiotConditionMet(inputs, config));
+    riot.Commit(RiotConditionMet(inputs, config));
     CHECK(riot.IsActive());
+}
+
+TEST_CASE("A forced riot meets the riot condition through a calm composition",
+          "[population][riot]")
+{
+    const PopCompositionConfig_t config;
+    RiotConditionInputs_t inputs;
+    CHECK_FALSE(RiotConditionMet(inputs, config));
+    inputs.forcedTurnsRemaining = 1;
+    CHECK(RiotConditionMet(inputs, config));
+
+    CHECK(ForcedRiotTurns(5, 1) == 5);
+    CHECK(ForcedRiotTurns(1, 5) == 5);
+    CHECK(ForcedRiotTurns(0, -2) == 0);
 }
 
 TEST_CASE("GoldenAgeLatch starts and ends on its condition", "[population][golden-age]")
@@ -204,39 +225,39 @@ TEST_CASE("GoldenAgeLatch starts and ends on its condition", "[population][golde
     GoldenAgeLatch goldenAge(started, ended, willStart);
     CHECK_FALSE(goldenAge.IsActive());
 
-    GoldenAgeLatch::Inputs_t inputs;
+    const PopCompositionConfig_t config;
+    GoldenAgeConditionInputs_t inputs;
     inputs.goldenAgeSum = 1;
-    inputs.threshold = 0;
     inputs.droneCount = 0;
 
-    goldenAge.Forecast(inputs);
+    goldenAge.Forecast(GoldenAgeConditionMet(inputs, config));
     CHECK(goldenAge.IsPending());
-    goldenAge.Commit(inputs);
+    goldenAge.Commit(GoldenAgeConditionMet(inputs, config));
     CHECK(goldenAge.IsActive());
     CHECK(startedCount == 1);
 
     // Edge-triggered: holding the condition does not re-emit.
-    goldenAge.Forecast(inputs);
-    goldenAge.Commit(inputs);
+    goldenAge.Forecast(GoldenAgeConditionMet(inputs, config));
+    goldenAge.Commit(GoldenAgeConditionMet(inputs, config));
     CHECK(startedCount == 1);
 
     // A single drone ends it outright, regardless of talent count.
     inputs.droneCount = 1;
-    goldenAge.Commit(inputs);
+    goldenAge.Commit(GoldenAgeConditionMet(inputs, config));
     CHECK_FALSE(goldenAge.IsActive());
     CHECK(endedCount == 1);
 
     // Re-enter, so the talent branch below is tested from inside a golden age rather than
     // from a state that is already false.
     inputs.droneCount = 0;
-    goldenAge.Forecast(inputs);
-    goldenAge.Commit(inputs);
+    goldenAge.Forecast(GoldenAgeConditionMet(inputs, config));
+    goldenAge.Commit(GoldenAgeConditionMet(inputs, config));
     REQUIRE(goldenAge.IsActive());
     CHECK(startedCount == 2);
 
     // Too few talents ends it: the sum falls below the threshold.
     inputs.goldenAgeSum = -1;
-    goldenAge.Commit(inputs);
+    goldenAge.Commit(GoldenAgeConditionMet(inputs, config));
     CHECK_FALSE(goldenAge.IsActive());
     CHECK(endedCount == 2);
 }

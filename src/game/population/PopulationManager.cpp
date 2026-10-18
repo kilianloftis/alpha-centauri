@@ -79,7 +79,7 @@ void PopulationManager::AddPop(const std::string& typeId)
     // no conversion path can produce, which is the asymmetry this package removed.
     m_container.AddPop(ResolveType_(typeId));
     NotifyPopGained_();
-    m_riot.NotifyPopGrown(BuildRiotInputs_());
+    m_riot.NotifyPopGrown(RiotConditionMet_());
 }
 
 void PopulationManager::RemovePop()
@@ -268,26 +268,25 @@ void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t&
     }
 }
 
-RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
+bool PopulationManager::RiotConditionMet_() const
 {
-    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
     RiotConditionInputs_t inputs;
     inputs.riotSum = m_container.GetMoodWeightSums().riot;
-    inputs.threshold = rConfig.riotThreshold;
-    return inputs;
+    inputs.forcedTurnsRemaining = m_riot.GetForcedTurnsRemaining();
+    return RiotConditionMet(inputs, GetCompositionConfig());
 }
 
 void PopulationManager::ForecastMood()
 {
-    m_riot.Forecast(BuildRiotInputs_());
-    m_goldenAge.Forecast(BuildGoldenAgeInputs_());
+    m_riot.Forecast(RiotConditionMet_());
+    m_goldenAge.Forecast(GoldenAgeConditionMet_());
     // Pending state carries no effects, but the UI reads it; no revision bump.
 }
 
 void PopulationManager::CommitMood()
 {
-    m_riot.Commit(BuildRiotInputs_());
-    m_goldenAge.Commit(BuildGoldenAgeInputs_());
+    m_riot.Commit(RiotConditionMet_());
+    m_goldenAge.Commit(GoldenAgeConditionMet_());
     m_moodRevision.Bump();
 }
 
@@ -485,13 +484,12 @@ void PopulationManager::AdvanceAssimilation()
     m_assimilation.Advance();
 }
 
-GoldenAgeLatch::Inputs_t PopulationManager::BuildGoldenAgeInputs_() const
+bool PopulationManager::GoldenAgeConditionMet_() const
 {
-    GoldenAgeLatch::Inputs_t inputs;
+    GoldenAgeConditionInputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
     inputs.goldenAgeSum = m_container.GetMoodWeightSums().goldenAge;
-    inputs.threshold = GetCompositionConfig().goldenAgeThreshold;
-    return inputs;
+    return GoldenAgeConditionMet(inputs, GetCompositionConfig());
 }
 
 void PopulationManager::NotifyPopGained_()
