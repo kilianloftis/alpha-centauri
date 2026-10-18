@@ -51,10 +51,6 @@ public:
     // The same question limited to records answered for as Major.
     bool HasCommittedMajorAgainst(FactionId_t perpetrator, FactionId_t victim) const;
 
-    // Eco-damage mineral term: each counted record contributes its severity's
-    // ecoVirtualMinerals. An act the Charter no longer forbids is not counted, so it adds
-    // nothing. Needs the config because the weight is authored there.
-    int EcoVirtualMinerals(FactionId_t perpetrator, const AtrocitiesConfig_t& rConfig) const;
 
     // Whether the sanction is standing in missionYear. Answered from the stored expiry rather
     // than from the entry existing, so a reader is right whether or not ExpireSanctions has

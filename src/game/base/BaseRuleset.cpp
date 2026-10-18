@@ -20,7 +20,6 @@ BaseRuleset_t MakeBaseRuleset(const GameDataContext& rData)
         .rComposition = *rData.popCompositionCalculator,
         .rDrones = *rData.droneCalculator,
         .rEcoDamage = *rData.ecoDamageCalculator,
-        .rAtrocities = *rData.atrocitiesConfig,
     };
 }
 

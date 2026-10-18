@@ -132,7 +132,7 @@ BaseManager::BaseManager(
           *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
-    , m_ecology(*this, rRules.rEcoDamage, rRules.rAtrocities)
+    , m_ecology(*this, rRules.rEcoDamage)
     , m_bMayOccupyWater(bMayOccupyWater)
 {
     m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)

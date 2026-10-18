@@ -114,7 +114,6 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         .rComposition = fixture.rComposition,
         .rDrones = fixture.rDrones,
         .rEcoDamage = fixture.rEcoDamage,
-        .rAtrocities = fixture.rAtrocities,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.nextBaseId++, "TestBase",
                                                rFixtures.At(8, 8), rules, nullptr, *rFixtures.ctx);

@@ -6,6 +6,7 @@
 #include "game/PlayerInteractionQueue.h"
 #include "game/stages/TurnStageRegistrar.h"
 #include "game/ecology/EcoDamageConfig.h"
+#include "game/ecology/EcologyRules.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/base/BaseManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
@@ -29,7 +30,6 @@ EcoDamage::EcoDamage(HookContext hookContext)
 
 StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    const EcoDamageConfig_t& rConfig = *rGameState.GetGameData().ecoDamageConfig;
     std::mt19937& rRng = rGameState.GetRng();
 
     std::vector<BaseId_t> baseIds;
@@ -44,7 +44,7 @@ StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
         {
             continue;
         }
-        const int chance = std::min(rConfig.maxChancePercent, pBase->GetEcologicalDamage());
+        const int chance = FungalPopChance(*pBase);
         if (chance <= 0)
         {
             continue;
@@ -64,23 +64,14 @@ StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 Tile* EcoDamage::PickPopTile_(GameState& rGameState, const BaseManager& rBase,
                               std::mt19937& rRng)
 {
-    WorldMap& rMap = rGameState.GetWorldMap();
-    std::vector<Tile*> candidates;
-    for (const Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
-    {
-        if (pTile->HasImprovement(ImprovementIds::k_Base)
-            || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
-        {
-            continue;
-        }
-        candidates.push_back(rMap.GetTile(pTile->GetX(), pTile->GetY()));
-    }
+    const std::vector<const Tile*> candidates = FungalPopTiles(rBase);
     if (candidates.empty())
     {
         return nullptr;
     }
     std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    return candidates[pick(rRng)];
+    const Tile& rPicked = *candidates[pick(rRng)];
+    return rGameState.GetWorldMap().GetTile(rPicked.GetX(), rPicked.GetY());
 }
 
 void EcoDamage::Pop_(GameState& rGameState, BaseManager& rBase, Tile& rPopTile)

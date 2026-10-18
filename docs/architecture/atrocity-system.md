@@ -61,7 +61,7 @@ graph TB
     AtrocitiesConfig --> AtrocityParser
 
     AtrocityLedger -->|IsSanctioned missionYear| CommerceRules
-    AtrocityLedger -->|EcoVirtualMinerals| EcoDamage
+    AtrocityLedger -->|AtrocityEcoMinerals| EcoDamage
     TurnStart -->|ExpireSanctions| AtrocityLedger
 
     style AtrocityLedger fill:#f9f,stroke:#333,stroke-width:4px
@@ -156,8 +156,8 @@ holds the standing commerce sanction: the mission year each sanctioned faction's
 `GetRevision()` moves on every record and sanction change; `CommerceCache` folds it into its
 per-base memo key, because a sanction zeroes a pair without touching any treaty or effect pool.
 
-`EcoVirtualMinerals` takes the config (the weight is authored there) and sums counted records
-only. `HasVictimized` and `HasCommittedMajorAgainst` read every record of that pair, including
+`AtrocityEcoMinerals` (`EcologyRules`) reads the config (the weight is authored there) and sums
+counted records only. `HasVictimized` and `HasCommittedMajorAgainst` read every record of that pair, including
 ones that were not counted.
 
 `IsSanctioned(faction, missionYear)` answers from the stored expiry rather than from the entry
@@ -174,7 +174,7 @@ its revision bump is what invalidates `CommerceCache`'s memo.
 | Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: a sneak attack, so nobody withdraws from territory. It obliges the victim's Pact partners, who join as part of the sneak attack (see `diplomacy-system.md`) |
 | Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta (including the victim's partners, who joined through the sneak attack), via `JoinVendetta`, a declaration (each side withdraws from the other's territory, evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced, and native life never joins: it has no diplomacy |
 | Council expulsion | `PlanetaryCouncil::Expel`, counted acts whose tier sets it |
-| Eco-damage | `AtrocityLedger::EcoVirtualMinerals`, counted records only (eco calculator not yet built) |
+| Eco-damage | `AtrocityEcoMinerals` (`EcologyRules`), counted records only |
 | Player notice | `EnqueueForPlayer`, gated by `PauseOnEventId_t::AtrocityCommitted`. Phrased from `AtrocitySeverityLabel`, not from the enumerator name |
 
 Sanctions lapse in `TurnStart`, which is world-scoped and owns the mission year; per-faction
@@ -201,5 +201,5 @@ met. Whether atrocities are common knowledge or gated on contact is unrecorded, 
 `TODO(atrocity)` in `AnnounceToPlayer_`.
 
 Consumers that do not exist yet: AI diplomatic reaction, integrity / blemishes / grievances,
-and the eco-damage calculator. The calculator reads `EcoVirtualMinerals` for the
+and the eco-damage calculator. The calculator reads `AtrocityEcoMinerals` for the
 `5 * Atrocities` term.

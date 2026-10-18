@@ -15,7 +15,6 @@ class ScrapRefundCalculator;
 class PopCompositionCalculator;
 class DroneCalculator;
 class EcoDamageCalculator;
-struct AtrocitiesConfig_t;
 struct GameDataContext;
 
 // The ruleset pieces a base reads. BaseManager copies each reference into the member or part
@@ -34,7 +33,6 @@ struct BaseRuleset_t
     const PopCompositionCalculator& rComposition;
     const DroneCalculator& rDrones;
     const EcoDamageCalculator& rEcoDamage;
-    const AtrocitiesConfig_t& rAtrocities;
 };
 
 BaseRuleset_t MakeBaseRuleset(const GameDataContext& rData);

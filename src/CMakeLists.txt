@@ -55,6 +55,7 @@ add_library(ac-core STATIC
     game/ecology/EcoDamageConfigParser.cpp
     game/ecology/EcoDamageCalculator.cpp
     game/ecology/BaseEcology.cpp
+    game/ecology/EcologyRules.cpp
     game/natives/NativeLifeLevelConfig.cpp
     game/world-events/WorldEventConfig.cpp
     game/world-events/WorldEventTracker.cpp

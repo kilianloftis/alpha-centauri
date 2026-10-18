@@ -54,21 +54,6 @@ bool AtrocityLedger::HasCommittedMajorAgainst(FactionId_t perpetrator, FactionId
     return false;
 }
 
-int AtrocityLedger::EcoVirtualMinerals(FactionId_t perpetrator,
-                                      const AtrocitiesConfig_t& rConfig) const
-{
-    int total = 0;
-    for (const AtrocityRecord_t& rRecord : m_records)
-    {
-        if (rRecord.perpetrator != perpetrator || !rRecord.bCounted)
-        {
-            continue;
-        }
-        total += rConfig.For(rRecord.severity).ecoVirtualMinerals;
-    }
-    return total;
-}
-
 bool AtrocityLedger::IsSanctioned(FactionId_t faction, int missionYear) const
 {
     const auto it = m_sanctionUntilYear.find(faction);

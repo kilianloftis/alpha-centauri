@@ -96,14 +96,15 @@ stage caps the roll at `eco_damage.json`'s `fungal_pop.max_chance_percent`.
 
 ## Components
 
-- **`BaseEcology`** (owned by `BaseManager`, which hands it the `EcoDamageCalculator` and the
-  atrocity config from `BaseRuleset_t` at construction): walks the base tile plus
+- **`BaseEcology`** (owned by `BaseManager`, which hands it the `EcoDamageCalculator` from
+  `BaseRuleset_t` at construction) memoizes the score. Its inputs come from
+  `EcoDamageInputs` (`EcologyRules`), which walks the base tile plus
   `WorkerAssignmentManager::GetWorkableTiles()`, resolving each tile's own
   `CollectTileEffects` in the tile's context (so a `TargetTileHas` condition such as the
   sea-base term applies). A tile adds its worked weight only when `IsTileWorkedByThisBase`
   accepts it, so a supply-crawled tile — or one a neighbour works — counts its unworked weight.
   Resolves the base and faction stats, reads blooms, grants and virtual minerals from the
-  `EcologyLedger` and counted atrocities from `AtrocityLedger::EcoVirtualMinerals`, and hands
+  `EcologyLedger` and counted atrocities from `AtrocityEcoMinerals`, and hands
   `EcoDamageInputs_t` to the calculator. The result is memoized on the faction effects version,
   research, population and mood revisions, the base map's worked-tile and appearance revisions,
   both ledgers' revisions and which game state is current. Reads the current game state, and

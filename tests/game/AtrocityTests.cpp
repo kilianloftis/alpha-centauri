@@ -9,6 +9,7 @@
 #include "game/atrocities/AtrocityConfigParser.h"
 #include "game/atrocities/AtrocityMutations.h"
 #include "game/atrocities/AtrocityLedger.h"
+#include "game/ecology/EcologyRules.h"
 #include "game/atrocities/AtrocityRules.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/diplomacy/DiplomacyLedger.h"
@@ -421,7 +422,7 @@ TEST_CASE("A repealed Charter lifts Major penalties and the victim still remembe
     CHECK(game.pState->GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), id));
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 0);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
     CHECK(game.Ledger().HasVictimized(id, game.pB->GetFactionId()));
     CHECK(game.Ledger().HasCommittedMajorAgainst(id, game.pB->GetFactionId()));
 }
@@ -633,24 +634,24 @@ TEST_CASE("The eco term counts Major atrocities committed under the Charter only
     REQUIRE(majorWeight > 0);
 
     CommitAtrocity(*game.pState, *game.pA, game.pB, k_Simple);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 0);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
 
     CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == majorWeight);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == majorWeight);
 
     // Two warheads under the Charter, two contributions.
     CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 2 * majorWeight);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 
     // "Any atrocities after lifting the UN-charter do not count." pA is off the council by now,
     // so a faction that still holds a seat has to move the repeal.
     game.RepealCharter(*game.pC);
     CommitAtrocity(*game.pState, *game.pA, game.pB, k_Major);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 2 * majorWeight);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 
     // Another faction's record is not ours.
     CommitAtrocity(*game.pState, *game.pB, game.pC, k_Major);
-    CHECK(game.Ledger().EcoVirtualMinerals(id, game.Config()) == 2 * majorWeight);
+    CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 2 * majorWeight);
 }
 
 // --- Config ---------------------------------------------------------------------------------
