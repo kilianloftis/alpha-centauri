@@ -37,6 +37,14 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseMana
 // The building's first OrbitalAttack effect, or null when it cannot attack satellites.
 const OrbitalAttackEffect_t* FindOrbitalAttackEffect(const BuildingConfig_t& rBuilding);
 
+// The attack rAttacker's building may make on rDefender's orbital at missionYear. Null when
+// the target is not an orbital rDefender owns, or the building has no ready OrbitalAttack copy.
+const OrbitalAttackEffect_t* ReadyOrbitalAttack(const Faction& rAttacker,
+                                                const Faction& rDefender,
+                                                const BuildingId_t& attackerBuildingId,
+                                                const BuildingId_t& targetBuildingId,
+                                                int missionYear);
+
 // Ready OrbitalAttack buildings for rFaction at missionYear (empty when none can fire).
 std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction,
                                                                int missionYear);

@@ -12,11 +12,9 @@ class GameState;
 class TileEffectsContext;
 class Unit;
 
-// Before CombatResolver::Resolve: roll ready Intercept sources on the defender side.
-// Sources are gathered from four lanes — the defender faction's pool, the base on the
-// defender's tile, the defender's own design, and the tile's area effects.
-// On success, destroys the attacker and returns a CombatResult_t with combat skipped.
-// Returns nullopt when no intercept fires (including when all attempts miss).
+// Before CombatResolver::Resolve: each ready source from CollectInterceptSources deploys and
+// rolls its chance; a miss may lose the source. A hit destroys the attacker and returns a
+// CombatResult_t with combat skipped. Returns nullopt when no intercept fires.
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
                                                  Unit& rAttacker,
                                                  Unit& rDefender,

@@ -88,6 +88,30 @@ const OrbitalAttackEffect_t* FindOrbitalAttackEffect(const BuildingConfig_t& rBu
     return nullptr;
 }
 
+const OrbitalAttackEffect_t* ReadyOrbitalAttack(const Faction& rAttacker,
+                                                const Faction& rDefender,
+                                                const BuildingId_t& attackerBuildingId,
+                                                const BuildingId_t& targetBuildingId,
+                                                int missionYear)
+{
+    const BuildingConfig_t* pTarget = rDefender.FindOwnedBuildingConfig(targetBuildingId);
+    if (pTarget == nullptr || !pTarget->orbital)
+    {
+        return nullptr;
+    }
+    const BuildingConfig_t* pBuilding = rAttacker.FindOwnedBuildingConfig(attackerBuildingId);
+    if (pBuilding == nullptr)
+    {
+        return nullptr;
+    }
+    const OrbitalAttackEffect_t* pEffect = FindOrbitalAttackEffect(*pBuilding);
+    if (pEffect == nullptr || rAttacker.CountReadyBuildings(attackerBuildingId, missionYear) <= 0)
+    {
+        return nullptr;
+    }
+    return pEffect;
+}
+
 std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction,
                                                                int missionYear)
 {

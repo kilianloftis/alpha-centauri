@@ -16,7 +16,9 @@ graph TD
         MoveCostRules -->|resolves per unit + tile| EntryTerms
         MovementRules --> TransportRules
         AttackRules[AttackRules<br/>CanAttackTile / targeting /<br/>FindAttackableHostileOnTile]
-        InterceptMutations[InterceptMutations<br/>Intercept % kill]
+        InterceptRules[InterceptRules<br/>sources, readiness, charge base]
+        InterceptMutations[InterceptMutations<br/>deploy, roll, kill or lose source]
+        InterceptMutations --> InterceptRules
         ScrambleRules[ScrambleRules<br/>FindScrambler]
         AttackRules --> MovementRules
         EvacuateTerritoryRules[EvacuateTerritoryRules<br/>on-host / nearest own tile]
@@ -247,8 +249,11 @@ rolled against has its order cleared.
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 
 1. **`Intercept`** (ODP / SAM-style) — rolled in `TryInterceptAttack` before combat.
-   Success destroys the attacker with empty rounds. Stock filters orbital attackers on base
-   tiles.
+   `CollectInterceptSources` lists the defender side's charges in the order they are tried,
+   `InterceptSourceReady` says which are off cooldown, and `InterceptChargeBase` names the base
+   a building charge is billed to and lost from. Each ready source deploys and rolls its
+   chance; a miss rolls `chance_of_destruction_on_fail`. Success destroys the attacker with
+   empty rounds. Stock filters orbital attackers on base tiles.
 2. **`Scramble`** — after Intercept misses/skips, `ResolveScrambleDefender_`
    picks a same-faction unit with a matching `condition` against the attacker, Chebyshev
    distance within the effect's `range`, and a `Pathfinder` path whose `totalCostFragments`

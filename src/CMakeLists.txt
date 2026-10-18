@@ -160,6 +160,7 @@ add_library(ac-core STATIC
     game/movement/EvacuateTerritoryMutations.cpp
     game/movement/TerritoryEntryMutations.cpp
     game/combat/InterceptMutations.cpp
+    game/combat/InterceptRules.cpp
     game/combat/ScrambleRules.cpp
     game/movement/MovementRules.cpp
     game/movement/TransportRules.cpp

@@ -8,6 +8,7 @@
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/OrbitalCensus.h"
 #include "game/combat/InterceptMutations.h"
+#include "game/combat/InterceptRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
@@ -604,4 +605,34 @@ TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
     CHECK(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("world_intercept_always_hit") == 0);
     CHECK(game.pAi->CountBuildings("world_intercept_always_hit") == 0);
+}
+
+TEST_CASE("Intercept sources run faction pool, design, then tile, each charge ready off cooldown",
+          "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
+    game.pState->GetTileEffects().AddOccupantWithEffects(
+        *game.pState->GetWorldMap().GetTile(8, 8), "test_sam_battery");
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& escort = game.MakeUnit(*game.pPlayer, 8, 8,
+                                 {"test_chassis", "test_armor", "test_sam_escort"}, &playerBase);
+
+    const std::vector<InterceptSource_t> sources =
+        CollectInterceptSources(missile, escort, game.pState->GetTileEffects());
+    REQUIRE(sources.size() == 3);
+    CHECK(sources[0].deployKind == InterceptSourceKind_t::Building);
+    CHECK(sources[0].sourceId == "test_odp_always_hit");
+    CHECK(InterceptChargeBase(sources[0]) == playerBase.GetBaseId());
+    CHECK(sources[1].sourceKind == InterceptSourceKind_t::Unit);
+    CHECK(sources[1].deployKind == InterceptSourceKind_t::None);
+    CHECK(sources[2].sourceKind == InterceptSourceKind_t::None);
+
+    const int year = game.pState->GetMissionYear();
+    CHECK(InterceptSourceReady(sources[0], escort, year));
+    game.pPlayer->DeployBuilding(playerBase.GetBaseId(), "test_odp_always_hit", year + 1);
+    CHECK_FALSE(InterceptSourceReady(sources[0], escort, year));
+    CHECK(InterceptSourceReady(sources[0], escort, year + 1));
+    CHECK(InterceptSourceReady(sources[1], escort, year));
 }

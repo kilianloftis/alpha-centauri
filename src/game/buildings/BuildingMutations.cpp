@@ -80,25 +80,16 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
         throw std::logic_error("TryAttackSatellite: a faction cannot ASAT its own orbitals");
     }
 
-    const BuildingConfig_t* pTarget = rDefender.FindOwnedBuildingConfig(targetOrbitalBuildingId);
-    if (!pTarget || !pTarget->orbital)
-    {
-        return result;
-    }
-
-    const BuildingConfig_t* pAttackerBuilding =
-        rAttacker.FindOwnedBuildingConfig(attackerBuildingId);
-    const OrbitalAttackEffect_t* pEffect =
-        pAttackerBuilding ? FindOrbitalAttackEffect(*pAttackerBuilding) : nullptr;
     const int year = rGameState.GetMissionYear();
-    if (!pEffect || rAttacker.CountReadyBuildings(attackerBuildingId, year) <= 0)
+    const OrbitalAttackEffect_t* pEffect = ReadyOrbitalAttack(
+        rAttacker, rDefender, attackerBuildingId, targetOrbitalBuildingId, year);
+    if (pEffect == nullptr)
     {
         return result;
     }
 
-    // Best-effort base attribution for the deploy ledger (see Faction::DeployBuilding): the
-    // faction-wide ready count above does not track which specific copy answers this attack,
-    // so this picks the first base holding one. Precise per-copy tracking is Package 8.
+    // The faction-wide ready count does not track which copy fires, so the deploy is billed to
+    // the first base holding one (see Faction::DeployBuilding).
     const BaseManager* pAttackerBase = rAttacker.FindBaseWithBuilding(attackerBuildingId);
     const BaseId_t attackerBaseId = pAttackerBase ? pAttackerBase->GetBaseId() : BaseId_t{};
 
