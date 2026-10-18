@@ -67,7 +67,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                                         m_rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
-    // After construction: the unit latches Military::IsPrototype in its constructor, and this
+    // After construction: the unit latches IsPrototype in its constructor, and this
     // is what makes the next one of the same design ordinary.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
     // Same three-valued production base as Unit's stamp path: omit → home; explicit null → skip.

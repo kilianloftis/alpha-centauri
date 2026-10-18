@@ -213,7 +213,7 @@ private:
     int m_moveFragmentsRemaining;
     int m_xp;
     // Latched at construction: true only when this unit was produced (a non-null pProducedAt)
-    // and Military::IsPrototype was true before the ledger recorded the design. Free spawns
+    // and IsPrototype was true before the ledger recorded the design. Free spawns
     // never latch; see docs/game-rules-decisions.md ("first one you built").
     bool m_bPrototype;
     std::optional<UnitOrder_t> m_order;
