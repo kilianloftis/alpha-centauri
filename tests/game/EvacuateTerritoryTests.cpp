@@ -270,3 +270,22 @@ TEST_CASE("Evacuate prefers the wrap-short path to own territory", "[evacuate][w
     CHECK(&unit.GetTile() == pDest);
     CHECK(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == guest.GetFactionId());
 }
+
+TEST_CASE("A guest shares a tile with the host in its base or beside its unit", "[evacuate]")
+{
+    FactionFixture fixture;
+    Faction& guest = fixture.MakeFaction();
+    Faction& host = fixture.MakeFaction();
+    fixture.MakeFactionBase(host, 11, 11);
+    fixture.MakeUnit(host, 28, 4, {"test_chassis"});
+
+    const Unit& inBase = fixture.MakeUnit(guest, 11, 11, {"test_chassis"});
+    const Unit& besideUnit = fixture.MakeUnit(guest, 28, 4, {"test_chassis"});
+    const Unit& onTerritory = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
+
+    CHECK(SharesTileWith(inBase, host, fixture.map));
+    CHECK(SharesTileWith(besideUnit, host, fixture.map));
+    CHECK_FALSE(SharesTileWith(onTerritory, host, fixture.map));
+    CHECK(MustLeaveTerritory(onTerritory, host.GetFactionId(), fixture.map.GetTerritory()));
+    CHECK_FALSE(MustLeaveTerritory(besideUnit, host.GetFactionId(), fixture.map.GetTerritory()));
+}

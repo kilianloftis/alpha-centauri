@@ -2,9 +2,6 @@
 
 #include "game/faction/Faction.h"
 #include "game/units/UnitManager.h"
-#include "game/visibility/VisibilityRules.h"
-#include "game/base/BaseManager.h"
-#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -22,42 +19,6 @@ namespace
 {
 
 using FreeByOrigin_t = std::unordered_map<const Tile*, std::vector<Unit*>>;
-
-std::vector<Unit*> CollectUnitsOnHostTerritory_(Faction& rGuest,
-                                                FactionId_t hostTerritoryOwner,
-                                                const TerritoryMap& rTerritory)
-{
-    std::vector<Unit*> onHost;
-    for (Unit& rUnit : rGuest.GetUnitManager().Units())
-    {
-        if (IsOnTerritoryOf(rUnit.GetTile(), hostTerritoryOwner, rTerritory)
-            && IsOwnerKnownTo(hostTerritoryOwner, rUnit))
-        {
-            onHost.push_back(&rUnit);
-        }
-    }
-    return onHost;
-}
-
-bool SharesTileWith_(const Unit& rUnit, const Faction& rHost, const WorldMap& rWorldMap)
-{
-    const Tile& rTile = rUnit.GetTile();
-    for (const BaseManager& rBase : rHost.Bases())
-    {
-        if (&rBase.GetTile() == &rTile)
-        {
-            return true;
-        }
-    }
-    for (const Unit* pOther : rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pOther && &pOther->GetFaction() == &rHost)
-        {
-            return true;
-        }
-    }
-    return false;
-}
 
 // Clears orders on every on-host unit. Groups non-embarked units by their origin tile.
 FreeByOrigin_t ClearOrdersAndGroupFreeByOrigin_(const std::vector<Unit*>& rOnHost)
@@ -172,9 +133,15 @@ EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
     Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
     const InteractionGridsConfig_t& rGrids)
 {
-    return EvacuateUnits_(
-        CollectUnitsOnHostTerritory_(rGuest, hostTerritoryOwner, rWorldMap.GetTerritory()),
-        rWorldMap, rGrids);
+    std::vector<Unit*> onHost;
+    for (Unit& rUnit : rGuest.GetUnitManager().Units())
+    {
+        if (MustLeaveTerritory(rUnit, hostTerritoryOwner, rWorldMap.GetTerritory()))
+        {
+            onHost.push_back(&rUnit);
+        }
+    }
+    return EvacuateUnits_(onHost, rWorldMap, rGrids);
 }
 
 EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
@@ -184,7 +151,7 @@ EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
     std::vector<Unit*> sharing;
     for (Unit& rUnit : rGuest.GetUnitManager().Units())
     {
-        if (SharesTileWith_(rUnit, rHost, rWorldMap))
+        if (SharesTileWith(rUnit, rHost, rWorldMap))
         {
             sharing.push_back(&rUnit);
         }

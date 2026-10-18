@@ -1,5 +1,6 @@
 #include "game/movement/EvacuateTerritoryRules.h"
 
+#include "game/base/BaseManager.h"
 #include "game/faction/Faction.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/map/MapUtils.h"
@@ -9,6 +10,7 @@
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
+#include "game/visibility/VisibilityRules.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -115,6 +117,33 @@ bool IsOnTerritoryOf(const Tile& rTile, FactionId_t hostTerritoryOwner,
                      const TerritoryMap& rTerritory)
 {
     return rTerritory.GetOwner(rTile) == hostTerritoryOwner;
+}
+
+bool MustLeaveTerritory(const Unit& rUnit, FactionId_t hostTerritoryOwner,
+                        const TerritoryMap& rTerritory)
+{
+    return IsOnTerritoryOf(rUnit.GetTile(), hostTerritoryOwner, rTerritory)
+           && IsOwnerKnownTo(hostTerritoryOwner, rUnit);
+}
+
+bool SharesTileWith(const Unit& rUnit, const Faction& rHost, const WorldMap& rWorldMap)
+{
+    const Tile& rTile = rUnit.GetTile();
+    for (const BaseManager& rBase : rHost.Bases())
+    {
+        if (&rBase.GetTile() == &rTile)
+        {
+            return true;
+        }
+    }
+    for (const Unit* pOther : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (&pOther->GetFaction() == &rHost)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 const Tile* FindNearestOwnTerritoryTile(const Unit& rUnit, const WorldMap& rWorldMap,

@@ -5,6 +5,7 @@
 namespace ac
 {
 
+class Faction;
 class Tile;
 class Unit;
 class WorldMap;
@@ -14,6 +15,14 @@ struct InteractionGridsConfig_t;
 // True when rTile is owned by hostTerritoryOwner (not unowned, not another faction).
 bool IsOnTerritoryOf(const Tile& rTile, FactionId_t hostTerritoryOwner,
                      const TerritoryMap& rTerritory);
+
+// A guest unit the host evacuates from its territory: on it, and not a covert unit whose owner
+// the host cannot identify.
+bool MustLeaveTerritory(const Unit& rUnit, FactionId_t hostTerritoryOwner,
+                        const TerritoryMap& rTerritory);
+
+// rUnit stands in one of rHost's bases or on a tile with one of rHost's units.
+bool SharesTileWith(const Unit& rUnit, const Faction& rHost, const WorldMap& rWorldMap);
 
 // Nearest tile owned by rUnit's faction that rUnit can hold without a carrier, that accepts
 // placement under the world's stacking rule, and that holds no unit rUnit may not share a tile
