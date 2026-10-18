@@ -1053,7 +1053,7 @@ TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council
 TEST_CASE("The governor cannot veto an election", "[council][veto]")
 {
     // Governor rules do not apply to elections — the office cannot be defended by its incumbent.
-    // See docs/game-rules-decisions.md #5. This is also why VetoUnanimouslyOverruled_ may read
+    // See docs/game-rules-decisions.md #5. This is also why VetoOverruled may read
     // standard ballots: an election never reaches it.
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
@@ -1172,4 +1172,52 @@ TEST_CASE("A tied election goes to the candidate with the lower faction id", "[c
 
     const Faction* pLower = a < b ? game.pA : game.pB;
     CHECK(ElectionWinner(rCouncil, pending) == pLower);
+}
+
+TEST_CASE("A faction has commlinks to the council once it knows every other member",
+          "[council][commlinks]")
+{
+    CouncilGame_ game;
+    const PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
+    const FactionId_t a = game.pA->GetFactionId();
+    REQUIRE_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pA));
+
+    rDiplomacy.SetKnown(a, game.pB->GetFactionId());
+    CHECK_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pA));
+    rDiplomacy.SetKnown(a, game.pC->GetFactionId());
+    CHECK(HasCommlinksToAllMembers(rCouncil, *game.pA));
+    CHECK_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pB));
+}
+
+TEST_CASE("Without a threshold, a proposal passes when Yea outweighs Nay", "[council][tally]")
+{
+    CouncilGame_ game;
+    const PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    PendingProposal_t pending;
+    pending.proposalId = "global_trade_pact";
+    pending.ballots[game.pA->GetFactionId()] = CouncilBallot_t::Yea;
+    pending.ballots[game.pB->GetFactionId()] = CouncilBallot_t::Nay;
+
+    // Abstaining and not voting count for neither side.
+    CHECK_FALSE(ProposalPasses(rCouncil, pending));
+    pending.ballots[game.pC->GetFactionId()] = CouncilBallot_t::Abstain;
+    CHECK_FALSE(ProposalPasses(rCouncil, pending));
+    pending.ballots[game.pC->GetFactionId()] = CouncilBallot_t::Yea;
+    CHECK(ProposalPasses(rCouncil, pending));
+}
+
+TEST_CASE("Only the governor may veto, and never an election", "[council][veto]")
+{
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    rCouncil.InstallGovernor(*game.pA);
+    PendingProposal_t standard;
+    standard.proposalId = "global_trade_pact";
+    PendingProposal_t election;
+    election.proposalId = "elect_planetary_governor";
+
+    CHECK(CanVeto(rCouncil, *game.pA, standard));
+    CHECK_FALSE(CanVeto(rCouncil, *game.pB, standard));
+    CHECK_FALSE(CanVeto(rCouncil, *game.pA, election));
 }
