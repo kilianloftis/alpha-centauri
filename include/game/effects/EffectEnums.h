@@ -240,8 +240,8 @@ enum class StatId_t
     // minerals that do not answer to ecology (orbital), positive for a dirty facility.
     EcoMineralOffset,
 
-    // Weight toward receiving a rebelling base (Additive, Faction domain). RebelFactionPicker
-    // resolves with seed 1.0 so factions without modifiers still participate equally.
+    // Weight toward receiving a rebelling base (Additive, Faction domain). RebelCandidateWeights
+    // seeds it with rebel_selection's base join weight, so factions without modifiers take part.
     RebelJoinWeight
     // TODO: add more stats as they are defined
 };

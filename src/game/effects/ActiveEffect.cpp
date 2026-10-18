@@ -6,7 +6,6 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/diplomacy/InfiltrationRules.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/base/RebelFactionPicker.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"

@@ -64,6 +64,7 @@ add_executable(effects-tests
     game/ScrambleTests.cpp
     game/BaseConquestTests.cpp
     game/AssimilationTrackerTests.cpp
+    game/RebelRulesTests.cpp
     game/AttackRulesTests.cpp
     game/ImprovementConfigParserTests.cpp
     game/TerraformTests.cpp

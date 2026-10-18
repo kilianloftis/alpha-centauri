@@ -18,7 +18,8 @@ add_library(ac-core STATIC
     game/faction/FactionFlavor.cpp
     game/units/Military.cpp
     game/units/UnitManager.cpp
-    game/base/RebelFactionPicker.cpp
+    game/base/RebelRules.cpp
+    game/base/RebelMutations.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp

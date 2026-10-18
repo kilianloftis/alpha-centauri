@@ -12,7 +12,7 @@
 #include "game/effects/TriggeredEffectRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/economy/EconomyManager.h"
-#include "game/base/RebelFactionPicker.h"
+#include "game/base/RebelMutations.h"
 #include "game/research/ResearchManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
@@ -187,15 +187,9 @@ bool Rebel_(TriggeredEffectContext_t& rCtx, std::vector<TriggeredEffectResult_t>
     {
         return false;
     }
-    const GameDataContext& rData = rCtx.rGameState.GetGameData();
-    if (!rData.popCompositionConfig)
-    {
-        throw std::runtime_error("ApplyTriggeredEffects: Rebel requires a popCompositionConfig");
-    }
     const BaseId_t baseId = rCtx.pBase->GetBaseId();
     const std::optional<FactionId_t> newOwner =
-        PickRebelFactionAndTransfer(*rCtx.pBase, rCtx.rGameState,
-                                    rData.popCompositionConfig->rebelSelection, rCtx.Rng());
+        PickRebelFactionAndTransfer(*rCtx.pBase, rCtx.rGameState, rCtx.Rng());
     if (!newOwner)
     {
         return false;

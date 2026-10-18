@@ -489,7 +489,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `BaseMoodEffects`: the one place a riot tier's effect array is split between the base lane
     (`BaseEffectsCache`) and the faction lane (`FactionEffectsPool`), so a `FactionUnits`
     penalty declared by a rioting base actually reaches its units.
-  - `BuildingMutations` / `RebelFactionPicker`: shared consequences of riot escalation, also
+  - `BuildingMutations` / `RebelMutations` (choosing through `RebelRules`): shared consequences of riot escalation, also
     used by conquest and probe sabotage.
   - `PopTypeRegistry`: derives each type's `PopClass_t` from the promotion graph at load, and
     rejects a graph that is not a single chain through `is_default`.

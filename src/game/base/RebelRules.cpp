@@ -1,21 +1,19 @@
-#include "game/base/RebelFactionPicker.h"
+#include "game/base/RebelRules.h"
 
-#include "game/faction/Faction.h"
+#include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/base/BaseManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/base/BaseManager.h"
-#include "game/population/PopulationManager.h"
+#include "game/faction/Faction.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/population/PopCompositionConfigParser.h"
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <limits>
-#include <optional>
-#include <vector>
 
 namespace ac
 {
@@ -72,29 +70,24 @@ int DistanceBonus_(const Faction& rCandidate, const BaseManager& rRebelling,
 
 int RebelJoinWeight_(const Faction& rFaction, const RebelSelectionConfig_t& rConfig)
 {
-    return static_cast<int>(std::lround(
-        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight,
-                           static_cast<double>(rConfig.baseJoinWeight))));
+    const double seed = static_cast<double>(rConfig.baseJoinWeight);
+    const double weight =
+        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed);
+    return static_cast<int>(std::lround(weight));
 }
-
-struct Candidate_t
-{
-    Faction* pFaction = nullptr;
-    int weight = 0;
-};
 
 } // namespace
 
-std::optional<FactionId_t> PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
-                                                       const RebelSelectionConfig_t& rConfig,
-                                                       std::mt19937& rRng)
+std::vector<RebelCandidate_t> RebelCandidateWeights(const BaseManager& rRebelling)
 {
-    Faction& rOwner = rBase.GetFaction();
-    const FactionId_t ownerId = rOwner.GetFactionId();
+    const GameState& rGameState = CurrentGameState();
+    const RebelSelectionConfig_t& rConfig =
+        rGameState.GetGameData().popCompositionConfig->rebelSelection;
+    const FactionId_t ownerId = rRebelling.GetFaction().GetFactionId();
     const int mapWidth = rGameState.GetWorldMap().GetWidth();
 
-    std::vector<Candidate_t> candidates;
-    for (Faction& rFaction : rGameState.Factions())
+    std::vector<RebelCandidate_t> candidates;
+    for (const Faction& rFaction : rGameState.Factions())
     {
         if (rFaction.GetFactionId() == ownerId)
         {
@@ -107,45 +100,14 @@ std::optional<FactionId_t> PickRebelFactionAndTransfer(BaseManager& rBase, GameS
         }
 
         const int weight = RebelJoinWeight_(rFaction, rConfig)
-            + DistanceBonus_(rFaction, rBase, rConfig, mapWidth);
+            + DistanceBonus_(rFaction, rRebelling, rConfig, mapWidth);
         if (weight <= 0)
         {
             continue;
         }
-        candidates.push_back(Candidate_t{&rFaction, weight});
+        candidates.push_back(RebelCandidate_t{rFaction.GetFactionId(), weight});
     }
-
-    if (candidates.empty())
-    {
-        std::cerr << "[Rebel] no candidate factions for base " << rBase.GetBaseId() << '\n';
-        return std::nullopt;
-    }
-
-    int totalWeight = 0;
-    for (const Candidate_t& rCand : candidates)
-    {
-        totalWeight += rCand.weight;
-    }
-
-    std::uniform_int_distribution<int> dist(1, totalWeight);
-    int roll = dist(rRng);
-    Faction* pChosen = candidates.front().pFaction;
-    for (const Candidate_t& rCand : candidates)
-    {
-        roll -= rCand.weight;
-        if (roll <= 0)
-        {
-            pChosen = rCand.pFaction;
-            break;
-        }
-    }
-
-    const BaseId_t baseId = rBase.GetBaseId();
-    // Same order conquest and mind control use: the assimilation window is stamped while the
-    // base still belongs to the loser, then TransferBaseTo moves it (and resets escalation).
-    rBase.GetPopulation().NotifyCaptured(ownerId, pChosen->GetFactionId());
-    rOwner.TransferBaseTo(baseId, *pChosen);
-    return pChosen->GetFactionId();
+    return candidates;
 }
 
 } // namespace ac
