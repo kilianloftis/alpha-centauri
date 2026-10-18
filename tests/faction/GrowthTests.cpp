@@ -6,6 +6,11 @@
 #include "game/population/GrowthRules.h"
 #include "game/population/PopulationRules.h"
 #include "game/population/GrowthConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/economy/ResourceManager.h"
+#include "game/production/ProductionApplyResult.h"
+#include "game/production/ProductionManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 
@@ -17,6 +22,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace ac;
 using actest::Active;
@@ -429,26 +435,35 @@ TEST_CASE("ResolveGrowth: the deposit is capped at the box", "[population][growt
     CHECK(outcome.stockpileAfter == 40);
 }
 
-TEST_CASE("Growth forecasts agree with the turn on the same inputs", "[population][growth]")
+TEST_CASE("A base at its size cap grows the same turn its Hab Complex completes",
+          "[population][growth][production]")
 {
-    for (const int stockpile : {0, 20, 40})
-    {
-        for (const int net : {-10, 0, 8})
-        {
-            actest::BaseFixture fixture;
-            actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
-            BaseManager& base = fixture.MakeBase(8, 4);
-            PopulationManager& rPopulation = base.GetPopulation();
-            rPopulation.SetNutrientStockpile(stockpile);
-            const int gross = net + rPopulation.GetCitizenNutrientIntake();
-            const int sizeBefore = rPopulation.GetSize();
-            const bool bWouldGrow = rPopulation.WouldGrowThisTurn(gross, BaseEffects_t{base});
-            const bool bWouldStarve = rPopulation.WouldStarveThisTurn(gross, BaseEffects_t{base});
+    actest::EffectPool pool;
+    actest::FactionFixture fixture;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 3);
+    BuildingConfig_t hab;
+    hab.id = "test_hab_complex";
+    hab.name = "Test Hab Complex";
+    hab.effects = {pool.StatMod(StatId_t::MaxBaseSize, 1, ModifierOp_t::Add,
+                                EffectScope_t::ThisBase)};
+    // Assigned before any base exists, so no building manager holds the replaced configs.
+    std::vector<BuildingConfig_t> buildings = fixture.buildings().GetAll();
+    buildings.push_back(hab);
+    fixture.buildings().Assign(std::move(buildings));
 
-            rPopulation.ApplyGrowth(gross, BaseEffects_t{base});
-            const int sizeAfter = rPopulation.GetSize();
-            CHECK(bWouldGrow == (sizeAfter == sizeBefore + 1));
-            CHECK(bWouldStarve == (sizeAfter == sizeBefore - 1));
-        }
-    }
+    BaseManager& base = fixture.MakeFactionBase(fixture.MakeFaction(), 8, 4);
+    PopulationManager& rPopulation = base.GetPopulation();
+    REQUIRE(rPopulation.GetSize() == 3);
+    REQUIRE_FALSE(rPopulation.CanGrow());
+    rPopulation.SetNutrientStockpile(rPopulation.GetNutrientsRequired(base.GetBaseEffects()));
+    base.GetResources().AddResource(StatId_t::Nutrients, rPopulation.GetCitizenNutrientIntake());
+
+    const BuildingConfig_t& rHab = fixture.buildings().Get("test_hab_complex");
+    base.GetProduction().SetProduction(&rHab, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(rPopulation.GetSize() == 3);
+
+    base.ApplyGrowth();
+    CHECK(rPopulation.GetSize() == 4);
 }

@@ -323,10 +323,6 @@ TEST_CASE("A deferred item completes on its own once the base has grown",
     {
         base.GetPopulation().RemovePop();
     }
-    // Feed the base at size 2: the deferral is about the pod's pop cost, and a bank that does
-    // not cover citizen intake would make the abandon check fire on pending starvation instead.
-    base.GetResources().AddResource(StatId_t::Nutrients, 4);
-
     const UnitDesign& rPod =
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
@@ -345,7 +341,7 @@ TEST_CASE("A deferred item completes on its own once the base has grown",
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
-TEST_CASE("Size-1 colony pod with pending growth completes without abandon or raze",
+TEST_CASE("A size-1 colony pod asks for confirmation even when the base is about to grow",
           "[production][unit][population][abandon][growth]")
 {
     UnitProductionGame_ game;
@@ -356,7 +352,7 @@ TEST_CASE("Size-1 colony pod with pending growth completes without abandon or ra
     }
     REQUIRE(base.GetPopulation().GetSize() == 1);
 
-    // Full tanks + non-negative net ⇒ WouldGrowThisTurn. required at size 1 = 20.
+    // A full box (required at size 1 is 20) and a surplus: the base grows this turn.
     base.GetPopulation().SetNutrientStockpile(20);
     base.GetResources().AddResource(StatId_t::Nutrients, 4);
 
@@ -365,37 +361,54 @@ TEST_CASE("Size-1 colony pod with pending growth completes without abandon or ra
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK_FALSE(CompletionAbandonsBase(base));
-    const ProductionApplyResult_t applied = base.ApplyProduction();
-    CHECK(applied.kind == ProductionApplyKind_t::Completed);
+    CHECK(CompletionAbandonsBase(base));
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK_FALSE(base.IsRazed());
-    CHECK(base.GetPopulation().GetNutrientStockpile() == 0);
-    CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
-TEST_CASE("Size-2 colony pod that starves down to nothing asks for confirmation",
+TEST_CASE("A size-2 colony pod completes without asking even when the base is starving",
           "[production][unit][population][abandon][growth]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(8, 8);
     base.GetPopulation().RemovePop();
     REQUIRE(base.GetPopulation().GetSize() == 2);
-
-    // Empty tanks and no production ⇒ net -4 exhausts storage, so BaseGrowth starves a pop
-    // after BaseProduction has already charged the pod's. Predicting only growth would let the
-    // base be razed on an answer of "no".
     base.GetPopulation().SetNutrientStockpile(0);
-    REQUIRE(base.GetResources().GetNutrientBank() == 0);
 
     const UnitDesign& rPod =
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK(CompletionAbandonsBase(base));
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
-    CHECK(base.GetPopulation().GetSize() == 2);
+    CHECK_FALSE(CompletionAbandonsBase(base));
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(base.GetPopulation().GetSize() == 1);
+}
+
+TEST_CASE("At Citizen a colony pod completes in a size-1 base, which keeps its citizen",
+          "[production][unit][population][abandon][difficulty]")
+{
+    UnitProductionGame_ game;
+    GameRulesConfig_t rules = game.settings.GetGameRules();
+    rules.difficultyId = "citizen";
+    game.settings.SetGameRules(rules);
+    BaseManager& base = game.MakeBase(8, 8);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    CHECK_FALSE(CompletionAbandonsBase(base));
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK_FALSE(base.IsRazed());
+    CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
 TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
@@ -408,10 +421,8 @@ TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
         base.GetPopulation().RemovePop();
     }
     base.GetPopulation().SetNutrientStockpile(0);
-    REQUIRE(base.GetResources().GetNutrientBank() == 0);
 
-    // The base is lost to starvation whatever it builds; the question is whether *this item*
-    // empties it, so the starve prediction floors at 1 rather than answering yes for everything.
+    // The base may starve out whatever it builds; only this item's own pop cost is asked about.
     const UnitDesign& rScout = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
     base.GetProduction().SetProduction(&rScout, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());

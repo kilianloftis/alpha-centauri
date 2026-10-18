@@ -1,6 +1,9 @@
 #include "game/production/ProductionRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/DifficultyConfig.h"
 #include "game/GameDataContext.h"
+#include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingConfig.h"
@@ -35,6 +38,24 @@
 
 namespace ac
 {
+
+namespace
+{
+
+int SizeAfterCompletion_(const IConstructable& rItem, int size)
+{
+    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(&rItem))
+    {
+        return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size);
+    }
+    if (const auto* pDesign = dynamic_cast<const UnitDesign*>(&rItem))
+    {
+        return PredictUnitProductionPopulationSize(*pDesign, size);
+    }
+    return size;
+}
+
+} // namespace
 
 ScrapPayout_t PlanScrapPayout(const ScrapQuote_t& rQuote, std::optional<BaseId_t> destBaseId)
 {
@@ -183,6 +204,20 @@ std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase)
     return available;
 }
 
+int CompletionPopulationFloor()
+{
+    const GameState& rGameState = CurrentGameState();
+    const GameDataContext& rData = rGameState.GetGameData();
+    if (!rData.difficultyConfig)
+    {
+        throw std::runtime_error("CompletionPopulationFloor requires a difficultyConfig");
+    }
+    const std::string& rDifficultyId = rGameState.GetSettings().GetGameRules().difficultyId;
+    const DifficultyRules_t& rRules =
+        rData.difficultyConfig->RequireForSession(rDifficultyId).rules;
+    return rRules.colonyPodPreservesSize1Base ? 1 : 0;
+}
+
 bool CompletionAbandonsBase(const BaseManager& rBase)
 {
     const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
@@ -190,30 +225,9 @@ bool CompletionAbandonsBase(const BaseManager& rBase)
     {
         return false;
     }
-
-    const PopulationManager& rPopulation = rBase.GetPopulation();
-    const int nutrients = rBase.GetResources().GetNutrientBank();
-    const BaseEffects_t& rEffects = rBase.GetBaseEffects();
-    int size = rPopulation.GetSize();
-    if (rPopulation.WouldGrowThisTurn(nutrients, rEffects))
-    {
-        ++size;
-    }
-    else if (rPopulation.WouldStarveThisTurn(nutrients, rEffects))
-    {
-        // Floored at 1: the question is whether this item empties the base. A base already
-        // starving out from size 1 is lost whatever it builds.
-        size = std::max(1, size - 1);
-    }
-    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pItem))
-    {
-        return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size) <= 0;
-    }
-    if (const auto* pDesign = dynamic_cast<const UnitDesign*>(pItem))
-    {
-        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
-    }
-    return false;
+    const int sizeAfter = SizeAfterCompletion_(*pItem, rBase.GetPopulation().GetSize());
+    // Only an item that would empty the base depends on the difficulty.
+    return sizeAfter <= 0 && CompletionPopulationFloor() == 0;
 }
 
 std::optional<BaseId_t> ScrapRefundBase(const Faction& rFaction, const Tile& rTile)

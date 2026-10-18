@@ -185,6 +185,8 @@ struct TriggeredEffectContext_t
     // Separate from actionTarget so an arm cannot silently redirect the ActionTarget faction
     // filter for everything authored after it.
     std::optional<FactionId_t> derivedVictim;
+    // Set by a production completion: no ModifyPopulation shrinks the base below it.
+    int populationFloor = 0;
     std::mt19937* pRng = nullptr;
 
     std::mt19937& Rng() const;

@@ -15,9 +15,8 @@ BaseGrowth::BaseGrowth(HookContext hookContext)
 {
 }
 
-// Ordered after BaseProduction so a Hab Complex / Dome completing this turn raises MaxBaseSize
-// before ApplyGrowth. Colony-pod abandon is handled in production via WouldGrowThisTurn and
-// CommitPendingGrowth before on-complete pop costs — see docs/game-rules-decisions.md §10.
+// Ordered after BaseProduction, as in SMAC, so a Hab Complex / Dome completing this turn raises
+// MaxBaseSize before ApplyGrowth.
 StageResult_t BaseGrowth::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
     std::cout << "Executing BaseGrowth stage for faction\n";

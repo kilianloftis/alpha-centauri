@@ -189,15 +189,6 @@ BaseManager::BaseManager(
                 return;
             }
             m_pBuildings->AddBuilding(itemId);
-            // Pending nutrient growth commits before on_complete_effects so a pop-cost item
-            // (and Hab raising the cap) sees the post-growth size. Hab added above unlocks
-            // CanGrow for a full tank at the old max. Intake for the new citizen is applied
-            // later in ApplyGrowth (gross bank − post-growth size × intake).
-            if (m_pPopulation->CommitPendingGrowth(m_pResources->GetNutrientBank(),
-                                                   m_effects.Get()))
-            {
-                m_pPopulation->EnsureCompositionCurrent();
-            }
             OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, nullptr});
             return;
         }
@@ -211,11 +202,6 @@ BaseManager::BaseManager(
                 m_tile,
                 this,
                 this);
-            if (m_pPopulation->CommitPendingGrowth(m_pResources->GetNutrientBank(),
-                                                   m_effects.Get()))
-            {
-                m_pPopulation->EnsureCompositionCurrent();
-            }
             OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, &rUnit});
             return;
         }

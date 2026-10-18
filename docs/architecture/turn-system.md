@@ -217,11 +217,12 @@ about a pending riot without being a yielding stage.
   convert them through a stockpile, then complete funded items. Ordered after `UnitSupport` and
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
-  Colony-pod abandon uses `WouldGrowThisTurn` and `CommitPendingGrowth` before on-complete pop
-  costs. Leftovers after a completion stay on the next item and convert only on a later turn if
-  that item is a stockpile. Stockpiles are their own config family (`config/stockpiles.json`,
-  `StockpileRegistry`); conversion delegates to `ApplyStockpileConversionAtBase`, which resolves
-  the stockpile config's own effects and never touches the base effect pool.
+  The colony-pod abandon prompt judges the base's current size, as SMAC's does, and a pop cost
+  stops at size 1 at a difficulty that preserves size-1 bases. Leftovers after a completion
+  stay on the next item and convert only on a later turn if that item is a stockpile.
+  Stockpiles are their own config family (`config/stockpiles.json`, `StockpileRegistry`);
+  conversion delegates to `ApplyStockpileConversionAtBase`, which resolves the stockpile
+  config's own effects and never touches the base effect pool.
 - **`PostActionsProduction`**: after `PlayerActions`, completion-only pass via
   `TryCompleteReadyProduction` (`bNewTurn=false`) — finishes funded queues (e.g. hurried during
   the player window) without banking leftover minerals or clearing same-turn abandon deferrals.

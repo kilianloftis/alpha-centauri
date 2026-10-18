@@ -3,6 +3,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
+#include "game/production/ProductionRules.h"
 #include "game/units/Military.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
@@ -55,6 +56,7 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
             rBase.GetBuildingManager().FindBuilding(rCompleted.itemId))
     {
         TriggeredEffectContext_t context(rGameState, rBase);
+        context.populationFloor = CompletionPopulationFloor();
         ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
         const std::vector<Unit*> occupants =
             rGameState.GetWorldMap().GetUnitPositions().GetUnitsOnTile(rBase.GetTile());
@@ -76,6 +78,7 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
         // (escape pod, starting unit, a granted unit) never goes through here.
         TriggeredEffectContext_t context(rGameState, rBase);
         context.pUnit = rCompleted.pUnit;
+        context.populationFloor = CompletionPopulationFloor();
         for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
         {
             if (pComp)

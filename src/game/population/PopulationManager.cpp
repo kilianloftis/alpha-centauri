@@ -228,31 +228,6 @@ GrowthOutcome_t PopulationManager::ResolveGrowth_(int nutrientProduction,
     return ResolveGrowth(inputs, m_rGrowthConfig);
 }
 
-bool PopulationManager::WouldGrowThisTurn(int nutrientProduction,
-                                          const BaseEffects_t& rBaseEffects) const
-{
-    return ResolveGrowth_(nutrientProduction, rBaseEffects).bGrows;
-}
-
-bool PopulationManager::WouldStarveThisTurn(int nutrientProduction,
-                                            const BaseEffects_t& rBaseEffects) const
-{
-    return ResolveGrowth_(nutrientProduction, rBaseEffects).bStarves;
-}
-
-bool PopulationManager::CommitPendingGrowth(int nutrientProduction,
-                                            const BaseEffects_t& rBaseEffects)
-{
-    const GrowthOutcome_t outcome = ResolveGrowth_(nutrientProduction, rBaseEffects);
-    if (!outcome.bGrows)
-    {
-        return false;
-    }
-    m_nutrientStockpile = outcome.stockpileOnGrowth;
-    OnGrowth.Emit();
-    return true;
-}
-
 void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects)
 {
     const GrowthOutcome_t outcome = ResolveGrowth_(nutrientProduction, rBaseEffects);

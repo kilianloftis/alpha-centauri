@@ -260,15 +260,20 @@ for `BaseProduction` / the UI; the presenter pauses if **any** matching setting 
 on an answer, not on minerals) and `nullopt` under riot. `ApplyProduction` stamps the turn
 original before any early-out, so switching away from a deferred item charges retool normally.
 
-Ordering: `BaseProduction` runs **before** `BaseGrowth` so Hab Complex / Dome can raise
-`MaxBaseSize` before growth. That puts both of the turn's pop events after the question, so the
-prediction accounts for each: `WouldGrowThisTurn` (full tanks, net ≥ 0, `CanGrow`) adds one, so a
-size-1 base that will grow is not prompted, and `WouldStarveThisTurn` (net loss exhausts the tank)
-subtracts one, so a size-2 base that starves after paying a pod's pop cost is not razed having
-answered "no". The starve adjustment is floored at size 1: a base starving out from size 1 is lost
-whatever it builds, and predicting 0 would make every item answer yes. `CommitPendingGrowth` then
-runs before on-complete pop costs so the pod does not raze the base before
-BaseGrowth deposits. See `docs/architecture/turn-system.md`.
+**The question judges the current size**, as SMAC's does: its gate at 0x4F0BF6 is "the item
+is a colony pod", then `pop_size == 1`, then "difficulty above Citizen", and it never asks
+whether the base is about to grow. So a size-1 base with a full nutrient box is still asked, and
+a size-2 base that will starve this turn is not. Here the moddable form of "a colony pod at size
+1" is any item whose pop cost would empty the base (`CompletionAbandonsBase`).
+
+**Citizen.** A difficulty with `colony_pod_preserves_size_1_base` (shipping: Citizen) stops a
+completed item's pop cost at size 1 (`CompletionPopulationFloor`), so the item completes, the
+base keeps its last citizen, and nothing is asked.
+
+**Ordering.** `BaseProduction` runs **before** `BaseGrowth`, as in SMAC, and that order is the
+whole mechanism for a base at its size cap with a full box: a Hab Complex or Habitation Dome
+completed in production raises `MaxBaseSize`, and the base grows in `BaseGrowth` the same turn.
+A completion does not grow the base early. See `docs/architecture/turn-system.md`.
 
 ## 11. Production pause gates OR-match
 

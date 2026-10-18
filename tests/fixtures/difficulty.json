@@ -4,7 +4,11 @@
     {
       "id": "citizen",
       "name": "Citizen",
-      "rules": { "player_atrocity_threshold": 9, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 9,
+        "ai_atrocity_threshold": 7,
+        "colony_pod_preserves_size_1_base": true
+      },
       "effects": [
         {
           "type": "StatModifier",

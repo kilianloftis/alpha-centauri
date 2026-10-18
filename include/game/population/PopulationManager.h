@@ -181,21 +181,6 @@ public:
     // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
-    // True when tanks are full, net (gross − citizen intake) is >= 0, and CanGrow().
-    // `nutrientProduction` is gross (ResourceManager bank). Used by abandon prediction and
-    // CommitPendingGrowth; does not mutate.
-    bool WouldGrowThisTurn(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
-
-    // The counterpart gate: net loss exhausts the tank, so ApplyGrowth will drop a pop. Mutually
-    // exclusive with WouldGrowThisTurn. Abandon prediction subtracts it for the same reason it
-    // adds pending growth.
-    bool WouldStarveThisTurn(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
-
-    // If WouldGrowThisTurn, grow one pop and empty the stockpile (no deposit). Used before
-    // on-complete production pop costs so a size-1 colony pod does not raze the base.
-    // Returns true when a pop was added. Later ApplyGrowth uses the post-growth size for intake.
-    bool CommitPendingGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
-
     // Applies ResolveGrowth (GrowthRules) to this turn's gross nutrient production.
     void ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 

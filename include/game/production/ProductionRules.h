@@ -69,8 +69,12 @@ bool CanScrapBuilding(const BuildingConfig_t& rBuilding);
 
 std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase);
 
-// Judged against the size the base ends the turn at, since BaseGrowth runs after
-// BaseProduction.
+// The smallest size a completed item's pop cost may leave: 1 at a difficulty that preserves a
+// size-1 base (Citizen), otherwise 0.
+int CompletionPopulationFloor();
+
+// The item's pop cost would empty the base at its current size. Growth due this turn does not
+// count, as SMAC's prompt does not.
 bool CompletionAbandonsBase(const BaseManager& rBase);
 
 // The closest base by TabletopDiagonalDistance, then the lower BaseId. Empty outside the

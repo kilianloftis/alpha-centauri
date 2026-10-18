@@ -123,11 +123,6 @@ int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
     return ProducedSplit_(rBaseEffects).psych;
 }
 
-int ResourceManager::GetNutrientBank() const
-{
-    return m_nutrients;
-}
-
 int ResourceManager::ConsumeNutrients()
 {
     int consumed = m_nutrients;

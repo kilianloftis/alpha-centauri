@@ -590,7 +590,9 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 {
                     return false;
                 }
-                const int delta = ApplyModifyPopulation_(*rCtx.pBase, rConcrete);
+                ModifyPopulationEffect_t floored = rConcrete;
+                floored.minSize = std::max(floored.minSize, rCtx.populationFloor);
+                const int delta = ApplyModifyPopulation_(*rCtx.pBase, floored);
                 rOut.push_back(PopulationChanged_t{delta});
                 return delta != 0;
             }

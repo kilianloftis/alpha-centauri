@@ -239,6 +239,7 @@ Some consequences have no condition, no choice and no amount: a transferred base
 - A pop-cost item, a colony pod say, wants the post-growth size. Both cannot come first.
 - So a completion commits the base's pending growth on the spot, inside `BaseProduction`, and `BaseGrowth` applies citizen intake later. Both completion branches repeat this.
 - **Decision:** stays. Delaying on-complete effects to the growth stage would differ from the original game. If a config option for it comes later, that change extracts the rule.
+- **Revised:** early growth goes. SMAC's abandon prompt judges the current size only, and production running before growth is all a Hab Complex needs. See `game-rules-decisions.md` §10.
 
 ### [B] PRD-14 Which copy is lost when a deployable building is destroyed
 `Faction.cpp:282` (`NotifyBuildingDestroyed`), `OrbitalAttack.cpp:31` (`DestroyOneBuilding_`).
