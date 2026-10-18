@@ -1,4 +1,5 @@
 #include "game/population/AssimilationTracker.h"
+#include "game/population/PopulationRules.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -106,4 +107,27 @@ TEST_CASE("A to B to C to B to A reverses each reclaim from that faction's own c
     CHECK(tracker.OccupierWindow().durationTurns == 27);
     CHECK(tracker.OccupierWindow().formerOwner == k_B);
     CHECK_FALSE(tracker.ClaimFor(k_A).IsActive());
+}
+
+TEST_CASE("AssimilationOnCapture starts a fresh window and reverses a claim on recapture",
+          "[population][assimilation]")
+{
+    AssimilationTracker tracker;
+    const AssimilationOnCapture_t first =
+        AssimilationOnCapture(tracker, k_A, k_B, k_Peak, k_Decay);
+    CHECK_FALSE(first.bReclaims);
+    CHECK(first.occupier.peakDrones == 5);
+    CHECK(first.occupier.durationTurns == 50);
+    REQUIRE(first.previousOwnerClaim.has_value());
+    CHECK(first.previousOwnerClaim->formerOwner == k_A);
+
+    tracker.NotifyCaptured(k_A, k_B, k_Peak, k_Decay);
+    Advance_(tracker, 20);
+
+    // Twenty turns away at one drone per ten turns reverses into two drones over twenty turns.
+    const AssimilationOnCapture_t back = AssimilationOnCapture(tracker, k_B, k_A, k_Peak, k_Decay);
+    CHECK(back.bReclaims);
+    CHECK(back.occupier.peakDrones == 2);
+    CHECK(back.occupier.durationTurns == 20);
+    CHECK(back.previousOwnerClaim.has_value());
 }

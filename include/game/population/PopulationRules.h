@@ -1,5 +1,10 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
+#include "game/population/AssimilationTracker.h"
+
+#include <optional>
+
 namespace ac
 {
 
@@ -35,5 +40,20 @@ bool GoldenAgeConditionMet(const GoldenAgeConditionInputs_t& rInputs,
 
 // Forcing a riot extends one already running but never shortens it.
 int ForcedRiotTurns(int remaining, int added);
+
+struct AssimilationOnCapture_t
+{
+    AssimilationState occupier;
+    // The new owner's own claim became the occupier window.
+    bool bReclaims = false;
+    // Set only when the previous owner holds no claim yet.
+    std::optional<AssimilationState> previousOwnerClaim;
+};
+
+// A recapture inverts the new owner's own elapsed time instead of starting a fresh window, and
+// an earlier owner's claim survives chained captures.
+AssimilationOnCapture_t AssimilationOnCapture(const AssimilationTracker& rTracker,
+                                              FactionId_t previousOwner, FactionId_t newOwner,
+                                              int peakDrones, int decayTurns);
 
 } // namespace ac

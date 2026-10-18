@@ -1,51 +1,11 @@
 #include "game/population/AssimilationTracker.h"
 
+#include "game/population/PopulationRules.h"
+
 #include <algorithm>
 
 namespace ac
 {
-
-AssimilationState AssimilationTracker::MakeFresh_(FactionId_t formerOwner, int peakDrones,
-                                                 int decayTurns)
-{
-    AssimilationState state;
-    if (peakDrones <= 0 || decayTurns <= 0)
-    {
-        return state;
-    }
-    state.formerOwner = formerOwner;
-    state.peakDrones = peakDrones;
-    state.durationTurns = peakDrones * decayTurns;
-    return state;
-}
-
-AssimilationState AssimilationTracker::MakeReversed_(FactionId_t formerOwner, int elapsed,
-                                                    int decayTurns)
-{
-    AssimilationState state;
-    if (elapsed <= 0 || decayTurns <= 0)
-    {
-        return state;
-    }
-    const int reversedPeak = elapsed / decayTurns;
-    if (reversedPeak <= 0)
-    {
-        return state;
-    }
-    state.formerOwner = formerOwner;
-    state.peakDrones = reversedPeak;
-    state.durationTurns = elapsed;
-    return state;
-}
-
-int AssimilationTracker::DecayTurnsOf_(const AssimilationState& rWindow, int fallbackDecay)
-{
-    if (rWindow.peakDrones <= 0)
-    {
-        return std::max(1, fallbackDecay);
-    }
-    return std::max(1, rWindow.durationTurns / rWindow.peakDrones);
-}
 
 void AssimilationTracker::Tick_(AssimilationState& rWindow)
 {
@@ -64,23 +24,16 @@ void AssimilationTracker::Tick_(AssimilationState& rWindow)
 void AssimilationTracker::NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner,
                                         int peakDrones, int decayTurns)
 {
-    const auto it = m_claims.find(newOwner);
-    if (it != m_claims.end() && it->second.IsActive())
+    const AssimilationOnCapture_t outcome =
+        AssimilationOnCapture(*this, previousOwner, newOwner, peakDrones, decayTurns);
+    if (outcome.bReclaims)
     {
-        const int elapsed = it->second.turnsElapsed;
-        const int decay = DecayTurnsOf_(it->second, decayTurns);
-        m_claims.erase(it);
-        m_occupier = MakeReversed_(previousOwner, elapsed, decay);
+        m_claims.erase(newOwner);
     }
-    else
+    m_occupier = outcome.occupier;
+    if (outcome.previousOwnerClaim)
     {
-        m_occupier = MakeFresh_(previousOwner, peakDrones, decayTurns);
-    }
-
-    // Preserve an existing claim: A's elapsed while B then C occupy must not reset at C's capture.
-    if (m_claims.find(previousOwner) == m_claims.end())
-    {
-        m_claims[previousOwner] = MakeFresh_(previousOwner, peakDrones, decayTurns);
+        m_claims[previousOwner] = *outcome.previousOwnerClaim;
     }
 }
 
@@ -109,6 +62,11 @@ AssimilationState AssimilationTracker::ClaimFor(FactionId_t factionId) const
         return {};
     }
     return it->second;
+}
+
+bool AssimilationTracker::HasClaim(FactionId_t factionId) const
+{
+    return m_claims.contains(factionId);
 }
 
 } // namespace ac
