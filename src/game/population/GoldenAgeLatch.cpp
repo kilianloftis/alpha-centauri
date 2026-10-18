@@ -10,14 +10,4 @@ GoldenAgeLatch::GoldenAgeLatch(Signal<>& rWillGoldenAge,
 {
 }
 
-void GoldenAgeLatch::Commit(bool bGoldenAgeCondition)
-{
-    Commit_(bGoldenAgeCondition);
-}
-
-void GoldenAgeLatch::RestoreState(bool bActive, bool bPending)
-{
-    Restore_(bActive, bPending);
-}
-
 } // namespace ac

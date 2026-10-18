@@ -29,7 +29,7 @@ void RiotLatch::Commit(bool bRiotCondition)
         --m_forcedTurnsRemaining;
     }
 
-    if (Commit_(bRiotCondition) == Transition_t::Ended)
+    if (MoodLatch::Commit(bRiotCondition) == Transition_t::Ended)
     {
         m_consecutiveTurns = 0;
         return;
@@ -53,7 +53,7 @@ void RiotLatch::ForceRiot(int turns)
 void RiotLatch::RestoreState(bool bActive, bool bPending, int forcedTurnsRemaining,
                                   int consecutiveTurns)
 {
-    Restore_(bActive, bPending);
+    MoodLatch::RestoreState(bActive, bPending);
     m_forcedTurnsRemaining = std::max(0, forcedTurnsRemaining);
     m_consecutiveTurns = bActive ? std::max(0, consecutiveTurns) : 0;
 }

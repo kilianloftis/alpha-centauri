@@ -5,16 +5,8 @@
 namespace ac
 {
 
-// The pending -> active latch shared by RiotLatch and GoldenAgeLatch.
-//
-// Both mood conditions run the same two-phase lifecycle across a turn:
-//   Forecast (Population stage) — condition holds, so warn the player and set pending. No
-//     gameplay effect yet; the player still has PlayerActions to respond.
-//   Commit (Mood stage, after PlayerActions) — re-evaluate and latch active, or release.
-//
-// Only the bookkeeping around it differs (a riot ages a forced timer and counts consecutive
-// turns). The condition is PopulationRules' answer, so the latches hold only the state machine. Not a polymorphic base: no virtuals, protected
-// non-virtual destructor, never held by base pointer.
+// The pending -> active latch RiotLatch and GoldenAgeLatch share: Forecast warns in the
+// Population stage, so the player can respond before Commit latches in the Mood stage.
 class MoodLatch
 {
 public:
@@ -34,6 +26,7 @@ protected:
         , m_rEnded(rEnded)
     {
     }
+    // Not a polymorphic base: never held or deleted through a MoodLatch pointer.
     ~MoodLatch() = default;
 
     enum class Transition_t
@@ -45,10 +38,10 @@ protected:
 
     // Latch or release, emitting started / ended on the edge. Returns which edge was crossed
     // so the caller can do its own bookkeeping without re-deriving it.
-    Transition_t Commit_(bool bCondition);
+    Transition_t Commit(bool bCondition);
 
     // Save/load: set both flags without emitting.
-    void Restore_(bool bActive, bool bPending);
+    void RestoreState(bool bActive, bool bPending);
 
     // Warn without the Forecast condition, for a source that sets pending directly.
     void SetPendingAndWarn_();

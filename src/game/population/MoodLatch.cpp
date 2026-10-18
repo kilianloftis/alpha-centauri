@@ -20,7 +20,7 @@ void MoodLatch::Forecast(bool bCondition)
     m_bPending = false;
 }
 
-MoodLatch::Transition_t MoodLatch::Commit_(bool bCondition)
+MoodLatch::Transition_t MoodLatch::Commit(bool bCondition)
 {
     m_bPending = false;
 
@@ -44,7 +44,7 @@ MoodLatch::Transition_t MoodLatch::Commit_(bool bCondition)
     return Transition_t::Ended;
 }
 
-void MoodLatch::Restore_(bool bActive, bool bPending)
+void MoodLatch::RestoreState(bool bActive, bool bPending)
 {
     m_bActive = bActive;
     m_bPending = bPending;

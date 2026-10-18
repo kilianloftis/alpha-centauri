@@ -14,10 +14,9 @@ public:
                         Signal<>& rGoldenAgeEnded);
     ~GoldenAgeLatch() = default;
 
-    void Commit(bool bGoldenAgeCondition);
-
-    // Save/load without emitting signals.
-    void RestoreState(bool bActive, bool bPending);
+    // A golden age keeps no bookkeeping of its own, so the base transitions are its API.
+    using MoodLatch::Commit;
+    using MoodLatch::RestoreState;
 };
 
 } // namespace ac

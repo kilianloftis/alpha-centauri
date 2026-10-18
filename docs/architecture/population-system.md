@@ -144,7 +144,7 @@ sequenceDiagram
 ```
 
 The split exists so the warning lands *before* the player acts and the latch closes *after*.
-`OnWill*` edge-emits when pending first latches (and again on `Restore_` if load-mid-pending);
+`OnWill*` edge-emits when pending first latches (and again on `RestoreState` if load-mid-pending);
 session attach wires player notices — the Population stage does not poll. Pending state
 carries no gameplay effect — only `IsRioting()` / `IsInGoldenAge()` do. A riot
 additionally ages a probe-forced timer and counts consecutive commits.
