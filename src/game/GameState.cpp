@@ -32,6 +32,7 @@
 #include "game/base/BaseConquestMutations.h"
 #include "game/combat/InterceptMutations.h"
 #include "game/GameDataContext.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
@@ -770,6 +771,12 @@ void GameState::CreatePlanetaryCouncil()
     m_pCouncil = std::make_unique<PlanetaryCouncil>(*m_rGameData.councilProposalRegistry,
                                                     *m_rGameData.councilRules,
                                                     std::move(members));
+    m_pCouncilVotes = std::make_unique<CouncilVoteExecutor>(*m_pCouncil);
+}
+
+CouncilVoteExecutor* GameState::GetCouncilVotes()
+{
+    return m_pCouncilVotes.get();
 }
 
 PlanetaryCouncil* GameState::GetPlanetaryCouncil()

@@ -9,6 +9,8 @@
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRules.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "ui/style/UiStyle.h"
 
@@ -21,8 +23,7 @@ namespace
 {
 
 // This view exists only for an active council vote. A missing council or player faction is a
-// broken session, not an empty state — leaving the player with a Vote button that does nothing
-// was the previous behaviour on every one of these paths.
+// broken session, not an empty state.
 PlanetaryCouncil& RequireCouncil_(GameState& rGameState)
 {
     PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil();
@@ -31,6 +32,12 @@ PlanetaryCouncil& RequireCouncil_(GameState& rGameState)
         throw std::runtime_error("CouncilVoteView: no planetary council in this session");
     }
     return *pCouncil;
+}
+
+CouncilVoteExecutor& RequireVotes_(GameState& rGameState)
+{
+    RequireCouncil_(rGameState);
+    return *rGameState.GetCouncilVotes();
 }
 
 Faction& RequirePlayer_(GameState& rGameState)
@@ -68,14 +75,12 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
     }
     if (rEvent.key == Key_t::Escape)
     {
-        // Escape resolves rather than abandons. Simply closing would leave GetPending() set,
-        // and Propose throws while it is — the council would accept no further business. Now
-        // that absentees abstain (PlanetaryCouncil::Resolve), resolving is always available,
-        // so there is no reason to trap the player in the view.
-        PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-        if (rCouncil.GetPending())
+        // Escape resolves rather than abandons: closing would leave GetPending() set, and
+        // Propose throws while it is. Absentees abstain, so resolving is always available.
+        CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
+        if (rVotes.GetPending())
         {
-            rCouncil.Resolve(m_rGameState);
+            rVotes.Resolve(m_rGameState);
         }
         m_bShouldClose = true;
         return true;
@@ -85,38 +90,36 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
 
 void CouncilVoteView::TryResolveAndClose_()
 {
-    PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-    if (!rCouncil.GetPending())
+    CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
+    if (!rVotes.GetPending())
     {
         return;
     }
-    // No AllMembersVoted() gate: a member that has not voted abstains. Waiting for unanimous
-    // participation is what made a silent member terminal, since nothing else clears the
-    // pending slot.
-    rCouncil.Resolve(m_rGameState);
+    // No AllMembersVoted() gate: a member that has not voted abstains, and nothing else clears
+    // the pending slot.
+    rVotes.Resolve(m_rGameState);
     m_bShouldClose = true;
 }
 
 void CouncilVoteView::OpenBallotSelector_()
 {
-    PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
+    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
+    const CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
     RequirePlayer_(m_rGameState);
-    if (!rCouncil.GetPending())
+    if (!rVotes.GetPending())
     {
         return;
     }
 
-    const PlanetaryCouncil::PendingProposal_t& rPending = *rCouncil.GetPending();
+    const PendingProposal_t& rPending = *rVotes.GetPending();
     const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(rPending.proposalId);
     const WindowLayout_t popupLayout = ResolveLayout(m_layout, Style().layouts.popupSmall);
 
     DismissOpenModals_();
     if (rConfig.kind == CouncilProposalKind_t::Election)
     {
-        // Exactly the members CastElectionVote will accept. Offering full membership meant the
-        // "two most populous factions" rule was decided by the UI — and now that the council
-        // enforces it, offering an ineligible candidate would throw on selection.
-        std::vector<Faction*> candidates = rCouncil.EligibleCandidates(rConfig);
+        // Exactly the members CastElectionVote will accept; an ineligible one would throw.
+        std::vector<Faction*> candidates = EligibleCandidates(rCouncil, rConfig);
         std::vector<PopupChoice_t> choices;
         choices.reserve(candidates.size() + 1);
         for (Faction* pCandidate : candidates)
@@ -144,13 +147,13 @@ void CouncilVoteView::OpenBallotSelector_()
 
 void CouncilVoteView::CastElectionVote_(Faction* pCandidate)
 {
-    RequireCouncil_(m_rGameState).CastElectionVote(RequirePlayer_(m_rGameState), pCandidate);
+    RequireVotes_(m_rGameState).CastElectionVote(RequirePlayer_(m_rGameState), pCandidate);
     TryResolveAndClose_();
 }
 
 void CouncilVoteView::CastBallot_(CouncilBallot_t ballot)
 {
-    RequireCouncil_(m_rGameState).CastVote(RequirePlayer_(m_rGameState), ballot);
+    RequireVotes_(m_rGameState).CastVote(RequirePlayer_(m_rGameState), ballot);
     TryResolveAndClose_();
 }
 

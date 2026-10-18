@@ -7,6 +7,7 @@
 #include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/council/CouncilRules.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
@@ -71,7 +72,7 @@ TEST_CASE("A cached vote weight equals the value it replaced", "[ui][council]")
     CouncilVoteWeightCache cache;
 
     const int live =
-        fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Representative);
+        VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative);
     CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative) == live);
     CHECK(cache.GetComputeCount() == 1);
 
@@ -95,9 +96,9 @@ TEST_CASE("Each faction gets its own cached weight", "[ui][council]")
     fixture.fixtures.MakeFactionBase(*fixture.pA, 8, 8);
 
     const int liveA =
-        fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Population);
+        VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Population);
     const int liveB =
-        fixture.Council().ComputeVoteWeight(*fixture.pB, CouncilVoteWeight_t::Population);
+        VoteWeight(fixture.Council(), *fixture.pB, CouncilVoteWeight_t::Population);
     REQUIRE(liveA != liveB);
 
     // Alternating between members is what the panels do; a single-slot cache would answer
@@ -124,7 +125,7 @@ TEST_CASE("A cached weight follows a population change", "[ui][council]")
 
     rBase.GetPopulation().AddPop();
     const int live =
-        fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Population);
+        VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Population);
     REQUIRE(live != before);
 
     CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Population) == live);
@@ -137,9 +138,9 @@ TEST_CASE("A cached weight is not reused across weighting modes", "[ui][council]
     fixture.fixtures.MakeFactionBase(*fixture.pA, 8, 8);
 
     const int representative =
-        fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Representative);
+        VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative);
     const int population =
-        fixture.Council().ComputeVoteWeight(*fixture.pA, CouncilVoteWeight_t::Population);
+        VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Population);
     REQUIRE(representative != population);
 
     CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative)

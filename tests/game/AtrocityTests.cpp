@@ -11,6 +11,8 @@
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/ecology/EcologyRules.h"
 #include "game/atrocities/AtrocityRules.h"
+#include "game/council/CouncilRules.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/research/ResearchManager.h"
@@ -91,6 +93,7 @@ struct AtrocityGame_
     void PassStandard(Faction& rProposer, const std::string& rProposalId)
     {
         PlanetaryCouncil& rCouncil = *pState->GetPlanetaryCouncil();
+        CouncilVoteExecutor& rVotes = *pState->GetCouncilVotes();
         for (Faction* pOther : rCouncil.Members())
         {
             if (pOther->GetFactionId() != rProposer.GetFactionId())
@@ -98,17 +101,17 @@ struct AtrocityGame_
                 Diplomacy().SetKnown(rProposer.GetFactionId(), pOther->GetFactionId());
             }
         }
-        const int wait = rCouncil.YearsUntilCanPropose(rProposer);
+        const int wait = YearsUntilCanPropose(rCouncil, rProposer);
         if (wait > 0)
         {
             pState->SetMissionYear(pState->GetMissionYear() + wait);
         }
-        rCouncil.Propose(*pState, rProposer, rProposalId);
+        rVotes.Propose(*pState, rProposer, rProposalId);
         for (Faction* pMember : rCouncil.Members())
         {
-            rCouncil.CastVote(*pMember, CouncilBallot_t::Yea);
+            rVotes.CastVote(*pMember, CouncilBallot_t::Yea);
         }
-        const ResolveProposalResult_t result = rCouncil.Resolve(*pState);
+        const ResolveProposalResult_t result = rVotes.Resolve(*pState);
         REQUIRE((result == ResolveProposalResult_t::Passed
                  || result == ResolveProposalResult_t::VetoOverruled));
     }

@@ -41,7 +41,9 @@ add_library(ac-core STATIC
     game/diplomacy/FirstContactResolver.cpp
     game/council/CouncilAiStub.cpp
     game/council/CouncilEffects.cpp
-    game/council/CouncilOutcomeApplier.cpp
+    game/council/CouncilMutations.cpp
+    game/council/CouncilRules.cpp
+    game/council/CouncilVoteExecutor.cpp
     game/council/CouncilProposalConfigParser.cpp
     game/council/CouncilRulesConfigParser.cpp
     game/council/PlanetaryCouncil.cpp

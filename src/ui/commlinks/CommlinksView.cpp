@@ -8,6 +8,8 @@
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRules.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "ui/style/UiStyle.h"
 
@@ -62,9 +64,9 @@ void CommlinksView::OpenCouncilCooldownPopup_()
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         rRules.memberProposeIntervalYears,
         rRules.governorProposeIntervalYears,
-        pCouncil->ProposeCooldownYears(*pPlayer),
+        ProposeCooldownYears(*pCouncil, *pPlayer),
         pCouncil->LastProposedYear(*pPlayer),
-        pCouncil->YearsUntilCanPropose(*pPlayer),
+        YearsUntilCanPropose(*pCouncil, *pPlayer),
         [this]() { m_bShouldClose = true; }));
 }
 
@@ -77,7 +79,7 @@ void CommlinksView::OpenCouncilProposals_()
         {
             for (const CouncilProposalConfig_t& rProposal : pCouncil->GetRegistry().GetAll())
             {
-                if (pCouncil->CanPropose(*pPlayer, rProposal.id))
+                if (CanPropose(*pCouncil, *pPlayer, rProposal.id))
                 {
                     available.push_back(&rProposal);
                 }
@@ -110,37 +112,37 @@ void CommlinksView::ShowNotice_(std::string message)
 
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)
 {
-    PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
+    const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
+    CouncilVoteExecutor* pVotes = m_rGameState.GetCouncilVotes();
     Faction* pPlayer = m_rGameState.GetPlayerFaction();
     if (!pCouncil || !pPlayer)
     {
         return;
     }
 
-    // The proposals popup closes itself on selection, so every gate below used to leave the
-    // player with a vanished list and no explanation. Only the cooldown one said anything.
-    if (pCouncil->GetPending())
+    // The proposals popup closes itself on selection, so each gate below explains itself.
+    if (pVotes->GetPending())
     {
         ShowNotice_("The council is already considering a proposal.");
         return;
     }
-    if (pCouncil->YearsUntilCanPropose(*pPlayer) > 0)
+    if (YearsUntilCanPropose(*pCouncil, *pPlayer) > 0)
     {
         OpenCouncilCooldownPopup_();
         return;
     }
-    if (!pCouncil->HasCommlinksToAllMembers(*pPlayer))
+    if (!HasCommlinksToAllMembers(*pCouncil, *pPlayer))
     {
         ShowNotice_("You must have commlinks with every council member to propose.");
         return;
     }
-    if (!pCouncil->CanPropose(*pPlayer, rProposal.id))
+    if (!CanPropose(*pCouncil, *pPlayer, rProposal.id))
     {
         ShowNotice_("You cannot propose " + rProposal.name + " right now.");
         return;
     }
 
-    pCouncil->Propose(m_rGameState, *pPlayer, rProposal.id);
+    pVotes->Propose(m_rGameState, *pPlayer, rProposal.id);
     m_bShouldClose = true;
     if (m_onOpenCouncilVote)
     {

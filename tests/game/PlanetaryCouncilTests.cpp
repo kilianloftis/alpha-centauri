@@ -7,6 +7,8 @@
 #include "game/council/CouncilProposalConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
+#include "game/council/CouncilRules.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/diplomacy/InfiltrationRules.h"
@@ -104,7 +106,7 @@ struct CouncilGame_
     void AdvancePastProposeCooldown(Faction& rFaction)
     {
         PlanetaryCouncil& rCouncil = *pState->GetPlanetaryCouncil();
-        const int wait = rCouncil.YearsUntilCanPropose(rFaction);
+        const int wait = YearsUntilCanPropose(rCouncil, rFaction);
         if (wait > 0)
         {
             pState->SetMissionYear(pState->GetMissionYear() + wait);
@@ -114,14 +116,15 @@ struct CouncilGame_
     void PassStandard(Faction& rProposer, const std::string& rProposalId)
     {
         PlanetaryCouncil& rCouncil = *pState->GetPlanetaryCouncil();
+        CouncilVoteExecutor& rVotes = *pState->GetCouncilVotes();
         GiveAllCommlinksTo(rProposer);
         AdvancePastProposeCooldown(rProposer);
-        rCouncil.Propose(*pState, rProposer, rProposalId);
+        rVotes.Propose(*pState, rProposer, rProposalId);
         for (Faction* pMember : rCouncil.Members())
         {
-            rCouncil.CastVote(*pMember, CouncilBallot_t::Yea);
+            rVotes.CastVote(*pMember, CouncilBallot_t::Yea);
         }
-        const ResolveProposalResult_t result = rCouncil.Resolve(*pState);
+        const ResolveProposalResult_t result = rVotes.Resolve(*pState);
         REQUIRE((result == ResolveProposalResult_t::Passed
                  || result == ResolveProposalResult_t::VetoOverruled));
     }
@@ -286,14 +289,15 @@ TEST_CASE("Proposing requires commlinks to every council member and shares them"
 {
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     CHECK_THROWS_AS(
-        rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
+        rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
 
     game.pState->GetDiplomacyLedger().SetKnown(game.pA->GetFactionId(), game.pB->GetFactionId());
     CHECK_THROWS_AS(
-        rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
+        rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
 
     game.GiveAllCommlinksTo(*game.pA);
@@ -301,9 +305,9 @@ TEST_CASE("Proposing requires commlinks to every council member and shares them"
     CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(game.pB->GetFactionId(),
                                                            game.pC->GetFactionId()));
 
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    REQUIRE(rCouncil.GetPending());
-    CHECK(rCouncil.GetPending()->proposalId == "elect_planetary_governor");
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    REQUIRE(rVotes.GetPending());
+    CHECK(rVotes.GetPending()->proposalId == "elect_planetary_governor");
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(game.pB->GetFactionId(),
                                                      game.pC->GetFactionId()));
 }
@@ -312,26 +316,27 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
 {
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
 
     const int proposedYear = game.pState->GetMissionYear();
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
-    CHECK(rCouncil.YearsUntilCanPropose(*game.pA) == 10);
+    CHECK(YearsUntilCanPropose(rCouncil, *game.pA) == 10);
     REQUIRE(rCouncil.LastProposedYear(*game.pA).has_value());
     CHECK(*rCouncil.LastProposedYear(*game.pA) == proposedYear);
     CHECK_THROWS_AS(
-        rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
+        rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
 
     game.pState->SetMissionYear(game.pState->GetMissionYear() + 10);
-    CHECK(rCouncil.YearsUntilCanPropose(*game.pA) == 0);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    CHECK(rCouncil.GetPending());
+    CHECK(YearsUntilCanPropose(rCouncil, *game.pA) == 0);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    CHECK(rVotes.GetPending());
 }
 
 TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists", "[council][infiltration]")
@@ -385,23 +390,24 @@ TEST_CASE("Non-participating factions are excluded from the council", "[council]
     Faction& rAlien = game.pState->AddFaction(std::move(pAlien));
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     CHECK(rCouncil.Members().size() == 3);
     CHECK(rCouncil.IsCouncilMember(*game.pA));
     CHECK_FALSE(rCouncil.IsCouncilMember(rAlien));
 
     // Only need commlinks among participating members to open a vote.
     game.GiveAllCommlinksTo(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
     CHECK_FALSE(game.pState->GetDiplomacyLedger().AreKnown(game.pA->GetFactionId(),
                                                            rAlien.GetFactionId()));
 
     // Alien cannot put an issue before the council (resolve first so pending is clear).
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
     CHECK_THROWS_AS(
-        rCouncil.Propose(*game.pState, rAlien, "elect_planetary_governor"),
+        rVotes.Propose(*game.pState, rAlien, "elect_planetary_governor"),
         std::invalid_argument);
 }
 
@@ -420,19 +426,20 @@ TEST_CASE("Non-members cannot cast council votes", "[council]")
 
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     // Election ballot: a non-member cannot cast an election vote.
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    CHECK_THROWS_AS(rCouncil.CastElectionVote(rAlien, game.pA), std::invalid_argument);
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    CHECK_THROWS_AS(rVotes.CastElectionVote(rAlien, game.pA), std::invalid_argument);
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     // Standard ballot: a non-member cannot cast a standard vote.
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
-    CHECK_THROWS_AS(rCouncil.CastVote(rAlien, CouncilBallot_t::Yea), std::invalid_argument);
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
+    CHECK_THROWS_AS(rVotes.CastVote(rAlien, CouncilBallot_t::Yea), std::invalid_argument);
 }
 
 TEST_CASE("Council emits open and resolve notifications", "[council]")
@@ -441,11 +448,12 @@ TEST_CASE("Council emits open and resolve notifications", "[council]")
     game.Discover(*game.pA, "planetary_economics"); // for global_trade_pact below
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     int openedCount = 0;
     FactionId_t openedProposer = 0;
     std::string openedId;
-    auto openedConn = rCouncil.OnProposalOpened.ConnectScoped(
+    auto openedConn = rVotes.OnProposalOpened.ConnectScoped(
         [&](Faction& rProposer, const std::string& rId)
         {
             ++openedCount;
@@ -456,7 +464,7 @@ TEST_CASE("Council emits open and resolve notifications", "[council]")
     int resolvedCount = 0;
     std::string resolvedId;
     ResolveProposalResult_t resolvedResult = ResolveProposalResult_t::Failed;
-    auto resolvedConn = rCouncil.OnResolved.ConnectScoped(
+    auto resolvedConn = rVotes.OnResolved.ConnectScoped(
         [&](const std::string& rId, ResolveProposalResult_t result)
         {
             ++resolvedCount;
@@ -464,27 +472,27 @@ TEST_CASE("Council emits open and resolve notifications", "[council]")
             resolvedResult = result;
         });
 
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
     CHECK(openedCount == 1);
     CHECK(openedProposer == game.pA->GetFactionId());
     CHECK(openedId == "elect_planetary_governor");
 
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
     CHECK(resolvedCount == 1);
     CHECK(resolvedId == "elect_planetary_governor");
     CHECK(resolvedResult == ResolveProposalResult_t::Passed);
 
     // A failed resolve notifies too (single-exit path fires for every outcome).
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
     CHECK(openedCount == 2);
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Nay);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Nay);
-    rCouncil.CastVote(*game.pC, CouncilBallot_t::Nay);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Nay);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Nay);
+    rVotes.CastVote(*game.pC, CouncilBallot_t::Nay);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
     CHECK(resolvedCount == 2);
     CHECK(resolvedId == "global_trade_pact");
     CHECK(resolvedResult == ResolveProposalResult_t::Failed);
@@ -496,15 +504,16 @@ TEST_CASE("Stub AI votes fill non-player ballots only", "[council]")
     game.Discover(*game.pA, "planetary_economics");
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     REQUIRE(game.pA->IsPlayerControlled());
     REQUIRE_FALSE(game.pB->IsPlayerControlled());
     REQUIRE_FALSE(game.pC->IsPlayerControlled());
 
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
-    CastStubCouncilVotes(rCouncil);
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
+    CastStubCouncilVotes(rVotes, rCouncil);
 
-    const auto* pPending = rCouncil.GetPending();
+    const auto* pPending = rVotes.GetPending();
     REQUIRE(pPending);
     CHECK(pPending->ballots.count(game.pA->GetFactionId()) == 0);
     REQUIRE(pPending->ballots.count(game.pB->GetFactionId()) == 1);
@@ -513,8 +522,8 @@ TEST_CASE("Stub AI votes fill non-player ballots only", "[council]")
     CHECK(pPending->ballots.at(game.pC->GetFactionId()) == CouncilBallot_t::Yea);
 
     // Idempotent: already-cast AI ballots are left alone.
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Nay);
-    CastStubCouncilVotes(rCouncil);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Nay);
+    CastStubCouncilVotes(rVotes, rCouncil);
     CHECK(pPending->ballots.at(game.pB->GetFactionId()) == CouncilBallot_t::Nay);
 }
 
@@ -523,11 +532,12 @@ TEST_CASE("Stub AI election votes pick the proposer", "[council]")
     CouncilGame_ game;
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    CastStubCouncilVotes(rCouncil);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    CastStubCouncilVotes(rVotes, rCouncil);
 
-    const auto* pPending = rCouncil.GetPending();
+    const auto* pPending = rVotes.GetPending();
     REQUIRE(pPending);
     CHECK(pPending->electionVotes.count(game.pA->GetFactionId()) == 0);
     REQUIRE(pPending->electionVotes.count(game.pB->GetFactionId()) == 1);
@@ -570,8 +580,8 @@ TEST_CASE("Salvage Unity Fusion Core grants energy to every council member", "[c
     CHECK(game.pC->GetEconomy().GetEnergy() == beforeC + 500);
 
     // One-shot: cannot pass again.
-    CHECK_FALSE(game.pState->GetPlanetaryCouncil()->CanPropose(
-        *game.pA, "salvage_unity_fusion_core"));
+    CHECK_FALSE(CanPropose(*game.pState->GetPlanetaryCouncil(), *game.pA,
+                           "salvage_unity_fusion_core"));
 }
 
 TEST_CASE("Global Trade Pact activates and can be repealed", "[council]")
@@ -647,7 +657,7 @@ TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", 
     // required_proposals gate on launch_solar_shade is satisfied by that proposal having
     // passed, which is why the two meanings had to be separated rather than just narrowed.
     game.PassStandard(*game.pA, "increase_solar_shade");
-    CHECK(rCouncil.CanPropose(*game.pA, "increase_solar_shade"));
+    CHECK(CanPropose(rCouncil, *game.pA, "increase_solar_shade"));
     game.PassStandard(*game.pA, "increase_solar_shade");
 
     game.PassStandard(*game.pA, "melt_polar_caps");
@@ -682,17 +692,18 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
 
     game.GiveAllCommlinksTo(*game.pA);
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
-    const std::vector<Faction*> candidates = rCouncil.GovernorCandidates();
+    const std::vector<Faction*> candidates = GovernorCandidates(rCouncil);
     REQUIRE(candidates.size() == 2);
     CHECK(candidates[0] == game.pA);
     CHECK(candidates[1] == game.pB);
 
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, nullptr);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, nullptr);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     REQUIRE(rCouncil.GetPlanetaryGovernor());
     CHECK(rCouncil.GetPlanetaryGovernor() == game.pA);
@@ -703,8 +714,8 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
                                                                   game.pB->GetFactionId()));
 
     // Governor propose interval is 10 years; members are 20.
-    CHECK(rCouncil.ProposeCooldownYears(*game.pA) == 10);
-    CHECK(rCouncil.ProposeCooldownYears(*game.pB) == 20);
+    CHECK(ProposeCooldownYears(rCouncil, *game.pA) == 10);
+    CHECK(ProposeCooldownYears(rCouncil, *game.pB) == 20);
 }
 
 TEST_CASE("Governor veto stands unless every other member voted yea", "[council]")
@@ -715,31 +726,32 @@ TEST_CASE("Governor veto stands unless every other member voted yea", "[council]
     game.GiveAllCommlinksTo(*game.pA);
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     // Elect A as governor first.
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     // Non-unanimous non-governor support: veto stands.
-    rCouncil.Propose(*game.pState, *game.pB, "global_trade_pact");
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pC, CouncilBallot_t::Nay);
-    REQUIRE(rCouncil.VetoPending(*game.pA));
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Vetoed);
+    rVotes.Propose(*game.pState, *game.pB, "global_trade_pact");
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pC, CouncilBallot_t::Nay);
+    REQUIRE(rVotes.VetoPending(*game.pA));
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Vetoed);
     CHECK_FALSE(rCouncil.IsActive("global_trade_pact"));
 
     // Every non-governor voted Yea: veto is overruled from the ballots.
     game.AdvancePastProposeCooldown(*game.pB);
-    rCouncil.Propose(*game.pState, *game.pB, "global_trade_pact");
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Nay);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pC, CouncilBallot_t::Yea);
-    REQUIRE(rCouncil.VetoPending(*game.pA));
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::VetoOverruled);
+    rVotes.Propose(*game.pState, *game.pB, "global_trade_pact");
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Nay);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pC, CouncilBallot_t::Yea);
+    REQUIRE(rVotes.VetoPending(*game.pA));
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::VetoOverruled);
     CHECK(rCouncil.IsActive("global_trade_pact"));
 }
 
@@ -750,20 +762,21 @@ TEST_CASE("Supreme Leader election stubs diplomatic victory at 75 percent", "[co
     game.GiveAllCommlinksTo(*game.pA);
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
-    rCouncil.Propose(*game.pState, *game.pA, "elect_supreme_leader");
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
+    rVotes.Propose(*game.pState, *game.pA, "elect_supreme_leader");
 
     // Equal population → each has 1/3. Need 75%, so A alone cannot win.
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, nullptr);
-    rCouncil.CastElectionVote(*game.pC, nullptr);
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, nullptr);
+    rVotes.CastElectionVote(*game.pC, nullptr);
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
 
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_supreme_leader");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::SupremeLeaderVictoryStub);
+    rVotes.Propose(*game.pState, *game.pA, "elect_supreme_leader");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::SupremeLeaderVictoryStub);
     REQUIRE(rCouncil.GetSupremeLeaderVictoryStub());
     CHECK(rCouncil.GetSupremeLeaderVictoryStub() == game.pA);
 }
@@ -776,6 +789,7 @@ TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffe
     game.GiveAllCommlinksTo(*game.pA);
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     BaseManager& baseA = *game.pA->Bases().begin();
     BaseManager& baseB = *game.pB->Bases().begin();
 
@@ -823,11 +837,11 @@ TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffe
 
     // Governor FactionGlobal extras reach only the governor's composed view.
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     auto hasCommerceEnergyBonus = [](const FactionEffects_t& rPool)
     {
@@ -859,23 +873,24 @@ TEST_CASE("A pending vote resolves when a member never votes", "[council][lifecy
     game.Discover(*game.pA, "planetary_economics");
     game.Discover(*game.pB, "planetary_economics");
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
 
     // Only the proposer and one other vote; pC never does.
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
-    REQUIRE_FALSE(rCouncil.AllMembersVoted());
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Yea);
+    REQUIRE_FALSE(rVotes.AllMembersVoted());
 
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     // The council is usable afterwards: the pending slot is clear and a new vote can open.
-    CHECK(rCouncil.GetPending() == nullptr);
+    CHECK(rVotes.GetPending() == nullptr);
     game.AdvancePastProposeCooldown(*game.pB);
     game.GiveAllCommlinksTo(*game.pB);
-    CHECK_NOTHROW(rCouncil.Propose(*game.pState, *game.pB, "repeal_trade_pact"));
+    CHECK_NOTHROW(rVotes.Propose(*game.pState, *game.pB, "repeal_trade_pact"));
 }
 
 TEST_CASE("A repeal can be used again after its target is re-enacted", "[council][lifecycle]")
@@ -898,7 +913,7 @@ TEST_CASE("A repeal can be used again after its target is re-enacted", "[council
     REQUIRE(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
 
     // The flip-flop the code always intended: repealable again now the charter is back.
-    CHECK(rCouncil.CanPropose(*game.pA, "repeal_un_charter"));
+    CHECK(CanPropose(rCouncil, *game.pA, "repeal_un_charter"));
     game.PassStandard(*game.pA, "repeal_un_charter");
     CHECK_FALSE(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
 }
@@ -912,11 +927,11 @@ TEST_CASE("A repeal is unavailable while its target is not in force", "[council]
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
 
     CHECK_FALSE(rCouncil.IsActive("global_trade_pact"));
-    CHECK_FALSE(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+    CHECK_FALSE(CanPropose(rCouncil, *game.pA, "repeal_trade_pact"));
 
     game.PassStandard(*game.pA, "global_trade_pact");
     REQUIRE(rCouncil.IsActive("global_trade_pact"));
-    CHECK(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+    CHECK(CanPropose(rCouncil, *game.pA, "repeal_trade_pact"));
 
     // The case that actually pins the repeal gate. After the repeal passes, its
     // required_proposals entry is still satisfied (global_trade_pact *has passed*), and the
@@ -925,7 +940,7 @@ TEST_CASE("A repeal is unavailable while its target is not in force", "[council]
     game.PassStandard(*game.pA, "repeal_trade_pact");
     REQUIRE(rCouncil.HasPassed("global_trade_pact"));
     REQUIRE_FALSE(rCouncil.IsActive("global_trade_pact"));
-    CHECK_FALSE(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+    CHECK_FALSE(CanPropose(rCouncil, *game.pA, "repeal_trade_pact"));
 }
 
 TEST_CASE("A standard proposal honors vote_threshold", "[council][tally]")
@@ -936,6 +951,7 @@ TEST_CASE("A standard proposal honors vote_threshold", "[council][tally]")
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     // Representative weight: one vote per member, three members. 2 of 3 is 0.667, so a 0.75
     // bar needs all three — and a bare majority must not be enough.
@@ -945,21 +961,21 @@ TEST_CASE("A standard proposal honors vote_threshold", "[council][tally]")
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pC, CouncilBallot_t::Nay);
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pC, CouncilBallot_t::Nay);
     // A bare majority (2 of 3) would pass under `yea > nay`; it must not clear a 0.66 bar.
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
     for (Faction* pMember : rCouncil.Members())
     {
-        rCouncil.CastVote(*pMember, CouncilBallot_t::Yea);
+        rVotes.CastVote(*pMember, CouncilBallot_t::Yea);
     }
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     rConfig.voteThreshold = 0.0;
 }
@@ -972,32 +988,33 @@ TEST_CASE("The AI stub never votes for an ineligible candidate", "[council][elec
     // brick than the one this package removed.
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     // Make the proposer the *least* populous member, so it is outside the top two.
     game.fixtures.MakeFactionBase(*game.pB, 11, 11);
     game.fixtures.MakeFactionBase(*game.pC, 2, 8);
 
     const std::vector<Faction*> eligible =
-        rCouncil.EligibleCandidates(rCouncil.GetRegistry().Get("elect_planetary_governor"));
+        EligibleCandidates(rCouncil, rCouncil.GetRegistry().Get("elect_planetary_governor"));
     REQUIRE(std::find(eligible.begin(), eligible.end(), game.pA) == eligible.end());
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    CHECK_NOTHROW(rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"));
-    CastStubCouncilVotes(rCouncil);
+    CHECK_NOTHROW(rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor"));
+    CastStubCouncilVotes(rVotes, rCouncil);
 
     // Every AI ballot names an eligible candidate (or abstains).
-    for (const auto& [voterId, candidateId] : rCouncil.GetPending()->electionVotes)
+    for (const auto& [voterId, candidateId] : rVotes.GetPending()->electionVotes)
     {
         if (!candidateId)
         {
             continue;
         }
-        const auto& rEligibleIds = rCouncil.GetPending()->eligibleCandidateIds;
+        const auto& rEligibleIds = rVotes.GetPending()->eligibleCandidateIds;
         CHECK(std::find(rEligibleIds.begin(), rEligibleIds.end(), *candidateId)
               != rEligibleIds.end());
     }
-    CHECK_NOTHROW(rCouncil.Resolve(*game.pState));
+    CHECK_NOTHROW(rVotes.Resolve(*game.pState));
 }
 
 TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council][election]")
@@ -1006,13 +1023,14 @@ TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council
     // enforcing anything called — the UI passed full membership as the candidate list.
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
 
     const std::vector<Faction*> eligible =
-        rCouncil.EligibleCandidates(rCouncil.GetRegistry().Get("elect_planetary_governor"));
+        EligibleCandidates(rCouncil, rCouncil.GetRegistry().Get("elect_planetary_governor"));
     REQUIRE(eligible.size() == 2);
 
     // Whichever member is not in the top two cannot be voted for.
@@ -1026,10 +1044,10 @@ TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council
     }
     REQUIRE(pIneligible != nullptr);
 
-    CHECK_THROWS(rCouncil.CastElectionVote(*game.pA, pIneligible));
-    CHECK_NOTHROW(rCouncil.CastElectionVote(*game.pA, eligible.front()));
+    CHECK_THROWS(rVotes.CastElectionVote(*game.pA, pIneligible));
+    CHECK_NOTHROW(rVotes.CastElectionVote(*game.pA, eligible.front()));
     // Abstaining is always allowed.
-    CHECK_NOTHROW(rCouncil.CastElectionVote(*game.pB, nullptr));
+    CHECK_NOTHROW(rVotes.CastElectionVote(*game.pB, nullptr));
 }
 
 TEST_CASE("The governor cannot veto an election", "[council][veto]")
@@ -1039,26 +1057,27 @@ TEST_CASE("The governor cannot veto an election", "[council][veto]")
     // standard ballots: an election never reaches it.
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     // Elect a governor, then have that governor propose another election.
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
     for (Faction* pMember : rCouncil.Members())
     {
-        rCouncil.CastElectionVote(*pMember, game.pA);
+        rVotes.CastElectionVote(*pMember, game.pA);
     }
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
     REQUIRE(rCouncil.GetPlanetaryGovernor() == game.pA);
 
     Faction& rGovernor = *rCouncil.GetPlanetaryGovernor();
     game.AdvancePastProposeCooldown(rGovernor);
-    rCouncil.Propose(*game.pState, rGovernor, "elect_planetary_governor");
-    REQUIRE(rCouncil.GetPending() != nullptr);
+    rVotes.Propose(*game.pState, rGovernor, "elect_planetary_governor");
+    REQUIRE(rVotes.GetPending() != nullptr);
 
     // A standard proposal would be vetoable by its governor; an election is not.
-    CHECK_FALSE(rCouncil.VetoPending(rGovernor));
-    CHECK_FALSE(rCouncil.GetPending()->vetoed);
+    CHECK_FALSE(rVotes.VetoPending(rGovernor));
+    CHECK_FALSE(rVotes.GetPending()->vetoed);
 }
 
 // --- Expulsion (major atrocity) ------------------------------------------------------------
@@ -1068,38 +1087,40 @@ TEST_CASE("Expel removes the seat and discards the ballot it held", "[council][e
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
-    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
-    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
-    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
-    REQUIRE_FALSE(rCouncil.AllMembersVoted());
+    rVotes.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rVotes.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rVotes.CastVote(*game.pB, CouncilBallot_t::Yea);
+    REQUIRE_FALSE(rVotes.AllMembersVoted());
 
     // pC is the only member yet to vote, so removing it completes the ballot rather than
     // leaving the vote waiting on a seat that no longer exists.
-    rCouncil.Expel(*game.pC);
+    rVotes.Expel(*game.pC);
     CHECK_FALSE(rCouncil.IsCouncilMember(*game.pC));
     CHECK(rCouncil.Members().size() == 2);
-    CHECK(rCouncil.AllMembersVoted());
-    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    CHECK(rVotes.AllMembersVoted());
+    CHECK(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 }
 
 TEST_CASE("Expelling the governor vacates the office and its standing effects", "[council][expel]")
 {
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
 
-    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
-    rCouncil.CastElectionVote(*game.pA, game.pA);
-    rCouncil.CastElectionVote(*game.pB, game.pA);
-    rCouncil.CastElectionVote(*game.pC, game.pA);
-    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    rVotes.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rVotes.CastElectionVote(*game.pA, game.pA);
+    rVotes.CastElectionVote(*game.pB, game.pA);
+    rVotes.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rVotes.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
     REQUIRE(rCouncil.GetPlanetaryGovernor() == game.pA);
     REQUIRE_FALSE(rCouncil.CollectFactionEffects(*game.pA).empty());
 
-    rCouncil.Expel(*game.pA);
+    rVotes.Expel(*game.pA);
 
     CHECK(rCouncil.GetPlanetaryGovernor() == nullptr);
     CHECK(rCouncil.CollectFactionEffects(*game.pA).empty());
@@ -1111,12 +1132,13 @@ TEST_CASE("An expelled faction cannot propose", "[council][expel]")
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
 
-    rCouncil.Expel(*game.pA);
+    rVotes.Expel(*game.pA);
 
-    CHECK_THROWS_AS(rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact"),
+    CHECK_THROWS_AS(rVotes.Propose(*game.pState, *game.pA, "global_trade_pact"),
                     std::invalid_argument);
 }
 
@@ -1124,12 +1146,13 @@ TEST_CASE("Expelling a faction that holds no seat changes nothing", "[council][e
 {
     CouncilGame_ game;
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = *game.pState->GetCouncilVotes();
     const size_t before = rCouncil.Members().size();
 
-    rCouncil.Expel(*game.pA);
+    rVotes.Expel(*game.pA);
     CHECK(rCouncil.Members().size() == before - 1);
 
     // Idempotent: a second major atrocity by the same faction must not disturb the council.
-    CHECK_NOTHROW(rCouncil.Expel(*game.pA));
+    CHECK_NOTHROW(rVotes.Expel(*game.pA));
     CHECK(rCouncil.Members().size() == before - 1);
 }

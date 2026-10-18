@@ -12,8 +12,8 @@ namespace ac
 class Faction;
 class PlanetaryCouncil;
 
-// PlanetaryCouncil::ComputeVoteWeight copies the faction's whole effect pool, appends the
-// council's and the world's, and resolves CouncilVotes modifiers over it. The panels ask for it
+// VoteWeight copies the faction's whole effect pool, appends the council's and the world's,
+// and resolves CouncilVotes modifiers over it. The panels ask for it
 // once per member per paint, so it is cached against the three things that move it: the council
 // revision, the faction's own effects version, and its population.
 //

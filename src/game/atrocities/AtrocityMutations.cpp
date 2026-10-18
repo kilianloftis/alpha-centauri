@@ -5,7 +5,7 @@
 #include "game/PlayerInteractionQueue.h"
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/atrocities/AtrocityRules.h"
-#include "game/council/PlanetaryCouncil.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 
 #include <stdexcept>
@@ -103,9 +103,9 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     }
     if (outcome.bExpelFromCouncil)
     {
-        if (PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil())
+        if (CouncilVoteExecutor* pVotes = rGameState.GetCouncilVotes())
         {
-            pCouncil->Expel(rPerpetrator);
+            pVotes->Expel(rPerpetrator);
         }
     }
 

@@ -89,9 +89,10 @@ graph TB
     end
 
     subgraph "Planetary Council System"
-        PlanetaryCouncil[PlanetaryCouncil<br/>voting state machine]
+        PlanetaryCouncil[PlanetaryCouncil<br/>membership, governor, laws]
+        CouncilVoteExecutor[CouncilVoteExecutor<br/>propose, vote, resolve]
         CouncilEffects[CouncilEffects<br/>active-effect store]
-        CouncilOutcomeApplier[CouncilOutcomeApplier<br/>game mutation]
+        CouncilMutations[CouncilMutations<br/>outcome effects]
         CouncilProposalRegistry[CouncilProposalRegistry]
     end
 
@@ -188,10 +189,12 @@ graph TB
     TurnProcessor --> Signal
 
     GameState --> PlanetaryCouncil
+    GameState --> CouncilVoteExecutor
+    CouncilVoteExecutor --> PlanetaryCouncil
+    CouncilVoteExecutor --> CouncilMutations
+    CouncilVoteExecutor --> Signal
     PlanetaryCouncil --> CouncilEffects
-    PlanetaryCouncil --> CouncilOutcomeApplier
     PlanetaryCouncil --> CouncilProposalRegistry
-    PlanetaryCouncil --> Signal
     CouncilEffects --> ActiveEffect
 
     GameState --> EcologyLedger
@@ -242,7 +245,7 @@ graph TB
     style CollectActiveEffects fill:#bfb,stroke:#333,stroke-width:3px
     style PlanetaryCouncil fill:#f9f,stroke:#333,stroke-width:3px
     style CouncilEffects fill:#fbf,stroke:#333,stroke-width:2px
-    style CouncilOutcomeApplier fill:#fbf,stroke:#333,stroke-width:2px
+    style CouncilMutations fill:#fbf,stroke:#333,stroke-width:2px
     style CouncilProposalRegistry fill:#bbf,stroke:#333,stroke-width:2px
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
@@ -660,9 +663,11 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Planetary Council System
 - **Purpose**: Runtime Planetary Council — proposals, voting, the Planetary Governor, and the continuous world law the council keeps in force.
 - **Components**:
-  - `PlanetaryCouncil`: The vote lifecycle (propose → vote/veto → resolve), membership (seated at construction, `Expel` the one way out), governorship, and active-proposal set. Owned by `GameState` (`std::unique_ptr`); exposes `OnProposalOpened` / `OnResolved` signals for the UI.
+  - `PlanetaryCouncil`: Membership (seated at construction, `Expel` the one way out), governorship, the active-proposal set and pass history. Owned by `GameState` (`std::unique_ptr`).
+  - `CouncilRules`: Who may propose, vote weights, election candidates, the tally and the veto.
+  - `CouncilVoteExecutor`: The vote lifecycle (propose → vote/veto → resolve) and the pending proposal. Owned by `GameState` beside the council; exposes `OnProposalOpened` / `OnResolved` signals for the UI.
   - `CouncilEffects`: Store for the continuous `ActiveEffect_t`s the council projects — world-global effects from proposals in force, plus the governor's faction-global effects.
-  - `CouncilOutcomeApplier`: Applies a passed proposal's `on_passed_effects` (energy grants) and a new governor's `on_elected_effects` (infiltration); world-parameter outcomes are deferred to `WorldEvents`.
+  - `CouncilMutations`: Applies a passed proposal's `on_passed_effects` (energy grants) and a new governor's `on_elected_effects` (infiltration); world-parameter outcomes are deferred to `WorldEvents`.
   - `CouncilProposalRegistry`: Proposal definitions loaded/validated from `config/council/`.
 - **Dependencies**:
   - `GameState` owns the council and folds `CouncilEffects` output into the faction effect pool

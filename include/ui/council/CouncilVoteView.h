@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/council/PlanetaryCouncil.h"
+#include "game/council/PendingProposal.h"
 #include "ui/IGameView.h"
 
 namespace ac

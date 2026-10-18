@@ -273,7 +273,7 @@ each with an explicit key:
   overlay covers the map.
 - **`CouncilVoteWeightCache`** (`include/ui/council/CouncilVoteWeightCache.h`) — one entry per
   faction, keyed on the council revision, the faction's local effects version and its
-  population. `PlanetaryCouncil::ComputeVoteWeight` copies the whole effect pool and resolves
+  population. `VoteWeight` (`CouncilRules`) copies the whole effect pool and resolves
   `CouncilVotes` modifiers; both council panels called it per member per paint.
 - **`SatelliteSummaryPanel`** — the orbital-type list, faction list and census map are members
   filled by `Refresh()`, called from the constructor. Nothing can move the census while Summary
@@ -397,8 +397,8 @@ it is safe to call `Advance`:
   soft-gates on that query and no-ops when false — it does not throw for an ordinary End Turn
   under a modal. Auto end-turn is queued from `WorldView::Update_` and consumed in
   `UIManager::Update()` (between `ProcessInput` and `Render`), never from the paint path.
-- **Council vote Escape:** While `PlanetaryCouncil::GetPending()` is set, Escape does not close
-  the vote overlay (Package 5 owns absentee/resolve exits).
+- **Council vote Escape:** While `CouncilVoteExecutor::GetPending()` is set, Escape resolves the
+  vote (absentees abstain) before closing the overlay.
 
 ### Object Lifetime / Invalidation (code-review 1.8)
 Views hold live references/pointers into mutable game state with no generic weak-handle system.

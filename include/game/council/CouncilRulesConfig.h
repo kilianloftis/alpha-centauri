@@ -18,7 +18,7 @@ struct CouncilRulesConfig_t
     // fed to CouncilEffects).
     std::vector<EffectConfig_t> governorEffects;
     // One-shot perks applied once, when a governor takes office — e.g. a SetInfiltration that
-    // outlives the term. Applied by CouncilOutcomeApplier::ApplyGovernor.
+    // outlives the term. Applied by ApplyCouncilGovernor.
     std::vector<TriggeredEffectConfig_t> onElectedEffects;
 };
 

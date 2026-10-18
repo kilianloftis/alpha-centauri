@@ -3,11 +3,16 @@
 ```mermaid
 graph TB
     subgraph "Runtime (mutable, per-game)"
-        PlanetaryCouncil[PlanetaryCouncil<br/>voting state machine]
+        PlanetaryCouncil[PlanetaryCouncil<br/>membership, governor, laws, history]
         CouncilEffects[CouncilEffects<br/>active-effect store]
-        CouncilOutcomeApplier[CouncilOutcomeApplier<br/>game mutation]
+        CouncilVoteExecutor[CouncilVoteExecutor<br/>propose, vote, veto, resolve]
         PendingProposal[PendingProposal_t<br/>ballots / electionVotes]
         Signals[Signals<br/>OnProposalOpened<br/>OnResolved]
+    end
+
+    subgraph "Decisions and outcomes"
+        CouncilRules[CouncilRules<br/>eligibility, weights, tally, veto]
+        CouncilMutations[CouncilMutations<br/>on_passed / on_elected effects]
     end
 
     subgraph "Definition Data (immutable)"
@@ -19,7 +24,7 @@ graph TB
     end
 
     subgraph "Collaborators"
-        GameState[GameState<br/>owns the council]
+        GameState[GameState<br/>owns the council and its executor]
         Faction[Faction<br/>members]
         DiplomacyLedger[DiplomacyLedger<br/>commlinks / infiltration]
         EconomyManager[EconomyManager<br/>energy grants]
@@ -29,30 +34,38 @@ graph TB
     end
 
     GameState --> PlanetaryCouncil
+    GameState --> CouncilVoteExecutor
     GameState -->|CollectWorldEffects| CouncilEffects
 
+    CouncilVoteExecutor --> PendingProposal
+    CouncilVoteExecutor --> Signals
+    CouncilVoteExecutor --> CouncilRules
+    CouncilVoteExecutor -->|RecordProposal, RecordPassed,<br/>Enact, InstallGovernor| PlanetaryCouncil
+    CouncilVoteExecutor --> CouncilMutations
+    CouncilVoteExecutor -->|SetKnown| DiplomacyLedger
+    CouncilRules -->|reads| PlanetaryCouncil
+    CouncilRules -->|commlinks| DiplomacyLedger
+    CouncilRules -->|tech gating| ResearchManager
+    CouncilRules -->|population, votes| Faction
+
     PlanetaryCouncil --> CouncilEffects
-    PlanetaryCouncil --> CouncilOutcomeApplier
-    PlanetaryCouncil --> PendingProposal
-    PlanetaryCouncil --> Signals
     PlanetaryCouncil --> CouncilProposalRegistry
-    PlanetaryCouncil -->|members, population, votes| Faction
-    PlanetaryCouncil -->|commlinks, SetKnown| DiplomacyLedger
-    PlanetaryCouncil -->|tech gating| ResearchManager
+    PlanetaryCouncil --> CouncilRulesConfig
 
     CouncilEffects --> ActiveEffect
-    CouncilOutcomeApplier -->|AddEnergy| EconomyManager
-    CouncilOutcomeApplier -->|SetInfiltration| DiplomacyLedger
-    CouncilOutcomeApplier -.->|TODO: world-parameter trigger| WorldEvents
+    CouncilMutations -->|AddEnergy| EconomyManager
+    CouncilMutations -->|SetInfiltration| DiplomacyLedger
+    CouncilMutations -.->|TODO: world-parameter trigger| WorldEvents
 
     CouncilProposalRegistry --> CouncilProposalConfig
     CouncilProposalRegistry --> ProposalParser
     CouncilRulesConfig --> RulesParser
-    PlanetaryCouncil --> CouncilRulesConfig
 
     style PlanetaryCouncil fill:#f9f,stroke:#333,stroke-width:4px
+    style CouncilVoteExecutor fill:#f9f,stroke:#333,stroke-width:3px
     style CouncilEffects fill:#fbf,stroke:#333,stroke-width:2px
-    style CouncilOutcomeApplier fill:#fbf,stroke:#333,stroke-width:2px
+    style CouncilMutations fill:#fbf,stroke:#333,stroke-width:2px
+    style CouncilRules fill:#bfb,stroke:#333,stroke-width:2px
     style CouncilProposalRegistry fill:#bbf,stroke:#333,stroke-width:2px
     style CouncilProposalConfig fill:#ffd,stroke:#333,stroke-width:2px
     style CouncilRulesConfig fill:#ffd,stroke:#333,stroke-width:2px
@@ -63,49 +76,70 @@ graph TB
 
 ## Component Overview
 
-### PlanetaryCouncil
-- **Purpose**: The council's voting state machine — the one runtime object that runs a
-  proposal from agenda to outcome. It holds the membership, the single pending vote,
-  the governorship, and the set of proposals currently in force.
-- **In force vs enacted** — two different questions, and conflating them was a shipped bug:
-  - `IsActive(id)` — *in force*: this proposal contributes continuous world effects right now.
+### PlanetaryCouncil (state owner)
+- **Purpose**: The council's standing state and the queries over it: membership, the
+  governorship, the Supreme Leader victory stub, the laws in force, pass counts, each
+  faction's last proposal year, and the council's effects and revision. No method takes a
+  `GameState`.
+- **In force vs enacted** are two different questions:
+  - `IsActive(id)`: *in force*, this proposal contributes continuous world effects right now.
     Only proposals that carry a `Continuous` + `WorldGlobal` effect ever enter this set.
-  - `HasPassed(id)` — *enacted*: it has been voted through at least once (pass-count history).
+  - `HasPassed(id)`: *enacted*, it has been voted through at least once (pass-count history).
     One-shots and pure repeals are only ever this.
-  Marking every passed proposal "in force" made `CanPropose`'s `IsActive && !repeatable` rule
-  consume `repeal_un_charter` permanently, so a reinstated charter could never be repealed
-  again.
-- **Responsibilities**:
-  - Membership (seated at construction, every member having
-    `identity.participatesInCouncil`; `Expel` is the one way out) and eligibility — `CanPropose` owns proposal
-    availability: member, proposable, tech, required/forbidden rule flags, `required_proposals`
-    (satisfied by *enacted*, so a one-shot prerequisite like `launch_solar_shade` still counts),
-    the repeal gate (a proposal with `repeals` is available only while one of its targets is in
-    force), and repeatability. Repeatability has two exemptions — continuous world laws and
-    repeals — because both become meaningful again when their subject changes state.
-    `Propose` adds the propose-time gates it excludes (commlinks, cooldown).
-  - The vote lifecycle: `Propose` → `CastVote`/`CastElectionVote` (+ governor `VetoPending`)
-    → `Resolve`. Only one `PendingProposal_t` exists at a time.
-  - **Absentees abstain.** `Resolve` has no "everyone voted" precondition: a member with no
-    ballot counts as an abstention, which is what both tallies already did with a missing
-    entry. Requiring unanimous participation made the pending slot terminal — nothing else
-    clears it and `Propose` throws while it is set. `AllMembersVoted()` remains as an advisory
-    query. `Propose` also clears the pending slot if an `OnProposalOpened` observer throws,
-    for the same reason.
-  - **Election eligibility** is the council's rule, not the UI's: `EligibleCandidates()` returns
-    `GovernorCandidates()` (the two most populous members) for a Planetary Governor election
-    and the whole council for Supreme Leader. The set is snapshotted into the pending proposal
-    when the vote opens — it derives from live population, so recomputing it per ballot would
-    let a faction drop out mid-vote while ballots already cast for it silently stood.
-    `CastElectionVote` and the tally both validate against that snapshot.
-  - Governorship bookkeeping and the Supreme Leader victory stub.
-  - Delegating outward effects to `CouncilEffects` (continuous) and
-    `CouncilOutcomeApplier` (one-shot outcomes / governor).
-- **Owned by**: `GameState` (`std::unique_ptr<PlanetaryCouncil> m_pCouncil`), created by
-  `GameState::CreatePlanetaryCouncil`. Non-copyable/non-movable (holds `Signal`s).
-- **Depends on**: `CouncilProposalRegistry` + `CouncilRulesConfig_t` (references),
-  `Faction*` members (non-owning, must outlive the council), and — through those members and
-  `GameState` — `DiplomacyLedger` and `ResearchManager`.
+  If every passed proposal were "in force", `CanPropose`'s non-repeatable rule would consume
+  `repeal_un_charter` permanently and a reinstated charter could never be repealed again.
+- **Transitions** (called by `CouncilVoteExecutor`): `RecordProposal`, `RecordPassed`
+  (repeals its targets and counts the pass), `Enact` (puts continuous laws in force),
+  `InstallGovernor`, `SetSupremeLeaderVictory`, and `Expel`.
+- **Revision** bumps when membership, the governor or the laws in force change, so `Faction`
+  composed-pool caches recompose. The pending vote is not council state and does not bump it;
+  vote weights do not depend on it.
+- **Owned by**: `GameState` (`m_pCouncil`), created by `GameState::CreatePlanetaryCouncil`.
+- **Depends on**: `CouncilProposalRegistry` + `CouncilRulesConfig_t` (references) and
+  `Faction*` members (non-owning, must outlive the council).
+
+### CouncilRules
+- `HasCommlinksToAllMembers`, `ProposeCooldownYears`, `YearsUntilCanPropose`.
+- `CanPropose` owns proposal availability: member, proposable, tech, required/forbidden rule
+  flags, `required_proposals` (satisfied by *enacted*, so a one-shot prerequisite like
+  `launch_solar_shade` still counts), the repeal gate (a proposal with `repeals` is available
+  only while one of its targets is in force), and repeatability. Repeatability has two
+  exemptions, continuous world laws and repeals, because both become meaningful again when
+  their subject changes state. Commlinks and cooldown are the propose-time checks it leaves out.
+- `VoteWeight` applies `CouncilVotes` effects to a member's representative or population weight.
+- `GovernorCandidates` (the two most populous members) and `EligibleCandidates` (those for a
+  Planetary Governor election, the whole council for Supreme Leader). Election eligibility is
+  the council's rule, not the UI's.
+- `ProposalPasses` and `ElectionWinner` tally a `PendingProposal_t`. A missing ballot is an
+  abstention; a vote threshold is measured against the total member weight.
+- `CanVeto` (the governor, never in an election) and `VetoOverruled` (every other member voted
+  Yea).
+
+### CouncilVoteExecutor
+- **Purpose**: Runs one vote from agenda to outcome. Holds the single `PendingProposal_t` and
+  the `OnProposalOpened` / `OnResolved` signals. Owned by `GameState` beside the council and
+  reached through `GameState::GetCouncilVotes()`.
+- `Propose` checks `CanPropose`, commlinks and cooldown; shares commlinks among members
+  (`DiplomacyLedger::SetKnown`); opens the pending vote with its candidate snapshot; records the
+  proposal on the council; then emits `OnProposalOpened`. If an observer throws, the pending
+  slot is cleared, because only `Resolve` clears it otherwise and `Propose` throws while it is
+  set.
+- **The candidate snapshot**: eligibility derives from live population, so recomputing it per
+  ballot would let a faction drop out mid-vote while ballots already cast for it stood.
+  `CastElectionVote` and `ElectionWinner` both validate against the snapshot.
+- **Absentees abstain.** `Resolve` has no "everyone voted" precondition, so the vote can always
+  be resolved. `AllMembersVoted()` is an advisory query.
+- `Expel` expels from the council and drops the expelled faction's ballot and candidacy from
+  the pending vote.
+
+### CouncilMutations
+- `ApplyPassedCouncilEffects` runs a proposal's `on_passed_effects` through
+  `ApplyTriggeredEffects` with every member as a subject, so `GrantEnergy` credits each of them.
+  World-parameter effects (sea level) are a documented **TODO**: they must trigger a
+  `WorldEvents` world event, not mutate the map here.
+- `ApplyCouncilGovernor` runs the rules' `on_elected_effects` for the incoming governor (e.g. a
+  `SetInfiltration` that outlives the term). Continuous `Infiltration` +
+  `factionFilter: CouncilMembers` stays query-time.
 
 ### CouncilEffects
 - **Purpose**: Owns the continuous `ActiveEffect_t`s the council projects, keeping each
@@ -120,20 +154,6 @@ graph TB
   world-global council effect," used both here and by the council's proposal eligibility.
 - **Conversion**: builds wrappers via the codebase's canonical `AppendActiveEffects` rather
   than a hand-rolled loop.
-
-### CouncilOutcomeApplier
-- **Purpose**: Applies the game-state mutations a passed proposal produces, keeping this
-  outward-facing mutation out of the voting logic.
-- **Responsibilities**:
-  - `ApplyPassedEffects` — runs a proposal's `on_passed_effects` through
-    `ApplyTriggeredEffects` with every member as a subject, so `GrantEnergy` credits each of
-    them. World-parameter effects (sea level) are a documented **TODO**: they must trigger a
-    `WorldEvents` world event, not mutate the map here.
-  - `ApplyGovernor` — runs the rules' `on_elected_effects` for the incoming governor (e.g. a
-    `SetInfiltration` that outlives the term). Continuous `Infiltration` +
-    `factionFilter: CouncilMembers` stays query-time.
-- **Depends on**: `CouncilRulesConfig_t` (reference); `GameState`/`Faction`/`DiplomacyLedger`
-  passed per call.
 
 ### CouncilProposalRegistry / config
 - **CouncilProposalConfig_t**: one proposal definition — `kind` (Standard/Election),
@@ -156,9 +176,9 @@ graph TB
     triggered type.
 
 ### Notifications
-- `Signal<Faction&, const std::string&> OnProposalOpened` — fired when a proposal is put
-  before the council; the UI raises the vote popup and AI observers decide their ballots.
-- `Signal<const std::string&, ResolveProposalResult_t> OnResolved` — fired once per
+- `CouncilVoteExecutor::OnProposalOpened(Faction&, const std::string&)` fires when a proposal
+  is put before the council; the UI raises the vote popup and AI observers decide their ballots.
+- `CouncilVoteExecutor::OnResolved(const std::string&, ResolveProposalResult_t)` fires once per
   resolution, for every outcome. Complements the pull-based `Revision` counter.
 
 ## Usage Flow
@@ -166,33 +186,36 @@ graph TB
 ### Proposing and voting
 1. UI lists proposals via `GetRegistry()` filtered by `CanPropose`; `YearsUntilCanPropose`
    supplies the cooldown notice.
-2. `Propose` validates eligibility → commlinks → cooldown, shares commlinks among members
-   (`DiplomacyLedger::SetKnown`), opens the `PendingProposal_t`, and emits `OnProposalOpened`.
+2. `CouncilVoteExecutor::Propose` validates eligibility, commlinks and cooldown, shares
+   commlinks, opens the `PendingProposal_t`, records the proposal, and emits `OnProposalOpened`.
 3. Members cast ballots (`CastVote` / `CastElectionVote`); the governor may `VetoPending`.
-   The UI reads live tallies from `GetPending()` and weights from `ComputeVoteWeight`.
-4. `Resolve` (single exit): `ResolveOutcome_` decides veto → tally → apply; then the pending
-   vote is cleared, the revision bumped, and `OnResolved` emitted.
+   The UI reads live tallies from `GetPending()` and weights from `VoteWeight`.
+4. `Resolve`: a veto stands unless `VetoOverruled`; otherwise `ProposalPasses` or
+   `ElectionWinner` decides; a pass is applied; then the pending vote is cleared and
+   `OnResolved` emitted.
 
 ### A passed proposal
-1. `ApplyPassedProposal_` runs repeals (`RemoveActiveProposal_`), records the pass, and applies
-   `on_passed_effects` via `CouncilOutcomeApplier`.
-2. Continuous proposals are activated (`ActivateProposal_` → `CouncilEffects::RebuildWorld`).
-3. Governor / Supreme Leader election outcomes apply governor privileges or record the
-   victory stub.
-4. `GameState::CollectWorldEffects…` folds `CouncilEffects` world + governor effects into the
+1. `PlanetaryCouncil::RecordPassed` lifts the laws it repeals and counts the pass.
+2. `ApplyPassedCouncilEffects` applies `on_passed_effects`.
+3. `PlanetaryCouncil::Enact` puts continuous laws in force (`CouncilEffects::RebuildWorld`).
+4. A Planetary Governor election installs the winner (`InstallGovernor`, then
+   `ApplyCouncilGovernor`); a Supreme Leader election records the victory stub.
+5. `GameState::CollectWorldEffects…` folds `CouncilEffects` world + governor effects into the
    faction effect pool, so council law reaches stat resolution.
 
 ## Design Decisions
 
 ### Single responsibility
-`PlanetaryCouncil` is the vote lifecycle only. The continuous-effect store (`CouncilEffects`)
-and outward game mutation (`CouncilOutcomeApplier`) are separate objects it owns, so each has
-one reason to change.
+`PlanetaryCouncil` holds the council's state; `CouncilRules` decides who may propose, how much a
+vote weighs and what passes; `CouncilVoteExecutor` runs the vote; `CouncilMutations` carries out
+the outcomes beyond the council; `CouncilEffects` stores the effects it projects. Each has one
+reason to change.
 
 ### Membership is seated once and only ever shrinks
 Members are non-owning pointers fixed at construction, with `Expel` as the single exception: a
-faction that commits a major atrocity loses its seat for good (`atrocity-system.md`). Expulsion has
-to do three things beyond dropping the pointer, because a vote may be open at the time:
+faction that commits a major atrocity loses its seat for good (`atrocity-system.md`, through
+`CouncilVoteExecutor::Expel`). Expulsion does three things beyond dropping the pointer, because
+a vote may be open at the time:
 
 - discard any ballot or election vote the expelled faction holds, so `AllMembersVoted` and the
   tally do not wait on, or weight, a seat that no longer exists
@@ -207,7 +230,7 @@ council.
 ### The council never mutates the world map
 World-parameter outcomes (sea level, climate) are triggers, not direct edits — gradual map
 mutation belongs to the `WorldEvents` system. Until that system exposes a trigger API, the
-applier holds a TODO and no world state lives on the council. Stock proposals that declare
+council mutations hold a TODO and no world state lives on the council. Stock proposals that declare
 an `on_passed` `WorldParameter` (solar shade, polar caps) are still **allowed at load** as a
 deferred surface; apply is a documented no-op until WorldEvents.
 
@@ -217,6 +240,6 @@ bonuses, including Continuous `Infiltration` filtered to council members). Propo
 weights, thresholds, tech gates, and rule-flag interactions all come from `config/council/`.
 
 ### Event-driven for the UI
-The council exposes `Signal`s for the AI-initiates-a-vote popup flow rather than forcing the
+The vote executor exposes `Signal`s for the AI-initiates-a-vote popup flow rather than forcing the
 UI to diff a `Revision`, matching the engine's internal signal pattern (e.g.
 `UnitManager::OnUnitCreated`).

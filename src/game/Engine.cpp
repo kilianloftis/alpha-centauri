@@ -2,6 +2,7 @@
 #include "game/GameState.h"
 #include "game/CurrentGameState.h"
 #include "game/council/CouncilAiStub.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
@@ -692,12 +693,10 @@ void Engine::StartNewGame_()
 
     m_pGameState->CreatePlanetaryCouncil();
     m_pGameState->CreateWorldEvents();
-    m_councilAiVoteConn = m_pGameState->GetPlanetaryCouncil()->OnProposalOpened.ConnectScoped(
+    m_councilAiVoteConn = m_pGameState->GetCouncilVotes()->OnProposalOpened.ConnectScoped(
         [this](Faction& /*rProposer*/, const std::string& /*rProposalId*/) {
-            if (PlanetaryCouncil* pCouncil = m_pGameState->GetPlanetaryCouncil())
-            {
-                CastStubCouncilVotes(*pCouncil);
-            }
+            CastStubCouncilVotes(*m_pGameState->GetCouncilVotes(),
+                                 *m_pGameState->GetPlanetaryCouncil());
         });
 
 #ifdef AC_PLACE_TEST_IMPROVEMENTS

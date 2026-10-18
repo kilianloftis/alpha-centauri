@@ -1,6 +1,7 @@
 #include "ui/council/CouncilVoteWeightCache.h"
 
 #include "game/faction/Faction.h"
+#include "game/council/CouncilRules.h"
 #include "game/council/PlanetaryCouncil.h"
 
 namespace ac
@@ -27,7 +28,7 @@ int CouncilVoteWeightCache::Get(const PlanetaryCouncil& rCouncil, const Faction&
     }
 
     ++m_computeCount;
-    candidate.weight = rCouncil.ComputeVoteWeight(rFaction, mode);
+    candidate.weight = VoteWeight(rCouncil, rFaction, mode);
     rEntry = candidate;
     return rEntry.weight;
 }

@@ -39,6 +39,7 @@ class TileEffectsContext;
 class EventBus;
 class GameSettings;
 struct GameDataContext;
+class CouncilVoteExecutor;
 class PlanetaryCouncil;
 
 class GameState : public IUnitOrderWorld, public IWorldEffectsSource
@@ -61,9 +62,9 @@ public:
               uint32_t rngSeed);
     ~GameState();
 
-    // Build the Planetary Council from factions currently in this GameState that
-    // participate in the council. Call after the starting factions have been added.
-    // Throws if already created.
+    // Build the Planetary Council, and the executor that runs its votes, from factions currently
+    // in this GameState that participate in the council. Call after the starting factions have
+    // been added. Throws if already created.
     void CreatePlanetaryCouncil();
 
     // Registries, configs and calculators: the rules every stage, rule module and view reads.
@@ -186,6 +187,8 @@ public:
     // Null until CreatePlanetaryCouncil (most unit-test fixtures never create one).
     PlanetaryCouncil* GetPlanetaryCouncil();
     const PlanetaryCouncil* GetPlanetaryCouncil() const;
+    // Null until CreatePlanetaryCouncil, like the council it votes on.
+    CouncilVoteExecutor* GetCouncilVotes();
 
     // Start tracking the world-event registry. Throws if already created. Without it the
     // WorldEvents stage runs no events.
@@ -268,6 +271,8 @@ private:
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::unique_ptr<ProbeActionExecutor> m_pProbeActions;
     std::unique_ptr<PlanetaryCouncil> m_pCouncil;
+    // Declared after the council it holds a reference to.
+    std::unique_ptr<CouncilVoteExecutor> m_pCouncilVotes;
     std::unique_ptr<WorldEventTracker> m_pWorldEvents;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;

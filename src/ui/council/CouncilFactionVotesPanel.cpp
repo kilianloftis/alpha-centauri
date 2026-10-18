@@ -3,6 +3,7 @@
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
@@ -29,7 +30,7 @@ std::string BallotLabel_(CouncilBallot_t ballot)
 }
 
 std::string MemberVoteLabel_(const PlanetaryCouncil& rCouncil,
-                             const PlanetaryCouncil::PendingProposal_t& rPending,
+                             const PendingProposal_t& rPending,
                              const CouncilProposalConfig_t& rConfig,
                              const Faction& rMember)
 {
@@ -85,7 +86,7 @@ void CouncilFactionVotesPanel::Render(Graphics& rGraphics)
     {
         return;
     }
-    const PlanetaryCouncil::PendingProposal_t* pPending = pCouncil->GetPending();
+    const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes()->GetPending();
     if (!pPending)
     {
         return;
