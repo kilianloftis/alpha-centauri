@@ -586,10 +586,11 @@ tile's own bound `ElevationRulesConfig_t`, so the effect needs no `GameDataConte
 
 `FungalBloom` (`include/game/ecology/FungalBloom.h`) sets fungus on the origin when it is not a
 base, then on a random sample of Chebyshev-1 neighbors that are not bases and do not already
-have fungus, up to the resolved tile count (the full count when the origin is a base). Setting
+have fungus, up to the resolved tile count (the full count when the origin is a base);
+`BloomCandidateTiles` (`EcologyRules`) lists those candidates and the bloom shuffles them. Setting
 fungus removes improvements that cannot coexist with it. A nutrient bonus stays. A uniform draw of
 `[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
-`config/native_units.json` spawns that many native-life designs on the new tiles, owned by the
+`config/native_units.json` spawns that many of the `EligibleLifeforms` on the new tiles, owned by the
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
 

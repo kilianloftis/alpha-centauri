@@ -1,5 +1,6 @@
 #include "game/ecology/FungalBloom.h"
 
+#include "game/ecology/EcologyRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -8,13 +9,11 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/natives/EnsureNativeDesign.h"
 #include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
-#include "game/units/UnitDomain.h"
 
 #include <algorithm>
 #include <optional>
@@ -28,21 +27,6 @@ namespace ac
 namespace
 {
 
-bool DomainCanHold_(UnitDomain_t domain, const Tile& rTile)
-{
-    switch (domain)
-    {
-        case UnitDomain_t::Land:
-            return !rTile.IsWater();
-        case UnitDomain_t::Sea:
-            return rTile.IsWater();
-        case UnitDomain_t::Air:
-        case UnitDomain_t::Orbital:
-            return true;
-    }
-    return false;
-}
-
 Faction* FindNativeLifeFaction_(GameState& rGameState)
 {
     for (Faction& rFaction : rGameState.Factions())
@@ -55,22 +39,6 @@ Faction* FindNativeLifeFaction_(GameState& rGameState)
     return nullptr;
 }
 
-std::vector<const NativeUnitConfig_t*> EligibleNatives_(const NativeUnitRegistry& rRegistry,
-                                                       const Tile& rTile)
-{
-    std::vector<const NativeUnitConfig_t*> eligible;
-    for (const NativeUnitConfig_t& rConfig : rRegistry.GetAll())
-    {
-        const NativeDesign design(rConfig);
-        if (!design.IsNativeLife() || !DomainCanHold_(design.GetDomain(), rTile))
-        {
-            continue;
-        }
-        eligible.push_back(&rConfig);
-    }
-    return eligible;
-}
-
 int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
                     const std::vector<Tile*>& rNewTiles, int lifeformCount, std::mt19937& rRng,
                     GameState& rGameState)
@@ -78,7 +46,7 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     std::vector<Tile*> habitable;
     for (Tile* pTile : rNewTiles)
     {
-        if (!EligibleNatives_(rNatives, *pTile).empty())
+        if (!EligibleLifeforms(*pTile, rNatives).empty())
         {
             habitable.push_back(pTile);
         }
@@ -93,7 +61,7 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     for (int n = 0; n < lifeformCount; ++n)
     {
         Tile& rTile = *habitable[tileDist(rRng)];
-        const std::vector<const NativeUnitConfig_t*> eligible = EligibleNatives_(rNatives, rTile);
+        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
         std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
         const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
         const NativeDesign* pDesign = EnsureNativeDesign(rPlanet, rNatives, rConfig.id);
@@ -121,39 +89,37 @@ int SpawnLifeforms_(const NativeUnitRegistry& rNatives, const std::vector<Tile*>
     return PlaceLifeforms_(*pPlanet, rNatives, rNewTiles, lifeformCount, rRng, rGameState);
 }
 
-std::vector<Tile*> SelectBloomTiles_(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
+std::vector<Tile*> SelectBloomTiles_(const Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
                                     std::mt19937& rRng)
 {
-    std::vector<Tile*> selected;
-    if (!rOrigin.HasImprovement(ImprovementIds::k_Base))
+    BloomCandidates_t candidates = BloomCandidateTiles(rOrigin, rWorldMap);
+    std::vector<const Tile*> selected;
+    if (candidates.pOrigin != nullptr)
     {
-        selected.push_back(&rOrigin);
+        selected.push_back(candidates.pOrigin);
     }
-
-    std::vector<Tile*> neighbors;
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
-        [&](Tile* pTile, int distance)
-        {
-            if (distance != 1 || !pTile)
-            {
-                return;
-            }
-            if (pTile->HasImprovement(ImprovementIds::k_Base)
-                || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
-            {
-                return;
-            }
-            neighbors.push_back(pTile);
-        });
-
-    std::shuffle(neighbors.begin(), neighbors.end(), rRng);
+    std::shuffle(candidates.neighbours.begin(), candidates.neighbours.end(), rRng);
     const int neighborSlots = tileCount - static_cast<int>(selected.size());
     if (neighborSlots > 0)
     {
-        const int take = std::min(neighborSlots, static_cast<int>(neighbors.size()));
-        selected.insert(selected.end(), neighbors.begin(), neighbors.begin() + take);
+        const int available = static_cast<int>(candidates.neighbours.size());
+        const int take = std::min(neighborSlots, available);
+        selected.insert(selected.end(), candidates.neighbours.begin(),
+                        candidates.neighbours.begin() + take);
     }
-    return selected;
+
+    std::vector<Tile*> tiles;
+    tiles.reserve(selected.size());
+    for (const Tile* pTile : selected)
+    {
+        Tile* pMutable = rWorldMap.GetTile(pTile->GetX(), pTile->GetY());
+        if (pMutable == nullptr)
+        {
+            throw std::logic_error("ApplyFungalBloom: a bloom tile is off this world");
+        }
+        tiles.push_back(pMutable);
+    }
+    return tiles;
 }
 
 std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
@@ -162,7 +128,7 @@ std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
     std::vector<Tile*> newly;
     for (Tile* pTile : rSelected)
     {
-        if (!pTile || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
+        if (pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
         {
             continue;
         }

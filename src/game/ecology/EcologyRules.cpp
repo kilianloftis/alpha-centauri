@@ -12,8 +12,13 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/faction/Faction.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
+#include "game/natives/NativeDesign.h"
+#include "game/natives/NativeUnitRegistry.h"
 #include "game/research/ResearchManager.h"
+#include "game/units/UnitDomain.h"
 
 #include <algorithm>
 #include <vector>
@@ -124,6 +129,61 @@ std::vector<const Tile*> FungalPopTiles(const BaseManager& rBase)
         candidates.push_back(pTile);
     }
     return candidates;
+}
+
+namespace
+{
+
+bool DomainCanHold_(UnitDomain_t domain, const Tile& rTile)
+{
+    switch (domain)
+    {
+        case UnitDomain_t::Land:
+            return !rTile.IsWater();
+        case UnitDomain_t::Sea:
+            return rTile.IsWater();
+        case UnitDomain_t::Air:
+        case UnitDomain_t::Orbital:
+            return true;
+    }
+    return false;
+}
+
+} // namespace
+
+BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin, const WorldMap& rWorldMap)
+{
+    BloomCandidates_t candidates;
+    if (!rOrigin.HasImprovement(ImprovementIds::k_Base))
+    {
+        candidates.pOrigin = &rOrigin;
+    }
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+        [&](const Tile* pTile, int /*distance*/)
+        {
+            if (pTile->HasImprovement(ImprovementIds::k_Base)
+                || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
+            {
+                return;
+            }
+            candidates.neighbours.push_back(pTile);
+        });
+    return candidates;
+}
+
+std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile,
+                                                         const NativeUnitRegistry& rNatives)
+{
+    std::vector<const NativeUnitConfig_t*> eligible;
+    for (const NativeUnitConfig_t& rConfig : rNatives.GetAll())
+    {
+        const NativeDesign design(rConfig);
+        if (design.IsNativeLife() && DomainCanHold_(design.GetDomain(), rTile))
+        {
+            eligible.push_back(&rConfig);
+        }
+    }
+    return eligible;
 }
 
 } // namespace ac

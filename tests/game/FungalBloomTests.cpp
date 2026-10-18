@@ -13,6 +13,7 @@
 #include "game/faction/FactionConfig.h"
 #include "game/units/UnitManager.h"
 #include "game/natives/NativeUnitConfig.h"
+#include "game/ecology/EcologyRules.h"
 #include "game/ecology/FungalBloom.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -285,4 +286,23 @@ TEST_CASE("Native units reject an inverted fungal lifeform range", "[map][fungus
     CHECK_THROWS_WITH(NativeUnitRegistry{}.Load(path.string()),
                       ContainsSubstring("fungal_bloom_native_lifeforms_max"));
     std::filesystem::remove(path);
+}
+
+TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "[map][fungus]")
+{
+    BloomSession_ session(0, 0, false, false);
+    TileEffectsContext& rEffects = session.pState->GetTileEffects();
+    rEffects.AddOccupantWithEffects(session.At_(8, 8), std::string(ImprovementIds::k_Base));
+    rEffects.AddOccupantWithEffects(session.At_(9, 9), std::string(ImprovementIds::k_Base));
+    session.At_(7, 7).AddTerrainFeature(rEffects.GetImprovements().Get("Fungus"));
+
+    const BloomCandidates_t candidates =
+        BloomCandidateTiles(session.At_(8, 8), session.pState->GetWorldMap());
+    CHECK(candidates.pOrigin == nullptr);
+    CHECK(candidates.neighbours.size() == 6);
+    for (const Tile* pTile : candidates.neighbours)
+    {
+        CHECK(pTile != &session.At_(9, 9));
+        CHECK(pTile != &session.At_(7, 7));
+    }
 }
