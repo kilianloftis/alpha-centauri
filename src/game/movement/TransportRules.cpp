@@ -11,8 +11,6 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
-#include <vector>
-
 namespace ac
 {
 
@@ -147,36 +145,6 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     return CanPhysicallyEnterTile(rPassenger, rTo, rWorldMap, rGrids);
 }
 
-bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
-{
-    if (rPassenger.IsEmbarked())
-    {
-        return false;
-    }
-    Unit* pCarrier = FindBoardableTransport(rPassenger, rPassenger.GetTile(), rWorldMap);
-    if (!pCarrier)
-    {
-        return false;
-    }
-    rPassenger.EmbarkInto(*pCarrier);
-    return true;
-}
-
-bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap,
-                          const InteractionGridsConfig_t& rGrids)
-{
-    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile(), rWorldMap, rGrids))
-    {
-        return false;
-    }
-    return TryAttachToTransport(rPassenger, rWorldMap);
-}
-
-bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
-{
-    return TryAttachToTransport(rPassenger, rWorldMap);
-}
-
 bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
                          const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids)
 {
@@ -198,24 +166,6 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier, const WorldMap& rWorldMap,
         if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile, rWorldMap, rGrids))
         {
             return false;
-        }
-    }
-    return true;
-}
-
-bool TryUnloadTransportInPlace(Unit& rCarrier, const WorldMap& rWorldMap,
-                               const InteractionGridsConfig_t& rGrids)
-{
-    if (!CanUnloadTransportInPlace(rCarrier, rWorldMap, rGrids))
-    {
-        return false;
-    }
-    std::vector<Unit*> cargo = rCarrier.GetCargo();
-    for (Unit* pPassenger : cargo)
-    {
-        if (pPassenger)
-        {
-            pPassenger->Disembark();
         }
     }
     return true;

@@ -9,6 +9,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/terraform/TerraformSpread.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 

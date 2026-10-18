@@ -8,7 +8,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <random>
 #include <string>
 
 namespace ac
@@ -19,7 +18,6 @@ class MindControlLedger;
 class Unit;
 class BaseManager;
 class WorldMap;
-class MoraleCalculator;
 
 struct ProbeChance_t
 {
@@ -69,9 +67,6 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   double failureScale = 1.0,
                                   double successScale = 1.0);
 
-// Roll mission then escape. RISK 0 missions are always successful (100%).
-ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng);
-
 // Whether the target faction detects the probe and so learns who sent a covert one.
 // TODO: the detection roll ("getting away cleanly") is not implemented; nothing is detected.
 bool ProbeDetected(const Unit& rProbe, const ProbeActionConfig_t& rAction,
@@ -100,8 +95,5 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
                                         const Faction& rActor, const ProbeTarget_t& rTarget,
                                         const WorldMap& rMap,
                                         const MindControlLedger& rMindControl);
-
-// Intrinsic XP bump after a fully successful probe mission (caps at max).
-bool TryPromoteProbeMission(Unit& rProbe, const MoraleCalculator& rMorale);
 
 } // namespace ac

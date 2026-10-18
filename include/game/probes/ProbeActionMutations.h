@@ -2,6 +2,7 @@
 
 #include "game/probes/ProbeActionConfig.h"
 #include "game/probes/ProbeActionResult.h"
+#include "game/probes/ProbeRules.h"
 #include "game/probes/ProbeTarget.h"
 
 #include <random>
@@ -9,8 +10,9 @@
 namespace ac
 {
 
-class Unit;
 class GameState;
+class MoraleCalculator;
+class Unit;
 
 // Apply the world mutations for a successful probe mission (tech theft, mind control,
 // sabotage, etc.). Does not roll success/escape, pay energy, promote, or destroy the probe.
@@ -27,5 +29,11 @@ bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
 void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
                            const ProbeTarget_t& rTarget, GameState& rGameState,
                            std::mt19937& rRng);
+
+// Roll mission then escape. RISK 0 missions are always successful (100%).
+ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng);
+
+// Intrinsic XP bump after a fully successful probe mission (caps at max).
+bool TryPromoteProbeMission(Unit& rProbe, const MoraleCalculator& rMorale);
 
 } // namespace ac

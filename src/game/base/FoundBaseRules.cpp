@@ -6,7 +6,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
-#include "game/production/ProductionManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -111,15 +110,6 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
     const int raw = FinalizeResolvedStat(
         ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals), &ctx).total);
     return std::max(0, raw);
-}
-
-void ApplyStartingMinerals(BaseManager& rBase, const Unit* pFoundingUnit)
-{
-    // Founding-only: call once from TryFoundBase after CreateBase. Transfers keep the
-    // existing ProductionManager (RebindFaction); snapshot restore uses SetMineralStockpile.
-    // Retool stays free while turn original is still null (see ProductionManager).
-    rBase.GetProduction().SetMineralStockpile(
-        ResolveStartingMinerals(rBase, pFoundingUnit));
 }
 
 } // namespace ac

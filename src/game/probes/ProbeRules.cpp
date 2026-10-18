@@ -11,10 +11,8 @@
 #include "game/probes/MindControlLedger.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/combat/MoraleCalculator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
-#include "lib/RandomRoll.h"
 
 #include <algorithm>
 #include <cmath>
@@ -235,24 +233,6 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffe
     return chances;
 }
 
-ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng)
-{
-    ProbeRollResult_t result;
-    result.chances = rChances;
-
-    if (rChances.risk <= 0 || RollPercent(rChances.successRate, rRng))
-    {
-        result.missionSucceeded = true;
-    }
-    else
-    {
-        return result;
-    }
-
-    result.escaped = RollPercent(rChances.survivalRate, rRng);
-    return result;
-}
-
 bool ProbeDetected(const Unit& /*rProbe*/, const ProbeActionConfig_t& /*rAction*/,
                    const ProbeTarget_t& /*rTarget*/, const ProbeRollResult_t& /*rRoll*/)
 {
@@ -375,21 +355,6 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             }
         },
         rTarget.ref);
-}
-
-bool TryPromoteProbeMission(Unit& rProbe, const MoraleCalculator& rMorale)
-{
-    if (!ResolveFlag(rProbe, RuleFlagId_t::ProbeTeam))
-    {
-        return false;
-    }
-    const int xp = rProbe.GetXp();
-    if (xp >= rMorale.GetConfig().MaxLevel())
-    {
-        return false;
-    }
-    rProbe.SetXp(xp + 1);
-    return true;
 }
 
 } // namespace ac

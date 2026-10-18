@@ -151,11 +151,15 @@ add_library(ac-core STATIC
     game/combat/ScrambleRules.cpp
     game/movement/MovementRules.cpp
     game/movement/TransportRules.cpp
+    game/movement/TransportMutations.cpp
     game/movement/FuelRules.cpp
+    game/movement/FuelMutations.cpp
     game/combat/AttackRules.cpp
     game/base/FoundBaseRules.cpp
+    game/base/BaseMutations.cpp
     game/movement/AirdropRules.cpp
     game/terraform/TerraformRules.cpp
+    game/terraform/TerraformMutations.cpp
     game/units/AdHocDesign.cpp
     game/base/BaseConquestConfigParser.cpp
     game/base/BaseConquestRules.cpp

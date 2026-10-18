@@ -8,8 +8,8 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/terraform/TerraformRules.h"
 
-#include <algorithm>
 #include <string>
 #include <string_view>
 
@@ -106,16 +106,6 @@ Tile* PickBestSpreadNeighbor_(Tile& rOrigin, WorldMap& rWorldMap,
 }
 
 } // namespace
-
-int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex)
-{
-    if (mapTileCount <= 0)
-    {
-        return 0;
-    }
-    const int turn = std::max(0, turnIndex);
-    return mapTileCount / (turn / 4 + 32);
-}
 
 bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
                                 TileEffectsContext& rTileEffects)

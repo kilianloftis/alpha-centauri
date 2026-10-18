@@ -1,5 +1,6 @@
 #include "game/probes/ProbeActionConfigParser.h"
 #include "game/probes/ProbeRules.h"
+#include "game/probes/ProbeActionMutations.h"
 #include "game/combat/MoraleConfigParser.h"
 #include "game/units/Unit.h"
 #include "game/social-engineering/SocialRatingConfigParser.h"

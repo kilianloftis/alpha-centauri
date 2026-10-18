@@ -2,10 +2,11 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ElevationRulesConfig.h"
 #include "game/map/TerrainConfig.h"
+#include "game/units/UnitDomain.h"
 
 #include <optional>
-#include <random>
 #include <span>
 #include <string>
 #include <vector>
@@ -13,13 +14,12 @@
 namespace ac
 {
 
-class IUnitOrderWorld;
 class ImprovementRegistry;
 class TerrainOperationRegistry;
 class Tile;
 class WorldMap;
-class TileEffectsContext;
 class Unit;
+struct CoexistenceOverrideEffect_t;
 struct TriggeredEffectConfig_t;
 
 // A Former project resolved from either a buildable improvement or a terrain operation.
@@ -50,12 +50,25 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 
-// Place the project's improvement and fire its on_complete_effects against the Former's tile.
-// An improvement refuses before it removes anything when terrain would still conflict, and
-// records on the tile any pair the Former's coexistence override waived. Returns whether
-// anything actually changed.
-bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
-                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
-                          IUnitOrderWorld* pWorld);
+// The improvement can be placed once the improvements it displaces are gone. Terrain is
+// never displaced, so anything left after that displacement is a hard refusal.
+bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
+                        std::span<const CoexistenceOverrideEffect_t> overrides);
+
+// Whether a Former of this domain can still move rTile in this direction. Raising stops at
+// Planet's ceiling, and a sea Former may only raise ground still at least a reference level
+// deep; lowering stops a level short of Planet's floor, and a land Former stops at the
+// reference level so it cannot dig its own tile out from under itself.
+bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
+                                  const ElevationRulesConfig_t& rRules);
+
+// The floor a Former of this domain lowers toward: ocean level on land (the tile stops at the
+// waterline), Planet's floor at sea.
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules);
+
+// SMAC alien_fauna forest/kelp growth: MapAreaTiles / (turn/4 + 32) random tile
+// samples per turn. turnIndex is years since GameState::k_FirstPlayableMissionYear
+// (0 on the first playable year).
+int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
 } // namespace ac

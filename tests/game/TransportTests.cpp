@@ -11,6 +11,7 @@
 #include "game/movement/MovementRules.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/TransportRules.h"
+#include "game/movement/TransportMutations.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"

@@ -13,6 +13,7 @@
 #include "game/map/WorldMap.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/terraform/TerraformRules.h"
+#include "game/terraform/TerraformMutations.h"
 #include "game/units/Unit.h"
 #include "game/effects/EffectConfig.h"
 #include "game/units/UnitComponentConfig.h"

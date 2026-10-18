@@ -1,7 +1,7 @@
 #include "game/stages/TurnEnd.h"
 #include "game/GameState.h"
 #include "game/stages/TurnStageRegistrar.h"
-#include "game/movement/FuelRules.h"
+#include "game/movement/FuelMutations.h"
 #include <iostream>
 
 namespace ac

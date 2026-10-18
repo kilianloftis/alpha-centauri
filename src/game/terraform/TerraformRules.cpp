@@ -1,16 +1,13 @@
 #include "game/terraform/TerraformRules.h"
-#include "game/units/IUnitOrderWorld.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
-#include "game/effects/TileEffectsContext.h"
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseTypes.h"
-#include "game/terraform/ElevationChange.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
@@ -32,6 +29,18 @@
 
 namespace ac
 {
+
+bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
+                        std::span<const CoexistenceOverrideEffect_t> overrides)
+{
+    if (rTile.HasImprovement(rPlaced.id))
+    {
+        return false;
+    }
+    const std::vector<std::string> displaced =
+        ImprovementsDisplacedBy(rTile, rPlaced, overrides);
+    return !OccupantsBlockPlacement(rTile, rPlaced, displaced, overrides);
+}
 
 namespace
 {
@@ -113,25 +122,11 @@ bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const 
     return FormerMatchesTile_(rUnit, rTile);
 }
 
-// The improvement can be placed once the improvements it displaces are gone. Terrain is
-// never displaced, so anything left after that displacement is a hard refusal.
-bool ImprovementApplies_(const Tile& rTile, const ImprovementConfig_t& rPlaced,
-                         std::span<const CoexistenceOverrideEffect_t> overrides)
-{
-    if (rTile.HasImprovement(rPlaced.id))
-    {
-        return false;
-    }
-    const std::vector<std::string> displaced =
-        ImprovementsDisplacedBy(rTile, rPlaced, overrides);
-    return !OccupantsBlockPlacement(rTile, rPlaced, displaced, overrides);
-}
-
 bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
                       std::span<const CoexistenceOverrideEffect_t> overrides,
                       const ElevationRulesConfig_t& rRules)
 {
-    if (rProject.pPlaces && ImprovementApplies_(rTile, *rProject.pPlaces, overrides))
+    if (rProject.pPlaces && ImprovementApplies(rTile, *rProject.pPlaces, overrides))
     {
         return true;
     }
@@ -238,63 +233,35 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 
-namespace
+bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
+                                  const ElevationRulesConfig_t& rRules)
 {
-
-// Nothing is removed until the placement is known to succeed: a project that has already
-// been paid for must not leave the tile stripped and empty when terrain shifted mid-order.
-bool PlaceImprovement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
-                       TileEffectsContext& rTileEffects,
-                       std::span<const CoexistenceOverrideEffect_t> overrides)
-{
-    if (rTile.HasImprovement(rPlaced.id))
+    const bool bSeaFormer = formerDomain == UnitDomain_t::Sea;
+    const int elevation = rTile.GetElevation();
+    if (bRaise)
     {
-        return true;
+        return bSeaFormer ? elevation <= -rRules.referenceLevelMeters
+                          : elevation < rRules.maxElevationMeters;
     }
-    if (!ImprovementApplies_(rTile, rPlaced, overrides))
-    {
-        return false;
-    }
-
-    for (const auto& [rImprovementId, rFeatureId] : WaivedPairsFor(rTile, rPlaced, overrides))
-    {
-        rTile.AddCoexistenceWaiver(rImprovementId, rFeatureId);
-    }
-    for (const std::string& rId : ImprovementsDisplacedBy(rTile, rPlaced, overrides))
-    {
-        rTileEffects.RemoveOccupantWithEffects(rTile, rId);
-    }
-    rTileEffects.AddOccupantWithEffects(rTile, rPlaced.id);
-    return rTile.HasImprovement(rPlaced.id);
+    // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the only
+    // limit we can state.
+    return bSeaFormer ? elevation - rRules.referenceLevelMeters >= rRules.minElevationMeters
+                      : elevation >= rRules.referenceLevelMeters;
 }
 
-} // namespace
-
-bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
-                          TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
-                          IUnitOrderWorld* pWorld)
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules)
 {
-    bool bDidAnything = false;
-    if (rProject.pPlaces)
+    return formerDomain == UnitDomain_t::Land ? rRules.oceanLevelMeters : rRules.minElevationMeters;
+}
+
+int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex)
+{
+    if (mapTileCount <= 0)
     {
-        const std::vector<CoexistenceOverrideEffect_t> overrides =
-            ActiveCoexistenceOverrides(rFormer);
-        bDidAnything = PlaceImprovement_(rTile, *rProject.pPlaces, rTileEffects, overrides);
+        return 0;
     }
-    if (!rProject.onCompleteEffects.empty())
-    {
-        // The effects mutate world state, which a movement-only harness has no session for.
-        if (!pWorld)
-        {
-            throw std::runtime_error("Terraform project '" + rProject.id
-                                     + "' declares on_complete_effects but there is no session "
-                                       "to apply them");
-        }
-        const bool bEffectsApplied =
-            pWorld->ApplyTerraformCompleteEffects(rTile, rProject, rFormer, rRng);
-        bDidAnything = bEffectsApplied || bDidAnything;
-    }
-    return bDidAnything;
+    const int turn = std::max(0, turnIndex);
+    return mapTileCount / (turn / 4 + 32);
 }
 
 } // namespace ac

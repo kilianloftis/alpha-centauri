@@ -19,6 +19,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionConfigParser.h"
 #include "game/terraform/ElevationChange.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/combat/Explosion.h"
 #include "game/ecology/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
