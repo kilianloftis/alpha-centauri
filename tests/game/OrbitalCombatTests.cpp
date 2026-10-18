@@ -636,3 +636,35 @@ TEST_CASE("Intercept sources run faction pool, design, then tile, each charge re
     CHECK(InterceptSourceReady(sources[0], escort, year + 1));
     CHECK(InterceptSourceReady(sources[1], escort, year));
 }
+
+TEST_CASE("A satellite attack needs a ready copy and an orbital target the defender owns",
+          "[orbital][asat]")
+{
+    OrbitalGame_ game;
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
+    attackerBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
+    // Two, so one is still in orbit after the strike below.
+    defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
+    defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
+    defenderBase.GetBuildingManager().AddBuilding("granted_hall");
+    const int year = game.pState->GetMissionYear();
+    const auto ready = [&](const char* pAttackerId, const char* pTargetId, int atYear)
+    {
+        return ReadyOrbitalAttack(*game.pPlayer, *game.pAi, pAttackerId, pTargetId, atYear)
+               != nullptr;
+    };
+
+    CHECK_FALSE(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
+    attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
+    CHECK(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
+    CHECK_FALSE(ready("test_odp_always_hit", "granted_hall", year));
+    CHECK_FALSE(ready("Sky_Hydroponics_Lab", "Sky_Hydroponics_Lab", year));
+
+    REQUIRE(game.pState
+                ->TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
+                                     "Sky_Hydroponics_Lab")
+                .bAttempted);
+    CHECK_FALSE(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
+    CHECK(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year + 2));
+}

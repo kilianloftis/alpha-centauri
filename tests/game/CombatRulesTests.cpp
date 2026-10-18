@@ -4,13 +4,17 @@
 #include "game/combat/CombatRules.h"
 #include "game/combat/MoraleRules.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/effects/WorldRulesConfigParser.h"
 #include "game/faction/Faction.h"
+#include "game/faction/FactionConfig.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/natives/NativeRules.h"
 #include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <utility>
 #include <vector>
 
 using namespace ac;
@@ -134,4 +138,64 @@ TEST_CASE("Only the survivor of a kill is offered promotion", "[combat][morale]"
 
     result.bDefenderDestroyed = false;
     CHECK(PromotionCandidate(result) == CombatSide_t::Defender);
+}
+
+TEST_CASE("Non-combatants are left unprotected only when no combatant shares their tile",
+          "[combat][collateral]")
+{
+    std::vector<EffectConfig_t> worldRules =
+        WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
+    FactionFixture fixture(k_TestMapWidth, k_TestMapHeight, std::move(worldRules));
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker =
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
+
+    const std::vector<CollateralHit_t> alone = PlanStackCollateral(attacker, defender, fixture.map);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, alone)
+          == std::vector<Unit*>{&probe});
+
+    fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    const std::vector<CollateralHit_t> guarded =
+        PlanStackCollateral(attacker, defender, fixture.map);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, guarded).empty());
+}
+
+TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotected",
+          "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker =
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
+
+    const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, defender, fixture.map);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, plan).empty());
+}
+
+TEST_CASE("A native is wild only while a native-life faction owns it", "[natives]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    FactionConfig_t wildDefinition = fixture.factionDefinition;
+    wildDefinition.id = "wild_life";
+    wildDefinition.identity.species = FactionSpecies_t::NativeLife;
+    Faction& wild = fixture.MakeFaction(wildDefinition);
+
+    const Unit& wildWorm = fixture.MakeUnit(wild, 8, 8, {"test_chassis", "native_life_chassis"});
+    const Unit& bredWorm =
+        fixture.MakeUnit(player, 10, 10, {"test_chassis", "native_life_chassis"});
+    const Unit& wildMachine = fixture.MakeUnit(wild, 12, 12, {"test_chassis"});
+
+    CHECK(IsWildNative(wildWorm));
+    CHECK_FALSE(IsWildNative(bredWorm));
+    CHECK_FALSE(IsWildNative(wildMachine));
 }
