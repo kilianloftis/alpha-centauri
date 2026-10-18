@@ -42,6 +42,7 @@ struct WorldGenDecorationConfig_t;
 struct LandmarkConfig_t;
 struct MoraleConfig_t;
 class MoraleCalculator;
+class CommerceCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
 class CouncilProposalRegistry;
@@ -134,6 +135,7 @@ struct GameDataContext
     // beside techCostCalculator rather than on GameState. Every faction, unit, and combat
     // path borrows this one instance.
     std::unique_ptr<MoraleCalculator> moraleCalculator;
+    std::unique_ptr<CommerceCalculator> commerceCalculator;
 
     // The paths this context was loaded from, so a caller that needs a config file LoadGameData
     // does not parse (the UI's terraform bindings) resolves it the same way as everything else

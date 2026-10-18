@@ -214,7 +214,7 @@ requires all five statuses and every key but `effects`, and refuses a duration o
 A status's `effects` may only be unconditional `FactionPair` `StatModifier commerce_rate`
 entries. Each faction's effect pool carries them once per partner, tagged with that partner
 (a faction can hold a Treaty with one partner and a Pact with another), and they resolve only
-when a context names the partner. `CommerceCalculator` resolves `CommerceRate` toward each
+when a context names the partner. `CommerceRules` resolves `CommerceRate` toward each
 partner; a rate of 0 means the pair does not trade, so whether a status trades is its rate,
 not a separate flag. Use `MultiplyGeometric` for a status's factor. AddPercents sum before they
 multiply, so a Treaty's `AddPercent -50` beside Global Trade Pact's `AddPercent 100` would give
@@ -243,7 +243,7 @@ side has nothing to accept.
 | `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `movement/TerritoryEntryMutations.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
-| `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceCalculator` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
+| `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceRules` resolves `CommerceRate` toward the partner, and skips the pair at 0 |
 | `may_attack` | `ApplyHostileAct`: an attack under a status that does not allow it declares Vendetta |
 | `defensive_obligation` | `IsObligedToDefend`: when a declaration raises obligations, and again when the player's prompt is shown |
 | `duration_turns` | `ExpireDiplomaticStatuses`, run by the TurnStart stage |

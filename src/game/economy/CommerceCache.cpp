@@ -20,10 +20,8 @@ const std::vector<CommercePartnerLine_t>& NoLines_()
 
 } // namespace
 
-CommerceCache::CommerceCache(const Faction& rOwner, const CommerceConfig_t& rConfig,
-                                 LuaRuntime& rLua)
+CommerceCache::CommerceCache(const Faction& rOwner)
     : m_rOwner(rOwner)
-    , m_calculator(rConfig, rLua)
 {}
 
 void CommerceCache::CollectRevisions_(std::vector<uint64_t>& rOut) const
@@ -68,7 +66,7 @@ void CommerceCache::Validate_() const
     }
     else
     {
-        m_cached = m_calculator.ComputeAllLines(m_rOwner);
+        m_cached = ComputeCommerceLines(m_rOwner);
     }
     m_cachedStamp = m_scratchRevisions;
 }

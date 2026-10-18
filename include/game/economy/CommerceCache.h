@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/economy/CommerceCalculator.h"
+#include "game/economy/CommerceRules.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -12,7 +12,7 @@ namespace ac
 class BaseManager;
 class Faction;
 
-// Faction-owned commerce queries. Pairing math stays in CommerceCalculator; this façade is
+// Faction-owned commerce queries. Pairing stays in CommerceRules; this façade is
 // injected into each base ResourceManager (like EconomyManager) and used by CommerceDisplay.
 //
 // It memoizes the owner's whole per-base breakdown, because the underlying pass is
@@ -24,7 +24,7 @@ class Faction;
 class CommerceCache
 {
 public:
-    CommerceCache(const Faction& rOwner, const CommerceConfig_t& rConfig, LuaRuntime& rLua);
+    explicit CommerceCache(const Faction& rOwner);
     ~CommerceCache() = default;
 
     CommerceCache(const CommerceCache&) = delete;
@@ -47,7 +47,6 @@ private:
     void Validate_() const;
 
     const Faction& m_rOwner;
-    CommerceCalculator m_calculator;
 
     mutable std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> m_cached;
     // Seeded to a value CollectRevisions_ can never produce, so the first query builds.

@@ -1,7 +1,7 @@
 #include "ui/base/CommerceDisplay.h"
 
 #include "game/faction/Faction.h"
-#include "game/economy/CommerceCalculator.h"
+#include "game/economy/CommerceRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/base/BaseManager.h"
 #include "game/economy/ResourceManager.h"

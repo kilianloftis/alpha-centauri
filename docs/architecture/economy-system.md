@@ -7,7 +7,8 @@ graph TB
         EconomyManager[EconomyManager]
         EnergyAllocation[EnergyAllocation_t<br/>econPercent<br/>labsPercent<br/>psychPercent]
         CommerceCache[CommerceCache]
-        CommerceCalculator[CommerceCalculator<br/>pure pairing math]
+        CommerceRules[CommerceRules<br/>pairing, sanctions, rates]
+        CommerceCalculator[CommerceCalculator<br/>pair formula]
     end
 
     subgraph "Base Resource Flow"
@@ -20,7 +21,8 @@ graph TB
     Faction --> EconomyManager
     EconomyManager --> EnergyAllocation
     CommerceCache -->|"injected into"| ResourceManager
-    CommerceCache --> CommerceCalculator
+    CommerceCache --> CommerceRules
+    CommerceRules --> CommerceCalculator
 
     Faction --> BaseManager
     BaseManager --> ResourceManager
@@ -31,6 +33,7 @@ graph TB
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
     style EconomyManager fill:#bfb,stroke:#333,stroke-width:3px
     style CommerceCache fill:#bfb,stroke:#333,stroke-width:3px
+    style CommerceRules fill:#bfb,stroke:#333,stroke-width:2px
     style CommerceCalculator fill:#bfb,stroke:#333,stroke-width:2px
     style ResourceManager fill:#bfb,stroke:#333,stroke-width:2px
     style EnergyAllocation fill:#bbf,stroke:#333,stroke-width:2px
@@ -89,18 +92,20 @@ graph TB
   keeps paying commerce for the rest of the turn), and every faction's `GetEffectsVersion()`
   (which already folds in base list, buildings, pops, research and SE).
 
-### CommerceCalculator
-- **Purpose**: Pure per-turn commerce income math for Treaty / Pact partners.
+### CommerceRules and CommerceCalculator
+- **Purpose**: Per-turn commerce income for Treaty / Pact partners. `CommerceRules` pairs the
+  bases, applies sanctions and resolves the rate and bonus effects; `CommerceCalculator`
+  (owned by `GameDataContext`) evaluates only the pair formula, through `PairValue`.
 - **Atrocity sanctions**: Datalinks commerce step (10) reduces a pair to zero when sanctions are
   in effect against *either* faction. Applied where the pair is formed rather than after the Lua
   formula — a sanctioned owner returns no lines at all and a sanctioned partner is skipped — so the
   base screen shows the partner gone rather than a zero row. An innocent partner loses the pair
   too. See `atrocity-system.md`.
-- **Entry point**: `ComputeAllLines(owner, state)` — one planet-wide pass that ranks each
-  faction's bases once and reuses the ranking for every pair. `ComputeForFaction` (energy per
-  base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base
-  of every partner, so per-base callers belong behind `CommerceCache`'s memo rather than in
-  a loop over `ComputeForBase`.
+- **Entry point**: `ComputeCommerceLines(owner)` — one planet-wide pass that ranks each
+  faction's bases once and reuses the ranking for every pair. `ComputeCommerceForFaction`
+  (energy per base) and `ComputeCommerceForBase` (one base's lines) are views onto it; ranking
+  prices every base of every partner, so per-base callers belong behind `CommerceCache`'s memo
+  rather than in a loop over `ComputeCommerceForBase`.
 - **Config**: `config/commerce.json` — `pair_multiplier` and a single Lua `formula` (same
   pattern as hurry). Inputs: `energy_ours`, `energy_theirs`, `pair_multiplier`,
   `commerce_tech`, `tech_denominator`. `CommerceRate` toward the partner includes the pair's

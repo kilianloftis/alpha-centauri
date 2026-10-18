@@ -46,6 +46,7 @@
 #include "game/population/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/economy/CommerceCalculator.h"
 #include "game/combat/MoraleConfigParser.h"
 #include "game/probes/ProbeActionConfigParser.h"
 #include "game/base/BaseConquestConfigParser.h"
@@ -117,6 +118,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.scrapRefundCalculator.get(), "scrapRefundCalculator"},
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
         {rData.moraleCalculator.get(), "moraleCalculator"},
+        {rData.commerceCalculator.get(), "commerceCalculator"},
     };
     for (const auto& [pMember, pName] : required)
     {
@@ -383,6 +385,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     rData.moraleCalculator =
         std::make_unique<MoraleCalculator>(*rData.moraleConfig, *rData.luaRuntime);
+    rData.commerceCalculator =
+        std::make_unique<CommerceCalculator>(*rData.commerceConfig, *rData.luaRuntime);
 
     ThrowIfIncomplete(rData);
     return rData;

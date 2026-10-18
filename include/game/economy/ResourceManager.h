@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/base/BaseTypes.h"
-#include "game/economy/CommerceCalculator.h"
+#include "game/economy/CommerceRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include <memory>

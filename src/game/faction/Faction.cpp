@@ -71,8 +71,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     // Distinct sub-streams from one seed, so flavor and research picks do not correlate.
     , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity, seed))
     , m_pEconomy(std::make_unique<EconomyManager>())
-    , m_pCommerce(std::make_unique<CommerceCache>(*this, *rDataContext.commerceConfig,
-                                                    *rDataContext.luaRuntime))
+    , m_pCommerce(std::make_unique<CommerceCache>(*this))
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(*rDataContext.techRegistry,
                                                     *rDataContext.techCostCalculator, this))

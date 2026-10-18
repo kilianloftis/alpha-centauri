@@ -113,7 +113,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
 | `ThisTech` | research cost for that tech | Resolved from the tech config when it is the research target (`ResearchManager`); never enters the faction pool on discovery (`AppendFactionLaneEffects` in `CollectDiscoveredTechEffects_`) |
-| `FactionPair` | the faction's dealings with one partner | `FactionEffectsPool::CollectDiplomaticStatusEffects_` adds the effects of the status the faction holds with each other session faction, tagged `ActiveEffect_t::partnerFaction`. `StatModifierMatchesInContext` admits one only when `EffectContext_t::pPartner` is that partner; `FilterByStatId` and `FilterForBase` never do. Read by `CommerceCalculator` (`CommerceRate`). |
+| `FactionPair` | the faction's dealings with one partner | `FactionEffectsPool::CollectDiplomaticStatusEffects_` adds the effects of the status the faction holds with each other session faction, tagged `ActiveEffect_t::partnerFaction`. `StatModifierMatchesInContext` admits one only when `EffectContext_t::pPartner` is that partner; `FilterByStatId` and `FilterForBase` never do. Read by `CommerceRules` (`CommerceRate`). |
 
 In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane_t`
 in `EffectEnums.h`, with the derived predicate `IsFactionLane`. Every collector/filter
@@ -211,7 +211,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     formula result like scrap), `CommerceRating` (Additive, Base — Economy SE / faction bonuses in
     the commerce tech ratio; social-rating expansions live on base effects),
     `CommerceEnergyBonus` (Additive, Base — flat add per commerce transaction after rate;
-    Planetary Governor). Consumed by `CommerceCalculator` during `ResourceCollection`; see
+    Planetary Governor). Consumed by `CommerceRules` during `ResourceCollection`; see
     [economy-system.md](economy-system.md).
 - **Consumers**: `StatModifierEffect_t::stat`. Unit armor uses `Defense`; tile-granted combat
   bonuses (rockiness, fungus, improvements) use `TileDefense` — see Tile Improvement Effects.

@@ -317,7 +317,7 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is the job of `PlanScrapPayout` (`ProductionRules`) and `CreditScrapRefund` (`ProductionMutations`), not the calculator's
-  - `CommerceCache` / `CommerceCalculator`: faction-owned commerce queries; calculator pairs Treaty/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
+  - `CommerceCache` / `CommerceRules` / `CommerceCalculator`: faction-owned commerce queries; the rules pair Treaty/Pact bases, the calculator evaluates the pair formula, and the cache feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
@@ -679,7 +679,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Dependencies**:
   - `CommitAtrocity` is authored in trigger lists (`genetic_plague`'s `on_success_effects`; the Planet Buster `on_detonate_effects`). Planet Buster victim comes from `AtrocityRules::BlastVictim` over what `Explosion` destroyed (first foreign base, else first foreign unit), handed over in `derivedVictim` rather than territory
   - Writes Vendetta (through `ApplyStatusChange`) and `PlanetaryCouncil::Expel`
-  - Read by `CommerceCalculator` (sanctions zero a pair) and `BaseEcology` (counted records' `eco_virtual_minerals`)
+  - Read by `CommerceRules` (sanctions zero a pair) and `BaseEcology` (counted records' `eco_virtual_minerals`)
   - Unknown severity names fail when the effect list or `atrocities.json` is loaded
 - **Details**: See `docs/architecture/atrocity-system.md` for detailed architecture
 

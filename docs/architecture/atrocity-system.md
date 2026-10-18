@@ -33,7 +33,7 @@ graph TB
         GameState[GameState<br/>owns the ledger]
         DiplomacyLedger[DiplomacyLedger<br/>Vendetta]
         PlanetaryCouncil[PlanetaryCouncil<br/>Expel]
-        CommerceCalculator[CommerceCalculator<br/>sanctions zero the pair]
+        CommerceRules[CommerceRules<br/>sanctions zero the pair]
         EcoDamage[BaseEcology<br/>virtual minerals term]
         TurnStart[TurnStart<br/>ExpireSanctions]
         Notices[PlayerInteractionQueue<br/>AtrocityCommitted notice]
@@ -60,7 +60,7 @@ graph TB
     AtrocitiesConfig --> SeverityConfig
     AtrocitiesConfig --> AtrocityParser
 
-    AtrocityLedger -->|IsSanctioned missionYear| CommerceCalculator
+    AtrocityLedger -->|IsSanctioned missionYear| CommerceRules
     AtrocityLedger -->|EcoVirtualMinerals| EcoDamage
     TurnStart -->|ExpireSanctions| AtrocityLedger
 
@@ -169,7 +169,7 @@ its revision bump is what invalidates `CommerceCache`'s memo.
 
 | Consequence | Where it lands |
 |---|---|
-| Commerce sanctions | `AtrocityLedger::ExtendSanction`, counted Simple acts only; `CommerceCalculator` drops the owner and skips sanctioned partners |
+| Commerce sanctions | `AtrocityLedger::ExtendSanction`, counted Simple acts only; `CommerceRules` drops the owner and skips sanctioned partners |
 | Victim memory | `AtrocityLedger::HasVictimized` and `HasCommittedMajorAgainst`. Written with the record, before the gates |
 | Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: a sneak attack, so nobody withdraws from territory. It obliges the victim's Pact partners, who join as part of the sneak attack (see `diplomacy-system.md`) |
 | Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta (including the victim's partners, who joined through the sneak attack), via `JoinVendetta`, a declaration (each side withdraws from the other's territory, evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced, and native life never joins: it has no diplomacy |

@@ -75,6 +75,7 @@ add_library(ac-core STATIC
     game/economy/EconomyManager.cpp
     game/economy/CommerceConfigParser.cpp
     game/economy/CommerceCalculator.cpp
+    game/economy/CommerceRules.cpp
     game/economy/CommerceCache.cpp
     game/base/BaseEffectsCache.cpp
     game/buildings/BuildingMutations.cpp
