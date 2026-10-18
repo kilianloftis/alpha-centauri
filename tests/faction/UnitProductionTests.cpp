@@ -19,7 +19,7 @@
 #include "game/economy/ResourceManager.h"
 #include "game/production/ProductionManager.h"
 #include "game/production/ProductionApplyResult.h"
-#include "game/production/ProductionCostCalculator.h"
+#include "game/production/ProductionRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -695,7 +695,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     const int prototypeCost = base.GetMineralCost();
     const int expected =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 50);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 50);
     CHECK(rDesign.GetBaseCost() == 40);
     CHECK(prototypeCost == expected);
     CHECK(prototypeCost > rDesign.GetBaseCost());
@@ -722,7 +722,7 @@ TEST_CASE("Completion leftover uses the effective cost including prototype surch
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     const int prototypeCost = base.GetMineralCost();
     REQUIRE(prototypeCost
-            == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base},
+            == ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base},
                                                      50));
 
     // Five minerals past the surcharged cost — below the retool threshold, so all stay.
@@ -745,9 +745,9 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
     without.GetProduction().SetProduction(&rDesign, without.GetBaseEffects());
 
     const int standardCost =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{withSkunk}, 0);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{withSkunk}, 0);
     const int prototypeCost =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{without}, 50);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{without}, 50);
     REQUIRE(prototypeCost > standardCost);
 
     CHECK(withSkunk.GetMineralCost() == standardCost);
@@ -811,9 +811,9 @@ TEST_CASE("Several new components still apply a single prototype surcharge",
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
 
     CHECK(base.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 50));
+          == ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 50));
     CHECK(base.GetMineralCost()
-          != ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 150));
+          != ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 150));
 }
 
 TEST_CASE("Fielding a unit removes the prototype penalty from other queues of that faction",
@@ -829,7 +829,7 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
     second.GetProduction().SetProduction(&rDesign, second.GetBaseEffects());
     const int prototypeCost = first.GetMineralCost();
     const int standardCost =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{first}, 0);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{first}, 0);
     REQUIRE(prototypeCost > standardCost);
 
     first.GetProduction().SetMineralStockpile(standardCost);
@@ -871,7 +871,7 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
     BaseManager& other = game.MakeBase(8, 12);
     other.GetProduction().SetProduction(&rSecond, other.GetBaseEffects());
     CHECK(other.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(rSecond.GetBaseCost(), BaseEffects_t{other}, 50));
+          == ComputeProductionCost(rSecond.GetBaseCost(), BaseEffects_t{other}, 50));
 }
 
 TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
@@ -891,7 +891,7 @@ TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
     aiBase.GetProduction().SetProduction(&rAi, aiBase.GetBaseEffects());
     CHECK(game.pOther->GetMilitary().IsPrototype(rAi));
     CHECK(aiBase.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(rAi.GetBaseCost(), BaseEffects_t{aiBase}, 50));
+          == ComputeProductionCost(rAi.GetBaseCost(), BaseEffects_t{aiBase}, 50));
 }
 
 TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
@@ -911,7 +911,7 @@ TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 0));
+          == ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 0));
 }
 
 TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger",
@@ -933,7 +933,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 0));
+          == ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{base}, 0));
 }
 
 TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
@@ -948,7 +948,7 @@ TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
     first.GetProduction().SetProduction(&rDesign, first.GetBaseEffects());
     second.GetProduction().SetProduction(&rDesign, second.GetBaseEffects());
     const int standardCost =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{first}, 0);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{first}, 0);
     const int prototypeCost = first.GetMineralCost();
     REQUIRE(prototypeCost > standardCost);
 
@@ -985,7 +985,7 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
     laggard.GetProduction().SetProduction(&rDesign, laggard.GetBaseEffects());
     finisher.GetProduction().SetProduction(&rDesign, finisher.GetBaseEffects());
     const int standardCost =
-        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{laggard}, 0);
+        ComputeProductionCost(rDesign.GetBaseCost(), BaseEffects_t{laggard}, 0);
     const int prototypeCost = finisher.GetMineralCost();
     REQUIRE(prototypeCost > standardCost);
 
@@ -1074,7 +1074,7 @@ TEST_CASE("A facility never takes the prototype surcharge", "[production][protot
 
     base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
-          == ProductionCostCalculator::ComputeCost(pFacility->GetBaseCost(), BaseEffects_t{base}, 0));
+          == ComputeProductionCost(pFacility->GetBaseCost(), BaseEffects_t{base}, 0));
 }
 
 TEST_CASE("PostActionsProduction completes a funded queue without banking leftovers",

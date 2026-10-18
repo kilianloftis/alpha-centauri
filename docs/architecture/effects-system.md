@@ -819,14 +819,14 @@ grants fewer units and reports the real count rather than throwing.
   other base at level 2.
 - **Growth rating → growth rate**: the growth axis's levels map to `GrowthRate`
   `AddPercent` modifiers (`config/social_rating_effects.json`, ±10% per level), which
-  `GrowthCalculator::ComputeNutrientsRequired` resolves per base — so the SE Growth score
+  `ComputeNutrientsRequired` (`GrowthRules`) resolves per base — so the SE Growth score
   directly scales each base's growth threshold, both at turn end (`ApplyGrowth`) and in the
   UI (`GrowthDisplay` → `GetNutrientsRequired()`, which uses the same memoized
   `BuildBaseEffects_()` as turn resolution). The extreme
   levels emit `NearZeroGrowth` / `PopulationBoom` rule flags instead (see Known Gaps).
 - **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
   `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
-  `ProductionCostCalculator::ComputeCost` resolves from the base effect list
+  `ComputeProductionCost` (`ProductionRules`) resolves from the base effect list
   (`baseCost * CostMultiplier * (1 + surchargePercent/100 * PrototypeSurchargeScale)` when
   prototyping). Same seam as Growth: the rating table defines the gameplay effects; the
   calculator never sees the raw Industry score. Skunkworks zeros only the surcharge term via
@@ -1199,7 +1199,7 @@ selector pass won't compile against the raw pool.
 
 - **`NearZeroGrowth` / `PopulationBoom` rule flags are emitted but not consumed**: the growth
   rating's extreme levels (and the `population_boom` project) declare them, and they reach the
-  base pool, but `GrowthCalculator` doesn't check them yet — their gameplay rules are undefined
+  base pool, but `ComputeNutrientsRequired` doesn't check them yet — their gameplay rules are undefined
   (TODO at the resolve site).
 - **TileDefense vs unit Defense**: tile bonuses use `TileDefense`; `Unit::GetDefense()` /
   design stats remain unit armor. Combat multiplies unit Defense by

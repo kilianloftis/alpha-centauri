@@ -33,7 +33,7 @@ inline std::vector<EffectConfig_t> MakeDefaultGrowthEffects()
 
 struct GrowthConfig_t
 {
-    int nutrientsPerPop = 10;             // tank rows scale; see GrowthCalculator
+    int nutrientsPerPop = 10;             // tank rows scale; see ComputeNutrientsRequired
     int nutrientIntakePerCitizen = 2;     // subtracted from production to form net surplus
     std::vector<EffectConfig_t> effects = MakeDefaultGrowthEffects();
 };

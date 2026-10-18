@@ -1,4 +1,4 @@
-#include "game/production/ProductionCostCalculator.h"
+#include "game/production/ProductionRules.h"
 #include "game/production/ProductionManager.h"
 #include "game/production/ProductionApplyResult.h"
 #include "game/faction/Faction.h"
@@ -82,43 +82,43 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
 
     SECTION("no CostMultiplier effects is normal rate (base_cost)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{base}, 0) == 10);
+        CHECK(ComputeProductionCost(10, BaseEffects_t{base}, 0) == 10);
     }
 
     SECTION("negative CostMultiplier AddPercent reduces cost (Industry +)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, -10.0), 0) == 9);
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, -50.0), 0) == 5);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, -10.0), 0) == 9);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, -50.0), 0) == 5);
     }
 
     SECTION("positive CostMultiplier AddPercent raises cost (Industry -)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, 10.0), 0) == 11);
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, 30.0), 0) == 13);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, 10.0), 0) == 11);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, 30.0), 0) == 13);
     }
 
     SECTION("CostMultiplier that zeroes the cost still floors at 1")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, -100.0), 0) == 1);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, -100.0), 0) == 1);
     }
 
     SECTION("prototype surcharge is 50% more minerals and does not stack in the calculator")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{base}, 50) == 15);
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(base, pool, -20.0), 50) == 12);
+        CHECK(ComputeProductionCost(10, BaseEffects_t{base}, 50) == 15);
+        CHECK(ComputeProductionCost(10, WithCostPercent(base, pool, -20.0), 50) == 12);
     }
 
     SECTION("PrototypeSurchargeScale 0 cancels only the surcharge term")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithSurchargeScale(base, pool, 0.0), 50) == 10);
-        CHECK(ProductionCostCalculator::ComputeCost(
+        CHECK(ComputeProductionCost(10, WithSurchargeScale(base, pool, 0.0), 50) == 10);
+        CHECK(ComputeProductionCost(
                   10, WithCostAndSurchargeScale(base, pool, -20.0, 0.0), 50)
               == 8);
     }
 
     SECTION("PrototypeSurchargeScale default seed leaves the full surcharge")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithSurchargeScale(base, pool, 1.0), 50) == 15);
+        CHECK(ComputeProductionCost(10, WithSurchargeScale(base, pool, 1.0), 50) == 15);
     }
 }
 

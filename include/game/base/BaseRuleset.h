@@ -31,7 +31,7 @@ struct BaseRuleset_t
     const ProductionConfig_t& rProduction;
     const HurryProductionCalculator& rHurry;
     const ScrapRefundCalculator& rScrap;
-    PopCompositionCalculator& rComposition;
+    const PopCompositionCalculator& rComposition;
     const DroneCalculator& rDrones;
     const EcoDamageCalculator& rEcoDamage;
     const AtrocitiesConfig_t& rAtrocities;

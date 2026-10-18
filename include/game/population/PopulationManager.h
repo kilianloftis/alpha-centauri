@@ -39,7 +39,7 @@ public:
     PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                       const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                       const GrowthConfig_t& rGrowthConfig,
-                      PopCompositionCalculator& rCompositionCalculator,
+                      const PopCompositionCalculator& rCompositionCalculator,
                       const DroneCalculator& rDroneCalculator,
                       const ResearchManager& rResearchManager,
                       BaseManager& rBase,
@@ -242,7 +242,7 @@ private:
     // A pointer only because RebindResearch re-points it when the base changes owner.
     const ResearchManager* m_pResearch;
     const GrowthConfig_t& m_rGrowthConfig;
-    PopCompositionCalculator& m_rCompositionCalculator;
+    const PopCompositionCalculator& m_rCompositionCalculator;
     const DroneCalculator& m_rDroneCalculator;
     BaseManager& m_rBase;
     int m_nutrientStockpile = 0;

@@ -62,7 +62,6 @@ add_library(ac-core STATIC
     game/buildings/BuildingManager.cpp
     game/production/ProductionManager.cpp
     game/production/ProductionConfigParser.cpp
-    game/production/ProductionCostCalculator.cpp
     game/production/HurryProductionCalculator.cpp
     game/production/ScrapConfigParser.cpp
     game/production/ProductionRules.cpp
@@ -97,7 +96,7 @@ add_library(ac-core STATIC
     game/population/PopCompositionCalculator.cpp
     game/population/MoodLatch.cpp
     game/population/RiotLatch.cpp
-    game/population/GrowthCalculator.cpp
+    game/population/GrowthRules.cpp
     game/population/GoldenAgeLatch.cpp
     game/population/PopTypeAvailabilityCalculator.cpp
     game/stages/TurnProcessor.cpp

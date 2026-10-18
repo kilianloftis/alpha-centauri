@@ -1,7 +1,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/population/CompositionInputs.h"
 #include "game/base/BaseManager.h"
-#include "game/population/GrowthCalculator.h"
+#include "game/population/GrowthRules.h"
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/PopTypeAvailabilityCalculator.h"
 #include "game/population/PopTypeConfigParser.h"
@@ -20,7 +20,7 @@ namespace ac
 PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                                      const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                                      const GrowthConfig_t& rGrowthConfig,
-                                     PopCompositionCalculator& rCompositionCalculator,
+                                     const PopCompositionCalculator& rCompositionCalculator,
                                      const DroneCalculator& rDroneCalculator,
                                      const ResearchManager& rResearchManager,
                                      BaseManager& rBase,
@@ -242,7 +242,7 @@ int PopulationManager::GetCitizenNutrientIntake() const
 
 int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const
 {
-    return GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+    return ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
 }
 
 bool PopulationManager::WouldGrowThisTurn(int nutrientProduction,
@@ -254,7 +254,7 @@ bool PopulationManager::WouldGrowThisTurn(int nutrientProduction,
         return false;
     }
     const int required =
-        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
     return m_nutrientStockpile >= required;
 }
 
@@ -280,7 +280,7 @@ bool PopulationManager::CommitPendingGrowth(int nutrientProduction,
 void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects)
 {
     const int required =
-        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
     int net = nutrientProduction - GetCitizenNutrientIntake();
 
     if (m_nutrientStockpile >= required && net >= 0)
@@ -314,7 +314,7 @@ void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t&
         m_nutrientStockpile = 0;
     }
     const int requiredAfter =
-        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
     if (m_nutrientStockpile > requiredAfter)
     {
         m_nutrientStockpile = requiredAfter;

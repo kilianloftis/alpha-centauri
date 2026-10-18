@@ -8,6 +8,7 @@
 namespace ac
 {
 
+struct BaseEffects_t;
 struct ScrapQuote_t;
 
 // A priced scrap together with the sink that will receive it. Quoting builds this, and
@@ -26,5 +27,13 @@ struct ScrapPayout_t
 // Pair rQuote with destBaseId, zeroing the amount when the refund needs a base and none was
 // supplied. Throws if rQuote is unavailable or its refundType is not a creditable payout.
 ScrapPayout_t PlanScrapPayout(const ScrapQuote_t& rQuote, std::optional<BaseId_t> destBaseId);
+
+// baseCost * CostMultiplier * (1 + surchargePercent/100 * PrototypeSurchargeScale), at least 1.
+// surchargePercent is production.json's prototype mineral penalty (0 when not a prototype).
+// TODO: the surcharge multiplies CostMultiplier rather than adding to it, and the result
+// rounds half away from zero while the retool penalty next door documents floor rounding "so
+// the remainder favours the player". Both are guesses; the real stacking and rounding rules
+// are not recorded anywhere.
+int ComputeProductionCost(int baseCost, const BaseEffects_t& rBaseEffects, int surchargePercent);
 
 } // namespace ac

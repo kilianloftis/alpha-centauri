@@ -1,5 +1,5 @@
 #include "game/production/ProductionManager.h"
-#include "game/production/ProductionCostCalculator.h"
+#include "game/production/ProductionRules.h"
 #include "game/production/ProductionPauseGates.h"
 #include "game/base/BaseManager.h"
 #include "game/faction/Faction.h"
@@ -117,8 +117,7 @@ int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects, bool bP
         return 0;
     }
     const int surcharge = bPrototype ? m_rConfig.prototypeSurchargePercent : 0;
-    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects,
-                                                 surcharge);
+    return ComputeProductionCost(m_pCurrentItem->GetBaseCost(), rBaseEffects, surcharge);
 }
 
 int ProductionManager::GetMineralStockpile() const

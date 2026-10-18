@@ -3,7 +3,7 @@
 
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
-#include "game/population/GrowthCalculator.h"
+#include "game/population/GrowthRules.h"
 #include "game/population/GrowthConfigParser.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -34,7 +34,7 @@ TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently 
         Active(pool.StatMod(StatId_t::GrowthRate, -100.0, ModifierOp_t::AddPercent), "crush"),
     }};
 
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 3, effects)
+    CHECK(ComputeNutrientsRequired(config, 3, effects)
           == std::numeric_limits<int>::max());
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("Threshold at size 3 uses size+1 rows", "[population][growth]")
     BaseManager& base = fixture.MakeBase(8, 4);
     GrowthConfig_t config;
     config.nutrientsPerPop = 10;
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 3, BaseEffects_t{base}) == 40);
+    CHECK(ComputeNutrientsRequired(config, 3, BaseEffects_t{base}) == 40);
 }
 
 TEST_CASE("Losing a pop announces it while it is still valid", "[population][growth]")

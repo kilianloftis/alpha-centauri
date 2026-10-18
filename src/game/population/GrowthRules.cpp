@@ -1,13 +1,16 @@
-#include "game/population/GrowthCalculator.h"
-#include "game/population/GrowthConfigParser.h"
+#include "game/population/GrowthRules.h"
+
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/population/GrowthConfigParser.h"
+
 #include <limits>
 
 namespace ac
 {
 
-int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize, const BaseEffects_t& rBaseEffects)
+int ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize,
+                             const BaseEffects_t& rBaseEffects)
 {
     // GrowthRate is RawScaled (see KindFor): modifiers scale the 100% baseline seed.
     // TODO: consume RuleFlagId_t::NearZeroGrowth / PopulationBoom (emitted by the growth

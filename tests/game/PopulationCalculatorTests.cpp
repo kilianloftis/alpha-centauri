@@ -9,7 +9,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/population/GoldenAgeLatch.h"
-#include "game/population/GrowthCalculator.h"
+#include "game/population/GrowthRules.h"
 #include "game/population/DroneCalculator.h"
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/GrowthConfigParser.h"
@@ -371,12 +371,12 @@ TEST_CASE("Growth threshold saturates instead of overflowing", "[population][gro
     GrowthConfig_t config;
     config.nutrientsPerPop = 1000000;
 
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 1000000, noEffects)
+    CHECK(ComputeNutrientsRequired(config, 1000000, noEffects)
           == std::numeric_limits<int>::max());
 
     GrowthConfig_t normal;
     normal.nutrientsPerPop = 10;
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(normal, 3, noEffects) == 40);
+    CHECK(ComputeNutrientsRequired(normal, 3, noEffects) == 40);
 }
 
 namespace

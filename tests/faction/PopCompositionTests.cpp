@@ -27,7 +27,7 @@
 #include "game/population/PopTypeRegistry.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/population/GrowthCalculator.h"
+#include "game/population/GrowthRules.h"
 #include "lib/LuaRuntime.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -386,7 +386,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
 
     GrowthConfig_t growthConfig;
     growthConfig.nutrientsPerPop = 10;
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 39);
+    CHECK(ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 39);
 
     pops.AddPop("Worker");
     pops.ForecastMood();
@@ -395,7 +395,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
 
     CHECK(resolveEcon(4.0) == Approx(4.0));
     CHECK(resolveGrowthRate() == Approx(100.0));
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 40);
+    CHECK(ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 40);
 }
 
 TEST_CASE("Composition seats drone pressure into the pool", "[population][composition]")
