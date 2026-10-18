@@ -75,29 +75,10 @@ void ProductionManager::RebindProductionItem(const IConstructable* pItem)
 void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem,
                                             const BaseEffects_t& rBaseEffects)
 {
-    // No turn original yet
-    if (!m_pTurnOriginalItem)
-    {
-        return;
-    }
-    // Free to go back to what the base was building when the turn handed over.
-    if (pNewItem == m_pTurnOriginalItem)
-    {
-        return;
-    }
-    if (m_mineralStockpile <= m_rConfig.retoolPenaltyThreshold)
-    {
-        return;
-    }
-
-    // Integer division rounds the loss down, so the remainder favours the player. Scale
-    // afterward so RetoolPenaltyScale 0 (Skunkworks) cancels the forfeit without changing
-    // threshold / percent semantics when scale is 1.
-    const int baseForfeit = m_mineralStockpile * m_rConfig.retoolPenaltyPercent / 100;
-    const double scale = ResolveBaseStat(rBaseEffects, StatId_t::RetoolPenaltyScale,
-                                         SeedFor(StatId_t::RetoolPenaltyScale));
-    const int forfeited = std::max(0, static_cast<int>(std::lround(baseForfeit * scale)));
-    m_mineralStockpile -= forfeited;
+    const bool bHasTurnOriginal = m_pTurnOriginalItem != nullptr;
+    const bool bReturning = pNewItem == m_pTurnOriginalItem;
+    m_mineralStockpile -= RetoolForfeit(m_mineralStockpile, bHasTurnOriginal, bReturning,
+                                        m_rConfig, rBaseEffects);
 }
 
 const IConstructable* ProductionManager::GetCurrentProduction() const
@@ -108,16 +89,6 @@ const IConstructable* ProductionManager::GetCurrentProduction() const
 bool ProductionManager::HasProduction() const
 {
     return m_pCurrentItem != nullptr;
-}
-
-int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const
-{
-    if (!m_pCurrentItem || m_pCurrentItem->IsStockpile())
-    {
-        return 0;
-    }
-    const int surcharge = bPrototype ? m_rConfig.prototypeSurchargePercent : 0;
-    return ComputeProductionCost(m_pCurrentItem->GetBaseCost(), rBaseEffects, surcharge);
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -147,14 +118,12 @@ void ProductionManager::BankProduction(int minerals)
 
 ProductionCompletionProbe_t ProductionManager::BuildCompletionProbe_() const
 {
-    const bool bPrototype = IsCurrentPrototype();
-    const BaseEffects_t& rEffects = m_rBase.GetBaseEffects();
     ProductionCompletionProbe_t probe;
     probe.hasProduction = HasProduction();
-    probe.productionDisabled = m_rBase.IsProductionDisabled();
-    probe.readyToComplete = IsReadyToComplete(rEffects, bPrototype);
-    probe.wouldAbandonBase = m_rBase.WouldCompletionAbandonBase();
-    probe.isPrototype = bPrototype;
+    probe.productionDisabled = !CanCompleteProduction(m_rBase);
+    probe.readyToComplete = IsReadyToComplete();
+    probe.wouldAbandonBase = CompletionAbandonsBase(m_rBase);
+    probe.isPrototype = IsCurrentPrototype();
     return probe;
 }
 
@@ -170,7 +139,7 @@ ProductionManager::FinishReady_(const ProductionCompletion::EvaluateResult_t& re
     const std::string completedName = rItem.GetName();
     std::vector<PauseOnEventId_t> events =
         CollectProductionPauseGates(rItem, ready.isPrototype);
-    const std::string completedId = CompleteProduction_(ready.isPrototype);
+    const std::string completedId = CompleteProduction_();
     return ProductionApplyResult_t{ProductionApplyKind_t::Completed, completedId,
                                    std::move(events), completedName};
 }
@@ -222,23 +191,23 @@ ProductionApplyResult_t ProductionManager::TryCompleteReady(bool bNewTurn)
         m_completion.TryCompleteReady(BuildCompletionProbe_(), bNewTurn));
 }
 
-bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const
+bool ProductionManager::IsReadyToComplete() const
 {
     return HasProduction() && !m_pCurrentItem->IsStockpile()
-        && m_mineralStockpile >= GetMineralCost(rBaseEffects, bPrototype);
+        && m_mineralStockpile >= ItemMineralCost(m_rBase, *m_pCurrentItem, m_rConfig);
 }
 
-std::string ProductionManager::CompleteProduction_(bool bPrototype)
+std::string ProductionManager::CompleteProduction_()
 {
     if (!HasProduction())
     {
         return std::string();
     }
 
-    // Cost first: ResetProduction_ replaces the item, after which GetMineralCost is 0.
-    const int cost = GetMineralCost(m_rBase.GetBaseEffects(), bPrototype);
+    // Cost first: ResetProduction_ replaces the item.
+    const int cost = ItemMineralCost(m_rBase, *m_pCurrentItem, m_rConfig);
     const int leftover = std::max(0, m_mineralStockpile - cost);
-    m_mineralStockpile = std::min(leftover, m_rConfig.retoolPenaltyThreshold);
+    m_mineralStockpile = OverflowCarried(leftover, m_rConfig);
 
     std::string completed = m_pCurrentItem->GetId();
     ResetProduction_();
@@ -262,10 +231,10 @@ bool ProductionManager::IsCompletionBlocked() const
 bool ProductionManager::IsCurrentPrototype() const
 {
     // Same test ClassifyCompletedItem uses. Resolving the design by id instead would scan
-    // every design of the faction on a call GetMineralCost makes from render paths, and would
-    // mistake a building for a unit if the two ever shared an id.
+    // every design of the faction on every render-path cost query, and would mistake a
+    // building for a unit if the two ever shared an id.
     const IDesign* pDesign = dynamic_cast<const IDesign*>(m_pCurrentItem);
-    return pDesign && m_rBase.GetFaction().GetMilitary().IsPrototype(*pDesign);
+    return pDesign && IsPrototype(m_rBase.GetFaction(), *pDesign);
 }
 
 std::string ProductionManager::CompletePending()

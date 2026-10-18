@@ -16,6 +16,7 @@
 #include "game/base/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
+#include "game/base/BaseRules.h"
 #include "game/base/BaseRuleset.h"
 #include "game/production/ScrapRefundCalculator.h"
 #include "game/production/ProductionRules.h"
@@ -650,29 +651,6 @@ void Faction::TransferUnitTo(UnitId_t unitId, Faction& rReceiver)
     }
 }
 
-std::optional<BaseId_t> Faction::ScrapDestinationFor_(const Tile& rTile) const
-{
-    if (m_rWorldMap.GetTerritory().GetOwner(rTile) != m_factionId)
-    {
-        return std::nullopt;
-    }
-
-    std::optional<BaseId_t> bestId;
-    int bestDist = std::numeric_limits<int>::max();
-    const int mapWidth = m_rWorldMap.GetWidth();
-    for (const BaseManager& rBase : Bases())
-    {
-        const int dist = TabletopDiagonalDistance(rTile, rBase.GetTile(), mapWidth);
-        const BaseId_t id = rBase.GetBaseId();
-        if (!bestId || dist < bestDist || (dist == bestDist && id < *bestId))
-        {
-            bestDist = dist;
-            bestId = id;
-        }
-    }
-    return bestId;
-}
-
 std::optional<ScrapPayout_t> Faction::QuoteScrapBuilding(const BaseManager& rBase,
                                                         const BuildingId_t& buildingId) const
 {
@@ -786,7 +764,8 @@ std::optional<ScrapPayout_t> Faction::QuoteScrapUnit(const Unit& rUnit) const
     {
         return std::nullopt;
     }
-    return PlanScrapPayout(quote, ScrapDestinationFor_(rUnit.GetTile()));
+    const std::optional<BaseId_t> destination = ScrapRefundBase(*this, rUnit.GetTile());
+    return PlanScrapPayout(quote, destination);
 }
 
 int Faction::ScrapUnit(Unit& rUnit)
@@ -880,7 +859,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     // k_DefaultInefficiencyHqDistance (16) when GetHeadquarters() is null, so a first base
     // without the flag loses half its energy before IncomeCollection — credits fall even as
     // tile production rises. Transfers use AddBase, not CreateBase, and do not grant.
-    if (GetHeadquarters() == nullptr
+    if (GrantsHeadquarters(*this)
         && m_rDataContext.buildingRegistry->Find("Headquarters")
         && pRawBase->GetBuildingManager().CanAddBuilding("Headquarters"))
     {

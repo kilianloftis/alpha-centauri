@@ -8,6 +8,7 @@ namespace ac
 {
 
 class BaseManager;
+class BuildingManager;
 class Faction;
 struct OrbitalAttackEffect_t;
 
@@ -23,6 +24,10 @@ struct OrbitalAttackerOption_t
     int chance = 0;
     int cooldownTurns = 0;
 };
+
+// Uniqueness: a building that is not allowMultiple once per base, and a secret project only
+// while no base anywhere holds it and it was never destroyed.
+bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding);
 
 // Facilities that may be randomly destroyed under the given filters.
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,

@@ -195,10 +195,6 @@ public:
     // this base has also constructed, so the UI can mark those copies.
     std::vector<const BuildingConfig_t*> GetGrantedBuildings() const;
 
-    // Items this base can currently queue: available buildings, available stockpile items,
-    // and all saved unit designs. "Constructable" in the build-menu sense — a stockpile is
-    // selectable but never completes into a facility.
-    std::vector<const IConstructable*> GetConstructable() const;
 
     // Production subsystem.
     ProductionManager& GetProduction();
@@ -220,9 +216,6 @@ public:
     // A deferred completion is a different thing entirely — see ProductionManager::IsCompletionBlocked.
     bool IsProductionDisabled() const;
 
-    // True when finishing the queued item would take this base to size 0 or below. The one
-    // place the abandonment rule is stated; ProductionCompletion asks and does not care why.
-    bool WouldCompletionAbandonBase() const;
 
     // True when ApplyProduction returned AwaitingConfirmation and the player has not yet chosen
     // CompletePendingProduction or DeferProductionCompletion.
@@ -369,6 +362,7 @@ private:
     const SocialRatingRegistry& m_rSocialRatings;
     const HurryProductionCalculator& m_rHurryCalculator;
     const ScrapRefundCalculator& m_rScrapCalculator;
+    const ProductionConfig_t& m_rProductionConfig;
     // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
     // because it is rebindable; never null.
     // Declaration order is construction order: resources depends on worker assignments

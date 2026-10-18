@@ -46,21 +46,9 @@ const IDesign* Military::GetDesign(const std::string& designId) const
     return nullptr;
 }
 
-bool Military::IsPrototype(const IDesign& rDesign) const
+bool Military::HasBuiltComponent(const std::string& componentId) const
 {
-    const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(&rDesign);
-    if (!pUnitDesign)
-    {
-        return false;
-    }
-    for (const UnitComponentConfig_t* pComp : pUnitDesign->GetComponents())
-    {
-        if (pComp && !m_builtComponentIds.contains(pComp->id))
-        {
-            return true;
-        }
-    }
-    return false;
+    return m_builtComponentIds.contains(componentId);
 }
 
 void Military::RecordBuiltComponents(const IDesign& rDesign)

@@ -27,6 +27,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionManager.h"
+#include "game/production/ProductionRules.h"
 #include "game/economy/ResourceManager.h"
 #include "game/map/WorldMap.h"
 #include "game/production/StockpileConfig.h"
@@ -165,7 +166,7 @@ TEST_CASE("A new base queues the default stockpile", "[production][stockpile]")
     REQUIRE(pStockpile != nullptr);
     CHECK(base.GetProduction().GetCurrentProduction() == pStockpile);
     CHECK(base.GetMineralCost() == 0);
-    CHECK_FALSE(base.GetProduction().IsReadyToComplete(base.GetBaseEffects(), false));
+    CHECK_FALSE(base.GetProduction().IsReadyToComplete());
 }
 
 TEST_CASE("Clearing production falls back to the default stockpile", "[production][stockpile]")
@@ -225,7 +226,7 @@ TEST_CASE("Stockpile Energy converts this turn's minerals and never completes",
     CHECK(applied.kind == ProductionApplyKind_t::InProgress);
     CHECK(base.GetProduction().GetCurrentProduction() == pStockpile);
     CHECK(base.GetProduction().GetMineralStockpile() == 0);
-    CHECK_FALSE(base.GetProduction().IsReadyToComplete(base.GetBaseEffects(), false));
+    CHECK_FALSE(base.GetProduction().IsReadyToComplete());
 }
 
 TEST_CASE("Stockpile converts prior production-stockpile leftovers with this turn's bank",
@@ -337,7 +338,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
     REQUIRE(pStockpile != nullptr);
 
-    const std::vector<const IConstructable*> available = pBase->GetConstructable();
+    const std::vector<const IConstructable*> available = ConstructableItems(*pBase);
     CHECK(std::find(available.begin(), available.end(), pStockpile) != available.end());
 }
 

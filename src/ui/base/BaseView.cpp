@@ -305,7 +305,8 @@ void BaseView::HandleProductionDisplayClicked_()
     }
 
     std::vector<PopupChoice_t> choices;
-    for (const IConstructable* pItem : m_rBase.GetConstructable())
+    const std::vector<const IConstructable*> constructable = ConstructableItems(m_rBase);
+    for (const IConstructable* pItem : constructable)
     {
         PopupChoice_t choice;
         choice.label = pItem->GetName();

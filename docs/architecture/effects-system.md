@@ -333,7 +333,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### UnitFilter_t
 - **Purpose**: Restricts which units an effect applies to in `CollectLiveUnitEffects` (context-free identity predicates, not combat situations).
-- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `Military::IsPrototype` when the unit was produced (`pProducedAt` set — "first one you built") before the faction's ledger records the design. It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
+- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `IsPrototype` (`ProductionRules`) when the unit was produced (`pProducedAt` set — "first one you built") before the faction's ledger records the design. It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.

@@ -31,7 +31,6 @@
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/TriggeredEffectRules.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
@@ -111,6 +110,7 @@ BaseManager::BaseManager(
     , m_rSocialRatings(rRules.rSocialRatings)
     , m_rHurryCalculator(rRules.rHurry)
     , m_rScrapCalculator(rRules.rScrap)
+    , m_rProductionConfig(rRules.rProduction)
     , m_pPopulation(std::make_unique<PopulationManager>(
           rRules.rPopTypes, rRules.rPopTypeAvailability, rRules.rGrowth, rRules.rComposition,
           rRules.rDrones, rFaction.GetResearch(), *this,
@@ -362,7 +362,7 @@ int BaseManager::GetMineralsForProduction() const
 std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem || pItem->IsStockpile() || IsProductionDisabled())
+    if (!pItem || pItem->IsStockpile() || !CanCompleteProduction(*this))
     {
         return std::nullopt;
     }
@@ -451,32 +451,6 @@ std::vector<const BuildingConfig_t*> BaseManager::GetGrantedBuildings() const
     return granted;
 }
 
-std::vector<const IConstructable*> BaseManager::GetConstructable() const
-{
-    std::vector<const IConstructable*> available;
-    for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildingsAvailableForConstruction())
-    {
-        available.push_back(pBuilding);
-    }
-    const std::vector<std::string>& rDiscoveredTechs =
-        m_pFaction->GetResearch().GetDiscoveredTechs();
-    for (const StockpileConfig_t& rStockpile : m_rStockpileRegistry.GetAll())
-    {
-        if (rStockpile.IsAvailable(rDiscoveredTechs))
-        {
-            available.push_back(&rStockpile);
-        }
-    }
-    for (const std::unique_ptr<IDesign>& pDesign : m_pFaction->GetMilitary().GetDesigns())
-    {
-        if (const auto* pItem = dynamic_cast<const IConstructable*>(pDesign.get()))
-        {
-            available.push_back(pItem);
-        }
-    }
-    return available;
-}
-
 ProductionManager& BaseManager::GetProduction()
 {
     return *m_pProduction;
@@ -491,7 +465,7 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
 {
     // Riot: do not ConsumeMinerals / BankProduction. Mid-turn TryCompleteReady still sees
     // productionDisabled via the completion probe — both gates are required.
-    if (IsProductionDisabled())
+    if (!CanBankProduction(*this))
     {
         return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
@@ -507,42 +481,6 @@ ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
 bool BaseManager::IsProductionDisabled() const
 {
     return ResolveFlag(*this, RuleFlagId_t::DisableProduction);
-}
-
-bool BaseManager::WouldCompletionAbandonBase() const
-{
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem)
-    {
-        return false;
-    }
-
-    // Judge the pop cost against the size the base ends the turn at. BaseGrowth runs after
-    // BaseProduction, so both pending pop events have to be predicted here or the answer is
-    // one stage stale — and a base that starves after paying a pop cost is razed without ever
-    // having been asked. The two gates are mutually exclusive.
-    int size = m_pPopulation->GetSize();
-    if (m_pPopulation->WouldGrowThisTurn(m_pResources->GetNutrientBank(), m_effects.Get()))
-    {
-        ++size;
-    }
-    else if (m_pPopulation->WouldStarveThisTurn(m_pResources->GetNutrientBank(), m_effects.Get()))
-    {
-        // Floored at 1: the question is whether *this item* empties the base. A base already
-        // starving out from size 1 is lost whatever it builds, and predicting size 0 here would
-        // make every item — pop cost or not — answer yes.
-        size = std::max(1, size - 1);
-    }
-    if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
-    {
-        return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size) <= 0;
-    }
-    if (const auto* pDesign =
-        dynamic_cast<const UnitDesign*>(m_pFaction->GetMilitary().GetDesign(pItem->GetId())))
-    {
-        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
-    }
-    return false;
 }
 
 bool BaseManager::HasPendingProductionConfirmation() const
@@ -562,7 +500,12 @@ void BaseManager::DeferProductionCompletion()
 
 int BaseManager::GetMineralCost() const
 {
-    return m_pProduction->GetMineralCost(m_effects.Get(), m_pProduction->IsCurrentPrototype());
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        return 0;
+    }
+    return ItemMineralCost(*this, *pItem, m_rProductionConfig);
 }
 
 HurryInputs_t BaseManager::BuildHurryInputs_(const IConstructable& rItem) const
@@ -590,7 +533,7 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
                                     + std::to_string(energyCredits) + " must be positive");
     }
 
-    if (IsProductionDisabled())
+    if (!CanHurry(*this))
     {
         throw std::runtime_error("BaseManager::HurryProduction: production is disabled at this "
                                  "base");
@@ -631,7 +574,7 @@ std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding_(const BuildingId_t
         {
             continue;
         }
-        if (pBuilding->bIsSecretProject)
+        if (!CanScrapBuilding(*pBuilding))
         {
             return std::nullopt;
         }

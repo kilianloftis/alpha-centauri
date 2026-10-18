@@ -1,13 +1,37 @@
 #include "game/production/ProductionRules.h"
 
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/economy/ResourceManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TriggeredEffectRules.h"
+#include "game/faction/Faction.h"
+#include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
+#include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
+#include "game/population/PopulationManager.h"
+#include "game/production/ProductionConfigParser.h"
+#include "game/production/ProductionManager.h"
 #include "game/production/ScrapConfig.h"
 #include "game/production/ScrapRefundCalculator.h"
+#include "game/production/StockpileConfig.h"
+#include "game/production/StockpileRegistry.h"
+#include "game/research/ResearchManager.h"
+#include "game/units/IDesign.h"
+#include "game/units/Military.h"
+#include "game/units/UnitDesign.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <memory>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -53,6 +77,167 @@ int ComputeProductionCost(int baseCost, const BaseEffects_t& rBaseEffects, int s
     }
 
     return std::max(1, static_cast<int>(std::lround(baseCost * multiplier)));
+}
+
+int RetoolForfeit(int mineralStockpile, bool bHasTurnOriginal, bool bReturningToTurnOriginal,
+                  const ProductionConfig_t& rConfig, const BaseEffects_t& rBaseEffects)
+{
+    if (!bHasTurnOriginal || bReturningToTurnOriginal)
+    {
+        return 0;
+    }
+    if (mineralStockpile <= rConfig.retoolPenaltyThreshold)
+    {
+        return 0;
+    }
+
+    // Integer division rounds the loss down, so the remainder favours the player. Scale
+    // afterward so RetoolPenaltyScale 0 (Skunkworks) cancels the forfeit.
+    const int baseForfeit = mineralStockpile * rConfig.retoolPenaltyPercent / 100;
+    const double scale = ResolveBaseStat(rBaseEffects, StatId_t::RetoolPenaltyScale,
+                                         SeedFor(StatId_t::RetoolPenaltyScale));
+    const long forfeited = std::lround(baseForfeit * scale);
+    return std::max(0, static_cast<int>(forfeited));
+}
+
+int OverflowCarried(int leftover, const ProductionConfig_t& rConfig)
+{
+    return std::min(leftover, rConfig.retoolPenaltyThreshold);
+}
+
+int ItemMineralCost(const BaseManager& rBase, const IConstructable& rItem,
+                    const ProductionConfig_t& rConfig)
+{
+    if (rItem.IsStockpile())
+    {
+        return 0;
+    }
+    const auto* pDesign = dynamic_cast<const IDesign*>(&rItem);
+    const bool bPrototype = pDesign && IsPrototype(rBase.GetFaction(), *pDesign);
+    const int surcharge = bPrototype ? rConfig.prototypeSurchargePercent : 0;
+    return ComputeProductionCost(rItem.GetBaseCost(), rBase.GetBaseEffects(), surcharge);
+}
+
+bool IsPrototype(const Faction& rFaction, const IDesign& rDesign)
+{
+    const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(&rDesign);
+    if (!pUnitDesign)
+    {
+        return false;
+    }
+    const Military& rMilitary = rFaction.GetMilitary();
+    for (const UnitComponentConfig_t* pComp : pUnitDesign->GetComponents())
+    {
+        if (pComp && !rMilitary.HasBuiltComponent(pComp->id))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CanBankProduction(const BaseManager& rBase)
+{
+    return !rBase.IsProductionDisabled();
+}
+
+bool CanCompleteProduction(const BaseManager& rBase)
+{
+    return !rBase.IsProductionDisabled();
+}
+
+bool CanHurry(const BaseManager& rBase)
+{
+    return !rBase.IsProductionDisabled();
+}
+
+bool CanScrapBuilding(const BuildingConfig_t& rBuilding)
+{
+    return !rBuilding.bIsSecretProject;
+}
+
+std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase)
+{
+    std::vector<const IConstructable*> available;
+    const BuildingManager& rBuildings = rBase.GetBuildingManager();
+    for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildingsAvailableForConstruction())
+    {
+        available.push_back(pBuilding);
+    }
+    const Faction& rFaction = rBase.GetFaction();
+    const std::vector<std::string>& rDiscoveredTechs = rFaction.GetResearch().GetDiscoveredTechs();
+    for (const StockpileConfig_t& rStockpile : rBase.GetStockpileRegistry().GetAll())
+    {
+        if (rStockpile.IsAvailable(rDiscoveredTechs))
+        {
+            available.push_back(&rStockpile);
+        }
+    }
+    for (const std::unique_ptr<IDesign>& pDesign : rFaction.GetMilitary().GetDesigns())
+    {
+        if (const auto* pItem = dynamic_cast<const IConstructable*>(pDesign.get()))
+        {
+            available.push_back(pItem);
+        }
+    }
+    return available;
+}
+
+bool CompletionAbandonsBase(const BaseManager& rBase)
+{
+    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
+    if (!pItem)
+    {
+        return false;
+    }
+
+    const PopulationManager& rPopulation = rBase.GetPopulation();
+    const int nutrients = rBase.GetResources().GetNutrientBank();
+    const BaseEffects_t& rEffects = rBase.GetBaseEffects();
+    int size = rPopulation.GetSize();
+    if (rPopulation.WouldGrowThisTurn(nutrients, rEffects))
+    {
+        ++size;
+    }
+    else if (rPopulation.WouldStarveThisTurn(nutrients, rEffects))
+    {
+        // Floored at 1: the question is whether this item empties the base. A base already
+        // starving out from size 1 is lost whatever it builds.
+        size = std::max(1, size - 1);
+    }
+    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pItem))
+    {
+        return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size) <= 0;
+    }
+    if (const auto* pDesign = dynamic_cast<const UnitDesign*>(pItem))
+    {
+        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
+    }
+    return false;
+}
+
+std::optional<BaseId_t> ScrapRefundBase(const Faction& rFaction, const Tile& rTile)
+{
+    const WorldMap& rWorldMap = rFaction.GetWorldMap();
+    if (rWorldMap.GetTerritory().GetOwner(rTile) != rFaction.GetFactionId())
+    {
+        return std::nullopt;
+    }
+
+    std::optional<BaseId_t> bestId;
+    int bestDist = std::numeric_limits<int>::max();
+    const int mapWidth = rWorldMap.GetWidth();
+    for (const BaseManager& rBase : rFaction.Bases())
+    {
+        const int dist = TabletopDiagonalDistance(rTile, rBase.GetTile(), mapWidth);
+        const BaseId_t id = rBase.GetBaseId();
+        if (!bestId || dist < bestDist || (dist == bestDist && id < *bestId))
+        {
+            bestDist = dist;
+            bestId = id;
+        }
+    }
+    return bestId;
 }
 
 } // namespace ac

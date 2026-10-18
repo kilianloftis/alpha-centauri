@@ -21,9 +21,7 @@ public:
     const std::vector<std::unique_ptr<IDesign>>& GetDesigns() const;
     const IDesign* GetDesign(const std::string& designId) const;
 
-    // True when any filled component on a UnitDesign has never been fielded by this faction.
-    // NativeDesign is never a prototype. Several unknown components still count as one prototype.
-    bool IsPrototype(const IDesign& rDesign) const;
+    bool HasBuiltComponent(const std::string& componentId) const;
 
     // Mark every filled component on a UnitDesign as fielded. No-op for NativeDesign.
     // Idempotent. Called from UnitManager::CreateUnit.

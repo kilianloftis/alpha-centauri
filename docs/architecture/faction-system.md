@@ -224,10 +224,10 @@ Caller contract: the faction must have been constructed against the session's `W
   prototypes.
 - **Prototype ledger**: `RecordBuiltComponents` marks every filled component of a design as
   fielded; `UnitManager::CreateUnit` calls it for *every* unit the faction gains, so starting
-  units, produced units and conquest spawns all share one ledger. `IsPrototype(design)` is true
-  while any filled component is still unfielded — several unknown components on one design are
-  still a single prototype.
-- **Two consumers, one question**: `BaseManager::IsCurrentProductionPrototype_` asks it for the
+  units, produced units and conquest spawns all share one ledger. `IsPrototype(faction, design)`
+  (`ProductionRules`) is true while any filled component is still unfielded — several unknown
+  components on one design are still a single prototype.
+- **Two consumers, one question**: `ItemMineralCost` (`ProductionRules`) asks it for the
   mineral surcharge (`production.json` `prototype_surcharge_percent`, scaled by base
   `PrototypeSurchargeScale` so Skunkworks can zero the extra without touching XP), and `Unit`'s
   constructor asks it once — only when `pProducedAt` is set ("first one you built"; see

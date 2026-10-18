@@ -68,6 +68,12 @@ public:
     // Bumped on every building mutation; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
+    // Null outside a GameState.
+    const SecretProjectAvailabilityRules* GetSecretProjectAvailability() const
+    {
+        return m_pSecretProjectCalculator;
+    }
+
     // Ownership transfer (BaseManager::RebindFaction): tech-gated construction availability
     // must read the new owner's discovered techs from the next
     // GetBuildingsAvailableForConstruction call.

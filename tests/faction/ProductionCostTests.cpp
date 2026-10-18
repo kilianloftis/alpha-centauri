@@ -3,6 +3,7 @@
 #include "game/production/ProductionApplyResult.h"
 #include "game/faction/Faction.h"
 #include "game/production/IConstructable.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 
@@ -131,16 +132,16 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
     production.SetProduction(&item, BaseEffects_t{base});
 
     actest::EffectPool pool;
-    CHECK(production.GetMineralCost(BaseEffects_t{base}, false) == 10);
-    CHECK(production.GetMineralCost(WithCostPercent(base, pool, -20.0), false) == 8);
+    CHECK(ItemMineralCost(base, item, k_TestConfig) == 10);
+    CHECK(ComputeProductionCost(item.GetBaseCost(), WithCostPercent(base, pool, -20.0), 0) == 8);
 
     production.BankProduction(5);
-    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{base}, false));
+    CHECK_FALSE(production.IsReadyToComplete());
     CHECK(production.GetMineralStockpile() == 5);
     CHECK(production.HasProduction());
 
     production.BankProduction(5);
-    REQUIRE(production.IsReadyToComplete(BaseEffects_t{base}, false));
+    REQUIRE(production.IsReadyToComplete());
     const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
     REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == "stub_item");
@@ -167,12 +168,12 @@ TEST_CASE("A stockpile item has no mineral cost and is never ready",
     production.SetProduction(&item, BaseEffects_t{base});
     production.SetMineralStockpile(100);
 
-    CHECK(production.GetMineralCost(BaseEffects_t{base}, false) == 0);
-    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{base}, false));
+    CHECK(ItemMineralCost(base, item, k_TestConfig) == 0);
+    CHECK_FALSE(production.IsReadyToComplete());
 
     production.BankProduction(10);
     CHECK(production.GetMineralStockpile() == 110);
-    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{base}, false));
+    CHECK_FALSE(production.IsReadyToComplete());
 }
 
 // Retooling. Switching away from what the base started the turn on forfeits half the minerals
@@ -389,7 +390,7 @@ TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent
     item.baseCost = 10;
     ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&item, base.GetBaseEffects());
-    REQUIRE(production.GetMineralCost(base.GetBaseEffects(), false) == 8);
+    REQUIRE(ItemMineralCost(base, item, k_TestConfig) == 8);
     production.SetMineralStockpile(12);
 
     const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
@@ -424,4 +425,31 @@ TEST_CASE("Completion leftover on the next item is a free retool", "[production]
     production.SetProduction(&playerPick, BaseEffects_t{base});
     CHECK(production.GetCurrentProduction() == &playerPick);
     CHECK(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
+}
+
+TEST_CASE("RetoolForfeit charges only a real retool above the threshold", "[production][retool]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 8);
+    const BaseEffects_t effects{base};
+    // Defaults: threshold 10, half forfeited, rounded down.
+    CHECK(RetoolForfeit(41, true, false, k_TestConfig, effects) == 20);
+    CHECK(RetoolForfeit(10, true, false, k_TestConfig, effects) == 0);
+    CHECK(RetoolForfeit(41, true, true, k_TestConfig, effects) == 0);
+    CHECK(RetoolForfeit(41, false, false, k_TestConfig, effects) == 0);
+}
+
+TEST_CASE("OverflowCarried keeps leftover minerals up to the retool threshold",
+          "[production][retool]")
+{
+    CHECK(OverflowCarried(4, k_TestConfig) == 4);
+    CHECK(OverflowCarried(30, k_TestConfig) == k_TestConfig.retoolPenaltyThreshold);
+}
+
+TEST_CASE("Secret projects cannot be scrapped", "[production][scrap]")
+{
+    BuildingConfig_t facility;
+    CHECK(CanScrapBuilding(facility));
+    facility.bIsSecretProject = true;
+    CHECK_FALSE(CanScrapBuilding(facility));
 }

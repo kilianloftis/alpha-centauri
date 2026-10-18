@@ -469,12 +469,6 @@ private:
     // Drop every deploy record for baseId (base destroyed: razed on capture).
     void DropBuildingDeploys_(BaseId_t baseId);
 
-    // Base that receives a unit's base-destined scrap refund on rTile: the closest live base
-    // by TabletopDiagonalDistance (horizontal wrap), then lower BaseId. Empty when rTile is
-    // outside this faction's territory or the faction holds no bases.
-    // TODO: SMAC's nearest-base metric for unit disband is not recorded.
-    std::optional<BaseId_t> ScrapDestinationFor_(const Tile& rTile) const;
-
     // ASAT / intercept deploy cooldowns, keyed by (baseId, buildingId) — the base attribution
     // is the calling site's best-effort pick of "a base holding a copy," not a tracked
     // per-instance id (see DeployBuilding). A copy is unavailable while

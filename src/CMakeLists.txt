@@ -80,6 +80,7 @@ add_library(ac-core STATIC
     game/base/BaseEffectsCache.cpp
     game/buildings/BuildingMutations.cpp
     game/base/BaseMoodEffects.cpp
+    game/base/BaseRules.cpp
     game/base/BaseRuleset.cpp
     game/production/ProductionCompletion.cpp
     game/production/ProductionPauseGates.cpp

@@ -1,5 +1,6 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/research/ResearchManager.h"
 #include <algorithm>
@@ -29,21 +30,7 @@ void BuildingManager::RebindResearch(const ResearchManager& rResearch)
 bool BuildingManager::CanAddBuilding(const BuildingId_t& buildingId) const
 {
     const BuildingConfig_t& rConfig = m_rRegistry.Get(buildingId);
-    if (!rConfig.allowMultiple && DoesBuildingExist_(buildingId))
-    {
-        return false;
-    }
-    if (rConfig.bIsSecretProject)
-    {
-        if (!m_pSecretProjectCalculator)
-        {
-            throw std::runtime_error(
-                "BuildingManager::CanAddBuilding: '" + buildingId + "' is a secret project, but "
-                "this base has no SecretProjectAvailabilityRules to check uniqueness");
-        }
-        return !m_pSecretProjectCalculator->IsUnavailable(buildingId);
-    }
-    return true;
+    return MayHoldBuilding(*this, rConfig);
 }
 
 void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
@@ -128,11 +115,7 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
     for (const BuildingConfig_t& rBuilding : m_rRegistry.GetAll())
     {
-        const bool bSecretProjectCompleted = rBuilding.bIsSecretProject
-                && m_pSecretProjectCalculator->IsUnavailable(rBuilding.id);
-        if (rBuilding.IsAvailable(discoveredTechs)
-                && (rBuilding.allowMultiple || !DoesBuildingExist_(rBuilding.id))
-                && !bSecretProjectCompleted)
+        if (rBuilding.IsAvailable(discoveredTechs) && MayHoldBuilding(*this, rBuilding))
         {
             available.push_back(&rBuilding);
         }

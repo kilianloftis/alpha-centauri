@@ -160,7 +160,7 @@ so a free scout still unlocks those components for the mineral surcharge. The ne
 *built* copy is ordinary (no surcharge, no prototype XP).
 
 **Signal:** `Unit`'s constructor latches prototype only when `pProducedAt != nullptr`
-and `Military::IsPrototype(design)` is true at that moment. Production completion
+and `IsPrototype(faction, design)` is true at that moment. Production completion
 passes the building base as `pProducedAt`; gift paths omit it.
 
 **Replaces:** the Unit.cpp TODO that left "first of its kind" vs "first one you built"
@@ -239,7 +239,7 @@ can carry after it eventually completes), and hurrying is meaningless rather tha
 The two coincide on "does not complete", for opposite reasons.
 
 The deferral answers for **one turn and one item**. It does not latch: `Apply` clears it each
-turn and re-derives `BaseManager::WouldCompletionAbandonBase`, so a base that has since grown
+turn and re-derives `CompletionAbandonsBase`, so a base that has since grown
 completes the item with no further player action. Switching or clearing the queue cancels it.
 
 **AI:** defers too — the same answer, not a special case. A base that grows finishes the item on
@@ -248,7 +248,7 @@ its own, so no rule about an AI abandoning its own base is needed.
 **Implemented** 2026-09-02. `ProductionCompletion` holds the two bits (`m_bPendingConfirmation`,
 `m_bDeferredThisTurn`) and evaluates a `ProductionCompletionProbe_t` gathered by
 `ProductionManager` — it does not hold `BaseManager` or `ProductionManager`. The abandonment
-rule itself is `BaseManager::WouldCompletionAbandonBase`. Pause gates are collected by
+rule itself is `CompletionAbandonsBase` (`ProductionRules`). Pause gates are collected by
 `CollectProductionPauseGates` (not Completion): kind / combat vs non-combat, plus
 `PrototypeBuilt` as an **additional** gate when the completion is a prototype fielding.
 `ProductionManager` packs `completedEvents` / `completedName` onto `ProductionApplyResult_t`

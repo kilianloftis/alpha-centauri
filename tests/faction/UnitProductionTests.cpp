@@ -172,7 +172,7 @@ TEST_CASE("All unit designs appear in the base constructable list", "[production
     const UnitDesign& rScout = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
     const UnitDesign& rSlow = game.AddDesign({"test_slow_chassis", "test_weapon", "test_armor"});
 
-    const std::vector<const IConstructable*> available = base.GetConstructable();
+    const std::vector<const IConstructable*> available = ConstructableItems(base);
     CHECK(ConstructableContains_(available, &rScout));
     CHECK(ConstructableContains_(available, &rSlow));
 
@@ -224,7 +224,7 @@ TEST_CASE("Colony pod that would abandon the base asks for confirmation",
     const ProductionApplyResult_t applied = base.ApplyProduction();
     CHECK(applied.kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.HasPendingProductionConfirmation());
-    CHECK(base.WouldCompletionAbandonBase());
+    CHECK(CompletionAbandonsBase(base));
     // Asking is not riot: nothing about the base's production has been switched off.
     CHECK_FALSE(base.IsProductionDisabled());
     CHECK(base.GetPopulation().GetSize() == 1);
@@ -337,7 +337,7 @@ TEST_CASE("A deferred item completes on its own once the base has grown",
 
     base.GetPopulation().AddPop();
     REQUIRE(base.GetPopulation().GetSize() == 2);
-    CHECK_FALSE(base.WouldCompletionAbandonBase());
+    CHECK_FALSE(CompletionAbandonsBase(base));
 
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
     CHECK_FALSE(base.HasPendingProductionConfirmation());
@@ -366,7 +366,7 @@ TEST_CASE("Size-1 colony pod with pending growth completes without abandon or ra
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK_FALSE(base.WouldCompletionAbandonBase());
+    CHECK_FALSE(CompletionAbandonsBase(base));
     const ProductionApplyResult_t applied = base.ApplyProduction();
     CHECK(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(base.GetPopulation().GetSize() == 1);
@@ -394,7 +394,7 @@ TEST_CASE("Size-2 colony pod that starves down to nothing asks for confirmation"
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK(base.WouldCompletionAbandonBase());
+    CHECK(CompletionAbandonsBase(base));
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.GetPopulation().GetSize() == 2);
 }
@@ -417,7 +417,7 @@ TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
     base.GetProduction().SetProduction(&rScout, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK_FALSE(base.WouldCompletionAbandonBase());
+    CHECK_FALSE(CompletionAbandonsBase(base));
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 }
 
@@ -690,7 +690,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
 
-    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    REQUIRE(IsPrototype(*game.pFaction, rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     const int prototypeCost = base.GetMineralCost();
@@ -703,7 +703,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     base.GetProduction().SetMineralStockpile(prototypeCost);
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
     const std::vector<Unit*> onTile =
         game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
@@ -717,7 +717,7 @@ TEST_CASE("Completion leftover uses the effective cost including prototype surch
     BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
-    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    REQUIRE(IsPrototype(*game.pFaction, rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     const int prototypeCost = base.GetMineralCost();
@@ -761,7 +761,7 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->IsPrototype());
     CHECK(onTile.front()->GetXp() == 2);
-    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
 }
 
 TEST_CASE("Skunkworks cancels retool penalty", "[production][retool][prototype]")
@@ -865,8 +865,8 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rFirst));
-    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rSecond));
+    CHECK_FALSE(IsPrototype(*game.pFaction, rFirst));
+    REQUIRE(IsPrototype(*game.pFaction, rSecond));
 
     BaseManager& other = game.MakeBase(8, 12);
     other.GetProduction().SetProduction(&rSecond, other.GetBaseEffects());
@@ -889,7 +889,7 @@ TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
     REQUIRE(playerBase.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     aiBase.GetProduction().SetProduction(&rAi, aiBase.GetBaseEffects());
-    CHECK(game.pOther->GetMilitary().IsPrototype(rAi));
+    CHECK(IsPrototype(*game.pOther, rAi));
     CHECK(aiBase.GetMineralCost()
           == ComputeProductionCost(rAi.GetBaseCost(), BaseEffects_t{aiBase}, 50));
 }
@@ -907,7 +907,7 @@ TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
         *game.pState->GetWorldMap().GetTile(8, 0), &base, &base);
     CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
-    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
@@ -921,7 +921,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
     BaseManager& base = game.MakeBase(8, 8);
     const UnitDesign& rDesign =
         game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
-    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    REQUIRE(IsPrototype(*game.pFaction, rDesign));
 
     // Home only — Engine starting units / gift path. Not "built".
     Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
@@ -929,7 +929,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
         *game.pState->GetWorldMap().GetTile(8, 0), &base);
     CHECK_FALSE(gifted.IsPrototype());
     CHECK(gifted.GetXp() == 1);
-    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
@@ -1048,7 +1048,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     const Unit& rPrototype = *onTile.front();
 
     // The faction has fielded the design, so the ledger no longer calls it a prototype...
-    REQUIRE_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    REQUIRE_FALSE(IsPrototype(*game.pFaction, rDesign));
     // ...but the unit built as one still is, and the XP baked at construction stays.
     CHECK(rPrototype.IsPrototype());
     CHECK(rPrototype.GetXp() == 2);

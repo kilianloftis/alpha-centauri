@@ -1,6 +1,7 @@
 #include "game/units/Unit.h"
 
 #include "game/combat/MoraleRules.h"
+#include "game/production/ProductionRules.h"
 #include "game/faction/Faction.h"
 #include "game/units/Military.h"
 #include "game/base/BaseManager.h"
@@ -50,7 +51,7 @@ Unit::Unit(UnitId_t unitId,
     , m_xp(0)
     // Latch before RecordBuiltComponents so later IsPrototype() agrees with construction.
     , m_bPrototype(pProducedAt.value_or(nullptr) != nullptr
-                   && rFaction.GetMilitary().IsPrototype(rDesign))
+                   && ac::IsPrototype(rFaction, rDesign))
     , m_bRegistered(false)
 {
     if (pHomeBase)

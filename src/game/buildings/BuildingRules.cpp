@@ -2,10 +2,13 @@
 
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
 
+#include <stdexcept>
+#include <string>
 #include <unordered_set>
 
 namespace ac
@@ -28,6 +31,26 @@ bool BuildingIsHeadquarters_(const BuildingConfig_t& rBuilding)
 }
 
 } // namespace
+
+bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding)
+{
+    if (!rBuilding.allowMultiple && rBuildings.HasBuilding(rBuilding.id))
+    {
+        return false;
+    }
+    if (!rBuilding.bIsSecretProject)
+    {
+        return true;
+    }
+    const SecretProjectAvailabilityRules* pAvailability = rBuildings.GetSecretProjectAvailability();
+    if (!pAvailability)
+    {
+        throw std::runtime_error("MayHoldBuilding: '" + rBuilding.id
+                                 + "' is a secret project, but this base has no "
+                                   "SecretProjectAvailabilityRules to check uniqueness");
+    }
+    return !pAvailability->IsUnavailable(rBuilding.id);
+}
 
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,
                                                                   bool bExcludeHq,

@@ -55,13 +55,6 @@ public:
     // True if a production item is currently set.
     bool HasProduction() const;
 
-    // Effective mineral cost of the current production item after CostMultiplier effects
-    // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued
-    // or the item is a stockpile.
-    // bPrototype applies production.json prototype_surcharge_percent, scaled by
-    // PrototypeSurchargeScale from rBaseEffects (Skunkworks zeros the extra).
-    int GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
-
     // Mineral stockpile owned by this manager.
     int GetMineralStockpile() const;
     void SetMineralStockpile(int amount);
@@ -82,7 +75,7 @@ public:
     ProductionApplyResult_t TryCompleteReady(bool bNewTurn = false);
 
     // True when something is queued, it can complete, and the stockpile meets its effective cost.
-    bool IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
+    bool IsReadyToComplete() const;
 
     bool HasPendingConfirmation() const;
     bool IsCompletionBlocked() const;
@@ -108,11 +101,9 @@ private:
 
     // Ungated spend: only FinishReady_ after Completion returns ReadyToFinish. Game code must
     // go through ApplyProduction / TryCompleteReady / CompletePending so abandon / riot /
-    // deferral gates apply. Spends the item's effective cost from GetBaseEffects(); leftover
-    // minerals stay on the stockpile — and therefore on whatever is queued next — up to
-    // retoolPenaltyThreshold. Completing also clears the turn original: the default fallback
+    // deferral gates apply. Completing also clears the turn original: the default fallback
     // is not a player choice.
-    std::string CompleteProduction_(bool bPrototype);
+    std::string CompleteProduction_();
 
     // Charging the penalty: what this base was producing when the player got control this turn.
     // Null means no turn original yet (new base / BankProduction with nothing queued) —
