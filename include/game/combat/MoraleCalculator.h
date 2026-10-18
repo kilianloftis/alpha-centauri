@@ -11,10 +11,8 @@ namespace ac
 
 class LuaRuntime;
 
-// Morale / XP rank formulas backed by game-wide MoraleConfig_t (levels, promotion).
-// Holds a non-owning config reference — same pattern as TechCostCalculator.
-// Combat Attack/Defense bonuses live as effects on each MoraleLevel_t and are folded
-// in by ResolveCombatUnitStat — this class only picks the level.
+// Morale / XP rank formulas over the game-wide MoraleConfig_t. It only picks the level:
+// ResolveCombatUnitStat folds in each MoraleLevel_t's Attack/Defense effects.
 class MoraleCalculator
 {
 public:
