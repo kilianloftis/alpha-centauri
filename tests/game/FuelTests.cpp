@@ -370,3 +370,23 @@ TEST_CASE("TryAssignAutoReturnToFuel ignores refuel sites beyond remaining moves
     CHECK_FALSE(TryAssignAutoReturnToFuel(jet, harness.pathfinder));
     CHECK_FALSE(jet.GetOrder().has_value());
 }
+
+TEST_CASE("The end-of-turn fuel outcome is read before anything changes", "[fuel]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& copter = fixture.MakeUnit(faction, 8, 8, {"test_copter_chassis"});
+
+    const EndOfTurnFuel_t fuel = ResolveEndOfTurnFuel(copter, fixture.map);
+    CHECK_FALSE(fuel.bBoardsCarrier);
+    CHECK_FALSE(fuel.bRefuels);
+    CHECK(fuel.bBurnsFuel);
+    CHECK(fuel.bOutOfFuel);
+    CHECK(fuel.outOfFuelDamage == 3);
+    CHECK_FALSE(fuel.bDestroyed);
+    CHECK(copter.GetCurrentFuel() == 4);
+
+    Unit& grav = fixture.MakeUnit(faction, 9, 9, {"test_flight_chassis"});
+    CHECK_FALSE(ResolveEndOfTurnFuel(grav, fixture.map).bBurnsFuel);
+}

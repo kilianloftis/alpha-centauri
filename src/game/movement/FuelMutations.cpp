@@ -114,34 +114,27 @@ bool TryAssignAutoReturnToFuel(Unit& rUnit, const Pathfinder& rPathfinder)
 
 void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
 {
-    if (!rUnit.GetDesign().UsesFuel())
-    {
-        return;
-    }
-
-    // Land on a carrier before fuel accounting so a free deck slot can save the unit.
-    if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air)
+    const EndOfTurnFuel_t fuel = ResolveEndOfTurnFuel(rUnit, rWorldMap);
+    if (fuel.bBoardsCarrier)
     {
         TryAttachToTransport(rUnit, rWorldMap);
     }
-    
-    if (IsRefuelSite(rUnit, rWorldMap))
+    if (fuel.bRefuels)
     {
         rUnit.SetCurrentFuel(rUnit.GetMaxFuel());
         return;
     }
-
-    // Unused moves still consume fuel for the airborne turn.
-    rUnit.SpendRemainingMoveFragments();
-
-    if (rUnit.GetCurrentFuel() > 0)
+    if (!fuel.bBurnsFuel)
     {
         return;
     }
-
-    const int damage = OutOfFuelDamage(rUnit);
-    rUnit.SetCurrentHp(rUnit.GetCurrentHp() - damage);
-    if (rUnit.GetCurrentHp() <= 0)
+    rUnit.SpendRemainingMoveFragments();
+    if (!fuel.bOutOfFuel)
+    {
+        return;
+    }
+    rUnit.SetCurrentHp(rUnit.GetCurrentHp() - fuel.outOfFuelDamage);
+    if (fuel.bDestroyed)
     {
         rUnit.GetFaction().GetUnitManager().DestroyUnit(rUnit);
     }

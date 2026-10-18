@@ -42,37 +42,49 @@ int OutOfFuelDamage(const Unit& rUnit)
 namespace
 {
 
-// Mirrors ProcessFuelAtTurnEnd's away-from-pad outcome without mutating: after optional
-// carrier land, would remaining-move fuel burn hit 0 and out-of-fuel damage kill the unit?
-bool WouldBeDestroyedWithoutRefuelThisTurn_(const Unit& rUnit, const WorldMap& rWorldMap)
+// IsRefuelSite as it will read once rUnit is aboard rCarrier.
+bool RefuelsAboard_(const Unit& rUnit, const Unit& rCarrier, const WorldMap& rWorldMap)
 {
-    if (!rUnit.GetDesign().UsesFuel())
-    {
-        return false;
-    }
-
-    if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air
-        && FindBoardableTransport(rUnit, rUnit.GetTile(), rWorldMap))
-    {
-        return false;
-    }
-
-    if (IsRefuelSite(rUnit, rWorldMap))
-    {
-        return false;
-    }
-
-    const int movesRemaining =
-        rUnit.GetMoveFragmentsRemaining() / MovementConstants_t::k_moveFragmentsPerPoint;
-    if (rUnit.GetCurrentFuel() - movesRemaining > 0)
-    {
-        return false;
-    }
-
-    return rUnit.GetCurrentHp() - OutOfFuelDamage(rUnit) <= 0;
+    const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
+    return TileHarbors(rUnit.GetTile(), rUnit.GetDomain(), factionId, rWorldMap.GetTerritory())
+           || UnitCarries(rCarrier, rUnit.GetDomain(), factionId);
 }
 
 } // namespace
+
+EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit, const WorldMap& rWorldMap)
+{
+    EndOfTurnFuel_t fuel;
+    if (!rUnit.GetDesign().UsesFuel())
+    {
+        return fuel;
+    }
+
+    const Unit* pCarrier = nullptr;
+    if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air)
+    {
+        pCarrier = FindBoardableTransport(rUnit, rUnit.GetTile(), rWorldMap);
+    }
+    fuel.bBoardsCarrier = pCarrier != nullptr;
+    fuel.bRefuels = pCarrier != nullptr ? RefuelsAboard_(rUnit, *pCarrier, rWorldMap)
+                                        : IsRefuelSite(rUnit, rWorldMap);
+    if (fuel.bRefuels)
+    {
+        return fuel;
+    }
+
+    fuel.bBurnsFuel = true;
+    const int pointsLeft =
+        rUnit.GetMoveFragmentsRemaining() / MovementConstants_t::k_moveFragmentsPerPoint;
+    if (rUnit.GetCurrentFuel() - pointsLeft > 0)
+    {
+        return fuel;
+    }
+    fuel.bOutOfFuel = true;
+    fuel.outOfFuelDamage = OutOfFuelDamage(rUnit);
+    fuel.bDestroyed = rUnit.GetCurrentHp() - fuel.outOfFuelDamage <= 0;
+    return fuel;
+}
 
 bool NeedsAutoReturnToFuel(const Unit& rUnit, const WorldMap& rWorldMap)
 {
@@ -80,8 +92,7 @@ bool NeedsAutoReturnToFuel(const Unit& rUnit, const WorldMap& rWorldMap)
     {
         return false;
     }
-
-    return WouldBeDestroyedWithoutRefuelThisTurn_(rUnit, rWorldMap);
+    return ResolveEndOfTurnFuel(rUnit, rWorldMap).bDestroyed;
 }
 
 } // namespace ac
