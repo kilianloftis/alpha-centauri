@@ -39,6 +39,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitPlacementRules.h"
 #include "lib/RandomRoll.h"
 
 #include <algorithm>
@@ -199,98 +200,13 @@ bool Rebel_(TriggeredEffectContext_t& rCtx, std::vector<TriggeredEffectResult_t>
     return true;
 }
 
-// Where a granted unit comes into the world. The trigger may have no base at all (a council
-// vote), so the anchor is resolved in order of how specific the context is; the unit is homed
-// there, and so pays support like a produced one.
-BaseManager* ResolveAnchorBase_(TriggeredEffectContext_t& rCtx, Faction& rFaction)
-{
-    if (rCtx.pBase && &rCtx.pBase->GetFaction() == &rFaction)
-    {
-        return rCtx.pBase;
-    }
-    if (rCtx.pTile)
-    {
-        if (BaseManager* pNearest = rFaction.FindNearestBase(*rCtx.pTile))
-        {
-            return pNearest;
-        }
-    }
-    if (BaseManager* pHq = rFaction.GetHeadquarters())
-    {
-        return pHq;
-    }
-    for (BaseManager& rBase : rFaction.Bases())
-    {
-        return &rBase;
-    }
-    return nullptr;
-}
-
-// IDesign-level stand-in for CanHoldTileWithoutCarrier, which needs a live Unit and so cannot
-// be asked before the unit exists. A tile that harbors the domain for this faction always
-// works (its own base, a port); otherwise the tile's own surface has to suit the domain.
-bool DesignCanHoldTile_(const UnitDesign& rDesign, const Tile& rTile, FactionId_t factionId,
-                        const WorldMap& rMap)
-{
-    const UnitDomain_t domain = rDesign.GetDomain();
-    if (TileHarbors(rTile, domain, factionId, rMap.GetTerritory()))
-    {
-        return true;
-    }
-    switch (domain)
-    {
-        case UnitDomain_t::Land:
-            return !rTile.IsWater();
-        case UnitDomain_t::Sea:
-            return rTile.IsWater();
-        case UnitDomain_t::Air:
-        case UnitDomain_t::Orbital:
-            return true;
-    }
-    return false;
-}
-
-// Tiles a unit of rDesign may be placed on, nearest first: the anchor tile itself, then
-// outward rings. Mirrors SpawnEscapePods_' ring search, but ordered rather than shuffled —
-// a granted unit should appear as close to its base as it can.
-std::vector<Tile*> PlaceableTilesNear_(const Tile& rOrigin, const UnitDesign& rDesign,
-                                       WorldMap& rMap, FactionId_t factionId, int needed)
-{
-    UnitPositionIndex& rPositions = rMap.GetUnitPositions();
-    std::vector<Tile*> found;
-    const auto consider = [&](Tile* pTile)
-    {
-        if (!pTile || !CanPlaceUnitOnTile(*pTile, rPositions))
-        {
-            return;
-        }
-        if (!DesignCanHoldTile_(rDesign, *pTile, factionId, rMap))
-        {
-            return;
-        }
-        found.push_back(pTile);
-    };
-
-    consider(rMap.GetTile(rOrigin.GetX(), rOrigin.GetY()));
-    // The hardcoded 2 is terrible design, but I think we'll get rid of single-tile mode
-    for (int radius = 1; found.size() < static_cast<size_t>(needed) && radius <= 2; ++radius)
-    {
-        ForEachTileInChebyshevRadius(rOrigin, rMap, radius, /*includeOrigin=*/false,
-            [&](Tile* pTile, int distance)
-            {
-                if (distance == radius)
-                {
-                    consider(pTile);
-                }
-            });
-    }
-    return found;
-}
-
 bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
                 Faction& rFaction, std::vector<TriggeredEffectResult_t>& rOut)
 {
-    BaseManager* pAnchor = ResolveAnchorBase_(rCtx, rFaction);
+    // A grant may have no base at all (a council vote); the anchor homes the unit, so it pays
+    // support like a produced one.
+    const std::optional<BaseId_t> anchorId = GrantAnchorBase(rFaction, rCtx.pBase, rCtx.pTile);
+    BaseManager* pAnchor = anchorId ? rFaction.FindBase(*anchorId) : nullptr;
     if (!pAnchor || rGrant.count <= 0)
     {
         rOut.push_back(UnitsGranted_t{0, {}});
@@ -307,12 +223,12 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
     }
 
     WorldMap& rMap = rCtx.rGameState.GetWorldMap();
-    const std::vector<Tile*> tiles = PlaceableTilesNear_(pAnchor->GetTile(), *pDesign, rMap,
-                                                         rFaction.GetFactionId(), rGrant.count);
+    const std::vector<const Tile*> tiles = PlacementTiles(
+        pAnchor->GetTile(), *pDesign, rFaction.GetFactionId(), rGrant.count, rMap);
 
     // A full map grants fewer units rather than throwing: the caller is told the real count.
     int spawned = 0;
-    for (Tile* pTile : tiles)
+    for (const Tile* pTile : tiles)
     {
         if (spawned >= rGrant.count)
         {

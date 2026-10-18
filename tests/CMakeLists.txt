@@ -53,6 +53,7 @@ add_executable(effects-tests
     game/CombatRatingTests.cpp
     game/CombatResolverTests.cpp
     game/CombatRulesTests.cpp
+    game/UnitPlacementRulesTests.cpp
     game/OrbitalCombatTests.cpp
     game/MoraleCalculatorTests.cpp
     game/ProbeRulesTests.cpp
