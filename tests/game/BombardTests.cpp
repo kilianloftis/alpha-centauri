@@ -502,3 +502,18 @@ TEST_CASE("An attack costs one move point unless it ends the turn; a bombard cos
     CHECK(AttackMoveFragments(rover, AttackKind_t::Bombard) == rover.GetMoveFragmentsRemaining());
     CHECK(AttackMoveFragments(jet, AttackKind_t::Attack) == jet.GetMoveFragmentsRemaining());
 }
+
+TEST_CASE("Equally matched defenders keep the order they stand in", "[combat][defender]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& first = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& second = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+
+    CHECK(SelectDefender(attacker, {&first, &second}) == &first);
+    CHECK(SelectDefender(attacker, {&second, &first}) == &second);
+    CHECK(SelectDefender(attacker, {}) == nullptr);
+}

@@ -390,3 +390,24 @@ TEST_CASE("The end-of-turn fuel outcome is read before anything changes", "[fuel
     Unit& grav = fixture.MakeUnit(faction, 9, 9, {"test_flight_chassis"});
     CHECK_FALSE(ResolveEndOfTurnFuel(grav, fixture.map).bBurnsFuel);
 }
+
+TEST_CASE("The auto-return forecast agrees with what the turn end does", "[fuel]")
+{
+    auto check = [](const std::vector<std::string>& rComponents, int fuel, int hp)
+    {
+        FactionFixture fixture;
+        FillLand_(fixture);
+        Faction& faction = fixture.MakeFaction();
+        Unit& unit = fixture.MakeUnit(faction, 8, 8, rComponents);
+        unit.SetCurrentFuel(fuel);
+        unit.SetCurrentHp(hp);
+
+        const bool bForecast = NeedsAutoReturnToFuel(unit, fixture.map);
+        ProcessFuelAtTurnEnd(unit, fixture.map);
+        CHECK(bForecast == (CountUnits_(faction) == 0));
+    };
+    check({"test_fuel_flight_chassis"}, 8, 10);
+    check({"test_fuel_flight_chassis"}, 4, 10);
+    check({"test_copter_chassis"}, 0, 10);
+    check({"test_copter_chassis"}, 0, 3);
+}

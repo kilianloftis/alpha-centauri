@@ -1156,3 +1156,20 @@ TEST_CASE("Expelling a faction that holds no seat changes nothing", "[council][e
     CHECK_NOTHROW(rVotes.Expel(*game.pA));
     CHECK(rCouncil.Members().size() == before - 1);
 }
+
+TEST_CASE("A tied election goes to the candidate with the lower faction id", "[council][election]")
+{
+    CouncilGame_ game;
+    const PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+
+    PendingProposal_t pending;
+    pending.proposalId = "elect_planetary_governor";
+    pending.eligibleCandidateIds = {a, b};
+    pending.electionVotes[a] = b;
+    pending.electionVotes[b] = a;
+
+    const Faction* pLower = a < b ? game.pA : game.pB;
+    CHECK(ElectionWinner(rCouncil, pending) == pLower);
+}
