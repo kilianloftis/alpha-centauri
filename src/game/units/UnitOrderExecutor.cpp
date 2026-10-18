@@ -6,6 +6,7 @@
 #include "game/combat/ScrambleRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/movement/MoveCostRules.h"
+#include "game/movement/MovementRules.h"
 #include "game/movement/Pathfinder.h"
 #include "game/combat/AttackRules.h"
 #include "game/base/BaseConquestRules.h"
@@ -226,11 +227,10 @@ UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUn
     rUnit.MarkAirdropped();
     rUnit.ClearOrder();
 
-    const int damageHp = AirdropLandingDamageHp(rUnit, rDest, m_rWorldMap);
-    if (damageHp > 0)
+    const AirdropLanding_t landing = AirdropLanding(rUnit, rDest, m_rWorldMap);
+    if (landing.hpAfter < rUnit.GetCurrentHp())
     {
-        const int hp = rUnit.GetCurrentHp();
-        rUnit.SetCurrentHp(std::max(1, hp - damageHp));
+        rUnit.SetCurrentHp(landing.hpAfter);
     }
 
     EnterTile_(rUnit, rDest);
@@ -241,7 +241,7 @@ UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUn
         return result;
     }
 
-    if (!rUnit.IsCombatUnit())
+    if (landing.bEndsTurn)
     {
         rUnit.SpendRemainingMoveFragments();
     }
@@ -291,37 +291,19 @@ StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rT
                                                     MoveOrder_t& rMoveOrder)
 {
     const EntryTerms_t terms = m_rMoveCosts.ForUnit(rMover, m_rWorldMap).EntryTerms(rTo);
-    const int available = rMover.GetMoveFragmentsRemaining();
-
-    if (terms.bRequiresFullCost)
+    const int paidSoFar = rMoveOrder.pChargeTile == &rTo ? rMoveOrder.chargeFragmentsPaid : 0;
+    const EntryPayment_t payment =
+        ResolveEntryPayment(terms, rMover.GetMoveFragmentsRemaining(), paidSoFar);
+    rMover.SpendMoveFragments(payment.chargedFragments);
+    if (!payment.bEnters)
     {
-        if (rMoveOrder.pChargeTile != &rTo)
-        {
-            rMoveOrder.pChargeTile = &rTo;
-            rMoveOrder.chargeFragmentsPaid = 0;
-        }
-        if (rMoveOrder.chargeFragmentsPaid + available < terms.costFragments)
-        {
-            // Bank this turn's fragments toward the entry price and stay put.
-            rMoveOrder.chargeFragmentsPaid += available;
-            rMover.SpendRemainingMoveFragments();
-            return {};
-        }
+        rMoveOrder.pChargeTile = &rTo;
+        rMoveOrder.chargeFragmentsPaid = payment.paidAfter;
+        return {};
     }
 
     rMoveOrder.pChargeTile = nullptr;
     rMoveOrder.chargeFragmentsPaid = 0;
-
-    // Standard terrain admits any positive balance (SpendMoveFragments clamps a negative
-    // result to 0); end-turn entries spend whatever remains.
-    if (terms.bEndsTurn)
-    {
-        rMover.SpendRemainingMoveFragments();
-    }
-    else
-    {
-        rMover.SpendMoveFragments(terms.costFragments);
-    }
     EnterTile_(rMover, rTo);
 
     StepResult_t result;

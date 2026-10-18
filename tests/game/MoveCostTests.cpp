@@ -5,6 +5,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
+#include "game/movement/MovementRules.h"
 #include "lib/Rational.h"
 
 #include <filesystem>
@@ -320,4 +321,31 @@ TEST_CASE("PlannedCostFragments hides tile detail under shroud", "[move-cost]")
 
     faction.GetExploredMap().Mark(fungus);
     CHECK(costs.PlannedCostFragments(fungus) == 4 * k_point);
+}
+
+TEST_CASE("A full-cost entry banks moves across turns until the price is paid", "[move-cost]")
+{
+    const int point = MovementConstants_t::k_moveFragmentsPerPoint;
+    const EntryTerms_t fungus{.costFragments = point * 3, .bRequiresFullCost = true,
+                              .bEndsTurn = true};
+
+    const EntryPayment_t first = ResolveEntryPayment(fungus, point, 0);
+    CHECK_FALSE(first.bEnters);
+    CHECK(first.chargedFragments == point);
+    CHECK(first.paidAfter == point);
+
+    const EntryPayment_t last = ResolveEntryPayment(fungus, point * 2, point);
+    CHECK(last.bEnters);
+    CHECK(last.chargedFragments == point * 2);
+    CHECK(last.paidAfter == 0);
+}
+
+TEST_CASE("Ordinary terrain admits any balance and charges its full cost", "[move-cost]")
+{
+    const int point = MovementConstants_t::k_moveFragmentsPerPoint;
+    const EntryTerms_t rough{.costFragments = point * 2};
+
+    const EntryPayment_t payment = ResolveEntryPayment(rough, 1, 0);
+    CHECK(payment.bEnters);
+    CHECK(payment.chargedFragments == point * 2);
 }

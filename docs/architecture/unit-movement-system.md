@@ -119,7 +119,9 @@ The `Query` exposes two views of the same terms, one per consumer:
 
 ## Execution
 
-`UnitOrderExecutor::SpendMovesAndEnter_` is rule-agnostic — it just acts on the terms:
+`ResolveEntryPayment` (`MovementRules`) turns the terms, this turn's fragments and what is
+already banked toward the tile into an `EntryPayment_t`; `UnitOrderExecutor::SpendMovesAndEnter_`
+charges it and keeps the bank on the move order:
 
 1. `bRequiresFullCost` and the banked total (`MoveOrder_t::chargeFragmentsPaid` toward
    `pChargeTile`) plus this turn's fragments still fall short → bank the remainder, zero the
@@ -143,7 +145,7 @@ When the next step of a move order is refused that way, `Execute_` stops before 
 player unit keeps its order and `IUnitOrderWorld::OnTerritoryEntryRefused` queues one
 `TerritoryEntryInteraction_t` (declare Vendetta on the owner and continue, or cancel the
 order; `BreakAgreementAndContinue` in `TerritoryEntryMutations.h`). Any other unit drops the order. Unloading checks the same
-outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`).
+outcome; airdrops into forbidden territory are refused outright (`AirdropFailReason_t::CannotEnter`). A legal drop lands as `AirdropLanding` says: `airdrop_landing_damage` percent of max HP off the faction's own launch pads, never the last point, and a non-combat unit spends the rest of its turn.
 
 `MayEnterTerritoryOf` takes the unit, not its faction. A unit with the `Covert` rule flag
 ignores the ban wherever the territory's owner does not know whose unit it is

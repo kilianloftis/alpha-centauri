@@ -13,6 +13,8 @@
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -46,19 +48,27 @@ bool OccupantBlocksAirdrop(const Unit& rDropper, const Unit& rOccupant)
     return true;
 }
 
-int AirdropLandingDamageHp(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap)
+AirdropLanding_t AirdropLanding(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap)
 {
+    AirdropLanding_t landing;
+    landing.hpAfter = rUnit.GetCurrentHp();
+    landing.bEndsTurn = !rUnit.IsCombatUnit();
     if (TileIsAirdropLaunchPad(rDest, rWorldMap, rUnit.GetFaction().GetFactionId()))
     {
-        return 0;
+        return landing;
     }
     const int percent = ResolveStat(rUnit, StatId_t::AirdropLandingDamage);
     if (percent <= 0)
     {
-        return 0;
+        return landing;
     }
     const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
-    return maxHp * percent / 100;
+    const int damage = maxHp * percent / 100;
+    if (damage > 0)
+    {
+        landing.hpAfter = std::max(1, landing.hpAfter - damage);
+    }
+    return landing;
 }
 
 bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest,

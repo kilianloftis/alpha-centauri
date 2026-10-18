@@ -392,3 +392,17 @@ TEST_CASE("Airdrop into empty foreign base captures via arrival", "[unit][airdro
     CHECK(rEnemyBase.GetFaction().GetFactionId() == game.pPlayer->GetFactionId());
     (void)rMap;
 }
+
+TEST_CASE("Airdrop landing never takes the last hit point", "[unit][airdrop]")
+{
+    AirdropGame_ game;
+    WorldMap& rMap = game.pState->GetWorldMap();
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
+    Unit& dropper =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+    dropper.SetCurrentHp(1);
+
+    const AirdropLanding_t landing = AirdropLanding(dropper, *rMap.GetTile(10, 10), rMap);
+    CHECK(landing.hpAfter == 1);
+    CHECK_FALSE(landing.bEndsTurn);
+}

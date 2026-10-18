@@ -35,9 +35,15 @@ bool TileIsAirdropLaunchPad(const Tile& rTile, const WorldMap& rWorldMap, int fa
 // rules as StepEvaluator: other faction; embarked cargo only blocks on a Base tile).
 bool OccupantBlocksAirdrop(const Unit& rDropper, const Unit& rOccupant);
 
-// Flat landing-damage HP from AirdropLandingDamage percent of max HP. 0 when dest is an
-// airdrop_launch pad for the unit's faction. Caller clamps so at least 1 HP remains.
-int AirdropLandingDamageHp(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap);
+struct AirdropLanding_t
+{
+    int hpAfter = 0;
+    bool bEndsTurn = false;
+};
+
+// Away from the faction's own launch pads the drop costs AirdropLandingDamage percent of max HP,
+// never the last point. A non-combat unit spends its turn landing.
+AirdropLanding_t AirdropLanding(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap);
 
 // True when CollectAreaEffects(rDest) includes a hostile-owned airdrop_interdiction RuleFlag
 // (ThisTile aura, typically with radius — stock Air Superiority).

@@ -7,6 +7,7 @@ class Tile;
 class Unit;
 class WorldMap;
 class UnitPositionIndex;
+struct EntryTerms_t;
 struct InteractionGridsConfig_t;
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
@@ -56,5 +57,18 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWor
 // one setting per world, beside the occupancy it constrains, rather than a process-wide global
 // that two sessions could not disagree about and a test could leak into the next case.
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions);
+
+struct EntryPayment_t
+{
+    bool bEnters = false;
+    // Charged against this turn's balance, which clamps at 0 (fuel is billed on the charge).
+    int chargedFragments = 0;
+    // Banked toward the tile afterwards; 0 once the unit enters.
+    int paidAfter = 0;
+};
+
+// A full-cost entry banks every fragment, across turns, until paidSoFar covers the price.
+// Otherwise any balance admits the unit; an entry that ends the turn spends all of it.
+EntryPayment_t ResolveEntryPayment(const EntryTerms_t& rTerms, int available, int paidSoFar);
 
 } // namespace ac

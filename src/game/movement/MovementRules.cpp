@@ -10,6 +10,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/movement/MoveCostRules.h"
 #include "game/movement/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
@@ -139,6 +140,20 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWor
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)
 {
     return rPositions.CanPlaceUnit(rTile);
+}
+
+EntryPayment_t ResolveEntryPayment(const EntryTerms_t& rTerms, int available, int paidSoFar)
+{
+    EntryPayment_t payment;
+    if (rTerms.bRequiresFullCost && paidSoFar + available < rTerms.costFragments)
+    {
+        payment.chargedFragments = available;
+        payment.paidAfter = paidSoFar + available;
+        return payment;
+    }
+    payment.bEnters = true;
+    payment.chargedFragments = rTerms.bEndsTurn ? available : rTerms.costFragments;
+    return payment;
 }
 
 } // namespace ac
