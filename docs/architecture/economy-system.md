@@ -53,7 +53,7 @@ graph TB
     caller bug and is loud.
   - Store the `EnergyAllocation_t` percentages for econ, labs, and psych.
   - Provide `SetEnergyAllocation()` / `GetEnergyAllocation()` for configuration (`SetEnergyAllocation` throws if the percentages do not sum to 100).
-  - Calculate how much of a given base's collected energy goes to each category via `CalculateEnergyForEcon()`, `CalculateEnergyForLabs()`, and `CalculateEnergyForPsych()`.
+- **Splitting energy**: `SplitEnergy` (`EconomyRules`) splits a base's allocatable energy by these percentages.
 - **Rounding rule**: Labs and psych receive floored percentage shares; economy receives the remainder (SMAC residual-economy rule). The three results always sum to the input energy.
 - **Ownership**: Owned by `Faction` and shared by every base belonging to that faction.
 - **Rationale**: Centralizing the allocation split keeps the split consistent across all bases and makes it easy to change from a single UI or AI decision point.
@@ -66,12 +66,12 @@ graph TB
 ### ResourceManager
 - **Purpose**: Calculates and caches per-base resource production.
 - **Responsibilities**:
-  - Read energy from worked tiles (plus crawlers / base center / Energy StatModifiers).
+  - Read energy from `WorkedYield` (worked tiles, crawlers, base center) plus Energy StatModifiers.
   - Add per-base **commerce** energy (from the injected `CommerceCache`) to that
     pre-inefficiency total during `ProduceResources` / production getters.
-  - Apply inefficiency, then ask the faction's `EconomyManager` how to split energy into econ, labs, and psych.
-  - Add the split amounts to the base's stockpiles.
-- **Interaction**: Holds a `const EconomyManager*` so it can query the split without mutating it.
+  - Bank what `AllocateBaseEnergy` returns: inefficiency (`EnergyAfterInefficiency`), the
+    faction's split (`SplitEnergy`), then the base's Econ / Labs / Psych modifiers. All three
+    are in `EconomyRules`.
 - **`GetEnergyProduction()`**: pre-commerce raw energy only (used for commerce pairing ranks).
 
 ### CommerceCache

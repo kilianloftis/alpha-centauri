@@ -1,4 +1,5 @@
 #include "game/economy/EconomyManager.h"
+#include "game/economy/EconomyRules.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
@@ -13,35 +14,35 @@ TEST_CASE("Energy allocation conserves total energy", "[economy]")
     {
         // Independent rounding used to mint a 6th energy: round(2)+round(2.5)+round(0.5).
         // Residual-economy rule: labs=2, psych=0, econ=3.
-        CHECK(economy.CalculateEnergyForLabs(5) == 2);
-        CHECK(economy.CalculateEnergyForPsych(5) == 0);
-        CHECK(economy.CalculateEnergyForEcon(5) == 3);
-        CHECK(economy.CalculateEnergyForEcon(5)
-            + economy.CalculateEnergyForLabs(5)
-            + economy.CalculateEnergyForPsych(5) == 5);
+        const EnergySplit_t split = SplitEnergy(economy.GetEnergyAllocation(), 5);
+        CHECK(split.labs == 2);
+        CHECK(split.psych == 0);
+        CHECK(split.econ == 3);
+        CHECK(split.econ + split.labs + split.psych == 5);
     }
 
     SECTION("exact multiples conserve without remainder")
     {
-        CHECK(economy.CalculateEnergyForEcon(10) == 4);
-        CHECK(economy.CalculateEnergyForLabs(10) == 5);
-        CHECK(economy.CalculateEnergyForPsych(10) == 1);
+        const EnergySplit_t split = SplitEnergy(economy.GetEnergyAllocation(), 10);
+        CHECK(split.econ == 4);
+        CHECK(split.labs == 5);
+        CHECK(split.psych == 1);
     }
 
     SECTION("custom split still conserves")
     {
         economy.SetEnergyAllocation({30, 60, 10});
         const int total = 7;
-        CHECK(economy.CalculateEnergyForEcon(total)
-            + economy.CalculateEnergyForLabs(total)
-            + economy.CalculateEnergyForPsych(total) == total);
+        const EnergySplit_t split = SplitEnergy(economy.GetEnergyAllocation(), total);
+        CHECK(split.econ + split.labs + split.psych == total);
     }
 
     SECTION("zero energy yields zero everywhere")
     {
-        CHECK(economy.CalculateEnergyForEcon(0) == 0);
-        CHECK(economy.CalculateEnergyForLabs(0) == 0);
-        CHECK(economy.CalculateEnergyForPsych(0) == 0);
+        const EnergySplit_t split = SplitEnergy(economy.GetEnergyAllocation(), 0);
+        CHECK(split.econ == 0);
+        CHECK(split.labs == 0);
+        CHECK(split.psych == 0);
     }
 }
 

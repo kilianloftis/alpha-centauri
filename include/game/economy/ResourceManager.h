@@ -2,6 +2,7 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/economy/CommerceRules.h"
+#include "game/economy/EconomyRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include <memory>
@@ -21,34 +22,15 @@ class Tile;
 class TileEffectsContext;
 
 // ResourceManager calculates resource production for a base and accumulates per-turn
-// stockpiles. It is owned by BaseManager and holds const pointers to the managers it reads from.
-//
-// Energy pipeline (per base, each turn):
-//   1. Produce energy (tiles, crawlers, buildings, Energy StatModifiers) + commerce
-//   2. Apply inefficiency (HQ tabletop-diagonal distance + Efficiency SE rating)
-//   3. Split into econ / labs / psych via the faction EconomyManager percentages
-//   4. Apply Econ / Labs / Psych StatModifiers to each category
+// stockpiles. It is owned by BaseManager. The worked yield, inefficiency and the econ / labs /
+// psych split are EconomyRules' decisions; this class banks what they return.
 // Faction CollectIncome / CollectResearch take econ and labs; psych stays here for composition.
 class ResourceManager
 {
 public:
-    // All are owned by (or resolved from) the base that owns this manager, so none can be
-    // absent. They were pointers re-checked at every single use, with "not set" throws that no
-    // caller could ever trigger. (The BuildingManager parameter this used to take was stored
-    // and never read.)
     // rBase is the owning BaseManager (same object for life; ownership transfer rebinds the
-    // faction underneath it). Used for Efficiency rating and HQ identity.
-    // rSocialRatings supplies the Efficiency level → inefficiency_denominator table.
-    // rCommerce supplies Treaty/Pact commerce energy for this base (rebound on transfer).
-    ResourceManager(
-        const WorkerAssignmentManager& rWorkerAssignments,
-        const EconomyManager& rEconomy,
-        const CommerceCache& rCommerce,
-        const BaseManager& rBase,
-        const SocialRatingRegistry& rSocialRatings,
-        const Tile& rBaseTile,
-        const TileEffectsContext& rTileEffects,
-        const HomeBaseIndex& rHomeUnits);
+    // faction underneath it). rCommerce supplies Treaty/Pact commerce energy (rebound on transfer).
+    ResourceManager(const CommerceCache& rCommerce, const BaseManager& rBase);
     ~ResourceManager();
 
     // Resource production per turn.
@@ -96,9 +78,9 @@ public:
     // faction's econ/labs/psych split. For stockpile conversion, which happens after
     // ProduceResources has already allocated this turn's tile energy. `energy` must be >= 0.
     //
-    // Applies the split only — not the flat Econ/Labs/Psych StatModifiers that
-    // CalculateEcon_/Labs_/Psych_ seed on top of it. Those were already applied this turn;
-    // running them again here would pay every facility's flat bonus twice.
+    // Applies the split only — not the flat Econ/Labs/Psych StatModifiers AllocateBaseEnergy
+    // adds. Those were already applied this turn; running them again here would pay every
+    // facility's flat bonus twice.
     void AddAllocatedEnergy(int energy);
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
@@ -110,37 +92,23 @@ public:
     // from the owner's CommerceCache memo; valid until the next commerce-input change.
     const std::vector<CommercePartnerLine_t>& GetCommercePartners() const;
 
-    // Ownership transfer (BaseManager::RebindFaction): energy split and commerce are
-    // per-faction, so a transferred base must read the new owner's managers.
-    void RebindEconomy(const EconomyManager& rEconomy);
+    // Ownership transfer (BaseManager::RebindFaction): commerce is per-faction, so a
+    // transferred base must read the new owner's cache.
     void RebindCommerce(const CommerceCache& rCommerce);
 
 private:
-    const WorkerAssignmentManager& m_rWorkerAssignments;
-    // Re-pointed by RebindEconomy / RebindCommerce on ownership transfer.
-    const EconomyManager* m_pEconomy;
+    // Re-pointed by RebindCommerce on ownership transfer.
     const CommerceCache* m_pCommerce;
     const BaseManager& m_rBase;
-    const SocialRatingRegistry& m_rSocialRatings;
-    const Tile& m_rBaseTile;
-    const TileEffectsContext& m_rTileEffects;
-    const HomeBaseIndex& m_rHomeUnits;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;
     int m_labs = 0;
     int m_psych = 0;
 
-    TileResources_t ComputeWorked_(const BaseEffects_t& rBaseEffects) const;
-
     int CalculateResource_(StatId_t stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
     int CommerceEnergy_() const;
-    // Post-inefficiency energy used for the econ/labs/psych split.
-    int AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const;
-    int ApplyInefficiency_(int energy) const;
-    int CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const;
-    int CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const;
-    int CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const;
+    EnergySplit_t ProducedSplit_(const BaseEffects_t& rBaseEffects) const;
 
     void ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
     void ProduceMinerals_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);

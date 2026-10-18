@@ -1,6 +1,7 @@
 #include "game/economy/ResourceManager.h"
 #include "game/economy/CommerceCache.h"
 #include "game/economy/EconomyManager.h"
+#include "game/economy/EconomyRules.h"
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
 #include "game/base/HomeBaseIndex.h"
@@ -37,70 +38,12 @@ int GetResourceValue_(const TileResources_t& resources, StatId_t resourceId)
     }
 }
 
-TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
-                                         const TileEffectsContext& rTileEffects,
-                                         const BaseEffects_t& rBaseEffects)
-{
-    TileResources_t total{0, 0, 0};
-    for (const Unit* pUnit : rHomeUnits.GetUnits())
-    {
-        if (!pUnit || !pUnit->IsSupplyCrawling())
-        {
-            continue;
-        }
-
-        const Tile* pTile = pUnit->GetWorkedTile();
-        if (!pTile)
-        {
-            continue;
-        }
-
-        const auto& rOrder = std::get<SupplyCrawlOrder_t>(*pUnit->GetOrder());
-        const TileResources_t yield =
-            rTileEffects.ResolveTileYield(*pTile, /*bIsBaseTile*/false, rBaseEffects).effective;
-        switch (rOrder.resource)
-        {
-            case StatId_t::Nutrients:
-                total.nutrients += yield.nutrients;
-                break;
-            case StatId_t::Minerals:
-                total.minerals += yield.minerals;
-                break;
-            case StatId_t::Energy:
-                total.energy += yield.energy;
-                break;
-            default:
-                break;
-        }
-    }
-    return total;
-}
-
 } // namespace
 
-ResourceManager::ResourceManager(
-    const WorkerAssignmentManager& rWorkerAssignments,
-    const EconomyManager& rEconomy,
-    const CommerceCache& rCommerce,
-    const BaseManager& rBase,
-    const SocialRatingRegistry& rSocialRatings,
-    const Tile& rBaseTile,
-    const TileEffectsContext& rTileEffects,
-    const HomeBaseIndex& rHomeUnits)
-    : m_rWorkerAssignments(rWorkerAssignments)
-    , m_pEconomy(&rEconomy)
-    , m_pCommerce(&rCommerce)
+ResourceManager::ResourceManager(const CommerceCache& rCommerce, const BaseManager& rBase)
+    : m_pCommerce(&rCommerce)
     , m_rBase(rBase)
-    , m_rSocialRatings(rSocialRatings)
-    , m_rBaseTile(rBaseTile)
-    , m_rTileEffects(rTileEffects)
-    , m_rHomeUnits(rHomeUnits)
 {
-}
-
-void ResourceManager::RebindEconomy(const EconomyManager& rEconomy)
-{
-    m_pEconomy = &rEconomy;
 }
 
 void ResourceManager::RebindCommerce(const CommerceCache& rCommerce)
@@ -110,26 +53,6 @@ void ResourceManager::RebindCommerce(const CommerceCache& rCommerce)
 
 ResourceManager::~ResourceManager()
 {
-}
-
-// Total worked resources: worker pops + supply crawlers home to this base + base center.
-TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffects) const
-{
-    TileResources_t total = m_rWorkerAssignments.ComputeWorkedResources(rBaseEffects);
-
-    const TileResources_t crawl =
-        CollectSupplyCrawlYield_(m_rHomeUnits, m_rTileEffects, rBaseEffects);
-    total.nutrients += crawl.nutrients;
-    total.energy    += crawl.energy;
-    total.minerals  += crawl.minerals;
-
-    const TileResources_t baseTile =
-        m_rTileEffects.ResolveTileYield(m_rBaseTile, /*bIsBaseTile*/true, rBaseEffects).effective;
-    total.nutrients += baseTile.nutrients;
-    total.energy    += baseTile.energy;
-    total.minerals  += baseTile.minerals;
-
-    return total;
 }
 
 int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& worked,
@@ -145,35 +68,20 @@ int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& wo
 
 int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateResource_(StatId_t::Nutrients, ComputeWorked_(rBaseEffects), rBaseEffects);
+    const TileResources_t worked = WorkedYield(m_rBase);
+    return CalculateResource_(StatId_t::Nutrients, worked, rBaseEffects);
 }
 
 int ResourceManager::GetMineralProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateResource_(StatId_t::Minerals, ComputeWorked_(rBaseEffects), rBaseEffects);
+    const TileResources_t worked = WorkedYield(m_rBase);
+    return CalculateResource_(StatId_t::Minerals, worked, rBaseEffects);
 }
 
 int ResourceManager::GetEnergyProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateResource_(StatId_t::Energy, ComputeWorked_(rBaseEffects), rBaseEffects);
-}
-
-int ResourceManager::ApplyInefficiency_(int energy) const
-{
-    // HQ never loses energy to inefficiency (distance 0, and regardless of Efficiency rating).
-    const BaseManager* pHq = m_rBase.GetFaction().GetHeadquarters();
-    if (pHq == &m_rBase)
-    {
-        return energy;
-    }
-
-    const int distance = pHq
-        ? TabletopDiagonalDistance(m_rBaseTile, pHq->GetTile(),
-                                   m_rTileEffects.GetWorldMap().GetWidth())
-        : k_DefaultInefficiencyHqDistance;
-    const int denominator = InefficiencyDenominatorForRating(
-        m_rSocialRatings, m_rBase.GetEffectiveSocialRating(SocialRatingId_t::Efficiency));
-    return energy - CalculateInefficiencyLoss(energy, distance, denominator);
+    const TileResources_t worked = WorkedYield(m_rBase);
+    return CalculateResource_(StatId_t::Energy, worked, rBaseEffects);
 }
 
 int ResourceManager::CommerceEnergy_() const
@@ -194,47 +102,25 @@ const std::vector<CommercePartnerLine_t>& ResourceManager::GetCommercePartners()
     return m_pCommerce->ComputeForBase(m_rBase);
 }
 
-int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const
+EnergySplit_t ResourceManager::ProducedSplit_(const BaseEffects_t& rBaseEffects) const
 {
-    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects) + CommerceEnergy_());
-}
-
-int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
-{
-    // ResolveBaseStat (FilterBaseLevelByStatId): base-level resolution must never pick up
-    // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
-    const int split = m_pEconomy->CalculateEnergyForEcon(energy);
-    return FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, StatId_t::Econ, static_cast<double>(split)));
-}
-
-int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const
-{
-    const int split = m_pEconomy->CalculateEnergyForLabs(energy);
-    return FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, StatId_t::Labs, static_cast<double>(split)));
-}
-
-int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const
-{
-    const int split = m_pEconomy->CalculateEnergyForPsych(energy);
-    return FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, StatId_t::Psych, static_cast<double>(split)));
+    const int energy = GetEnergyProduction(rBaseEffects) + CommerceEnergy_();
+    return AllocateBaseEnergy(m_rBase, energy);
 }
 
 int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateEcon_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return ProducedSplit_(rBaseEffects).econ;
 }
 
 int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateLabs_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return ProducedSplit_(rBaseEffects).labs;
 }
 
 int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculatePsych_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return ProducedSplit_(rBaseEffects).psych;
 }
 
 int ResourceManager::GetNutrientBank() const
@@ -309,10 +195,13 @@ void ResourceManager::AddAllocatedEnergy(int energy)
     {
         throw std::invalid_argument("AddAllocatedEnergy: energy must be non-negative");
     }
-    const int allocatable = ApplyInefficiency_(energy);
-    m_econ  += m_pEconomy->CalculateEnergyForEcon(allocatable);
-    m_labs  += m_pEconomy->CalculateEnergyForLabs(allocatable);
-    m_psych += m_pEconomy->CalculateEnergyForPsych(allocatable);
+    const int allocatable = EnergyAfterInefficiency(m_rBase, energy);
+    const EnergyAllocation_t allocation =
+        m_rBase.GetFaction().GetEconomy().GetEnergyAllocation();
+    const EnergySplit_t split = SplitEnergy(allocation, allocatable);
+    m_econ  += split.econ;
+    m_labs  += split.labs;
+    m_psych += split.psych;
 }
 
 int ResourceManager::ConsumeEcon()
@@ -346,12 +235,11 @@ void ResourceManager::ProduceMinerals_(const TileResources_t& worked, const Base
 
 void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    const int energy = ApplyInefficiency_(
-        CalculateResource_(StatId_t::Energy, worked, rBaseEffects) + CommerceEnergy_());
-
-    m_econ  += CalculateEcon_(energy, rBaseEffects);
-    m_labs  += CalculateLabs_(energy, rBaseEffects);
-    m_psych += CalculatePsych_(energy, rBaseEffects);
+    const int produced = CalculateResource_(StatId_t::Energy, worked, rBaseEffects);
+    const EnergySplit_t split = AllocateBaseEnergy(m_rBase, produced + CommerceEnergy_());
+    m_econ  += split.econ;
+    m_labs  += split.labs;
+    m_psych += split.psych;
 }
 
 void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
@@ -361,7 +249,7 @@ void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
     // so it always means "psych available this turn".
     m_psych = 0;
 
-    const TileResources_t worked = ComputeWorked_(rBaseEffects);
+    const TileResources_t worked = WorkedYield(m_rBase);
     ProduceNutrients_(worked, rBaseEffects);
     ProduceMinerals_(worked, rBaseEffects);
     AllocateEnergy_(worked, rBaseEffects);

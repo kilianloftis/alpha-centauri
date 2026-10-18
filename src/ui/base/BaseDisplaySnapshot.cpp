@@ -6,6 +6,7 @@
 #include "game/base/HomeBaseIndex.h"
 #include "game/population/PopulationManager.h"
 #include "game/production/ProductionManager.h"
+#include "game/economy/EconomyRules.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/WorldMap.h"
@@ -31,7 +32,7 @@ BaseDisplaySnapshot_t BuildBaseDisplaySnapshot(const BaseManager& rBase)
 
     snapshot.nutrientProduction = rBase.GetNutrientProduction();
     snapshot.nutrientsRequired = rBase.GetNutrientsRequired();
-    snapshot.mineralProduction = rBase.GetMineralsForProduction();
+    snapshot.mineralProduction = MineralsForProduction(rBase);
 
     const IConstructable* pProduction = rBase.GetProduction().GetCurrentProduction();
     snapshot.bHasProduction = pProduction != nullptr;

@@ -265,7 +265,7 @@ each with an explicit key:
   effects version, the world `WorkedTileIndex` revision, the base's population revision, its
   home-unit revision, and the current production item. Previously `GrowthDisplay`,
   `ProductionDisplay` and `BaseWorkableAreaDisplay` between them drove two full
-  `ResourceManager::ComputeWorked_` passes and twenty per-tile yield resolutions on **every
+  `WorkedYield` passes and twenty per-tile yield resolutions on **every
   paint**. Cheap reads (stockpiles, base name, population size) stay live and are deliberately
   not in the snapshot.
   Tile state is absent from the key because it cannot change while the view is open:

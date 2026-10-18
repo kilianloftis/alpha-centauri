@@ -126,7 +126,7 @@ TEST_CASE("The snapshot reports the same yields the panel used to query live", "
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
     CHECK(snapshot.nutrientProduction == rBase.GetNutrientProduction());
     CHECK(snapshot.nutrientsRequired == rBase.GetNutrientsRequired());
-    CHECK(snapshot.mineralProduction == rBase.GetMineralsForProduction());
+    CHECK(snapshot.mineralProduction == MineralsForProduction(rBase));
 
     const WorkerAssignmentManager& rAssignments = rBase.GetWorkerAssignments();
     for (const auto& [pTile, rEntry] : snapshot.tiles)

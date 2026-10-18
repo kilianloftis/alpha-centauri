@@ -565,7 +565,7 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
 
     // The base keeps its HomeBaseIndex across the move, so units of the *previous* owner
     // would still be homed here — and a supply crawler homed at a base feeds that base's
-    // production (ResourceManager::ComputeWorked_), i.e. the captor would harvest the loser's
+    // production (WorkedYield), i.e. the captor would harvest the loser's
     // crawlers. A claim on a base its owner does not own is a foreign home claim, which the
     // transfer protocol treats as invalid; drop exactly those (same rule ReleaseAndAdopt_
     // applies to unit transfer). Units the receiver already owns keep their home.

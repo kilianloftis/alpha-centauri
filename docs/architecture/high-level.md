@@ -560,7 +560,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   *receiver* owns stay valid; claims held by units of any other faction are **foreign** and are
   dropped on transfer. That is the same rule unit transfer applies, and it is load-bearing: a
   supply crawler homed at a base feeds that base's production
-  (`ResourceManager::ComputeWorked_`), so leaving the loser's claims in place would have the
+  (`WorkedYield`), so leaving the loser's claims in place would have the
   captor harvesting the loser's crawlers.
 - **Base introduction is auto-wired.** `Faction::AddBase` emits `OnBaseAdded` for every insertion
   — founding, post-transfer adopt, and (if it returns) future load — and `Engine` connects that

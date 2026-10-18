@@ -162,7 +162,7 @@ std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeCommerce
     }
 
     const int techDenominator = TechDenominator_(rGameState);
-    // Ranking a faction prices every one of its bases (ComputeWorked_ per base), so each
+    // Ranking a faction prices every one of its bases (WorkedYield per base), so each
     // side is ranked once here and reused for every pair rather than per owner base.
     const std::vector<RankedBase_t> ownerBases = RankBasesByEnergy_(rOwner);
 

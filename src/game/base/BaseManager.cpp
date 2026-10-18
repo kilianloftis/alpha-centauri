@@ -120,9 +120,7 @@ BaseManager::BaseManager(
           rTileEffects.GetWorldMap().GetWorkedTiles()))
     , m_pBuildings(std::make_unique<BuildingManager>(rRules.rBuildings, pSecretProjectCalculator,
                                                      rFaction.GetResearch()))
-    , m_pResources(std::make_unique<ResourceManager>(
-          *m_pWorkerAssignments, rFaction.GetEconomy(), rFaction.GetCommerce(), *this,
-          m_rSocialRatings, m_tile, m_rTileEffects, m_homeUnits))
+    , m_pResources(std::make_unique<ResourceManager>(rFaction.GetCommerce(), *this))
     , m_pProduction(std::make_unique<ProductionManager>(
           rRules.rProduction,
           [this]() -> const IConstructable* {
@@ -354,11 +352,6 @@ int BaseManager::GetMineralSupportCost() const
     return MineralSupportCost(*this);
 }
 
-int BaseManager::GetMineralsForProduction() const
-{
-    return std::max(0, GetMineralProduction() - GetMineralSupportCost());
-}
-
 std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
@@ -376,7 +369,7 @@ std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
     {
         return 1;
     }
-    const int rate = GetMineralsForProduction();
+    const int rate = MineralsForProduction(*this);
     if (rate <= 0)
     {
         return std::nullopt;
@@ -707,7 +700,6 @@ void BaseManager::RebindFaction(Faction& rFaction)
     m_effects.BindProvider(rFaction);
     m_pPopulation->RebindResearch(rFaction.GetResearch());
     m_pBuildings->RebindResearch(rFaction.GetResearch());
-    m_pResources->RebindEconomy(rFaction.GetEconomy());
     m_pResources->RebindCommerce(rFaction.GetCommerce());
 
     // Buildings live in the shared registry, so a queued building pointer stays valid when

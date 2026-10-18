@@ -154,10 +154,7 @@ public:
     int GetMineralProduction() const;
     // Home-unit mineral support this turn (free slots applied; current roster, no disband).
     int GetMineralSupportCost() const;
-    // Minerals ApplyProduction will allocate if the current roster stays: production minus
-    // support, floored at 0. The production panel shows this, not the gross yield.
-    int GetMineralsForProduction() const;
-    // Turns until the queued item reaches cost at GetMineralsForProduction(). Empty when
+    // Turns until the queued item reaches cost at MineralsForProduction(). Empty when
     // nothing is queued, the item never completes, or the rate is 0 with minerals still owed.
     // Already-met cost is 1 (completes this turn).
     std::optional<int> GetTurnsToProductionCompletion() const;
@@ -231,6 +228,7 @@ public:
 
     // Stockpile configs for conversion and the empty-queue fallback.
     const StockpileRegistry& GetStockpileRegistry() const { return m_rStockpileRegistry; }
+    const SocialRatingRegistry& GetSocialRatings() const { return m_rSocialRatings; }
 
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list) and the

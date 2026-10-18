@@ -283,7 +283,7 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
     const int gross = base.GetMineralProduction();
     REQUIRE(gross > 1);
     CHECK(base.GetMineralSupportCost() == 0);
-    CHECK(base.GetMineralsForProduction() == gross);
+    CHECK(MineralsForProduction(base) == gross);
 
     // Support 0 covers two chassis; the third costs 1 mineral.
     fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
@@ -291,8 +291,8 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
     fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
     CHECK(base.GetMineralSupportCost() == 1);
-    CHECK(base.GetMineralsForProduction() == gross - 1);
-    CHECK(base.GetMineralsForProduction() == base.GetMineralProduction() - 1);
+    CHECK(MineralsForProduction(base) == gross - 1);
+    CHECK(MineralsForProduction(base) == base.GetMineralProduction() - 1);
 }
 
 TEST_CASE("Turns to completion is remaining minerals over after-support rate, rounded up",
@@ -309,7 +309,7 @@ TEST_CASE("Turns to completion is remaining minerals over after-support rate, ro
     CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
 
     base.GetBuildingManager().AddBuilding("mineral_cache");
-    const int rate = base.GetMineralsForProduction();
+    const int rate = MineralsForProduction(base);
     const int cost = base.GetMineralCost();
     REQUIRE(rate > 0);
     REQUIRE(cost > 0);

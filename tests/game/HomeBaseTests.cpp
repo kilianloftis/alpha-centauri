@@ -104,7 +104,7 @@ TEST_CASE("Transferring a base drops the previous owner's home claims", "[unit][
     // Ownership change ≠ destroy — the HomeBaseIndex moves with the BaseManager object rather
     // than the faction — but a claim held by a unit the new owner does not own is a *foreign*
     // claim, and the transfer protocol treats those as invalid. Leaving it would let the captor
-    // collect the loser's supply-crawler yield (ResourceManager::ComputeWorked_ walks the home
+    // collect the loser's supply-crawler yield (WorkedYield walks the home
     // index with no faction check) and list the loser's units in its own SupportDisplay.
     giver.TransferBaseTo(base.GetBaseId(), receiver);
 

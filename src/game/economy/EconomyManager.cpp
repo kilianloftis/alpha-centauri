@@ -54,26 +54,4 @@ EnergyAllocation_t EconomyManager::GetEnergyAllocation() const
     return m_allocation;
 }
 
-int EconomyManager::CalculateEnergyForLabs(int totalEnergy) const
-{
-    // Integer division (floor). Matches SMAC: labs take their exact percentage share.
-    return (totalEnergy * m_allocation.labsPercent) / 100;
-}
-
-int EconomyManager::CalculateEnergyForPsych(int totalEnergy) const
-{
-    // Integer division (floor). Matches SMAC: psych takes its exact percentage share.
-    return (totalEnergy * m_allocation.psychPercent) / 100;
-}
-
-int EconomyManager::CalculateEnergyForEcon(int totalEnergy) const
-{
-    // Economy is the residual bucket (SMAC): whatever remains after labs and psych
-    // receive their floored shares. This conserves energy — the three categories
-    // always sum to totalEnergy — and absorbs all rounding leftovers into econ.
-    return totalEnergy
-         - CalculateEnergyForLabs(totalEnergy)
-         - CalculateEnergyForPsych(totalEnergy);
-}
-
 } // namespace ac
