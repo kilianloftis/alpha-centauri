@@ -2,6 +2,7 @@
 
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/combat/MoraleConfig.h"
 #include "game/movement/MoveCostRules.h"
@@ -99,10 +100,10 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const int attackRating = ResolveCombatUnitStat(
-        attacker, StatId_t::Attack, attackCtx, morale.EffectiveLevelEffects(attacker, attackCtx));
+        attacker, StatId_t::Attack, attackCtx, EffectiveLevelEffects(attacker, attackCtx, morale));
     const int defenseRating = ResolveCombatUnitStat(
         defender, StatId_t::Defense, defenseCtx,
-        morale.EffectiveLevelEffects(defender, defenseCtx));
+        EffectiveLevelEffects(defender, defenseCtx, morale));
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -129,10 +130,10 @@ TEST_CASE("Partial movement scales attack strength by the leftover fraction of a
     const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const int attackRating = ResolveCombatUnitStat(
-        attacker, StatId_t::Attack, attackCtx, morale.EffectiveLevelEffects(attacker, attackCtx));
+        attacker, StatId_t::Attack, attackCtx, EffectiveLevelEffects(attacker, attackCtx, morale));
     const int defenseRating = ResolveCombatUnitStat(
         defender, StatId_t::Defense, defenseCtx,
-        morale.EffectiveLevelEffects(defender, defenseCtx));
+        EffectiveLevelEffects(defender, defenseCtx, morale));
     const int point = MovementConstants_t::k_moveFragmentsPerPoint;
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
@@ -190,7 +191,7 @@ TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat]
         defenseCtx.pAttacker = &rAttacker;
         return ResolveCombatUnitStat(
             defender, StatId_t::Defense, defenseCtx,
-            morale.EffectiveLevelEffects(defender, defenseCtx));
+            EffectiveLevelEffects(defender, defenseCtx, morale));
     };
 
     // Armor base defense 3; +100% AddPercent vs air/orbital → 6.
@@ -234,7 +235,7 @@ TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea"
         attackCtx.pDefender = &rDefender;
         return ResolveCombatUnitStat(
             rAttacker, StatId_t::Attack, attackCtx,
-            morale.EffectiveLevelEffects(rAttacker, attackCtx));
+            EffectiveLevelEffects(rAttacker, attackCtx, morale));
     };
 
     // Weapon base attack 4; +100% vs air → 8; −50% vs land/sea → 2.
@@ -452,10 +453,10 @@ TEST_CASE("Partial movement scales psi attack strength by the leftover fraction"
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const double attackRating = ResolveCombatUnitMultiplicativeStat(
         attacker, StatId_t::Attack, 1.0, attackCtx,
-        morale.EffectiveLevelEffects(attacker, attackCtx));
+        EffectiveLevelEffects(attacker, attackCtx, morale));
     const double defenseRating = ResolveCombatUnitMultiplicativeStat(
         defender, StatId_t::Defense, 1.0, defenseCtx,
-        morale.EffectiveLevelEffects(defender, defenseCtx));
+        EffectiveLevelEffects(defender, defenseCtx, morale));
 
     CombatHarness_ harness(fixture, /*seed*/ 23);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);

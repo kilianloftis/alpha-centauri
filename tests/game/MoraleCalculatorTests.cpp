@@ -8,6 +8,8 @@
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
+#include "game/combat/MoraleMutations.h"
 #include "game/combat/MoraleConfig.h"
 #include "game/combat/MoraleConfigParser.h"
 #include "game/movement/MoveCostRules.h"
@@ -114,17 +116,17 @@ TEST_CASE("Morale level effects apply Attack AddPercent in combat resolve", "[mo
 
     unit.SetXp(0); // Very Green −25%
     CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
-                                morale.EffectiveLevelEffects(unit, ctx))
+                                EffectiveLevelEffects(unit, ctx, morale))
           == static_cast<int>(std::lround(baseAttack * 0.75)));
 
     unit.SetXp(2); // Disciplined 0%
     CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
-                                morale.EffectiveLevelEffects(unit, ctx))
+                                EffectiveLevelEffects(unit, ctx, morale))
           == baseAttack);
 
     unit.SetXp(4); // Veteran +25%
     CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
-                                morale.EffectiveLevelEffects(unit, ctx))
+                                EffectiveLevelEffects(unit, ctx, morale))
           == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 
@@ -136,15 +138,15 @@ TEST_CASE("DisplayName switches on IsNativeLife", "[morale]")
 
     Unit& conventional = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     conventional.SetXp(3);
-    CHECK(morale.DisplayName(conventional) == "Hardened");
+    CHECK(MoraleDisplayName(conventional, morale) == "Hardened");
 
     Unit& psi = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_psi"});
     psi.SetXp(3);
-    CHECK(morale.DisplayName(psi) == "Hardened");
+    CHECK(MoraleDisplayName(psi, morale) == "Hardened");
 
     Unit& native = fixture.MakeUnit(faction, 10, 10, {"native_life_chassis"});
     native.SetXp(3);
-    CHECK(morale.DisplayName(native) == "Boil");
+    CHECK(MoraleDisplayName(native, morale) == "Boil");
 }
 
 TEST_CASE("SE Morale +2 adds defense-in-base morale_bonus only when defending", "[morale][se]")
@@ -165,8 +167,8 @@ TEST_CASE("SE Morale +2 adds defense-in-base morale_bonus only when defending", 
     // +2 SE: +1 always, +1 more defending in base → 2 on defense, 1 on attack.
     CHECK(ResolveStat(unit, StatId_t::MoraleBonus, defCtx) == 2);
     CHECK(ResolveStat(unit, StatId_t::MoraleBonus, atkCtx) == 1);
-    CHECK(morale.EffectiveMoraleLevel(unit, defCtx) == 4);
-    CHECK(morale.EffectiveMoraleLevel(unit, atkCtx) == 3);
+    CHECK(EffectiveMoraleLevel(unit, defCtx, morale) == 4);
+    CHECK(EffectiveMoraleLevel(unit, atkCtx, morale) == 3);
 }
 
 TEST_CASE("Low SE Morale halves positive Creche defense bonus", "[morale][se]")
@@ -186,7 +188,7 @@ TEST_CASE("Low SE Morale halves positive Creche defense bonus", "[morale][se]")
     const EffectContext_t defCtx{&unit.GetTile(), CombatRole_t::Defender};
     // SE -2: morale_bonus -1 + positive_morale_scale -50%; Creche +1 → 0 after scale.
     // Creche home soften: unconditional -1 → 0; conditional scaled → 0 → level 2.
-    CHECK(morale.EffectiveMoraleLevel(unit, defCtx) == 2);
+    CHECK(EffectiveMoraleLevel(unit, defCtx, morale) == 2);
 }
 
 TEST_CASE("Defense floor keeps defender at Green", "[morale]")
@@ -199,8 +201,8 @@ TEST_CASE("Defense floor keeps defender at Green", "[morale]")
 
     const EffectContext_t atkCtx{&unit.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defCtx{&unit.GetTile(), CombatRole_t::Defender};
-    CHECK(morale.EffectiveMoraleLevel(unit, atkCtx) == 0);
-    CHECK(morale.EffectiveMoraleLevel(unit, defCtx) == 1);
+    CHECK(EffectiveMoraleLevel(unit, atkCtx, morale) == 0);
+    CHECK(EffectiveMoraleLevel(unit, defCtx, morale) == 1);
 }
 
 TEST_CASE("ResolveCombatUnitStat applies morale level Attack AddPercent", "[morale][combat]")
@@ -214,7 +216,7 @@ TEST_CASE("ResolveCombatUnitStat applies morale level Attack AddPercent", "[mora
 
     const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
     const int combatAttack = ResolveCombatUnitStat(
-        unit, StatId_t::Attack, ctx, morale.EffectiveLevelEffects(unit, ctx));
+        unit, StatId_t::Attack, ctx, EffectiveLevelEffects(unit, ctx, morale));
     CHECK(combatAttack == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 
@@ -230,12 +232,12 @@ TEST_CASE("morale_bonus carries a Unit-domain amount_source without a caller-sta
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
 
-    const int noBases = morale.EffectiveMoraleLevel(unit, ctx);
+    const int noBases = EffectiveMoraleLevel(unit, ctx, morale);
 
     fixture.MakeFactionBase(faction, 8, 4);
     fixture.MakeFactionBase(faction, 8, 12);
     REQUIRE(faction.GetBaseCount() == 2);
-    CHECK(morale.EffectiveMoraleLevel(unit, ctx) == noBases + 2);
+    CHECK(EffectiveMoraleLevel(unit, ctx, morale) == noBases + 2);
 }
 
 TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]")
@@ -247,12 +249,34 @@ TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]"
     std::mt19937 rng(1);
 
     unit.SetXp(1);
-    CHECK(morale.TryPromote(unit, 100, 100, rng));
+    CHECK(TryPromote(unit, 100, 100, morale, rng));
     CHECK(unit.GetXp() == 2);
 
     unit.SetXp(6);
-    CHECK_FALSE(morale.TryPromote(unit, 100, 100, rng));
+    CHECK_FALSE(TryPromote(unit, 100, 100, morale, rng));
     CHECK(unit.GetXp() == 6);
+}
+
+TEST_CASE("MoraleCalculator value methods read the configured levels", "[morale]")
+{
+    FactionFixture fixture;
+    const MoraleCalculator& morale = fixture.morale();
+
+    // Levels run 0 (Very Green) to 6 (Elite); the defense floor is 1 (Green).
+    CHECK(morale.MoraleLevel(6, 2, CombatRole_t::Attacker) == 6);
+    CHECK(morale.MoraleLevel(0, -1, CombatRole_t::Attacker) == 0);
+    CHECK(morale.MoraleLevel(0, 0, CombatRole_t::Defender) == 1);
+    CHECK(morale.MoraleLevel(3, 1, CombatRole_t::Defender) == 4);
+
+    CHECK(morale.IntrinsicXp(false) == 1);
+    CHECK(morale.IntrinsicXp(true) == 2);
+
+    CHECK(morale.LevelEffects(4).size() == 4);
+    CHECK(morale.LevelEffects(99).empty());
+
+    // Green always promotes; Elite has no level above it.
+    CHECK(morale.PromotionChance(1, 100, 100) == Catch::Approx(1.0));
+    CHECK(morale.PromotionChance(6, 100, 100) == 0.0);
 }
 
 TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
@@ -302,7 +326,7 @@ TEST_CASE("A committed riot costs morale only for units homed at the rioting bas
 
     const EffectContext_t riotCtx{&homedAtRiot.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t calmCtx{&homedElsewhere.GetTile(), CombatRole_t::Attacker};
-    const int levelBefore = fixture.morale().EffectiveMoraleLevel(homedAtRiot, riotCtx);
+    const int levelBefore = EffectiveMoraleLevel(homedAtRiot, riotCtx, fixture.morale());
     REQUIRE(ResolveStat(homedAtRiot, StatId_t::MoraleBonus, riotCtx) == 0);
 
     rioting.GetPopulation().ForceRiot(/*turns=*/1);
@@ -316,8 +340,8 @@ TEST_CASE("A committed riot costs morale only for units homed at the rioting bas
     // nothing. It must also narrow to that base's own garrison.
     CHECK(ResolveStat(homedAtRiot, StatId_t::MoraleBonus, riotCtx) == -1);
     CHECK(ResolveStat(homedElsewhere, StatId_t::MoraleBonus, calmCtx) == 0);
-    CHECK(fixture.morale().EffectiveMoraleLevel(homedAtRiot, riotCtx) == levelBefore - 1);
-    CHECK(fixture.morale().EffectiveMoraleLevel(homedElsewhere, calmCtx) == levelBefore);
+    CHECK(EffectiveMoraleLevel(homedAtRiot, riotCtx, fixture.morale()) == levelBefore - 1);
+    CHECK(EffectiveMoraleLevel(homedElsewhere, calmCtx, fixture.morale()) == levelBefore);
 
     // The base-lane half of the same tier stays on the base path and does not leak to units.
     CHECK(ResolveFlag(rioting, RuleFlagId_t::DisableProduction));

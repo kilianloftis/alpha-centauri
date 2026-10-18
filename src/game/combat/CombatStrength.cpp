@@ -5,6 +5,7 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/Faction.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/units/Unit.h"
 
@@ -38,10 +39,10 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     {
         attackRating = ResolveCombatUnitMultiplicativeStat(
             rAttacker, StatId_t::Attack, 1.0, attackCtx,
-            rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
+            EffectiveLevelEffects(rAttacker, attackCtx, rMorale));
         const double defenseRating = ResolveCombatUnitMultiplicativeStat(
             rDefender, defenderStat, 1.0, defenseCtx,
-            rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
+            EffectiveLevelEffects(rDefender, defenseCtx, rMorale));
         strength.attackStrength = static_cast<int>(
             std::lround(attackRating * k_CombatStrengthScale));
         strength.defenseStrength = static_cast<int>(std::lround(
@@ -51,10 +52,10 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     {
         const int conventionalAttack = ResolveCombatUnitStat(
             rAttacker, StatId_t::Attack, attackCtx,
-            rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
+            EffectiveLevelEffects(rAttacker, attackCtx, rMorale));
         const int defenseRating = ResolveCombatUnitStat(
             rDefender, defenderStat, defenseCtx,
-            rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
+            EffectiveLevelEffects(rDefender, defenseCtx, rMorale));
         attackRating = static_cast<double>(conventionalAttack);
         strength.attackStrength = conventionalAttack * k_CombatStrengthScale;
         strength.defenseStrength = static_cast<int>(std::lround(

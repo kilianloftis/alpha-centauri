@@ -245,7 +245,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `ResearchManager`'s tech-cost modifier, and `FactionVisibleMap`'s vision range. Do not
   truncate or `std::round` a total anywhere else — a fork means one stat resolves to two
   values depending on which path asked, which is what this helper exists to prevent. The one
-  deliberate exception is `MoraleCalculator`'s `PositiveMoraleScale` step, which truncates
+  deliberate exception is the `PositiveMoraleScale` step in `MoraleRules`, which truncates
   toward zero to match integer halving and says so at the call site.
 
 ### ResolveDomain_t / DomainFor
@@ -859,7 +859,7 @@ grants fewer units and reports the real count rather than throwing.
 - **Location**: `include/game/effects/EffectConfigParser.h` / `src/game/effects/EffectConfigParser.cpp`.
 - **Responsibilities**:
   - `ParseModifierOp`, `ParseEffectScope` — the canonical string&lt;-&gt;enum mappings for effect-config enums. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`. The snake_case id maps (`ParseStatId`, `ParseRuleFlagId`, `ParseSocialRatingId`) live next to their enums in `EffectEnums.h` at `ac` scope, per the one-map-next-to-the-enum guideline.
-  - `ModifierOp_t` includes clamping ops: `MaxClamp` and `MinClamp`. `ParseModifierOp` accepts these names; `ApplyModifierStack` applies clamps after the Add / AddPercent / MultiplyGeometric math so clamps bound the final resolved value. The tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins. **Only resolve sites that route through `ApplyModifierStack` honour clamps** — the deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the `MoraleCalculator` additive pass, stockpile `MineralsConverted`) drop them silently.
+  - `ModifierOp_t` includes clamping ops: `MaxClamp` and `MinClamp`. `ParseModifierOp` accepts these names; `ApplyModifierStack` applies clamps after the Add / AddPercent / MultiplyGeometric math so clamps bound the final resolved value. The tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins. **Only resolve sites that route through `ApplyModifierStack` honour clamps** — the deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the `MoraleRules` additive pass, stockpile `MineralsConverted`) drop them silently.
   - `ParseFactionFilter` accepts a `PlayerType` kind: `{ "kind": "PlayerType", "type": "Player" | "AI" }`, parsed case-insensitively through `magic_enum`. Two different resolve paths read it: `FactionFilterMatchesOwner` (owner-side — does this effect apply to the faction that *owns* the pool, used when difficulty injects its effect list) and `FactionFilterCoversTarget` (target-side — does this effect reach that *other* faction, used for cross-faction dispatch such as infiltration). Neither substitutes for the other.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
   - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `Intercept.chance`.

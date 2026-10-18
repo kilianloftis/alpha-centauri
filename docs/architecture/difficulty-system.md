@@ -148,7 +148,7 @@ MinClamp and MaxClamp cross, MinClamp wins.
 
 Clamps are only honoured by resolve sites that go through `ApplyModifierStack`. The
 deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the
-`MoraleCalculator` additive pass, stockpile `MineralsConverted`) ignore them silently — do not
+`MoraleRules` additive pass, stockpile `MineralsConverted`) ignore them silently — do not
 write a clamp against a stat those paths own.
 
 ## Stat kinds

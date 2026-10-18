@@ -13,6 +13,7 @@
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatStrength.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
@@ -258,7 +259,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     defenderAttack.pDefender = &defender;
     const int defenderAttackRating = ResolveCombatUnitStat(
         defender, StatId_t::Attack, defenderAttack,
-        fixture.morale().EffectiveLevelEffects(defender, defenderAttack));
+        EffectiveLevelEffects(defender, defenderAttack, fixture.morale()));
     const int point = MovementConstants_t::k_moveFragmentsPerPoint;
     const int scaledByLeftover = static_cast<int>(std::lround(
         defenderAttackRating * 1.0 / static_cast<double>(point) * k_CombatStrengthScale));
@@ -358,19 +359,19 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
     ctx.pAttacker = &attacker;
     ctx.pDefender = &defender;
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                fixture.morale().EffectiveLevelEffects(attacker, ctx))
+                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
           == 6);
     CHECK(attacker.GetStat(StatId_t::Attack) == 4);
 
     fixture.At(8, 8).SetElevation(999);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                fixture.morale().EffectiveLevelEffects(attacker, ctx))
+                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
           == 4);
 
     fixture.At(8, 8).SetElevation(0);
     fixture.At(9, 9).SetElevation(2000);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                fixture.morale().EffectiveLevelEffects(attacker, ctx))
+                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
           == 4);
 }
 

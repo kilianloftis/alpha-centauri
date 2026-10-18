@@ -1,5 +1,6 @@
 #include "game/probes/ProbeActionExecutor.h"
 
+#include "game/combat/MoraleRules.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeRules.h"
 #include "game/effects/ActiveEffect.h"
@@ -191,7 +192,7 @@ void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const 
                                             const ProbeTarget_t& rTarget, int risk) const
 {
     EffectContext_t ctx;
-    const int morale = m_rMorale.EffectiveMoraleLevel(rUnit, ctx);
+    const int morale = EffectiveMoraleLevel(rUnit, ctx, m_rMorale);
     const int targetProbeEffect =
         TargetProbeDefenseEffect(rTarget, m_rProbeActions.successFormula);
 

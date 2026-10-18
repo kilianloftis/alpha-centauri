@@ -146,6 +146,8 @@ add_library(ac-core STATIC
     game/combat/MoraleConfig.cpp
     game/combat/MoraleConfigParser.cpp
     game/combat/MoraleCalculator.cpp
+    game/combat/MoraleRules.cpp
+    game/combat/MoraleMutations.cpp
     game/combat/DisengageRules.cpp
     game/movement/EvacuateTerritoryRules.cpp
     game/movement/EvacuateTerritoryMutations.cpp

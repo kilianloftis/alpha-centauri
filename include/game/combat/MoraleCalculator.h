@@ -3,7 +3,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/combat/MoraleConfig.h"
 
-#include <random>
 #include <span>
 #include <string>
 
@@ -11,12 +10,11 @@ namespace ac
 {
 
 class LuaRuntime;
-class Unit;
 
-// Morale / XP rank rules backed by game-wide MoraleConfig_t (levels, promotion).
+// Morale / XP rank formulas backed by game-wide MoraleConfig_t (levels, promotion).
 // Holds a non-owning config reference — same pattern as TechCostCalculator.
 // Combat Attack/Defense bonuses live as effects on each MoraleLevel_t and are folded
-// in by ResolveCombatUnitStat — this class only picks the effective level.
+// in by ResolveCombatUnitStat — this class only picks the level.
 class MoraleCalculator
 {
 public:
@@ -24,23 +22,18 @@ public:
 
     const MoraleConfig_t& GetConfig() const;
 
-    int BaseIntrinsicXp(const Unit& rUnit) const;
+    int IntrinsicXp(bool bProbeTeam) const;
 
-    // Live morale level for combat (SE bonus, creche soften, riot, defense floor).
-    int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx) const;
+    // Clamped to the configured levels, with the defense floor for a defender.
+    int MoraleLevel(int xp, int liveBonus, CombatRole_t role) const;
 
-    // Effects declared on the unit's effective morale level (empty if level missing).
     // Includes promotion_chance modifiers; combat resolve ignores stats it does not query.
-    std::span<const EffectConfig_t> EffectiveLevelEffects(const Unit& rUnit,
-                                                          const EffectContext_t& rCtx) const;
+    std::span<const EffectConfig_t> LevelEffects(int level) const;
 
-    const std::string& DisplayName(const Unit& rUnit) const;
     const std::string& DisplayName(int level, bool bNativeLifecycle) const;
 
-    // Promote survivor one intrinsic XP on success. Caps at max level.
-    // Promotion chance uses intrinsic XP level effects (not SE-shifted effective level).
-    bool TryPromote(Unit& rSurvivor, int attackStrength, int defenseStrength,
-                    std::mt19937& rRng) const;
+    // Uses the intrinsic level's effects, not the SE-shifted effective level.
+    double PromotionChance(int xp, int attackStrength, int defenseStrength) const;
 
 private:
     const MoraleConfig_t& m_rConfig;

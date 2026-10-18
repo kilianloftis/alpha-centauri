@@ -1,5 +1,6 @@
 #include "game/units/Unit.h"
 
+#include "game/combat/MoraleRules.h"
 #include "game/faction/Faction.h"
 #include "game/units/Military.h"
 #include "game/base/BaseManager.h"
@@ -81,7 +82,7 @@ Unit::Unit(UnitId_t unitId,
     m_currentFuel = GetMaxFuel();
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_xp = m_rMorale.BaseIntrinsicXp(*this);
+    m_xp = BaseIntrinsicXp(*this, m_rMorale);
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
 }

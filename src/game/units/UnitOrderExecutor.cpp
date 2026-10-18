@@ -1,6 +1,7 @@
 #include "game/units/UnitOrderExecutor.h"
 
 #include "game/combat/InterceptMutations.h"
+#include "game/combat/MoraleMutations.h"
 #include "game/combat/ScrambleRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/movement/MoveCostRules.h"
@@ -77,11 +78,11 @@ void UnitOrderExecutor::PromoteOnKill_(Unit& rAttacker, Unit& rDefender,
 {
     if (rResult.bDefenderDestroyed && !rResult.bAttackerDestroyed)
     {
-        m_rMorale.TryPromote(rAttacker, rResult.attackStrength, rResult.defenseStrength, m_rRng);
+        TryPromote(rAttacker, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
     }
     if (rResult.bAttackerDestroyed && !rResult.bDefenderDestroyed)
     {
-        m_rMorale.TryPromote(rDefender, rResult.attackStrength, rResult.defenseStrength, m_rRng);
+        TryPromote(rDefender, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
     }
 }
 
