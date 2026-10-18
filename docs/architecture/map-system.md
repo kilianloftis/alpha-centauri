@@ -283,7 +283,7 @@ and yield lookups for object rows still read the live tile.
 ### Base System
 - Bases work tiles to extract resources
 - `BaseManager::GetX()` / `GetY()` track map position via the base's tile
-- `WorkerAssignmentManager::GetWorkableTiles()` / `ForEachTileInWorkableArea` yield the **Euclidean radius-2** lattice disk (`p² + q² ≤ 5`) around the base — the classic SMAC 5×5 with corners cut — excluding the base's own tile (20 surrounding tiles). Enemy-unit blocking is a TODO pending combat.
+- `WorkerAssignmentManager::GetWorkableTiles()` / `ForEachWorkableTile` (`BaseRules`) yield the **Euclidean radius-2** lattice disk (`p² + q² ≤ 5`) around the base — the classic SMAC 5×5 with corners cut — excluding the base's own tile (20 surrounding tiles). Enemy-unit blocking is a TODO pending combat.
 - `WorkerAssignmentManager::ComputeWorkedResources()` aggregates resources from worked tiles
 - `TileResources_t` struct used to pass resource totals
 - Each worker assigned to a tile contributes that tile's resource production

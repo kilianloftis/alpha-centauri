@@ -1,4 +1,6 @@
 #include "game/economy/WorkerAssignmentManager.h"
+
+#include "game/base/BaseRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorkedTileIndex.h"
@@ -83,7 +85,7 @@ bool WorkerAssignmentManager::Assign_(Pop& rPop, const Tile* pTile, bool bUserAs
         return false;
     }
 
-    if (std::find(m_workableTiles.begin(), m_workableTiles.end(), pTile) == m_workableTiles.end())
+    if (!pTile || !MayWorkTile(*this, *pTile))
     {
         return false;
     }
@@ -248,11 +250,7 @@ bool WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
     // worker off a tile it was productively working — and the previous code ignored
     // UserAssignWorker's bool, so a doomed request destroyed a specialist's role or left a
     // worker idle with nothing to show for it.
-    if (std::find(m_workableTiles.begin(), m_workableTiles.end(), pTile) == m_workableTiles.end())
-    {
-        return false;
-    }
-    if (IsTileAssigned(pTile))
+    if (!pTile || !MayWorkTile(*this, *pTile))
     {
         return false;
     }
@@ -354,7 +352,7 @@ std::vector<const Tile*> WorkerAssignmentManager::GetAvailableTiles_() const
     std::vector<const Tile*> availableTiles;
     for (const Tile* pTile : m_workableTiles)
     {
-        if (pTile && !IsTileAssigned(pTile))
+        if (pTile && MayWorkTile(*this, *pTile))
         {
             availableTiles.push_back(pTile);
         }

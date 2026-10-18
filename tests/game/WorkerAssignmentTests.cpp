@@ -5,6 +5,8 @@
 
 #include "GameFixtures.h"
 
+#include "game/base/BaseManager.h"
+#include "game/base/BaseRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
@@ -430,4 +432,45 @@ TEST_CASE("Workable area wraps horizontally across the map seam", "[worker][work
     // (width-4,4): lattice offset (-2, 2) — outside the workable disk (corners cut).
     base.GetWorkerAssignments().UnassignWorker(rPop);
     CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 4, 4)));
+}
+
+TEST_CASE("MayWorkTile: overlapping work areas, one worker per tile", "[economy][workers]")
+{
+    actest::BaseFixture fixture;
+    ac::BaseManager& rFirst = fixture.MakeBase(8, 8);
+    ac::BaseManager& rSecond = fixture.MakeBase(12, 8);
+    ac::WorkerAssignmentManager& rFirstWorkers = rFirst.GetWorkerAssignments();
+    const ac::WorkerAssignmentManager& rSecondWorkers = rSecond.GetWorkerAssignments();
+    rFirstWorkers.UnassignAll();
+    rSecond.GetWorkerAssignments().UnassignAll();
+
+    const ac::Tile* pShared = nullptr;
+    for (const ac::Tile* pTile : rFirstWorkers.GetWorkableTiles())
+    {
+        for (const ac::Tile* pOther : rSecondWorkers.GetWorkableTiles())
+        {
+            if (pTile == pOther && !rFirstWorkers.IsTileAssigned(pTile))
+            {
+                pShared = pTile;
+            }
+        }
+    }
+    REQUIRE(pShared != nullptr);
+    REQUIRE(ac::MayWorkTile(rFirstWorkers, *pShared));
+    REQUIRE(ac::MayWorkTile(rSecondWorkers, *pShared));
+
+    ac::Pop* pWorker = nullptr;
+    for (ac::Pop& rPop : rFirst.GetPopulation().Pops())
+    {
+        if (rPop.IsWorker())
+        {
+            pWorker = &rPop;
+        }
+    }
+    REQUIRE(pWorker != nullptr);
+    REQUIRE(rFirstWorkers.AssignWorker(*pWorker, pShared));
+    CHECK_FALSE(ac::MayWorkTile(rSecondWorkers, *pShared));
+
+    // The base's own tile is outside its work area.
+    CHECK_FALSE(ac::MayWorkTile(rFirstWorkers, rFirst.GetTile()));
 }

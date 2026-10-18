@@ -1,4 +1,6 @@
 #include "game/base/BaseManager.h"
+
+#include "game/base/BaseRules.h"
 #include "game/base/BaseEffectsCache.h"
 #include "game/base/BaseRuleset.h"
 #include "game/faction/Faction.h"
@@ -49,7 +51,7 @@ namespace
 std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEffects, const Tile& tile)
 {
     std::vector<const Tile*> tiles;
-    ForEachTileInWorkableArea(tile, rTileEffects.GetWorldMap(),
+    ForEachWorkableTile(tile, rTileEffects.GetWorldMap(),
         [&tiles](const Tile* pTile)
         {
             tiles.push_back(pTile);

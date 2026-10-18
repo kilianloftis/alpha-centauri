@@ -216,14 +216,4 @@ void ForEachTileInEuclideanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     }
 }
 
-// The SMAC base workable area: Euclidean radius 2 on the lattice (p^2 + q^2 <= 5).
-// Skips rOrigin itself (20 surrounding tiles).
-template<typename WorldMapT, typename Fn>
-void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
-{
-    static constexpr int k_WorkableRadius = 2;
-    ForEachTileInEuclideanRadius(rOrigin, rWorldMap, k_WorkableRadius, /*includeOrigin=*/false,
-        [&](auto* pTile, int /*distSq*/) { fn(pTile); });
-}
-
 } // namespace ac

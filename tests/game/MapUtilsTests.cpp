@@ -1,5 +1,6 @@
 #include "TestHelpers.h"
 
+#include "game/base/BaseRules.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -241,7 +242,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
     SECTION("the workable area is the 20 tiles around the origin")
     {
         std::set<const Tile*> workable;
-        ForEachTileInWorkableArea(rOrigin, map, [&](const Tile* pTile)
+        ForEachWorkableTile(rOrigin, map, [&](const Tile* pTile)
         {
             workable.insert(pTile);
         });
@@ -261,7 +262,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
     {
         const Tile& rEdge = *map.GetTile(k_Width - 2, 14);
         int count = 0;
-        ForEachTileInWorkableArea(rEdge, map, [&](const Tile*)
+        ForEachWorkableTile(rEdge, map, [&](const Tile*)
         {
             ++count;
         });
@@ -272,7 +273,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
     {
         const Tile& rPole = *map.GetTile(20, 0);
         int count = 0;
-        ForEachTileInWorkableArea(rPole, map, [&](const Tile*)
+        ForEachWorkableTile(rPole, map, [&](const Tile*)
         {
             ++count;
         });
