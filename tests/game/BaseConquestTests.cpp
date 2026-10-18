@@ -789,3 +789,26 @@ TEST_CASE("A raid on a populated base with a facility is a coin flip between the
     CHECK(plan.facilityChancePercent == 50);
     CHECK(plan.bPopCanBeLost);
 }
+
+TEST_CASE("Killing an undefended base's last defender costs a casualty pop", "[unit][conquest]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
+    const WorldMap& rMap = game.pState->GetWorldMap();
+    const Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    CHECK(ConquestOnLastDefenderKill(attacker, rBase, rMap)
+          == ConquestKind_t::LastDefenderCasualty);
+
+    game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"});
+    CHECK_FALSE(ConquestOnLastDefenderKill(attacker, rBase, rMap).has_value());
+}
+
+TEST_CASE("Native life that kills a base's last defender raids it", "[unit][conquest]")
+{
+    ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
+    const Unit& worm =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "native_life_chassis"});
+    CHECK(ConquestOnLastDefenderKill(worm, rBase, game.pState->GetWorldMap())
+          == ConquestKind_t::NativeRaid);
+}

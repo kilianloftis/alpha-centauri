@@ -12,8 +12,11 @@
 #include "game/visibility/FactionRevealedUnits.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/research/ResearchManager.h"
+#include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitSlotConfig.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/probes/MindControlLedger.h"
@@ -788,4 +791,109 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
     CHECK(green > 0);
     CHECK(elite > green);
     CHECK(elite <= treasury);
+}
+
+TEST_CASE("Mission risk is the repeat risk at a probed base, and at least 2 at an HQ facility",
+          "[probe][risk]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& hq = game.MakeBase(*game.pAi, 8, 8);
+    BaseManager& colony = game.MakeBase(*game.pAi, 14, 8);
+    REQUIRE(IsHeadquarters(hq));
+    REQUIRE_FALSE(IsHeadquarters(colony));
+    const Unit& atHq = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const Unit& atColony =
+        game.MakeUnit(*game.pPlayer, 13, 9, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeTarget_t hqTarget =
+        *ResolveProbeTarget(atHq, hq.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    const ProbeTarget_t colonyTarget =
+        *ResolveProbeTarget(atColony, colony.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+
+    const ProbeActionsConfig_t& rActions = *game.fixtures.dataContext.probeActionsConfig;
+    // Fixture risks: steal_tech 0, repeated 1; sabotage_facility 1.
+    const ProbeActionConfig_t& rSteal = *rActions.Find(ProbeActionId_t::StealTech);
+    const ProbeActionConfig_t& rSabotage = *rActions.Find(ProbeActionId_t::SabotageFacility);
+    CHECK(MissionRisk(rSteal, colonyTarget, "", false) == 0);
+    CHECK(MissionRisk(rSteal, colonyTarget, "", true) == 1);
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Command_Center", false) == 1);
+    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center", false) == 2);
+}
+
+TEST_CASE("A probe may steal what the target knows and the actor could research now",
+          "[probe][tech]")
+{
+    ProbeGame_ game(/*bWithTechs=*/true);
+    game.pAi->GetResearch().AddDiscoveredTech("build_tech");
+    game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
+
+    CHECK(StealableTechs(*game.pPlayer, *game.pAi) == std::vector<std::string>{"build_tech"});
+    game.pPlayer->GetResearch().AddDiscoveredTech("build_tech");
+    CHECK(StealableTechs(*game.pPlayer, *game.pAi)
+          == std::vector<std::string>{"advanced_build"});
+}
+
+TEST_CASE("A probe's failure scale is void against a target that blocks probe teams, and the "
+          "target's success scale always applies",
+          "[probe][rules]")
+{
+    // Declared before the game, whose design holds references into them.
+    EffectPool pool;
+    UnitComponentConfig_t enhancement;
+    ProbeGame_ game;
+
+    BuildingConfig_t hunterSeeker;
+    hunterSeeker.id = "test_hunter_seeker";
+    hunterSeeker.name = "Test Hunter-Seeker";
+    hunterSeeker.effects = {pool.RuleFlag(RuleFlagId_t::BlocksProbeTeams),
+                            pool.StatMod(StatId_t::ProbeSuccessScale, -50,
+                                         ModifierOp_t::AddPercent)};
+    // Assigned before any base exists, so no building manager holds the replaced configs.
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(hunterSeeker);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    const Unit& plain = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    enhancement.id = "test_failure_halving";
+    enhancement.type = "ability";
+    enhancement.effects = {pool.StatMod(StatId_t::ProbeFailureScale, -50, ModifierOp_t::AddPercent,
+                                        EffectScope_t::ThisUnit)};
+    std::vector<UnitSlotConfig_t> slots;
+    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
+    for (const UnitComponentConfig_t* pComponent :
+         {game.fixtures.unitComponents.Find("test_chassis"),
+          game.fixtures.unitComponents.Find("Probe_Team"),
+          static_cast<const UnitComponentConfig_t*>(&enhancement)})
+    {
+        const std::string slotId = "slot_" + pComponent->id;
+        slots.push_back({.id = slotId, .displayName = slotId,
+                         .componentType = pComponent->type, .required = true});
+        assigned[slotId] = pComponent;
+    }
+    const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
+    const Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), rEnhancedDesign,
+        game.pState->GetWorldMap().GetUnitPositions(), *game.pState->GetWorldMap().GetTile(9, 9),
+        &home);
+
+    const MoraleCalculator& rMorale = game.fixtures.morale();
+    const ProbeSuccessFormula_t& rFormula =
+        game.fixtures.dataContext.probeActionsConfig->successFormula;
+    const auto successAgainstEnemy = [&](const Unit& rProbe)
+    {
+        const ProbeTarget_t target =
+            *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+        return ProbeChancesFor(rProbe, target, /*risk=*/1, rMorale, rFormula).successRate;
+    };
+    const int plainOpen = successAgainstEnemy(plain);
+    CHECK(plainOpen > 0);
+    CHECK(successAgainstEnemy(enhanced) > plainOpen);
+
+    enemy.GetBuildingManager().AddBuilding("test_hunter_seeker");
+    const int plainBlocked = successAgainstEnemy(plain);
+    CHECK(plainBlocked < plainOpen);
+    CHECK(successAgainstEnemy(enhanced) == plainBlocked);
 }
