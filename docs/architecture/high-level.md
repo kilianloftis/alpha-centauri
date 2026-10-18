@@ -302,7 +302,7 @@ graph TB
   - TurnStageFactory depends on TurnStages and config/turn_stages.json
 
 ### GameDataContext
-- **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityRules` below, which lives on `GameState` instead.
+- **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state; rules read that through `CurrentGameState()`.
 - **Who holds it**: `Engine` owns the context and holds it `const`. `GameState`, `Faction` and `ViewFactory` receive `const GameDataContext&` at construction, and `GameState::GetGameData()` is the only accessor that hands it back out.
   - Free rule functions and turn stages read it from the `GameState&` they take, or from `CurrentGameState().GetGameData()` when they take none. They never reach it through a faction, base or unit.
   - The classes those owners build take the pieces they use as constructor references. `MoraleCalculator` (a stateless view over `moraleConfig`, owned here beside `TechCostCalculator`) reaches `Unit` via `Faction` → `UnitManager` without appearing in any create/transfer signature — `UnitManager::CreateUnit` and `Faction::TransferUnitTo` take no morale argument.
@@ -349,7 +349,7 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
    - Exception: `ProbeActionExecutor`'s queries keep `GameState&`, because they build `ProbeTarget_t`, which holds mutable references for `TryProbeAction`.
 5. **Writes.** Code that changes state outside its own object takes `GameState&`. A `GameState&` parameter means the function may write.
 6. **Game objects never hold a `GameState`.** That covers factions, bases, units and their parts.
-   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator`, the executors and `SecretProjectAvailabilityRules`.
+   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator` and the executors.
    - One exception stays for now: the unit-id allocator callback that `GameState` binds into each faction (`BindUnitSpawnServices`).
 7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
 8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
@@ -459,7 +459,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Faction System
 - **Purpose**: Manages all factions and their mutable save-game state
 - **Components**:
-  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `SecretProjectAvailabilityRules` lives here too, since it scans the live faction vector — as an owned member of the object it queries, it cannot dangle the way a `GameDataContext`-owned reference into it could. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
+  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `Faction`: Represents a single faction with all its subsystems
   - `Faction Subsystems`: FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy

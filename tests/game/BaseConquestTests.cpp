@@ -9,6 +9,7 @@
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -106,7 +107,7 @@ struct ConquestGame_
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
             pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase);
         while (pBase->GetPopulation().GetSize() < pop)
         {
@@ -542,9 +543,8 @@ TEST_CASE("Population reduced to zero razes the base and tombstones Secret Proje
     CHECK(game.pState->IsSecretProjectDestroyed("test_secret_project"));
     // Unavailable forever, but owned by nobody — the two questions the calculator used to
     // answer with one method, so a razed project read as somebody's.
-    CHECK(game.pState->GetSecretProjectAvailability().IsUnavailable("test_secret_project"));
-    CHECK_FALSE(
-        game.pState->GetSecretProjectAvailability().IsOwnedByAnyFaction("test_secret_project"));
+    CHECK(IsSecretProjectUnavailable("test_secret_project"));
+    CHECK_FALSE(IsSecretProjectOwned("test_secret_project"));
 }
 
 TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")

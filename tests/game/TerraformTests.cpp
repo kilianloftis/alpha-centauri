@@ -71,7 +71,7 @@ struct TerraformGame_
         REQUIRE(pTile);
         BaseManager* pBase = pPlayer->CreateBase(
             pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }

@@ -46,7 +46,6 @@ class ResearchManager;
 class ResearchSelector;
 class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
-class SecretProjectAvailabilityRules;
 class UnitManager;
 class UnitPositionIndex;
 class MoraleCalculator;
@@ -120,8 +119,7 @@ public:
     // new address — for future save/load reconstruction, NOT the live transfer path (see
     // TransferBaseTo).
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
-                                        TileEffectsContext& rTileEffects,
-                                        const SecretProjectAvailabilityRules& rSecretProjectAvailability);
+                                        TileEffectsContext& rTileEffects);
     // Identity-preserving ownership move: ReleaseBase → rebind owner → rReceiver.AddBase.
     // Same BaseManager object and baseId end up owned by rReceiver; no destroy/recreate, no
     // fake events. Recalculates composition and worker assignment under the new owner
@@ -134,7 +132,6 @@ public:
     // that building (first-base / rebuilt-HQ founding).
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             TileEffectsContext& rTileEffects,
-                            const SecretProjectAvailabilityRules& rSecretProjectAvailability,
                             std::optional<int> initialPopulation = std::nullopt,
                             bool bMayOccupyWater = false);
     // Iterate live bases by reference without exposing the owning unique_ptrs. Razed bases are

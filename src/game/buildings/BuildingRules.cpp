@@ -1,8 +1,9 @@
 #include "game/buildings/BuildingRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
-#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
@@ -42,14 +43,30 @@ bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& 
     {
         return true;
     }
-    const SecretProjectAvailabilityRules* pAvailability = rBuildings.GetSecretProjectAvailability();
-    if (!pAvailability)
+    return !IsSecretProjectUnavailable(rBuilding.id);
+}
+
+bool IsSecretProjectUnavailable(const BuildingId_t& buildingId)
+{
+    // TODO(difficulty): when rules.ai_secret_projects_require_human_prereq, AI may not start
+    // an SP until a human faction has the prerequisite tech.
+    return CurrentGameState().IsSecretProjectDestroyed(buildingId)
+           || IsSecretProjectOwned(buildingId);
+}
+
+bool IsSecretProjectOwned(const BuildingId_t& buildingId)
+{
+    for (const Faction& rFaction : CurrentGameState().Factions())
     {
-        throw std::runtime_error("MayHoldBuilding: '" + rBuilding.id
-                                 + "' is a secret project, but this base has no "
-                                   "SecretProjectAvailabilityRules to check uniqueness");
+        for (const BaseManager& rBase : rFaction.Bases())
+        {
+            if (rBase.GetBuildingManager().HasBuilding(buildingId))
+            {
+                return true;
+            }
+        }
     }
-    return !pAvailability->IsUnavailable(rBuilding.id);
+    return false;
 }
 
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,

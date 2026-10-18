@@ -116,7 +116,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         .rEcoDamage = fixture.rEcoDamage,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.nextBaseId++, "TestBase",
-                                               rFixtures.At(8, 8), rules, nullptr, *rFixtures.ctx);
+                                               rFixtures.At(8, 8), rules, *rFixtures.ctx);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;
@@ -330,8 +330,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
-        pState->GetTileEffects(),
-        pState->GetSecretProjectAvailability());
+        pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
@@ -638,8 +637,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects(),
-        pState->GetSecretProjectAvailability());
+        pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
     REQUIRE(pBase->GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
     pBase->GetBuildingManager().AddBuilding("mineral_cache");
@@ -684,8 +682,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 8),
-        pState->GetTileEffects(),
-        pState->GetSecretProjectAvailability());
+        pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
     pBase->GetProduction().SetMineralStockpile(12);
 
@@ -695,8 +692,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     const std::optional<BaseSnapshot_t> extracted = faction.ExtractBase(pBase->GetBaseId());
     REQUIRE(extracted.has_value());
     BaseManager* pRestored = faction.CreateBaseFromSnapshot(
-        *extracted, pState->GetTileEffects(),
-        pState->GetSecretProjectAvailability());
+        *extracted, pState->GetTileEffects());
     REQUIRE(pRestored != nullptr);
 
     // Resolved through the stockpile registry, not the building registry.

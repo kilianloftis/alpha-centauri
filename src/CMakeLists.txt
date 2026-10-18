@@ -132,7 +132,6 @@ add_library(ac-core STATIC
     game/display/MapOverlayChannelsConfigParser.cpp
     game/display/BaseSpriteSizesConfigParser.cpp
     game/buildings/BuildingUpkeep.cpp
-    game/buildings/SecretProjectAvailabilityRules.cpp
     game/production/StockpileConfigParser.cpp
     game/production/StockpileConversion.cpp
     game/buildings/BuildingRules.cpp

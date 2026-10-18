@@ -18,7 +18,7 @@
 #include "game/faction/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/buildings/SecretProjectAvailabilityRules.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/economy/EconomyManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -251,8 +251,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(8, 4),
-        pState->GetTileEffects(),
-        pState->GetSecretProjectAvailability());
+        pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("test_secret_project");
@@ -264,7 +263,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
                       Catch::Matchers::ContainsSubstring("cannot be scrapped"));
     CHECK(pBase->GetBuildingManager().HasBuilding("test_secret_project"));
     CHECK(faction.GetEconomy().GetEnergy() == 0);
-    CHECK(pState->GetSecretProjectAvailability().IsOwnedByAnyFaction("test_secret_project"));
+    CHECK(IsSecretProjectOwned("test_secret_project"));
     CHECK_FALSE(pState->IsSecretProjectDestroyed("test_secret_project"));
 }
 

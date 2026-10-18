@@ -12,7 +12,6 @@
 #include "game/buildings/BuildingRules.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
-#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionManager.h"
@@ -79,8 +78,7 @@ struct BuildingGame_
     {
         BaseManager* pBase = rFaction.CreateBase(
             pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects(),
-            pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase != nullptr);
         return *pBase;
     }
@@ -140,20 +138,17 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
     // — wrong for any caller that wants ownership (a UI label, a victory check, diplomacy).
     BuildingGame_ game;
     BaseManager& base = game.MakeBase(*game.pPlayer, 8, 4);
-    const SecretProjectAvailabilityRules& rAvailability =
-        game.pState->GetSecretProjectAvailability();
-
-    CHECK_FALSE(rAvailability.IsUnavailable("test_secret_project"));
-    CHECK_FALSE(rAvailability.IsOwnedByAnyFaction("test_secret_project"));
+    CHECK_FALSE(IsSecretProjectUnavailable("test_secret_project"));
+    CHECK_FALSE(IsSecretProjectOwned("test_secret_project"));
 
     base.GetBuildingManager().AddBuilding("test_secret_project");
-    CHECK(rAvailability.IsUnavailable("test_secret_project"));
-    CHECK(rAvailability.IsOwnedByAnyFaction("test_secret_project"));
+    CHECK(IsSecretProjectUnavailable("test_secret_project"));
+    CHECK(IsSecretProjectOwned("test_secret_project"));
 
     // Destroying the copy tombstones it: still unavailable, but no longer owned.
     base.GetBuildingManager().DestroyBuilding("test_secret_project");
-    CHECK(rAvailability.IsUnavailable("test_secret_project"));
-    CHECK_FALSE(rAvailability.IsOwnedByAnyFaction("test_secret_project"));
+    CHECK(IsSecretProjectUnavailable("test_secret_project"));
+    CHECK_FALSE(IsSecretProjectOwned("test_secret_project"));
 
     // And it cannot be rebuilt, by anyone.
     BaseManager& aiBase = game.MakeBase(*game.pAi, 8, 12);

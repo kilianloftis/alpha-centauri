@@ -8,7 +8,6 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
-#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/economy/CommerceCache.h"
 #include "game/DifficultyConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
@@ -399,8 +398,7 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
 
 BaseManager* Faction::CreateBaseFromSnapshot(
     const BaseSnapshot_t& rSnapshot,
-    TileEffectsContext& rTileEffects,
-    const SecretProjectAvailabilityRules& rSecretProjectAvailability)
+    TileEffectsContext& rTileEffects)
 {
     if (!rSnapshot.pTile)
     {
@@ -410,7 +408,6 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
         MakeBaseRuleset(m_rDataContext),
-        &rSecretProjectAvailability,
         rTileEffects,
         rSnapshot.populationSize,
         rSnapshot.bMayOccupyWater);
@@ -830,7 +827,6 @@ const BaseManager* Faction::FindNearestBase(const Tile& rFrom) const
 
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   TileEffectsContext& rTileEffects,
-                                  const SecretProjectAvailabilityRules& rSecretProjectAvailability,
                                   std::optional<int> initialPopulation,
                                   bool bMayOccupyWater)
 {
@@ -841,7 +837,6 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
         MakeBaseRuleset(m_rDataContext),
-        &rSecretProjectAvailability,
         rTileEffects,
         initialPopulation,
         bMayOccupyWater);

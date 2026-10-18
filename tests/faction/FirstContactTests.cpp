@@ -129,8 +129,7 @@ TEST_CASE("Seeing a foreign base establishes Known", "[diplomacy][first-contact]
     game.pB->CreateBase(
         game.pState->AllocateBaseId(), "Enemy",
         game.pState->GetWorldMap().GetTile(9, 9),
-        game.pState->GetTileEffects(),
-        game.pState->GetSecretProjectAvailability());
+        game.pState->GetTileEffects());
 
     CHECK(game.pState->GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
@@ -186,8 +185,7 @@ TEST_CASE("Seeing a covert unit establishes no contact", "[diplomacy][first-cont
     game.pA->CreateBase(
         game.pState->AllocateBaseId(), "Watch",
         game.pState->GetWorldMap().GetTile(8, 8),
-        game.pState->GetTileEffects(),
-        game.pState->GetSecretProjectAvailability());
+        game.pState->GetTileEffects());
 
     Unit& rCovert = game.MakeUnit(*game.pB, 10, 10, {"test_chassis", "covert"});
 

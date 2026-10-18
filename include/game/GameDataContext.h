@@ -61,8 +61,7 @@ struct DiplomacyConfig_t;
 // Individual pieces are not mutated after loading, but this is not a blanket immutability
 // guarantee: LuaRuntime carries mutable interpreter state used internally by every formula
 // evaluation (see code-review-findings.md 3.6). Deliberately excludes anything that reads
-// live save-game state — e.g. SecretProjectAvailabilityRules lives on GameState instead,
-// since it queries the faction vector and would dangle if GameState were ever rebuilt.
+// live save-game state; rules read that through CurrentGameState().
 struct GameDataContext
 {
     GameDataContext();

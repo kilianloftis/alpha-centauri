@@ -91,7 +91,7 @@ struct BlastGame_
     {
         BaseManager* pBase = pPlayer->CreateBase(
             pState->AllocateBaseId(), "TestBase", &At_(x, y),
-            pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }
@@ -300,7 +300,7 @@ TEST_CASE("Detonating a Planet Buster names the first foreign base destroyed",
 
     BaseManager* pVictimBase = rVictim.CreateBase(
         game.pState->AllocateBaseId(), "VictimBase", &game.At_(8, 8),
-        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+        game.pState->GetTileEffects());
     REQUIRE(pVictimBase);
 
     Unit& rMissile = game.MakePlanetBuster_(8, 8);
@@ -327,7 +327,7 @@ TEST_CASE("A Planet Buster next to a foreign base names that owner even off the 
     Faction& rVictim = game.AddFaction_();
     BaseManager* pVictimBase = rVictim.CreateBase(
         game.pState->AllocateBaseId(), "VictimBase", &game.At_(9, 9),
-        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+        game.pState->GetTileEffects());
     REQUIRE(pVictimBase);
     game.pState->RebuildTerritory();
     // Detonation is on a neighboring tile, not the base tile itself. Territory may claim it;
@@ -348,7 +348,7 @@ TEST_CASE("A Planet Buster on own land that kills foreign units names the enemy"
     Faction& rEnemy = game.AddFaction_();
     game.pPlayer->CreateBase(
         game.pState->AllocateBaseId(), "Home", &game.At_(8, 8),
-        game.pState->GetTileEffects(), game.pState->GetSecretProjectAvailability());
+        game.pState->GetTileEffects());
     game.pState->RebuildTerritory();
     REQUIRE(game.pState->GetWorldMap().GetTerritory().GetOwner(game.At_(8, 8))
             == game.pPlayer->GetFactionId());

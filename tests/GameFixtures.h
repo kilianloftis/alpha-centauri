@@ -351,9 +351,6 @@ struct BaseFixture : WorldFixture
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
-            // The one optional dependency: it needs a GameState, which this fixture has no
-            // reason to build. Only GetBuildingsAvailableForConstruction requires it.
-            /*secretProjectCalculator*/ nullptr,
             *ctx,
             initialPopulation));
         return *bases.back();
@@ -480,7 +477,6 @@ struct FactionFixture : BaseFixture
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
-            /*secretProjectCalculator*/ nullptr,
             *ctx,
             initialPopulation);
         ac::BaseManager& rBase = *pBase;
@@ -597,7 +593,7 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::GameState
 {
     ac::BaseManager* pBase = rFaction.CreateBase(
         rState.AllocateBaseId(), "TestBase", rState.GetWorldMap().GetTile(x, y),
-        rState.GetTileEffects(), rState.GetSecretProjectAvailability());
+        rState.GetTileEffects());
     if (!pBase)
     {
         throw std::runtime_error("MakeSessionBase: CreateBase failed");

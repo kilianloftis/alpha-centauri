@@ -29,6 +29,12 @@ struct OrbitalAttackerOption_t
 // while no base anywhere holds it and it was never destroyed.
 bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding);
 
+// A secret project can no longer be built once some base holds it or it was destroyed.
+bool IsSecretProjectUnavailable(const BuildingId_t& buildingId);
+
+// Some base holds the project now. A destroyed project is unavailable but owned by nobody.
+bool IsSecretProjectOwned(const BuildingId_t& buildingId);
+
 // Facilities that may be randomly destroyed under the given filters.
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,
                                                                   bool bExcludeHq,

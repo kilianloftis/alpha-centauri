@@ -107,7 +107,7 @@ struct FoundBaseGame_
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
             pState->AllocateBaseId(), "TestBase", pTile,
-            pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase);
         return *pBase;
     }

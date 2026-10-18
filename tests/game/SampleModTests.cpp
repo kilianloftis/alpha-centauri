@@ -92,8 +92,7 @@ struct ModHarness_
     {
         BaseManager* pBase = pFaction->CreateBase(
             pState->AllocateBaseId(), "ModBase", pState->GetWorldMap().GetTile(x, y),
-            pState->GetTileEffects(),
-            pState->GetSecretProjectAvailability());
+            pState->GetTileEffects());
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

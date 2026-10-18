@@ -43,7 +43,6 @@ class IEffectsProvider;
 class Tile;
 class Faction;
 struct BaseRuleset_t;
-class SecretProjectAvailabilityRules;
 class Unit;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
@@ -102,18 +101,12 @@ public:
     // Research manager, economy manager and effects provider are NOT parameters: they are the
     // owning faction's, and passing them separately let a caller inject one faction's economy
     // into another faction's base while RebindFaction silently overrode it on transfer.
-    //
-    // pSecretProjectCalculator is the one genuinely optional dependency: it reads live session
-    // state (the faction vector) and so only exists inside a GameState. A base without one
-    // cannot answer secret-project availability, and BuildingManager says so rather than
-    // guessing.
     BaseManager(
         Faction& rFaction,
         BaseId_t baseId,
         std::string name,
         Tile& tile,
         const BaseRuleset_t& rRules,
-        const SecretProjectAvailabilityRules* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
         std::optional<int> initialPopulation = std::nullopt,
         bool bMayOccupyWater = false);

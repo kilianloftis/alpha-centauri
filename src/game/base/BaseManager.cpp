@@ -97,7 +97,6 @@ BaseManager::BaseManager(
     std::string name,
     Tile& tile,
     const BaseRuleset_t& rRules,
-    const SecretProjectAvailabilityRules* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
     std::optional<int> initialPopulation,
     bool bMayOccupyWater)
@@ -120,8 +119,7 @@ BaseManager::BaseManager(
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
-    , m_pBuildings(std::make_unique<BuildingManager>(rRules.rBuildings, pSecretProjectCalculator,
-                                                     rFaction.GetResearch()))
+    , m_pBuildings(std::make_unique<BuildingManager>(rRules.rBuildings, rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(rFaction.GetCommerce(), *this))
     , m_pProduction(std::make_unique<ProductionManager>(
           rRules.rProduction,

@@ -181,7 +181,7 @@ void PlacePreviewFactionBases_(GameState& rGameState, Faction& rPlayer,
         }
         BaseManager* pBase = rPlayer.CreateBase(
             rGameState.AllocateBaseId(), rPreview.name, pTile, rGameState.GetTileEffects(),
-            rGameState.GetSecretProjectAvailability(), rPreview.population, rPreview.bWater);
+            rPreview.population, rPreview.bWater);
         if (!pBase)
         {
             continue;
@@ -512,7 +512,6 @@ void Engine::StartNewGame_()
         BaseManager* pBase = pFaction->CreateBase(
             m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
             m_pGameState->GetTileEffects(),
-            m_pGameState->GetSecretProjectAvailability(),
             /*initialPopulation=*/3);
         placedBases.push_back(pBase);
 

@@ -148,7 +148,6 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pEcology(std::make_unique<EcologyLedger>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
-    , m_secretProjectAvailability(*this)
 {
     if (!m_worldMap)
     {
@@ -172,7 +171,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         m_pFirstContact->ConsiderUnit(rMoved);
     });
     // Passing *this is safe here: the executor only stores the pointer and never calls back
-    // during GameState's own construction (same contract as m_secretProjectAvailability).
+    // during GameState's own construction.
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
         *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, this);
@@ -800,11 +799,6 @@ void GameState::RebuildTerritory()
         }
     }
     m_worldMap->GetTerritory().Rebuild(*m_worldMap, bases);
-}
-
-const SecretProjectAvailabilityRules& GameState::GetSecretProjectAvailability() const
-{
-    return m_secretProjectAvailability;
 }
 
 void GameState::ReapRazedBases()

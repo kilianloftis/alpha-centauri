@@ -499,7 +499,6 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
         rFaction.SuggestBaseName(),
         pTile,
         rGameState.GetTileEffects(),
-        rGameState.GetSecretProjectAvailability(),
         std::nullopt,
         bMayOccupyWater);
 

@@ -6,7 +6,6 @@
 #include "game/probes/MindControlLedger.h"
 #include "game/ecology/EcologyLedger.h"
 #include "game/world-events/WorldEventTracker.h"
-#include "game/buildings/SecretProjectAvailabilityRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticActionExecutor.h"
 #include "game/diplomacy/FirstContactResolver.h"
@@ -199,13 +198,6 @@ public:
     // OnBaseListChanged handler so founding a base keeps ownership current.
     void RebuildTerritory();
 
-    // Scans all bases of all factions to check whether a secret project has already been
-    // built. Owned here (rather than GameDataContext) because it queries this live,
-    // mutable faction data — an "immutable definition data" object referencing it would be
-    // constructible only after GameState exists, and would dangle if GameState were ever
-    // rebuilt (new game / load game).
-    const SecretProjectAvailabilityRules& GetSecretProjectAvailability() const;
-
     // Secret Projects lost when a base is razed (pop → 0). Tombstoned so they can never be
     // rebuilt by any faction.
     void MarkSecretProjectDestroyed(const std::string& buildingId);
@@ -276,9 +268,6 @@ private:
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
     IdAllocator m_unitIdAllocator;
-    // Constructed with *this: only stores the reference, never dereferences it during
-    // GameState's own construction, so binding it before m_factions is populated is safe.
-    SecretProjectAvailabilityRules m_secretProjectAvailability;
     std::unordered_set<std::string> m_destroyedSecretProjects;
     // Idempotent session wiring for production on_complete + mood notices (transfer-safe).
     std::unordered_set<BaseManager*> m_sessionWiredBases;

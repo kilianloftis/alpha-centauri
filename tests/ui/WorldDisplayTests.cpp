@@ -149,7 +149,7 @@ TEST_CASE("Missing faction base art keeps the name-only marker", "[ui][world][ba
     // Short name so map-label truncation cannot hide it.
     BaseManager* pBase = fixture.pPlayer->CreateBase(
         fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
-        fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
+        fixture.pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     const RecordingGraphics graphics = Render_(fixture, ReliefMode_t::Flat, false);
@@ -168,7 +168,7 @@ TEST_CASE("Faction base sprites and colors.json label colour draw when assets ex
     fixture.pPlayer->GetExploredMap().MarkAll();
     BaseManager* pBase = fixture.pPlayer->CreateBase(
         fixture.pState->AllocateBaseId(), "HQ", fixture.pState->GetWorldMap().GetTile(8, 8),
-        fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
+        fixture.pState->GetTileEffects());
     REQUIRE(pBase != nullptr);
 
     const std::string spritePath = BareBaseSpritePath("gaian", false, 1);
