@@ -27,8 +27,8 @@ graph TD
     end
 
     subgraph Conquest
-        BaseConquestRules[BaseConquestRules<br/>pure predicates: garrison,<br/>capture veto, species]
-        BaseConquestMutations[BaseConquestMutations<br/>world mutation: pop loss, facility<br/>destruction, capture, raze, raid]
+        BaseConquestRules[BaseConquestRules<br/>garrison, capture veto, species,<br/>conquest kind, capture and raid plans]
+        BaseConquestMutations[BaseConquestMutations<br/>draws within the plans: pop loss,<br/>facility destruction, pods, transfer]
         BaseConquestConfig[BaseConquestConfig_t<br/>config/base_conquest.json]
         BaseConquestMutations --> BaseConquestRules
         BaseConquestMutations --> BaseConquestConfig

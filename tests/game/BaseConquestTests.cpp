@@ -760,3 +760,32 @@ TEST_CASE("Assimilation expires after fifty turns and the next capture is fresh"
     CHECK(rWindow.peakDrones == 5);
     CHECK(rWindow.durationTurns == 50);
 }
+
+TEST_CASE("Planning a cross-species capture keeps one pop and sends half the rest as pods",
+          "[unit][conquest]")
+{
+    ConquestGame_ game(FactionSpecies_t::Human, FactionSpecies_t::Progenitor);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/5);
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
+
+    const CaptureOutcome_t outcome = PlanCapture(attacker, rBase);
+    CHECK(outcome.popLoss == 4);
+    CHECK(outcome.escapePods == 2);
+    CHECK(outcome.minFacilitiesDestroyed <= outcome.maxFacilitiesDestroyed);
+    CHECK(rBase.GetPopulation().GetSize() == 5);
+    CHECK(ConquestOnEntry(attacker, rBase, game.pState->GetWorldMap())
+          == ConquestKind_t::Capture);
+}
+
+TEST_CASE("A raid on a populated base with a facility is a coin flip between them",
+          "[unit][conquest]")
+{
+    ConquestGame_ game(FactionSpecies_t::Human, FactionSpecies_t::Human);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+
+    const NativeRaidPlan_t plan = PlanNativeRaid(rBase);
+    CHECK_FALSE(plan.facilityCandidates.empty());
+    CHECK(plan.facilityChancePercent == 50);
+    CHECK(plan.bPopCanBeLost);
+}

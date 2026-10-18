@@ -8,11 +8,9 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/FactionConfig.h"
 #include "game/units/Military.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
-#include "game/buildings/BuildingRules.h"
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
@@ -57,46 +55,6 @@ int RemovePopulation_(BaseManager& rBase, int amount)
         ++removed;
     }
     return removed;
-}
-
-// Every base_conquest stat is Additive: base_conquest.json Adds the baseline, facilities
-// and difficulty stack on top. Pop loss is resolved before facilities are destroyed so a
-// ThisBase clamp still counts even if the building granting it is then randomly demolished.
-int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
-{
-    const int resolved =
-        FinalizeResolvedStat(ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat)));
-    return std::max(0, resolved);
-}
-
-int DestroyRandomFacilities_(BaseManager& rBase, std::mt19937& rRng)
-{
-    std::vector<const BuildingConfig_t*> candidates =
-        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
-    if (candidates.empty())
-    {
-        return 0;
-    }
-
-    // Both bounds clamp to what the base actually has, so no modifier can invert the range
-    // or push it past the eligible count — the resolved stats need no other validation.
-    const int eligible = static_cast<int>(candidates.size());
-    const int minCount = std::clamp(
-        ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMin), 0, eligible);
-    const int maxPercent = std::clamp(
-        ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMaxPercent), 0, 100);
-    const int maxCount =
-        std::min(std::max(minCount, eligible * maxPercent / 100), eligible);
-
-    std::uniform_int_distribution<int> countDist(minCount, maxCount);
-    const int toDestroy = countDist(rRng);
-
-    std::shuffle(candidates.begin(), candidates.end(), rRng);
-    for (int i = 0; i < toDestroy; ++i)
-    {
-        DestroyBuildingAndNotify(rBase, *candidates[static_cast<size_t>(i)]);
-    }
-    return toDestroy;
 }
 
 // Report whether the pop losses just applied took the base out of the game. The raze itself
@@ -156,69 +114,54 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     return spawnCount;
 }
 
-// Human ↔ Progenitor capture: the base keeps one pop, half the displaced colonists flee as
-// escape pods. Reports both counts through rResult, which owns every conquest tally.
-void ApplySpeciesClashPopulation_(BaseManager& rBase, GameState& rGameState,
-                                  const BaseConquestConfig_t& rConfig, std::mt19937& rRng,
-                                  BaseConquestResult_t& rResult)
+void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutcome,
+                               std::mt19937& rRng, BaseConquestResult_t& rResult)
 {
-    Faction& rOwner = rBase.GetFaction();
-    const int size = rBase.GetPopulation().GetSize();
-    if (size <= 1)
+    if (rOutcome.facilityCandidates.empty())
     {
         return;
     }
-
-    const int removed = size - 1;
-    const int flee = removed / 2;
-
-    rResult.escapePodsSpawned = SpawnEscapePods_(
-        rOwner, rBase.GetTile(), flee, rGameState, rConfig.escapeColonyPod, rRng);
-
-    // Leave population 1 in the base; flee pods are separate units on adjacent tiles.
-    rResult.populationLost = RemovePopulation_(rBase, removed);
-}
-
-void RepairCapturer_(Unit& rCapturer)
-{
-    if (ResolveFlag(rCapturer, RuleFlagId_t::NoConquestRepair))
+    std::uniform_int_distribution<int> countDist(rOutcome.minFacilitiesDestroyed,
+                                                 rOutcome.maxFacilitiesDestroyed);
+    const int toDestroy = countDist(rRng);
+    std::vector<const BuildingConfig_t*> candidates = rOutcome.facilityCandidates;
+    std::shuffle(candidates.begin(), candidates.end(), rRng);
+    for (int i = 0; i < toDestroy; ++i)
     {
-        return;
+        DestroyBuildingAndNotify(rBase, *candidates[static_cast<size_t>(i)]);
     }
-    rCapturer.SetCurrentHp(ResolveStat(rCapturer, StatId_t::HitPoints));
+    rResult.facilitiesDestroyed = toDestroy;
 }
 
 BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase)
 {
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::LastDefenderCasualty;
-
-    result.populationLost = RemovePopulation_(
-        rBase, ResolveBaseConquestStat_(rBase, StatId_t::LastDefenderPopLoss));
-
+    result.populationLost = RemovePopulation_(rBase, LastDefenderPopLoss(rBase));
     NoteIfAlreadyRazed_(rBase, result);
     return result;
 }
 
-BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameState& rGameState,
-                                      std::mt19937& rRng)
+BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, std::mt19937& rRng)
 {
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::NativeRaid;
 
-    std::vector<const BuildingConfig_t*> facilities =
-        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
-    std::uniform_int_distribution<int> coin(0, 1);
-    const bool bDestroyFacility = !facilities.empty() && (rBase.GetPopulation().GetSize() <= 0
-                                                          || coin(rRng) == 0);
+    const NativeRaidPlan_t plan = PlanNativeRaid(rBase);
+    bool bDestroyFacility = plan.facilityChancePercent == 100;
+    if (plan.facilityChancePercent == 50)
+    {
+        std::uniform_int_distribution<int> coin(0, 1);
+        bDestroyFacility = coin(rRng) == 0;
+    }
 
     if (bDestroyFacility)
     {
-        std::uniform_int_distribution<size_t> pick(0, facilities.size() - 1);
-        DestroyBuildingAndNotify(rBase, *facilities[pick(rRng)]);
+        std::uniform_int_distribution<size_t> pick(0, plan.facilityCandidates.size() - 1);
+        DestroyBuildingAndNotify(rBase, *plan.facilityCandidates[pick(rRng)]);
         result.facilitiesDestroyed = 1;
     }
-    else if (rBase.GetPopulation().GetSize() > 0)
+    else if (plan.bPopCanBeLost)
     {
         result.populationLost = RemovePopulation_(rBase, 1);
     }
@@ -240,23 +183,13 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
     Faction& rOldOwner = rBase.GetFaction();
     Faction& rNewOwner = rCapturer.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
+    const CaptureOutcome_t outcome = PlanCapture(rCapturer, rBase);
 
-    const bool bCrossSpecies =
-        IsCrossSpeciesConquest(rNewOwner.GetDefinition().identity.species,
-                               rOldOwner.GetDefinition().identity.species);
-    const int capturePopLoss =
-        bCrossSpecies ? 0 : ResolveBaseConquestStat_(rBase, StatId_t::CapturePopLoss);
-
-    result.facilitiesDestroyed = DestroyRandomFacilities_(rBase, rRng);
-
-    if (bCrossSpecies)
-    {
-        ApplySpeciesClashPopulation_(rBase, rGameState, rConfig, rRng, result);
-    }
-    else
-    {
-        result.populationLost = RemovePopulation_(rBase, capturePopLoss);
-    }
+    DestroyCaptureFacilities_(rBase, outcome, rRng, result);
+    // Pods first, while the base still has the pops they flee from.
+    result.escapePodsSpawned = SpawnEscapePods_(rOldOwner, rBase.GetTile(), outcome.escapePods,
+                                                rGameState, rConfig.escapeColonyPod, rRng);
+    result.populationLost = RemovePopulation_(rBase, outcome.popLoss);
 
     if (NoteIfAlreadyRazed_(rBase, result))
     {
@@ -265,7 +198,10 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
 
     rBase.GetPopulation().NotifyCaptured(rOldOwner.GetFactionId(), rNewOwner.GetFactionId());
     rOldOwner.TransferBaseTo(baseId, rNewOwner);
-    RepairCapturer_(rCapturer);
+    if (outcome.bRepairsCapturer)
+    {
+        rCapturer.SetCurrentHp(ResolveStat(rCapturer, StatId_t::HitPoints));
+    }
     return result;
 }
 
@@ -281,7 +217,9 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
     {
         return {};
     }
-    if (HasBaseGarrison(*pBase, rGameState.GetWorldMap()))
+    const std::optional<ConquestKind_t> kind =
+        ConquestOnLastDefenderKill(rAttacker, *pBase, rGameState.GetWorldMap());
+    if (!kind)
     {
         return {};
     }
@@ -289,19 +227,13 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
     // Capture requires stepping onto the tile; combat only applies last-defender
     // casualties (and native raids from the adjacent attacker).
     BaseConquestResult_t result = ApplyLastDefenderCasualty_(*pBase);
-    if (result.bBaseRazed)
+    if (result.bBaseRazed || *kind != ConquestKind_t::NativeRaid)
     {
         return result;
     }
-
-    if (IsNativeLifeFaction(rAttacker.GetFaction().GetDefinition().identity.species))
-    {
-        BaseConquestResult_t raid = ApplyNativeRaid_(rAttacker, *pBase, rGameState, rRng);
-        raid.populationLost += result.populationLost;
-        return raid;
-    }
-
-    return result;
+    BaseConquestResult_t raid = ApplyNativeRaid_(rAttacker, *pBase, rRng);
+    raid.populationLost += result.populationLost;
+    return raid;
 }
 
 BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
@@ -314,25 +246,16 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
     {
         return {};
     }
-    if (pBase->GetFactionId() == rMover.GetFaction().GetFactionId())
+    const std::optional<ConquestKind_t> kind =
+        ConquestOnEntry(rMover, *pBase, rGameState.GetWorldMap());
+    if (kind == ConquestKind_t::NativeRaid)
     {
-        return {};
+        return ApplyNativeRaid_(rMover, *pBase, rRng);
     }
-    if (HasBaseGarrison(*pBase, rGameState.GetWorldMap()))
-    {
-        return {};
-    }
-
-    if (IsNativeLifeFaction(rMover.GetFaction().GetDefinition().identity.species))
-    {
-        return ApplyNativeRaid_(rMover, *pBase, rGameState, rRng);
-    }
-
-    if (CanCaptureBase(rMover))
+    if (kind == ConquestKind_t::Capture)
     {
         return ApplyCapture_(rMover, *pBase, rGameState, rRng);
     }
-
     return {};
 }
 

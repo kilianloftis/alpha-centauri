@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include <vector>
+
 namespace ac
 {
 
@@ -8,8 +11,9 @@ class BaseManager;
 class Tile;
 class WorldMap;
 enum class FactionSpecies_t;
+struct BuildingConfig_t;
 
-// Pure conquest predicates. World mutations live in BaseConquestMutations.
+// Conquest decisions. BaseConquestMutations draws within them and carries them out.
 
 // Owner units that still hold the base against capture.
 bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap);
@@ -22,5 +26,53 @@ bool CanCaptureBase(const Unit& rCapturer);
 
 // Human ↔ Progenitor conquest uses the harsher population rule.
 bool IsCrossSpeciesConquest(FactionSpecies_t attacker, FactionSpecies_t defender);
+
+enum class ConquestKind_t
+{
+    Capture,
+    NativeRaid,
+    LastDefenderCasualty,
+};
+
+// Stepping onto an undefended foreign base: native life raids it, a unit that may capture
+// takes it.
+std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseManager& rBase,
+                                              const WorldMap& rWorldMap);
+
+// Killing an undefended base's last defender always costs LastDefenderCasualty; NativeRaid
+// means native life then raids it.
+std::optional<ConquestKind_t> ConquestOnLastDefenderKill(const Unit& rAttacker,
+                                                         const BaseManager& rBase,
+                                                         const WorldMap& rWorldMap);
+
+// Pops lost with the last defender (the Additive last_defender_pop_loss).
+int LastDefenderPopLoss(const BaseManager& rBase);
+
+struct CaptureOutcome_t
+{
+    std::vector<const BuildingConfig_t*> facilityCandidates;
+    // How many candidates are destroyed: a uniform draw in [min, max].
+    int minFacilitiesDestroyed = 0;
+    int maxFacilitiesDestroyed = 0;
+    int popLoss = 0;
+    // A cross-species capture keeps one pop; half the displaced colonists flee as escape pods.
+    int escapePods = 0;
+    bool bRepairsCapturer = false;
+};
+
+// Read before anything is destroyed, so a ThisBase clamp still counts even if the building
+// granting it is then demolished.
+CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase);
+
+struct NativeRaidPlan_t
+{
+    std::vector<const BuildingConfig_t*> facilityCandidates;
+    // 0, 50 (one fair coin) or 100: certain when the base has no pop left to lose.
+    int facilityChancePercent = 0;
+    // Without a facility loss, a raid takes one pop when there is one.
+    bool bPopCanBeLost = false;
+};
+
+NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase);
 
 } // namespace ac
