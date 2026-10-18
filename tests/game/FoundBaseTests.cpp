@@ -15,6 +15,7 @@
 #include "game/terraform/ElevationChange.h"
 #include "game/map/ImprovementIds.h"
 #include "game/terraform/SurfaceOccupancy.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/base/FoundBaseRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
@@ -23,6 +24,7 @@
 #include "game/units/UnitSlotConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <memory>
 #include <ranges>
 #include <unordered_map>
@@ -460,4 +462,27 @@ TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile"
     CHECK(CanFoundBase(seaPod));
     CHECK(FoundedBaseMayOccupyWater(seaPod));
     CHECK_FALSE(CanFoundBase(rover));
+}
+
+TEST_CASE("A flip to water names what it removes and whether the base is razed",
+          "[unit][found-base][surface]")
+{
+    FoundBaseGame_ game;
+    BaseManager& land = game.MakeBase(*game.pPlayer, 8, 8);
+    game.pState->GetTileEffects().AddOccupantWithEffects(land.GetTile(), "Farm");
+    BaseManager& domed = game.MakeBase(*game.pPlayer, 5, 11);
+    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+
+    const SurfaceFlipConsequences_t razed =
+        SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, &land);
+    CHECK(razed.bRazesBase);
+    CHECK(std::ranges::count(razed.removedImprovements, std::string(ImprovementIds::k_Base)) == 1);
+    CHECK(std::ranges::count(razed.removedImprovements, std::string("Farm")) == 1);
+    CHECK_FALSE(land.IsRazed());
+
+    const SurfaceFlipConsequences_t spared =
+        SurfaceFlipConsequences(domed.GetTile(), /*bNowWater=*/true, &domed);
+    CHECK_FALSE(spared.bRazesBase);
+    CHECK(std::ranges::count(spared.removedImprovements, std::string(ImprovementIds::k_Base))
+          == 0);
 }

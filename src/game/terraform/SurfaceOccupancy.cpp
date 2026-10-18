@@ -6,8 +6,10 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/units/IUnitOrderWorld.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -17,60 +19,6 @@ namespace ac
 
 namespace
 {
-
-bool DomainMatches_(const ImprovementConfig_t& rConfig, bool bNowWater)
-{
-    if (!rConfig.domain.has_value())
-    {
-        return true;
-    }
-    const bool bDomainWater = *rConfig.domain == ImprovementDomain_t::Sea;
-    return bDomainWater == bNowWater;
-}
-
-std::vector<std::string> ImprovementsToRemove_(const Tile& rTile, bool bNowWater, bool bSpareBase)
-{
-    std::vector<std::string> remove;
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
-    {
-        if (!pImprovement || DomainMatches_(*pImprovement, bNowWater))
-        {
-            continue;
-        }
-        if (bSpareBase && pImprovement->id == ImprovementIds::k_Base)
-        {
-            continue;
-        }
-        remove.push_back(pImprovement->id);
-    }
-    return remove;
-}
-
-void SettleSubmergedBase_(BaseManager* pBase, bool bNowWater, IUnitOrderWorld* pWorld,
-                          const std::vector<std::string>& rRemoving)
-{
-    if (!bNowWater)
-    {
-        return;
-    }
-    if (pBase && !pBase->MayOccupyWater())
-    {
-        pBase->GetFaction().RazeBase(*pBase);
-        return;
-    }
-    if (pWorld)
-    {
-        return;
-    }
-    for (const std::string& rId : rRemoving)
-    {
-        if (rId == ImprovementIds::k_Base)
-        {
-            throw std::logic_error(
-                "ReconcileSurfaceFlips: a base tile became water with no world to raze it");
-        }
-    }
-}
 
 void RemoveImprovements_(TileEffectsContext& rTileEffects, Tile& rTile,
                          const std::vector<std::string>& rIds)
@@ -84,17 +32,23 @@ void RemoveImprovements_(TileEffectsContext& rTileEffects, Tile& rTile,
 void ReconcileTile_(TileEffectsContext& rTileEffects, IUnitOrderWorld* pWorld,
                     const SurfaceFlip_t& rFlip)
 {
-    if (!rFlip.pTile)
-    {
-        return;
-    }
     Tile& rTile = *rFlip.pTile;
     BaseManager* pBase = pWorld ? pWorld->FindBaseAt(rTile.GetX(), rTile.GetY()) : nullptr;
-    const bool bSpareBase = rFlip.bNowWater && pBase && pBase->MayOccupyWater();
-    const std::vector<std::string> remove =
-        ImprovementsToRemove_(rTile, rFlip.bNowWater, bSpareBase);
-    SettleSubmergedBase_(pBase, rFlip.bNowWater, pWorld, remove);
-    RemoveImprovements_(rTileEffects, rTile, remove);
+    const SurfaceFlipConsequences_t consequences =
+        SurfaceFlipConsequences(rTile, rFlip.bNowWater, pBase);
+    const std::vector<std::string>& rRemoved = consequences.removedImprovements;
+    if (consequences.bRazesBase)
+    {
+        pBase->GetFaction().RazeBase(*pBase);
+    }
+    else if (rFlip.bNowWater && pWorld == nullptr
+             && std::find(rRemoved.begin(), rRemoved.end(), ImprovementIds::k_Base)
+                    != rRemoved.end())
+    {
+        throw std::logic_error(
+            "ReconcileSurfaceFlips: a base tile became water with no world to raze it");
+    }
+    RemoveImprovements_(rTileEffects, rTile, rRemoved);
 }
 
 } // namespace

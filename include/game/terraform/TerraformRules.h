@@ -14,6 +14,7 @@
 namespace ac
 {
 
+class BaseManager;
 class ImprovementRegistry;
 class TerrainOperationRegistry;
 class Tile;
@@ -70,6 +71,17 @@ int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig
 // samples per turn. turnIndex is years since GameState::k_FirstPlayableMissionYear
 // (0 on the first playable year).
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
+
+struct SurfaceFlipConsequences_t
+{
+    std::vector<std::string> removedImprovements;
+    bool bRazesBase = false;
+};
+
+// A flip removes every improvement whose domain is not the new surface (an omitted domain stays).
+// On water, pBase is razed unless it MayOccupyWater, in which case it keeps its Base marker.
+SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
+                                                  const BaseManager* pBase);
 
 struct TerraformSpread_t
 {

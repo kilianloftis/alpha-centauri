@@ -7,6 +7,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
+#include "game/base/BaseManager.h"
 #include "game/base/BaseTypes.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementIds.h"
@@ -515,6 +516,26 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const Wor
         return std::nullopt;
     }
     return TerraformSpread_t{pBest, &rConfig};
+}
+
+SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
+                                                  const BaseManager* pBase)
+{
+    SurfaceFlipConsequences_t consequences;
+    const bool bBaseOnWaterAllowed = pBase != nullptr && pBase->MayOccupyWater();
+    consequences.bRazesBase = bNowWater && pBase != nullptr && !bBaseOnWaterAllowed;
+    const bool bSpareBase = bNowWater && bBaseOnWaterAllowed;
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        const bool bSeaDomain = pImprovement->domain == ImprovementDomain_t::Sea;
+        const bool bDomainKept = !pImprovement->domain.has_value() || bSeaDomain == bNowWater;
+        if (bDomainKept || (bSpareBase && pImprovement->id == ImprovementIds::k_Base))
+        {
+            continue;
+        }
+        consequences.removedImprovements.push_back(pImprovement->id);
+    }
+    return consequences;
 }
 
 } // namespace ac
