@@ -30,6 +30,12 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const World
 
 bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId);
 
+// A FoundBase unit founds where it stands: only a sea unit on water, and CanFoundBaseAt.
+bool CanFoundBase(const Unit& rUnit);
+
+// The base a sea unit founds on water keeps its water tile.
+bool FoundedBaseMayOccupyWater(const Unit& rUnit);
+
 // Resolve StartingMinerals for a newly created base: base-level effects (SE, secret
 // projects, …) plus the founding unit's live effects when provided. Floored at 0.
 int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit = nullptr);

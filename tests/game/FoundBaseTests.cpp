@@ -446,3 +446,18 @@ TEST_CASE("A land base is razed when its tile becomes water unless it may occupy
     CHECK(pSea->MayOccupyWater());
     CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
 }
+
+TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile",
+          "[unit][found-base]")
+{
+    FoundBaseGame_ game;
+    game.pState->GetWorldMap().GetTile(11, 11)->SetElevation(-100);
+    Unit& landPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"});
+    Unit& seaPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_colony_pod"});
+    Unit& rover = game.MakeUnit(*game.pPlayer, 12, 12, {"test_chassis"});
+
+    CHECK_FALSE(CanFoundBase(landPod));
+    CHECK(CanFoundBase(seaPod));
+    CHECK(FoundedBaseMayOccupyWater(seaPod));
+    CHECK_FALSE(CanFoundBase(rover));
+}

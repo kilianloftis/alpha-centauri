@@ -11,6 +11,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDomain.h"
 
 #include <algorithm>
 #include <vector>
@@ -80,6 +81,25 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId)
     const GameState& rGameState = CurrentGameState();
     return CanFoundBaseAt(rTile, founderFactionId, rGameState.GetWorldMap(),
                           CollectAllBases_(rGameState));
+}
+
+bool CanFoundBase(const Unit& rUnit)
+{
+    if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
+    {
+        return false;
+    }
+    const Tile& rTile = rUnit.GetTile();
+    if (rTile.IsWater() && rUnit.GetDomain() != UnitDomain_t::Sea)
+    {
+        return false;
+    }
+    return CanFoundBaseAt(rTile, rUnit.GetFaction().GetFactionId());
+}
+
+bool FoundedBaseMayOccupyWater(const Unit& rUnit)
+{
+    return rUnit.GetTile().IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
 }
 
 int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)

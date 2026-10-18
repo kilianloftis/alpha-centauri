@@ -511,21 +511,13 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
 
 BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
 {
-    if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
+    if (!CanFoundBase(rUnit))
     {
         return nullptr;
     }
 
     Faction& rFaction = rUnit.GetFaction();
     const Tile& rUnitTile = rUnit.GetTile();
-    if (rUnitTile.IsWater() && rUnit.GetDomain() != UnitDomain_t::Sea)
-    {
-        return nullptr;
-    }
-    if (!CanFoundBaseAt(rUnitTile, rFaction.GetFactionId()))
-    {
-        return nullptr;
-    }
 
     Tile* pTile = rGameState.GetWorldMap().GetTile(rUnitTile.GetX(), rUnitTile.GetY());
     if (!pTile)
@@ -533,8 +525,7 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
         return nullptr;
     }
 
-    const bool bMayOccupyWater =
-        rUnitTile.IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
+    const bool bMayOccupyWater = FoundedBaseMayOccupyWater(rUnit);
     BaseManager* pBase = rFaction.CreateBase(
         rGameState.AllocateBaseId(),
         rFaction.SuggestBaseName(),
