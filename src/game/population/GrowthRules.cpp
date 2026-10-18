@@ -4,6 +4,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/population/GrowthConfigParser.h"
 
+#include <algorithm>
 #include <limits>
 
 namespace ac
@@ -36,6 +37,37 @@ int ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize,
         return std::numeric_limits<int>::max();
     }
     return static_cast<int>(required);
+}
+
+GrowthOutcome_t ResolveGrowth(const GrowthInputs_t& rInputs, const GrowthConfig_t& rConfig)
+{
+    GrowthOutcome_t outcome;
+    int stockpile = rInputs.stockpile;
+    int net = rInputs.netNutrients;
+    const bool bBoxFull = stockpile >= rInputs.boxNow && net >= 0;
+
+    if (bBoxFull && rInputs.bRoomToGrow)
+    {
+        outcome.bGrows = true;
+        outcome.stockpileOnGrowth = 0;
+        stockpile = outcome.stockpileOnGrowth;
+        // The intake above was for the old size, and the new citizen eats this turn too.
+        net -= rConfig.nutrientIntakePerCitizen;
+    }
+    else if (bBoxFull)
+    {
+        stockpile = rInputs.boxNow / 2;
+    }
+    else if (stockpile + net < 0)
+    {
+        outcome.bStarves = true;
+        outcome.stockpileAfter = 0;
+        return outcome;
+    }
+
+    const int box = outcome.bGrows ? rInputs.boxNext : rInputs.boxNow;
+    outcome.stockpileAfter = std::clamp(stockpile + net, 0, box);
+    return outcome;
 }
 
 } // namespace ac

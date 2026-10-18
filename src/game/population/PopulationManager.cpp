@@ -245,79 +245,56 @@ int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) c
     return ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
 }
 
+GrowthOutcome_t PopulationManager::ResolveGrowth_(int nutrientProduction,
+                                                  const BaseEffects_t& rBaseEffects) const
+{
+    const int size = GetSize();
+    GrowthInputs_t inputs;
+    inputs.stockpile = m_nutrientStockpile;
+    inputs.netNutrients = nutrientProduction - GetCitizenNutrientIntake();
+    inputs.boxNow = ComputeNutrientsRequired(m_rGrowthConfig, size, rBaseEffects);
+    inputs.boxNext = ComputeNutrientsRequired(m_rGrowthConfig, size + 1, rBaseEffects);
+    inputs.bRoomToGrow = CanGrow();
+    return ResolveGrowth(inputs, m_rGrowthConfig);
+}
+
 bool PopulationManager::WouldGrowThisTurn(int nutrientProduction,
                                           const BaseEffects_t& rBaseEffects) const
 {
-    const int net = nutrientProduction - GetCitizenNutrientIntake();
-    if (net < 0 || !CanGrow())
-    {
-        return false;
-    }
-    const int required =
-        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
-    return m_nutrientStockpile >= required;
+    return ResolveGrowth_(nutrientProduction, rBaseEffects).bGrows;
 }
 
-bool PopulationManager::WouldStarveThisTurn(int nutrientProduction) const
+bool PopulationManager::WouldStarveThisTurn(int nutrientProduction,
+                                            const BaseEffects_t& rBaseEffects) const
 {
-    // The ApplyGrowth starve gate. No grow/blocked check is needed to exclude it: that branch
-    // requires stockpile >= required (> 0) and net >= 0, which can never sum below zero.
-    return m_nutrientStockpile + (nutrientProduction - GetCitizenNutrientIntake()) < 0;
+    return ResolveGrowth_(nutrientProduction, rBaseEffects).bStarves;
 }
 
 bool PopulationManager::CommitPendingGrowth(int nutrientProduction,
                                             const BaseEffects_t& rBaseEffects)
 {
-    if (!WouldGrowThisTurn(nutrientProduction, rBaseEffects))
+    const GrowthOutcome_t outcome = ResolveGrowth_(nutrientProduction, rBaseEffects);
+    if (!outcome.bGrows)
     {
         return false;
     }
-    m_nutrientStockpile = 0;
+    m_nutrientStockpile = outcome.stockpileOnGrowth;
     OnGrowth.Emit();
     return true;
 }
 
 void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects)
 {
-    const int required =
-        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
-    int net = nutrientProduction - GetCitizenNutrientIntake();
-
-    if (m_nutrientStockpile >= required && net >= 0)
+    const GrowthOutcome_t outcome = ResolveGrowth_(nutrientProduction, rBaseEffects);
+    if (outcome.bGrows)
     {
-        if (CanGrow())
-        {
-            m_nutrientStockpile = 0;
-            OnGrowth.Emit();
-            // Post-growth eating: intake above used the pre-grow size.
-            net -= m_rGrowthConfig.nutrientIntakePerCitizen;
-        }
-        else
-        {
-            // Full tanks at the population limit: half the box, then deposit.
-            m_nutrientStockpile = required / 2;
-        }
+        m_nutrientStockpile = outcome.stockpileOnGrowth;
+        OnGrowth.Emit();
     }
-    else if (m_nutrientStockpile + net < 0)
+    m_nutrientStockpile = outcome.stockpileAfter;
+    if (outcome.bStarves)
     {
-        m_nutrientStockpile = 0;
         OnStarvation.Emit();
-        return;
-    }
-
-    m_nutrientStockpile += net;
-    // Only the post-grow intake adjustment above can push the deposit below zero (every other
-    // path reaching here was gated on stockpile + net >= 0). A base that just grew carries no
-    // hidden debt into next turn's starve check, so floor it rather than bank a negative tank.
-    if (m_nutrientStockpile < 0)
-    {
-        m_nutrientStockpile = 0;
-    }
-    const int requiredAfter =
-        ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
-    if (m_nutrientStockpile > requiredAfter)
-    {
-        m_nutrientStockpile = requiredAfter;
     }
 }
 

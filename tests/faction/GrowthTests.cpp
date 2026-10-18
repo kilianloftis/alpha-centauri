@@ -348,3 +348,82 @@ TEST_CASE("A StartingSize that resolves to zero fails loudly at founding",
 
     CHECK_THROWS_AS(fixture.MakeBase(8, 4, std::nullopt), std::runtime_error);
 }
+
+namespace
+{
+
+GrowthInputs_t GrowthInputs_(int stockpile, int net, bool bRoomToGrow)
+{
+    GrowthInputs_t inputs;
+    inputs.stockpile = stockpile;
+    inputs.netNutrients = net;
+    inputs.boxNow = 40;
+    inputs.boxNext = 50;
+    inputs.bRoomToGrow = bRoomToGrow;
+    return inputs;
+}
+
+} // namespace
+
+TEST_CASE("ResolveGrowth: a full box at the population limit keeps half", "[population][growth]")
+{
+    GrowthConfig_t config;
+    const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(40, 4, false), config);
+    CHECK_FALSE(outcome.bGrows);
+    CHECK_FALSE(outcome.bStarves);
+    CHECK(outcome.stockpileAfter == 24);
+}
+
+TEST_CASE("ResolveGrowth: growth empties the box and the new citizen eats", "[population][growth]")
+{
+    GrowthConfig_t config;
+    config.nutrientIntakePerCitizen = 2;
+    const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(40, 4, true), config);
+    CHECK(outcome.bGrows);
+    CHECK(outcome.stockpileOnGrowth == 0);
+    CHECK(outcome.stockpileAfter == 2);
+
+    // The new citizen's intake never banks a negative box.
+    CHECK(ResolveGrowth(GrowthInputs_(40, 1, true), config).stockpileAfter == 0);
+}
+
+TEST_CASE("ResolveGrowth: starvation empties the box", "[population][growth]")
+{
+    GrowthConfig_t config;
+    const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(3, -5, true), config);
+    CHECK(outcome.bStarves);
+    CHECK_FALSE(outcome.bGrows);
+    CHECK(outcome.stockpileAfter == 0);
+}
+
+TEST_CASE("ResolveGrowth: the deposit is capped at the box", "[population][growth]")
+{
+    GrowthConfig_t config;
+    const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(10, 50, true), config);
+    CHECK_FALSE(outcome.bGrows);
+    CHECK(outcome.stockpileAfter == 40);
+}
+
+TEST_CASE("Growth forecasts agree with the turn on the same inputs", "[population][growth]")
+{
+    for (const int stockpile : {0, 20, 40})
+    {
+        for (const int net : {-10, 0, 8})
+        {
+            actest::BaseFixture fixture;
+            actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
+            BaseManager& base = fixture.MakeBase(8, 4);
+            PopulationManager& rPopulation = base.GetPopulation();
+            rPopulation.SetNutrientStockpile(stockpile);
+            const int gross = net + rPopulation.GetCitizenNutrientIntake();
+            const int sizeBefore = rPopulation.GetSize();
+            const bool bWouldGrow = rPopulation.WouldGrowThisTurn(gross, BaseEffects_t{base});
+            const bool bWouldStarve = rPopulation.WouldStarveThisTurn(gross, BaseEffects_t{base});
+
+            rPopulation.ApplyGrowth(gross, BaseEffects_t{base});
+            const int sizeAfter = rPopulation.GetSize();
+            CHECK(bWouldGrow == (sizeAfter == sizeBefore + 1));
+            CHECK(bWouldStarve == (sizeAfter == sizeBefore - 1));
+        }
+    }
+}

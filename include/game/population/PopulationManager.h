@@ -10,6 +10,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/population/RiotLatch.h"
 #include "game/population/GoldenAgeLatch.h"
+#include "game/population/GrowthRules.h"
 #include "lib/Revision.h"
 
 #include <functional>
@@ -187,18 +188,16 @@ public:
     bool WouldGrowThisTurn(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
 
     // The counterpart gate: net loss exhausts the tank, so ApplyGrowth will drop a pop. Mutually
-    // exclusive with WouldGrowThisTurn, and independent of the growth threshold, so it needs no
-    // effect list. Abandon prediction subtracts it for the same reason it adds pending growth.
-    bool WouldStarveThisTurn(int nutrientProduction) const;
+    // exclusive with WouldGrowThisTurn. Abandon prediction subtracts it for the same reason it
+    // adds pending growth.
+    bool WouldStarveThisTurn(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
 
     // If WouldGrowThisTurn, grow one pop and empty the stockpile (no deposit). Used before
     // on-complete production pop costs so a size-1 colony pod does not raze the base.
     // Returns true when a pop was added. Later ApplyGrowth uses the post-growth size for intake.
     bool CommitPendingGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 
-    // Apply this turn's gross nutrient production: subtract citizen intake, then grow/starve
-    // or half-tank at the cap, deposit and cap. After a grow in this call, subtracts one more
-    // intake for the new citizen before depositing.
+    // Applies ResolveGrowth (GrowthRules) to this turn's gross nutrient production.
     void ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 
     // Ownership transfer (BaseManager::RebindFaction): pop fallback/obsolescence resolution
@@ -257,6 +256,7 @@ private:
     Revision m_moodRevision;
 
     CompositionEffectInputs_t BuildCompositionInputs_() const;
+    GrowthOutcome_t ResolveGrowth_(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
     RiotConditionInputs_t BuildRiotInputs_() const;
     GoldenAgeLatch::Inputs_t BuildGoldenAgeInputs_() const;
 

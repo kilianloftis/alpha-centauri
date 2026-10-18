@@ -545,7 +545,7 @@ bool BaseManager::WouldCompletionAbandonBase() const
     {
         ++size;
     }
-    else if (m_pPopulation->WouldStarveThisTurn(m_pResources->GetNutrientBank()))
+    else if (m_pPopulation->WouldStarveThisTurn(m_pResources->GetNutrientBank(), m_effects.Get()))
     {
         // Floored at 1: the question is whether *this item* empties the base. A base already
         // starving out from size 1 is lost whatever it builds, and predicting size 0 here would
