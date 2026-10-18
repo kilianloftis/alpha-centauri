@@ -65,10 +65,6 @@ private:
         GameState& rGameState) const;
     bool TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_t& rAction,
                           const ProbeTarget_t& rTarget);
-    int ResolveMissionRisk_(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-                            const BuildingId_t& facilityId, bool bRepeatAtBase) const;
-    void FillProbeChances_(ProbeActionResult_t& rResult, const Unit& rUnit,
-                           const ProbeTarget_t& rTarget, int risk) const;
     ProbeActionResult_t ResolveProbeRoll_(Unit& rUnit, const ProbeActionConfig_t& rAction,
                                           const ProbeTarget_t& rTarget, GameState& rGameState,
                                           const BuildingId_t& facilityId,

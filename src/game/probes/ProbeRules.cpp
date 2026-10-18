@@ -13,6 +13,9 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/combat/MoraleRules.h"
+#include "game/research/ResearchRules.h"
+#include "game/research/TechConfigParser.h"
 
 #include <algorithm>
 #include <cmath>
@@ -355,6 +358,69 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             }
         },
         rTarget.ref);
+}
+
+int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
+                const std::string& facilityId, bool bRepeatAtBase)
+{
+    int risk = rAction.risk;
+    if (bRepeatAtBase && rAction.riskRepeat.has_value())
+    {
+        risk = *rAction.riskRepeat;
+    }
+    if (rAction.id == ProbeActionId_t::SabotageFacility && !facilityId.empty())
+    {
+        const BaseManager* pBase = AsBase(rTarget);
+        if (pBase && IsHeadquarters(*pBase))
+        {
+            risk = std::max(risk, 2);
+        }
+    }
+    return risk;
+}
+
+ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk,
+                              const MoraleCalculator& rMorale,
+                              const ProbeSuccessFormula_t& rFormula)
+{
+    EffectContext_t ctx;
+    const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
+    const int targetProbeEffect = TargetProbeDefenseEffect(rTarget, rFormula);
+    double failureScale = 1.0;
+    if (!TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
+    {
+        failureScale = ResolveMultiplicativeStat(rProbe, StatId_t::ProbeFailureScale, 1.0);
+    }
+    const double successScale = ResolveTargetSuccessScale(rTarget);
+    return ComputeProbeChances(morale, risk, targetProbeEffect, rFormula, failureScale,
+                               successScale);
+}
+
+int StealEnergyAmount(const BaseManager& rBase, const Faction& rTarget, int morale)
+{
+    const int energy = rTarget.GetEconomy().GetEnergy();
+    if (energy <= 0)
+    {
+        return 0;
+    }
+    const int pop = rBase.GetPopulation().GetSize();
+    const int factionPop = rTarget.TotalPopulation();
+    const int share = energy * pop / (factionPop + 1);
+    const int minSteal = std::max(0, (share * std::max(1, morale)) / 10);
+    return std::clamp(minSteal + std::max(0, (share - minSteal) / 2), 0, energy);
+}
+
+std::vector<std::string> StealableTechs(const Faction& rActor, const Faction& rTarget)
+{
+    std::vector<std::string> techs;
+    for (const TechConfig_t* pTech : AvailableTechs(rActor.GetResearch()))
+    {
+        if (rTarget.GetResearch().HasDiscoveredTech(pTech->id))
+        {
+            techs.push_back(pTech->id);
+        }
+    }
+    return techs;
 }
 
 } // namespace ac

@@ -119,8 +119,9 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
                                                   pTargetBase->GetBaseId());
     }
 
-    const int risk = ResolveMissionRisk_(*pAction, *target, facilityId, bRepeatAtBase);
-    FillProbeChances_(result, rUnit, *target, risk);
+    const int risk = MissionRisk(*pAction, *target, facilityId, bRepeatAtBase);
+    result.chances = ProbeChancesFor(rUnit, *target, risk, m_rMorale,
+                                     m_rProbeActions.successFormula);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
     return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, result, roll);
 }
@@ -165,50 +166,6 @@ bool ProbeActionExecutor::TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_
     }
     rEconomy.SpendEnergy(*cost);
     return true;
-}
-
-int ProbeActionExecutor::ResolveMissionRisk_(const ProbeActionConfig_t& rAction,
-                                             const ProbeTarget_t& rTarget,
-                                             const BuildingId_t& facilityId,
-                                             bool bRepeatAtBase) const
-{
-    int risk = rAction.risk;
-    if (bRepeatAtBase && rAction.riskRepeat.has_value())
-    {
-        risk = *rAction.riskRepeat;
-    }
-    if (rAction.id == ProbeActionId_t::SabotageFacility && !facilityId.empty())
-    {
-        const BaseManager* pBase = AsBase(rTarget);
-        if (pBase && IsHeadquarters(*pBase))
-        {
-            risk = std::max(risk, 2);
-        }
-    }
-    return risk;
-}
-
-void ProbeActionExecutor::FillProbeChances_(ProbeActionResult_t& rResult, const Unit& rUnit,
-                                            const ProbeTarget_t& rTarget, int risk) const
-{
-    EffectContext_t ctx;
-    const int morale = EffectiveMoraleLevel(rUnit, ctx, m_rMorale);
-    const int targetProbeEffect =
-        TargetProbeDefenseEffect(rTarget, m_rProbeActions.successFormula);
-
-    // Thinker: failure-scale (Algo) only when the target does not BlocksProbeTeams; success
-    // scale (HSA) always applies against that target.
-    double failureScale = 1.0;
-    if (!TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
-    {
-        failureScale = ResolveMultiplicativeStat(rUnit, StatId_t::ProbeFailureScale, 1.0);
-    }
-    const double successScale = ResolveTargetSuccessScale(rTarget);
-
-    rResult.chances =
-        ComputeProbeChances(morale, risk, targetProbeEffect,
-                            m_rProbeActions.successFormula, failureScale,
-                            successScale);
 }
 
 ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(

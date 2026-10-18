@@ -1,5 +1,6 @@
 #include "game/probes/ProbeActionMutations.h"
 
+#include "game/probes/ProbeRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -80,54 +81,20 @@ bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState
     return true;
 }
 
-// Among techs the actor can research (prereqs met, not yet known) that the target already
-// knows, pick uniformly at random. Empty when nothing is eligible.
-TechId PickStealableTech_(const Faction& rActor, const Faction& rTarget, std::mt19937& rRng)
-{
-    std::vector<TechId> candidates;
-    const std::vector<const TechConfig_t*> available = AvailableTechs(rActor.GetResearch());
-    for (const TechConfig_t* pTech : available)
-    {
-        if (pTech && rTarget.GetResearch().HasDiscoveredTech(pTech->id))
-        {
-            candidates.push_back(pTech->id);
-        }
-    }
-    if (candidates.empty())
-    {
-        return {};
-    }
-    std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
-    return candidates[dist(rRng)];
-}
-
 bool ApplyStealTech_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& rResult,
                      std::mt19937& rRng)
 {
-    Faction& rTarget = rBase.GetFaction();
-    const TechId techId = PickStealableTech_(rActor, rTarget, rRng);
-    if (techId.empty())
+    const std::vector<TechId> candidates = StealableTechs(rActor, rBase.GetFaction());
+    if (candidates.empty())
     {
         rResult.detail = ProbeActionStatus_t::NoTech;
         return true; // mission succeeds but nothing to steal
     }
+    std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
+    const TechId techId = candidates[dist(rRng)];
     rActor.GetResearch().AddDiscoveredTech(techId);
     rResult.detail = ProbeStolenTech_t{techId};
     return true;
-}
-
-int StealEnergyAmount_(const BaseManager& rBase, const Faction& rTarget, int morale)
-{
-    const int energy = rTarget.GetEconomy().GetEnergy();
-    if (energy <= 0)
-    {
-        return 0;
-    }
-    const int pop = rBase.GetPopulation().GetSize();
-    const int factionPop = rTarget.TotalPopulation();
-    const int share = energy * pop / (factionPop + 1);
-    const int minSteal = std::max(0, (share * std::max(1, morale)) / 10);
-    return std::clamp(minSteal + std::max(0, (share - minSteal) / 2), 0, energy);
 }
 
 bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
@@ -138,8 +105,8 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     EffectContext_t ctx;
     const MoraleCalculator& rMorale = *rGameState.GetGameData().moraleCalculator;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
-    const int stolen = StealEnergyAmount_(rBase, rTarget, morale);
-    // StealEnergyAmount_ clamps to the target's treasury, so this can never overdraw.
+    const int stolen = StealEnergyAmount(rBase, rTarget, morale);
+    // StealEnergyAmount clamps to the target's treasury, so this can never overdraw.
     rTarget.GetEconomy().SpendEnergy(stolen);
     rActor.GetEconomy().AddEnergy(stolen);
     rResult.detail = ProbeEnergyStolen_t{stolen};

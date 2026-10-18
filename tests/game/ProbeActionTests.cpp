@@ -772,3 +772,20 @@ TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomac
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
 }
+
+TEST_CASE("A drain never takes more than the treasury, and a better probe takes more",
+          "[probe][action]")
+{
+    ProbeGame_ game;
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    game.pAi->GetEconomy().SpendEnergy(game.pAi->GetEconomy().GetEnergy());
+    CHECK(StealEnergyAmount(enemy, *game.pAi, 3) == 0);
+
+    game.pAi->GetEconomy().AddEnergy(1000);
+    const int treasury = game.pAi->GetEconomy().GetEnergy();
+    const int green = StealEnergyAmount(enemy, *game.pAi, 1);
+    const int elite = StealEnergyAmount(enemy, *game.pAi, 6);
+    CHECK(green > 0);
+    CHECK(elite > green);
+    CHECK(elite <= treasury);
+}

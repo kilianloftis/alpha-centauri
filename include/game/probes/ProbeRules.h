@@ -9,11 +9,13 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace ac
 {
 
 class MindControlLedger;
+class MoraleCalculator;
 
 class Unit;
 class BaseManager;
@@ -66,6 +68,24 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   const ProbeSuccessFormula_t& rFormula,
                                   double failureScale = 1.0,
                                   double successScale = 1.0);
+
+// The action's risk, or its repeat risk at a base this faction has probed before. Sabotaging a
+// chosen facility at a headquarters is at least risk 2.
+int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
+                const std::string& facilityId, bool bRepeatAtBase);
+
+// ComputeProbeChances for this probe and target: its effective morale, the target's probe
+// defense, the failure scale unless the target BlocksProbeTeams, and the target's success scale.
+ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk,
+                              const MoraleCalculator& rMorale,
+                              const ProbeSuccessFormula_t& rFormula);
+
+// A drain takes the base's share of the target treasury, at least a morale-tenth of it, plus
+// half of what is left of the share, never more than the treasury holds.
+int StealEnergyAmount(const BaseManager& rBase, const Faction& rTarget, int morale);
+
+// Techs the actor could research now that the target already knows.
+std::vector<std::string> StealableTechs(const Faction& rActor, const Faction& rTarget);
 
 // Whether the target faction detects the probe and so learns who sent a covert one.
 // TODO: the detection roll ("getting away cleanly") is not implemented; nothing is detected.
