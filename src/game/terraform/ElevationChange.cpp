@@ -1,18 +1,14 @@
 #include "game/terraform/ElevationChange.h"
 
 #include "game/effects/TileEffectsContext.h"
-#include "game/map/MapUtils.h"
-#include "game/terraform/SurfaceOccupancy.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/terraform/SurfaceOccupancy.h"
+#include "game/terraform/TerraformRules.h"
 
-#include <algorithm>
-#include <deque>
-#include <optional>
 #include <span>
 #include <stdexcept>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -22,151 +18,54 @@ namespace ac
 namespace
 {
 
-int Clamp_(int elevation, int floorMeters, int ceilingMeters)
+Tile& MutableTile_(WorldMap& rWorldMap, const Tile& rTile)
 {
-    return std::max(floorMeters, std::min(elevation, ceilingMeters));
+    Tile* pTile = rWorldMap.GetTile(rTile.GetX(), rTile.GetY());
+    if (pTile == nullptr)
+    {
+        throw std::logic_error("ElevationChange: a planned tile is not on this world");
+    }
+    return *pTile;
 }
 
-// The caller's band intersected with Planet's own. The origin honors both; pulled
-// neighbors only Planet's.
-struct OriginBand_t
+// Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
+// recomputes rivers. Returns false when there was nothing to write.
+bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMap& rWorldMap,
+                           TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
 {
-    int floor = 0;
-    int ceiling = 0;
-};
-
-OriginBand_t RequireLegalEdit_(int floorMeters, int ceilingMeters,
-                               const ElevationRulesConfig_t& rRules)
-{
-    if (rRules.maxAdjacentDifferenceMeters <= 0)
+    if (rWrites.empty())
     {
-        throw std::logic_error("ApplyElevationDelta: max adjacent difference must be > 0");
+        return false;
     }
 
-    OriginBand_t band;
-    band.floor = std::max(floorMeters, rRules.minElevationMeters);
-    band.ceiling = std::min(ceilingMeters, rRules.maxElevationMeters);
-    if (band.floor > band.ceiling)
+    TileChangeDeferral defer;
+    std::vector<SurfaceFlip_t> before;
+    std::unordered_set<const Tile*> seen;
+    for (const ElevationWrite_t& rWrite : rWrites)
     {
-        throw std::logic_error("ApplyElevationDelta: the requested band excludes Planet's range");
-    }
-    return band;
-}
-
-// Elevation a neighbor must take to sit within maxDiff of tileElev, or nullopt when it
-// already does (including after Planet's own clamp).
-std::optional<int> PulledElevation_(int tileElev, int neighborElev, int maxDiff, int floorMeters,
-                                    int ceilingMeters)
-{
-    int desired = neighborElev;
-    if (neighborElev > tileElev + maxDiff)
-    {
-        desired = tileElev + maxDiff;
-    }
-    else if (neighborElev < tileElev - maxDiff)
-    {
-        desired = tileElev - maxDiff;
-    }
-    else
-    {
-        return std::nullopt;
-    }
-
-    desired = Clamp_(desired, floorMeters, ceilingMeters);
-    if (desired == neighborElev)
-    {
-        return std::nullopt;
-    }
-    return desired;
-}
-
-// First observation wins, so a tile pulled across the line and back records the net flip.
-class PriorSurface
-{
-public:
-    explicit PriorSurface(bool bRecord)
-        : m_bRecord(bRecord)
-    {
-    }
-
-    void Note(Tile& rTile)
-    {
-        if (m_bRecord)
+        Tile& rTile = MutableTile_(rWorldMap, *rWrite.pTile);
+        if (seen.insert(&rTile).second)
         {
-            m_wasWater.emplace(&rTile, rTile.IsWater());
+            before.push_back(SurfaceFlip_t{&rTile, rTile.IsWater()});
         }
+        rTile.SetElevation(rWrite.elevation);
     }
 
-    void AppendFlips(std::vector<SurfaceFlip_t>& rFlips) const
+    if (pTileEffects)
     {
-        for (const auto& [pTile, bWasWater] : m_wasWater)
+        std::vector<SurfaceFlip_t> flips;
+        for (const SurfaceFlip_t& rBefore : before)
         {
-            if (pTile->IsWater() != bWasWater)
+            if (rBefore.pTile->IsWater() != rBefore.bNowWater)
             {
-                rFlips.push_back(SurfaceFlip_t{pTile, pTile->IsWater()});
+                flips.push_back(SurfaceFlip_t{rBefore.pTile, rBefore.pTile->IsWater()});
             }
         }
+        ReconcileSurfaceFlips(*pTileEffects, pWorld, flips);
     }
 
-    std::vector<Tile*> NotedTiles() const
-    {
-        std::vector<Tile*> tiles;
-        tiles.reserve(m_wasWater.size());
-        for (const auto& [pTile, bWasWater] : m_wasWater)
-        {
-            (void)bWasWater;
-            tiles.push_back(pTile);
-        }
-        return tiles;
-    }
-
-private:
-    bool m_bRecord = false;
-    std::unordered_map<Tile*, bool> m_wasWater;
-};
-
-void RelaxAdjacentSlopes_(std::span<Tile*> seeds, WorldMap& rWorldMap, int maxDiff,
-                          int floorMeters, int ceilingMeters, PriorSurface& rPrior)
-{
-    std::deque<Tile*> pending;
-    std::unordered_set<Tile*> queued;
-    for (Tile* pSeed : seeds)
-    {
-        if (pSeed && queued.insert(pSeed).second)
-        {
-            pending.push_back(pSeed);
-        }
-    }
-
-    while (!pending.empty())
-    {
-        Tile* pTile = pending.front();
-        pending.pop_front();
-        queued.erase(pTile);
-
-        ForEachTileInChebyshevRadius(*pTile, rWorldMap, 1, false,
-            [&](Tile* pNeighbor, int /*distance*/)
-            {
-                if (!pNeighbor)
-                {
-                    return;
-                }
-                const std::optional<int> desired = PulledElevation_(
-                    pTile->GetElevation(), pNeighbor->GetElevation(), maxDiff, floorMeters,
-                    ceilingMeters);
-                if (!desired)
-                {
-                    return;
-                }
-
-                rPrior.Note(*pNeighbor);
-                pNeighbor->SetElevation(*desired);
-                if (queued.insert(pNeighbor).second)
-                {
-                    pending.push_back(pNeighbor);
-                }
-            });
-    }
+    RecomputeRivers(rWorldMap);
+    return true;
 }
 
 } // namespace
@@ -185,30 +84,11 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
                          const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
                          TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
 {
-    const OriginBand_t band = RequireLegalEdit_(floorMeters, ceilingMeters, rRules);
-    const int next = Clamp_(rOrigin.GetElevation() + deltaMeters, band.floor, band.ceiling);
-    if (next == rOrigin.GetElevation())
-    {
-        return false;
-    }
-
-    TileChangeDeferral defer;
-    PriorSurface prior(pTileEffects != nullptr);
-    prior.Note(rOrigin);
-    rOrigin.SetElevation(next);
-    Tile* pOrigin = &rOrigin;
-    RelaxAdjacentSlopes_(std::span<Tile*>(&pOrigin, 1), rWorldMap,
-                         rRules.maxAdjacentDifferenceMeters, rRules.minElevationMeters,
-                         rRules.maxElevationMeters, prior);
-    if (pTileEffects)
-    {
-        std::vector<SurfaceFlip_t> flips;
-        prior.AppendFlips(flips);
-        ReconcileSurfaceFlips(*pTileEffects, pWorld, flips);
-    }
-
-    RecomputeRivers(rWorldMap);
-    return true;
+    const ElevationSeed_t seed{&rOrigin, deltaMeters};
+    const std::vector<ElevationWrite_t> writes = PlanElevationChange(
+        std::span<const ElevationSeed_t>(&seed, 1), floorMeters, ceilingMeters, rWorldMap,
+        rRules);
+    return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
 }
 
 bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt19937& rRng,
@@ -220,16 +100,14 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
         return false;
     }
 
-    // Every level is rolled even once the sum is past anything Planet can absorb, so the RNG
-    // stream advances by levelCount whatever the rolls were.
-    const int span = rRules.maxElevationMeters - rRules.minElevationMeters;
-    int delta = 0;
+    // Every level is rolled, whatever the sum, so the RNG stream advances by levelCount.
+    std::vector<int> rolls;
+    rolls.reserve(static_cast<size_t>(levelCount));
     for (int level = 0; level < levelCount; ++level)
     {
-        const int roll = RollLevelMeters(rRng, rRules);
-        delta = roll >= span - delta ? span : delta + roll;
+        rolls.push_back(RollLevelMeters(rRng, rRules));
     }
-
+    const int delta = EarthquakeDeltaMeters(rolls, rRules);
     return ApplyElevationDelta(rOrigin, rWorldMap, delta, rRules, rRules.minElevationMeters,
                                rRules.maxElevationMeters, pTileEffects, pWorld);
 }
@@ -243,48 +121,19 @@ bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt1993
         return false;
     }
 
-    const OriginBand_t band =
-        RequireLegalEdit_(rRules.minElevationMeters, rRules.maxElevationMeters, rRules);
-
-    TileChangeDeferral defer;
-    PriorSurface prior(pTileEffects != nullptr);
-    std::vector<Tile*> changed;
-    changed.reserve(tiles.size());
-
+    // Roll even when the tile is already on the floor, so the stream advances once per tile.
+    std::vector<ElevationSeed_t> seeds;
+    seeds.reserve(tiles.size());
     for (Tile* pTile : tiles)
     {
-        if (!pTile)
+        if (pTile)
         {
-            continue;
+            seeds.push_back(ElevationSeed_t{pTile, -RollLevelMeters(rRng, rRules)});
         }
-        // Roll even when the tile is already on the floor, so the stream advances once per tile.
-        const int roll = RollLevelMeters(rRng, rRules);
-        const int next = Clamp_(pTile->GetElevation() - roll, band.floor, band.ceiling);
-        if (next == pTile->GetElevation())
-        {
-            continue;
-        }
-        prior.Note(*pTile);
-        pTile->SetElevation(next);
-        changed.push_back(pTile);
     }
-
-    if (changed.empty())
-    {
-        return false;
-    }
-
-    RelaxAdjacentSlopes_(changed, rWorldMap, rRules.maxAdjacentDifferenceMeters,
-                         rRules.minElevationMeters, rRules.maxElevationMeters, prior);
-    if (pTileEffects)
-    {
-        std::vector<SurfaceFlip_t> flips;
-        prior.AppendFlips(flips);
-        ReconcileSurfaceFlips(*pTileEffects, pWorld, flips);
-    }
-
-    RecomputeRivers(rWorldMap);
-    return true;
+    const std::vector<ElevationWrite_t> writes = PlanElevationChange(
+        seeds, rRules.minElevationMeters, rRules.maxElevationMeters, rWorldMap, rRules);
+    return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
 }
 
 } // namespace ac

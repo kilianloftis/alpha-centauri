@@ -3,6 +3,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/terraform/ElevationChange.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/map/ElevationRulesConfigParser.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/map/Tile.h"
@@ -533,4 +534,33 @@ TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation]
     CHECK_FALSE(UnitCanDetonate(plain));
     CHECK_FALSE(ApplyDetonation(*game.pState, plain));
     CHECK(pTile->GetElevation() == before);
+}
+
+TEST_CASE("Planning an elevation change lists its writes and leaves the map untouched",
+          "[map][elevation]")
+{
+    const ElevationRulesConfig_t rules = ShippingRules_();
+    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
+    At_(map, 8, 8).SetElevation(0);
+    At_(map, 7, 9).SetElevation(-2000);
+
+    const ElevationSeed_t seed{&At_(map, 8, 8), 1000};
+    const std::vector<ElevationWrite_t> writes =
+        PlanElevationChange(std::span<const ElevationSeed_t>(&seed, 1), rules.minElevationMeters,
+                            rules.maxElevationMeters, map, rules);
+    REQUIRE(writes.size() >= 2);
+    CHECK(writes.front().pTile == &At_(map, 8, 8));
+    CHECK(writes.front().elevation == 1000);
+    CHECK(At_(map, 8, 8).GetElevation() == 0);
+    CHECK(At_(map, 7, 9).GetElevation() == -2000);
+}
+
+TEST_CASE("An earthquake's level rolls add up to at most Planet's full span", "[map][elevation]")
+{
+    const ElevationRulesConfig_t rules = ShippingRules_();
+    const int span = rules.maxElevationMeters - rules.minElevationMeters;
+    const std::vector<int> small = {100, 200};
+    const std::vector<int> huge = {span, 500};
+    CHECK(EarthquakeDeltaMeters(small, rules) == 300);
+    CHECK(EarthquakeDeltaMeters(huge, rules) == span);
 }

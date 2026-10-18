@@ -71,4 +71,29 @@ int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig
 // (0 on the first playable year).
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
+struct ElevationSeed_t
+{
+    const Tile* pTile = nullptr;
+    int deltaMeters = 0;
+};
+
+struct ElevationWrite_t
+{
+    const Tile* pTile = nullptr;
+    int elevation = 0;
+};
+
+// Every elevation write a change makes, in order. Each seed moves by deltaMeters within
+// [floorMeters, ceilingMeters] and Planet's range; then every moved tile pulls its Chebyshev
+// neighbours to within max_adjacent_difference_meters, clamped only to Planet's range. Empty
+// when no seed moves. Throws when the band excludes Planet's range.
+std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
+                                                  int floorMeters, int ceilingMeters,
+                                                  const WorldMap& rWorldMap,
+                                                  const ElevationRulesConfig_t& rRules);
+
+// The sum of the level rolls, capped at Planet's full elevation span.
+int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
+                          const ElevationRulesConfig_t& rRules);
+
 } // namespace ac
