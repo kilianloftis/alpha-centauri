@@ -142,6 +142,7 @@ add_library(ac-core STATIC
     game/natives/NativeUnitConfigParser.cpp
     game/natives/NativeUnitRegistry.cpp
     game/natives/EnsureNativeDesign.cpp
+    game/natives/NativeRules.cpp
     game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
@@ -217,7 +218,8 @@ add_library(ac-core STATIC
     game/worldgen/LandmarkGeneration.cpp
     game/worldgen/FungusGeneration.cpp
     game/ecology/FungalBloom.cpp
-    game/combat/Explosion.cpp
+    game/combat/ExplosionMutations.cpp
+    game/combat/ExplosionRules.cpp
     game/worldgen/TileBonusGeneration.cpp
     game/worldgen/MapGenerationConfig.cpp
     game/worldgen/MoistureGeneration.cpp

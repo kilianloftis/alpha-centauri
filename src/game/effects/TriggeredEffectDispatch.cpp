@@ -22,7 +22,8 @@
 #include "game/production/ProductionConfigParser.h"
 #include "game/terraform/ElevationChange.h"
 #include "game/terraform/TerraformRules.h"
-#include "game/combat/Explosion.h"
+#include "game/combat/ExplosionMutations.h"
+#include "game/combat/ExplosionRules.h"
 #include "game/ecology/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
@@ -494,17 +495,13 @@ bool Explosion_(TriggeredEffectContext_t& rCtx, const ExplosionEffect_t& rConfig
     {
         return false;
     }
-    int radius = rConfig.radius;
-    if (rConfig.radiusStat)
+    const std::optional<int> radius = ExplosionRadius(rConfig, rCtx.pUnit);
+    if (!radius)
     {
-        if (!rCtx.pUnit)
-        {
-            return false;
-        }
-        radius = rCtx.pUnit->GetStat(*rConfig.radiusStat);
+        return false;
     }
     const ExplosionResult_t result =
-        ApplyExplosion(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), radius, rCtx.Rng(),
+        ApplyExplosion(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), *radius, rCtx.Rng(),
                        rCtx.rGameState, rCtx.pUnit);
     // Only a unit-borne blast has someone to answer for it. Without one there is no detonator
     // to exclude, so CommitAtrocity falls back to whatever the trigger site targeted.

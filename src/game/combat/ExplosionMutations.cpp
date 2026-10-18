@@ -1,4 +1,4 @@
-#include "game/combat/Explosion.h"
+#include "game/combat/ExplosionMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/GameState.h"

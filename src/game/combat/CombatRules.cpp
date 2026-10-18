@@ -3,9 +3,9 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
-#include "game/faction/FactionConfig.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/natives/NativeRules.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -74,12 +74,6 @@ Susceptibility_t ResolveSusceptibility_(const Unit& rOccupant, const Tile& rTile
     return susceptibility;
 }
 
-bool IsWildNative_(const Unit& rUnit)
-{
-    return rUnit.GetDesign().IsNativeLife()
-        && IsNativeLifeFaction(rUnit.GetFaction().GetDefinition().identity.species);
-}
-
 bool IsImmune_(const Unit* pUnit, const std::vector<CollateralHit_t>& rPlan)
 {
     return std::any_of(rPlan.begin(), rPlan.end(), [pUnit](const CollateralHit_t& rHit)
@@ -145,7 +139,7 @@ std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Un
         {
             hit.bImmune = true;
         }
-        else if (IsWildNative_(*pOccupant))
+        else if (IsWildNative(*pOccupant))
         {
             hit.bDestroyed = true;
         }

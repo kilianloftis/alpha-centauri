@@ -4,8 +4,8 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
 #include "game/economy/EconomyManager.h"
-#include "game/faction/FactionConfig.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/natives/NativeRules.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -14,20 +14,9 @@
 namespace ac
 {
 
-namespace
-{
-
-bool IsWildNative_(const Unit& rUnit)
-{
-    return rUnit.GetDesign().IsNativeLife()
-        && IsNativeLifeFaction(rUnit.GetFaction().GetDefinition().identity.species);
-}
-
-} // namespace
-
 void GrantPlanetPearls(const MoraleCalculator& rMorale, Faction& rKiller, const Unit& rVictim)
 {
-    if (!IsWildNative_(rVictim))
+    if (!IsWildNative(rVictim))
     {
         return;
     }

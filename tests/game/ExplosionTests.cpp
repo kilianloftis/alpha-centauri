@@ -13,7 +13,8 @@
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
-#include "game/combat/Explosion.h"
+#include "game/combat/ExplosionMutations.h"
+#include "game/combat/ExplosionRules.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
@@ -425,4 +426,18 @@ TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
     CHECK(game.pState->GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);
     CHECK(UnitCount_(*game.pPlayer) == 0);
     CHECK(game.pState->GetAtrocityLedger().Records().empty());
+}
+
+TEST_CASE("A blast sized by a unit stat needs a detonator; a fixed blast does not",
+          "[map][explosion]")
+{
+    BlastGame_ game;
+    const ExplosionEffect_t fixed{.radius = 2};
+    const ExplosionEffect_t sized{.radiusStat = StatId_t::ExplosionRadius};
+    Unit& rUnit = game.MakeChassisUnit_(8, 8);
+
+    CHECK(ExplosionRadius(fixed, nullptr) == 2);
+    CHECK(ExplosionRadius(fixed, &rUnit) == 2);
+    CHECK_FALSE(ExplosionRadius(sized, nullptr).has_value());
+    CHECK(ExplosionRadius(sized, &rUnit) == rUnit.GetStat(StatId_t::ExplosionRadius));
 }

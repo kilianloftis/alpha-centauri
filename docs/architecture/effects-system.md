@@ -593,7 +593,7 @@ fungus removes improvements that cannot coexist with it. A nutrient bonus stays.
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
 
-`Explosion` (`include/game/combat/Explosion.h`) wipes a Chebyshev disk and then lowers it.
+`Explosion` (`include/game/combat/ExplosionMutations.h`) wipes a Chebyshev disk and then lowers it; `ExplosionRadius` picks the fixed radius or the detonator's radius stat.
 Radius 1 is the origin plus its neighbors (9 tiles). On each tile it destroys every unit
 except the detonating subject, razes a base, and removes built improvements. Optional terrain,
 aquifers, rockiness, and moisture stay. The subject is spared so the payload's following
