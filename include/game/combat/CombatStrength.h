@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/effects/EffectEnums.h"
+#include "game/combat/CombatRules.h"
 
 namespace ac
 {
@@ -22,13 +22,12 @@ struct CombatStrength_t
 };
 
 // Attack and defense roll pools. Conventional ratings are the combat Attack/Defense stats;
-// psi ratings start at 1 and ignore additive weapon and armour. defenderStat is the
-// defender's rating (Defense, or Attack in an artillery duel) and still multiplies by the
-// defender tile's defense multiplier. When the attacker has fewer than one movement point
+// psi ratings start at 1 and ignore additive weapon and armour. The defender is rated with
+// Defense, or Attack in an artillery duel, times the defender tile's defense multiplier. When the attacker has fewer than one movement point
 // remaining, attack strength is multiplied by that leftover fraction of a point.
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const TileEffectsContext& rTileEffects,
                                        const MoraleCalculator& rMorale,
-                                       StatId_t defenderStat);
+                                       CombatEngagement_t engagement);
 
 } // namespace ac

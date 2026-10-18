@@ -17,7 +17,7 @@ namespace ac
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const TileEffectsContext& rTileEffects,
                                        const MoraleCalculator& rMorale,
-                                       StatId_t defenderStat)
+                                       CombatEngagement_t engagement)
 {
     // TODO(difficulty): apply combat handicap from rules.combat_handicap /
     // combat_handicap_natives_only once magnitude is known (do not invent percents).
@@ -32,6 +32,9 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     const double tileDefenseMult = rTileEffects.ResolveTileDefenseMultiplier(
         rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
 
+    const StatId_t defenderStat = engagement == CombatEngagement_t::ArtilleryDuel
+                                      ? StatId_t::Attack
+                                      : StatId_t::Defense;
     strength.bPsiCombat = ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
                           || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
     double attackRating = 0.0;

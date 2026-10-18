@@ -252,7 +252,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     defender.SetMoveFragmentsRemaining(1);
 
     const CombatStrength_t expected = ResolveCombatStrength(
-        attacker, defender, *fixture.ctx, fixture.morale(), StatId_t::Attack);
+        attacker, defender, *fixture.ctx, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     EffectContext_t defenderAttack = defenseCtx;
     defenderAttack.pAttacker = &attacker;
@@ -317,7 +317,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
 
     const CombatStrength_t expectedStrike =
         ResolveCombatStrength(attacker, defender, *fixture.ctx, fixture.morale(),
-                              StatId_t::Defense);
+                              CombatEngagement_t::ArtilleryStrike);
     OrderHarness_ orders(fixture, 1);
     const auto strike = orders.orders.TryBombard(attacker, defender.GetTile());
     REQUIRE(strike);
@@ -332,7 +332,8 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     duelAttacker.SetMoveFragmentsRemaining(point * 2 / 3);
     duelDefender.SetMoveFragmentsRemaining(1);
     const CombatStrength_t expectedDuel = ResolveCombatStrength(
-        duelAttacker, duelDefender, *fixture.ctx, fixture.morale(), StatId_t::Attack);
+        duelAttacker, duelDefender, *fixture.ctx, fixture.morale(),
+        CombatEngagement_t::ArtilleryDuel);
     const auto duel = orders.orders.TryBombard(duelAttacker, duelDefender.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);

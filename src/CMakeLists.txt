@@ -146,6 +146,7 @@ add_library(ac-core STATIC
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
     game/combat/CombatResolver.cpp
+    game/combat/CombatRules.cpp
     game/combat/CombatStrength.cpp
     game/combat/StackCollateral.cpp
     game/combat/PlanetPearls.cpp

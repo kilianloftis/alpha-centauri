@@ -53,7 +53,7 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
     {
         return false;
     }
-    if ((startHp - rCandidate.GetCurrentHp()) * 2 < startHp)
+    if (!PastDisengageThreshold(rCandidate, startHp))
     {
         return false;
     }
@@ -123,11 +123,8 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,
     const bool bArtillery = bStrike
                             || rOptions.engagement == CombatEngagement_t::ArtilleryDuel;
 
-    const StatId_t defenderStat = rOptions.engagement == CombatEngagement_t::ArtilleryDuel
-                                      ? StatId_t::Attack
-                                      : StatId_t::Defense;
     const CombatStrength_t strength = ResolveCombatStrength(
-        rAttacker, rDefender, m_rTileEffects, m_rMorale, defenderStat);
+        rAttacker, rDefender, m_rTileEffects, m_rMorale, rOptions.engagement);
     result.attackStrength = strength.attackStrength;
     result.defenseStrength = strength.defenseStrength;
     result.bPsiCombat = strength.bPsiCombat;
@@ -151,31 +148,19 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,
         CombatRound_t round;
         round.attackRoll = Roll_(result.attackStrength);
         round.defenseRoll = Roll_(result.defenseStrength);
-        round.damage = k_roundDamage;
-
-        // Strict greater-than for the attacker; equal rolls favour the defender.
-        if (round.attackRoll > round.defenseRoll)
+        const CombatRoundOutcome_t outcome = ResolveCombatRound(
+            rAttacker, rDefender, round.attackRoll, round.defenseRoll, rOptions.engagement,
+            hpFloor);
+        round.roundWinner = outcome.winner;
+        round.damage = outcome.damage;
+        // Only the loser is written; a losing strike attacker is left as it was.
+        if (outcome.winner == CombatSide_t::Attacker)
         {
-            round.roundWinner = CombatSide_t::Attacker;
-            round.damage = result.bPsiCombat
-                               ? std::max(1, ResolveStat(rDefender, StatId_t::PsiDamage))
-                               : k_roundDamage;
-            const int current = rDefender.GetCurrentHp();
-            const int next = bStrike
-                                 ? std::max(current - round.damage, std::min(current, hpFloor))
-                                 : current - round.damage;
-            rDefender.SetCurrentHp(next);
+            rDefender.SetCurrentHp(rDefender.GetCurrentHp() - outcome.defenderHpLoss);
         }
-        else
+        else if (outcome.attackerHpLoss > 0)
         {
-            round.roundWinner = CombatSide_t::Defender;
-            round.damage = result.bPsiCombat
-                               ? std::max(1, ResolveStat(rAttacker, StatId_t::PsiDamage))
-                               : k_roundDamage;
-            if (!bStrike)
-            {
-                rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - round.damage);
-            }
+            rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - outcome.attackerHpLoss);
         }
 
         round.attackerHpAfter = rAttacker.GetCurrentHp();

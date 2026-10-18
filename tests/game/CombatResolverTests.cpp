@@ -277,7 +277,7 @@ TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
         {
             CHECK(round.roundWinner == CombatSide_t::Defender);
         }
-        CHECK(round.damage == CombatResolver::k_roundDamage);
+        CHECK(round.damage == k_CombatRoundDamage);
     }
 
     CHECK(result.bDefenderDestroyed);
@@ -554,7 +554,7 @@ TEST_CASE("Conventional combat keeps fixed one damage despite psi tier", "[comba
     CHECK_FALSE(result.bPsiCombat);
     for (const CombatRound_t& round : result.rounds)
     {
-        CHECK(round.damage == CombatResolver::k_roundDamage);
+        CHECK(round.damage == k_CombatRoundDamage);
     }
 }
 
