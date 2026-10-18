@@ -2,6 +2,7 @@
 
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/movement/AirdropRules.h"
+#include "game/combat/AttackRules.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/movement/StepEvaluator.h"
@@ -27,7 +28,6 @@ class BaseManager;
 class GameState;
 class IUnitOrderWorld;
 class TerrainOperationRegistry;
-struct BombardTargeting_t;
 
 // Outcome of one applied step. A native raider is consumed by the base it raids, so a step
 // can legally end with the mover gone; bMoverDestroyed is the signal that no caller may
@@ -170,19 +170,19 @@ private:
 
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
     void PromoteOnKill_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);
-    // Marks the attack, spends movement, clears the order, and destroys a SingleUse unit.
-    // Returns true when that expend destroyed rAttacker. bSpendRemaining spends every
-    // fragment left; otherwise the cost is one movement point.
-    bool SpendAttackAction_(Unit& rAttacker, bool bSpendRemaining);
+    // Marks the attack, spends AttackMoveFragments, clears the order, and destroys a
+    // SingleUse unit. Returns true when that expend destroyed rAttacker.
+    bool SpendAttackAction_(Unit& rAttacker, AttackKind_t kind);
     // Last-defender casualties on a base tile. Returns true when the raid destroyed rAttacker.
     bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
     CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
                                            CombatEngagement_t engagement);
     // One act per faction the shot will hit: units it strikes, or the territory owner of an
     // empty tile's improvements. Attributed when any of that faction's targets is.
-    std::vector<HostileAct_t> BombardHostileActs_(const Unit& rAttacker, const Tile& rTargetTile,
-                                                  const BombardTargeting_t& rTargeting,
-                                                  bool bOccupied) const;
+    std::vector<HostileAct_t> BombardHostileActs_(
+        const Unit& rAttacker, const Tile& rTargetTile, const Unit* pDuelTarget,
+        const std::vector<Unit*>& rStrikeTargets,
+        const std::vector<std::string>& rImprovementTargets) const;
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).

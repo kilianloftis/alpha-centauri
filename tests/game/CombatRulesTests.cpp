@@ -1,6 +1,8 @@
 #include "GameFixtures.h"
 
+#include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
+#include "game/combat/MoraleRules.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/Faction.h"
 #include "game/map/Tile.h"
@@ -117,4 +119,19 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
     REQUIRE(inBase.size() == 1);
     CHECK(inBase.front().bImmune);
     CHECK(inBase.front().damage == 0);
+}
+
+TEST_CASE("Only the survivor of a kill is offered promotion", "[combat][morale]")
+{
+    CombatResult_t result;
+    CHECK_FALSE(PromotionCandidate(result).has_value());
+
+    result.bDefenderDestroyed = true;
+    CHECK(PromotionCandidate(result) == CombatSide_t::Attacker);
+
+    result.bAttackerDestroyed = true;
+    CHECK_FALSE(PromotionCandidate(result).has_value());
+
+    result.bDefenderDestroyed = false;
+    CHECK(PromotionCandidate(result) == CombatSide_t::Defender);
 }

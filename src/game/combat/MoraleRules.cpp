@@ -1,6 +1,7 @@
 #include "game/combat/MoraleRules.h"
 
 #include "game/base/BaseManager.h"
+#include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
@@ -109,6 +110,19 @@ std::span<const EffectConfig_t> EffectiveLevelEffects(const Unit& rUnit,
 {
     const int level = EffectiveMoraleLevel(rUnit, rCtx, rMorale);
     return rMorale.LevelEffects(level);
+}
+
+std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult)
+{
+    if (rResult.bDefenderDestroyed && !rResult.bAttackerDestroyed)
+    {
+        return CombatSide_t::Attacker;
+    }
+    if (rResult.bAttackerDestroyed && !rResult.bDefenderDestroyed)
+    {
+        return CombatSide_t::Defender;
+    }
+    return std::nullopt;
 }
 
 const std::string& MoraleDisplayName(const Unit& rUnit, const MoraleCalculator& rMorale)

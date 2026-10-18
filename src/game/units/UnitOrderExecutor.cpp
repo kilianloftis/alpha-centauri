@@ -2,10 +2,10 @@
 
 #include "game/combat/InterceptMutations.h"
 #include "game/combat/MoraleMutations.h"
+#include "game/combat/MoraleRules.h"
 #include "game/combat/ScrambleRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/movement/MoveCostRules.h"
-#include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
 #include "game/combat/AttackRules.h"
 #include "game/base/BaseConquestRules.h"
@@ -76,27 +76,20 @@ OrderProgress_t UnitOrderExecutor::ExpendIfSingleUse_(const Unit& rUnit) const
 void UnitOrderExecutor::PromoteOnKill_(Unit& rAttacker, Unit& rDefender,
                                        const CombatResult_t& rResult)
 {
-    if (rResult.bDefenderDestroyed && !rResult.bAttackerDestroyed)
+    const std::optional<CombatSide_t> candidate = PromotionCandidate(rResult);
+    if (!candidate)
     {
-        TryPromote(rAttacker, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
+        return;
     }
-    if (rResult.bAttackerDestroyed && !rResult.bDefenderDestroyed)
-    {
-        TryPromote(rDefender, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
-    }
+    Unit& rSurvivor = *candidate == CombatSide_t::Attacker ? rAttacker : rDefender;
+    TryPromote(rSurvivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
 }
 
-bool UnitOrderExecutor::SpendAttackAction_(Unit& rAttacker, bool bSpendRemaining)
+bool UnitOrderExecutor::SpendAttackAction_(Unit& rAttacker, AttackKind_t kind)
 {
     rAttacker.MarkAttacked();
-    if (bSpendRemaining)
-    {
-        rAttacker.SpendRemainingMoveFragments();
-    }
-    else
-    {
-        rAttacker.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
-    }
+    const int fragments = AttackMoveFragments(rAttacker, kind);
+    rAttacker.SpendMoveFragments(fragments);
     rAttacker.ClearOrder();
     if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
     {
@@ -403,17 +396,10 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     result.scramblePath = std::move(scrambleHops);
     PromoteOnKill_(rAttacker, rCombatDefender, result);
 
-    if (!result.bAttackerDestroyed)
+    // Combat never moves either side, so capturing an emptied base is a later step onto it.
+    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Attack))
     {
-        // Combat never moves either side. Default cost is one movement point (and one fuel
-        // point when the design tracks fuel). AttackingEndsTurn (Needlejet) spends the rest
-        // of the turn's moves instead. Capture of an emptied base is a later step onto the
-        // tile while moves remain.
-        const bool bSpendRemaining = rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn);
-        if (SpendAttackAction_(rAttacker, bSpendRemaining))
-        {
-            result.bAttackerDestroyed = true;
-        }
+        result.bAttackerDestroyed = true;
     }
 
     // Last-defender casualties / adjacent native raid — not ownership transfer. Capture
@@ -432,8 +418,9 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 }
 
 std::vector<HostileAct_t> UnitOrderExecutor::BombardHostileActs_(
-    const Unit& rAttacker, const Tile& rTargetTile, const BombardTargeting_t& rTargeting,
-    bool bOccupied) const
+    const Unit& rAttacker, const Tile& rTargetTile, const Unit* pDuelTarget,
+    const std::vector<Unit*>& rStrikeTargets,
+    const std::vector<std::string>& rImprovementTargets) const
 {
     std::vector<HostileAct_t> acts;
     const auto addAct = [&](const HostileAct_t& rAct)
@@ -453,21 +440,15 @@ std::vector<HostileAct_t> UnitOrderExecutor::BombardHostileActs_(
             it->bAttributed = it->bAttributed || rAct.bAttributed;
         }
     };
-    if (rTargeting.pDuelTarget)
+    if (pDuelTarget)
     {
-        addAct(HostileActAgainst(rAttacker, *rTargeting.pDuelTarget));
+        addAct(HostileActAgainst(rAttacker, *pDuelTarget));
     }
-    else if (!rTargeting.bBombardPresentButIllegal)
+    for (const Unit* pTarget : rStrikeTargets)
     {
-        for (const Unit* pTarget : rTargeting.strikeTargets)
-        {
-            if (pTarget)
-            {
-                addAct(HostileActAgainst(rAttacker, *pTarget));
-            }
-        }
+        addAct(HostileActAgainst(rAttacker, *pTarget));
     }
-    if (!bOccupied && !NonBaseImprovementIds(rTargetTile).empty())
+    if (!rImprovementTargets.empty())
     {
         addAct(HostileActAgainst(rAttacker, m_rWorldMap.GetTerritory().GetOwner(rTargetTile)));
     }
@@ -482,49 +463,45 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
         return std::nullopt;
     }
 
-    const bool bOccupied = TileHasUnits(rTargetTile, m_rWorldMap);
     BombardResult_t result;
-    const BombardTargeting_t targeting =
-        CollectBombardTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
-    const std::vector<HostileAct_t> acts =
-        BombardHostileActs_(rAttacker, rTargetTile, targeting, bOccupied);
+    Unit* pDuelTarget =
+        ArtilleryDuelTarget(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+    const std::vector<Unit*> strikeTargets =
+        BombardStrikeTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+    const std::vector<std::string> improvementTargets =
+        BombardImprovementTargets(rTargetTile, m_rWorldMap);
+    const std::vector<HostileAct_t> acts = BombardHostileActs_(
+        rAttacker, rTargetTile, pDuelTarget, strikeTargets, improvementTargets);
 
-    if (targeting.pDuelTarget)
+    if (pDuelTarget)
     {
         result.combats.push_back(ResolveBombardExchange_(
-            rAttacker, *targeting.pDuelTarget, CombatEngagement_t::ArtilleryDuel));
+            rAttacker, *pDuelTarget, CombatEngagement_t::ArtilleryDuel));
         result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
     }
-    else if (!targeting.bBombardPresentButIllegal)
+    for (Unit* pTarget : strikeTargets)
     {
-        for (Unit* pTarget : targeting.strikeTargets)
+        if (result.bAttackerDestroyed)
         {
-            if (!pTarget || result.bAttackerDestroyed)
-            {
-                break;
-            }
-            result.combats.push_back(ResolveBombardExchange_(
-                rAttacker, *pTarget, CombatEngagement_t::ArtilleryStrike));
-            result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
+            break;
+        }
+        result.combats.push_back(ResolveBombardExchange_(
+            rAttacker, *pTarget, CombatEngagement_t::ArtilleryStrike));
+        result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
+    }
+
+    if (!improvementTargets.empty())
+    {
+        std::uniform_int_distribution<size_t> pick(0, improvementTargets.size() - 1);
+        const std::string id = improvementTargets[pick(m_rRng)];
+        if (Tile* pTile = m_rWorldMap.GetTile(rTargetTile.GetX(), rTargetTile.GetY()))
+        {
+            m_rTileEffects.RemoveOccupantWithEffects(*pTile, id);
+            result.destroyedImprovementId = id;
         }
     }
 
-    if (!bOccupied)
-    {
-        const std::vector<std::string> candidates = NonBaseImprovementIds(rTargetTile);
-        if (!candidates.empty())
-        {
-            std::uniform_int_distribution<size_t> pick(0, candidates.size() - 1);
-            const std::string id = candidates[pick(m_rRng)];
-            if (Tile* pTile = m_rWorldMap.GetTile(rTargetTile.GetX(), rTargetTile.GetY()))
-            {
-                m_rTileEffects.RemoveOccupantWithEffects(*pTile, id);
-                result.destroyedImprovementId = id;
-            }
-        }
-    }
-
-    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, true))
+    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Bombard))
     {
         result.bAttackerDestroyed = true;
     }

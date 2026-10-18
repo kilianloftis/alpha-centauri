@@ -45,6 +45,10 @@ CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefe
                                         int attackRoll, int defenseRoll,
                                         CombatEngagement_t engagement, int hpFloor);
 
+// TODO: combat odds are not implemented. Every pair scores alike, so candidate order picks
+// the defender.
+double DefenderWinChance(const Unit& rAttacker, const Unit& rDefender);
+
 // A unit may withdraw once it has lost half the HP it started the fight with.
 bool PastDisengageThreshold(const Unit& rUnit, int startHp);
 

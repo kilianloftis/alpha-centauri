@@ -115,6 +115,11 @@ CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefe
     return outcome;
 }
 
+double DefenderWinChance(const Unit&, const Unit&)
+{
+    return 0.5;
+}
+
 bool PastDisengageThreshold(const Unit& rUnit, int startHp)
 {
     return (startHp - rUnit.GetCurrentHp()) * 2 >= startHp;

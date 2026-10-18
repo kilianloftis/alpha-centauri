@@ -19,8 +19,12 @@ struct InteractionGridsConfig_t;
 bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
                    const InteractionGridsConfig_t& rGrids);
 
-// Hostile on rTile that rObserver can see, or nullptr. Concealed occupants read as absent.
-// Embarked cargo is eligible only on a Base tile; non-embarked hostiles are preferred.
+// The candidate with the best DefenderWinChance against rAttacker; ties keep candidate order.
+// Null when there are no candidates.
+Unit* SelectDefender(const Unit& rAttacker, const std::vector<Unit*>& rCandidates);
+
+// The hostile on rTile that would defend against rObserver, among those it can see, or nullptr.
+// Concealed occupants read as absent. Embarked cargo is eligible only on a Base tile.
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
                                const WorldMap& rWorldMap,
                                const TileEffectsContext& rTileEffects);
@@ -48,27 +52,31 @@ bool CanBombard(const Unit& rAttacker);
 bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
                           const WorldMap& rWorldMap);
 
-// Hostiles on the tile (surface, then embarked cargo when the tile has a base), ignoring
-// visibility. If any hostile has Bombard, pDuelTarget is the first that passes attack_unit
-// and strikeTargets stays empty. bBombardPresentButIllegal is set when a bombard hostile
-// is present and none of them pass attack_unit. Otherwise strikeTargets is every hostile
-// that passes attack_unit.
-struct BombardTargeting_t
+// Bombard targets come from every hostile on the tile, seen or not: surface units, then
+// embarked cargo when the tile has a base. Only hostiles that pass attack_unit are targets.
+
+// The bombard-capable hostile that answers with a duel, chosen by SelectDefender, or nullptr.
+Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile,
+                          const WorldMap& rWorldMap, const TileEffectsContext& rTileEffects);
+
+// The hostiles one strike hits in tile order. Empty while any hostile there can bombard,
+// even one the attacker may not engage.
+std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTargetTile,
+                                        const WorldMap& rWorldMap,
+                                        const TileEffectsContext& rTileEffects);
+
+// Improvement ids a shot may wreck: everything but Base and terrain features, and only on a
+// tile with no units at all, friendly or embarked included.
+std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile,
+                                                   const WorldMap& rWorldMap);
+
+enum class AttackKind_t
 {
-    Unit* pDuelTarget = nullptr;
-    bool bBombardPresentButIllegal = false;
-    std::vector<Unit*> strikeTargets;
+    Attack,
+    Bombard,
 };
 
-BombardTargeting_t CollectBombardTargets(const Unit& rAttacker, const Tile& rTargetTile,
-                                         const WorldMap& rWorldMap,
-                                         const TileEffectsContext& rTileEffects);
-
-// Surface occupants or embarked cargo, including friendlies. An occupied tile is not
-// wrecked by bombard.
-bool TileHasUnits(const Tile& rTile, const WorldMap& rWorldMap);
-
-// Improvement ids on the tile other than Base. Terrain features are not included.
-std::vector<std::string> NonBaseImprovementIds(const Tile& rTile);
+// One movement point, or every fragment left when the unit has AttackingEndsTurn or bombards.
+int AttackMoveFragments(const Unit& rAttacker, AttackKind_t kind);
 
 } // namespace ac

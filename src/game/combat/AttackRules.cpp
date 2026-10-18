@@ -1,5 +1,6 @@
 #include "game/combat/AttackRules.h"
 
+#include "game/combat/CombatRules.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InteractionResolve.h"
@@ -10,6 +11,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
 #include "game/movement/TransportRules.h"
 #include "game/units/Unit.h"
@@ -102,20 +104,37 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMa
     return ResolveInteractionCell(rGrids, q, &rAttacker, ctx) == InteractionCell_t::Allow;
 }
 
+Unit* SelectDefender(const Unit& rAttacker, const std::vector<Unit*>& rCandidates)
+{
+    Unit* pBest = nullptr;
+    double bestChance = 0.0;
+    for (Unit* pCandidate : rCandidates)
+    {
+        const double chance = DefenderWinChance(rAttacker, *pCandidate);
+        if (pBest == nullptr || chance > bestChance)
+        {
+            pBest = pCandidate;
+            bestChance = chance;
+        }
+    }
+    return pBest;
+}
+
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
                                const WorldMap& rWorldMap,
                                const TileEffectsContext& rTileEffects)
 {
     std::vector<Unit*> hostiles;
     AppendHostiles_(rObserver, rTile, rWorldMap, hostiles);
+    std::vector<Unit*> visible;
     for (Unit* pUnit : hostiles)
     {
         if (IsUnitVisibleTo(rObserver.GetFaction(), *pUnit, rTileEffects))
         {
-            return pUnit;
+            visible.push_back(pUnit);
         }
     }
-    return nullptr;
+    return SelectDefender(rObserver, visible);
 }
 
 Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile,
@@ -167,57 +186,74 @@ bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
     return distance >= 1 && distance <= range;
 }
 
-BombardTargeting_t CollectBombardTargets(const Unit& rAttacker, const Tile& rTargetTile,
-                                         const WorldMap& rWorldMap,
-                                         const TileEffectsContext& rTileEffects)
+Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile,
+                          const WorldMap& rWorldMap, const TileEffectsContext& rTileEffects)
 {
     const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
     std::vector<Unit*> hostiles;
     AppendHostiles_(rAttacker, rTargetTile, rWorldMap, hostiles);
 
-    BombardTargeting_t result;
-    bool bAnyBombard = false;
+    std::vector<Unit*> duellists;
     for (Unit* pHostile : hostiles)
     {
-        const bool bLegal = PassesAttackUnit_(rAttacker, *pHostile, rTargetTile, rWorldMap, rGrids);
+        if (pHostile->GetFlag(RuleFlagId_t::Bombard)
+            && PassesAttackUnit_(rAttacker, *pHostile, rTargetTile, rWorldMap, rGrids))
+        {
+            duellists.push_back(pHostile);
+        }
+    }
+    return SelectDefender(rAttacker, duellists);
+}
+
+std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTargetTile,
+                                        const WorldMap& rWorldMap,
+                                        const TileEffectsContext& rTileEffects)
+{
+    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
+    std::vector<Unit*> hostiles;
+    AppendHostiles_(rAttacker, rTargetTile, rWorldMap, hostiles);
+
+    std::vector<Unit*> targets;
+    for (Unit* pHostile : hostiles)
+    {
         if (pHostile->GetFlag(RuleFlagId_t::Bombard))
         {
-            bAnyBombard = true;
-            if (result.pDuelTarget == nullptr && bLegal)
-            {
-                result.pDuelTarget = pHostile;
-            }
+            return {};
         }
-        else if (bLegal)
+        if (PassesAttackUnit_(rAttacker, *pHostile, rTargetTile, rWorldMap, rGrids))
         {
-            result.strikeTargets.push_back(pHostile);
+            targets.push_back(pHostile);
         }
     }
-    if (bAnyBombard)
+    return targets;
+}
+
+std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile,
+                                                   const WorldMap& rWorldMap)
+{
+    if (!rWorldMap.GetUnitsOnTile(rTargetTile).empty()
+        || !rWorldMap.GetCargoOnTile(rTargetTile).empty())
     {
-        result.strikeTargets.clear();
-        result.bBombardPresentButIllegal = result.pDuelTarget == nullptr;
+        return {};
     }
-    return result;
-}
-
-bool TileHasUnits(const Tile& rTile, const WorldMap& rWorldMap)
-{
-    return !rWorldMap.GetUnitsOnTile(rTile).empty()
-           || !rWorldMap.GetCargoOnTile(rTile).empty();
-}
-
-std::vector<std::string> NonBaseImprovementIds(const Tile& rTile)
-{
     std::vector<std::string> ids;
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    for (const ImprovementConfig_t* pImprovement : rTargetTile.GetImprovements())
     {
-        if (pImprovement && pImprovement->id != ImprovementIds::k_Base)
+        if (pImprovement->id != ImprovementIds::k_Base)
         {
             ids.push_back(pImprovement->id);
         }
     }
     return ids;
+}
+
+int AttackMoveFragments(const Unit& rAttacker, AttackKind_t kind)
+{
+    if (kind == AttackKind_t::Bombard || rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn))
+    {
+        return rAttacker.GetMoveFragmentsRemaining();
+    }
+    return MovementConstants_t::k_moveFragmentsPerPoint;
 }
 
 } // namespace ac

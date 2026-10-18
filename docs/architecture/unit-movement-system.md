@@ -215,18 +215,22 @@ allow with the `footing` axis omitted ("assault from anywhere"). Declare-attack 
 `TryAttack` / UI is `FindAttackableHostileOnTile` (moves, adjacency, visible hostile,
 `CanAttackTile`, then `Resolve(attack_unit)`); a resting aircraft — on a tile that harbors its
 domain, or embarked on a same-faction carrier that carries it — is attackable by any domain.
-Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`, which
+hands the visible hostiles to `SelectDefender`: the best `DefenderWinChance` defends, ties in
+tile order. Combat odds are not implemented yet, so every pair ties and the first defends.
 When the attacker has fewer than one movement point of fragments left, `ResolveCombatStrength`
 multiplies the resolved attack rating by that leftover fraction of a point; a full point
-or more leaves attack strength unchanged. The post-combat spend is still one point, or
-the rest of the turn when `AttackingEndsTurn`.
+or more leaves attack strength unchanged. The post-combat spend is `AttackMoveFragments`: one
+point, or the rest of the turn when `AttackingEndsTurn` or when bombarding. A survivor of a kill
+(`PromotionCandidate`) rolls for promotion.
 
 **Bombard.** A unit with the `bombard` rule flag has no melee attack. `IsWithinBombardRange`
 is the declare gate: the flag, any remaining movement fragments, and Chebyshev distance in
-`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `F` is bombard targeting or the Farm terraform binding. The key walks those actions, runs the one that is valid, and throws when both are. Whether the terraform binding is valid is `UnitOrderExecutor::CanStartTerraformProject`, the same check `TryStartTerraform` makes: it resolves the project id against the improvements and the terrain operation registry the executor took at construction, and reads the elevation rules of the Former's world. The next click fires a targeting shot. `CollectBombardTargets`
-chooses the duel or the strike list from the same hostile census melee uses (surface units,
-then embarked cargo on a base) and the same `attack_unit` gate. `TryBombard` resolves that
-choice, and when `TileHasUnits` is false removes one random id from `NonBaseImprovementIds`.
+`1 .. bombard_range`. Visibility and `CanEnterTile` are not required. `F` is bombard targeting or the Farm terraform binding. The key walks those actions, runs the one that is valid, and throws when both are. Whether the terraform binding is valid is `UnitOrderExecutor::CanStartTerraformProject`, the same check `TryStartTerraform` makes: it resolves the project id against the improvements and the terrain operation registry the executor took at construction, and reads the elevation rules of the Former's world. The next click fires a targeting shot. `ArtilleryDuelTarget`
+and `BombardStrikeTargets` choose the duel or the strike list from the same hostile census melee
+uses (surface units, then embarked cargo on a base) and the same `attack_unit` gate; any
+bombard-capable hostile empties the strike list. `TryBombard` resolves that choice, and removes
+one random id from `BombardImprovementTargets`, which is empty unless the tile has no units.
 Fog and Conceal are unchanged: a unit `IsUnitVisibleTo` rejected stays hidden after the shot.
 While bombard playback is up, the map draws those units; it stops when playback ends.
 A strike records one round and does not apply that round's damage to the attacker. Defender

@@ -452,3 +452,53 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK_FALSE(artillery.GetOrder().has_value());
     CHECK(bystander.GetOrder().has_value());
 }
+
+TEST_CASE("A bombard-capable hostile answers with a duel and no unit takes a strike",
+          "[bombard]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
+    Unit& infantry = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    const Tile& rTarget = fixture.At(9, 9);
+
+    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, *fixture.ctx) == nullptr);
+    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, *fixture.ctx)
+          == std::vector<Unit*>{&infantry});
+
+    Unit& artillery = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "bombard"});
+    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, *fixture.ctx) == &artillery);
+    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, *fixture.ctx).empty());
+}
+
+TEST_CASE("Only an empty tile offers improvements to wreck, never its base", "[bombard]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Tile& rTile = fixture.At(9, 9);
+    rTile.AddImprovement(fixture.improvements.Get("Farm"));
+    rTile.AddImprovement(fixture.improvements.Get("Base"));
+    CHECK(BombardImprovementTargets(rTile, fixture.map) == std::vector<std::string>{"Farm"});
+
+    fixture.MakeUnit(fixture.MakeFaction(), 9, 9, {"test_chassis"});
+    CHECK(BombardImprovementTargets(rTile, fixture.map).empty());
+}
+
+TEST_CASE("An attack costs one move point unless it ends the turn; a bombard costs the rest",
+          "[bombard]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    const int point = MovementConstants_t::k_moveFragmentsPerPoint;
+    Unit& rover = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& jet = fixture.MakeUnit(player, 9, 9, {"test_fuel_flight_chassis", "test_weapon"});
+    REQUIRE(rover.GetMoveFragmentsRemaining() > point);
+    REQUIRE(jet.GetMoveFragmentsRemaining() > point);
+
+    CHECK(AttackMoveFragments(rover, AttackKind_t::Attack) == point);
+    CHECK(AttackMoveFragments(rover, AttackKind_t::Bombard) == rover.GetMoveFragmentsRemaining());
+    CHECK(AttackMoveFragments(jet, AttackKind_t::Attack) == jet.GetMoveFragmentsRemaining());
+}
