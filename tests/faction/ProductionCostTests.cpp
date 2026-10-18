@@ -6,6 +6,8 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"
@@ -452,4 +454,45 @@ TEST_CASE("Secret projects cannot be scrapped", "[production][scrap]")
     CHECK(CanScrapBuilding(facility));
     facility.bIsSecretProject = true;
     CHECK_FALSE(CanScrapBuilding(facility));
+}
+
+TEST_CASE("A rioting base banks, completes and hurries nothing", "[production][riot]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& rioting = fixture.MakeFactionBase(faction, 8, 8);
+    BaseManager& calm = fixture.MakeFactionBase(faction, 8, 12);
+    rioting.GetPopulation().ForceRiot(/*turns=*/1);
+    rioting.GetPopulation().CommitMood();
+    REQUIRE(rioting.GetPopulation().IsRioting());
+
+    CHECK_FALSE(CanBankProduction(rioting));
+    CHECK_FALSE(CanCompleteProduction(rioting));
+    CHECK_FALSE(CanHurry(rioting));
+    CHECK(CanBankProduction(calm));
+    CHECK(CanCompleteProduction(calm));
+    CHECK(CanHurry(calm));
+}
+
+TEST_CASE("A scrap refund goes to the nearest own base, and only inside own territory",
+          "[production][scrap]")
+{
+    actest::FactionFixture fixture;
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    Faction& faction = fixture.MakeFaction();
+    Faction& rival = fixture.MakeFaction();
+    // The later base takes the lower id, so the tie below is settled by id rather than order.
+    fixture.nextBaseId = 5;
+    BaseManager& west = fixture.MakeFactionBase(faction, 8, 8);
+    fixture.nextBaseId = 2;
+    BaseManager& east = fixture.MakeFactionBase(faction, 16, 8);
+    fixture.MakeFactionBase(rival, 28, 8);
+
+    CHECK(ScrapRefundBase(faction, fixture.At(10, 8)) == west.GetBaseId());
+    CHECK(ScrapRefundBase(faction, fixture.At(14, 8)) == east.GetBaseId());
+    CHECK(ScrapRefundBase(faction, fixture.At(12, 8)) == east.GetBaseId());
+    CHECK_FALSE(ScrapRefundBase(faction, fixture.At(28, 10)).has_value());
 }

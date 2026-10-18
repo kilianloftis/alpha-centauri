@@ -9,6 +9,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/buildings/SecretProjectAvailabilityRules.h"
@@ -276,4 +277,25 @@ TEST_CASE("BuildingRegistry validates the whole set", "[building][config]")
                           Catch::Matchers::ContainsSubstring("upkeep"));
     }
 
+}
+
+TEST_CASE("A base holds a building once unless it stacks, and a secret project while no one does",
+          "[building][secret-project]")
+{
+    BuildingGame_ game;
+    BaseManager& base = game.MakeBase(*game.pPlayer, 8, 4);
+    BaseManager& rivalBase = game.MakeBase(*game.pAi, 8, 12);
+    const BuildingConfig_t& rCommand = *game.fixtures.buildings().Find("Command_Center");
+    const BuildingConfig_t& rStacking = *game.fixtures.buildings().Find("test_facility_a");
+    const BuildingConfig_t& rProject = *game.fixtures.buildings().Find("test_secret_project");
+
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    base.GetBuildingManager().AddBuilding("test_facility_a");
+    CHECK_FALSE(MayHoldBuilding(base.GetBuildingManager(), rCommand));
+    CHECK(MayHoldBuilding(rivalBase.GetBuildingManager(), rCommand));
+    CHECK(MayHoldBuilding(base.GetBuildingManager(), rStacking));
+
+    CHECK(MayHoldBuilding(rivalBase.GetBuildingManager(), rProject));
+    base.GetBuildingManager().AddBuilding("test_secret_project");
+    CHECK_FALSE(MayHoldBuilding(rivalBase.GetBuildingManager(), rProject));
 }

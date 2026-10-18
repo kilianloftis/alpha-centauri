@@ -16,6 +16,7 @@
 #include "game/map/ImprovementIds.h"
 #include "game/terraform/SurfaceOccupancy.h"
 #include "game/terraform/TerraformRules.h"
+#include "game/base/BaseRules.h"
 #include "game/base/FoundBaseRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
@@ -485,4 +486,15 @@ TEST_CASE("A flip to water names what it removes and whether the base is razed",
     CHECK_FALSE(spared.bRazesBase);
     CHECK(std::ranges::count(spared.removedImprovements, std::string(ImprovementIds::k_Base))
           == 0);
+}
+
+TEST_CASE("Only a faction without a headquarters is granted one by its next base",
+          "[found-base][hq]")
+{
+    FoundBaseGame_ game;
+    CHECK(GrantsHeadquarters(*game.pPlayer));
+
+    game.MakeBase(*game.pPlayer, 8, 8);
+    CHECK_FALSE(GrantsHeadquarters(*game.pPlayer));
+    CHECK(GrantsHeadquarters(*game.pAi));
 }
