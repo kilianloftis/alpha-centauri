@@ -10,9 +10,43 @@
 namespace ac
 {
 
-// Pure atrocity decisions. World mutations live in AtrocityMutations.
-// Each of these has its own reason to change — the escalation rule, the legality gate, and the
-// duration curve are three separate game rules that happen to be consulted together.
+class Faction;
+
+// Atrocity decisions; AtrocityMutations carries them out. The escalation rule, the legality gate
+// and the duration curve are separate game rules that happen to be consulted together.
+
+// Why an act was not answered for. Decided once, so the notice does not re-derive it.
+enum class AtrocityExcuse_t
+{
+    None,
+    CharterRepealed,
+    ProgenitorParty,
+};
+
+struct AtrocityOutcome_t
+{
+    // A perpetrator named as its own victim is victimless.
+    std::optional<FactionId_t> victimId;
+    AtrocityExcuse_t excuse = AtrocityExcuse_t::None;
+    bool bCharterInForce = true;
+    bool bCounted = false;
+    // The severity answered for, which escalation may raise above the authored one.
+    AtrocitySeverityId_t severity = AtrocitySeverityId_t::Simple;
+    // Years a counted Simple act adds to the commerce sanction.
+    std::optional<int> sanctionYears;
+    bool bUniversalVendetta = false;
+    bool bExpelFromCouncil = false;
+};
+
+// The Charter is named first because a repeal excuses everyone; a Progenitor party keeps the
+// authored tier, since reclassifying it as Major would punish an act the exemption allows.
+AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pVictim,
+                                  AtrocitySeverityId_t authored);
+
+// Living AI factions other than the victim not yet at Vendetta with the perpetrator. Humans are
+// never forced in.
+std::vector<FactionId_t> UniversalVendettaJoiners(FactionId_t perpetrator,
+                                                  std::optional<FactionId_t> victim);
 
 // The severity actually answered for, given the perpetrator's counted Simple acts so far.
 // The counter is treated as already including this act: while that total is still at or under

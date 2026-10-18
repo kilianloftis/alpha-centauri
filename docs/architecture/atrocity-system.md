@@ -7,8 +7,8 @@ graph TB
         AtrocityRecord[AtrocityRecord_t<br/>perpetrator, victim, severity,<br/>year, charter state, counted]
     end
 
-    subgraph "Decisions (pure)"
-        AtrocityRules[AtrocityRules<br/>EffectiveSeverityId<br/>PenaltiesApply<br/>SpeciesExemptionApplies<br/>SanctionYearsAdded<br/>BlastVictim]
+    subgraph "Decisions"
+        AtrocityRules[AtrocityRules<br/>ResolveAtrocity<br/>UniversalVendettaJoiners<br/>EffectiveSeverityId<br/>PenaltiesApply<br/>SpeciesExemptionApplies<br/>SanctionYearsAdded<br/>BlastVictim]
     end
 
     subgraph "Mutation"
@@ -123,12 +123,14 @@ Progenitor perpetrator is excused even with no victim.
 
 `eco_virtual_minerals` is read from config for counted records only.
 
-### AtrocityRules (pure)
+### AtrocityRules
 
 `EffectiveSeverityId`, `PenaltiesApply`, `SpeciesExemptionApplies`, `SanctionYearsAdded`,
 `BlastVictim`. The escalation rule, the Charter gate, the Progenitor gate, the duration curve,
-and who a blast is answered to are separate game rules consulted together. Pure, so tests pin
-them directly without a GameState. Mirrors the `BaseConquestRules` / `ProbeRules` split.
+and who a blast is answered to are separate game rules consulted together. These take plain
+values, so tests pin them directly without a GameState. `ResolveAtrocity` and
+`UniversalVendettaJoiners` read the session (council, ledgers, difficulty) through
+`CurrentGameState()` and combine them. Mirrors the `BaseConquestRules` / `ProbeRules` split.
 
 `BlastVictim` is the warhead rule: a razed base outranks a killed unit, the first owner the
 disk reached wins within each, and the detonator is never their own victim. It lives here and
@@ -138,9 +140,10 @@ which of them answers for it.
 
 ### AtrocityMutations (mutation)
 
-`CommitAtrocity` orchestrates: gather config, decide whether the authored act is counted, classify
-the severity from the simple counter, write the record, then — only if it was counted — charge for
-it and announce it. **The record is written either way**, because the victim's memory is that
+`ResolveAtrocity` (`AtrocityRules`) decides whether the authored act is counted, classifies the
+severity from the simple counter, and names the sanction years, universal Vendetta and expulsion
+that follow. `CommitAtrocity` writes the record, then charges what the outcome names (the
+`UniversalVendettaJoiners` are read only after the act's own hostile act lands) and announces it. **The record is written either way**, because the victim's memory is that
 record. Escalation, sanctions, and the eco term read `bCounted` only.
 
 `AtrocityCommitted_t` reports the severity actually answered for (which escalation may have

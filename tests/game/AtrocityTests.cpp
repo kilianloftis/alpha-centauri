@@ -20,6 +20,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -912,4 +913,25 @@ TEST_CASE("An atrocity with a Progenitor party names that exemption", "[atrocity
     REQUIRE(pNotice);
     CHECK(pNotice->body.find("take no interest") != std::string::npos);
     CHECK(pNotice->body.find("no longer forbids") == std::string::npos);
+}
+
+TEST_CASE("Resolving an atrocity names its outcome and records nothing", "[atrocity]")
+{
+    AtrocityGame_ game;
+
+    const AtrocityOutcome_t major = ResolveAtrocity(*game.pA, game.pB, k_Major);
+    CHECK(major.bCounted);
+    CHECK(major.victimId == game.pB->GetFactionId());
+    CHECK_FALSE(major.sanctionYears.has_value());
+    CHECK(major.bUniversalVendetta == game.Config().For(k_Major).bUniversalVendetta);
+
+    const AtrocityOutcome_t self = ResolveAtrocity(*game.pA, game.pA, k_Simple);
+    CHECK_FALSE(self.victimId.has_value());
+    CHECK(self.sanctionYears == game.Config().sanctionYearsPerAtrocity);
+    CHECK(game.Ledger().Records().empty());
+
+    const std::vector<FactionId_t> joiners =
+        UniversalVendettaJoiners(game.pA->GetFactionId(), game.pB->GetFactionId());
+    CHECK(std::find(joiners.begin(), joiners.end(), game.pB->GetFactionId()) == joiners.end());
+    CHECK(std::find(joiners.begin(), joiners.end(), game.pA->GetFactionId()) == joiners.end());
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/atrocities/AtrocityConfig.h"
+#include "game/atrocities/AtrocityRules.h"
 
 #include <optional>
 
@@ -9,14 +10,6 @@ namespace ac
 
 class Faction;
 class GameState;
-
-// Why an act was not answered for. Decided once, so the notice does not re-derive it.
-enum class AtrocityExcuse_t
-{
-    None,
-    CharterRepealed,
-    ProgenitorParty,
-};
 
 // What one commission did, for the presentation layer to phrase a notice from.
 struct AtrocityCommitted_t
