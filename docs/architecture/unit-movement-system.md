@@ -255,7 +255,9 @@ rolled against has its order cleared.
    `InterceptSourceReady` says which are off cooldown, and `InterceptChargeBase` names the base
    a building charge is billed to and lost from. Each ready source deploys and rolls its
    chance; a miss rolls `chance_of_destruction_on_fail`. Success destroys the attacker with
-   empty rounds. Stock filters orbital attackers on base tiles.
+   empty rounds. A miss that loses the defender's own design loses the defender: the attack
+   ends with empty rounds, spent but with no kill, so no promotion and no last-defender loss.
+   Stock filters orbital attackers on base tiles.
 2. **`Scramble`** — after Intercept misses/skips, `ResolveScrambleDefender_`
    picks a same-faction unit with a matching `condition` against the attacker, Chebyshev
    distance within the effect's `range`, and a `Pathfinder` path whose `totalCostFragments`

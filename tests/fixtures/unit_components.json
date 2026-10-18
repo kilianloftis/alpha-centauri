@@ -233,6 +233,27 @@
     ]
   },
   {
+    "id": "test_sam_misfire",
+    "name": "Test SAM Misfire",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisUnit",
+        "parameters": {
+          "chance": 0,
+          "chance_of_destruction_on_fail": 100
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "land"
+          ]
+        }
+      }
+    ]
+  },
+  {
     "id": "ignore_zoc",
     "name": "Ignore Zone of Control",
     "type": "ability",

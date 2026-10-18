@@ -360,7 +360,13 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         if (std::optional<CombatResult_t> intercepted =
                 m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
         {
-            // Intercept destroys the attacker; no attack history / move spend on a dead unit.
+            // A defender lost to its own intercept was never fought: the attack is spent, with no
+            // kill to promote and no last defender lost in battle.
+            if (!intercepted->bAttackerDestroyed
+                && SpendAttackAction_(rAttacker, AttackKind_t::Attack))
+            {
+                intercepted->bAttackerDestroyed = true;
+            }
             m_pWorld->OnHostileAct(act);
             return intercepted;
         }

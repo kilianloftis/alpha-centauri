@@ -18,9 +18,11 @@
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
+#include "game/population/PopulationManager.h"
 #include "game/units/UnitOrderExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <ranges>
@@ -667,4 +669,35 @@ TEST_CASE("A satellite attack needs a ready copy and an orbital target the defen
                 .bAttempted);
     CHECK_FALSE(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
     CHECK(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year + 2));
+}
+
+TEST_CASE("A defender lost to its own failed intercept ends the attack with no fight and no kill",
+          "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Unit& attacker = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8,
+                                   {"test_chassis", "test_armor", "test_sam_misfire"},
+                                   &playerBase);
+    const UnitId_t garrisonId = garrison.GetUnitId();
+    attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
+    const int movesBefore = attacker.GetMoveFragmentsRemaining();
+    const int xpBefore = attacker.GetXp();
+    const int popBefore = playerBase.GetPopulation().GetSize();
+
+    const std::optional<CombatResult_t> result =
+        game.pState->GetUnitOrderExecutor().TryAttack(attacker, playerBase.GetTile());
+    REQUIRE(result);
+    CHECK(result->bDefenderDestroyed);
+    CHECK_FALSE(result->bAttackerDestroyed);
+    CHECK(result->rounds.empty());
+    const bool garrisonAlive = std::ranges::any_of(game.pPlayer->GetUnitManager().Units(),
+        [&](const Unit& rUnit) { return rUnit.GetUnitId() == garrisonId; });
+    CHECK_FALSE(garrisonAlive);
+
+    CHECK(attacker.HasAttackedThisTurn());
+    CHECK(attacker.GetMoveFragmentsRemaining() < movesBefore);
+    CHECK(attacker.GetXp() == xpBefore);
+    CHECK(playerBase.GetPopulation().GetSize() == popBefore);
 }

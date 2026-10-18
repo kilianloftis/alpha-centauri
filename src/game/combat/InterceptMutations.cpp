@@ -63,13 +63,27 @@ CombatResult_t ResolveInterceptKill_(Unit& rAttacker, Unit& rDefender)
     return result;
 }
 
-void DestroyInterceptSource_(GameState& rGameState, Unit& rDefender,
-                             const InterceptSource_t& rSource)
+// No fight took place, so the attacker holds the field without having won one.
+CombatResult_t LoseDefenderToItsIntercept_(Unit& rAttacker, Unit& rDefender)
+{
+    CombatResult_t result;
+    result.attackerId = rAttacker.GetUnitId();
+    result.defenderId = rDefender.GetUnitId();
+    result.victor = CombatSide_t::Attacker;
+    result.bDefenderDestroyed = true;
+    rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
+    return result;
+}
+
+// Losing the defender's own design loses the defender, which ends the attack.
+std::optional<CombatResult_t> LoseInterceptSource_(GameState& rGameState, Unit& rAttacker,
+                                                   Unit& rDefender,
+                                                   const InterceptSource_t& rSource)
 {
     switch (rSource.sourceKind)
     {
     case InterceptSourceKind_t::None:
-        return;
+        return std::nullopt;
     case InterceptSourceKind_t::Building:
     {
         const std::optional<BaseId_t> baseId = InterceptChargeBase(rSource);
@@ -86,12 +100,12 @@ void DestroyInterceptSource_(GameState& rGameState, Unit& rDefender,
                                    + rSource.sourceId + "'");
         }
         pBase->GetBuildingManager().DestroyBuilding(rSource.sourceId);
-        return;
+        return std::nullopt;
     }
     case InterceptSourceKind_t::Unit:
-        rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
-        return;
+        return LoseDefenderToItsIntercept_(rAttacker, rDefender);
     }
+    throw std::logic_error("LoseInterceptSource_: unknown intercept source kind");
 }
 
 } // namespace
@@ -117,9 +131,14 @@ std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
         {
             return ResolveInterceptKill_(rAttacker, rDefender);
         }
-        if (RollPercent(rSource.pIntercept->chanceOfDestructionOnFail, rRng))
+        if (!RollPercent(rSource.pIntercept->chanceOfDestructionOnFail, rRng))
         {
-            DestroyInterceptSource_(rGameState, rDefender, rSource);
+            continue;
+        }
+        if (std::optional<CombatResult_t> lost =
+                LoseInterceptSource_(rGameState, rAttacker, rDefender, rSource))
+        {
+            return lost;
         }
     }
     return std::nullopt;

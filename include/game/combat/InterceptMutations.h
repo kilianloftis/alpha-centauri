@@ -13,7 +13,7 @@ class TileEffectsContext;
 class Unit;
 
 // Before combat each ready CollectInterceptSources entry deploys and rolls; a miss may lose it.
-// A hit destroys the attacker and returns the result with combat skipped; otherwise nullopt.
+// Returns the result when a combatant is lost: the attacker to a hit, the defender to its own miss.
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
                                                  Unit& rAttacker,
                                                  Unit& rDefender,
