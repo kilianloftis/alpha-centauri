@@ -72,7 +72,7 @@ graph TB
 - **Purpose**: Global registry of all available technologies
 - **Responsibilities**:
   - Register and store all `TechConfig_t` entries; lookup by id
-  - **Validate the tech graph at load**: every prerequisite id exists, no tech is its own prerequisite, and the prerequisite graph is acyclic. A cycle is unreachable forever — `ResearchManager::GetAvailableTechs` only offers a tech once every prerequisite is discovered — so it must fail at load rather than present as techs quietly missing from the research menu.
+  - **Validate the tech graph at load**: every prerequisite id exists, no tech is its own prerequisite, and the prerequisite graph is acyclic. A cycle is unreachable forever — `AvailableTechs` (`ResearchRules`) only offers a tech once every prerequisite is discovered — so it must fail at load rather than present as techs quietly missing from the research menu.
 - **Lifetime**: Loaded at game start into `GameDataContext`
 - **Used by**: All ResearchManager instances
 

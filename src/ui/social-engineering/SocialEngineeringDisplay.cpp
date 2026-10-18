@@ -1,5 +1,7 @@
 #include "ui/social-engineering/SocialEngineeringDisplay.h"
 
+#include "game/social-engineering/SocialEngineeringRules.h"
+
 #include "game/faction/Faction.h"
 #include "game/faction/FactionConfig.h"
 #include "game/research/ResearchManager.h"
@@ -289,7 +291,7 @@ WindowLayout_t GetPolicyCellLayout(
 
 const SocialPolicyConfig_t* FindAvailablePolicyAt(
     const SocialPolicyRegistry& rRegistry,
-    const std::vector<std::string>& rDiscoveredTechIds,
+    const Faction& rFaction,
     SocialCategory_t category,
     size_t policyIndex
 )
@@ -301,7 +303,7 @@ const SocialPolicyConfig_t* FindAvailablePolicyAt(
     }
 
     const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
-    if (!pPolicy || !pPolicy->IsAvailable(rDiscoveredTechIds))
+    if (!pPolicy || !PolicyAvailable(rFaction, *pPolicy))
     {
         return nullptr;
     }
@@ -362,8 +364,6 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     const float verticalPadding =
         policyGridLayout.height * Style().socialEngineeringDisplay.verticalPaddingRatio;
 
-    const std::vector<std::string>& discoveredTechIds = m_rFaction.GetResearch().GetDiscoveredTechs();
-
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
         const SocialCategory_t category = k_Categories[categoryIndex];
@@ -410,7 +410,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
                 m_layout, categoryIndex, policyIndex, policies.size());
 
             const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
-            if (!pPolicy || !pPolicy->IsAvailable(discoveredTechIds))
+            if (!pPolicy || !PolicyAvailable(m_rFaction, *pPolicy))
             {
                 rGraphics.DrawRect(
                     policyCell.x, policyCell.y, policyCell.width, policyCell.height,
@@ -516,8 +516,6 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const std::vector<std::string>& discoveredTechIds = m_rFaction.GetResearch().GetDiscoveredTechs();
-
     const float clickX = static_cast<float>(rEvent.x);
     const float clickY = static_cast<float>(rEvent.y);
 
@@ -542,7 +540,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 
             const SocialPolicyConfig_t* pPolicy = FindAvailablePolicyAt(
                 m_rPolicyRegistry,
-                discoveredTechIds,
+                m_rFaction,
                 category,
                 policyIndex
             );

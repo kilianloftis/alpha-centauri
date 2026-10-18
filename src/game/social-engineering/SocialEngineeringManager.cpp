@@ -80,19 +80,4 @@ int SocialEngineeringManager::GetSocialRating(SocialRatingId_t rating) const
     return it == rTotals.end() ? 0 : it->second;
 }
 
-std::vector<const SocialPolicyConfig_t*> SocialEngineeringManager::GetAvailablePolicies(
-    SocialCategory_t category,
-    const std::vector<std::string>& rDiscoveredTechIds) const
-{
-    std::vector<const SocialPolicyConfig_t*> result;
-    for (const SocialPolicyConfig_t* pConfig : m_rRegistry.GetByCategory(category))
-    {
-        if (pConfig->IsAvailable(rDiscoveredTechIds))
-        {
-            result.push_back(pConfig);
-        }
-    }
-    return result;
-}
-
 } // namespace ac

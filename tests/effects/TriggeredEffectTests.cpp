@@ -13,6 +13,7 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/Military.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -589,7 +590,7 @@ TEST_CASE("Available GrantTech leaves world oncePer unspent when the pool is emp
     ResearchManager& rResearch = game.pFaction->GetResearch();
     while (true)
     {
-        std::vector<const TechConfig_t*> available = rResearch.GetAvailableTechs();
+        std::vector<const TechConfig_t*> available = AvailableTechs(rResearch);
         std::erase_if(available,
                       [](const TechConfig_t* pTech)
                       {

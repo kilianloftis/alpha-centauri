@@ -9,6 +9,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -113,7 +114,7 @@ void DiscoverEverything_(ResearchManager& rResearch)
 {
     for (;;)
     {
-        const std::vector<const TechConfig_t*> available = rResearch.GetAvailableTechs();
+        const std::vector<const TechConfig_t*> available = AvailableTechs(rResearch);
         if (available.empty())
         {
             break;

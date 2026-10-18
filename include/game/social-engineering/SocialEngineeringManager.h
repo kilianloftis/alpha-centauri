@@ -40,11 +40,6 @@ public:
     // Base-local modifiers (buildings, pops) live on BaseManager::GetEffectiveSocialRating.
     int GetSocialRating(SocialRatingId_t rating) const;
 
-    // All policies in a category that the faction may currently adopt,
-    // given the faction's discovered tech string ids.
-    std::vector<const SocialPolicyConfig_t*> GetAvailablePolicies(
-        SocialCategory_t category,
-        const std::vector<std::string>& rDiscoveredTechIds) const;
 
     // Bumped on every policy change; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }

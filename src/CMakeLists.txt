@@ -24,6 +24,7 @@ add_library(ac-core STATIC
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp
     game/research/ResearchManager.cpp
+    game/research/ResearchRules.cpp
     game/research/ResearchSelector.cpp
     game/GameCategory.cpp
     game/diplomacy/DiplomaticStatus.cpp
@@ -58,6 +59,7 @@ add_library(ac-core STATIC
     game/world-events/WorldEventConfig.cpp
     game/world-events/WorldEventTracker.cpp
     game/social-engineering/SocialEngineeringManager.cpp
+    game/social-engineering/SocialEngineeringRules.cpp
     game/base/BaseManager.cpp
     game/base/HomeBaseIndex.cpp
     game/buildings/BuildingManager.cpp

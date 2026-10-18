@@ -1,5 +1,6 @@
 #include "game/CurrentGameState.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 #include "game/research/ResearchSelector.h"
 #include "game/GameCategory.h"
 #include "game/GameSettings.h"
@@ -9,6 +10,8 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/social-engineering/SocialEngineeringRules.h"
+#include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/LuaRuntime.h"
 
 #include "GameFixtures.h"
@@ -212,4 +215,24 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
     research.AddDiscoveredTech("grow_tech");
     REQUIRE(research.HasResearchTarget());
     CHECK(research.GetResearchTarget() == afterIdle);
+}
+
+TEST_CASE("Surplus research carries over to the next tech", "[research]")
+{
+    CHECK(ResearchCarriedOver(30, 25) == 5);
+    CHECK(ResearchCarriedOver(25, 25) == 0);
+}
+
+TEST_CASE("A policy is available once its tech is known", "[research][social-engineering]")
+{
+    actest::FactionFixture fixtures;
+    Faction& faction = fixtures.MakeFaction();
+    SocialPolicyConfig_t policy;
+    policy.id = "gated";
+    CHECK(PolicyAvailable(faction, policy));
+
+    policy.requiredTech = "build_tech";
+    CHECK_FALSE(PolicyAvailable(faction, policy));
+    faction.GetResearch().AddDiscoveredTech("build_tech");
+    CHECK(PolicyAvailable(faction, policy));
 }

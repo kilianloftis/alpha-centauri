@@ -1,6 +1,7 @@
 #include "game/research/ResearchSelector.h"
 
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 
 #include <random>
 #include <stdexcept>
@@ -45,7 +46,7 @@ bool ResearchSelector::IsCategoryEnabled(GameCategory_t category) const
 
 std::vector<const TechConfig_t*> ResearchSelector::GetCandidateTargets() const
 {
-    const std::vector<const TechConfig_t*> available = m_rResearchManager.GetAvailableTechs();
+    const std::vector<const TechConfig_t*> available = AvailableTechs(m_rResearchManager);
     if (available.empty())
     {
         return {};

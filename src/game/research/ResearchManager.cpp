@@ -1,5 +1,7 @@
 #include "game/research/ResearchManager.h"
 
+#include "game/research/ResearchRules.h"
+
 #include "game/effects/IEffectsProvider.h"
 #include "game/research/TechCostConfig.h"
 #include "game/effects/ActiveEffect.h"
@@ -109,38 +111,12 @@ void ResearchManager::RecalculatePointsNeeded()
 
 void ResearchManager::ComputePointsNeeded_() const
 {
-    TechCostInputs_t inputs;
-    inputs.techs      = static_cast<int>(m_discoveredTechs.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
-    inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
-    if (m_pEffectsProvider)
-    {
-        const FactionEffects_t& rFactionEffects = m_pEffectsProvider->GetActiveEffects();
-        inputs.factionTechCostModifier = FinalizeResolvedStat(
-            ResolveFactionStat(rFactionEffects, StatId_t::TechCost, SeedFor(StatId_t::TechCost)));
-        inputs.diff = FinalizeResolvedStat(ResolveFactionStat(
-            rFactionEffects, StatId_t::TechCostDiff, SeedFor(StatId_t::TechCostDiff)));
-        m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
-    }
-    else
-    {
-        m_costEffectsVersion = 0;
-    }
-
-    std::vector<ActiveEffect_t> thisTechEffects;
-    for (const EffectConfig_t& rEffect : m_pCurrentResearchTarget->effects)
-    {
-        if (rEffect.scope == EffectScope_t::ThisTech)
-        {
-            thisTechEffects.emplace_back(rEffect, m_pCurrentResearchTarget->id);
-        }
-    }
-    inputs.techTechCostModifier = FinalizeResolvedStat(ResolveStatModifiersTotal(
-        FilterByStatId(thisTechEffects, StatId_t::TechCost), SeedFor(StatId_t::TechCost)));
-
+    const TechCostInputs_t inputs =
+        TechCostInputs(*this, m_pEffectsProvider, *m_pCurrentResearchTarget);
+    m_costEffectsVersion = m_pEffectsProvider ? m_pEffectsProvider->GetEffectsVersion() : 0;
     m_costResearchRevision = GetRevision();
-    // Remaining fields are placeholder defaults (turns=0, bIsAI=false, etc.)
-
-    m_pointsNeededForCurrentTech = m_rTechCostCalculator.CalculateCost(*m_pCurrentResearchTarget, inputs);
+    m_pointsNeededForCurrentTech =
+        m_rTechCostCalculator.CalculateCost(*m_pCurrentResearchTarget, inputs);
 }
 
 void ResearchManager::RevalidatePointsNeeded_() const
@@ -178,7 +154,7 @@ bool ResearchManager::DiscoverTech()
     }
 
     AddDiscoveredTech(m_pCurrentResearchTarget->id);
-    m_accumulatedPoints = m_accumulatedPoints - m_pointsNeededForCurrentTech;
+    m_accumulatedPoints = ResearchCarriedOver(m_accumulatedPoints, m_pointsNeededForCurrentTech);
     ClearResearchTarget();
 
     return true;
@@ -210,37 +186,6 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
     m_discoveredTechs.push_back(techId);
     m_revision.Bump();
     OnTechDiscovered.Emit(m_discoveredTechs.back());
-}
-
-std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const
-{
-    std::vector<const TechConfig_t*> available;
-    const auto& allConfigs = m_rTechRegistry.GetAll();
-
-    for (const TechConfig_t& rConfig : allConfigs)
-    {
-        if (HasDiscoveredTech(rConfig.id))
-        {
-            continue;
-        }
-
-        bool bPrerequisitesMet = true;
-        for (const TechId& rPrereq : rConfig.prerequisites)
-        {
-            if (!HasDiscoveredTech(rPrereq))
-            {
-                bPrerequisitesMet = false;
-                break;
-            }
-        }
-
-        if (bPrerequisitesMet)
-        {
-            available.push_back(&rConfig);
-        }
-    }
-
-    return available;
 }
 
 void ResearchManager::ResetAccumulatedPoints_()

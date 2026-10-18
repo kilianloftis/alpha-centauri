@@ -33,7 +33,7 @@ struct AddBuildingEffect_t
 
 struct GrantTechEffect_t
 {
-    // Present: grant this tech id. Absent: pick uniformly from GetAvailableTechs() (Secrets
+    // Present: grant this tech id. Absent: pick uniformly from AvailableTechs() (Secrets
     // first-discover bonus). Parser requires exactly one of tech_id / selection Available.
     std::optional<std::string> techId;
 };

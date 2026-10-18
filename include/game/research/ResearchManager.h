@@ -59,8 +59,6 @@ public:
     // Emitted after a tech joins the discovered set. Bridged to the mod-facing EvTechDiscovered.
     Signal<const TechId&> OnTechDiscovered;
 
-    std::vector<const TechConfig_t*> GetAvailableTechs() const;
-
     // Bumped when a tech is discovered; FactionEffectsPool includes this in its stamp so
     // removed_by_tech effects drop out of the pool on the next Get.
     uint64_t GetRevision() const { return m_revision.Get(); }

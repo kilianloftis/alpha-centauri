@@ -14,6 +14,7 @@
 #include "game/economy/EconomyManager.h"
 #include "game/base/RebelMutations.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingMutations.h"
@@ -106,8 +107,7 @@ bool AddTech_(TriggeredEffectContext_t& rCtx, Faction& rFaction, const GrantTech
     }
     else
     {
-        const std::vector<const TechConfig_t*> available =
-            rFaction.GetResearch().GetAvailableTechs();
+        const std::vector<const TechConfig_t*> available = AvailableTechs(rFaction.GetResearch());
         if (available.empty())
         {
             return false;

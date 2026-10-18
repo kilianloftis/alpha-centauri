@@ -8,6 +8,7 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/ResearchRules.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
@@ -84,7 +85,8 @@ bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState
 TechId PickStealableTech_(const Faction& rActor, const Faction& rTarget, std::mt19937& rRng)
 {
     std::vector<TechId> candidates;
-    for (const TechConfig_t* pTech : rActor.GetResearch().GetAvailableTechs())
+    const std::vector<const TechConfig_t*> available = AvailableTechs(rActor.GetResearch());
+    for (const TechConfig_t* pTech : available)
     {
         if (pTech && rTarget.GetResearch().HasDiscoveredTech(pTech->id))
         {

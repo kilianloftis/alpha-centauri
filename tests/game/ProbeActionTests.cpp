@@ -245,7 +245,7 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    // Only build_tech is in actor GetAvailableTechs ∩ target discoveries.
+    // Only build_tech is in the actor's AvailableTechs ∩ target discoveries.
     const auto* pStolen = std::get_if<ProbeStolenTech_t>(&result.detail);
     REQUIRE(pStolen);
     CHECK(pStolen->techId == "build_tech");
