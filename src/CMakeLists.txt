@@ -200,6 +200,7 @@ add_library(ac-core STATIC
     game/map/WorkedTileIndex.cpp
     game/map/TileFlagMap.cpp
     game/map/TerritoryMap.cpp
+    game/map/TerritoryRules.cpp
     game/visibility/FactionVisibleMap.cpp
     game/visibility/FactionTileMemory.cpp
     game/visibility/VisibilityMutations.cpp

@@ -156,14 +156,15 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
 - **Purpose**: World-scoped mutually exclusive ownership of tiles — “whose territory is this?” Owned by `WorldMap` (`WorldMap::GetTerritory()`), same placement pattern as `WorkedTileIndex` / `UnitPositionIndex`. `Tile` stays free of political state.
 - **Components**:
   - `TerritoryMap` (`include/game/map/TerritoryMap.h`) — dense `FactionId` grid; `k_NoFactionOwner` (-1) for unclaimed
-  - `GameState::RebuildTerritory()` — collects every base of every faction and calls `TerritoryMap::Rebuild`
+  - `ClaimTerritory` (`include/game/map/TerritoryRules.h`) — the claim rules below; returns the owner of every tile
+  - `GameState::RebuildTerritory()` — collects every base of every faction and calls `TerritoryMap::Rebuild`, which stores `ClaimTerritory`'s answer
   - Wired via `Faction::OnBaseListChanged` when a faction is added to `GameState`, so founding a base rebuilds ownership. Rebuild whenever a base is **created, destroyed, or changes hands** — population size is not an input.
 - **Claim rules**:
   - **Land base** (`Tile::IsLand()`): Euclidean disk radius 7 (`dx² + dy² ≤ 50`), only land tiles reachable by orthogonal BFS through contiguous land inside that disk
   - **Sea base** (`Tile::IsWater()`): Euclidean disk radius 3 (`dx² + dy² ≤ 10`), only contiguous sea the same way
   - Land bases never claim sea; sea bases never claim land
 - **Contested tiles**: among bases that can claim a tile, owner is the nearest base by Euclidean distance (`dx² + dy²`); ties go to the **lower `BaseId`**
-- **Rebuild preconditions**: `Rebuild` throws unless the grid has been `Reset` and its dimensions equal the world's, and throws if a base sits outside the grid. Returning quietly left every caller reading `k_NoFactionOwner` as though ownership were current, and a desynced `Reset` indexed out of bounds.
+- **Rebuild preconditions**: `Rebuild` throws unless the grid has been `Reset` and its dimensions equal the world's, and `ClaimTerritory` throws if a base sits outside the grid, so no caller reads `k_NoFactionOwner` as though ownership were current and a desynced `Reset` cannot index out of bounds.
 - **Consumers**: territory-owned improvements (`owned_by_territory: true`, e.g. Sensor) stamp `ActiveEffect_t::ownerFaction` from `GetOwner` and only apply for that faction (defense aura / fog vision — see effects and visibility docs)
 
 ### World Generation pipeline
