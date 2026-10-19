@@ -337,9 +337,7 @@ struct WorldFixture : SessionInputs
 struct BaseFixture : WorldFixture
 {
     ac::EconomyManager economy; // default 40/50/10 energy split
-    // Stub owner for MakeBase standalone bases (declared before bases so bases destroy first).
-    std::unique_ptr<ac::Faction> pOwnerFaction;
-    std::vector<std::unique_ptr<ac::BaseManager>> bases;
+    ac::Faction* pBaseOwner = nullptr;
 
     BaseFixture()
         : BaseFixture(k_TestMapWidth, k_TestMapHeight)
@@ -352,9 +350,6 @@ struct BaseFixture : WorldFixture
         : WorldFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
     {
         ownerDefinition.id = "test_base_owner";
-        pOwnerFaction = std::make_unique<ac::Faction>(
-            /*factionId*/ 1, /*bIsPlayerControlled*/ true, ownerDefinition, dataContext,
-            map, settings, k_TestFactionSeed);
     }
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
@@ -363,42 +358,6 @@ struct BaseFixture : WorldFixture
     const ac::StockpileRegistry& stockpiles() const { return *dataContext.stockpileRegistry; }
     ac::PopTypeRegistry& popTypes() { return *dataContext.popTypeRegistry; }
     const ac::PopTypeRegistry& popTypes() const { return *dataContext.popTypeRegistry; }
-
-    // std::nullopt exercises the shipping founding path (resolved StartingSize); the 3 default
-    // keeps the pre-existing fixture size for tests that only care about having pops.
-    ac::BaseManager& MakeBase(int x, int y, std::optional<int> initialPopulation = 3)
-    {
-        bases.push_back(std::make_unique<ac::BaseManager>(
-            *pOwnerFaction, state.AllocateBaseId(), "TestBase", At(x, y),
-            ac::MakeBaseRuleset(dataContext),
-            ctx,
-            initialPopulation));
-        return *bases.back();
-    }
-};
-
-// BaseFixture plus real Factions and unit designs — for the universal-routing lanes
-// (FactionUnits, WorldGlobal, two-level ratings, unit auras).
-struct FactionFixture : BaseFixture
-{
-    FactionFixture()
-        : FactionFixture(k_TestMapWidth, k_TestMapHeight)
-    {
-    }
-
-    explicit FactionFixture(int width, int height,
-                            std::vector<ac::EffectConfig_t> worldRules = {},
-                            const OccupantFiles_t& rOccupants = {},
-                            const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
-        : BaseFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
-    {
-        factionDefinition.id = "test_faction";
-    }
-
-    ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
-    const ac::SocialPolicyRegistry& socialPolicies() const { return *dataContext.socialPolicyRegistry; }
-    ac::SocialRatingRegistry& socialRatings() { return *dataContext.socialRatingRegistry; }
-    const ac::SocialRatingRegistry& socialRatings() const { return *dataContext.socialRatingRegistry; }
 
     ac::Faction& MakeFaction()
     {
@@ -424,6 +383,15 @@ struct FactionFixture : BaseFixture
             id, bIsPlayerControlled, rDefinition, dataContext, map, settings, seed));
     }
 
+    ac::Faction& BaseOwner()
+    {
+        if (pBaseOwner == nullptr)
+        {
+            pBaseOwner = &MakeFaction_(ownerDefinition);
+        }
+        return *pBaseOwner;
+    }
+
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y,
                                      std::optional<int> initialPopulation = 3)
     {
@@ -436,6 +404,37 @@ struct FactionFixture : BaseFixture
         rFaction.AddBase(std::move(pBase));
         return rBase;
     }
+
+    // std::nullopt exercises the shipping founding path (resolved StartingSize); the 3 default
+    // keeps the pre-existing fixture size for tests that only care about having pops.
+    ac::BaseManager& MakeBase(int x, int y, std::optional<int> initialPopulation = 3)
+    {
+        return MakeFactionBase(BaseOwner(), x, y, initialPopulation);
+    }
+};
+
+// BaseFixture plus real Factions and unit designs — for the universal-routing lanes
+// (FactionUnits, WorldGlobal, two-level ratings, unit auras).
+struct FactionFixture : BaseFixture
+{
+    FactionFixture()
+        : FactionFixture(k_TestMapWidth, k_TestMapHeight)
+    {
+    }
+
+    explicit FactionFixture(int width, int height,
+                            std::vector<ac::EffectConfig_t> worldRules = {},
+                            const OccupantFiles_t& rOccupants = {},
+                            const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
+        : BaseFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
+    {
+        factionDefinition.id = "test_faction";
+    }
+
+    ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
+    const ac::SocialPolicyRegistry& socialPolicies() const { return *dataContext.socialPolicyRegistry; }
+    ac::SocialRatingRegistry& socialRatings() { return *dataContext.socialRatingRegistry; }
+    const ac::SocialRatingRegistry& socialRatings() const { return *dataContext.socialRatingRegistry; }
 
     // A design from fixture components, one synthetic slot per component.
     const ac::UnitDesign& MakeDesign(const std::vector<std::string>& rComponentIds)

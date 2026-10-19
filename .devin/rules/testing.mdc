@@ -56,3 +56,7 @@ Test failed after adding wrap → either assert the new wrap requirement, or fix
 ## Always report failures
 
 In the final summary for the user, **always mention test failures** when any occurred during the work — names or filters, what failed, and whether you treated them as a requirement change or an implementation bug — even if everything passes by the end of the session.
+
+## Fixtures are game sessions
+
+A test runs in its fixture's session. Build a `GameState` of your own only when the test must compare two sessions.

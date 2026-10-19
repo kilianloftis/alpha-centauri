@@ -90,9 +90,6 @@ TEST_CASE("MaxBaseSize Adds stack with the pop_growth baseline", "[population][g
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
     fixture.dataContext.growthConfig->effects.push_back(
         MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 120.0));
-    fixture.pOwnerFaction = std::make_unique<Faction>(
-        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
     BaseManager& base = fixture.MakeBase(8, 4);
     CHECK(base.GetPopulation().GetMaxSize() == 127);
@@ -360,9 +357,6 @@ TEST_CASE("Founding without an explicit size resolves StartingSize", "[populatio
 {
     actest::BaseFixture fixture;
     actest::SetStartingSize(*fixture.dataContext.growthConfig, 2);
-    fixture.pOwnerFaction = std::make_unique<Faction>(
-        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
     BaseManager& base = fixture.MakeBase(8, 4, std::nullopt);
     CHECK(base.GetPopulation().GetSize() == 2);
@@ -373,9 +367,6 @@ TEST_CASE("A StartingSize that resolves to zero fails loudly at founding",
 {
     actest::BaseFixture fixture;
     actest::SetStartingSize(*fixture.dataContext.growthConfig, 0);
-    fixture.pOwnerFaction = std::make_unique<Faction>(
-        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed);
 
     CHECK_THROWS_AS(fixture.MakeBase(8, 4, std::nullopt), std::runtime_error);
 }

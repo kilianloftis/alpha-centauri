@@ -213,10 +213,10 @@ TEST_CASE("A base can never work another base's own tile", "[worker][index]")
 TEST_CASE("A destroyed base releases its own tile", "[worker][index]")
 {
     actest::BaseFixture fixture;
-    fixture.MakeBase(8, 8);
+    BaseManager& base = fixture.MakeBase(8, 8);
     REQUIRE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 8)));
 
-    fixture.bases.pop_back();
+    REQUIRE(fixture.BaseOwner().ExtractBase(base.GetBaseId()).has_value());
 
     CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(fixture.At(8, 8)));
 }

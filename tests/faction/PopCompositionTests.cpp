@@ -768,7 +768,7 @@ TEST_CASE("Every conversion path resolves the obsolescence chain", "[population]
     pops.ConvertTo(rPop, "Technician");
     CHECK(std::string(rPop.GetPopType()) == "Technician");
 
-    fixture.pOwnerFaction->GetResearch().AddDiscoveredTech("advanced_build");
+    fixture.BaseOwner().GetResearch().AddDiscoveredTech("advanced_build");
     pops.ConvertTo(rPop, "Technician");
     CHECK(std::string(rPop.GetPopType()) == "Engineer");
 }
