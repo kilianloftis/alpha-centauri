@@ -586,7 +586,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
     FactionFixture fixture(4, 4);
     FillLand(fixture.map);
     Faction& faction = AddSessionFaction(fixture, fixture.factionDefinition, true);
-    Unit& unit = MakeSessionUnit(fixture, faction, 2, 2, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 2, 2, {"test_chassis"});
     unit.SetMoveFragmentsRemaining(0);
 
     TurnStart stage(HookContext{});
@@ -601,7 +601,7 @@ TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs ord
     FactionFixture fixture(4, 4);
     FillLand(fixture.map);
     Faction& faction = AddSessionFaction(fixture, fixture.factionDefinition, true);
-    Unit& unit = MakeSessionUnit(fixture, faction, 2, 2, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 2, 2, {"test_chassis"});
     REQUIRE(unit.GetMoveFragmentsRemaining() > 0);
     unit.SetOrder(SkipTurnOrder_t{});
     REQUIRE_FALSE(faction.GetUnitManager().HasUnitsRequiringOrders());

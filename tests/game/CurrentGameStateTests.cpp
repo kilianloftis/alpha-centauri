@@ -66,3 +66,15 @@ TEST_CASE("A scope on one thread is not visible on another", "[game][current-gam
 
     CHECK(pSeenOnOtherThread == nullptr);
 }
+
+TEST_CASE("AddFaction rejects a faction built against another map", "[game][current-game-state]")
+{
+    actest::FactionFixture fixture;
+    ac::WorldMap otherMap(2, 1, actest::TestMapRules());
+    auto pFaction = std::make_unique<ac::Faction>(
+        fixture.state.AllocateFactionId(), /*bIsPlayerControlled=*/true, fixture.factionDefinition,
+        fixture.dataContext, otherMap, fixture.settings, actest::k_TestFactionSeed);
+
+    CHECK_THROWS_AS(fixture.state.AddFaction(std::move(pFaction)), std::invalid_argument);
+    CHECK(fixture.state.Factions().empty());
+}

@@ -367,8 +367,12 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
     {
         if ((*it)->GetBaseId() == baseId)
         {
+            // Move out before erase so ~BaseManager cannot observe a null hole in m_bases
+            // (tile-effect teardown walks session factions and Bases()).
             BaseSnapshot_t snapshot = (*it)->CaptureSnapshot();
+            std::unique_ptr<BaseManager> pExtracted = std::move(*it);
             m_bases.erase(it);
+            pExtracted.reset();
             DropBuildingDeploys_(baseId);
             m_baseListRevision.Bump();
             OnBaseListChanged.Emit();

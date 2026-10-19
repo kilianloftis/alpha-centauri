@@ -584,11 +584,11 @@ TEST_CASE("An atrocity sneak-attacks its victim while the world declares on the 
     REQUIRE(rTerritory.GetOwner(9, 3) == rPerpetrator.GetFactionId());
     REQUIRE(rTerritory.GetOwner(7, 3) == rPerpetrator.GetFactionId());
     REQUIRE(rTerritory.GetOwner(8, 4) == rPerpetrator.GetFactionId());
-    Unit& rInVictimLand = MakeSessionUnit(game.fixtures, rPerpetrator, 13, 7);
-    Unit& rVictimGuest = MakeSessionUnit(game.fixtures, rVictim, 9, 3);
-    Unit& rInBystanderLand = MakeSessionUnit(game.fixtures, rPerpetrator, 3, 7);
-    Unit& rBystanderGuest = MakeSessionUnit(game.fixtures, rBystander, 7, 3);
-    Unit& rPartnerGuest = MakeSessionUnit(game.fixtures, rVictimPartner, 8, 4);
+    Unit& rInVictimLand = game.fixtures.MakeUnit(rPerpetrator, 13, 7);
+    Unit& rVictimGuest = game.fixtures.MakeUnit(rVictim, 9, 3);
+    Unit& rInBystanderLand = game.fixtures.MakeUnit(rPerpetrator, 3, 7);
+    Unit& rBystanderGuest = game.fixtures.MakeUnit(rBystander, 7, 3);
+    Unit& rPartnerGuest = game.fixtures.MakeUnit(rVictimPartner, 8, 4);
 
     CommitAtrocity(game.fixtures.state, rPerpetrator, &rVictim, k_Major);
 

@@ -29,7 +29,6 @@
 #include "game/economy/ResourceManager.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
@@ -341,7 +340,6 @@ struct BaseFixture : WorldFixture
     // Stub owner for MakeBase standalone bases (declared before bases so bases destroy first).
     std::unique_ptr<ac::Faction> pOwnerFaction;
     std::vector<std::unique_ptr<ac::BaseManager>> bases;
-    int nextBaseId = 1;
 
     BaseFixture()
         : BaseFixture(k_TestMapWidth, k_TestMapHeight)
@@ -371,7 +369,7 @@ struct BaseFixture : WorldFixture
     ac::BaseManager& MakeBase(int x, int y, std::optional<int> initialPopulation = 3)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
-            *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
+            *pOwnerFaction, state.AllocateBaseId(), "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
             ctx,
             initialPopulation));
@@ -383,12 +381,6 @@ struct BaseFixture : WorldFixture
 // (FactionUnits, WorldGlobal, two-level ratings, unit auras).
 struct FactionFixture : BaseFixture
 {
-    // Units are destroyed before bases (~Faction member order), so crawler claim
-    // release can reach WorkerAssignmentManager while the home base is still alive.
-    std::vector<std::unique_ptr<ac::Faction>> factions;
-    int nextFactionId = 1;
-    int nextUnitId = 1;
-
     FactionFixture()
         : FactionFixture(k_TestMapWidth, k_TestMapHeight)
     {
@@ -422,57 +414,21 @@ struct FactionFixture : BaseFixture
 
     ac::Faction& MakeFaction_(const ac::FactionConfig_t& rDefinition)
     {
-        // Only the first fixture faction is player-controlled; tests needing a second
+        // Only the first session faction is player-controlled; tests needing a second
         // faction (e.g. WorldGlobal routing between two factions) get an AI one.
-        const bool bIsPlayerControlled = factions.empty();
+        const bool bIsPlayerControlled = state.Factions().empty();
+        const ac::FactionId_t id = state.AllocateFactionId();
         // Distinct per faction so two fixture factions do not make identical picks.
-        const uint32_t seed = k_TestFactionSeed + static_cast<uint32_t>(nextFactionId);
-        factions.push_back(std::make_unique<ac::Faction>(
-            nextFactionId++, bIsPlayerControlled, rDefinition, dataContext,
-            map, settings, seed));
-        ac::Faction& rFaction = *factions.back();
-        // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
-        rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](ac::Unit& rDestroyed)
-        {
-            for (auto& pFaction : factions)
-            {
-                pFaction->GetRevealedUnits().Forget(rDestroyed);
-            }
-        });
-        // Keep territory current when bases are founded (same hook GameState uses).
-        rFaction.OnBaseListChanged.Connect([this]()
-        {
-            std::vector<const ac::BaseManager*> bases;
-            for (const auto& pFaction : factions)
-            {
-                for (const ac::BaseManager& rBase : pFaction->Bases())
-                {
-                    bases.push_back(&rBase);
-                }
-            }
-            map.GetTerritory().Rebuild(map, bases);
-        });
-        rFaction.OnSecretProjectDestroyed.Connect([this](const ac::BuildingId_t& rId)
-        {
-            state.MarkSecretProjectDestroyed(rId);
-        });
-        // Mirror GameState::AttachToSession_: CreateUnit no longer applies produced triggers.
-        rFaction.GetUnitManager().OnUnitCreated.Connect(
-            [this](ac::Unit& rCreated, ac::BaseManager* pBuiltAt)
-            {
-                if (pBuiltAt)
-                {
-                    ac::ApplyUnitProducedTriggers(state, rCreated, *pBuiltAt);
-                }
-            });
-        return rFaction;
+        const uint32_t seed = k_TestFactionSeed + static_cast<uint32_t>(id);
+        return state.AddFaction(std::make_unique<ac::Faction>(
+            id, bIsPlayerControlled, rDefinition, dataContext, map, settings, seed));
     }
 
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y,
                                      std::optional<int> initialPopulation = 3)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            rFaction, nextBaseId++, "TestBase", At(x, y),
+            rFaction, state.AllocateBaseId(), "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
             ctx,
             initialPopulation);
@@ -507,12 +463,12 @@ struct FactionFixture : BaseFixture
 
     // Creates a live unit at (x, y), registered on the world map for aura/position queries.
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
-                       const std::vector<std::string>& rComponentIds,
+                       const std::vector<std::string>& rComponentIds = {"test_chassis"},
                        ac::BaseManager* pHomeBase = nullptr,
                        ac::BaseManager* pProducedAt = nullptr)
     {
         // The unit registers itself in the map's position index for its lifetime.
-        return rFaction.GetUnitManager().CreateUnit(nextUnitId++, MakeDesign(rComponentIds),
+        return rFaction.GetUnitManager().CreateUnit(state.AllocateUnitId(), MakeDesign(rComponentIds),
                                                     map.GetUnitPositions(), At(x, y),
                                                     pHomeBase, pProducedAt);
     }
@@ -591,15 +547,6 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& 
         throw std::runtime_error("MakeSessionBase: CreateBase failed");
     }
     return *pBase;
-}
-
-// A live unit of rFaction at (x, y) on the fixture's map.
-inline ac::Unit& MakeSessionUnit(FactionFixture& rFixtures, ac::Faction& rFaction, int x, int y,
-                                 const std::vector<std::string>& rComponentIds = {"test_chassis"})
-{
-    return rFaction.GetUnitManager().CreateUnit(
-        rFixtures.state.AllocateUnitId(), rFixtures.MakeDesign(rComponentIds),
-        rFixtures.map.GetUnitPositions(), *rFixtures.map.GetTile(x, y));
 }
 
 } // namespace actest

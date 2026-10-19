@@ -59,7 +59,7 @@ struct DiplomacyFixture
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
                    const std::vector<std::string>& rComponentIds = {"test_chassis"})
     {
-        return MakeSessionUnit(fixtures, rFaction, x, y, rComponentIds);
+        return fixtures.MakeUnit(rFaction, x, y, rComponentIds);
     }
 
     void MeetAll()

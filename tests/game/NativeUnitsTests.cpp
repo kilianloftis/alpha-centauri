@@ -42,7 +42,7 @@ TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
     CHECK_FALSE(pDesign->HasComponent("Mind_Worm"));
 
     Unit& rUnit = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 4));
+        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 4));
     CHECK(rUnit.GetDomain() == UnitDomain_t::Land);
 
     const IConstructable* pItem = dynamic_cast<const IConstructable*>(
@@ -94,9 +94,9 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
     fixture.At(8, 8).SetElevation(100);
     fixture.At(7, 9).SetElevation(100);
     Unit& rWorm = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8));
+        fixture.state.AllocateUnitId(), *pWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8));
     Unit& rSpore = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pSpore, fixture.map.GetUnitPositions(), fixture.At(7, 9));
+        fixture.state.AllocateUnitId(), *pSpore, fixture.map.GetUnitPositions(), fixture.At(7, 9));
 
     const MoveCostRules calc(fixture.improvements);
     for (const Unit* pUnit : {&rWorm, &rSpore})
@@ -139,9 +139,9 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
     fixture.At(8, 10).SetElevation(-100);
     fixture.At(7, 11).SetElevation(-100);
     Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pIsle, fixture.map.GetUnitPositions(), fixture.At(9, 9));
+        fixture.state.AllocateUnitId(), *pIsle, fixture.map.GetUnitPositions(), fixture.At(9, 9));
     Unit& rLurk = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pLurk, fixture.map.GetUnitPositions(), fixture.At(8, 10));
+        fixture.state.AllocateUnitId(), *pLurk, fixture.map.GetUnitPositions(), fixture.At(8, 10));
     Unit& rShip = fixture.MakeUnit(rFaction, 7, 11, {"test_sea_chassis"});
 
     const MoveCostRules calc(fixture.improvements);
@@ -194,9 +194,9 @@ TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[nativ
     Tile& rTowerTile = fixture.At(8, 8);
     Tile& rWormTile = fixture.At(7, 9);
     Unit& rTower = rOwner.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pTowerDesign, fixture.map.GetUnitPositions(), rTowerTile);
+        fixture.state.AllocateUnitId(), *pTowerDesign, fixture.map.GetUnitPositions(), rTowerTile);
     Unit& rWorm = rOwner.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pWormDesign, fixture.map.GetUnitPositions(), rWormTile);
+        fixture.state.AllocateUnitId(), *pWormDesign, fixture.map.GetUnitPositions(), rWormTile);
 
     rObserver.RebuildVisibility();
     REQUIRE_FALSE(rObserver.GetExploredMap().IsExplored(rTowerTile));
@@ -241,7 +241,7 @@ TEST_CASE("Isle of the Deep cargo capacity scales with IntrinsicXp", "[native][c
 
     fixture.At(8, 6).SetElevation(-100);
     Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 6));
+        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 6));
 
     rIsle.SetXp(1);
     const int atOne = ResolveStat(rIsle, StatId_t::CargoCapacity);
@@ -273,7 +273,7 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
         EnsureNativeDesign(owner, *fixture.dataContext.nativeUnitRegistry, "Sea_Lurk");
     REQUIRE(pDesign);
     Unit& subject = owner.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9));
+        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9));
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
@@ -346,16 +346,16 @@ TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP"
     BaseManager& rBare = fixture.MakeFactionBase(rFaction, 8, 14);
 
     Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8),
+        fixture.state.AllocateUnitId(), rWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8),
         &rBase, &rBase);
     Unit& rWormBare = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(7, 9),
+        fixture.state.AllocateUnitId(), rWorm, fixture.map.GetUnitPositions(), fixture.At(7, 9),
         &rBare, &rBare);
     Unit& rLocustUnit = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, rLocust, fixture.map.GetUnitPositions(), fixture.At(9, 9),
+        fixture.state.AllocateUnitId(), rLocust, fixture.map.GetUnitPositions(), fixture.At(9, 9),
         &rBase, &rBase);
     Unit& rLocustBare = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, rLocust, fixture.map.GetUnitPositions(), fixture.At(8, 10),
+        fixture.state.AllocateUnitId(), rLocust, fixture.map.GetUnitPositions(), fixture.At(8, 10),
         &rBare, &rBare);
     Unit& rLand = fixture.MakeUnit(rFaction, 10, 10, {"test_chassis"}, &rBase, &rBase);
     Unit& rLandBare = fixture.MakeUnit(rFaction, 9, 11, {"test_chassis"}, &rBare, &rBare);
@@ -394,13 +394,13 @@ TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[nativ
         RequireNative_(rFaction, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
 
     Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8),
+        fixture.state.AllocateUnitId(), rWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8),
         &rBase, &rBase);
     Unit& rQuiet = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, quietDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9),
+        fixture.state.AllocateUnitId(), quietDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9),
         &rBase, &rBase);
     Unit& rPlain = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, plainDesign, fixture.map.GetUnitPositions(), fixture.At(10, 10),
+        fixture.state.AllocateUnitId(), plainDesign, fixture.map.GetUnitPositions(), fixture.At(10, 10),
         &rBase, &rBase);
     Unit& rLand = fixture.MakeUnit(rFaction, 11, 11, {"test_chassis"}, &rBase, &rBase);
 

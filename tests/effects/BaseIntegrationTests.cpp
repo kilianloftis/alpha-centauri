@@ -229,12 +229,20 @@ TEST_CASE("Building production without spawn services completes without on_compl
     CHECK_FALSE(hasGranted);
 }
 
+// Spawn services only bind in AttachToSession_. A faction built against the fixture map
+// but never added has none, so unit completion must throw before CreateUnit.
 TEST_CASE("Unit production without spawn services throws before spawning",
           "[effects][base][triggered]")
 {
     actest::FactionFixture fixture;
-    Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Faction unaffiliated(/*factionId*/ 99, /*bIsPlayerControlled*/ false,
+                         fixture.factionDefinition, fixture.dataContext, fixture.map,
+                         fixture.settings, actest::k_TestFactionSeed);
+    auto pBase = std::make_unique<BaseManager>(
+        unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
+        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
+    BaseManager& base = *pBase;
+    REQUIRE(fixture.state.Factions().empty());
 
     UnitSlotConfig_t chassisSlot;
     chassisSlot.id = "slot_0";
@@ -256,15 +264,15 @@ TEST_CASE("Unit production without spawn services throws before spawning",
     };
     auto pDesign =
         std::make_unique<UnitDesign>(std::vector{chassisSlot, weaponSlot}, assigned);
-    REQUIRE(faction.GetMilitary().AddDesign(std::move(pDesign)));
+    REQUIRE(unaffiliated.GetMilitary().AddDesign(std::move(pDesign)));
     const UnitDesign* pQueued =
-        dynamic_cast<const UnitDesign*>(faction.GetMilitary().GetDesigns().front().get());
+        dynamic_cast<const UnitDesign*>(unaffiliated.GetMilitary().GetDesigns().front().get());
     REQUIRE(pQueued != nullptr);
 
     base.GetProduction().SetProduction(pQueued, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
-    CHECK(faction.GetUnitManager().Units().empty());
+    CHECK(unaffiliated.GetUnitManager().Units().empty());
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

@@ -164,6 +164,7 @@ catch-up sweep plus a full first-contact pass. The order is load-bearing: the ob
 — load-game, or any future runtime creation — was never scanned.
 
 Caller contract: the faction must have been constructed against the session's `WorldMap`.
+`AddFaction` throws `std::invalid_argument` when the faction was built against another map.
 
 ### Faction
 - **Purpose**: Represents a single faction in the game (player or AI)

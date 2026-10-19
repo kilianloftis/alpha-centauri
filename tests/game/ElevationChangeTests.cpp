@@ -387,7 +387,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     };
     fixture.designs.emplace_back(slots, assigned);
     Unit& attacker = player.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, fixture.designs.back(), fixture.map.GetUnitPositions(),
+        fixture.state.AllocateUnitId(), fixture.designs.back(), fixture.map.GetUnitPositions(),
         fixture.At(8, 8));
 
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});

@@ -484,11 +484,9 @@ TEST_CASE("A scrap refund goes to the nearest own base, and only inside own terr
     }
     Faction& faction = fixture.MakeFaction();
     Faction& rival = fixture.MakeFaction();
-    // The later base takes the lower id, so the tie below is settled by id rather than order.
-    fixture.nextBaseId = 5;
-    BaseManager& west = fixture.MakeFactionBase(faction, 8, 8);
-    fixture.nextBaseId = 2;
+    // East is founded first so it has the lower id; the equidistant tile settles by id.
     BaseManager& east = fixture.MakeFactionBase(faction, 16, 8);
+    BaseManager& west = fixture.MakeFactionBase(faction, 8, 8);
     fixture.MakeFactionBase(rival, 28, 8);
 
     CHECK(ScrapRefundBase(faction, fixture.At(10, 8)) == west.GetBaseId());

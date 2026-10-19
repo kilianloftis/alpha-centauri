@@ -97,6 +97,7 @@ public:
     // Factions. Registration only: the faction is already valid when it arrives (world map and
     // settings are constructor dependencies). This adds the session wiring that must close over
     // GameState — see AttachToSession_ — and works for a faction that already owns bases/units.
+    // Throws std::invalid_argument when the faction was built against another WorldMap.
     Faction& AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
     // Iterate factions by reference without exposing the owning unique_ptrs.

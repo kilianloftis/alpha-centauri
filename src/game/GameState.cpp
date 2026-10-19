@@ -352,18 +352,11 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     {
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
-    // Contract: pFaction must have been constructed against this session's WorldMap. The old
-    // AddFaction called BindWorldMap and thereby *made* that true; now the map is a Faction
-    // constructor dependency, so the caller establishes it (Engine passes
-    // m_pGameState->GetWorldMap()). A mismatch resolves Sensor vision and territory ownership
-    // from the wrong world while coordinate-based unit/base reveal keeps working, so it shows
-    // up as subtly wrong visibility rather than an obvious failure.
-    //
-    // Not enforced with a throw here: the test fixtures own their world map and lend a
-    // GameState to compose effects against, so identity would require handing map ownership to
-    // GameState — a fixture redesign with destruction-order hazards (factions and bases hold
-    // Tile& into the map) that is out of this package's scope. See
-    // docs/full-review-fix-prompts/04-composition-root-and-deps.md.
+    if (&pFaction->GetWorldMap() != &GetWorldMap())
+    {
+        throw std::invalid_argument(
+            "GameState::AddFaction: faction was built against another WorldMap");
+    }
     // Register first, attach second. The faction must already be in m_factions before any
     // observer runs: AttachToSession_ ends with a visibility/territory sweep, and both
     // ConsiderObserver and RebuildTerritory iterate Factions(). Wiring before the push (the

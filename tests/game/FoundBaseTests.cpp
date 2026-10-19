@@ -40,9 +40,9 @@ namespace
 void RebuildTerritory_(FactionFixture& rFixture)
 {
     std::vector<const BaseManager*> bases;
-    for (const auto& pFaction : rFixture.factions)
+    for (const Faction& rFaction : rFixture.state.Factions())
     {
-        for (const BaseManager& rBase : pFaction->Bases())
+        for (const BaseManager& rBase : rFaction.Bases())
         {
             bases.push_back(&rBase);
         }
@@ -53,9 +53,9 @@ void RebuildTerritory_(FactionFixture& rFixture)
 std::vector<const BaseManager*> AllBases_(FactionFixture& rFixture)
 {
     std::vector<const BaseManager*> bases;
-    for (const auto& pFaction : rFixture.factions)
+    for (const Faction& rFaction : rFixture.state.Factions())
     {
-        for (const BaseManager& rBase : pFaction->Bases())
+        for (const BaseManager& rBase : rFaction.Bases())
         {
             bases.push_back(&rBase);
         }
