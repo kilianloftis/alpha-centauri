@@ -134,7 +134,7 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
     production.SetProduction(&item, BaseEffects_t{base});
 
     actest::EffectPool pool;
-    CHECK(ItemMineralCost(base, item, k_TestConfig) == 10);
+    CHECK(ItemMineralCost(base, item) == 10);
     CHECK(ComputeProductionCost(item.GetBaseCost(), WithCostPercent(base, pool, -20.0), 0) == 8);
 
     production.BankProduction(5);
@@ -170,7 +170,7 @@ TEST_CASE("A stockpile item has no mineral cost and is never ready",
     production.SetProduction(&item, BaseEffects_t{base});
     production.SetMineralStockpile(100);
 
-    CHECK(ItemMineralCost(base, item, k_TestConfig) == 0);
+    CHECK(ItemMineralCost(base, item) == 0);
     CHECK_FALSE(production.IsReadyToComplete());
 
     production.BankProduction(10);
@@ -392,7 +392,7 @@ TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent
     item.baseCost = 10;
     ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&item, base.GetBaseEffects());
-    REQUIRE(ItemMineralCost(base, item, k_TestConfig) == 8);
+    REQUIRE(ItemMineralCost(base, item) == 8);
     production.SetMineralStockpile(12);
 
     const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);

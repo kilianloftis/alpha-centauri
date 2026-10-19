@@ -12,7 +12,6 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/probes/MindControlLedger.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 
@@ -38,13 +37,11 @@ bool AreOnOrAdjacent_(const Tile& rA, const Tile& rB, const WorldMap& rMap)
 
 ProbeActionExecutor::ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
                                          const ProbeActionsConfig_t& rProbeActions,
-                                         std::mt19937& rRng,
-                                         const MindControlLedger& rMindControl)
+                                         std::mt19937& rRng)
     : m_rWorldMap(rWorldMap)
     , m_rMorale(rMorale)
     , m_rProbeActions(rProbeActions)
     , m_rRng(rRng)
-    , m_rMindControl(rMindControl)
 {
 }
 
@@ -60,7 +57,7 @@ bool ProbeActionExecutor::CanTryProbeAction_(const Unit& rUnit,
     {
         return false;
     }
-    return CanProbeAction(rUnit, rAction, rTarget, m_rWorldMap, m_rMindControl);
+    return CanProbeAction(rUnit, rAction, rTarget);
 }
 
 bool ProbeActionExecutor::CanTryProbeAction(const Unit& rUnit,
@@ -120,8 +117,7 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     }
 
     const int risk = MissionRisk(*pAction, *target, facilityId, bRepeatAtBase);
-    result.chances = ProbeChancesFor(rUnit, *target, risk, m_rMorale,
-                                     m_rProbeActions.successFormula);
+    result.chances = ProbeChancesFor(rUnit, *target, risk);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
     return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, result, roll);
 }
@@ -150,7 +146,7 @@ bool ProbeActionExecutor::TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_
                                            const ProbeTarget_t& rTarget)
 {
     const std::optional<int> cost =
-        QuoteProbeActionCost(rAction, rUnit.GetFaction(), rTarget, m_rWorldMap, m_rMindControl);
+        QuoteProbeActionCost(rAction, rUnit.GetFaction(), rTarget);
     if (!cost.has_value())
     {
         return false;

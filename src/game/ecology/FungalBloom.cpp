@@ -46,7 +46,7 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     std::vector<Tile*> habitable;
     for (Tile* pTile : rNewTiles)
     {
-        if (!EligibleLifeforms(*pTile, rNatives).empty())
+        if (!EligibleLifeforms(*pTile).empty())
         {
             habitable.push_back(pTile);
         }
@@ -61,7 +61,7 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     for (int n = 0; n < lifeformCount; ++n)
     {
         Tile& rTile = *habitable[tileDist(rRng)];
-        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
+        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile);
         std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
         const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
         const NativeDesign* pDesign = EnsureNativeDesign(rPlanet, rNatives, rConfig.id);
@@ -92,7 +92,7 @@ int SpawnLifeforms_(const NativeUnitRegistry& rNatives, const std::vector<Tile*>
 std::vector<Tile*> SelectBloomTiles_(const Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
                                     std::mt19937& rRng)
 {
-    BloomCandidates_t candidates = BloomCandidateTiles(rOrigin, rWorldMap);
+    BloomCandidates_t candidates = BloomCandidateTiles(rOrigin);
     std::vector<const Tile*> selected;
     if (candidates.pOrigin != nullptr)
     {

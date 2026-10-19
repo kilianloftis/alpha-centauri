@@ -1,5 +1,8 @@
 #include "game/probes/ProbeRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -13,6 +16,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
 #include "game/research/ResearchRules.h"
 #include "game/research/TechConfigParser.h"
@@ -259,8 +263,7 @@ bool IsHeadquarters(const BaseManager& rBase)
 }
 
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget, const WorldMap& rMap,
-                    const MindControlLedger& rMindControl)
+                    const ProbeTarget_t& rTarget)
 {
     if (!ActorMeetsActionPrereqs_(rProbe, rAction))
     {
@@ -316,8 +319,7 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
     // previously such a unit was priced as if the HQ were 12 tiles away, making the
     // best-defended tile on the map the cheapest to subvert.
     if (rAction.cost.has_value()
-        && !QuoteProbeActionCost(rAction, rProbe.GetFaction(), rTarget, rMap, rMindControl)
-                .has_value())
+        && !QuoteProbeActionCost(rAction, rProbe.GetFaction(), rTarget).has_value())
     {
         return false;
     }
@@ -325,9 +327,7 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
 }
 
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
-                                        const Faction& rActor, const ProbeTarget_t& rTarget,
-                                        const WorldMap& rMap,
-                                        const MindControlLedger& rMindControl)
+                                        const Faction& rActor, const ProbeTarget_t& rTarget)
 {
     if (!rAction.cost.has_value())
     {
@@ -340,6 +340,9 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
         costMultiplier = ResolveProbeActionCostMultiplier_(*pSource);
     }
 
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rMap = rGame.GetWorldMap();
+    const MindControlLedger& rMindControl = rGame.GetMindControlLedger();
     return std::visit(
         [&](const auto& rConcrete) -> std::optional<int>
         {
@@ -379,10 +382,11 @@ int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget
     return risk;
 }
 
-ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk,
-                              const MoraleCalculator& rMorale,
-                              const ProbeSuccessFormula_t& rFormula)
+ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk)
 {
+    const GameDataContext& rData = CurrentGameState().GetGameData();
+    const MoraleCalculator& rMorale = *rData.moraleCalculator;
+    const ProbeSuccessFormula_t& rFormula = rData.probeActionsConfig->successFormula;
     EffectContext_t ctx;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
     const int targetProbeEffect = TargetProbeDefenseEffect(rTarget, rFormula);

@@ -86,8 +86,7 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
 {
     const ElevationSeed_t seed{&rOrigin, deltaMeters};
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
-        std::span<const ElevationSeed_t>(&seed, 1), floorMeters, ceilingMeters, rWorldMap,
-        rRules);
+        std::span<const ElevationSeed_t>(&seed, 1), floorMeters, ceilingMeters, rRules);
     return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
 }
 
@@ -132,7 +131,7 @@ bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt1993
         }
     }
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
-        seeds, rRules.minElevationMeters, rRules.maxElevationMeters, rWorldMap, rRules);
+        seeds, rRules.minElevationMeters, rRules.maxElevationMeters, rRules);
     return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
 }
 

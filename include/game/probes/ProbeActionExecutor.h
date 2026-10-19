@@ -17,7 +17,6 @@
 namespace ac
 {
 
-class MindControlLedger;
 class WorldMap;
 class GameState;
 class Tile;
@@ -32,8 +31,7 @@ class ProbeActionExecutor
 {
 public:
     ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
-                        const ProbeActionsConfig_t& rProbeActions, std::mt19937& rRng,
-                        const MindControlLedger& rMindControl);
+                        const ProbeActionsConfig_t& rProbeActions, std::mt19937& rRng);
 
     // Order-domain gates plus CanProbeAction mechanics for one configured action against
     // whatever rAction's target kind resolves to on rTile.
@@ -87,7 +85,6 @@ private:
     const MoraleCalculator& m_rMorale;
     const ProbeActionsConfig_t& m_rProbeActions;
     std::mt19937& m_rRng;
-    const MindControlLedger& m_rMindControl;
     // (actor faction, target base) pairs that have already been probed this session.
     std::set<std::pair<FactionId_t, BaseId_t>> m_probedBases;
 };

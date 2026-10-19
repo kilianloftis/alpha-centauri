@@ -18,7 +18,6 @@ class BaseManager;
 class ImprovementRegistry;
 class TerrainOperationRegistry;
 class Tile;
-class WorldMap;
 class Unit;
 struct CoexistenceOverrideEffect_t;
 struct TriggeredEffectConfig_t;
@@ -45,7 +44,7 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
                                                       const TerrainOperationRegistry& rOperations);
 
 // These read the elevation rules of the world the tile or unit stands in.
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap);
+int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId);
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
@@ -91,8 +90,7 @@ struct TerraformSpread_t
 
 // Forest spreads from land, KelpFarm from sea, onto the best eligible neighbour (arid and flat
 // first). Empty when rOrigin holds neither or no neighbour qualifies.
-std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const WorldMap& rWorldMap,
-                                                  const ImprovementRegistry& rImprovements);
+std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin);
 
 struct ElevationSeed_t
 {
@@ -110,7 +108,6 @@ struct ElevationWrite_t
 // moved tile pulls its neighbours within the slope limit. Throws on a band outside Planet's range.
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
                                                   int floorMeters, int ceilingMeters,
-                                                  const WorldMap& rWorldMap,
                                                   const ElevationRulesConfig_t& rRules);
 
 // The sum of the level rolls, capped at Planet's full elevation span.

@@ -194,7 +194,7 @@ ProductionApplyResult_t ProductionManager::TryCompleteReady(bool bNewTurn)
 bool ProductionManager::IsReadyToComplete() const
 {
     return HasProduction() && !m_pCurrentItem->IsStockpile()
-        && m_mineralStockpile >= ItemMineralCost(m_rBase, *m_pCurrentItem, m_rConfig);
+        && m_mineralStockpile >= ItemMineralCost(m_rBase, *m_pCurrentItem);
 }
 
 std::string ProductionManager::CompleteProduction_()
@@ -205,7 +205,7 @@ std::string ProductionManager::CompleteProduction_()
     }
 
     // Cost first: ResetProduction_ replaces the item.
-    const int cost = ItemMineralCost(m_rBase, *m_pCurrentItem, m_rConfig);
+    const int cost = ItemMineralCost(m_rBase, *m_pCurrentItem);
     const int leftover = std::max(0, m_mineralStockpile - cost);
     m_mineralStockpile = OverflowCarried(leftover, m_rConfig);
 

@@ -293,8 +293,7 @@ TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "
     rEffects.AddOccupantWithEffects(session.At_(9, 9), std::string(ImprovementIds::k_Base));
     session.At_(7, 7).AddTerrainFeature(rEffects.GetImprovements().Get("Fungus"));
 
-    const BloomCandidates_t candidates =
-        BloomCandidateTiles(session.At_(8, 8), session.fixtures.state.GetWorldMap());
+    const BloomCandidates_t candidates = BloomCandidateTiles(session.At_(8, 8));
     CHECK(candidates.pOrigin == nullptr);
     CHECK(candidates.neighbours.size() == 6);
     for (const Tile* pTile : candidates.neighbours)
@@ -307,16 +306,14 @@ TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "
 TEST_CASE("Only lifeforms whose domain can stand on a tile appear there", "[map][fungus]")
 {
     BloomSession_ session(1, 1, false, false);
-    const NativeUnitRegistry& rNatives = *session.fixtures.dataContext.nativeUnitRegistry;
     Tile& sea = session.At_(10, 10);
     sea.SetElevation(-100);
     REQUIRE(sea.IsWater());
 
-    const std::vector<const NativeUnitConfig_t*> onLand =
-        EligibleLifeforms(session.At_(8, 8), rNatives);
+    const std::vector<const NativeUnitConfig_t*> onLand = EligibleLifeforms(session.At_(8, 8));
     REQUIRE(onLand.size() == 1);
     CHECK(onLand.front()->id == "Mind_Worm");
-    const std::vector<const NativeUnitConfig_t*> atSea = EligibleLifeforms(sea, rNatives);
+    const std::vector<const NativeUnitConfig_t*> atSea = EligibleLifeforms(sea);
     REQUIRE(atSea.size() == 1);
     CHECK(atSea.front()->id == "Isle_of_the_Deep");
 }

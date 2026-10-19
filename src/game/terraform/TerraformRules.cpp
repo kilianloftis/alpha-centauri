@@ -2,6 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
@@ -170,13 +171,14 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
     return std::nullopt;
 }
 
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap)
+int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId)
 {
     const ElevationRulesConfig_t& rRules = rTile.MapRules();
     if (rRules.referenceLevelMeters <= 0)
     {
         throw std::logic_error("QuoteRaiseLowerEnergyCost: reference_level_meters must be > 0");
     }
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     const int elevBand = std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters + 1;
     int nearest = std::numeric_limits<int>::max();
     const int mapWidth = rWorldMap.GetWidth();
@@ -201,11 +203,9 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
 {
-    const GameState& rGameState = CurrentGameState();
     if (rProject.energyCostSource == EnergyCostSource_t::RaiseLowerQuote)
     {
-        return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId(),
-                                         rGameState.GetWorldMap());
+        return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId());
     }
     return rProject.project.energyCost;
 }
@@ -445,10 +445,10 @@ void RelaxAdjacentSlopes_(const std::vector<const Tile*>& rSeeds, const WorldMap
 
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
                                                   int floorMeters, int ceilingMeters,
-                                                  const WorldMap& rWorldMap,
                                                   const ElevationRulesConfig_t& rRules)
 {
     const ElevationBand_t band = RequireLegalEdit_(floorMeters, ceilingMeters, rRules);
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     WorkingElevations_ working;
     std::vector<const Tile*> moved;
     for (const ElevationSeed_t& rSeed : seeds)
@@ -482,8 +482,7 @@ int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
     return delta;
 }
 
-std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const WorldMap& rWorldMap,
-                                                  const ImprovementRegistry& rImprovements)
+std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
 {
     const bool bWantSea = rOrigin.IsWater();
     const std::string improvementId(bWantSea ? ImprovementIds::k_KelpFarm
@@ -492,6 +491,9 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin, const Wor
     {
         return std::nullopt;
     }
+    const GameState& rGame = CurrentGameState();
+    const ImprovementRegistry& rImprovements = *rGame.GetGameData().improvementRegistry;
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     // Present by construction: ValidateTerrainFeatures proves both ids exist at load.
     const ImprovementConfig_t& rConfig = rImprovements.Get(improvementId);
 

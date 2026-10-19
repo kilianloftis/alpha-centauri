@@ -832,8 +832,7 @@ TEST_CASE("Forest spread prefers the arid, flat neighbour and changes nothing wh
     arid.SetRockiness(Rockiness_t::Flat);
     arid.SetMoisture(Moisture_t::Arid);
 
-    const std::optional<TerraformSpread_t> spread =
-        PickSpreadTarget(origin, world.map, world.ctx.GetImprovements());
+    const std::optional<TerraformSpread_t> spread = PickSpreadTarget(origin);
     REQUIRE(spread.has_value());
     CHECK(spread->pTarget == &arid);
     CHECK(spread->pImprovement->id == "Forest");

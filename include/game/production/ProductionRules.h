@@ -53,8 +53,7 @@ int RetoolForfeit(int mineralStockpile, bool bHasTurnOriginal, bool bReturningTo
 int OverflowCarried(int leftover, const ProductionConfig_t& rConfig);
 
 // 0 for a stockpile; a prototype pays production.json's surcharge.
-int ItemMineralCost(const BaseManager& rBase, const IConstructable& rItem,
-                    const ProductionConfig_t& rConfig);
+int ItemMineralCost(const BaseManager& rBase, const IConstructable& rItem);
 
 // A unit design is a prototype while any of its components has not been fielded by the faction.
 // A native design never is.

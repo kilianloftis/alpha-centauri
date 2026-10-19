@@ -191,8 +191,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
             }
         });
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(
-        *m_worldMap, *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng,
-        *m_pMindControl);
+        *m_worldMap, *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng);
 }
 
 GameState::~GameState()

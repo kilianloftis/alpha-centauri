@@ -126,13 +126,14 @@ int OverflowCarried(int leftover, const ProductionConfig_t& rConfig)
     return std::min(leftover, rConfig.retoolPenaltyThreshold);
 }
 
-int ItemMineralCost(const BaseManager& rBase, const IConstructable& rItem,
-                    const ProductionConfig_t& rConfig)
+int ItemMineralCost(const BaseManager& rBase, const IConstructable& rItem)
 {
     if (rItem.IsStockpile())
     {
         return 0;
     }
+    const GameDataContext& rData = CurrentGameState().GetGameData();
+    const ProductionConfig_t& rConfig = *rData.productionConfig;
     const auto* pDesign = dynamic_cast<const IDesign*>(&rItem);
     const bool bPrototype = pDesign && IsPrototype(rBase.GetFaction(), *pDesign);
     const int surcharge = bPrototype ? rConfig.prototypeSurchargePercent : 0;

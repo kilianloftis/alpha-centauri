@@ -654,11 +654,7 @@ TEST_CASE("The mind-control quote adds the actor's total over the divisor to its
         probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
     REQUIRE(target.has_value());
     const auto quote = [&]
-    {
-        return QuoteProbeActionCost(*pAction, *game.pPlayer, *target,
-                                    game.fixtures.state.GetWorldMap(),
-                                    game.fixtures.state.GetMindControlLedger());
-    };
+    { return QuoteProbeActionCost(*pAction, *game.pPlayer, *target); };
 
     // No garrison, so the first factor is the population alone.
     const int population = targetBase.GetPopulation().GetSize();
@@ -688,12 +684,9 @@ TEST_CASE("The mind-control quote ignores the target faction's total", "[probe][
     REQUIRE(target.has_value());
 
     const std::optional<int> before =
-        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
-                             game.fixtures.state.GetMindControlLedger());
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target);
     game.fixtures.state.GetMindControlLedger().Record(game.pAi->GetFactionId(), 8);
-    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
-                               game.fixtures.state.GetMindControlLedger())
-          == before);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == before);
 }
 
 TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][cost][mind-control]")
@@ -709,13 +702,10 @@ TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][c
     REQUIRE(target.has_value());
 
     const std::optional<int> before =
-        QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
-                             game.fixtures.state.GetMindControlLedger());
+        QuoteProbeActionCost(*pAction, *game.pPlayer, *target);
     REQUIRE(before.has_value());
     game.fixtures.state.GetMindControlLedger().Record(game.pPlayer->GetFactionId(), 8);
-    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target, game.fixtures.state.GetWorldMap(),
-                               game.fixtures.state.GetMindControlLedger())
-          == before);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == before);
 }
 
 TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta",
@@ -869,14 +859,11 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
         game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9),
         &home);
 
-    const MoraleCalculator& rMorale = game.fixtures.morale();
-    const ProbeSuccessFormula_t& rFormula =
-        game.fixtures.dataContext.probeActionsConfig->successFormula;
     const auto successAgainstEnemy = [&](const Unit& rProbe)
     {
         const ProbeTarget_t target =
             *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
-        return ProbeChancesFor(rProbe, target, /*risk=*/1, rMorale, rFormula).successRate;
+        return ProbeChancesFor(rProbe, target, /*risk=*/1).successRate;
     };
     const int plainOpen = successAgainstEnemy(plain);
     CHECK(plainOpen > 0);

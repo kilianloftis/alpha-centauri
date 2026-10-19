@@ -484,7 +484,7 @@ int BaseManager::GetMineralCost() const
     {
         return 0;
     }
-    return ItemMineralCost(*this, *pItem, m_rProductionConfig);
+    return ItemMineralCost(*this, *pItem);
 }
 
 HurryInputs_t BaseManager::BuildHurryInputs_(const IConstructable& rItem) const

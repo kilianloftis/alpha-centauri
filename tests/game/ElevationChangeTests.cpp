@@ -195,8 +195,9 @@ TEST_CASE("A preset's elevation range is the world storage range", "[map][elevat
 
 TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][elevation]")
 {
-    const ElevationRulesConfig_t rules = ShippingRules_();
-    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
+    WorldFixture fixture;
+    const ElevationRulesConfig_t& rules = TestMapRules();
+    WorldMap& map = fixture.map;
 
     SECTION("a neighbor already within the limit stays")
     {
@@ -282,10 +283,11 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
 TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
           "[map][elevation]")
 {
-    ElevationRulesConfig_t rules = ShippingRules_();
+    WorldFixture fixture;
+    ElevationRulesConfig_t rules = TestMapRules();
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
-    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
+    WorldMap& map = fixture.map;
 
     At_(map, 8, 4).SetElevation(3000);
     REQUIRE(ApplyElevationDelta(At_(map, 8, 4), map, 2000, rules, rules.minElevationMeters,
@@ -529,20 +531,20 @@ TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation]
 TEST_CASE("Planning an elevation change lists its writes and leaves the map untouched",
           "[map][elevation]")
 {
-    const ElevationRulesConfig_t rules = ShippingRules_();
-    WorldMap map(actest::k_TestMapWidth, actest::k_TestMapHeight, rules);
-    At_(map, 8, 8).SetElevation(0);
-    At_(map, 7, 9).SetElevation(-2000);
+    WorldFixture fixture;
+    const ElevationRulesConfig_t& rules = TestMapRules();
+    At_(fixture.map, 8, 8).SetElevation(0);
+    At_(fixture.map, 7, 9).SetElevation(-2000);
 
-    const ElevationSeed_t seed{&At_(map, 8, 8), 1000};
+    const ElevationSeed_t seed{&At_(fixture.map, 8, 8), 1000};
     const std::vector<ElevationWrite_t> writes =
         PlanElevationChange(std::span<const ElevationSeed_t>(&seed, 1), rules.minElevationMeters,
-                            rules.maxElevationMeters, map, rules);
+                            rules.maxElevationMeters, rules);
     REQUIRE(writes.size() >= 2);
-    CHECK(writes.front().pTile == &At_(map, 8, 8));
+    CHECK(writes.front().pTile == &At_(fixture.map, 8, 8));
     CHECK(writes.front().elevation == 1000);
-    CHECK(At_(map, 8, 8).GetElevation() == 0);
-    CHECK(At_(map, 7, 9).GetElevation() == -2000);
+    CHECK(At_(fixture.map, 8, 8).GetElevation() == 0);
+    CHECK(At_(fixture.map, 7, 9).GetElevation() == -2000);
 }
 
 TEST_CASE("An earthquake's level rolls add up to at most Planet's full span", "[map][elevation]")

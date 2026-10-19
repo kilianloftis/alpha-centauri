@@ -151,13 +151,14 @@ bool DomainCanHold_(UnitDomain_t domain, const Tile& rTile)
 
 } // namespace
 
-BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin, const WorldMap& rWorldMap)
+BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin)
 {
     BloomCandidates_t candidates;
     if (!rOrigin.HasImprovement(ImprovementIds::k_Base))
     {
         candidates.pOrigin = &rOrigin;
     }
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pTile, int /*distance*/)
         {
@@ -171,9 +172,10 @@ BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin, const WorldMap& rWorl
     return candidates;
 }
 
-std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile,
-                                                         const NativeUnitRegistry& rNatives)
+std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile)
 {
+    const GameDataContext& rData = CurrentGameState().GetGameData();
+    const NativeUnitRegistry& rNatives = *rData.nativeUnitRegistry;
     std::vector<const NativeUnitConfig_t*> eligible;
     for (const NativeUnitConfig_t& rConfig : rNatives.GetAll())
     {

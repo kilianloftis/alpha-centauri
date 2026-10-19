@@ -14,12 +14,8 @@
 namespace ac
 {
 
-class MindControlLedger;
-class MoraleCalculator;
-
 class Unit;
 class BaseManager;
-class WorldMap;
 
 struct ProbeChance_t
 {
@@ -76,9 +72,7 @@ int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget
 
 // ComputeProbeChances for this probe and target: its effective morale, the target's probe
 // defense, the failure scale unless the target BlocksProbeTeams, and the target's success scale.
-ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk,
-                              const MoraleCalculator& rMorale,
-                              const ProbeSuccessFormula_t& rFormula);
+ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk);
 
 // A drain takes the base's share of the target treasury, at least a morale-tenth of it, plus
 // half of what is left of the share, never more than the treasury holds.
@@ -102,18 +96,14 @@ bool IsHeadquarters(const BaseManager& rBase);
 // Probe-mechanics eligibility only: ProbeTeam, required tech, target-kind match, HQ
 // constraints, BlocksProbeTeams / ProbeSubversionImmune, and — for paid actions — that a cost
 // can actually be quoted, so an action that payment would refuse is never offered. Does not
-// check moves or adjacency (those belong to ProbeActionExecutor). rMap and rMindControl feed
-// the distance-to-HQ and mind-control history terms in the quote.
+// check moves or adjacency (those belong to ProbeActionExecutor).
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget, const WorldMap& rMap,
-                    const MindControlLedger& rMindControl);
+                    const ProbeTarget_t& rTarget);
 
 // Energy cost rActor is quoted for a paid action (0 when free). The base formula reads the
-// actor's total from rMindControl. Empty when the formula cannot produce a cost (e.g. zero
-// distance to HQ). Affordability / payment live in ProbeActionExecutor.
+// actor's mind-control total. Empty when the formula cannot produce a cost (e.g. zero distance
+// to HQ). Affordability / payment live in ProbeActionExecutor.
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
-                                        const Faction& rActor, const ProbeTarget_t& rTarget,
-                                        const WorldMap& rMap,
-                                        const MindControlLedger& rMindControl);
+                                        const Faction& rActor, const ProbeTarget_t& rTarget);
 
 } // namespace ac
