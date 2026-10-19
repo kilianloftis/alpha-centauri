@@ -449,7 +449,7 @@ void WorldView::Update_()
             {
                 continue;
             }
-            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
             {
                 continue;
             }
@@ -903,7 +903,7 @@ bool WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
                 continue;
             }
             pPlayback->names[pUnit->GetUnitId()] = pUnit->GetDesign().GetName();
-            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
             {
                 pPlayback->playbackUnitIds.insert(pUnit->GetUnitId());
             }
@@ -1046,7 +1046,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         {
             continue;
         }
-        if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+        if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
         {
             continue;
         }

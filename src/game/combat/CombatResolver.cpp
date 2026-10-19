@@ -209,7 +209,7 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,
 
     if (result.bDefenderDestroyed)
     {
-        ApplyStackCollateral(m_rWorldMap, m_rMorale, rAttacker, rDefender);
+        ApplyStackCollateral(m_rMorale, rAttacker, rDefender);
         GrantPlanetPearls(m_rMorale, rAttacker.GetFaction(), rDefender);
         rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
     }

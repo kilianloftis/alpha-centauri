@@ -1,5 +1,7 @@
 #include "game/base/BaseConquestRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -17,8 +19,10 @@
 namespace ac
 {
 
-bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap)
+bool HasBaseGarrison(const BaseManager& rBase)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const FactionId_t ownerId = rBase.GetFactionId();
     for (const Unit* pUnit : rWorldMap.GetAllUnitsOnTile(rBase.GetTile()))
     {
@@ -64,11 +68,9 @@ int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
 
 } // namespace
 
-std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseManager& rBase,
-                                              const WorldMap& rWorldMap)
+std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseManager& rBase)
 {
-    if (rBase.GetFactionId() == rMover.GetFaction().GetFactionId()
-        || HasBaseGarrison(rBase, rWorldMap))
+    if (rBase.GetFactionId() == rMover.GetFaction().GetFactionId() || HasBaseGarrison(rBase))
     {
         return std::nullopt;
     }
@@ -84,10 +86,9 @@ std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseMana
 }
 
 std::optional<ConquestKind_t> ConquestOnLastDefenderKill(const Unit& rAttacker,
-                                                         const BaseManager& rBase,
-                                                         const WorldMap& rWorldMap)
+                                                         const BaseManager& rBase)
 {
-    if (HasBaseGarrison(rBase, rWorldMap))
+    if (HasBaseGarrison(rBase))
     {
         return std::nullopt;
     }

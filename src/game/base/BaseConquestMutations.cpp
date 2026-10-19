@@ -218,7 +218,7 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
         return {};
     }
     const std::optional<ConquestKind_t> kind =
-        ConquestOnLastDefenderKill(rAttacker, *pBase, rGameState.GetWorldMap());
+        ConquestOnLastDefenderKill(rAttacker, *pBase);
     if (!kind)
     {
         return {};
@@ -247,7 +247,7 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
         return {};
     }
     const std::optional<ConquestKind_t> kind =
-        ConquestOnEntry(rMover, *pBase, rGameState.GetWorldMap());
+        ConquestOnEntry(rMover, *pBase);
     if (kind == ConquestKind_t::NativeRaid)
     {
         return ApplyNativeRaid_(rMover, *pBase, rRng);

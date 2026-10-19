@@ -9,7 +9,6 @@
 namespace ac
 {
 
-class TileEffectsContext;
 class Unit;
 struct InterceptEffect_t;
 
@@ -40,8 +39,7 @@ struct InterceptSource_t
 // Every source in the order they are tried: the defender faction's pool, the base on the
 // defender's tile, the defender's design, each faction's WorldGlobal grants, council, tile.
 std::vector<InterceptSource_t> CollectInterceptSources(const Unit& rAttacker,
-                                                       const Unit& rDefender,
-                                                       const TileEffectsContext& rTileEffects);
+                                                       const Unit& rDefender);
 
 // Off cooldown at missionYear. A source with no ledger is always ready.
 bool InterceptSourceReady(const InterceptSource_t& rSource, const Unit& rDefender,

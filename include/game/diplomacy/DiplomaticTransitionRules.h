@@ -11,9 +11,7 @@ namespace ac
 
 class DiplomacyLedger;
 class Tile;
-class TileEffectsContext;
 class Unit;
-class WorldMap;
 
 // aggressor acted against victim (combat, bombardment, a probe action, an atrocity). Built
 // before the act resolves: either unit may not survive it.
@@ -44,9 +42,7 @@ bool HonoredObligationCascades();
 
 // One act per faction a shot from rAttacker at rTarget will hit: the duel opponent or the units
 // it strikes, or an empty tile's territory owner. Attributed when any of that faction's targets is.
-std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget,
-                                             const WorldMap& rWorldMap,
-                                             const TileEffectsContext& rTileEffects);
+std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget);
 
 // The status a pair may propose next. Any status may also go to Vendetta.
 constexpr std::optional<DiplomaticStatus_t> StepUp(DiplomaticStatus_t status)

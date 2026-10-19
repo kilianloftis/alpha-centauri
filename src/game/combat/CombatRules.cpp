@@ -1,5 +1,7 @@
 #include "game/combat/CombatRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
@@ -119,9 +121,10 @@ bool PastDisengageThreshold(const Unit& rUnit, int startHp)
     return (startHp - rUnit.GetCurrentHp()) * 2 >= startHp;
 }
 
-std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender,
-                                                 const WorldMap& rWorldMap)
+std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const Tile& rTile = rDefender.GetTile();
     const int splash = ResolveSplash_(rAttacker);
 
@@ -153,7 +156,6 @@ std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Un
 }
 
 std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Unit& rDefender,
-                                                const WorldMap& rWorldMap,
                                                 const std::vector<CollateralHit_t>& rPlan)
 {
     if (!ResolveFlag(rAttacker.GetFaction(),
@@ -162,6 +164,8 @@ std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Uni
         return {};
     }
 
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     std::vector<Unit*> nonCombatants;
     for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rDefender.GetTile()))
     {

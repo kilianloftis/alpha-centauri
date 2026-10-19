@@ -166,8 +166,7 @@ TEST_CASE("FindPath routes around visible enemy ZOC", "[movement][pathfinding][z
     ExploreAll_(player, fixture.map);
     const Tile& rDest = fixture.At(10, 10);
 
-    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(8, 8)).front(),
-                            fixture.ctx));
+    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(8, 8)).front()));
 
     const Path_t path = harness.pathfinder.FindPath(mover, rDest);
     REQUIRE(path.bReachable);
@@ -195,10 +194,8 @@ TEST_CASE("FindPath unreachable when visible ZOC walls off destination",
     Unit& mover = fixture.MakeUnit(player, 12, 0, {"test_chassis"});
     const Tile& rDest = fixture.At(14, 2);
 
-    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(13, 1)).front(),
-                            fixture.ctx));
-    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(10, 0)).front(),
-                            fixture.ctx));
+    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(13, 1)).front()));
+    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(10, 0)).front()));
 
     const Path_t path = harness.pathfinder.FindPath(mover, rDest);
     CHECK_FALSE(path.bReachable);
@@ -345,7 +342,7 @@ TEST_CASE("FindPath ignores cloaked hostiles until contact-revealed",
     const Tile& rDest = fixture.At(9, 9);
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
 
     // Planner ignores cloak/ZOC — Chebyshev-cheap path stays reachable (equal-cost
     // diagonals may or may not step on the cloaked tile itself).
@@ -374,7 +371,7 @@ TEST_CASE("FindPath ignores fogged hostiles outside vision",
     ExploreAll_(player, fixture.map);
     const Tile& rDest = fixture.At(9, 9);
 
-    REQUIRE_FALSE(IsUnitVisibleTo(player, hostile, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, hostile));
     CHECK(harness.steps.CanPlanStep(mover, fixture.At(7, 7), hostile.GetTile()));
 
     // Unknown occupant does not force a detour.

@@ -184,8 +184,7 @@ TEST_CASE("Sea may enter its own land base, but not open land or a foreign base"
     SECTION("cannot attack another faction's coastal land base")
     {
         fixture.MakeFactionBase(other, 9, 9);
-        CHECK_FALSE(CanAttackTile(sea, fixture.At(9, 9), fixture.map,
-                                  fixture.dataContext.interactionGrids));
+        CHECK_FALSE(CanAttackTile(sea, fixture.At(9, 9)));
     }
 }
 
@@ -312,14 +311,14 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
     player.RebuildVisibility();
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
-    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
     CHECK_FALSE(move.orders.TryAttack(mover, fixture.At(9, 9)));
     CHECK(mover.GetMoveFragmentsRemaining() == 2 * k_point);
 
     // Bumping the occupied tile reveals the cloaked unit.
     MoveOrder_t bumpCloaked{&fixture.At(9, 9)};
     CHECK_FALSE(move.orders.TryStep(mover, fixture.At(9, 9), bumpCloaked).bEntered);
-    CHECK(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, cloaked));
     REQUIRE(move.orders.TryAttack(mover, fixture.At(9, 9)));
 }
 
@@ -336,11 +335,11 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
     Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     player.RebuildVisibility();
 
-    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
     // ZOC -> ZOC toward (4,5) is blocked by the cloaked projector.
     MoveOrder_t zocBump{&fixture.At(7, 9)};
     CHECK_FALSE(move.orders.TryStep(mover, fixture.At(7, 9), zocBump).bEntered);
-    CHECK(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, cloaked));
     CHECK(move.orders.TryAttack(mover, fixture.At(9, 9)));
 }
 
@@ -358,11 +357,11 @@ TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
     player.RebuildVisibility();
     mover.SetOrder(MoveOrder_t{&fixture.At(9, 9)});
 
-    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
 
     move.orders.Execute(mover);
 
-    CHECK(IsUnitVisibleTo(player, cloaked, fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, cloaked));
     CHECK(&mover.GetTile() == &fixture.At(8, 8)); // did not enter the hostile tile
     CHECK_FALSE(mover.GetOrder().has_value()); // contact-reveal cancelled the move
 }
@@ -382,13 +381,13 @@ TEST_CASE("Move order cancels when fog of war reveals a hostile",
     player.RebuildVisibility();
     mover.SetOrder(MoveOrder_t{&fixture.At(10, 10)});
 
-    REQUIRE_FALSE(IsUnitVisibleTo(player, hostile, fixture.ctx));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, hostile));
     const int distBefore = ChebyshevDistance(mover.GetTile(), fixture.At(10, 10), fixture.map.GetWidth());
 
     move.orders.Execute(mover);
 
     CHECK(ChebyshevDistance(mover.GetTile(), fixture.At(10, 10), fixture.map.GetWidth()) == distBefore - 1);
-    CHECK(IsUnitVisibleTo(player, hostile, fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, hostile));
     CHECK_FALSE(mover.GetOrder().has_value());
 }
 

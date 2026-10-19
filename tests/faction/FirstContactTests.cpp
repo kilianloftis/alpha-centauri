@@ -137,7 +137,7 @@ TEST_CASE("Cloaked unit on visible map still establishes Known",
     Unit& rCloaked = game.MakeUnit(*game.pB, 9, 9, {"test_chassis", "Cloaking_Device"});
 
     REQUIRE(game.pA->GetVisibleMap().IsVisible(rCloaked.GetTile()));
-    REQUIRE_FALSE(IsUnitVisibleTo(*game.pA, rCloaked, game.fixtures.state.GetTileEffects()));
+    REQUIRE_FALSE(IsUnitVisibleTo(*game.pA, rCloaked));
     CHECK(game.fixtures.state.GetDiplomacyLedger().AreKnown(
         game.pA->GetFactionId(), game.pB->GetFactionId()));
 }

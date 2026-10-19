@@ -1,10 +1,11 @@
 #include "game/combat/ScrambleRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
-#include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -97,12 +98,11 @@ bool CanScrambleTo_(const Unit& rCandidate,
 
 } // namespace
 
-Unit* FindScrambler(const Unit& rAttacker,
-                              Unit& rOriginalDefender,
-                              const WorldMap& rWorldMap,
-                              const TileEffectsContext& /*rTileEffects*/,
-                              const Pathfinder& rPathfinder)
+Unit* FindScrambler(const Unit& rAttacker, Unit& rOriginalDefender)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const Pathfinder& rPathfinder = rGame.GetPathfinder();
     const Tile& rDest = rOriginalDefender.GetTile();
 
     Unit* pBest = nullptr;

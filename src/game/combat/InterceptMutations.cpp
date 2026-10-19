@@ -113,12 +113,10 @@ std::optional<CombatResult_t> LoseInterceptSource_(GameState& rGameState, Unit& 
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
                                                  Unit& rAttacker,
                                                  Unit& rDefender,
-                                                 TileEffectsContext& rTileEffects,
                                                  std::mt19937& rRng)
 {
     const int year = rGameState.GetMissionYear();
-    const std::vector<InterceptSource_t> sources =
-        CollectInterceptSources(rAttacker, rDefender, rTileEffects);
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(rAttacker, rDefender);
 
     for (const InterceptSource_t& rSource : sources)
     {

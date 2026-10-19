@@ -221,7 +221,7 @@ TEST_CASE("Entering a base garrisons it rather than boarding a transport there",
     REQUIRE(land.IsEmbarked());
 
     // Cargo parked in a base is still what holds the base.
-    CHECK(HasBaseGarrison(rBase, fixture.map));
+    CHECK(HasBaseGarrison(rBase));
 }
 
 TEST_CASE("A carrier lost in a base sets its cargo down instead of drowning it",
@@ -244,7 +244,7 @@ TEST_CASE("A carrier lost in a base sets its cargo down instead of drowning it",
     // The passenger is set down in the base, and the base is still held.
     CHECK_FALSE(land.IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(8, 8));
-    CHECK(HasBaseGarrison(rBase, fixture.map));
+    CHECK(HasBaseGarrison(rBase));
 
     size_t survivors = 0;
     for (Unit& rUnit : faction.GetUnitManager().Units())

@@ -68,10 +68,10 @@ const Faction& Ledger_(const InterceptSource_t& rSource)
 } // namespace
 
 std::vector<InterceptSource_t> CollectInterceptSources(const Unit& rAttacker,
-                                                       const Unit& rDefender,
-                                                       const TileEffectsContext& rTileEffects)
+                                                       const Unit& rDefender)
 {
     const GameState& rState = CurrentGameState();
+    const TileEffectsContext& rTileEffects = rState.GetTileEffects();
     const Faction& rDefFaction = rDefender.GetFaction();
     const FactionId_t defenderId = rDefFaction.GetFactionId();
     const Tile& rTile = rDefender.GetTile();

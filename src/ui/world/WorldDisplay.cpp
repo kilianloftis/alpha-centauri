@@ -120,7 +120,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     content.showsUnit = [this, pPlayer](const Unit& rUnit) {
         // Per-unit visibility (fog, Conceal/Detect, contact reveal), not tile fog alone.
         return (m_pPlaybackVisibleUnits && m_pPlaybackVisibleUnits->contains(rUnit.GetUnitId()))
-               || !pPlayer || IsUnitVisibleTo(*pPlayer, rUnit, m_rGameState.GetTileEffects());
+               || !pPlayer || IsUnitVisibleTo(*pPlayer, rUnit);
     };
     content.pSelectedUnit = m_pSelectedUnit;
 

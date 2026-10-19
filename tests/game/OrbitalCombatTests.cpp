@@ -612,7 +612,7 @@ TEST_CASE("Intercept sources run faction pool, design, then tile, each charge re
                                  {"test_chassis", "test_armor", "test_sam_escort"}, &playerBase);
 
     const std::vector<InterceptSource_t> sources =
-        CollectInterceptSources(missile, escort, game.fixtures.state.GetTileEffects());
+        CollectInterceptSources(missile, escort);
     REQUIRE(sources.size() == 3);
     CHECK(sources[0].deployKind == InterceptSourceKind_t::Building);
     CHECK(sources[0].sourceId == "test_odp_always_hit");

@@ -6,7 +6,6 @@ namespace ac
 {
 
 class Unit;
-class WorldMap;
 
 // Which side of a fight a roll / outcome refers to. Attacker initiated; Defender is the
 // unit on the target tile.
@@ -63,13 +62,11 @@ struct CollateralHit_t
 };
 
 // One entry per other occupant of the defender's tile, in tile order.
-std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender,
-                                                 const WorldMap& rWorldMap);
+std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender);
 
 // Read after collateral lands: while NonCombatantsDestroyedWithoutCombatant is in force, the
 // non-combatants left with no combatant beside them. Immune occupants count for neither.
 std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Unit& rDefender,
-                                                const WorldMap& rWorldMap,
                                                 const std::vector<CollateralHit_t>& rPlan);
 
 } // namespace ac

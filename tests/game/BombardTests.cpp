@@ -129,10 +129,10 @@ TEST_CASE("Bombard range includes adjacent and the configured edge", "[bombard]"
     Faction& player = fixture.MakeFaction();
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "bombard"});
 
-    CHECK(IsWithinBombardRange(attacker, fixture.At(9, 9), fixture.map));
-    CHECK(IsWithinBombardRange(attacker, fixture.At(10, 10), fixture.map));
-    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(8, 8), fixture.map));
-    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(11, 11), fixture.map));
+    CHECK(IsWithinBombardRange(attacker, fixture.At(9, 9)));
+    CHECK(IsWithinBombardRange(attacker, fixture.At(10, 10)));
+    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(8, 8)));
+    CHECK_FALSE(IsWithinBombardRange(attacker, fixture.At(11, 11)));
 
     OrderHarness_ orders(fixture, 1);
     const int before = attacker.GetMoveFragmentsRemaining();
@@ -141,7 +141,7 @@ TEST_CASE("Bombard range includes adjacent and the configured edge", "[bombard]"
     CHECK(attacker.GetMoveFragmentsRemaining() == before);
 
     Unit& plain = fixture.MakeUnit(player, 8, 6, {"test_chassis"});
-    CHECK_FALSE(IsWithinBombardRange(plain, fixture.At(9, 7), fixture.map));
+    CHECK_FALSE(IsWithinBombardRange(plain, fixture.At(9, 7)));
 }
 
 TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP floor", "[bombard]")
@@ -415,14 +415,14 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     player.RebuildVisibility();
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(fogged));
-    CHECK_FALSE(IsUnitVisibleTo(player, fogged, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, fogged));
 
     OrderHarness_ orders(fixture, 1);
     const auto strike = orders.orders.TryBombard(attacker, fogged.GetTile());
     REQUIRE(strike);
     REQUIRE(strike->combats.size() == 1);
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(fogged));
-    CHECK_FALSE(IsUnitVisibleTo(player, fogged, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, fogged));
     CHECK_FALSE(fogged.GetOrder().has_value());
     CHECK_FALSE(player.GetVisibleMap().IsVisible(fogged.GetTile()));
 
@@ -432,7 +432,7 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     bystander.SetOrder(HoldOrder_t{});
     player.RebuildVisibility();
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(artillery));
-    CHECK_FALSE(IsUnitVisibleTo(player, artillery, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, artillery));
 
     Unit& second = fixture.MakeUnit(player, 6, 10, {"test_chassis", "bombard"});
     const auto duel = orders.orders.TryBombard(second, artillery.GetTile());
@@ -441,8 +441,8 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK(duel->combats.front().defenderId == artillery.GetUnitId());
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(artillery));
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(bystander));
-    CHECK_FALSE(IsUnitVisibleTo(player, artillery, fixture.ctx));
-    CHECK_FALSE(IsUnitVisibleTo(player, bystander, fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(player, artillery));
+    CHECK_FALSE(IsUnitVisibleTo(player, bystander));
     CHECK_FALSE(artillery.GetOrder().has_value());
     CHECK(bystander.GetOrder().has_value());
 }
@@ -458,13 +458,13 @@ TEST_CASE("A bombard-capable hostile answers with a duel and no unit takes a str
     Unit& infantry = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const Tile& rTarget = fixture.At(9, 9);
 
-    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, fixture.ctx) == nullptr);
-    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, fixture.ctx)
+    CHECK(ArtilleryDuelTarget(attacker, rTarget) == nullptr);
+    CHECK(BombardStrikeTargets(attacker, rTarget)
           == std::vector<Unit*>{&infantry});
 
     Unit& artillery = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "bombard"});
-    CHECK(ArtilleryDuelTarget(attacker, rTarget, fixture.map, fixture.ctx) == &artillery);
-    CHECK(BombardStrikeTargets(attacker, rTarget, fixture.map, fixture.ctx).empty());
+    CHECK(ArtilleryDuelTarget(attacker, rTarget) == &artillery);
+    CHECK(BombardStrikeTargets(attacker, rTarget).empty());
 }
 
 TEST_CASE("Only an empty tile offers improvements to wreck, never its base", "[bombard]")
@@ -474,10 +474,10 @@ TEST_CASE("Only an empty tile offers improvements to wreck, never its base", "[b
     Tile& rTile = fixture.At(9, 9);
     rTile.AddImprovement(fixture.improvements.Get("Farm"));
     rTile.AddImprovement(fixture.improvements.Get("Base"));
-    CHECK(BombardImprovementTargets(rTile, fixture.map) == std::vector<std::string>{"Farm"});
+    CHECK(BombardImprovementTargets(rTile) == std::vector<std::string>{"Farm"});
 
     fixture.MakeUnit(fixture.MakeFaction(), 9, 9, {"test_chassis"});
-    CHECK(BombardImprovementTargets(rTile, fixture.map).empty());
+    CHECK(BombardImprovementTargets(rTile).empty());
 }
 
 TEST_CASE("An attack costs one move point unless it ends the turn; a bombard costs the rest",

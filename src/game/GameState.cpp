@@ -632,9 +632,9 @@ const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
 }
 
 std::optional<CombatResult_t> GameState::TryInterceptAttack(
-    Unit& rAttacker, Unit& rDefender, TileEffectsContext& rTileEffects, std::mt19937& rRng)
+    Unit& rAttacker, Unit& rDefender, std::mt19937& rRng)
 {
-    return ac::TryInterceptAttack(*this, rAttacker, rDefender, rTileEffects, rRng);
+    return ac::TryInterceptAttack(*this, rAttacker, rDefender, rRng);
 }
 
 BaseConquestResult_t GameState::ResolvePostCombatBaseConquest(

@@ -180,12 +180,9 @@ TEST_CASE("Sea-base assault: attack needs pods for land; capture is flag-gated",
     CHECK(CanCaptureBase(amph));
     CHECK(CanCaptureBase(sea));
 
-    WorldMap& rMap = game.fixtures.state.GetWorldMap();
-    const InteractionGridsConfig_t& rGrids =
-        game.fixtures.state.GetTileEffects().GetInteractionGrids();
-    CHECK_FALSE(CanAttackTile(land, rBase.GetTile(), rMap, rGrids));
-    CHECK(CanAttackTile(amph, rBase.GetTile(), rMap, rGrids));
-    CHECK(CanAttackTile(sea, rBase.GetTile(), rMap, rGrids));
+    CHECK_FALSE(CanAttackTile(land, rBase.GetTile()));
+    CHECK(CanAttackTile(amph, rBase.GetTile()));
+    CHECK(CanAttackTile(sea, rBase.GetTile()));
 }
 
 TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conquest][amphibious]")
@@ -766,7 +763,7 @@ TEST_CASE("Planning a cross-species capture keeps one pop and sends half the res
     CHECK(outcome.escapePods == 2);
     CHECK(outcome.minFacilitiesDestroyed <= outcome.maxFacilitiesDestroyed);
     CHECK(rBase.GetPopulation().GetSize() == 5);
-    CHECK(ConquestOnEntry(attacker, rBase, game.fixtures.state.GetWorldMap())
+    CHECK(ConquestOnEntry(attacker, rBase)
           == ConquestKind_t::Capture);
 }
 
@@ -787,13 +784,12 @@ TEST_CASE("Killing an undefended base's last defender costs a casualty pop", "[u
 {
     ConquestGame_ game;
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
-    const WorldMap& rMap = game.fixtures.state.GetWorldMap();
     const Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
-    CHECK(ConquestOnLastDefenderKill(attacker, rBase, rMap)
+    CHECK(ConquestOnLastDefenderKill(attacker, rBase)
           == ConquestKind_t::LastDefenderCasualty);
 
     game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"});
-    CHECK_FALSE(ConquestOnLastDefenderKill(attacker, rBase, rMap).has_value());
+    CHECK_FALSE(ConquestOnLastDefenderKill(attacker, rBase).has_value());
 }
 
 TEST_CASE("Native life that kills a base's last defender raids it", "[unit][conquest]")
@@ -802,6 +798,6 @@ TEST_CASE("Native life that kills a base's last defender raids it", "[unit][conq
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
     const Unit& worm =
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "native_life_chassis"});
-    CHECK(ConquestOnLastDefenderKill(worm, rBase, game.fixtures.state.GetWorldMap())
+    CHECK(ConquestOnLastDefenderKill(worm, rBase)
           == ConquestKind_t::NativeRaid);
 }

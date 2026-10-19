@@ -84,7 +84,7 @@ std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& 
     for (Unit* pUnit : rGameState.GetWorldMap().GetAllUnitsOnTile(rTile))
     {
         if (pUnit && &pUnit->GetFaction() != &rProbeFaction
-            && IsUnitVisibleTo(rProbeFaction, *pUnit, rGameState.GetTileEffects()))
+            && IsUnitVisibleTo(rProbeFaction, *pUnit))
         {
             return ProbeTarget_t{ProbeUnitTarget_t{*pUnit}, pUnit->GetFaction(), rTile};
         }

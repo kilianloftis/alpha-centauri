@@ -227,7 +227,7 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
 {
     const WorldMap& rMap = rPathfinder.GetWorldMap();
     if (rMover.GetFlag(RuleFlagId_t::Bombard) && pGameState
-        && IsWithinBombardRange(rMover, rDest, rMap))
+        && IsWithinBombardRange(rMover, rDest))
     {
         m_bBombardRequested = true;
         m_pInteractTarget = &rDest;
@@ -244,7 +244,7 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
                    : nullptr;
     const Unit* pAttackableHostile =
         (pGameState && !rMover.GetFlag(RuleFlagId_t::Bombard))
-            ? FindAttackableHostileOnTile(rMover, rDest, rMap, pGameState->GetTileEffects())
+            ? FindAttackableHostileOnTile(rMover, rDest)
             : nullptr;
 
     if (bAdjacent

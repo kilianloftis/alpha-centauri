@@ -1,5 +1,7 @@
 #include "game/visibility/VisibilityRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -81,8 +83,7 @@ bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const st
 
 } // namespace
 
-bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
-                     const TileEffectsContext& rTileEffects)
+bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject)
 {
     if (rSubject.GetFaction().GetFactionId() == rObserver.GetFactionId())
     {
@@ -106,6 +107,8 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
         }
     }
 
+    const GameState& rGame = CurrentGameState();
+    const TileEffectsContext& rTileEffects = rGame.GetTileEffects();
     const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);
     std::unordered_set<std::string> channels;
     CollectConcealmentChannels_(rSubject, areaEffects, channels);

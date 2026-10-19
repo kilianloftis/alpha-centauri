@@ -366,7 +366,7 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
         fixture.state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
     Unit& shrouded = MakeUnit_(fixture, enemy, 10, 2, nullptr, {"test_chassis"}, designs);
     fixture.pPlayer->RebuildVisibility();
-    CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded, fixture.state.GetTileEffects()));
+    CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded));
 
     WorldDisplay display(fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen());
     display.Render(fixture.graphics);

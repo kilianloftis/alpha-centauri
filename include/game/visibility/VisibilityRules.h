@@ -6,7 +6,6 @@ namespace ac
 {
 
 class Faction;
-class TileEffectsContext;
 class Unit;
 
 // Whether rObserver can see rSubject as a unit (distinct from tile fog-of-war).
@@ -20,8 +19,7 @@ class Unit;
 // pierces. Tile-area Conceal is gated by AppliesForFaction for the subject (terrain
 // Conceal stays universal via unset owner). Map markers, tile picking, and attack all
 // use this check.
-bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
-                     const TileEffectsContext& rTileEffects);
+bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject);
 
 // Whether observer knows which faction owns rSubject: its own units, and any unit without Covert.
 // TODO: detection — a covert unit's owner becomes known to an observer that detects it.

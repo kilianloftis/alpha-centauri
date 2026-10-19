@@ -3,7 +3,6 @@
 #include "game/combat/CombatRules.h"
 #include "game/combat/PlanetPearls.h"
 #include "game/faction/Faction.h"
-#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitManager.h"
 
@@ -12,10 +11,9 @@
 namespace ac
 {
 
-void ApplyStackCollateral(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
-                          Unit& rAttacker, Unit& rDefender)
+void ApplyStackCollateral(const MoraleCalculator& rMorale, Unit& rAttacker, Unit& rDefender)
 {
-    const std::vector<CollateralHit_t> plan = PlanStackCollateral(rAttacker, rDefender, rWorldMap);
+    const std::vector<CollateralHit_t> plan = PlanStackCollateral(rAttacker, rDefender);
     for (const CollateralHit_t& rHit : plan)
     {
         Unit& rOccupant = *rHit.pOccupant;
@@ -37,7 +35,7 @@ void ApplyStackCollateral(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
     }
 
     const std::vector<Unit*> unprotected =
-        NonCombatantsLeftUnprotected(rAttacker, rDefender, rWorldMap, plan);
+        NonCombatantsLeftUnprotected(rAttacker, rDefender, plan);
     for (Unit* pNonCombatant : unprotected)
     {
         pNonCombatant->GetFaction().GetUnitManager().DestroyUnit(*pNonCombatant);

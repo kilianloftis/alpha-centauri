@@ -9,7 +9,6 @@ namespace ac
 {
 
 class GameState;
-class TileEffectsContext;
 class Unit;
 
 // Before combat each ready CollectInterceptSources entry deploys and rolls; a miss may lose it.
@@ -17,7 +16,6 @@ class Unit;
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
                                                  Unit& rAttacker,
                                                  Unit& rDefender,
-                                                 TileEffectsContext& rTileEffects,
                                                  std::mt19937& rRng);
 
 } // namespace ac

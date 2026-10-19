@@ -84,7 +84,7 @@ bool StepEvaluator::UnitCountsForPlanner_(const Unit& rMover, const Unit& rOther
     {
         return true;
     }
-    return IsUnitVisibleTo(rMover.GetFaction(), rOther, m_rTileEffects);
+    return IsUnitVisibleTo(rMover.GetFaction(), rOther);
 }
 
 bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,

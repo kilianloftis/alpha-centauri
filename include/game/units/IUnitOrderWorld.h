@@ -13,7 +13,6 @@ namespace ac
 
 class BaseManager;
 class Tile;
-class TileEffectsContext;
 class Unit;
 struct TerraformProject_t;
 
@@ -28,8 +27,7 @@ public:
     virtual BaseManager* FindBaseAt(int tileX, int tileY) = 0;
 
     virtual std::optional<CombatResult_t> TryInterceptAttack(
-        Unit& rAttacker, Unit& rDefender, TileEffectsContext& rTileEffects,
-        std::mt19937& rRng) = 0;
+        Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) = 0;
 
     virtual BaseConquestResult_t ResolvePostCombatBaseConquest(
         Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) = 0;

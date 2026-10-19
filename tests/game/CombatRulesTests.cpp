@@ -110,7 +110,7 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     Unit& inOpen = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
-    const std::vector<CollateralHit_t> open = PlanStackCollateral(attacker, defender, fixture.map);
+    const std::vector<CollateralHit_t> open = PlanStackCollateral(attacker, defender);
     REQUIRE(open.size() == 1);
     CHECK(open.front().pOccupant == &inOpen);
     CHECK_FALSE(open.front().bImmune);
@@ -119,7 +119,7 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
 
     fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
     const std::vector<CollateralHit_t> inBase =
-        PlanStackCollateral(attacker, defender, fixture.map);
+        PlanStackCollateral(attacker, defender);
     REQUIRE(inBase.size() == 1);
     CHECK(inBase.front().bImmune);
     CHECK(inBase.front().damage == 0);
@@ -154,14 +154,14 @@ TEST_CASE("Non-combatants are left unprotected only when no combatant shares the
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
 
-    const std::vector<CollateralHit_t> alone = PlanStackCollateral(attacker, defender, fixture.map);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, alone)
+    const std::vector<CollateralHit_t> alone = PlanStackCollateral(attacker, defender);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, alone)
           == std::vector<Unit*>{&probe});
 
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const std::vector<CollateralHit_t> guarded =
-        PlanStackCollateral(attacker, defender, fixture.map);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, guarded).empty());
+        PlanStackCollateral(attacker, defender);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, guarded).empty());
 }
 
 TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotected",
@@ -176,8 +176,8 @@ TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotecte
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
 
-    const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, defender, fixture.map);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, fixture.map, plan).empty());
+    const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, defender);
+    CHECK(NonCombatantsLeftUnprotected(attacker, defender, plan).empty());
 }
 
 TEST_CASE("A native is wild only while a native-life faction owns it", "[natives]")

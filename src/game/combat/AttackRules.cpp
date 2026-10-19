@@ -1,5 +1,8 @@
 #include "game/combat/AttackRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
 #include "game/combat/CombatRules.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
@@ -82,9 +85,12 @@ void AppendHostiles_(const Unit& rObserver, const Tile& rTile, const WorldMap& r
 
 } // namespace
 
-bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
-                   const InteractionGridsConfig_t& rGrids)
+bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
+
     // No attacking a tile the unit could not enter...
     if (!CanPhysicallyEnterTile(rAttacker, rTargetTile, rWorldMap, rGrids))
     {
@@ -120,16 +126,17 @@ Unit* SelectDefender(const Unit& rAttacker, const std::vector<Unit*>& rCandidate
     return pBest;
 }
 
-Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
-                               const WorldMap& rWorldMap,
-                               const TileEffectsContext& rTileEffects)
+Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+
     std::vector<Unit*> hostiles;
     AppendHostiles_(rObserver, rTile, rWorldMap, hostiles);
     std::vector<Unit*> visible;
     for (Unit* pUnit : hostiles)
     {
-        if (IsUnitVisibleTo(rObserver.GetFaction(), *pUnit, rTileEffects))
+        if (IsUnitVisibleTo(rObserver.GetFaction(), *pUnit))
         {
             visible.push_back(pUnit);
         }
@@ -137,11 +144,12 @@ Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
     return SelectDefender(rObserver, visible);
 }
 
-Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile,
-                                  const WorldMap& rWorldMap,
-                                  const TileEffectsContext& rTileEffects)
+Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile)
 {
-    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
+
     if (rAttacker.GetMoveFragmentsRemaining() <= 0)
     {
         return nullptr;
@@ -150,12 +158,11 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     {
         return nullptr;
     }
-    if (!CanAttackTile(rAttacker, rTargetTile, rWorldMap, rGrids))
+    if (!CanAttackTile(rAttacker, rTargetTile))
     {
         return nullptr;
     }
-    Unit* pDefender =
-        FindVisibleHostileOnTile(rAttacker, rTargetTile, rWorldMap, rTileEffects);
+    Unit* pDefender = FindVisibleHostileOnTile(rAttacker, rTargetTile);
     if (!pDefender)
     {
         return nullptr;
@@ -174,22 +181,25 @@ bool CanBombard(const Unit& rAttacker)
            && rAttacker.GetMoveFragmentsRemaining() > 0;
 }
 
-bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile,
-                          const WorldMap& rWorldMap)
+bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile)
 {
     if (!CanBombard(rAttacker))
     {
         return false;
     }
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const int distance = ChebyshevDistance(rAttacker.GetTile(), rTargetTile, rWorldMap.GetWidth());
     const int range = rAttacker.GetStat(StatId_t::BombardRange);
     return distance >= 1 && distance <= range;
 }
 
-Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile,
-                          const WorldMap& rWorldMap, const TileEffectsContext& rTileEffects)
+Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile)
 {
-    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
+
     std::vector<Unit*> hostiles;
     AppendHostiles_(rAttacker, rTargetTile, rWorldMap, hostiles);
 
@@ -205,11 +215,12 @@ Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile,
     return SelectDefender(rAttacker, duellists);
 }
 
-std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTargetTile,
-                                        const WorldMap& rWorldMap,
-                                        const TileEffectsContext& rTileEffects)
+std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTargetTile)
 {
-    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
+
     std::vector<Unit*> hostiles;
     AppendHostiles_(rAttacker, rTargetTile, rWorldMap, hostiles);
 
@@ -228,9 +239,10 @@ std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTarg
     return targets;
 }
 
-std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile,
-                                                   const WorldMap& rWorldMap)
+std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     if (!rWorldMap.GetUnitsOnTile(rTargetTile).empty()
         || !rWorldMap.GetCargoOnTile(rTargetTile).empty())
     {

@@ -155,7 +155,7 @@ void UnitOrderExecutor::CollectVisibleHostileIds_(const Unit& rObserver,
     m_rWorldMap.GetUnitPositions().ForEachUnit([&](const Unit& rUnit)
     {
         if (rUnit.GetFaction().GetFactionId() != observerId
-            && IsUnitVisibleTo(rFaction, rUnit, m_rTileEffects))
+            && IsUnitVisibleTo(rFaction, rUnit))
         {
             rOut.insert(rUnit.GetUnitId());
         }
@@ -194,7 +194,7 @@ void UnitOrderExecutor::CancelMoveOrderIfNewHostile_(
 Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
                                                   const Tile& rTile) const
 {
-    return ac::FindVisibleHostileOnTile(rObserver, rTile, m_rWorldMap, m_rTileEffects);
+    return ac::FindVisibleHostileOnTile(rObserver, rTile);
 }
 
 bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger)
@@ -346,7 +346,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
                                                            const Tile& rTargetTile)
 {
     Unit* pDefender =
-        FindAttackableHostileOnTile(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+        FindAttackableHostileOnTile(rAttacker, rTargetTile);
     if (!pDefender)
     {
         return std::nullopt;
@@ -358,7 +358,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     if (m_pWorld)
     {
         if (std::optional<CombatResult_t> intercepted =
-                m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
+                m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rRng))
         {
             // A defender lost to its own intercept was never fought: the attack is spent, with no
             // kill to promote and no last defender lost in battle.
@@ -408,20 +408,16 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     Unit& rAttacker, const Tile& rTargetTile)
 {
-    if (!IsWithinBombardRange(rAttacker, rTargetTile, m_rWorldMap))
+    if (!IsWithinBombardRange(rAttacker, rTargetTile))
     {
         return std::nullopt;
     }
 
     BombardResult_t result;
-    Unit* pDuelTarget =
-        ArtilleryDuelTarget(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
-    const std::vector<Unit*> strikeTargets =
-        BombardStrikeTargets(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
-    const std::vector<std::string> improvementTargets =
-        BombardImprovementTargets(rTargetTile, m_rWorldMap);
-    const std::vector<HostileAct_t> acts =
-        BombardHostileActs(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
+    Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTargetTile);
+    const std::vector<Unit*> strikeTargets = BombardStrikeTargets(rAttacker, rTargetTile);
+    const std::vector<std::string> improvementTargets = BombardImprovementTargets(rTargetTile);
+    const std::vector<HostileAct_t> acts = BombardHostileActs(rAttacker, rTargetTile);
 
     if (pDuelTarget)
     {
@@ -743,8 +739,7 @@ Unit& UnitOrderExecutor::ResolveScrambleDefender_(Unit& rAttacker,
                                                   std::vector<const Tile*>& rOutPath)
 {
     rOutPath.clear();
-    Unit* pScrambler = FindScrambler(
-        rAttacker, rOriginalDefender, m_rWorldMap, m_rTileEffects, m_rPathfinder);
+    Unit* pScrambler = FindScrambler(rAttacker, rOriginalDefender);
     if (!pScrambler)
     {
         return rOriginalDefender;

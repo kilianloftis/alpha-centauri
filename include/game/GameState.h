@@ -146,8 +146,7 @@ public:
     const BaseManager* FindBaseAt(int tileX, int tileY) const;
 
     std::optional<CombatResult_t> TryInterceptAttack(
-        Unit& rAttacker, Unit& rDefender, TileEffectsContext& rTileEffects,
-        std::mt19937& rRng) override;
+        Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) override;
     BaseConquestResult_t ResolvePostCombatBaseConquest(
         Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) override;
     BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) override;

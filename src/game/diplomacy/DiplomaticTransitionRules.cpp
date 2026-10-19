@@ -61,10 +61,10 @@ bool HonoredObligationCascades()
     throw std::logic_error("HonoredObligationCascades: unknown defensive obligation mode");
 }
 
-std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget,
-                                             const WorldMap& rWorldMap,
-                                             const TileEffectsContext& rTileEffects)
+std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     std::vector<HostileAct_t> acts;
     const auto addAct = [&](const HostileAct_t& rAct)
     {
@@ -83,15 +83,15 @@ std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& 
             it->bAttributed = it->bAttributed || rAct.bAttributed;
         }
     };
-    if (const Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTarget, rWorldMap, rTileEffects))
+    if (const Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTarget))
     {
         addAct(HostileActAgainst(rAttacker, *pDuelTarget));
     }
-    for (const Unit* pTarget : BombardStrikeTargets(rAttacker, rTarget, rWorldMap, rTileEffects))
+    for (const Unit* pTarget : BombardStrikeTargets(rAttacker, rTarget))
     {
         addAct(HostileActAgainst(rAttacker, *pTarget));
     }
-    if (!BombardImprovementTargets(rTarget, rWorldMap).empty())
+    if (!BombardImprovementTargets(rTarget).empty())
     {
         const FactionId_t owner = rWorldMap.GetTerritory().GetOwner(rTarget);
         addAct(HostileActAgainst(rAttacker, owner));

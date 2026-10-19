@@ -14,7 +14,6 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementConstants.h"
-#include "game/movement/Pathfinder.h"
 #include "game/combat/ScrambleRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
@@ -179,9 +178,6 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
           "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.fixtures.state.GetWorldMap();
-    auto& rEffects = game.fixtures.state.GetTileEffects();
-    const Pathfinder& rPathfinder = game.fixtures.state.GetPathfinder();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
 
@@ -194,8 +190,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         scrambler.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
-              == nullptr);
+        CHECK(FindScrambler(attacker, ground) == nullptr);
     }
 
     SECTION("out of radius")
@@ -206,8 +201,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         game.FullMoves(scrambler);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
-              == nullptr);
+        CHECK(FindScrambler(attacker, ground) == nullptr);
     }
 
     SECTION("enemy air superiority does not scramble for the defender")
@@ -218,8 +212,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         game.FullMoves(enemyScrambler);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 7, 9, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
-              == nullptr);
+        CHECK(FindScrambler(attacker, ground) == nullptr);
     }
 
     SECTION("land attacker fails Domain air condition")
@@ -231,8 +224,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         const Tile& rScramblerTile = scrambler.GetTile();
         Unit& landAttacker =
             game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "test_weapon"});
-        CHECK(FindScrambler(landAttacker, ground, rMap, rEffects, rPathfinder)
-              == nullptr);
+        CHECK(FindScrambler(landAttacker, ground) == nullptr);
 
         const UnitId_t groundId = ground.GetUnitId();
         auto result =
@@ -247,9 +239,6 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
 TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scramble]")
 {
     ScrambleGame_ game;
-    WorldMap& rMap = game.fixtures.state.GetWorldMap();
-    auto& rEffects = game.fixtures.state.GetTileEffects();
-    const Pathfinder& rPathfinder = game.fixtures.state.GetPathfinder();
 
     Unit& ground = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis", "test_weapon"});
     Unit& attacker =
@@ -265,8 +254,7 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(weak);
         game.FullMoves(strong);
-        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
-              == &strong);
+        CHECK(FindScrambler(attacker, ground) == &strong);
     }
 
     SECTION("equal Attack prefers higher HP")
@@ -281,8 +269,7 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
         game.FullMoves(highHp);
         lowHp.SetCurrentHp(3);
         highHp.SetCurrentHp(8);
-        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
-              == &highHp);
+        CHECK(FindScrambler(attacker, ground) == &highHp);
     }
 }
 
@@ -335,8 +322,7 @@ TEST_CASE("Scramble never routes into territory its faction may not enter", "[un
 
     const auto findScrambler = [&]
     {
-        return FindScrambler(attacker, ground, game.fixtures.state.GetWorldMap(),
-                             game.fixtures.state.GetTileEffects(), game.fixtures.state.GetPathfinder());
+        return FindScrambler(attacker, ground);
     };
 
     CHECK(findScrambler() == &scrambler);

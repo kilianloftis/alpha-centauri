@@ -9,14 +9,13 @@ namespace ac
 class Unit;
 class BaseManager;
 class Tile;
-class WorldMap;
 enum class FactionSpecies_t;
 struct BuildingConfig_t;
 
 // Conquest decisions. BaseConquestMutations draws within them and carries them out.
 
 // Owner units that still hold the base against capture.
-bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap);
+bool HasBaseGarrison(const BaseManager& rBase);
 
 // Capturer may take an undefended base once on its tile. Domain / channel-crossing
 // entry is gated by TryStep (CanEnterTile) and the garrison by HasBaseGarrison, so this
@@ -36,14 +35,12 @@ enum class ConquestKind_t
 
 // Stepping onto an undefended foreign base: native life raids it, a unit that may capture
 // takes it.
-std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseManager& rBase,
-                                              const WorldMap& rWorldMap);
+std::optional<ConquestKind_t> ConquestOnEntry(const Unit& rMover, const BaseManager& rBase);
 
 // Killing an undefended base's last defender always costs LastDefenderCasualty; NativeRaid
 // means native life then raids it.
 std::optional<ConquestKind_t> ConquestOnLastDefenderKill(const Unit& rAttacker,
-                                                         const BaseManager& rBase,
-                                                         const WorldMap& rWorldMap);
+                                                         const BaseManager& rBase);
 
 // Pops lost with the last defender (the Additive last_defender_pop_loss).
 int LastDefenderPopLoss(const BaseManager& rBase);

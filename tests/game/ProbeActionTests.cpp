@@ -518,7 +518,7 @@ TEST_CASE("Probe cannot target a concealed unit until contact reveals it",
     Unit& cloaked = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "Cloaking_Device"});
     const Tile& rTargetTile = cloaked.GetTile();
 
-    REQUIRE_FALSE(IsUnitVisibleTo(*game.pPlayer, cloaked, game.fixtures.state.GetTileEffects()));
+    REQUIRE_FALSE(IsUnitVisibleTo(*game.pPlayer, cloaked));
     CHECK_FALSE(ResolveProbeTarget(probe, rTargetTile, ProbeTargetKind_t::Unit, game.fixtures.state)
                     .has_value());
     CHECK_FALSE(game.fixtures.state.GetProbeActions().CanOpenProbeActions(
