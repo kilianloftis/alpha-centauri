@@ -142,10 +142,10 @@ TEST_CASE("Founding is illegal within 2 tiles of an existing base", "[unit][foun
     RebuildTerritory_(fixture);
 
     const auto bases = AllBases_(fixture);
-    CHECK_FALSE(CanFoundBaseAt(fixture.At(8, 8), faction.GetFactionId(), fixture.map, bases)); // 0
-    CHECK_FALSE(CanFoundBaseAt(fixture.At(9, 9), faction.GetFactionId(), fixture.map, bases)); // 1
-    CHECK_FALSE(CanFoundBaseAt(fixture.At(10, 10), faction.GetFactionId(), fixture.map, bases)); // 2
-    CHECK(CanFoundBaseAt(fixture.At(11, 11), faction.GetFactionId(), fixture.map, bases));       // 3
+    CHECK_FALSE(CanFoundBaseAt(fixture.At(8, 8), faction.GetFactionId(), bases)); // 0
+    CHECK_FALSE(CanFoundBaseAt(fixture.At(9, 9), faction.GetFactionId(), bases)); // 1
+    CHECK_FALSE(CanFoundBaseAt(fixture.At(10, 10), faction.GetFactionId(), bases)); // 2
+    CHECK(CanFoundBaseAt(fixture.At(11, 11), faction.GetFactionId(), bases));       // 3
 }
 
 TEST_CASE("Founding is illegal in another faction's territory", "[unit][found-base]")
@@ -163,8 +163,8 @@ TEST_CASE("Founding is illegal in another faction's territory", "[unit][found-ba
     REQUIRE(ChebyshevDistance(fixture.At(8, 8), inOwnerTerritory, fixture.map.GetWidth()) >= 3);
     REQUIRE(fixture.map.GetTerritory().GetOwner(inOwnerTerritory) == owner.GetFactionId());
 
-    CHECK_FALSE(CanFoundBaseAt(inOwnerTerritory, other.GetFactionId(), fixture.map, AllBases_(fixture)));
-    CHECK(CanFoundBaseAt(inOwnerTerritory, owner.GetFactionId(), fixture.map, AllBases_(fixture)));
+    CHECK_FALSE(CanFoundBaseAt(inOwnerTerritory, other.GetFactionId(), AllBases_(fixture)));
+    CHECK(CanFoundBaseAt(inOwnerTerritory, owner.GetFactionId(), AllBases_(fixture)));
 }
 
 TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[unit][found-base]")

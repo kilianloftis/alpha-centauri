@@ -9,7 +9,6 @@ namespace ac
 class BaseManager;
 class Tile;
 class Unit;
-class WorldMap;
 class TerritoryMap;
 
 // Colony pods may not found within this Chebyshev distance of any existing base
@@ -17,18 +16,15 @@ class TerritoryMap;
 inline constexpr int k_MinBaseFoundingSeparation = 3;
 
 // True when any live base is within Chebyshev distance < k_MinBaseFoundingSeparation.
-bool IsTooCloseToAnyBase(const Tile& rTile, const WorldMap& rWorldMap,
-                         const std::vector<const BaseManager*>& rBases);
+bool IsTooCloseToAnyBase(const Tile& rTile, const std::vector<const BaseManager*>& rBases);
 
 // True when the tile belongs to a faction other than the founder (unowned / own OK).
 bool IsInForeignTerritory(const Tile& rTile, FactionId_t founderFactionId,
                           const TerritoryMap& rTerritory);
 
 // Territory + spacing checks only (does not require a FoundBase-capable unit).
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const WorldMap& rWorldMap,
+bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
                     const std::vector<const BaseManager*>& rBases);
-
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId);
 
 // A FoundBase unit founds where it stands: only a sea unit on water, and CanFoundBaseAt.
 bool CanFoundBase(const Unit& rUnit);

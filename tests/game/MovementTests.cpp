@@ -124,8 +124,7 @@ TEST_CASE("Land reaches water only by transport; pods are not open ocean",
         CHECK_FALSE(move.steps.CanStep(land, land.GetTile(), fixture.At(9, 9)));
         // Holding the tile is a separate question from reaching it — a garrison whose
         // carrier dies in its own sea base still survives there.
-        CHECK(CanHoldTileWithoutCarrier(land, fixture.At(9, 9), fixture.map,
-                                   fixture.dataContext.interactionGrids));
+        CHECK(CanHoldTileWithoutCarrier(land, fixture.At(9, 9)));
     }
 
     SECTION("friendly transport (sea unit with cargo capacity)")
@@ -146,9 +145,8 @@ TEST_CASE("Land reaches water only by transport; pods are not open ocean",
     {
         Unit& amph = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_amphibious"});
         CHECK_FALSE(move.steps.CanStep(amph, amph.GetTile(), fixture.At(9, 9)));
-        CHECK_FALSE(CanEnterTileTerrain(amph, fixture.At(9, 9), fixture.dataContext.interactionGrids));
-        CHECK_FALSE(CanEnterTile(amph, fixture.At(9, 9), fixture.map,
-                                 fixture.dataContext.interactionGrids));
+        CHECK_FALSE(CanEnterTileTerrain(amph, fixture.At(9, 9)));
+        CHECK_FALSE(CanEnterTile(amph, fixture.At(9, 9)));
     }
 }
 

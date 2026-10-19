@@ -92,7 +92,7 @@ Tile* PickStartingBaseTile_(WorldMap& rMap,
         {
             return false;
         }
-        return !IsTooCloseToAnyBase(rTile, rMap, rPlacedBases);
+        return !IsTooCloseToAnyBase(rTile, rPlacedBases);
     };
 
     for (const auto& [x, y] : rPreferred)
@@ -130,7 +130,7 @@ Tile* FindPreviewBaseTile_(WorldMap& rMap, const Tile& rNear, bool bWantWater,
             continue;
         }
         if (rMap.GetWorkedTiles().IsWorked(*pTile)
-            || IsTooCloseToAnyBase(*pTile, rMap, rPlacedBases))
+            || IsTooCloseToAnyBase(*pTile, rPlacedBases))
         {
             continue;
         }

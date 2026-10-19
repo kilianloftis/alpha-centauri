@@ -88,11 +88,10 @@ void AppendHostiles_(const Unit& rObserver, const Tile& rTile, const WorldMap& r
 bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile)
 {
     const GameState& rGame = CurrentGameState();
-    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
 
     // No attacking a tile the unit could not enter...
-    if (!CanPhysicallyEnterTile(rAttacker, rTargetTile, rWorldMap, rGrids))
+    if (!CanPhysicallyEnterTile(rAttacker, rTargetTile))
     {
         return false;
     }

@@ -35,10 +35,9 @@ FreeByOrigin_t ClearOrdersAndGroupFreeByOrigin_(const std::vector<Unit*>& rOnHos
     return freeByOrigin;
 }
 
-bool TryMoveUnitTo_(Unit& rUnit, const Tile& rDest, WorldMap& rWorldMap,
-                    const InteractionGridsConfig_t& rGrids)
+bool TryMoveUnitTo_(Unit& rUnit, const Tile& rDest, WorldMap& rWorldMap)
 {
-    if (!CanHoldTileWithoutCarrier(rUnit, rDest, rWorldMap, rGrids))
+    if (!CanHoldTileWithoutCarrier(rUnit, rDest))
     {
         return false;
     }
@@ -52,12 +51,11 @@ bool TryMoveUnitTo_(Unit& rUnit, const Tile& rDest, WorldMap& rWorldMap,
 }
 
 void RelocateUnitsIndividually_(std::vector<Unit*>& rUnits, WorldMap& rWorldMap,
-                                const InteractionGridsConfig_t& rGrids,
                                 EvacuateTerritoryResult_t& rResult)
 {
     for (Unit* pUnit : rUnits)
     {
-        const Tile* pDest = FindNearestOwnTerritoryTile(*pUnit, rWorldMap, rGrids);
+        const Tile* pDest = FindNearestOwnTerritoryTile(*pUnit);
         if (!pDest)
         {
             ++rResult.unitsLeftInPlace;
@@ -71,14 +69,13 @@ void RelocateUnitsIndividually_(std::vector<Unit*>& rUnits, WorldMap& rWorldMap,
 // Moves every pending unit that can hold and place on rDest. Returns those that could not.
 std::vector<Unit*> MoveGroupToDestination_(std::vector<Unit*>& rPending, const Tile& rDest,
                                            WorldMap& rWorldMap,
-                                           const InteractionGridsConfig_t& rGrids,
                                            EvacuateTerritoryResult_t& rResult)
 {
     std::vector<Unit*> remaining;
     remaining.reserve(rPending.size());
     for (Unit* pUnit : rPending)
     {
-        if (TryMoveUnitTo_(*pUnit, rDest, rWorldMap, rGrids))
+        if (TryMoveUnitTo_(*pUnit, rDest, rWorldMap))
         {
             ++rResult.unitsMoved;
         }
@@ -91,12 +88,11 @@ std::vector<Unit*> MoveGroupToDestination_(std::vector<Unit*>& rPending, const T
 }
 
 void EvacuateOriginGroup_(std::vector<Unit*> pending, WorldMap& rWorldMap,
-                          const InteractionGridsConfig_t& rGrids,
                           EvacuateTerritoryResult_t& rResult)
 {
     while (!pending.empty())
     {
-        const Tile* pDest = FindNearestOwnTerritoryTile(*pending.front(), rWorldMap, rGrids);
+        const Tile* pDest = FindNearestOwnTerritoryTile(*pending.front());
         if (!pDest)
         {
             rResult.unitsLeftInPlace += static_cast<int>(pending.size());
@@ -104,34 +100,33 @@ void EvacuateOriginGroup_(std::vector<Unit*> pending, WorldMap& rWorldMap,
         }
 
         std::vector<Unit*> remaining =
-            MoveGroupToDestination_(pending, *pDest, rWorldMap, rGrids, rResult);
+            MoveGroupToDestination_(pending, *pDest, rWorldMap, rResult);
         if (remaining.size() == pending.size())
         {
-            RelocateUnitsIndividually_(remaining, rWorldMap, rGrids, rResult);
+            RelocateUnitsIndividually_(remaining, rWorldMap, rResult);
             return;
         }
         pending = std::move(remaining);
     }
 }
 
-EvacuateTerritoryResult_t EvacuateUnits_(const std::vector<Unit*>& rUnits, WorldMap& rWorldMap,
-                                         const InteractionGridsConfig_t& rGrids)
+EvacuateTerritoryResult_t EvacuateUnits_(const std::vector<Unit*>& rUnits, WorldMap& rWorldMap)
 {
     EvacuateTerritoryResult_t result;
     FreeByOrigin_t freeByOrigin = ClearOrdersAndGroupFreeByOrigin_(rUnits);
     for (auto& [pOrigin, units] : freeByOrigin)
     {
         (void)pOrigin;
-        EvacuateOriginGroup_(std::move(units), rWorldMap, rGrids, result);
+        EvacuateOriginGroup_(std::move(units), rWorldMap, result);
     }
     return result;
 }
 
 } // namespace
 
-EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
-    Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
-    const InteractionGridsConfig_t& rGrids)
+EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(Faction& rGuest,
+                                                     FactionId_t hostTerritoryOwner,
+                                                     WorldMap& rWorldMap)
 {
     std::vector<Unit*> onHost;
     for (Unit& rUnit : rGuest.GetUnitManager().Units())
@@ -141,22 +136,21 @@ EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
             onHost.push_back(&rUnit);
         }
     }
-    return EvacuateUnits_(onHost, rWorldMap, rGrids);
+    return EvacuateUnits_(onHost, rWorldMap);
 }
 
-EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
-    Faction& rGuest, const Faction& rHost, WorldMap& rWorldMap,
-    const InteractionGridsConfig_t& rGrids)
+EvacuateTerritoryResult_t EvacuateUnitsSharingWith(Faction& rGuest, const Faction& rHost,
+                                                   WorldMap& rWorldMap)
 {
     std::vector<Unit*> sharing;
     for (Unit& rUnit : rGuest.GetUnitManager().Units())
     {
-        if (SharesTileWith(rUnit, rHost, rWorldMap))
+        if (SharesTileWith(rUnit, rHost))
         {
             sharing.push_back(&rUnit);
         }
     }
-    return EvacuateUnits_(sharing, rWorldMap, rGrids);
+    return EvacuateUnits_(sharing, rWorldMap);
 }
 
 } // namespace ac

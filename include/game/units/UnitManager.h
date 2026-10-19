@@ -19,7 +19,6 @@ class BaseManager;
 class Faction;
 class UnitPositionIndex;
 class MoraleCalculator;
-struct InteractionGridsConfig_t;
 
 class UnitManager
 {
@@ -42,8 +41,7 @@ public:
 
     // rMorale is the game-wide calculator owned by GameDataContext; every unit this manager
     // creates borrows it, so morale rules need not be threaded through create/transfer calls.
-    UnitManager(Faction& rFaction, const MoraleCalculator& rMorale,
-                const InteractionGridsConfig_t& rInteractionGrids);
+    UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
     ~UnitManager() = default;
 
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
@@ -131,7 +129,6 @@ private:
 
     Faction& m_rFaction;
     const MoraleCalculator& m_rMorale;
-    const InteractionGridsConfig_t& m_rInteractionGrids;
     std::vector<std::unique_ptr<Unit>> m_units;
     std::vector<std::unique_ptr<Unit>> m_pendingDestructions;
     std::size_t m_destructionDeferralDepth = 0;

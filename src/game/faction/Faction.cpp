@@ -78,8 +78,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pResearchSelector(std::make_unique<ResearchSelector>(*m_pResearch, seed ^ 0x9E3779B9u))
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(
           *rDataContext.socialPolicyRegistry))
-    , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator,
-                                             rDataContext.interactionGrids))
+    , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
     , m_effectsPool(*this, *rDataContext.buildingRegistry, m_baseListRevision,
                     rDataContext.tileYieldRules.effects, *rDataContext.socialRatingRegistry,
                     rDataContext.productionConfig->effects,

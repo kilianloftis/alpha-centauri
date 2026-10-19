@@ -21,13 +21,13 @@ TEST_CASE("Only Treaty keeps a faction's units out of the other's territory",
          {DiplomaticStatus_t::Neutral, DiplomaticStatus_t::Pact, DiplomaticStatus_t::Vendetta})
     {
         game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), status);
-        CHECK(CanEnterTile(rScout, game.At(10, 10), game.Map(), game.Grids()));
+        CHECK(CanEnterTile(rScout, game.At(10, 10)));
     }
 
     game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                             DiplomaticStatus_t::Treaty);
-    CHECK_FALSE(CanEnterTile(rScout, game.At(10, 10), game.Map(), game.Grids()));
-    CHECK(CanEnterTile(rScout, game.At(6, 6), game.Map(), game.Grids()));
+    CHECK_FALSE(CanEnterTile(rScout, game.At(10, 10)));
+    CHECK(CanEnterTile(rScout, game.At(6, 6)));
 }
 
 TEST_CASE("Only Pact partners may stand on the same tile", "[diplomacy][status][movement]")
@@ -36,14 +36,14 @@ TEST_CASE("Only Pact partners may stand on the same tile", "[diplomacy][status][
     Unit& rMover = game.MakeUnit(*game.pA, 11, 3);
     Unit& rOther = game.MakeUnit(*game.pB, 12, 4);
 
-    CHECK_FALSE(HasFriendlyOccupant(rMover, rOther.GetTile(), game.Map()));
+    CHECK_FALSE(HasFriendlyOccupant(rMover, rOther.GetTile()));
     MoveOrder_t order;
     CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
 
     game.Ledger().SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                             DiplomaticStatus_t::Pact);
-    CHECK(HasFriendlyOccupant(rMover, rOther.GetTile(), game.Map()));
-    CHECK(HasFriendlyBase(rMover, game.pBaseB->GetTile(), game.Map()));
+    CHECK(HasFriendlyOccupant(rMover, rOther.GetTile()));
+    CHECK(HasFriendlyBase(rMover, game.pBaseB->GetTile()));
     CHECK(game.fixtures.state.GetUnitOrderExecutor().TryStep(rMover, rOther.GetTile(), order).bEntered);
     CHECK(&rMover.GetTile() == &rOther.GetTile());
 }

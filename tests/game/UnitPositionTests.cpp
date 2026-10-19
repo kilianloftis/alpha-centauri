@@ -189,7 +189,7 @@ TEST_CASE("GetUnitsOnTile is occupants-only; cargo needs GetCargoOnTile", "[unit
     Unit& carrier = fixture.MakeUnit(
         faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
     Unit& jet = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
-    REQUIRE(TryAttachToTransport(jet, fixture.map));
+    REQUIRE(TryAttachToTransport(jet));
 
     REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).size() == 1);
     CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).front() == &carrier);

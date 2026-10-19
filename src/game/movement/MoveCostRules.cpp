@@ -72,7 +72,7 @@ EntryTerms_t MoveCostRules::Query::EntryTerms(const Tile& rTile) const
     if (rTile.HasFeature(ImprovementIds::k_Fungus) && !bClamp)
     {
         terms.bEndsTurn = true;
-        terms.bRequiresFullCost = !HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap);
+        terms.bRequiresFullCost = !HasFriendlyOccupant(m_rUnit, rTile);
     }
     return terms;
 }

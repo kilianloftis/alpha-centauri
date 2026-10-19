@@ -1,5 +1,7 @@
 #include "game/movement/AirdropRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -30,8 +32,10 @@ bool UnitHasFullMoves_(const Unit& rUnit)
 
 } // namespace
 
-bool TileIsAirdropLaunchPad(const Tile& rTile, const WorldMap& rWorldMap, int factionId)
+bool TileIsAirdropLaunchPad(const Tile& rTile, int factionId)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     return TileProvidesFlag(rTile, RuleFlagId_t::AirdropLaunch, rWorldMap, factionId);
 }
 
@@ -48,12 +52,12 @@ bool OccupantBlocksAirdrop(const Unit& rDropper, const Unit& rOccupant)
     return true;
 }
 
-AirdropLanding_t AirdropLanding(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap)
+AirdropLanding_t AirdropLanding(const Unit& rUnit, const Tile& rDest)
 {
     AirdropLanding_t landing;
     landing.hpAfter = rUnit.GetCurrentHp();
     landing.bEndsTurn = !rUnit.IsCombatUnit();
-    if (TileIsAirdropLaunchPad(rDest, rWorldMap, rUnit.GetFaction().GetFactionId()))
+    if (TileIsAirdropLaunchPad(rDest, rUnit.GetFaction().GetFactionId()))
     {
         return landing;
     }
@@ -71,9 +75,10 @@ AirdropLanding_t AirdropLanding(const Unit& rUnit, const Tile& rDest, const Worl
     return landing;
 }
 
-bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest,
-                          const TileEffectsContext& rTileEffects)
+bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest)
 {
+    const GameState& rGame = CurrentGameState();
+    const TileEffectsContext& rTileEffects = rGame.GetTileEffects();
     const FactionId_t dropperId = rDropper.GetFaction().GetFactionId();
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rDest))
     {
@@ -106,7 +111,7 @@ AirdropEligibility_t CanAttemptAirdrop(const Unit& rUnit)
         return result;
     }
     const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
-    if (!TileIsAirdropLaunchPad(rUnit.GetTile(), rUnit.GetFaction().GetWorldMap(), factionId))
+    if (!TileIsAirdropLaunchPad(rUnit.GetTile(), factionId))
     {
         result.failReason = AirdropFailReason_t::NotOnLaunchPad;
         return result;
@@ -119,8 +124,7 @@ AirdropEligibility_t CanAttemptAirdrop(const Unit& rUnit)
     return result;
 }
 
-AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap,
-                                  const TileEffectsContext& rTileEffects)
+AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest)
 {
     AirdropEligibility_t result = CanAttemptAirdrop(rUnit);
     if (!result.Ok())
@@ -134,6 +138,8 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest, const Wo
         return result;
     }
 
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const Faction& rFaction = rUnit.GetFaction();
     const bool bOrbital = ResolveFlag(rFaction, RuleFlagId_t::OrbitalInsertion);
     if (!bOrbital)
@@ -147,8 +153,7 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest, const Wo
         }
     }
 
-    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
-    if (!CanEnterTile(rUnit, rDest, rWorldMap, rGrids))
+    if (!CanEnterTile(rUnit, rDest))
     {
         result.failReason = AirdropFailReason_t::CannotEnter;
         return result;
@@ -186,7 +191,7 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest, const Wo
         }
     }
 
-    if (IsAirdropInterdicted(rUnit, rDest, rTileEffects))
+    if (IsAirdropInterdicted(rUnit, rDest))
     {
         result.failReason = AirdropFailReason_t::Interdicted;
         return result;

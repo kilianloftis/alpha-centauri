@@ -1,5 +1,8 @@
 #include "game/movement/MovementRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -36,8 +39,7 @@ InteractionQuery_t EnterQuery_(const Unit& rMover, const Tile& rTile)
 
 } // namespace
 
-bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
-                     const InteractionGridsConfig_t& rGrids)
+bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
     if (rProjector.IsEmbarked())
     {
@@ -50,6 +52,8 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
     // The subject is the actor: it is the unit whose move is being gated, and overrides
     // resolve from the acting unit. That is what lets a unit declare "nothing holds me"
     // (Cloaking Device, Probe Team) as a zoc deny on itself — non-default where stock allows.
+    const GameState& rGame = CurrentGameState();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
     InteractionQuery_t q;
     q.grid = InteractionGridId_t::Zoc;
     q.actorDomain = rSubject.GetDomain();
@@ -58,32 +62,35 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
     return ResolveInteractionCell(rGrids, q, &rSubject, ctx) == InteractionCell_t::Allow;
 }
 
-bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
-                         const InteractionGridsConfig_t& rGrids)
+bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
     return ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx)
         == InteractionCell_t::Allow;
 }
 
-bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
-                               const WorldMap& rWorldMap,
-                               const InteractionGridsConfig_t& rGrids)
+bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile)
 {
-    if (CanEnterTileTerrain(rMover, rTile, rGrids))
+    if (CanEnterTileTerrain(rMover, rTile))
     {
         return true;
     }
     // Any unit may *hold* a tile that harbors its domain. This grants no entry: a land unit
     // still reaches its own sea base only by transport or pods.
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     return TileHarbors(rTile, rMover.GetDomain(), rMover.GetFaction().GetFactionId(),
                        rWorldMap.GetTerritory());
 }
 
-bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                            const InteractionGridsConfig_t& rGrids)
+bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
     if (ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx)
@@ -104,18 +111,21 @@ bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile, const WorldMa
     // too, so TileHarbors is deliberately not consulted here — it governs only whether a
     // unit already there may stay (CanHoldTileWithoutCarrier / SurvivesCarrierLoss).
     return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
-        && FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
+        && FindBoardableTransport(rMover, rTile) != nullptr;
 }
 
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                  const InteractionGridsConfig_t& rGrids)
+bool CanEnterTile(const Unit& rMover, const Tile& rTile)
 {
-    return CanPhysicallyEnterTile(rMover, rTile, rWorldMap, rGrids)
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    return CanPhysicallyEnterTile(rMover, rTile)
         && MayEnterTerritoryOf(rMover, rWorldMap.GetTerritory().GetOwner(rTile));
 }
 
-bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
+bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
         if (pUnit && pUnit != &rMover
@@ -127,12 +137,14 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& 
     return false;
 }
 
-bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
 {
     if (!rTile.HasImprovement(ImprovementIds::k_Base))
     {
         return false;
     }
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const FactionId_t owner = rWorldMap.GetTerritory().GetOwner(rTile);
     return owner != k_NoFactionOwner && MayShareTiles(rMover.GetFaction(), owner);
 }

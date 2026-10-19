@@ -300,14 +300,14 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
     Unit& airTransport = fixture.MakeUnit(faction, 8, 8, {"test_flight_chassis", "test_air_transport"});
     Unit& land = fixture.MakeUnit(faction, 7, 7, {"test_chassis"});
     // Bare tile does not harbor air — air carrier cannot load.
-    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 8), fixture.map));
+    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 8)));
     fixture.MoveUnit(land, 8, 8);
     CHECK_FALSE(harness.orders.TryAttachToTransport(land));
 
     fixture.MakeFactionBase(faction, 7, 9);
     fixture.MoveUnit(airTransport, 7, 9);
     fixture.MoveUnit(land, 7, 9);
-    CHECK(CanLoadAtTile(airTransport, fixture.At(7, 9), fixture.map));
+    CHECK(CanLoadAtTile(airTransport, fixture.At(7, 9)));
     REQUIRE(harness.orders.TryAttachToTransport(land));
     CHECK(land.IsEmbarked());
 
@@ -323,7 +323,7 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
     fixture.MakeUnit(faction, 8, 10, {"test_sea_chassis", "test_carrier_deck"});
     fixture.MoveUnit(airTransport, 8, 10);
     Unit& land2 = fixture.MakeUnit(faction, 8, 10, {"test_chassis"});
-    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 10), fixture.map));
+    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 10)));
     CHECK_FALSE(harness.orders.TryAttachToTransport(land2));
 }
 
@@ -336,11 +336,11 @@ TEST_CASE("A hostile base is not an air-transport load site", "[transport]")
 
     Unit& airTransport = fixture.MakeUnit(player, 8, 10, {"test_flight_chassis", "test_air_transport"});
     fixture.MakeFactionBase(enemy, 8, 10);
-    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 10), fixture.map));
+    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(8, 10)));
 
     fixture.MakeFactionBase(player, 7, 9);
     fixture.MoveUnit(airTransport, 7, 9);
-    CHECK(CanLoadAtTile(airTransport, fixture.At(7, 9), fixture.map));
+    CHECK(CanLoadAtTile(airTransport, fixture.At(7, 9)));
 }
 
 TEST_CASE("Attack on transport tile hits carrier not cargo", "[transport][combat]")
@@ -354,7 +354,7 @@ TEST_CASE("Attack on transport tile hits carrier not cargo", "[transport][combat
     MakeWater_(fixture.At(9, 9));
     Unit& transport = fixture.MakeUnit(enemy, 9, 9, {"test_sea_chassis", "test_transport"});
     Unit& cargo = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
-    REQUIRE(ac::TryAttachToTransport(cargo, fixture.map));
+    REQUIRE(ac::TryAttachToTransport(cargo));
 
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit* pTarget = harness.orders.FindVisibleHostileOnTile(attacker, fixture.At(9, 9));

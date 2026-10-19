@@ -1,8 +1,8 @@
 #include "game/base/FoundBaseRules.h"
 
 #include "game/CurrentGameState.h"
-#include "game/faction/Faction.h"
 #include "game/GameState.h"
+#include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
@@ -37,9 +37,10 @@ std::vector<const BaseManager*> CollectAllBases_(const GameState& rGameState)
 
 } // namespace
 
-bool IsTooCloseToAnyBase(const Tile& rTile, const WorldMap& rWorldMap,
-                         const std::vector<const BaseManager*>& rBases)
+bool IsTooCloseToAnyBase(const Tile& rTile, const std::vector<const BaseManager*>& rBases)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const int mapWidth = rWorldMap.GetWidth();
     for (const BaseManager* pBase : rBases)
     {
@@ -62,25 +63,20 @@ bool IsInForeignTerritory(const Tile& rTile, FactionId_t founderFactionId,
     return owner != k_NoFactionOwner && owner != founderFactionId;
 }
 
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId, const WorldMap& rWorldMap,
+bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
                     const std::vector<const BaseManager*>& rBases)
 {
-    if (IsTooCloseToAnyBase(rTile, rWorldMap, rBases))
+    if (IsTooCloseToAnyBase(rTile, rBases))
     {
         return false;
     }
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     if (IsInForeignTerritory(rTile, founderFactionId, rWorldMap.GetTerritory()))
     {
         return false;
     }
     return true;
-}
-
-bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId)
-{
-    const GameState& rGameState = CurrentGameState();
-    return CanFoundBaseAt(rTile, founderFactionId, rGameState.GetWorldMap(),
-                          CollectAllBases_(rGameState));
 }
 
 bool CanFoundBase(const Unit& rUnit)
@@ -94,7 +90,9 @@ bool CanFoundBase(const Unit& rUnit)
     {
         return false;
     }
-    return CanFoundBaseAt(rTile, rUnit.GetFaction().GetFactionId());
+    const GameState& rGame = CurrentGameState();
+    const std::vector<const BaseManager*> bases = CollectAllBases_(rGame);
+    return CanFoundBaseAt(rTile, rUnit.GetFaction().GetFactionId(), bases);
 }
 
 bool FoundedBaseMayOccupyWater(const Unit& rUnit)

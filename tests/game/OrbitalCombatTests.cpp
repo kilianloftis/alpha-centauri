@@ -113,9 +113,9 @@ TEST_CASE("Orbital domain can enter any terrain", "[movement][orbital]")
     Faction& faction = fixture.MakeFaction();
     Unit& missile = fixture.MakeUnit(faction, 8, 8, {"test_orbital_chassis", "test_weapon"});
     CHECK(missile.GetDomain() == UnitDomain_t::Orbital);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 8), fixture.dataContext.interactionGrids));
+    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 8)));
     fixture.At(8, 10).SetElevation(-100);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 10), fixture.dataContext.interactionGrids));
+    CHECK(CanEnterTileTerrain(missile, fixture.At(8, 10)));
 }
 
 TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbital][census]")

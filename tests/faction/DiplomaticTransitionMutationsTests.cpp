@@ -105,7 +105,7 @@ TEST_CASE("An evacuated unit is not set down among units it may not share a tile
         game.MakeUnit(*game.pA, x, y);
     }
 
-    EvacuateUnitsFromTerritory(*game.pB, game.pA->GetFactionId(), game.Map(), game.Grids());
+    EvacuateUnitsFromTerritory(*game.pB, game.pA->GetFactionId(), game.Map());
 
     CHECK(game.Map().GetTerritory().GetOwner(rGuest.GetTile()) == game.pB->GetFactionId());
     CHECK_FALSE(game.SharesAnyTile(*game.pA, *game.pB));

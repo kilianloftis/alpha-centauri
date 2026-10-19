@@ -9,13 +9,13 @@
 namespace ac
 {
 
-bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
+bool TryAttachToTransport(Unit& rPassenger)
 {
     if (rPassenger.IsEmbarked())
     {
         return false;
     }
-    Unit* pCarrier = FindBoardableTransport(rPassenger, rPassenger.GetTile(), rWorldMap);
+    Unit* pCarrier = FindBoardableTransport(rPassenger, rPassenger.GetTile());
     if (!pCarrier)
     {
         return false;
@@ -24,25 +24,23 @@ bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
     return true;
 }
 
-bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap,
-                          const InteractionGridsConfig_t& rGrids)
+bool TryAutoAttachOnEntry(Unit& rPassenger)
 {
-    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile(), rWorldMap, rGrids))
+    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile()))
     {
         return false;
     }
-    return TryAttachToTransport(rPassenger, rWorldMap);
+    return TryAttachToTransport(rPassenger);
 }
 
-bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
+bool TryAutoAttachWhenMustLand(Unit& rPassenger)
 {
-    return TryAttachToTransport(rPassenger, rWorldMap);
+    return TryAttachToTransport(rPassenger);
 }
 
-bool TryUnloadTransportInPlace(Unit& rCarrier, const WorldMap& rWorldMap,
-                               const InteractionGridsConfig_t& rGrids)
+bool TryUnloadTransportInPlace(Unit& rCarrier)
 {
-    if (!CanUnloadTransportInPlace(rCarrier, rWorldMap, rGrids))
+    if (!CanUnloadTransportInPlace(rCarrier))
     {
         return false;
     }

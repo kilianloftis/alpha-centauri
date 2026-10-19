@@ -7,7 +7,6 @@ namespace ac
 
 class Faction;
 class WorldMap;
-struct InteractionGridsConfig_t;
 
 struct EvacuateTerritoryResult_t
 {
@@ -20,14 +19,13 @@ struct EvacuateTerritoryResult_t
 // nearest holdable own-territory tile (no move spend), sharing one destination search per
 // origin tile when stacks share a tile. Embarked cargo is towed when its carrier moves and is
 // not counted separately. Units with no legal destination stay put (orders still cleared).
-EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(
-    Faction& rGuest, FactionId_t hostTerritoryOwner, WorldMap& rWorldMap,
-    const InteractionGridsConfig_t& rGrids);
+EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(Faction& rGuest,
+                                                     FactionId_t hostTerritoryOwner,
+                                                     WorldMap& rWorldMap);
 
 // The same relocation for every unit of rGuest that shares a tile with a unit of rHost or
 // stands in one of rHost's bases.
-EvacuateTerritoryResult_t EvacuateUnitsSharingWith(
-    Faction& rGuest, const Faction& rHost, WorldMap& rWorldMap,
-    const InteractionGridsConfig_t& rGrids);
+EvacuateTerritoryResult_t EvacuateUnitsSharingWith(Faction& rGuest, const Faction& rHost,
+                                                   WorldMap& rWorldMap);
 
 } // namespace ac

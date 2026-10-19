@@ -5,23 +5,19 @@ namespace ac
 
 class Tile;
 class Unit;
-class WorldMap;
 class UnitPositionIndex;
 struct EntryTerms_t;
-struct InteractionGridsConfig_t;
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
 // Embarked cargo never projects and same-faction never applies; both short-circuit here.
 // Everything else is the zoc grid, resolved with rSubject as the acting unit — the row is
 // the held unit's domain, the column the projector's, so a unit that ignores ZOC declares a
 // zoc `deny` on itself (non-default where stock would hold it).
-bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
-                     const InteractionGridsConfig_t& rGrids);
+bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
 
 // Whether rMover may enter rTile for its chassis domain per the enter interaction grid
 // (stock: air any; sea water; land land).
-bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
-                         const InteractionGridsConfig_t& rGrids);
+bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
 // Whether rMover could stand on rTile with no hull under it: enter-grid allow, or a tile
 // that TileHarbors the mover's domain for its faction. NOT a movement predicate — it never
@@ -29,28 +25,24 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
 // hold its own sea base but may only *reach* it by transport or Amphibious Pods; see
 // CanEnterTile). Asked only when a carrier is about to stop supporting a passenger:
 // auto-boarding, carrier loss, unload-in-place.
-bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
-                               const WorldMap& rWorldMap,
-                               const InteractionGridsConfig_t& rGrids);
+bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile);
 
 // Physical tile-entry predicate, used by attack legality.
 // Resolve(enter) allow, plus lifts that depend on the tile: sea on land via TileHarbors,
 // or land on water via FindBoardableTransport. Neither grants free ocean movement.
-bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                            const InteractionGridsConfig_t& rGrids);
+bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile);
 
 // Full tile-entry predicate used by stepping, unloading, and airdrops: physical entry, and
 // the territory owner's status with rMover's faction allows entering its territory.
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                  const InteractionGridsConfig_t& rGrids);
+bool CanEnterTile(const Unit& rMover, const Tile& rTile);
 
 // True when a unit of rMover's faction, or of a faction it may share tiles with, already
 // occupies rTile.
-bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
+bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile);
 
 // True when rTile holds a base of rMover's faction or of a faction it may share tiles with.
 // Used by ZOC callers (StepEvaluator); enter/hold use TileHarbors instead.
-bool HasFriendlyBase(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
 
 // Whether a new unit (or move destination) may occupy rTile under the stacking rule.
 // The rule itself lives on UnitPositionIndex (see UnitPositionIndex::SetSingleUnitPerTile) —

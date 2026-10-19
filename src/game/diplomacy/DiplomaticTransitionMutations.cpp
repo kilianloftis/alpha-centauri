@@ -27,11 +27,10 @@ bool AiHonorsDefensiveObligation_(const GameState& /*rGameState*/, FactionId_t /
     return true;
 }
 
-void WithdrawFromTerritories_(Faction& rA, Faction& rB, WorldMap& rWorldMap,
-                              const InteractionGridsConfig_t& rGrids)
+void WithdrawFromTerritories_(Faction& rA, Faction& rB, WorldMap& rWorldMap)
 {
-    EvacuateUnitsFromTerritory(rA, rB.GetFactionId(), rWorldMap, rGrids);
-    EvacuateUnitsFromTerritory(rB, rA.GetFactionId(), rWorldMap, rGrids);
+    EvacuateUnitsFromTerritory(rA, rB.GetFactionId(), rWorldMap);
+    EvacuateUnitsFromTerritory(rB, rA.GetFactionId(), rWorldMap);
 }
 
 bool IsObligationQueued_(const GameState& rGameState, FactionId_t ally, FactionId_t aggressor)
@@ -62,8 +61,7 @@ bool EnterVendetta_(GameState& rGameState, FactionId_t a, FactionId_t b, Vendett
     ApplyStatusChange(rGameState, a, b, DiplomaticStatus_t::Vendetta);
     if (VendettaWithdrawsTerritory(kind))
     {
-        WithdrawFromTerritories_(rA, rB, rGameState.GetWorldMap(),
-                                 rGameState.GetGameData().interactionGrids);
+        WithdrawFromTerritories_(rA, rB, rGameState.GetWorldMap());
     }
     return true;
 }
@@ -129,17 +127,16 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
     const GameDataContext& rData = rGameState.GetGameData();
     const DiplomaticStatusRules_t& rFrom = rData.diplomacyConfig->For(from);
     const DiplomaticStatusRules_t& rTo = rData.diplomacyConfig->For(to);
-    const InteractionGridsConfig_t& rGrids = rData.interactionGrids;
     WorldMap& rWorldMap = rGameState.GetWorldMap();
 
     if (rFrom.bEnterTerritory && !rTo.bEnterTerritory)
     {
-        WithdrawFromTerritories_(rA, rB, rWorldMap, rGrids);
+        WithdrawFromTerritories_(rA, rB, rWorldMap);
     }
     if (rFrom.bShareTiles && !rTo.bShareTiles)
     {
-        EvacuateUnitsSharingWith(rA, rB, rWorldMap, rGrids);
-        EvacuateUnitsSharingWith(rB, rA, rWorldMap, rGrids);
+        EvacuateUnitsSharingWith(rA, rB, rWorldMap);
+        EvacuateUnitsSharingWith(rB, rA, rWorldMap);
     }
 }
 

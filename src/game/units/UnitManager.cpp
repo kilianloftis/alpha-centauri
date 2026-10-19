@@ -18,11 +18,9 @@
 namespace ac
 {
 
-UnitManager::UnitManager(Faction& rFaction, const MoraleCalculator& rMorale,
-                         const InteractionGridsConfig_t& rInteractionGrids)
+UnitManager::UnitManager(Faction& rFaction, const MoraleCalculator& rMorale)
     : m_rFaction(rFaction)
     , m_rMorale(rMorale)
-    , m_rInteractionGrids(rInteractionGrids)
 {
 }
 
@@ -95,8 +93,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
         {
             continue;
         }
-        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile, m_rFaction.GetWorldMap(),
-                                m_rInteractionGrids))
+        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
         {
             pPassenger->Disembark();
         }

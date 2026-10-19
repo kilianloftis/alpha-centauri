@@ -223,8 +223,10 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
     }
 
     WorldMap& rMap = rCtx.rGameState.GetWorldMap();
-    const std::vector<const Tile*> tiles = PlacementTiles(
-        pAnchor->GetTile(), *pDesign, rFaction.GetFactionId(), rGrant.count, rMap);
+    const Tile& rAnchorTile = pAnchor->GetTile();
+    const FactionId_t factionId = rFaction.GetFactionId();
+    const std::vector<const Tile*> tiles =
+        PlacementTiles(rAnchorTile, *pDesign, factionId, rGrant.count);
 
     // A full map grants fewer units rather than throwing: the caller is told the real count.
     int spawned = 0;

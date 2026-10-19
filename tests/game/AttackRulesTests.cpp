@@ -204,7 +204,7 @@ Unit& PlaceAttacker_(AttackGame_& game, AttackerStance_t stance, bool bPods, int
             rMap.GetTile(ax, ay)->SetElevation(-100);
             game.MakeUnit(*game.pPlayer, ax, ay, {"test_sea_chassis", "test_transport"});
             Unit& cargo = game.MakeUnit(*game.pPlayer, ax, ay, components);
-            REQUIRE(TryAttachToTransport(cargo, rMap));
+            REQUIRE(TryAttachToTransport(cargo));
             return cargo;
         }
     }
@@ -244,21 +244,19 @@ TEST_CASE("CanAttackTile implies CanEnterTile; amphibious assault still needs po
 {
     AttackGame_ game;
     WorldMap& rMap = game.fixtures.state.GetWorldMap();
-    const InteractionGridsConfig_t& rGrids =
-        game.fixtures.state.GetTileEffects().GetInteractionGrids();
     rMap.GetTile(8, 8)->SetElevation(100);
     Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& pods = game.MakeUnit(*game.pPlayer, 7, 7,
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
     BaseManager& rEnemy = game.MakeBase(*game.pAi, 9, 9);
-    CHECK_FALSE(CanEnterTile(land, rEnemy.GetTile(), rMap, rGrids));
+    CHECK_FALSE(CanEnterTile(land, rEnemy.GetTile()));
     CHECK_FALSE(CanAttackTile(land, rEnemy.GetTile()));
-    CHECK(CanEnterTile(pods, rEnemy.GetTile(), rMap, rGrids));
+    CHECK(CanEnterTile(pods, rEnemy.GetTile()));
     CHECK(CanAttackTile(pods, rEnemy.GetTile()));
 
     rMap.GetTile(7, 7)->SetElevation(100);
-    CHECK(CanEnterTile(land, *rMap.GetTile(7, 7), rMap, rGrids));
+    CHECK(CanEnterTile(land, *rMap.GetTile(7, 7)));
     CHECK(CanAttackTile(land, *rMap.GetTile(7, 7)));
 }
 
@@ -266,8 +264,6 @@ TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
 {
     AttackGame_ game;
     WorldMap& rMap = game.fixtures.state.GetWorldMap();
-    const InteractionGridsConfig_t& rGrids =
-        game.fixtures.state.GetTileEffects().GetInteractionGrids();
     rMap.GetTile(8, 8)->SetElevation(100);
     rMap.GetTile(8, 10)->SetElevation(-100);
     Unit& sea = game.MakeUnit(*game.pPlayer, 8, 10, {"test_sea_chassis", "test_weapon"});
@@ -278,8 +274,8 @@ TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
     // Air can enter land and water, so both attacks are legal.
     CHECK(CanAttackTile(air, *rMap.GetTile(8, 8)));
     CHECK(CanAttackTile(air, *rMap.GetTile(8, 10)));
-    CHECK(CanEnterTile(air, *rMap.GetTile(8, 8), rMap, rGrids));
-    CHECK(CanEnterTile(air, *rMap.GetTile(8, 10), rMap, rGrids));
+    CHECK(CanEnterTile(air, *rMap.GetTile(8, 8)));
+    CHECK(CanEnterTile(air, *rMap.GetTile(8, 10)));
 }
 
 TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit][attack]")
@@ -312,7 +308,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         rMap.GetTile(7, 9)->SetElevation(100);
         Unit& transport = game.MakeUnit(*game.pAi, 8, 10, {"test_sea_chassis", "test_transport"});
         Unit& cargo = game.MakeUnit(*game.pAi, 8, 10, {"test_chassis"});
-        REQUIRE(TryAttachToTransport(cargo, rMap));
+        REQUIRE(TryAttachToTransport(cargo));
         Unit& attacker = game.MakeUnit(*game.pPlayer, 7, 9,
                                        {"test_chassis", "test_weapon", "test_amphibious"});
 
@@ -329,7 +325,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         Unit& transport =
             game.MakeUnit(*game.pAi, 9, 9, {"test_sea_chassis", "test_transport"}, &rBase);
         Unit& cargo = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
-        REQUIRE(TryAttachToTransport(cargo, rMap));
+        REQUIRE(TryAttachToTransport(cargo));
         rMap.GetTile(8, 8)->SetElevation(100);
         Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8,
                                        {"test_chassis", "test_weapon", "test_amphibious"});

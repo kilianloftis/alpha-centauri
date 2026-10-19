@@ -1,5 +1,7 @@
 #include "game/movement/FuelRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/TerritoryMap.h"
@@ -13,8 +15,10 @@
 namespace ac
 {
 
-bool IsRefuelSite(const Unit& rUnit, const WorldMap& rWorldMap)
+bool IsRefuelSite(const Unit& rUnit)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     // Pad improvements (Base, Airbase): territory must harbor the unit's domain.
     if (TileHarbors(rUnit.GetTile(), rUnit.GetDomain(), rUnit.GetFaction().GetFactionId(),
                     rWorldMap.GetTerritory()))
@@ -43,8 +47,10 @@ namespace
 {
 
 // IsRefuelSite as it will read once rUnit is aboard rCarrier.
-bool RefuelsAboard_(const Unit& rUnit, const Unit& rCarrier, const WorldMap& rWorldMap)
+bool RefuelsAboard_(const Unit& rUnit, const Unit& rCarrier)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
     return TileHarbors(rUnit.GetTile(), rUnit.GetDomain(), factionId, rWorldMap.GetTerritory())
            || UnitCarries(rCarrier, rUnit.GetDomain(), factionId);
@@ -52,7 +58,7 @@ bool RefuelsAboard_(const Unit& rUnit, const Unit& rCarrier, const WorldMap& rWo
 
 } // namespace
 
-EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit, const WorldMap& rWorldMap)
+EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit)
 {
     EndOfTurnFuel_t fuel;
     if (!rUnit.GetDesign().UsesFuel())
@@ -63,11 +69,11 @@ EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit, const WorldMap& rWorldMa
     const Unit* pCarrier = nullptr;
     if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air)
     {
-        pCarrier = FindBoardableTransport(rUnit, rUnit.GetTile(), rWorldMap);
+        pCarrier = FindBoardableTransport(rUnit, rUnit.GetTile());
     }
     fuel.bBoardsCarrier = pCarrier != nullptr;
-    fuel.bRefuels = pCarrier != nullptr ? RefuelsAboard_(rUnit, *pCarrier, rWorldMap)
-                                        : IsRefuelSite(rUnit, rWorldMap);
+    fuel.bRefuels = pCarrier != nullptr ? RefuelsAboard_(rUnit, *pCarrier)
+                                        : IsRefuelSite(rUnit);
     if (fuel.bRefuels)
     {
         return fuel;
@@ -86,13 +92,13 @@ EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit, const WorldMap& rWorldMa
     return fuel;
 }
 
-bool NeedsAutoReturnToFuel(const Unit& rUnit, const WorldMap& rWorldMap)
+bool NeedsAutoReturnToFuel(const Unit& rUnit)
 {
     if (rUnit.GetOrder().has_value() || rUnit.GetMoveFragmentsRemaining() <= 0)
     {
         return false;
     }
-    return ResolveEndOfTurnFuel(rUnit, rWorldMap).bDestroyed;
+    return ResolveEndOfTurnFuel(rUnit).bDestroyed;
 }
 
 } // namespace ac

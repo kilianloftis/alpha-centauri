@@ -1,5 +1,7 @@
 #include "game/units/UnitPlacementRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/faction/Faction.h"
 #include "game/map/MapUtils.h"
@@ -67,9 +69,10 @@ std::optional<BaseId_t> GrantAnchorBase(const Faction& rFaction, const BaseManag
 }
 
 std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& rDesign,
-                                        FactionId_t factionId, int needed,
-                                        const WorldMap& rWorldMap)
+                                        FactionId_t factionId, int needed)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const UnitPositionIndex& rPositions = rWorldMap.GetUnitPositions();
     std::vector<const Tile*> found;
     const auto consider = [&](const Tile* pTile)

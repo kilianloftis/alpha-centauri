@@ -21,8 +21,7 @@ namespace
 EvacuateTerritoryResult_t Evacuate_(FactionFixture& rFixture, Faction& rGuest,
                                     FactionId_t hostId)
 {
-    return EvacuateUnitsFromTerritory(rGuest, hostId, rFixture.map,
-                                      rFixture.dataContext.interactionGrids);
+    return EvacuateUnitsFromTerritory(rGuest, hostId, rFixture.map);
 }
 
 } // namespace
@@ -122,10 +121,8 @@ TEST_CASE("Evacuate skips unholdable own land for a sea unit", "[evacuate][domai
 
     // Plain guest land nearer than the base must not be chosen; the own base harbors sea.
     REQUIRE(fixture.map.GetTerritory().GetOwner(7, 7) == guest.GetFactionId());
-    REQUIRE_FALSE(CanHoldTileWithoutCarrier(ship, fixture.At(7, 7), fixture.map,
-                                            fixture.dataContext.interactionGrids));
-    REQUIRE(CanHoldTileWithoutCarrier(ship, fixture.At(5, 5), fixture.map,
-                                      fixture.dataContext.interactionGrids));
+    REQUIRE_FALSE(CanHoldTileWithoutCarrier(ship, fixture.At(7, 7)));
+    REQUIRE(CanHoldTileWithoutCarrier(ship, fixture.At(5, 5)));
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
     CHECK(result.unitsMoved == 1);
@@ -145,8 +142,7 @@ TEST_CASE("Evacuate takes the next tile when the nearest own tile is full", "[ev
     const Tile* pNearest = nullptr;
     {
         Unit& probe = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
-        pNearest = FindNearestOwnTerritoryTile(probe, fixture.map,
-                                               fixture.dataContext.interactionGrids);
+        pNearest = FindNearestOwnTerritoryTile(probe);
         REQUIRE(pNearest);
         guest.GetUnitManager().DestroyUnit(probe);
     }
@@ -176,7 +172,7 @@ TEST_CASE("Evacuate moves co-stacked units on one host tile to the same own tile
     Unit& a = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
     Unit& b = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
     const Tile* pDest =
-        FindNearestOwnTerritoryTile(a, fixture.map, fixture.dataContext.interactionGrids);
+        FindNearestOwnTerritoryTile(a);
     REQUIRE(pDest);
 
     const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
@@ -258,8 +254,7 @@ TEST_CASE("Evacuate prefers the wrap-short path to own territory", "[evacuate][w
     const Tile& rOrigin = fixture.At(10, 4);
     const int longDistToBase =
         ChebyshevDistance(rOrigin, fixture.At(0, 4), fixture.map.GetWidth());
-    const Tile* pDest = FindNearestOwnTerritoryTile(unit, fixture.map,
-                                                    fixture.dataContext.interactionGrids);
+    const Tile* pDest = FindNearestOwnTerritoryTile(unit);
     REQUIRE(pDest);
     const int expectedDist =
         ChebyshevDistance(rOrigin, *pDest, fixture.map.GetWidth());
@@ -283,9 +278,9 @@ TEST_CASE("A guest shares a tile with the host in its base or beside its unit", 
     const Unit& besideUnit = fixture.MakeUnit(guest, 28, 4, {"test_chassis"});
     const Unit& onTerritory = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
 
-    CHECK(SharesTileWith(inBase, host, fixture.map));
-    CHECK(SharesTileWith(besideUnit, host, fixture.map));
-    CHECK_FALSE(SharesTileWith(onTerritory, host, fixture.map));
+    CHECK(SharesTileWith(inBase, host));
+    CHECK(SharesTileWith(besideUnit, host));
+    CHECK_FALSE(SharesTileWith(onTerritory, host));
     CHECK(MustLeaveTerritory(onTerritory, host.GetFactionId(), fixture.map.GetTerritory()));
     CHECK_FALSE(MustLeaveTerritory(besideUnit, host.GetFactionId(), fixture.map.GetTerritory()));
 }

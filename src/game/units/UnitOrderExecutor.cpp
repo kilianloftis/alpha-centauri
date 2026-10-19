@@ -199,25 +199,24 @@ Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
 
 bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger)
 {
-    return ac::TryAttachToTransport(rPassenger, m_rWorldMap);
+    return ac::TryAttachToTransport(rPassenger);
 }
 
 bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
 {
-    return ac::TryAutoAttachWhenMustLand(rPassenger, m_rWorldMap);
+    return ac::TryAutoAttachWhenMustLand(rPassenger);
 }
 
 bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
 {
-    return TryUnloadTransportInPlace(rCarrier, m_rWorldMap,
-                                     m_rTileEffects.GetInteractionGrids());
+    return TryUnloadTransportInPlace(rCarrier);
 }
 
 UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUnit,
                                                                        const Tile& rDest)
 {
     AirdropActionResult_t result;
-    const AirdropEligibility_t eligibility = CanAirdropTo(rUnit, rDest, m_rWorldMap, m_rTileEffects);
+    const AirdropEligibility_t eligibility = CanAirdropTo(rUnit, rDest);
     if (!eligibility.Ok())
     {
         result.failReason = eligibility.failReason;
@@ -227,7 +226,7 @@ UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUn
     rUnit.MarkAirdropped();
     rUnit.ClearOrder();
 
-    const AirdropLanding_t landing = AirdropLanding(rUnit, rDest, m_rWorldMap);
+    const AirdropLanding_t landing = AirdropLanding(rUnit, rDest);
     if (landing.hpAfter < rUnit.GetCurrentHp())
     {
         rUnit.SetCurrentHp(landing.hpAfter);
@@ -254,7 +253,7 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
     // Board a transport on this tile only when the mover cannot hold the tile itself
     // (step onto open water / ship-to-ship transfer); entering a base leaves it a garrison,
     // not cargo.
-    ac::TryAutoAttachOnEntry(rMover, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
+    ac::TryAutoAttachOnEntry(rMover);
 
     if (TileHasVisitEffects(rMover.GetTile()))
     {

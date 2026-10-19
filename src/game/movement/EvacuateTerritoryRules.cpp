@@ -1,5 +1,7 @@
 #include "game/movement/EvacuateTerritoryRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/faction/Faction.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
@@ -36,14 +38,13 @@ bool HoldsUnitItMayNotShareWith_(const Unit& rUnit, const Tile& rTile, const Wor
 
 // A unit already on its own territory stays; whoever shares the tile with it moves instead.
 bool IsValidEvacuateDestination_(const Unit& rUnit, const Tile& rTile,
-                                 const WorldMap& rWorldMap, FactionId_t ownFactionId,
-                                 const InteractionGridsConfig_t& rGrids)
+                                 const WorldMap& rWorldMap, FactionId_t ownFactionId)
 {
     if (rWorldMap.GetTerritory().GetOwner(rTile) != ownFactionId)
     {
         return false;
     }
-    if (!CanHoldTileWithoutCarrier(rUnit, rTile, rWorldMap, rGrids))
+    if (!CanHoldTileWithoutCarrier(rUnit, rTile))
     {
         return false;
     }
@@ -64,7 +65,7 @@ bool IsBetterEvacuateTieBreak_(const Tile& rCandidate, int bestY, int bestX)
 // Best valid tile on the Chebyshev ring at `distance` (Y then X). nullptr if none.
 const Tile* FindBestOnChebyshevRing_(const Unit& rUnit, const Tile& rOrigin,
                                      const WorldMap& rWorldMap, FactionId_t ownFactionId,
-                                     const InteractionGridsConfig_t& rGrids, int distance)
+                                     int distance)
 {
     const Tile* pBest = nullptr;
     int bestY = std::numeric_limits<int>::max();
@@ -73,8 +74,7 @@ const Tile* FindBestOnChebyshevRing_(const Unit& rUnit, const Tile& rOrigin,
     auto consider = [&](int p, int q)
     {
         const Tile* pTile = GetTileAtLatticeOffset(rWorldMap, rOrigin, p, q);
-        if (!pTile || !IsValidEvacuateDestination_(rUnit, *pTile, rWorldMap, ownFactionId,
-                                                   rGrids))
+        if (!pTile || !IsValidEvacuateDestination_(rUnit, *pTile, rWorldMap, ownFactionId))
         {
             return;
         }
@@ -126,8 +126,10 @@ bool MustLeaveTerritory(const Unit& rUnit, FactionId_t hostTerritoryOwner,
            && IsOwnerKnownTo(hostTerritoryOwner, rUnit);
 }
 
-bool SharesTileWith(const Unit& rUnit, const Faction& rHost, const WorldMap& rWorldMap)
+bool SharesTileWith(const Unit& rUnit, const Faction& rHost)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const Tile& rTile = rUnit.GetTile();
     for (const BaseManager& rBase : rHost.Bases())
     {
@@ -146,17 +148,18 @@ bool SharesTileWith(const Unit& rUnit, const Faction& rHost, const WorldMap& rWo
     return false;
 }
 
-const Tile* FindNearestOwnTerritoryTile(const Unit& rUnit, const WorldMap& rWorldMap,
-                                        const InteractionGridsConfig_t& rGrids)
+const Tile* FindNearestOwnTerritoryTile(const Unit& rUnit)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     const FactionId_t ownId = rUnit.GetFaction().GetFactionId();
     const Tile& rOrigin = rUnit.GetTile();
     const int maxRadius = MaxChebyshevEvacuateRadius_(rWorldMap);
 
     for (int distance = 0; distance <= maxRadius; ++distance)
     {
-        if (const Tile* pBest = FindBestOnChebyshevRing_(rUnit, rOrigin, rWorldMap, ownId,
-                                                         rGrids, distance))
+        if (const Tile* pBest =
+                FindBestOnChebyshevRing_(rUnit, rOrigin, rWorldMap, ownId, distance))
         {
             return pBest;
         }

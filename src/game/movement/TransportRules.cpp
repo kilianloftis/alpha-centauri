@@ -1,5 +1,7 @@
 #include "game/movement/TransportRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -7,7 +9,6 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
-#include "game/effects/InteractionGridsConfig.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
@@ -94,7 +95,7 @@ bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger)
     return UnitCarries(rCarrier, rPassenger.GetDomain(), rPassenger.GetFaction().GetFactionId());
 }
 
-bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile, const WorldMap& rWorldMap)
+bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile)
 {
     bool bNeedsHarbor = false;
     ForEachTransportParams_(rCarrier, [&](const TransportParamsEffect_t& rParams)
@@ -108,20 +109,23 @@ bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile, const WorldMap& rWor
     {
         return true;
     }
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     return TileHarbors(rTile, rCarrier.GetDomain(), rCarrier.GetFaction().GetFactionId(),
                        rWorldMap.GetTerritory());
 }
 
-Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
-                             const WorldMap& rWorldMap)
+Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile)
 {
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
         if (!pUnit || pUnit == &rPassenger)
         {
             continue;
         }
-        if (CanCarryPassenger(*pUnit, rPassenger) && CanLoadAtTile(*pUnit, rTile, rWorldMap))
+        if (CanCarryPassenger(*pUnit, rPassenger) && CanLoadAtTile(*pUnit, rTile))
         {
             return pUnit;
         }
@@ -129,30 +133,29 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
     return nullptr;
 }
 
-bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
-                 const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids)
+bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo)
 {
     if (!rPassenger.IsEmbarked())
     {
         return false;
     }
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
     if (!AreChebyshevAdjacent(rFrom, rTo, rWorldMap.GetWidth()))
     {
         return false;
     }
     // Unload uses the physical enter rules (friendly harbor, InteractionOverride sea base,
     // land, etc.). Territory is the step's own check (StepEvaluator, BlockedByTerritory).
-    return CanPhysicallyEnterTile(rPassenger, rTo, rWorldMap, rGrids);
+    return CanPhysicallyEnterTile(rPassenger, rTo);
 }
 
-bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
-                         const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids)
+bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile)
 {
-    return CanHoldTileWithoutCarrier(rPassenger, rTile, rWorldMap, rGrids);
+    return CanHoldTileWithoutCarrier(rPassenger, rTile);
 }
 
-bool CanUnloadTransportInPlace(const Unit& rCarrier, const WorldMap& rWorldMap,
-                               const InteractionGridsConfig_t& rGrids)
+bool CanUnloadTransportInPlace(const Unit& rCarrier)
 {
     if (rCarrier.GetDomain() != UnitDomain_t::Air || rCarrier.GetCargo().empty())
     {
@@ -163,7 +166,7 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier, const WorldMap& rWorldMap,
     {
         // Dropping in place leaves nothing under the passenger, so it must hold the tile
         // on its own — boarding another carrier here is not what this order does.
-        if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile, rWorldMap, rGrids))
+        if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile))
         {
             return false;
         }

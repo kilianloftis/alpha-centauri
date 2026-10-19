@@ -154,7 +154,7 @@ TEST_CASE("Airdrop requires Drop Pods, launch pad, and full moves", "[unit][aird
 
     Tile* pNear = rMap.GetTile(10, 10);
     REQUIRE(pNear);
-    CHECK(CanAirdropTo(withPods, *pNear, rMap, rEffects).failReason
+    CHECK(CanAirdropTo(withPods, *pNear).failReason
           == AirdropFailReason_t::NotOnLaunchPad);
 }
 
@@ -195,13 +195,13 @@ TEST_CASE("Airdrop range 8 vs orbital insertion", "[unit][airdrop]")
     Tile* pOutOfRange = rMap.GetTile(17, 13);
     REQUIRE(pInRange);
     REQUIRE(pOutOfRange);
-    CHECK(CanAirdropTo(dropper, *pInRange, rMap, rEffects).Ok());
-    CHECK(CanAirdropTo(dropper, *pOutOfRange, rMap, rEffects).failReason
+    CHECK(CanAirdropTo(dropper, *pInRange).Ok());
+    CHECK(CanAirdropTo(dropper, *pOutOfRange).failReason
           == AirdropFailReason_t::OutOfRange);
 
     game.pPlayer->GetResearch().AddDiscoveredTech("graviton_theory");
     CHECK(ResolveFlag(*game.pPlayer, RuleFlagId_t::OrbitalInsertion));
-    CHECK(CanAirdropTo(dropper, *pOutOfRange, rMap, rEffects).Ok());
+    CHECK(CanAirdropTo(dropper, *pOutOfRange).Ok());
 }
 
 TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
@@ -269,7 +269,7 @@ TEST_CASE("Airdrop rejects enemy-occupied tiles and interdiction", "[unit][airdr
     Tile* pDest = rMap.GetTile(10, 10);
     REQUIRE(pDest);
     game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
-    CHECK(CanAirdropTo(dropper, *pDest, rMap, rEffects).failReason
+    CHECK(CanAirdropTo(dropper, *pDest).failReason
           == AirdropFailReason_t::EnemyOccupied);
 
     // Clear occupant by using another dest; place air superiority nearby.
@@ -277,12 +277,12 @@ TEST_CASE("Airdrop rejects enemy-occupied tiles and interdiction", "[unit][airdr
     REQUIRE(pClear);
     Unit& interceptor =
         game.MakeUnit(*game.pAi, 9, 13, {"test_flight_chassis", "test_weapon", "air_superiority"});
-    CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
+    CHECK(CanAirdropTo(dropper, *pClear).failReason
           == AirdropFailReason_t::Interdicted);
 
     // Spent moves do not lift the ThisTile aura — denial is projected like Detect.
     interceptor.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
-    CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
+    CHECK(CanAirdropTo(dropper, *pClear).failReason
           == AirdropFailReason_t::Interdicted);
 }
 
@@ -304,7 +304,7 @@ TEST_CASE("Friendly interceptor does not block airdrop", "[unit][airdrop]")
 
     Tile* pClear = rMap.GetTile(11, 11);
     REQUIRE(pClear);
-    CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).Ok());
+    CHECK(CanAirdropTo(dropper, *pClear).Ok());
 }
 
 TEST_CASE("Noncombat airdrop spends remaining moves; combat keeps them", "[unit][airdrop]")
@@ -394,7 +394,7 @@ TEST_CASE("Airdrop landing never takes the last hit point", "[unit][airdrop]")
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     dropper.SetCurrentHp(1);
 
-    const AirdropLanding_t landing = AirdropLanding(dropper, *rMap.GetTile(10, 10), rMap);
+    const AirdropLanding_t landing = AirdropLanding(dropper, *rMap.GetTile(10, 10));
     CHECK(landing.hpAfter == 1);
     CHECK_FALSE(landing.bEndsTurn);
 }

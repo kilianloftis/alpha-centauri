@@ -75,7 +75,7 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
 bool TryAssignAutoReturnToFuel(Unit& rUnit, const Pathfinder& rPathfinder)
 {
     const WorldMap& rWorldMap = rPathfinder.GetWorldMap();
-    if (!NeedsAutoReturnToFuel(rUnit, rWorldMap))
+    if (!NeedsAutoReturnToFuel(rUnit))
     {
         return false;
     }
@@ -112,12 +112,12 @@ bool TryAssignAutoReturnToFuel(Unit& rUnit, const Pathfinder& rPathfinder)
     return true;
 }
 
-void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
+void ProcessFuelAtTurnEnd(Unit& rUnit)
 {
-    const EndOfTurnFuel_t fuel = ResolveEndOfTurnFuel(rUnit, rWorldMap);
+    const EndOfTurnFuel_t fuel = ResolveEndOfTurnFuel(rUnit);
     if (fuel.bBoardsCarrier)
     {
-        TryAttachToTransport(rUnit, rWorldMap);
+        TryAttachToTransport(rUnit);
     }
     if (fuel.bRefuels)
     {
@@ -142,14 +142,13 @@ void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
 
 void ProcessAllFuelAtTurnEnd(GameState& rGameState)
 {
-    WorldMap& rWorldMap = rGameState.GetWorldMap();
     for (Faction& rFaction : rGameState.Factions())
     {
         UnitManager& rUnits = rFaction.GetUnitManager();
         const auto destructionScope = rUnits.DeferDestruction();
         for (Unit& rUnit : rUnits.Units())
         {
-            ProcessFuelAtTurnEnd(rUnit, rWorldMap);
+            ProcessFuelAtTurnEnd(rUnit);
         }
     }
 }

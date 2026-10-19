@@ -44,17 +44,17 @@ TEST_CASE("Granted units take the origin, then whole rings out to radius 2", "[u
     const Tile& origin = fixture.At(8, 8);
 
     const std::vector<const Tile*> one =
-        PlacementTiles(origin, rLandDesign, factionId, 1, fixture.map);
+        PlacementTiles(origin, rLandDesign, factionId, 1);
     REQUIRE(one.size() == 1);
     CHECK(one.front() == &origin);
 
     // Ring 1 is taken whole, less the flooded tile a land unit cannot stand on.
     const std::vector<const Tile*> two =
-        PlacementTiles(origin, rLandDesign, factionId, 2, fixture.map);
+        PlacementTiles(origin, rLandDesign, factionId, 2);
     CHECK(two.size() == 8);
     CHECK(std::find(two.begin(), two.end(), &fixture.At(9, 9)) == two.end());
 
     const std::vector<const Tile*> many =
-        PlacementTiles(origin, rLandDesign, factionId, 100, fixture.map);
+        PlacementTiles(origin, rLandDesign, factionId, 100);
     CHECK(many.size() == 24);
 }

@@ -54,14 +54,14 @@ void ForEachHostileOnTile_(const Unit& rMover, const Tile& rTile, const WorldMap
 // Invokes rFn(Unit&) for each ZOC projector around rTile; stops early if rFn returns false.
 template <typename Fn>
 void ForEachZocProjectorAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                                const InteractionGridsConfig_t& rGrids, Fn&& rFn)
+                                Fn&& rFn)
 {
     ForEachTileInChebyshevRadius(rTile, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pNeighbor, int /*distance*/)
         {
             for (Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNeighbor))
             {
-                if (pUnit && UnitExertsZocOn(*pUnit, rMover, rGrids) && !rFn(*pUnit))
+                if (pUnit && UnitExertsZocOn(*pUnit, rMover) && !rFn(*pUnit))
                 {
                     return;
                 }
@@ -99,8 +99,7 @@ bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,
             return true;
         }
     }
-    return CanPhysicallyEnterTile(rMover, rTile, m_rWorldMap,
-                                  m_rTileEffects.GetInteractionGrids());
+    return CanPhysicallyEnterTile(rMover, rTile);
 }
 
 bool StepEvaluator::IsForbiddenTerritory(const Unit& rMover, const Tile& rTile) const
@@ -112,8 +111,7 @@ bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,
                                         Knowledge_t knowledge) const
 {
     bool bInZoc = false;
-    ForEachZocProjectorAround_(rMover, rTile, m_rWorldMap, m_rTileEffects.GetInteractionGrids(),
-                               [&](Unit& rProjector)
+    ForEachZocProjectorAround_(rMover, rTile, m_rWorldMap, [&](Unit& rProjector)
     {
         if (!UnitCountsForPlanner_(rMover, rProjector, knowledge))
         {
@@ -138,7 +136,7 @@ bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const
         return false;
     }
     // SMAC: ZOC→ZOC is legal when the destination already holds a friendly unit or base.
-    if (HasFriendlyOccupant(rMover, rTo, m_rWorldMap) || HasFriendlyBase(rMover, rTo, m_rWorldMap))
+    if (HasFriendlyOccupant(rMover, rTo) || HasFriendlyBase(rMover, rTo))
     {
         return false;
     }
@@ -164,7 +162,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
     // Embarked units may only unload to an adjacent legal tile.
     if (rMover.IsEmbarked())
     {
-        if (!CanUnloadTo(rMover, rFrom, rTo, m_rWorldMap, m_rTileEffects.GetInteractionGrids()))
+        if (!CanUnloadTo(rMover, rFrom, rTo))
         {
             result.outcome = StepOutcome_t::BlockedByTerrain;
             return result;
@@ -200,8 +198,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
     if (IsZocViolation_(rMover, rFrom, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByZoc;
-        ForEachZocProjectorAround_(rMover, rFrom, m_rWorldMap, m_rTileEffects.GetInteractionGrids(),
-                                   [&](Unit& rProjector)
+        ForEachZocProjectorAround_(rMover, rFrom, m_rWorldMap, [&](Unit& rProjector)
         {
             if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
             {
@@ -209,8 +206,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
             }
             return true;
         });
-        ForEachZocProjectorAround_(rMover, rTo, m_rWorldMap, m_rTileEffects.GetInteractionGrids(),
-                                   [&](Unit& rProjector)
+        ForEachZocProjectorAround_(rMover, rTo, m_rWorldMap, [&](Unit& rProjector)
         {
             if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
             {
