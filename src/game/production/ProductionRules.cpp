@@ -97,7 +97,8 @@ int ComputeProductionCost(int baseCost, const BaseEffects_t& rBaseEffects, int s
         multiplier *= (1.0 + static_cast<double>(surchargePercent) / 100.0 * scale);
     }
 
-    return std::max(1, static_cast<int>(std::lround(baseCost * multiplier)));
+    const int roundedCost = static_cast<int>(std::lround(baseCost * multiplier));
+    return std::max(1, roundedCost);
 }
 
 int RetoolForfeit(int mineralStockpile, bool bHasTurnOriginal, bool bReturningToTurnOriginal,

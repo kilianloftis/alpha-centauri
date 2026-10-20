@@ -1,5 +1,6 @@
 #include "game/ecology/FungalBloom.h"
 
+#include "game/CurrentGameState.h"
 #include "game/ecology/EcologyRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
@@ -11,9 +12,8 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/natives/EnsureNativeDesign.h"
-#include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
+#include "game/units/Military.h"
 
 #include <algorithm>
 #include <optional>
@@ -46,7 +46,7 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     std::vector<Tile*> habitable;
     for (Tile* pTile : rNewTiles)
     {
-        if (!EligibleLifeforms(*pTile).empty())
+        if (!EligibleLifeforms(*pTile, rNatives).empty())
         {
             habitable.push_back(pTile);
         }
@@ -61,14 +61,14 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     for (int n = 0; n < lifeformCount; ++n)
     {
         Tile& rTile = *habitable[tileDist(rRng)];
-        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile);
+        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
         std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
         const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
-        const NativeDesign* pDesign = EnsureNativeDesign(rPlanet, rNatives, rConfig.id);
+        const IDesign* pDesign = rPlanet.GetMilitary().GetDesign(rConfig.id);
         if (!pDesign)
         {
             throw std::logic_error("ApplyFungalBloom: native design '" + rConfig.id
-                                   + "' could not be registered");
+                                   + "' is not registered on the native-life faction");
         }
         rPlanet.GetUnitManager().CreateUnit(
             rGameState.AllocateUnitId(), *pDesign, rGameState.GetWorldMap().GetUnitPositions(),
@@ -156,6 +156,8 @@ int RollLifeformCount_(const NativeUnitRegistry& rNatives, std::mt19937& rRng)
 FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
                                      std::mt19937& rRng, GameState& rGameState)
 {
+    RequireCurrentGameState(rGameState);
+    RequireCurrentWorldMap(rWorldMap);
     FungalBloomResult_t result;
     if (tileCount <= 0)
     {

@@ -404,8 +404,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
 namespace
 {
 
-// A GameState over its own 9x9 map: ApplyDetonation resolves the tile through the state's
-// world map, so the unit must live on that map rather than FactionFixture's.
+// FactionFixture is one session: the unit and detonation share the fixture's world map.
 struct DetonateGame_
 {
     FactionFixture fixtures;

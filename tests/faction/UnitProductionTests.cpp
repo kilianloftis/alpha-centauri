@@ -781,6 +781,85 @@ TEST_CASE("Skunkworks cancels retool penalty", "[production][retool][prototype]"
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
 }
 
+TEST_CASE("Probe Team GrantXp applies on production complete, not on CreateUnit",
+          "[production][unit][morale]")
+{
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign = game.AddDesign({"test_chassis", "Probe_Team"});
+        base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
+        base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+        REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+        const std::vector<Unit*> onTile =
+            game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        REQUIRE(onTile.size() == 1);
+        CHECK(onTile.front()->GetXp() == 3);
+    }
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign = game.AddDesign({"test_chassis", "Probe_Team"});
+        Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
+            game.fixtures.state.AllocateUnitId(), rDesign,
+            game.fixtures.state.GetWorldMap().GetUnitPositions(),
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
+        CHECK(spawned.GetXp() == 2);
+    }
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign = game.AddDesign({"test_chassis", "Probe_Team"});
+        Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
+            game.fixtures.state.AllocateUnitId(), rDesign,
+            game.fixtures.state.GetWorldMap().GetUnitPositions(),
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
+        CHECK(gifted.GetXp() == 1);
+    }
+}
+
+TEST_CASE("High Morale GrantXp applies on production complete, not on CreateUnit",
+          "[production][unit][morale]")
+{
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign =
+            game.AddDesign({"test_chassis", "test_weapon", "test_high_morale"});
+        base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
+        base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+        REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+        const std::vector<Unit*> onTile =
+            game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
+        REQUIRE(onTile.size() == 1);
+        CHECK(onTile.front()->GetXp() == 3);
+    }
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign =
+            game.AddDesign({"test_chassis", "test_weapon", "test_high_morale"});
+        Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
+            game.fixtures.state.AllocateUnitId(), rDesign,
+            game.fixtures.state.GetWorldMap().GetUnitPositions(),
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
+        CHECK(spawned.GetXp() == 2);
+    }
+    {
+        UnitProductionGame_ game;
+        BaseManager& base = game.MakeBase(8, 8);
+        const UnitDesign& rDesign =
+            game.AddDesign({"test_chassis", "test_weapon", "test_high_morale"});
+        Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
+            game.fixtures.state.AllocateUnitId(), rDesign,
+            game.fixtures.state.GetWorldMap().GetUnitPositions(),
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
+        CHECK(gifted.GetXp() == 1);
+    }
+}
+
 TEST_CASE("Prototype GrantXp stacks with on_unit_produced train bonuses",
           "[production][unit][prototype]")
 {

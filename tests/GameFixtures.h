@@ -300,6 +300,8 @@ struct SessionInputs
         SetBaseConquestStat(*dataContext.baseConquestConfig,
                             ac::StatId_t::CaptureFacilitiesDestroyedMaxPercent, 50);
         SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::ConqueredDroneCap, -0.5);
+        dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 50;
+        dataContext.baseConquestConfig->nativeRaid.popLoss = 1;
     }
 
     ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }

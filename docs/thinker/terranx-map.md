@@ -65,8 +65,26 @@ a size-1 base whose tanks are full is still lost on a "yes".
 `or [eax], dl` (`0x4F21C0`), not through `set_fac`. The facility exists before `base_growth`
 runs.
 
+**Spawn morale** (`0x4F12EA`–`0x4F13C5`), after `veh_init`: non-native units start from
+`morale_mod` (`0x4E6400`). Probe weapon `0x15` then adds Covert Ops Center +2 and Nethack
+Terminus +1. `has_abil` (`0x5BF1F0`) of `ABL_TRAINED` (`0x4000`, High Morale) increments
+the same accumulator, then prototype does, then a final +1. The result is written to
+`VEH.morale` (`0x95284c`). High Morale is not a live combat modifier.
+
 ### `base_growth` (`0x4EF1C0`)
 
 At the population limit it checks Hab Complex and Habitation Dome directly with `has_fac`
 (`0x421670`; facility 24 at `0x4EF448`, 25 at `0x4EF479`). A Hab Complex or Dome finished in
 `base_production` the same turn therefore lets the base grow that turn.
+
+## Unit morale
+
+### `morale_veh` (`0x5C0E40`)
+
+Does not add High Morale. Combat units are `VEH.morale` plus SE Morale / `rule_morale` /
+Creche / Brood Pit / drone riot, clamped 0–6.
+
+Probe plan (`UNIT.plan` `0xb` at `0x9ab892`): SE Probe (clamped 0–3) + Telepathic Matrix +2
++ one per `TFLAG_IMPROVE_PROBE` tech + `VEH.morale`, then **clamp 2–6**. The Disciplined
+floor is this live clamp, not a stored spawn of 2. Thinker's `mod_morale_veh` follows the
+same split; it does not add `ABL_TRAINED` either.

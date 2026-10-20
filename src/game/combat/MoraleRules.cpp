@@ -1,10 +1,8 @@
 #include "game/combat/MoraleRules.h"
 
-#include "game/base/BaseManager.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/Faction.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -44,25 +42,6 @@ int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bCondit
     return total;
 }
 
-bool HomeBaseHasCreche_(const Unit& rUnit)
-{
-    const BaseManager* pHome = rUnit.GetHomeBase();
-    if (!pHome)
-    {
-        return false;
-    }
-    // Creche is a ThisBase RuleFlag on the home base's buildings.
-    for (const ActiveEffect_t& rEffect : pHome->CollectBuildingEffects())
-    {
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == RuleFlagId_t::Creche)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
 {
     // Stamp the unit's subjects once: callers build a combat/UI context that carries no
@@ -71,31 +50,28 @@ int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
     int unconditional = SumMoraleBonus_(rUnit, ctx, /*bConditionalOnly=*/false);
     int conditional = SumMoraleBonus_(rUnit, ctx, /*bConditionalOnly=*/true);
 
-    // Children's Crèche (home): soften negative SE-style morale_bonus (toward 0).
-    if (HomeBaseHasCreche_(rUnit) && unconditional < 0)
+    // NegativeMoraleScale halves SE-style penalties toward 0. Truncate so -1 * 0.5 → 0.
+    if (unconditional < 0)
     {
-        unconditional /= 2; // toward 0 for negatives in C++
+        const double scale =
+            ResolveMultiplicativeStat(rUnit, StatId_t::NegativeMoraleScale, 1.0, ctx);
+        const double scaled = std::trunc(unconditional * scale);
+        unconditional = static_cast<int>(scaled);
     }
 
-    // SE Morale ≤ -2: PositiveMoraleScale AddPercent -50 halves Creche-style +mods.
-    // Truncate toward zero so +1 * 0.5 → 0 (matches integer /2), not lround → 1.
+    // PositiveMoraleScale halves Creche-style +mods. Truncate so +1 * 0.5 → 0, not lround → 1.
     if (conditional > 0)
     {
         const double scale =
             ResolveMultiplicativeStat(rUnit, StatId_t::PositiveMoraleScale, 1.0, ctx);
-        conditional = static_cast<int>(std::trunc(conditional * scale));
+        const double scaled = std::trunc(conditional * scale);
+        conditional = static_cast<int>(scaled);
     }
 
     return unconditional + conditional;
 }
 
 } // namespace
-
-int BaseIntrinsicXp(const Unit& rUnit, const MoraleCalculator& rMorale)
-{
-    const bool bProbeTeam = ResolveFlag(rUnit, RuleFlagId_t::ProbeTeam);
-    return rMorale.IntrinsicXp(bProbeTeam);
-}
 
 int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                          const MoraleCalculator& rMorale)
@@ -129,8 +105,10 @@ const std::string& MoraleDisplayName(const Unit& rUnit, const MoraleCalculator& 
 {
     const MoraleConfig_t& rConfig = rMorale.GetConfig();
     const int level = std::clamp(rUnit.GetXp(), rConfig.MinLevel(), rConfig.MaxLevel());
-    const bool bNative = rUnit.GetDesign().IsNativeLife();
-    return rMorale.DisplayName(level, bNative);
+    const MoraleLifecycle_t lifecycle = rUnit.GetDesign().IsNativeLife()
+                                            ? MoraleLifecycle_t::Native
+                                            : MoraleLifecycle_t::Conventional;
+    return rMorale.DisplayName(level, lifecycle);
 }
 
 } // namespace ac

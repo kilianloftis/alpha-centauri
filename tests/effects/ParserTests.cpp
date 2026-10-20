@@ -70,6 +70,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
     CHECK(ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
     CHECK(ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
+    CHECK(ParseStatId("negative_morale_scale") == StatId_t::NegativeMoraleScale);
     CHECK(ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(ParseStatId("starting_size") == StatId_t::StartingSize);
     CHECK(ParseStatId("max_base_size") == StatId_t::MaxBaseSize);
@@ -153,7 +154,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::IgnoresProbeBlock);
     CHECK(ParseRuleFlagId("airdrop_launch") == RuleFlagId_t::AirdropLaunch);
     CHECK(ParseRuleFlagId("airdrop_interdiction") == RuleFlagId_t::AirdropInterdiction);
-    CHECK(ParseRuleFlagId("creche") == RuleFlagId_t::Creche);
     CHECK(ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK(ParseRuleFlagId("harbors") == RuleFlagId_t::Harbors);
     CHECK(ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);

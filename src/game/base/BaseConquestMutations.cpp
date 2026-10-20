@@ -2,9 +2,11 @@
 
 #include "game/units/AdHocDesign.h"
 
+#include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "lib/RandomRoll.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -148,12 +150,7 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, std::mt
     result.outcome = BaseConquestOutcome_t::NativeRaid;
 
     const NativeRaidPlan_t plan = PlanNativeRaid(rBase);
-    bool bDestroyFacility = plan.facilityChancePercent == 100;
-    if (plan.facilityChancePercent == 50)
-    {
-        std::uniform_int_distribution<int> coin(0, 1);
-        bDestroyFacility = coin(rRng) == 0;
-    }
+    const bool bDestroyFacility = RollPercent(plan.facilityChancePercent, rRng);
 
     if (bDestroyFacility)
     {
@@ -161,9 +158,9 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, std::mt
         DestroyBuildingAndNotify(rBase, *plan.facilityCandidates[pick(rRng)]);
         result.facilitiesDestroyed = 1;
     }
-    else if (plan.bPopCanBeLost)
+    else
     {
-        result.populationLost = RemovePopulation_(rBase, 1);
+        result.populationLost = RemovePopulation_(rBase, plan.popLoss);
     }
 
     rNative.GetFaction().GetUnitManager().DestroyUnit(rNative);
@@ -212,6 +209,7 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
                                                    GameState& rGameState,
                                                    std::mt19937& rRng)
 {
+    RequireCurrentGameState(rGameState);
     BaseManager* pBase = rGameState.FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY());
     if (!pBase)
     {
@@ -240,6 +238,7 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
                                               GameState& rGameState,
                                               std::mt19937& rRng)
 {
+    RequireCurrentGameState(rGameState);
     BaseManager* pBase =
         rGameState.FindBaseAt(rMover.GetTile().GetX(), rMover.GetTile().GetY());
     if (!pBase)

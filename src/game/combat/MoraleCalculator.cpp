@@ -40,13 +40,9 @@ const MoraleConfig_t& MoraleCalculator::GetConfig() const
     return m_rConfig;
 }
 
-int MoraleCalculator::IntrinsicXp(bool bProbeTeam) const
+int MoraleCalculator::StartingIntrinsicXp() const
 {
-    if (bProbeTeam)
-    {
-        return m_rConfig.probeBaseIntrinsic;
-    }
-    return m_rConfig.baseIntrinsic;
+    return m_rConfig.startingIntrinsic;
 }
 
 int MoraleCalculator::MoraleLevel(int xp, int liveBonus, CombatRole_t role) const
@@ -64,12 +60,12 @@ std::span<const EffectConfig_t> MoraleCalculator::LevelEffects(int level) const
     const MoraleLevel_t* pLevel = m_rConfig.FindLevel(level);
     if (!pLevel)
     {
-        return {};
+        throw std::runtime_error("No morale level found for level " + std::to_string(level));
     }
     return pLevel->effects;
 }
 
-const std::string& MoraleCalculator::DisplayName(int level, bool bNativeLifecycle) const
+const std::string& MoraleCalculator::DisplayName(int level, MoraleLifecycle_t lifecycle) const
 {
     const MoraleLevel_t* pLevel = m_rConfig.FindLevel(level);
     static const std::string k_unknown = "?";
@@ -77,7 +73,11 @@ const std::string& MoraleCalculator::DisplayName(int level, bool bNativeLifecycl
     {
         return k_unknown;
     }
-    return bNativeLifecycle ? pLevel->native : pLevel->conventional;
+    if (lifecycle == MoraleLifecycle_t::Native)
+    {
+        return pLevel->native;
+    }
+    return pLevel->conventional;
 }
 
 double MoraleCalculator::PromotionChance(int xp, int attackStrength, int defenseStrength) const

@@ -359,10 +359,12 @@ Two entry points, reached from `UnitOrderExecutor`:
   native raid if the attacker is native life. **Capture requires stepping onto the tile**, so
   combat alone never transfers ownership.
 - `ResolveBaseEntryConquest` — a unit entered an ungarrisoned foreign base tile. Native life
-  raids; anything else captures if `CanCaptureBase`. Same-species capture pop loss is the
-  separate Additive `CapturePopLoss`, resolved before random facility destruction so a
-  `ThisBase` clamp still counts if the granting building is then demolished. How many
-  facilities are destroyed is likewise resolved from the base's effects — Additive
+  raids (`native_raid.facility_chance_percent` between one facility and
+  `native_raid.pop_loss` population); anything else captures if `CanCaptureBase`.
+  Same-species capture pop loss is the separate Additive `CapturePopLoss`, resolved
+  before random facility destruction so a `ThisBase` clamp still counts if the granting
+  building is then demolished. How many facilities are destroyed is likewise resolved
+  from the base's effects — Additive
   `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent`, each clamped
   against the eligible count so no modifier can invert the range. It is independent
   of `LastDefenderPopLoss`: Perimeter Defense guards the last-defender case only, and nothing

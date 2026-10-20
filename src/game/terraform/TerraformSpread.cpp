@@ -1,5 +1,6 @@
 #include "game/terraform/TerraformSpread.h"
 
+#include "game/CurrentGameState.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -14,6 +15,7 @@ namespace ac
 bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
                                 TileEffectsContext& rTileEffects)
 {
+    RequireCurrentWorldMap(rWorldMap);
     const std::optional<TerraformSpread_t> spread = PickSpreadTarget(rOrigin);
     if (!spread)
     {
@@ -31,6 +33,7 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
 void SpreadTerraformImprovements(WorldMap& rWorldMap, TileEffectsContext& rTileEffects,
                                  int turnIndex, std::mt19937& rRng)
 {
+    RequireCurrentWorldMap(rWorldMap);
     const auto tiles = rWorldMap.GetTiles();
     if (tiles.empty())
     {

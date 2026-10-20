@@ -11,6 +11,12 @@ namespace ac
 
 class LuaRuntime;
 
+enum class MoraleLifecycle_t
+{
+    Conventional,
+    Native,
+};
+
 // Morale / XP rank formulas over the game-wide MoraleConfig_t. It only picks the level:
 // ResolveCombatUnitStat folds in each MoraleLevel_t's Attack/Defense effects.
 class MoraleCalculator
@@ -20,7 +26,7 @@ public:
 
     const MoraleConfig_t& GetConfig() const;
 
-    int IntrinsicXp(bool bProbeTeam) const;
+    int StartingIntrinsicXp() const;
 
     // Clamped to the configured levels, with the defense floor for a defender.
     int MoraleLevel(int xp, int liveBonus, CombatRole_t role) const;
@@ -28,7 +34,7 @@ public:
     // Includes promotion_chance modifiers; combat resolve ignores stats it does not query.
     std::span<const EffectConfig_t> LevelEffects(int level) const;
 
-    const std::string& DisplayName(int level, bool bNativeLifecycle) const;
+    const std::string& DisplayName(int level, MoraleLifecycle_t lifecycle) const;
 
     // Uses the intrinsic level's effects, not the SE-shifted effective level.
     double PromotionChance(int xp, int attackStrength, int defenseStrength) const;

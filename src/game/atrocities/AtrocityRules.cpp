@@ -111,6 +111,7 @@ int AtrocityThreshold_(const GameState& rGameState, const Faction& rPerpetrator)
 
 } // namespace
 
+// AI: Apply SRP
 AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pVictim,
                                   AtrocitySeverityId_t authored)
 {

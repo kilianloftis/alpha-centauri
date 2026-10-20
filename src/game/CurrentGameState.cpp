@@ -1,5 +1,8 @@
 #include "game/CurrentGameState.h"
 
+#include "game/GameState.h"
+#include "game/map/WorldMap.h"
+
 #include <cassert>
 #include <stdexcept>
 
@@ -23,6 +26,24 @@ const GameState& CurrentGameState()
 const GameState* FindCurrentGameState()
 {
     return g_pCurrentGameState;
+}
+
+void RequireCurrentGameState(const GameState& rGameState)
+{
+    if (&rGameState != &CurrentGameState())
+    {
+        throw std::logic_error(
+            "RequireCurrentGameState: argument is not the current game state on this thread");
+    }
+}
+
+void RequireCurrentWorldMap(const WorldMap& rWorldMap)
+{
+    if (&rWorldMap != &CurrentGameState().GetWorldMap())
+    {
+        throw std::logic_error(
+            "RequireCurrentWorldMap: argument is not the current game state's world map");
+    }
 }
 
 GameStateScope::GameStateScope(const GameState& rGameState)

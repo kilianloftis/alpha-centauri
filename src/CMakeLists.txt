@@ -142,7 +142,6 @@ add_library(ac-core STATIC
     game/natives/NativeDesign.cpp
     game/natives/NativeUnitConfigParser.cpp
     game/natives/NativeUnitRegistry.cpp
-    game/natives/EnsureNativeDesign.cpp
     game/natives/NativeRules.cpp
     game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp

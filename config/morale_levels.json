@@ -1,6 +1,5 @@
 {
-  "base_intrinsic": 1,
-  "probe_base_intrinsic": 2,
+  "starting_intrinsic": 1,
   "defense_floor_index": 1,
   "promotion_seed_formula": "(attack_strength + defense_strength) > 0 and defense_strength / (attack_strength + defense_strength) or 0",
   "levels": [

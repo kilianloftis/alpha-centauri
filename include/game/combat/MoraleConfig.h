@@ -20,8 +20,7 @@ struct MoraleLevel_t
 
 struct MoraleConfig_t
 {
-    int baseIntrinsic = 1;
-    int probeBaseIntrinsic = 2;
+    int startingIntrinsic = 1;
     int defenseFloorIndex = 1;
     // Lua seed for promotion_chance ApplyModifierStack. Vars: attack_strength, defense_strength
     // (final post-combat weapon and armor strengths from the kill).

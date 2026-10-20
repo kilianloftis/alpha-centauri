@@ -16,9 +16,9 @@
 #include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
-#include "game/natives/EnsureNativeDesign.h"
 #include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
+#include "game/units/Military.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
@@ -70,8 +70,8 @@ struct LinkGame_
 
     Unit& MakeArtifact(Faction& rFaction, const Tile& rTile, BaseManager* pHome)
     {
-        const NativeDesign* pDesign = EnsureNativeDesign(
-            rFaction, *fixtures.dataContext.nativeUnitRegistry, "Alien_Artifact");
+        const IDesign* pLookedUp = rFaction.GetMilitary().GetDesign("Alien_Artifact");
+        const auto* pDesign = dynamic_cast<const NativeDesign*>(pLookedUp);
         REQUIRE(pDesign);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), *pDesign, fixtures.state.GetWorldMap().GetUnitPositions(), rTile,

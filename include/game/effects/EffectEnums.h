@@ -134,6 +134,9 @@ enum class StatId_t
     // Scales positive *conditional* morale_bonus contributions (Creche in-base, etc.).
     // PureMultiplier (seed 1.0); SE Morale ≤ -2 uses AddPercent -50 ("+ modifiers halved").
     PositiveMoraleScale,
+    // Scales negative *unconditional* morale_bonus (SE penalties). PureMultiplier (seed 1.0);
+    // Children's Crèche uses AddPercent -50 on FactionUnits with OriginBaseIsHomeBase.
+    NegativeMoraleScale,
     // Post-combat promotion probability (RawScaled). Resolve site seeds D/(A+D) from final
     // combat weapon/armor strengths; morale level effects apply MinClamp / MultiplyGeometric /
     // MaxClamp. Not resolved during combat stat passes.
@@ -335,6 +338,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
         case StatId_t::PositiveMoraleScale:
+        case StatId_t::NegativeMoraleScale:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:
@@ -460,6 +464,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeFailureScale:
         case StatId_t::MoraleBonus:
         case StatId_t::PositiveMoraleScale:
+        case StatId_t::NegativeMoraleScale:
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
@@ -525,6 +530,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
+    if (rStat == "negative_morale_scale")   return StatId_t::NegativeMoraleScale;
     if (rStat == "promotion_chance")        return StatId_t::PromotionChance;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "starting_size")           return StatId_t::StartingSize;
@@ -646,8 +652,6 @@ enum class RuleFlagId_t
     // Faction/global flags
     PopulationBoom,
     NearZeroGrowth,
-    // Children's Crèche at a base: softens negative morale_bonus for units home-based there.
-    Creche,
     // Base is the faction headquarters (assassinate / MC eligibility).
     Headquarters,
     // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
@@ -708,7 +712,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "harbors")                     return RuleFlagId_t::Harbors;
     if (rFlag == "airdrop_launch")              return RuleFlagId_t::AirdropLaunch;
     if (rFlag == "airdrop_interdiction")        return RuleFlagId_t::AirdropInterdiction;
-    if (rFlag == "creche")                      return RuleFlagId_t::Creche;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;

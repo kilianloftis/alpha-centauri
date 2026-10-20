@@ -835,7 +835,9 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
 
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
-    const Unit& plain = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& plain = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    // RISK 1 at starting_intrinsic is 0% success, so the scale comparison has no headroom.
+    plain.SetXp(2);
 
     enhancement.id = "test_failure_halving";
     enhancement.type = "ability";
@@ -854,10 +856,11 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
         assigned[slotId] = pComponent;
     }
     const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
-    const Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
+    Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), rEnhancedDesign,
         game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9),
         &home);
+    enhanced.SetXp(2);
 
     const auto successAgainstEnemy = [&](const Unit& rProbe)
     {

@@ -245,8 +245,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `ResearchManager`'s tech-cost modifier, and `FactionVisibleMap`'s vision range. Do not
   truncate or `std::round` a total anywhere else — a fork means one stat resolves to two
   values depending on which path asked, which is what this helper exists to prevent. The one
-  deliberate exception is the `PositiveMoraleScale` step in `MoraleRules`, which truncates
-  toward zero to match integer halving and says so at the call site.
+  deliberate exception is the `PositiveMoraleScale` / `NegativeMoraleScale` steps in
+  `MoraleRules`, which truncate toward zero to match integer halving and say so at the
+  call site.
 
 ### ResolveDomain_t / DomainFor
 - **Purpose**: Consumer-side **subject** taxonomy — which typed resolve / amount-source

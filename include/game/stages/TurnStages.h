@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/CurrentGameState.h"
 #include "game/stages/HookContext.h"
 #include <map>
 #include <memory>
@@ -75,6 +76,7 @@ public:
 
     StageResult_t Execute(GameState& rGameState)
     {
+        RequireCurrentGameState(rGameState);
         if (HasReplaceHooks())
         {
             ExecuteReplaceHooks(rGameState, nullptr);
@@ -95,6 +97,7 @@ public:
 
     StageResult_t Execute(GameState& rGameState, Faction& rFaction)
     {
+        RequireCurrentGameState(rGameState);
         if (HasReplaceHooks())
         {
             ExecuteReplaceHooks(rGameState, &rFaction);

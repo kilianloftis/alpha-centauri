@@ -1,7 +1,9 @@
 #include "game/base/BaseConquestRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/base/BaseConquestConfig.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -15,6 +17,7 @@
 #include "game/units/Unit.h"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace ac
 {
@@ -140,15 +143,19 @@ CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase)
 
 NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase)
 {
+    const BaseConquestConfig_t* pConfig = CurrentGameState().GetGameData().baseConquestConfig.get();
+    if (!pConfig)
+    {
+        throw std::logic_error("PlanNativeRaid: baseConquestConfig is null");
+    }
     NativeRaidPlan_t plan;
+    plan.popLoss = pConfig->nativeRaid.popLoss;
     plan.facilityCandidates =
         CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
-    const bool bHasPop = rBase.GetPopulation().GetSize() > 0;
     if (!plan.facilityCandidates.empty())
     {
-        plan.facilityChancePercent = bHasPop ? 50 : 100;
+        plan.facilityChancePercent = pConfig->nativeRaid.facilityChancePercent;
     }
-    plan.bPopCanBeLost = bHasPop;
     return plan;
 }
 

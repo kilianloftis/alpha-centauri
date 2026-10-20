@@ -36,8 +36,9 @@ constexpr int k_defaultHqDistance = 12;
 
 int ResolveProbeDefenseBonus_(const BaseManager& rBase)
 {
-    return static_cast<int>(std::lround(ResolveBaseStat(
-        rBase.GetBaseEffects(), StatId_t::ProbeDefense, SeedFor(StatId_t::ProbeDefense))));
+    const double value = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeDefense,
+                                         SeedFor(StatId_t::ProbeDefense));
+    return static_cast<int>(std::lround(value));
 }
 
 double ResolveProbeSuccessScale_(const BaseManager& rBase)
@@ -225,15 +226,19 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffe
         + rFormula.strengthOffset;
     chances.probeStrength = std::max(1, missionStrength);
     int failureRate = (risk * 100) / chances.probeStrength;
-    failureRate = static_cast<int>(std::lround(failureRate * failureScale));
+    const double scaledFailure = static_cast<double>(failureRate) * failureScale;
+    failureRate = static_cast<int>(std::lround(scaledFailure));
     int successRate = 100 - failureRate;
-    successRate = static_cast<int>(std::lround(successRate * successScale));
+    const double scaledSuccess = static_cast<double>(successRate) * successScale;
+    successRate = static_cast<int>(std::lround(scaledSuccess));
 
     const int escapeStrength = std::max(1, morale - targetProbeEffect);
     int lossRate = ((risk + 1) * 100) / escapeStrength;
-    lossRate = static_cast<int>(std::lround(lossRate * failureScale));
+    const double scaledLoss = static_cast<double>(lossRate) * failureScale;
+    lossRate = static_cast<int>(std::lround(scaledLoss));
     int survivalRate = 100 - lossRate;
-    survivalRate = static_cast<int>(std::lround(survivalRate * successScale));
+    const double scaledSurvival = static_cast<double>(survivalRate) * successScale;
+    survivalRate = static_cast<int>(std::lround(scaledSurvival));
 
     chances.successRate = std::clamp(successRate, 0, 100);
     chances.survivalRate = std::clamp(survivalRate, 0, 100);

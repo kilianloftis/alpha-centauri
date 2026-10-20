@@ -309,40 +309,36 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
     FactionFixture fixtures;
     GameSettings settings;
 
-    auto makeState = [&](unsigned seed)
+    struct SeededSession_
     {
-        auto pState = std::make_unique<GameState>(
-            std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
-                                       actest::TestMapRules()),
-            fixtures.dataContext,
-            settings, actest::k_TestRngSeed);
-        const GameStateScope scope(*pState);
-        pState->GetRng().seed(seed);
-        pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);
-        return pState;
+        std::unique_ptr<GameState> pState;
+        GameStateScope scope;
+
+        SeededSession_(FactionFixture& rFixtures, GameSettings& rSettings, unsigned seed)
+            : pState(std::make_unique<GameState>(
+                  std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                             actest::TestMapRules()),
+                  rFixtures.dataContext, rSettings, actest::k_TestRngSeed))
+            , scope(*pState)
+        {
+            pState->GetRng().seed(seed);
+            pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);
+        }
     };
 
-    auto pA = makeState(42);
-    auto pB = makeState(99);
-    auto pA2 = makeState(42);
-    CHECK(pA->GetYearsSinceFirstPlayableYear() == 0);
-
-    WorldEvents eventsA(HookContext{});
-    WorldEvents eventsB(HookContext{});
-    WorldEvents eventsA2(HookContext{});
-    CHECK(eventsA.Execute(*pA) == StageResult_t::Continue);
-    CHECK(eventsB.Execute(*pB) == StageResult_t::Continue);
-    CHECK(eventsA2.Execute(*pA2) == StageResult_t::Continue);
+    const auto runStage_ = [&](unsigned seed)
+    {
+        SeededSession_ session(fixtures, settings, seed);
+        CHECK(session.pState->GetYearsSinceFirstPlayableYear() == 0);
+        WorldEvents events(HookContext{});
+        CHECK(events.Execute(*session.pState) == StageResult_t::Continue);
+        return session.pState->GetRng()();
+    };
 
     // Session streams diverge by seed; identical seeds stay aligned after the same stage work.
-    CHECK(pA->GetRng()() != pB->GetRng()());
-    // Re-seeded twin already ran the same stage draws — next draw matches pA's next draw only
-    // if both consumed the same count; compare post-stage state by re-running from seed.
-    auto pA3 = makeState(42);
-    auto pA4 = makeState(42);
-    WorldEvents e3(HookContext{});
-    WorldEvents e4(HookContext{});
-    e3.Execute(*pA3);
-    e4.Execute(*pA4);
-    CHECK(pA3->GetRng()() == pA4->GetRng()());
+    const auto drawA = runStage_(42);
+    const auto drawB = runStage_(99);
+    const auto drawA2 = runStage_(42);
+    CHECK(drawA != drawB);
+    CHECK(drawA == drawA2);
 }

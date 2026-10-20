@@ -64,10 +64,9 @@ CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase);
 struct NativeRaidPlan_t
 {
     std::vector<const BuildingConfig_t*> facilityCandidates;
-    // 0, 50 (one fair coin) or 100: certain when the base has no pop left to lose.
+    // Chance to destroy one candidate; otherwise the raid takes popLoss.
     int facilityChancePercent = 0;
-    // Without a facility loss, a raid takes one pop when there is one.
-    bool bPopCanBeLost = false;
+    int popLoss = 0;
 };
 
 NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase);

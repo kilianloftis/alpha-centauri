@@ -34,8 +34,7 @@ TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
 {
     const MoraleConfig_t config =
         MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json"));
-    CHECK(config.baseIntrinsic == 1);
-    CHECK(config.probeBaseIntrinsic == 2);
+    CHECK(config.startingIntrinsic == 1);
     CHECK(config.defenseFloorIndex == 1);
     CHECK(config.promotionSeedFormula
           == "(attack_strength + defense_strength) > 0 and defense_strength / "
@@ -187,8 +186,32 @@ TEST_CASE("Low SE Morale halves positive Creche defense bonus", "[morale][se]")
 
     const EffectContext_t defCtx{&unit.GetTile(), CombatRole_t::Defender};
     // SE -2: morale_bonus -1 + positive_morale_scale -50%; Creche +1 → 0 after scale.
-    // Creche home soften: unconditional -1 → 0; conditional scaled → 0 → level 2.
+    // Creche negative_morale_scale: unconditional -1 → 0; conditional scaled → 0 → level 2.
     CHECK(EffectiveMoraleLevel(unit, defCtx, morale) == 2);
+}
+
+TEST_CASE("Home-base Creche halves negative SE morale_bonus", "[morale][se]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& crecheBase = fixture.MakeFactionBase(faction, 8, 8);
+    BaseManager& otherBase = fixture.MakeFactionBase(faction, 8, 12);
+    crecheBase.GetBuildingManager().AddBuilding("Childrens_Creche");
+    Unit& homedAtCreche = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &crecheBase);
+    Unit& homedElsewhere = fixture.MakeUnit(faction, 8, 12, {"test_chassis"}, &otherBase);
+    homedAtCreche.SetXp(2);
+    homedElsewhere.SetXp(2);
+    const MoraleCalculator& morale = fixture.morale();
+
+    const SocialPolicyConfig_t* pPolicy = fixture.socialPolicies().Find("low_morale_policy");
+    REQUIRE(pPolicy);
+    faction.GetSocialEngineering().SetActivePolicy(*pPolicy);
+
+    // Attack: Creche +1 (IsDefending) does not apply. Unconditional SE -1 halved only at home.
+    const EffectContext_t atkCreche{&homedAtCreche.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t atkOther{&homedElsewhere.GetTile(), CombatRole_t::Attacker};
+    CHECK(EffectiveMoraleLevel(homedAtCreche, atkCreche, morale) == 2);
+    CHECK(EffectiveMoraleLevel(homedElsewhere, atkOther, morale) == 1);
 }
 
 TEST_CASE("Defense floor keeps defender at Green", "[morale]")
@@ -268,11 +291,10 @@ TEST_CASE("MoraleCalculator value methods read the configured levels", "[morale]
     CHECK(morale.MoraleLevel(0, 0, CombatRole_t::Defender) == 1);
     CHECK(morale.MoraleLevel(3, 1, CombatRole_t::Defender) == 4);
 
-    CHECK(morale.IntrinsicXp(false) == 1);
-    CHECK(morale.IntrinsicXp(true) == 2);
+    CHECK(morale.StartingIntrinsicXp() == 1);
 
     CHECK(morale.LevelEffects(4).size() == 4);
-    CHECK(morale.LevelEffects(99).empty());
+    CHECK_THROWS_WITH(morale.LevelEffects(99), Catch::Matchers::ContainsSubstring("99"));
 
     // Green always promotes; Elite has no level above it.
     CHECK(morale.PromotionChance(1, 100, 100) == Catch::Approx(1.0));

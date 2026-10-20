@@ -5,7 +5,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/units/UnitManager.h"
 #include "game/visibility/VisibilityRules.h"
-#include "game/natives/EnsureNativeDesign.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitConfigParser.h"
@@ -24,25 +23,40 @@
 using namespace ac;
 using namespace actest;
 
-TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
+namespace
+{
+
+void LoadNatives_(FactionFixture& rFixture)
+{
+    rFixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    rFixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+}
+
+const NativeDesign& RequireNative_(Faction& rFaction, const std::string& rId)
+{
+    const IDesign* pDesign = rFaction.GetMilitary().GetDesign(rId);
+    const auto* pNative = dynamic_cast<const NativeDesign*>(pDesign);
+    REQUIRE(pNative);
+    return *pNative;
+}
+
+} // namespace
+
+TEST_CASE("Mind Worm is land psi combat", "[native]")
 {
     FactionFixture fixture;
-    // Point the fixture context at the full native set for EnsureNativeDesign.
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
-    REQUIRE(pDesign);
-    CHECK(pDesign->GetDomain() == UnitDomain_t::Land);
-    CHECK(pDesign->IsCombatUnit());
-    CHECK(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
-    CHECK_FALSE(pDesign->UsesFuel());
-    CHECK_FALSE(pDesign->HasComponent("Mind_Worm"));
+    const NativeDesign& rDesign = RequireNative_(rFaction, "Mind_Worm");
+    CHECK(rDesign.GetDomain() == UnitDomain_t::Land);
+    CHECK(rDesign.IsCombatUnit());
+    CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK_FALSE(rDesign.UsesFuel());
+    CHECK_FALSE(rDesign.HasComponent("Mind_Worm"));
 
     Unit& rUnit = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 4));
+        fixture.state.AllocateUnitId(), rDesign, fixture.map.GetUnitPositions(), fixture.At(8, 4));
     CHECK(rUnit.GetDomain() == UnitDomain_t::Land);
 
     const IConstructable* pItem = dynamic_cast<const IConstructable*>(
@@ -54,30 +68,22 @@ TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
 TEST_CASE("Locusts of Chiron are air without fuel", "[native]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Locusts_of_Chiron");
-    REQUIRE(pDesign);
-    CHECK(pDesign->GetDomain() == UnitDomain_t::Air);
-    CHECK_FALSE(pDesign->UsesFuel());
+    const NativeDesign& rDesign = RequireNative_(rFaction, "Locusts_of_Chiron");
+    CHECK(rDesign.GetDomain() == UnitDomain_t::Air);
+    CHECK_FALSE(rDesign.UsesFuel());
 }
 
 TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][movement]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pWorm =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
-    const NativeDesign* pSpore =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Spore_Launcher");
-    REQUIRE(pWorm);
-    REQUIRE(pSpore);
+    const NativeDesign& rWormDesign = RequireNative_(rFaction, "Mind_Worm");
+    const NativeDesign& rSporeDesign = RequireNative_(rFaction, "Spore_Launcher");
 
     Tile& rFungus = fixture.At(9, 9);
     rFungus.SetElevation(100);
@@ -94,9 +100,9 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
     fixture.At(8, 8).SetElevation(100);
     fixture.At(7, 9).SetElevation(100);
     Unit& rWorm = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8));
+        fixture.state.AllocateUnitId(), rWormDesign, fixture.map.GetUnitPositions(), fixture.At(8, 8));
     Unit& rSpore = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pSpore, fixture.map.GetUnitPositions(), fixture.At(7, 9));
+        fixture.state.AllocateUnitId(), rSporeDesign, fixture.map.GetUnitPositions(), fixture.At(7, 9));
 
     const MoveCostRules calc(fixture.improvements);
     for (const Unit* pUnit : {&rWorm, &rSpore})
@@ -118,16 +124,11 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
 TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[native][movement]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pIsle =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Isle_of_the_Deep");
-    const NativeDesign* pLurk =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Sea_Lurk");
-    REQUIRE(pIsle);
-    REQUIRE(pLurk);
+    const NativeDesign& rIsleDesign = RequireNative_(rFaction, "Isle_of_the_Deep");
+    const NativeDesign& rLurkDesign = RequireNative_(rFaction, "Sea_Lurk");
 
     Tile& rOpenSea = fixture.At(10, 10);
     rOpenSea.SetElevation(-100);
@@ -139,9 +140,9 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
     fixture.At(8, 10).SetElevation(-100);
     fixture.At(7, 11).SetElevation(-100);
     Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pIsle, fixture.map.GetUnitPositions(), fixture.At(9, 9));
+        fixture.state.AllocateUnitId(), rIsleDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9));
     Unit& rLurk = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pLurk, fixture.map.GetUnitPositions(), fixture.At(8, 10));
+        fixture.state.AllocateUnitId(), rLurkDesign, fixture.map.GetUnitPositions(), fixture.At(8, 10));
     Unit& rShip = fixture.MakeUnit(rFaction, 7, 11, {"test_sea_chassis"});
 
     const MoveCostRules calc(fixture.improvements);
@@ -163,40 +164,32 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
 TEST_CASE("Fungal Tower is land psi combat visible in fog", "[native]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Fungal_Tower");
-    REQUIRE(pDesign);
-    CHECK(pDesign->GetDomain() == UnitDomain_t::Land);
-    CHECK(pDesign->IsCombatUnit());
-    CHECK(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
-    CHECK(ResolveFlag(*pDesign, RuleFlagId_t::VisibleInFog));
+    const NativeDesign& rDesign = RequireNative_(rFaction, "Fungal_Tower");
+    CHECK(rDesign.GetDomain() == UnitDomain_t::Land);
+    CHECK(rDesign.IsCombatUnit());
+    CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(ResolveFlag(rDesign, RuleFlagId_t::VisibleInFog));
 }
 
 TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[native][visibility]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rOwner = fixture.MakeFaction();
     Faction& rObserver = fixture.MakeFaction();
-    const NativeDesign* pTowerDesign =
-        EnsureNativeDesign(rOwner, *fixture.dataContext.nativeUnitRegistry, "Fungal_Tower");
-    const NativeDesign* pWormDesign =
-        EnsureNativeDesign(rOwner, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
-    REQUIRE(pTowerDesign);
-    REQUIRE(pWormDesign);
+    const NativeDesign& rTowerDesign = RequireNative_(rOwner, "Fungal_Tower");
+    const NativeDesign& rWormDesign = RequireNative_(rOwner, "Mind_Worm");
 
     Tile& rTowerTile = fixture.At(8, 8);
     Tile& rWormTile = fixture.At(7, 9);
     Unit& rTower = rOwner.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pTowerDesign, fixture.map.GetUnitPositions(), rTowerTile);
+        fixture.state.AllocateUnitId(), rTowerDesign, fixture.map.GetUnitPositions(), rTowerTile);
     Unit& rWorm = rOwner.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pWormDesign, fixture.map.GetUnitPositions(), rWormTile);
+        fixture.state.AllocateUnitId(), rWormDesign, fixture.map.GetUnitPositions(), rWormTile);
 
     rObserver.RebuildVisibility();
     REQUIRE_FALSE(rObserver.GetExploredMap().IsExplored(rTowerTile));
@@ -216,32 +209,26 @@ TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[nativ
 TEST_CASE("Alien Artifact is non-combat", "[native]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Alien_Artifact");
-    REQUIRE(pDesign);
-    CHECK_FALSE(pDesign->IsCombatUnit());
-    CHECK_FALSE(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
+    const NativeDesign& rDesign = RequireNative_(rFaction, "Alien_Artifact");
+    CHECK_FALSE(rDesign.IsCombatUnit());
+    CHECK_FALSE(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiCombat));
 }
 
 TEST_CASE("Isle of the Deep cargo capacity scales with IntrinsicXp", "[native][cargo]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& rFaction = fixture.MakeFaction();
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(rFaction, *fixture.dataContext.nativeUnitRegistry, "Isle_of_the_Deep");
-    REQUIRE(pDesign);
-    CHECK(pDesign->GetDomain() == UnitDomain_t::Sea);
+    const NativeDesign& rDesign = RequireNative_(rFaction, "Isle_of_the_Deep");
+    CHECK(rDesign.GetDomain() == UnitDomain_t::Sea);
 
     fixture.At(8, 6).SetElevation(-100);
     Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(8, 6));
+        fixture.state.AllocateUnitId(), rDesign, fixture.map.GetUnitPositions(), fixture.At(8, 6));
 
     rIsle.SetXp(1);
     const int atOne = ResolveStat(rIsle, StatId_t::CargoCapacity);
@@ -261,19 +248,16 @@ TEST_CASE("Isle of the Deep cargo capacity scales with IntrinsicXp", "[native][c
 TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibility]")
 {
     FactionFixture fixture;
-    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    fixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    LoadNatives_(fixture);
 
     Faction& observer = fixture.MakeFaction();
     Faction& owner = fixture.MakeFaction();
     fixture.MakeUnit(observer, 8, 8, {"test_chassis"});
 
     fixture.At(9, 9).SetElevation(-100);
-    const NativeDesign* pDesign =
-        EnsureNativeDesign(owner, *fixture.dataContext.nativeUnitRegistry, "Sea_Lurk");
-    REQUIRE(pDesign);
+    const NativeDesign& rDesign = RequireNative_(owner, "Sea_Lurk");
     Unit& subject = owner.GetUnitManager().CreateUnit(
-        fixture.state.AllocateUnitId(), *pDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9));
+        fixture.state.AllocateUnitId(), rDesign, fixture.map.GetUnitPositions(), fixture.At(9, 9));
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
@@ -282,25 +266,6 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
     fixture.At(9, 9).SetElevation(100);
     CHECK(IsUnitVisibleTo(observer, subject));
 }
-
-namespace
-{
-
-void LoadNatives_(FactionFixture& rFixture)
-{
-    rFixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    rFixture.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
-}
-
-const NativeDesign& RequireNative_(Faction& rFaction, const NativeUnitRegistry& rNatives,
-                                   const std::string& rId)
-{
-    const NativeDesign* pDesign = EnsureNativeDesign(rFaction, rNatives, rId);
-    REQUIRE(pDesign);
-    return *pDesign;
-}
-
-} // namespace
 
 TEST_CASE("native_life is the RuleFlag on the design", "[native][parser]")
 {
@@ -337,9 +302,9 @@ TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP"
     rBase.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
     const NativeDesign& rWorm =
-        RequireNative_(rFaction, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
+        RequireNative_(rFaction, "Mind_Worm");
     const NativeDesign& rLocust =
-        RequireNative_(rFaction, *fixture.dataContext.nativeUnitRegistry, "Locusts_of_Chiron");
+        RequireNative_(rFaction, "Locusts_of_Chiron");
     CHECK(rWorm.IsNativeLife());
     CHECK(rLocust.IsNativeLife());
 
@@ -391,7 +356,7 @@ TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[nativ
     rBase.GetBuildingManager().AddBuilding("Centauri_Preserve");
 
     const NativeDesign& rWorm =
-        RequireNative_(rFaction, *fixture.dataContext.nativeUnitRegistry, "Mind_Worm");
+        RequireNative_(rFaction, "Mind_Worm");
 
     Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
         fixture.state.AllocateUnitId(), rWorm, fixture.map.GetUnitPositions(), fixture.At(8, 8),

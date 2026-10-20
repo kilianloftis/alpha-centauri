@@ -240,6 +240,15 @@
           "flag": "covert"
         }
       }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {

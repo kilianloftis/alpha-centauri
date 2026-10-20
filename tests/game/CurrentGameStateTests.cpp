@@ -78,3 +78,15 @@ TEST_CASE("AddFaction rejects a faction built against another map", "[game][curr
     CHECK_THROWS_AS(fixture.state.AddFaction(std::move(pFaction)), std::invalid_argument);
     CHECK(fixture.state.Factions().empty());
 }
+
+TEST_CASE("RequireCurrentGameState and RequireCurrentWorldMap enforce session identity",
+          "[game][current-game-state]")
+{
+    actest::FactionFixture fixture;
+    const std::unique_ptr<ac::GameState> pOther = MakeState_(fixture);
+
+    CHECK_NOTHROW(ac::RequireCurrentGameState(fixture.state));
+    CHECK_NOTHROW(ac::RequireCurrentWorldMap(fixture.state.GetWorldMap()));
+    CHECK_THROWS_AS(ac::RequireCurrentGameState(*pOther), std::logic_error);
+    CHECK_THROWS_AS(ac::RequireCurrentWorldMap(pOther->GetWorldMap()), std::logic_error);
+}

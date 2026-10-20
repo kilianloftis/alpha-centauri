@@ -1,5 +1,6 @@
 #include "game/probes/ProbeActionExecutor.h"
 
+#include "game/CurrentGameState.h"
 #include "game/combat/MoraleRules.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeRules.h"
@@ -35,11 +36,10 @@ bool AreOnOrAdjacent_(const Tile& rA, const Tile& rB, const WorldMap& rMap)
 
 } // namespace
 
-ProbeActionExecutor::ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
+ProbeActionExecutor::ProbeActionExecutor(const MoraleCalculator& rMorale,
                                          const ProbeActionsConfig_t& rProbeActions,
                                          std::mt19937& rRng)
-    : m_rWorldMap(rWorldMap)
-    , m_rMorale(rMorale)
+    : m_rMorale(rMorale)
     , m_rProbeActions(rProbeActions)
     , m_rRng(rRng)
 {
@@ -53,7 +53,8 @@ bool ProbeActionExecutor::CanTryProbeAction_(const Unit& rUnit,
     {
         return false;
     }
-    if (!AreOnOrAdjacent_(rUnit.GetTile(), rTarget.rTile, m_rWorldMap))
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
+    if (!AreOnOrAdjacent_(rUnit.GetTile(), rTarget.rTile, rWorldMap))
     {
         return false;
     }
@@ -64,12 +65,14 @@ bool ProbeActionExecutor::CanTryProbeAction(const Unit& rUnit,
                                             const ProbeActionConfig_t& rAction,
                                             const Tile& rTile, GameState& rGameState) const
 {
+    RequireCurrentGameState(rGameState);
     return ResolveEligibleTarget_(rUnit, rTile, rAction, rGameState).has_value();
 }
 
 std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAvailableProbeActions(
     const Unit& rProbe, const Tile& rTile, GameState& rGameState) const
 {
+    RequireCurrentGameState(rGameState);
     std::vector<std::pair<ProbeActionId_t, std::string>> actions;
     for (const ProbeActionConfig_t& rAction : m_rProbeActions.actions)
     {
@@ -84,6 +87,7 @@ std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAv
 bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rTile,
                                               GameState& rGameState) const
 {
+    RequireCurrentGameState(rGameState);
     return !ListAvailableProbeActions(rProbe, rTile, rGameState).empty();
 }
 
@@ -91,6 +95,7 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile, GameState& rGameState,
     const BuildingId_t& facilityId)
 {
+    RequireCurrentGameState(rGameState);
     ProbeActionResult_t result;
     const ProbeActionConfig_t* pAction = m_rProbeActions.Find(actionId);
     if (!pAction)

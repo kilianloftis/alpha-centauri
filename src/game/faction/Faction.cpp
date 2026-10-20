@@ -24,7 +24,7 @@
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
 #include "game/units/UnitDesign.h"
-#include "game/natives/EnsureNativeDesign.h"
+#include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/effects/InteractionResolve.h"
@@ -107,7 +107,12 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     {
         for (const NativeUnitConfig_t& rConfig : rDataContext.nativeUnitRegistry->GetAll())
         {
-            EnsureNativeDesign(*this, *rDataContext.nativeUnitRegistry, rConfig.id);
+            auto pDesign = std::make_unique<NativeDesign>(rConfig);
+            if (!m_pMilitary->AddDesign(std::move(pDesign)))
+            {
+                throw std::runtime_error("Faction: failed to register native design '"
+                                         + rConfig.id + "'");
+            }
         }
     }
 }

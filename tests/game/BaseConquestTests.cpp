@@ -15,6 +15,7 @@
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
 #include "game/base/BaseConquestConfig.h"
+#include "game/base/BaseConquestMutations.h"
 #include "game/base/BaseConquestRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -25,7 +26,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <random>
 #include <ranges>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -777,7 +780,7 @@ TEST_CASE("A raid on a populated base with a facility is a coin flip between the
     const NativeRaidPlan_t plan = PlanNativeRaid(rBase);
     CHECK_FALSE(plan.facilityCandidates.empty());
     CHECK(plan.facilityChancePercent == 50);
-    CHECK(plan.bPopCanBeLost);
+    CHECK(plan.popLoss == 1);
 }
 
 TEST_CASE("Killing an undefended base's last defender costs a casualty pop", "[unit][conquest]")
@@ -800,4 +803,57 @@ TEST_CASE("Native life that kills a base's last defender raids it", "[unit][conq
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "native_life_chassis"});
     CHECK(ConquestOnLastDefenderKill(worm, rBase)
           == ConquestKind_t::NativeRaid);
+}
+
+TEST_CASE("A raid that misses the facility takes the configured pop loss",
+          "[unit][conquest]")
+{
+    ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/4);
+    game.fixtures.dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 0;
+    game.fixtures.dataContext.baseConquestConfig->nativeRaid.popLoss = 2;
+
+    Unit& worm =
+        game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "native_life_chassis"});
+    std::mt19937 rng(1);
+    const BaseConquestResult_t result =
+        ResolveBaseEntryConquest(worm, game.fixtures.state, rng);
+
+    CHECK(result.outcome == BaseConquestOutcome_t::NativeRaid);
+    CHECK(result.populationLost == 2);
+    CHECK(rBase.GetPopulation().GetSize() == 2);
+    CHECK(result.bActorDestroyed);
+}
+
+TEST_CASE("ResolvePostCombatBaseConquest applies a native raid after the casualty",
+          "[unit][conquest]")
+{
+    ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+    game.fixtures.dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 100;
+
+    Unit& worm =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "native_life_chassis"});
+    std::mt19937 rng(1);
+    const BaseConquestResult_t result =
+        ResolvePostCombatBaseConquest(worm, rBase.GetTile(), game.fixtures.state, rng);
+
+    CHECK(result.outcome == BaseConquestOutcome_t::NativeRaid);
+    CHECK(result.bActorDestroyed);
+    CHECK(result.facilitiesDestroyed == 1);
+    CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+}
+
+TEST_CASE("ResolveBaseEntryConquest rejects a GameState that is not current",
+          "[unit][conquest][current-game-state]")
+{
+    ConquestGame_ game;
+    Unit& mover = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
+    auto pOther = std::make_unique<GameState>(
+        std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
+                                   actest::TestMapRules()),
+        game.fixtures.dataContext, game.fixtures.settings, actest::k_TestRngSeed);
+    std::mt19937 rng(1);
+    CHECK_THROWS_AS(ResolveBaseEntryConquest(mover, *pOther, rng), std::logic_error);
 }

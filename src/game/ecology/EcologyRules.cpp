@@ -172,10 +172,9 @@ BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin)
     return candidates;
 }
 
-std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile)
+std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile,
+                                                         const NativeUnitRegistry& rNatives)
 {
-    const GameDataContext& rData = CurrentGameState().GetGameData();
-    const NativeUnitRegistry& rNatives = *rData.nativeUnitRegistry;
     std::vector<const NativeUnitConfig_t*> eligible;
     for (const NativeUnitConfig_t& rConfig : rNatives.GetAll())
     {

@@ -14,9 +14,7 @@ class MoraleCalculator;
 class Unit;
 struct CombatResult_t;
 
-int BaseIntrinsicXp(const Unit& rUnit, const MoraleCalculator& rMorale);
-
-// Live morale level for combat (SE bonus, creche soften, riot, defense floor).
+// Live morale level for combat (SE bonus, morale scales, riot, defense floor).
 int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                          const MoraleCalculator& rMorale);
 

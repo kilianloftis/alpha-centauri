@@ -17,7 +17,6 @@
 namespace ac
 {
 
-class WorldMap;
 class GameState;
 class Tile;
 
@@ -30,8 +29,8 @@ class Tile;
 class ProbeActionExecutor
 {
 public:
-    ProbeActionExecutor(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
-                        const ProbeActionsConfig_t& rProbeActions, std::mt19937& rRng);
+    ProbeActionExecutor(const MoraleCalculator& rMorale, const ProbeActionsConfig_t& rProbeActions,
+                        std::mt19937& rRng);
 
     // Order-domain gates plus CanProbeAction mechanics for one configured action against
     // whatever rAction's target kind resolves to on rTile.
@@ -81,7 +80,6 @@ private:
     ProbeActionResult_t CaptureProbe_(Unit& rUnit, ProbeActionResult_t result) const;
     void FinalizeProbeSuccess_(Unit& rUnit, ProbeActionResult_t& rResult) const;
 
-    WorldMap& m_rWorldMap;
     const MoraleCalculator& m_rMorale;
     const ProbeActionsConfig_t& m_rProbeActions;
     std::mt19937& m_rRng;

@@ -1,5 +1,6 @@
 #include "game/terraform/ElevationChange.h"
 
+#include "game/CurrentGameState.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
@@ -84,6 +85,7 @@ bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
                          const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
                          TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
 {
+    RequireCurrentWorldMap(rWorldMap);
     const ElevationSeed_t seed{&rOrigin, deltaMeters};
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
         std::span<const ElevationSeed_t>(&seed, 1), floorMeters, ceilingMeters, rRules);
@@ -94,6 +96,7 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
                      const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
                      IUnitOrderWorld* pWorld)
 {
+    RequireCurrentWorldMap(rWorldMap);
     if (levelCount <= 0)
     {
         return false;
@@ -115,6 +118,7 @@ bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt1993
                         const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
                         IUnitOrderWorld* pWorld)
 {
+    RequireCurrentWorldMap(rWorldMap);
     if (tiles.empty())
     {
         return false;

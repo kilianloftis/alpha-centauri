@@ -129,8 +129,7 @@ MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
     configFile >> root;
 
     MoraleConfig_t config;
-    config.baseIntrinsic = root.value("base_intrinsic", 1);
-    config.probeBaseIntrinsic = root.value("probe_base_intrinsic", 2);
+    config.startingIntrinsic = root.value("starting_intrinsic", 1);
     config.defenseFloorIndex = root.value("defense_floor_index", 1);
     if (!root.contains("promotion_seed_formula") || !root.at("promotion_seed_formula").is_string())
     {

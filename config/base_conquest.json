@@ -53,5 +53,9 @@
       "No_Armour",
       "Fission_Plant"
     ]
+  },
+  "native_raid": {
+    "facility_chance_percent": 50,
+    "pop_loss": 1
   }
 }

@@ -16,6 +16,14 @@ struct EscapeColonyPodConfig_t
     std::vector<std::string> componentIds;
 };
 
+struct NativeRaidConfig_t
+{
+    // Chance to destroy a facility; otherwise the raid takes popLoss. A living base
+    // always has population — size 0 razes it.
+    int facilityChancePercent = 0;
+    int popLoss = 0;
+};
+
 struct BaseConquestConfig_t
 {
     // Continuous effects injected into every faction's pool: the LastDefenderPopLoss,
@@ -25,6 +33,7 @@ struct BaseConquestConfig_t
     // touching C++.
     std::vector<EffectConfig_t> effects;
     EscapeColonyPodConfig_t escapeColonyPod;
+    NativeRaidConfig_t nativeRaid;
 };
 
 } // namespace ac

@@ -53,14 +53,12 @@ It declares `visible_in_fog`: once an observer has explored its tile, `IsUnitVis
 keeps the live tower drawn and attackable while that tile is fogged. Shroud still hides
 it, and concealment still applies. Destroying the tower removes the marker.
 
-## Factory
+## Designs
 
-`EnsureNativeDesign(Faction&, const NativeUnitRegistry&, nativeId)` registers (or returns)
-the faction’s `NativeDesign` by stable config id — same role as `EnsureAdHocDesign` for
-component lists. A fungal bloom calls it on the session's native-life faction (Planet,
-`config/factions/planet/`) for each lifeform it spawns, with the registry from
-`GameState::GetGameData()`. Eco-damage fungal-pop spawning
-should call it the same way.
+`Faction` construction registers a `NativeDesign` on `Military` for every entry in
+`NativeUnitRegistry`. Production and spawn look it up with `Military::GetDesign`. A fungal
+bloom does that on the session's native-life faction (Planet, `config/factions/planet/`) for
+each lifeform it spawns. Eco-damage fungal-pop spawning should look the design up the same way.
 
 ## Lifecycle starting XP
 

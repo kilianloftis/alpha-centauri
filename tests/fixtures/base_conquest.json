@@ -51,5 +51,9 @@
       "test_chassis",
       "test_colony_pod"
     ]
+  },
+  "native_raid": {
+    "facility_chance_percent": 50,
+    "pop_loss": 1
   }
 }

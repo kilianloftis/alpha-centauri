@@ -977,8 +977,8 @@ namespace
 {
 
 // The one multiplicative-only unit resolve: AddPercent / MultiplyGeometric contributions
-// seeded at baseValue, Adds deliberately ignored. Shared by psi combat and the SE morale
-// PositiveMoraleScale step so the two cannot drift.
+// seeded at baseValue, Adds deliberately ignored. Shared by psi combat and the morale
+// scale steps in MoraleRules so the two cannot drift.
 double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t statId,
                                   double baseValue, const EffectContext_t& rCtx)
 {

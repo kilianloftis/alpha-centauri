@@ -269,6 +269,21 @@
     ]
   },
   {
+    "id": "test_high_morale",
+    "name": "Test High Morale",
+    "type": "ability",
+    "mineral_cost": 1,
+    "on_complete_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "covert",
     "name": "Covert",
     "type": "ability",
@@ -962,6 +977,15 @@
         "scope": "ThisUnit",
         "parameters": {
           "flag": "cannot_capture_bases"
+        }
+      }
+    ],
+    "on_complete_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
         }
       }
     ]

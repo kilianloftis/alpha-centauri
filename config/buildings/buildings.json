@@ -31,10 +31,15 @@
     "icon": "assets/sprites/facilities/fac001.png",
     "effects": [
       {
-        "type": "RuleFlag",
-        "scope": "ThisBase",
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "OriginBaseIsHomeBase"
+        },
         "parameters": {
-          "flag": "creche"
+          "stat": "negative_morale_scale",
+          "amount": -50,
+          "op": "AddPercent"
         }
       },
       {

@@ -152,8 +152,8 @@ TEST_CASE("on_unit_produced GrantXp: Aerospace Complex only boosts air starting 
     Unit& air = fixture.MakeUnit(faction, 9, 9, {"test_flight_chassis"}, &base, &base);
 
     // Both are the first built of their components, so both are prototypes.
-    CHECK(land.GetXp() == 2); // base_intrinsic + prototype GrantXp
-    CHECK(air.GetXp() == 4); // base_intrinsic 1 + prototype 1 + Aerospace 2
+    CHECK(land.GetXp() == 2); // starting_intrinsic + prototype GrantXp
+    CHECK(air.GetXp() == 4); // starting_intrinsic 1 + prototype 1 + Aerospace 2
 }
 
 TEST_CASE("on_unit_produced GrantXp applies at the production base only",

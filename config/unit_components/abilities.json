@@ -323,6 +323,22 @@
     ]
   },
   {
+    "id": "High_Morale",
+    "name": "High Morale",
+    "type": "ability",
+    "required_tech": "intellectual_integrity",
+    "mineral_cost": 1,
+    "on_complete_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "Non_Lethal_Methods",
     "name": "Non-Lethal Methods",
     "type": "ability",

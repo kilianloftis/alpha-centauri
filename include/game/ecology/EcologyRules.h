@@ -10,6 +10,7 @@ namespace ac
 
 class AtrocityLedger;
 class BaseManager;
+class NativeUnitRegistry;
 class Tile;
 struct NativeUnitConfig_t;
 
@@ -38,6 +39,7 @@ struct BloomCandidates_t
 BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin);
 
 // Native-life designs whose domain can stand on rTile.
-std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile);
+std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile,
+                                                         const NativeUnitRegistry& rNatives);
 
 } // namespace ac
