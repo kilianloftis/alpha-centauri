@@ -1,6 +1,16 @@
 #include "ui/world/SelectedUnitPanel.h"
 #include "game/base/BaseManager.h"
+#include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleConfig.h"
+#include "game/combat/MoraleRules.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
+#include "game/faction/Faction.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/Tile.h"
 #include "game/movement/MovementConstants.h"
+#include "game/population/PopulationManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
@@ -21,9 +31,56 @@ constexpr size_t k_UnitNameFirstCharCount = 1;
 
 } // namespace
 
-SelectedUnitPanel::SelectedUnitPanel(WindowLayout_t layout, SpriteLibrary& rSprites)
+std::string FormatMoraleDisplay(const Unit& rUnit, const MoraleCalculator& rMorale)
+{
+    EffectContext_t displayCtx{&rUnit.GetTile()};
+    displayCtx.pUnit = &rUnit;
+    std::string text = MoraleDisplayName(rUnit, displayCtx, rMorale);
+
+    const int rank = EffectiveMoraleLevel(rUnit, displayCtx, rMorale);
+    const MoraleConfig_t& rConfig = rMorale.GetConfig();
+    const bool bOnBase = rUnit.GetTile().HasFeature(ImprovementIds::k_Base);
+    const bool bCountInSquare = rank < rConfig.MaxLevel() && bOnBase;
+    int pluses = 0;
+    if (bCountInSquare)
+    {
+        // Defender extras are the in-square facility marks; attack penalties stay off the string.
+        EffectContext_t extraCtx = displayCtx;
+        extraCtx.combatRole = CombatRole_t::Defender;
+        const int extras = ResolveStat(rUnit, StatId_t::MoraleExtra, extraCtx);
+        pluses += std::max(0, extras);
+    }
+    const Faction& rFaction = rUnit.GetFaction();
+    const SocialEngineeringManager& rSe = rFaction.GetSocialEngineering();
+    const int seMorale = rSe.GetSocialRating(SocialRatingId_t::Morale);
+    // SE +2/+3 is a field mark; on a base it is already in the defender extras above.
+    if ((seMorale == 2 || seMorale == 3) && !bCountInSquare)
+    {
+        ++pluses;
+    }
+    if (rank == rConfig.MinLevel() && pluses == 0)
+    {
+        pluses = 1;
+    }
+    text.append(static_cast<std::size_t>(pluses), '+');
+
+    const BaseManager* pHome = rUnit.GetHomeBase();
+    if (pHome != nullptr)
+    {
+        const PopulationManager& rPop = pHome->GetPopulation();
+        if (rPop.IsRioting() && rank > rConfig.MinLevel())
+        {
+            text += " (-)";
+        }
+    }
+    return text;
+}
+
+SelectedUnitPanel::SelectedUnitPanel(WindowLayout_t layout, SpriteLibrary& rSprites,
+                                     const MoraleCalculator& rMorale)
     : UIElement(layout)
     , m_rSprites(rSprites)
+    , m_rMorale(rMorale)
 {
 }
 
@@ -51,6 +108,7 @@ void SelectedUnitPanel::Render(Graphics& rGraphics)
 
     float textY = iconY + iconSize + textGap;
     textY = DrawName_(rGraphics, textX, textY, fontSize) + textGap;
+    textY = DrawMorale_(rGraphics, textX, textY, fontSize) + textGap;
     textY = DrawStats_(rGraphics, textX, textY, fontSize) + textGap;
     textY = DrawMoves_(rGraphics, textX, textY, fontSize) + textGap;
     {
@@ -114,6 +172,19 @@ float SelectedUnitPanel::DrawName_(Graphics& rGraphics, float textX, float textY
 {
     rGraphics.DrawText(
         m_pSelectedUnit->GetDesign().GetName(),
+        textX,
+        textY,
+        fontSize,
+        Style().selectedUnitPanel.bodyTextColor);
+    return textY + static_cast<float>(fontSize);
+}
+
+float SelectedUnitPanel::DrawMorale_(Graphics& rGraphics, float textX, float textY,
+                                     unsigned int fontSize) const
+{
+    const std::string text = FormatMoraleDisplay(*m_pSelectedUnit, m_rMorale);
+    rGraphics.DrawText(
+        text,
         textX,
         textY,
         fontSize,

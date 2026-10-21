@@ -12,6 +12,8 @@
 #include "ui/world/EndTurnButton.h"
 #include "ui/world/MinimapDisplay.h"
 #include "game/GameState.h"
+#include "game/GameDataContext.h"
+#include "game/combat/MoraleCalculator.h"
 #include "game/GameSettings.h"
 #include "game/faction/Faction.h"
 #include "game/movement/TransportMutations.h"
@@ -91,8 +93,14 @@ WorldView::WorldView(
     const auto& console = Style().worldView;
     const WindowLayout_t& rConsole = m_consolePlacement.layout;
 
+    const GameDataContext& rData = rGameState.GetGameData();
+    const MoraleCalculator* pMorale = rData.moraleCalculator.get();
+    if (!pMorale)
+    {
+        throw std::runtime_error("WorldView: morale calculator is not loaded");
+    }
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(
-        ResolveLayout(rConsole, console.consoleUnit), m_rSprites);
+        ResolveLayout(rConsole, console.consoleUnit), m_rSprites, *pMorale);
     m_pSelectedUnitPanel = pSelectedUnit.get();
     m_elements.push_back(std::move(pSelectedUnit));
 

@@ -326,8 +326,7 @@ struct AnyOf_t
 };
 
 // True when EffectContext_t::combatRole is Defender, matching bMatches. Omit value in JSON
-// to require Defender; "value": false matches the attacker. CombatRole None fails closed
-// for value true and matches value false (not defending).
+// to require Defender; "value": false matches the attacker. CombatRole None matches neither.
 struct IsDefending_t
 {
     bool bMatches = true;

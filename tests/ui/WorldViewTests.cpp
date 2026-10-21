@@ -13,6 +13,11 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/population/PopulationManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "ui/world/SelectedUnitPanel.h"
 #include "game/units/UnitSlotConfig.h"
 #include "input/Input.h"
 #include "ui/IGameView.h"
@@ -182,6 +187,56 @@ TEST_CASE("Clicking a garrisoned base opens the base view", "[ui][world]")
     pView->HandleMouse(ReleaseAt_(x, y));
 
     REQUIRE(pOpened == &rBase);
+}
+
+TEST_CASE("FormatMoraleDisplay is say_morale: word, pluses, home-riot suffix", "[ui][morale]")
+{
+    ViewFixture fixture;
+    Faction& faction = *fixture.pPlayer;
+    const MoraleCalculator& morale = fixture.morale();
+    std::deque<UnitDesign> designs;
+
+    Unit& field = MakeUnit_(fixture, 8, 6, nullptr, {"test_chassis"}, designs);
+    field.SetXp(0);
+    CHECK(FormatMoraleDisplay(field, morale) == "Very Green+");
+    field.SetXp(1);
+    CHECK(FormatMoraleDisplay(field, morale) == "Green");
+    field.SetXp(2);
+    CHECK(FormatMoraleDisplay(field, morale) == "Disciplined");
+
+    BaseManager& creche = fixture.MakeBase(8, 8);
+    creche.GetBuildingManager().AddBuilding("Childrens_Creche");
+    Unit& onCreche = MakeUnit_(fixture, 8, 8, &creche, {"test_chassis"}, designs);
+    onCreche.SetXp(2);
+    CHECK(FormatMoraleDisplay(onCreche, morale) == "Disciplined+");
+
+    BaseManager& home = fixture.MakeBase(8, 12);
+    Unit& homed = MakeUnit_(fixture, 8, 12, &home, {"test_chassis"}, designs);
+    homed.SetXp(3);
+    home.GetPopulation().ForceRiot(/*turns=*/1);
+    home.GetPopulation().CommitMood();
+    REQUIRE(home.GetPopulation().IsRioting());
+    CHECK(FormatMoraleDisplay(homed, morale) == "Hardened (-)");
+
+    const SocialPolicyRegistry& rPolicies = *fixture.dataContext.socialPolicyRegistry;
+    const SocialPolicyConfig_t* pPolicy = rPolicies.Find("morale_policy");
+    REQUIRE(pPolicy);
+    faction.GetSocialEngineering().SetActivePolicy(*pPolicy);
+    Unit& seUnit = MakeUnit_(fixture, 8, 4, nullptr, {"test_chassis"}, designs);
+    seUnit.SetXp(2);
+    CHECK(FormatMoraleDisplay(seUnit, morale) == "Hardened+");
+    CHECK(FormatMoraleDisplay(onCreche, morale) == "Hardened++");
+}
+
+TEST_CASE("Selected unit panel shows FormatMoraleDisplay", "[ui][world][morale]")
+{
+    ViewFixture fixture;
+    fixture.pPlayer->GetExploredMap().MarkAll();
+    std::deque<UnitDesign> designs;
+    Unit& unit = MakeGarrison_(fixture, 8, 8, nullptr, designs);
+    auto pView = MakeWorldView_(fixture);
+    PrimeWorldView_(*pView, fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining(FormatMoraleDisplay(unit, fixture.morale())));
 }
 
 TEST_CASE("Clicking a unit off a base selects it without opening a base", "[ui][world]")

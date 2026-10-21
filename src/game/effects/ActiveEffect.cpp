@@ -574,8 +574,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             }
             else if constexpr (std::is_same_v<T, IsDefending_t>)
             {
-                const bool bDefending = ctx.combatRole == CombatRole_t::Defender;
-                return bDefending == rAlt.bMatches;
+                if (rAlt.bMatches)
+                {
+                    return ctx.combatRole == CombatRole_t::Defender;
+                }
+                return ctx.combatRole == CombatRole_t::Attacker;
             }
             else if constexpr (std::is_same_v<T, IsInCombat_t>)
             {
