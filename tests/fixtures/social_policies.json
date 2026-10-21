@@ -175,6 +175,22 @@
     ]
   },
   {
+    "id": "very_low_morale_policy",
+    "name": "Very Low Morale Policy (-4 Morale rating)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": -4 } }
+    ]
+  },
+  {
+    "id": "high_morale_policy",
+    "name": "High Morale Policy (+4 Morale rating)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 4 } }
+    ]
+  },
+  {
     "id": "simple",
     "default": true,
     "name": "Simple",

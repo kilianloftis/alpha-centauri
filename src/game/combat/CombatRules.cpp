@@ -35,7 +35,7 @@ int ResolveSplash_(const Unit& rAttacker)
     ctx.pUnit = &rAttacker;
     ctx.pAttacker = &rAttacker;
     return std::max(0, ResolveCombatUnitStat(
-                           rAttacker, StatId_t::CollateralDamage, ctx, {}));
+                           rAttacker, StatId_t::CollateralDamage, ctx));
 }
 
 // Tile effects and the occupant's live list, same combined stack move cost uses.

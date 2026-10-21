@@ -335,7 +335,7 @@
           "stat": "attack",
           "amount": 1,
           "op": "Add",
-          "amount_source": "BasesOwned"
+          "amount_source": { "kind": "BasesOwned" }
         }
       }
     ]
@@ -350,10 +350,10 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "morale_bonus",
+          "stat": "morale_rank",
           "amount": 1,
           "op": "Add",
-          "amount_source": "BasesOwned"
+          "amount_source": { "kind": "BasesOwned" }
         }
       }
     ]
@@ -1682,7 +1682,7 @@
           "stat": "attack",
           "amount": 25,
           "op": "AddPercent",
-          "amount_source": "LevelsAboveOpponent"
+          "amount_source": { "kind": "LevelsAboveOpponent" }
         }
       }
     ]

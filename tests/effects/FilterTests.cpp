@@ -15,6 +15,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <map>
 #include <ranges>
 
 using namespace ac;
@@ -304,6 +305,70 @@ TEST_CASE("AmountSourceValue: missing BasesOwned subject throws",
     CHECK_THROWS_AS(AmountSourceValue(mod, nullptr), std::runtime_error);
     EffectContext_t empty{};
     CHECK_THROWS_AS(AmountSourceValue(mod, &empty), std::runtime_error);
+}
+
+TEST_CASE("AmountSourceValue: SocialRating table key miss is 0", "[effects][amount_source]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::MoraleExtra;
+    mod.op = ModifierOp_t::Add;
+    StatModifierEffect_t::AmountSourceSpec_t source;
+    source.kind = StatModifierEffect_t::AmountSource_t::SocialRating;
+    source.rating = SocialRatingId_t::Morale;
+    source.amounts = std::map<int, double>{{99, 5.0}};
+    mod.amountSource = source;
+
+    EffectContext_t ctx;
+    ctx.pUnit = &unit;
+    CHECK(AmountSourceValue(mod, &ctx) == Approx(0.0));
+}
+
+TEST_CASE("AmountSourceValue: SocialRating requires pUnit",
+          "[effects][amount_source]")
+{
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::MoraleExtra;
+    mod.op = ModifierOp_t::Add;
+    StatModifierEffect_t::AmountSourceSpec_t source;
+    source.kind = StatModifierEffect_t::AmountSource_t::SocialRating;
+    source.rating = SocialRatingId_t::Morale;
+    source.amounts = std::map<int, double>{{0, 1.0}};
+    mod.amountSource = source;
+    CHECK_THROWS_AS(AmountSourceValue(mod, nullptr), std::runtime_error);
+    EffectContext_t empty{};
+    CHECK_THROWS_AS(AmountSourceValue(mod, &empty), std::runtime_error);
+}
+
+TEST_CASE("FilterByStatIdInContext: SocialRating drops without pUnit",
+          "[effects][amount_source][filter]")
+{
+    actest::EffectPool pool;
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::MoraleExtra;
+    mod.op = ModifierOp_t::Add;
+    StatModifierEffect_t::AmountSourceSpec_t source;
+    source.kind = StatModifierEffect_t::AmountSource_t::SocialRating;
+    source.rating = SocialRatingId_t::Morale;
+    source.amounts = std::map<int, double>{{0, 1.0}};
+    mod.amountSource = source;
+    EffectConfig_t config;
+    config.effect = mod;
+    config.scope = EffectScope_t::FactionUnits;
+    const std::vector<ActiveEffect_t> effects = {Active(pool.Add(std::move(config)), "table")};
+
+    CHECK(FilterByStatIdInContext(effects, StatId_t::MoraleExtra, EffectContext_t{}).empty());
+
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    EffectContext_t ctx;
+    ctx.pUnit = &unit;
+    CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::MoraleExtra, ctx))
+          == 1);
 }
 
 TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",

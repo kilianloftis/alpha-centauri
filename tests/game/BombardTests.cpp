@@ -251,9 +251,10 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     EffectContext_t defenderAttack = defenseCtx;
     defenderAttack.pAttacker = &attacker;
     defenderAttack.pDefender = &defender;
+    const int defenderAttackLevel = CombatMoraleLevel(defender, defenderAttack, fixture.morale());
     const int defenderAttackRating = ResolveCombatUnitStat(
         defender, StatId_t::Attack, defenderAttack,
-        EffectiveLevelEffects(defender, defenderAttack, fixture.morale()));
+        fixture.morale().CombatAddPercent(defenderAttackLevel));
     const int point = MovementConstants_t::k_moveFragmentsPerPoint;
     const int scaledByLeftover = static_cast<int>(std::lround(
         defenderAttackRating * 1.0 / static_cast<double>(point) * k_CombatStrengthScale));
@@ -353,21 +354,17 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
     EffectContext_t ctx{&defender.GetTile(), CombatRole_t::Attacker};
     ctx.pAttacker = &attacker;
     ctx.pDefender = &defender;
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
-          == 6);
+    const int attackLevel = CombatMoraleLevel(attacker, ctx, fixture.morale());
+    const double attackPercent = fixture.morale().CombatAddPercent(attackLevel);
+    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 6);
     CHECK(attacker.GetStat(StatId_t::Attack) == 4);
 
     fixture.At(8, 8).SetElevation(999);
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
-          == 4);
+    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 4);
 
     fixture.At(8, 8).SetElevation(0);
     fixture.At(9, 9).SetElevation(2000);
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx,
-                                EffectiveLevelEffects(attacker, ctx, fixture.morale()))
-          == 4);
+    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 4);
 }
 
 TEST_CASE("An empty tile loses one non-base improvement, including outside vision", "[bombard]")

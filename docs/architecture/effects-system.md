@@ -107,7 +107,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
 | `WorldGlobal` | every resolver that can apply the effect | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Bases and faction stats read that pool. `CollectLiveUnitEffects` appends the unit-domain stat modifiers and rule flags. `TileEffectsContext::CollectAreaEffects` and move-cost entry append the tile-domain slice from `CollectSessionWorldEffects()`. Intercept bills a `WorldGlobal` charge to the granting faction; a council charge has no building ledger. Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
-| `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`) | faction pool → `CollectLiveUnitEffects`. Combat Attack/Defense use `ResolveCombatUnitStat`, which merges the unit's effective `MoraleLevel_t::effects` (Attack/Defense `AddPercent` from `morale_levels.json`) into the same stack. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
+| `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`; in-square extras use `SubjectIsOnOriginBase`) | faction pool → `CollectLiveUnitEffects`. Combat Attack/Defense use `ResolveCombatUnitStat` with `MoraleCalculator::CombatAddPercent` at `CombatMoraleLevel` (stated `morale_rank` plus `morale_extra`; defense clamped to `[defense_floor_index, MaxLevel]`). The percent is `(combatLevel - baseline_index) * percent_per_level` from `morale_levels.json` and shares the AddPercent bucket with weapon/chassis modifiers. Named rows keep `promotion_chance` and `planet_pearls` only. `EffectContext_t::combatRole` enables `IsInCombat` (riot rank penalty) and `IsDefending` (SE +2/+3 defend-in-base extra and attack-only Crèche extras via `"value": false`). The rank word is `EffectiveMoraleLevel` with `combatRole` None. Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
 | `ProducedAtThisBase` | units built at the originating base | stamped onto the unit at construction (`Unit::GetProductionGrants`); collected by `CollectLiveUnitEffects` from the unit, not by live pool origin matching. Permanent non-XP train grants. Starting XP (Command Center, Aerospace, prototype) uses triggered `GrantXp` on `on_unit_produced_effects` instead. |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
@@ -192,6 +192,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Responsibilities**:
   - Identifies the target stat via `StatId_t`.
   - Stores an `amount` and a `ModifierOp_t`.
+  - Optionally carries an `amount_source` object (`kind`, plus source-specific fields). A scale source multiplies `amount` by a live value. `SocialRating` with `amounts` selects `amounts[rating]` (missing key is 0). Exclusive with a sibling `amount` when `amounts` is set.
   - Optionally carries a `TileSelector_t selector`. When **absent**, the modifier is either an intrinsic tile yield (`ThisTile` scope) or a flat base/unit modifier (resolved once). When **present**, the modifier applies to each worked tile whose features satisfy the selector — e.g. a building's "+1 mineral to every worked Mine".
 
 ### StatId_t
@@ -244,10 +245,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `TileEffectsContext::ResolveResource_` (per-tile yield), `UnitDesign::GetBaseCost`,
   `ResearchManager`'s tech-cost modifier, and `FactionVisibleMap`'s vision range. Do not
   truncate or `std::round` a total anywhere else — a fork means one stat resolves to two
-  values depending on which path asked, which is what this helper exists to prevent. The one
-  deliberate exception is the `PositiveMoraleScale` / `NegativeMoraleScale` steps in
-  `MoraleRules`, which truncate toward zero to match integer halving and say so at the
-  call site.
+  values depending on which path asked, which is what this helper exists to prevent.
 
 ### ResolveDomain_t / DomainFor
 - **Purpose**: Consumer-side **subject** taxonomy — which typed resolve / amount-source
@@ -314,6 +312,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   subject and drops `BaseSize` silently. Threading a subject through the scrap API is the fix
   if a `BaseSize`-scaled refund is ever wanted.
 
+### AmountSourceSpec_t
+- **Purpose**: `amount_source` is a tagged object. Scale kinds (`BaseSize`, `IntrinsicXp`, …) compute `amount * live`. `SocialRating` takes `rating` and `amounts` and selects `amounts[GetSocialRating]`; a missing map entry contributes 0. `rating` lives only on the SocialRating source — it is not a sibling of `kind`.
+- **Authoring**: `"amount_source": { "kind": "BaseSize" }` with optional `amount` scale (default 1). `"amount_source": { "kind": "SocialRating", "rating": "morale", "amounts": { … } }` — exclusive with `amount`. `selector` cannot combine with any amount_source. A later kind is a new `AmountSource_t` enumerator, the fields it needs, a case in `AmountSourceValue`, and a fail-closed subject check in `StatModifierMatchesInContext`.
+- **Resolve**: `AmountSourceValue(const StatModifierEffect_t&, …)` switches on `kind`. `StatModifierMatchesInContext` drops the modifier when that kind's subject is absent (`pUnit` for `SocialRating`).
+- **When to use a table**: one stat, one op, amount varies by an integer. Linear scales omit `amounts`. A list that emits *different effect types* per step stays a level list (`social_rating_effects.json`, `morale_levels.json`). Shipping: Children's Crèche (four effects) and Brood Pit (two) look up SE Morale.
+
 ### TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasFeature()` — there is no separate improvement-type enum.
 - **Shape**: `std::variant` so invalid kind/parameter combos are unrepresentable:
@@ -326,7 +330,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile. JSON `"present": false` inverts the test ("this tile does **not** have Fungus"), the same way `IsNativeLife_t`'s `value` does; an absent tile fails closed whichever polarity was authored, so a negated test is not a way to match "no tile". There is no `Not_t`: a whole alternative would have to hold a nested `Condition_t`, and every negation the rules need is of a tile-feature test.
   - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
   - `AnyOf_t` — at least one nested `Condition_t` is satisfied (OR). Same JSON shape and the same `values` desugaring as `AllOf_t`. Level Terrain's precondition is `AnyOf` over `Rocky` / `Rolling`.
-  - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `OriginBaseIsHomeBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — parameterless situational predicates. `OriginBaseIsTargetBase_t` keys on the combat tile; `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base, which is how a base-sourced `FactionUnits` effect (a riot tier's morale penalty) narrows to that base's own garrison.
+  - `IsDefending_t`, `IsInCombat_t`, `OriginBaseIsHomeBase_t`, `SubjectIsOnOriginBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — situational predicates. `IsDefending_t` matches `combatRole == Defender` by default; JSON `"value": false` matches the attacker. `IsInCombat_t` is true when `combatRole` is Attacker or Defender (riot `morale_rank`). `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base (home Crèche rank offsets, riot penalty). `SubjectIsOnOriginBase_t` keys on the unit standing on the origin base tile (in-square Crèche / Brood Pit extras).
+  - `SocialRating_t` — situational. True when the unit owner's faction-wide social rating satisfies `CompareOp_t` against `value`. Absent unit fails closed.
+  - `OriginBaseHasBuilding_t` — situational. True when the effect's `originBase` has a constructed copy of `buildingId`, matching `bPresent` (JSON `value`). Distinct from `BaseHasBuilding_t` (`EffectContext_t::pBase`). Absent origin fails closed.
   - `SubjectDesign_t` — identity predicate. True when `EffectContext_t::pUnit`'s design id equals `designId`. Absent unit fails closed. Load validation checks the id against `NativeUnitRegistry`.
   - `IsNativeLife_t` — identity predicate. True when the design's `native_life` RuleFlag equals `bMatches` (JSON `value`, default true). A composed design carries the flag on a component. Absent unit fails closed.
   - `BaseHasBuilding_t` — situational predicate. True when `EffectContext_t::pBase` has a constructed copy of `buildingId`. Absent base fails closed. Load validation checks the id against `BuildingRegistry`. Alien Artifact's hold list uses this to name Network Node.
@@ -335,6 +341,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 ### UnitFilter_t
 - **Purpose**: Restricts which units an effect applies to in `CollectLiveUnitEffects` (context-free identity predicates, not combat situations).
 - **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `IsPrototype` (`ProductionRules`) when the unit was produced (`pProducedAt` set — "first one you built") before the faction's ledger records the design. It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
+
+### CompareOp_t
+- **Purpose**: `Eq` / `Le` / `Ge` of a live integer against a bound (`CompareSatisfied`). Numeric conditions share it; `SocialRating_t` is the current caller. Distinct from `ModifierOp_t` (how a stat stacks).
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.
@@ -889,8 +898,11 @@ grants fewer units and reports the real count rather than throwing.
       `pAttacker` / `pDefender`), allows `AddPercent` on `attack` or `defense`, and scopes
       `ThisUnit` or `WorldGlobal`. `bombard_min_hp_percent` is a Tile-domain percent of integer
       `hit_points`; `AddPercent` on it is rejected. `bombard_range` is a Unit-domain Chebyshev
-      radius. A `selector` may not be combined with **any** `amount_source`:
-      selectors route through tile-yield resolution, which supplies only a tile subject. Each
+      radius.       A `selector` may not be combined with **any** `amount_source`:
+      selectors route through tile-yield resolution, which supplies only a tile subject.
+      `amount_source` is an object with `kind`. Scale kinds use `amount` (default 1).
+      `SocialRating` requires `rating` and `amounts` (exclusive with `amount`); a missing
+      map entry contributes 0. Each
       amount_source contribution for `BaseSize` is **floored** before entering the modifier
       stack (vanilla University `floor(size×0.25)` does not share fractional residue with
       another fractional BaseSize source; `ElevationEnergy` / `MineralsConverted` /

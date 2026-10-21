@@ -1,0 +1,18 @@
+{
+  "Childrens_Creche": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "condition": { "kind": "SubjectIsOnOriginBase" },
+      "parameters": { "stat": "morale_rank", "amount": 1, "op": "MinClamp" }
+    }
+  ],
+  "Brood_Pit": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "condition": { "kind": "SubjectIsOnOriginBase" },
+      "parameters": { "stat": "morale_rank", "amount": 1, "op": "MinClamp" }
+    }
+  ]
+}

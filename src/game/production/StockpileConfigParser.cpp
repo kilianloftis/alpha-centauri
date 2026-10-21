@@ -24,7 +24,7 @@ bool HasMineralsConverted_(const std::vector<EffectConfig_t>& rEffects)
 {
     return std::any_of(rEffects.begin(), rEffects.end(), [](const EffectConfig_t& rEffect) {
         const auto* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-        return pMod && pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted;
+        return pMod && pMod->HasAmountSource(StatModifierEffect_t::AmountSource_t::MineralsConverted);
     });
 }
 
@@ -60,7 +60,7 @@ void RejectMineralIndependentYield_(const std::vector<EffectConfig_t>& rEffects,
         {
             continue;
         }
-        if (pMod->amountSource != StatModifierEffect_t::AmountSource_t::MineralsConverted)
+        if (!pMod->HasAmountSource(StatModifierEffect_t::AmountSource_t::MineralsConverted))
         {
             throw std::runtime_error(
                 "Stockpile '" + rId

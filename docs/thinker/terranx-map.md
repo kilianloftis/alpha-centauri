@@ -88,3 +88,62 @@ Probe plan (`UNIT.plan` `0xb` at `0x9ab892`): SE Probe (clamped 0–3) + Telepat
 + one per `TFLAG_IMPROVE_PROBE` tech + `VEH.morale`, then **clamp 2–6**. The Disciplined
 floor is this live clamp, not a stored spawn of 2. Thinker's `mod_morale_veh` follows the
 same split; it does not add `ABL_TRAINED` either.
+
+Combat units (not probe, not basic-psi `unit_id < 0x40 && offense < 0`): clamp SE −4..4,
+then +1 if ≤−2 / −1 if ≥2, add negative `rule_morale`. If **home** has facility 2
+(Children's Crèche) and the modifier is negative, signed `/2` toward 0 (`cdq; sub; sar 1`
+at `0x5C1042`). Basic psi returns `VEH.morale` at `0x5C0F7A` and never sees home Crèche.
+Brood Pit home (facility `0x23` at `0x5C1053`) is the same `/2` but only for native-psi
+that reach that site — effectively Isle of the Deep (`unit_id == 15`). Thinker's
+`mod_morale_veh` removes the home Crèche half (`Fix:`).
+
+### `get_basic_offense` (`0x5015B0`) / `get_basic_defense` (`0x501940`)
+
+`base_at` (`0x4E3A50`) on **that unit's tile**. Facility bits via `bitmask` (`0x50BA00`).
+
+If facility 2: `morale++`, then `morale -= adjusted_SE`. Attack (`0x50168C`) clamps the
+rating −4..4 and +1 if ≤−2. Defense (`0x501A14`) zeros positives first, then the same
+≤−2 bump. Applies to every unit on the tile, including natives. Thinker's combat path
+skips natives and adds HQ +1 (`Fix:`).
+
+Brood Pit (`0x23`): native psi only. After Crèche, +1 and no second subtract
+(`0x50171C` / `0x501A9D`). Without Crèche, +1 and rating-subtract; defense does **not**
+zero positives (`0x501B15`).
+
+After extras: defense always `clamp(morale, 1, 6)` at `0x501C03`. Attack clamps
+1–6 only when `ebp+0x18` (`unk_tgl`, artillery / attacker–defender swap) is set
+(`0x501874`–`0x501895`); otherwise the integer is **unbounded**. Both then
+`add ebx, 6` and multiply proto by that (`offense_proto` `0x5C1150` at
+`0x5018AE`, then `imul eax, ebx` at `0x501929`; defense `0x501C22`). There is
+no off-table rank row — strength is `proto * (morale + 6)`. Disciplined (2) is
+`* 8` (100%); each step is another 1/8 of proto (+12.5%). Abilities are
+`has_abil` (`0x5BF1F0`) after that factor.
+
+Both then add +1 if `SE_morale_pending` (`Faction` +0x25C = `0x96CC3C`) is 2 or 3.
+Defense does this whenever `base_at` succeeded (`0x501B4C`). Attack does it only
+when `unk_tgl` is set (`0x5017BE`) — Thinker notes that flag is the
+attacker/defender swap in `battle_compute`. `SE_morale` (active, +0x288 =
+`0x96CC68`) is the value the Crèche/Brood subtract uses; the +2/+3 extra reads
+pending.
+
+### `say_morale` (`0x4B3FD0`) / `say_morale_2` (`0x4B43C0`)
+
+Unit-info rank string. `say_morale_2` is a wrapper onto the global buffer at
+`0x9B86A0`. The rank **word** is `morale_veh(veh, 0, arg3)` at `0x4B3FE3` —
+riot flag off — then the name table at `0x952328` (conventional) /
+`0x95232C` (native lifecycle). Riot is not folded into that word.
+
+Annotations after the word, in order:
+
+- Home drone-riot (`BASE` +0x70 bit 1) and `morale_veh > 0` and no
+  `RFLAG_MORALE`: append `" (-)"` (`0x6874C8` at `0x4B40C9`).
+- On a base and rank &lt; 6: count in-square extras into `0x8C6B54` the same way
+  combat does (facility 2, then Brood Pit `0x23` for native psi). Each extra is
+  a `"+"` (`0x6874D0`).
+- `SE_morale_pending` 2 or 3: one more `"+"` (`0x4B430A`). No on-base gate —
+  the mark shows in the field; combat only pays it in a base when defending.
+- Rank 0 and no pluses: force one `"+"`.
+- Designated defender (`VEH` +0x2C bit 7): append `"(d)"` (`0x6874D4`).
+
+Thinker's `mod_say_morale2` also adds HQ +1 to the plus count (`Fix:`). The
+binary does not.

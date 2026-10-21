@@ -160,21 +160,46 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     }
 }
 
+int SocialRatingValue_(const Unit& rUnit, SocialRatingId_t rating)
+{
+    return rUnit.GetFaction().GetSocialEngineering().GetSocialRating(rating);
+}
+
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
 {
     if (!rMod.amountSource.has_value())
     {
         return rMod.amount;
     }
-    switch (*rMod.amountSource)
+    switch (rMod.amountSource->kind)
     {
+        case StatModifierEffect_t::AmountSource_t::SocialRating:
+        {
+            if (!pCtx || !pCtx->pUnit)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: SocialRating requires pUnit");
+            }
+            const int rating = SocialRatingValue_(*pCtx->pUnit, rMod.amountSource->rating);
+            if (!rMod.amountSource->amounts.has_value())
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: SocialRating requires amounts");
+            }
+            const auto it = rMod.amountSource->amounts->find(rating);
+            if (it == rMod.amountSource->amounts->end())
+            {
+                return 0.0;
+            }
+            return it->second;
+        }
         case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
             if (!pCtx || !pCtx->targetTile || !pCtx->pTileYieldRules)
             {
                 throw std::runtime_error(
                     "AmountSourceValue: ElevationEnergy requires targetTile and pTileYieldRules");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->targetTile,
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->targetTile,
                                      *pCtx->pTileYieldRules);
         case StatModifierEffect_t::AmountSource_t::MineralsConverted:
             if (!pCtx || !pCtx->pStockpile)
@@ -182,35 +207,35 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
                 throw std::runtime_error(
                     "AmountSourceValue: MineralsConverted requires pStockpile");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pStockpile);
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pStockpile);
         case StatModifierEffect_t::AmountSource_t::BaseSize:
             if (!pCtx || !pCtx->pBase)
             {
                 throw std::runtime_error(
                     "AmountSourceValue: BaseSize requires pBase");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pBase);
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pBase);
         case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
             if (!pCtx || !pCtx->pBase)
             {
                 throw std::runtime_error(
                     "AmountSourceValue: BuildingUpkeep requires pBase");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pBase);
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pBase);
         case StatModifierEffect_t::AmountSource_t::BasesOwned:
             if (!pCtx || !pCtx->pFaction)
             {
                 throw std::runtime_error(
                     "AmountSourceValue: BasesOwned requires pFaction");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pFaction);
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pFaction);
         case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
             if (!pCtx || !pCtx->pUnit)
             {
                 throw std::runtime_error(
                     "AmountSourceValue: IntrinsicXp requires pUnit");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pUnit);
+            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pUnit);
         case StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent:
         {
             const Unit* pOther = pCtx ? OpposingCombatant_(*pCtx) : nullptr;
@@ -549,17 +574,42 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             }
             else if constexpr (std::is_same_v<T, IsDefending_t>)
             {
-                return ctx.combatRole == CombatRole_t::Defender;
+                const bool bDefending = ctx.combatRole == CombatRole_t::Defender;
+                return bDefending == rAlt.bMatches;
             }
-            else if constexpr (std::is_same_v<T, OriginBaseIsTargetBase_t>)
+            else if constexpr (std::is_same_v<T, IsInCombat_t>)
             {
-                return pOriginBase != nullptr && ctx.targetTile != nullptr
-                    && &pOriginBase->GetTile() == ctx.targetTile;
+                return ctx.combatRole == CombatRole_t::Attacker
+                    || ctx.combatRole == CombatRole_t::Defender;
             }
             else if constexpr (std::is_same_v<T, OriginBaseIsHomeBase_t>)
             {
                 return pOriginBase != nullptr && ctx.pUnit != nullptr
                     && ctx.pUnit->GetHomeBase() == pOriginBase;
+            }
+            else if constexpr (std::is_same_v<T, SubjectIsOnOriginBase_t>)
+            {
+                return pOriginBase != nullptr && ctx.pUnit != nullptr
+                    && &ctx.pUnit->GetTile() == &pOriginBase->GetTile();
+            }
+            else if constexpr (std::is_same_v<T, SocialRating_t>)
+            {
+                if (ctx.pUnit == nullptr)
+                {
+                    return false;
+                }
+                const int rating = SocialRatingValue_(*ctx.pUnit, rAlt.rating);
+                return CompareSatisfied(rating, rAlt.op, rAlt.value);
+            }
+            else if constexpr (std::is_same_v<T, OriginBaseHasBuilding_t>)
+            {
+                if (pOriginBase == nullptr)
+                {
+                    return false;
+                }
+                const bool bHas =
+                    pOriginBase->GetBuildingManager().FindBuilding(rAlt.buildingId) != nullptr;
+                return bHas == rAlt.bPresent;
             }
             else if constexpr (std::is_same_v<T, AttackerIsEmbarked_t>)
             {
@@ -723,8 +773,11 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             }
             else if constexpr (std::is_same_v<T, TargetTileHas_t>
                                || std::is_same_v<T, IsDefending_t>
-                               || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                               || std::is_same_v<T, IsInCombat_t>
                                || std::is_same_v<T, OriginBaseIsHomeBase_t>
+                               || std::is_same_v<T, SubjectIsOnOriginBase_t>
+                               || std::is_same_v<T, SocialRating_t>
+                               || std::is_same_v<T, OriginBaseHasBuilding_t>
                                || std::is_same_v<T, AttackerIsEmbarked_t>
                                || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                || std::is_same_v<T, AttackerDomain_t>
@@ -997,31 +1050,51 @@ double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t st
     return ApplyModifierStack(baseValue, contributions);
 }
 
-// A live unit's effects plus the morale level's own effects, as one Unit-domain bundle.
+// A live unit's effects plus extra ThisUnit configs (planet_pearls rows or the combat
+// morale AddPercent), as one Unit-domain bundle.
 UnitEffects_t LiveUnitEffectsWithMorale_(const Unit& rUnit,
-                                         std::span<const EffectConfig_t> moraleLevelEffects)
+                                         std::span<const EffectConfig_t> extraEffects)
 {
     UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
-    AppendActiveEffects(moraleLevelEffects, nullptr, "morale_level", unitEffects.effects);
+    AppendActiveEffects(extraEffects, nullptr, "morale_level", unitEffects.effects);
     return unitEffects;
 }
 
 } // namespace
 
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          std::span<const EffectConfig_t> moraleLevelEffects)
+                          std::span<const EffectConfig_t> extraEffects)
 {
     return FinalizeResolvedStat(
-        ResolveUnitStat(LiveUnitEffectsWithMorale_(rUnit, moraleLevelEffects), statId,
+        ResolveUnitStat(LiveUnitEffectsWithMorale_(rUnit, extraEffects), statId,
                         SeedFor(statId), &rCtx));
+}
+
+int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
+                          double moraleAddPercent)
+{
+    EffectConfig_t scale;
+    scale.scope = EffectScope_t::ThisUnit;
+    scale.effect = StatModifierEffect_t{statId, moraleAddPercent, ModifierOp_t::AddPercent};
+    return ResolveCombatUnitStat(rUnit, statId, rCtx, std::span<const EffectConfig_t>(&scale, 1));
 }
 
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                            const EffectContext_t& rCtx,
-                                           std::span<const EffectConfig_t> moraleLevelEffects)
+                                           std::span<const EffectConfig_t> extraEffects)
 {
-    return ResolveUnitMultiplicative_(LiveUnitEffectsWithMorale_(rUnit, moraleLevelEffects),
+    return ResolveUnitMultiplicative_(LiveUnitEffectsWithMorale_(rUnit, extraEffects),
                                       statId, baseValue, rCtx);
+}
+
+double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                           const EffectContext_t& rCtx, double moraleAddPercent)
+{
+    EffectConfig_t scale;
+    scale.scope = EffectScope_t::ThisUnit;
+    scale.effect = StatModifierEffect_t{statId, moraleAddPercent, ModifierOp_t::AddPercent};
+    return ResolveCombatUnitMultiplicativeStat(
+        rUnit, statId, baseValue, rCtx, std::span<const EffectConfig_t>(&scale, 1));
 }
 
 namespace

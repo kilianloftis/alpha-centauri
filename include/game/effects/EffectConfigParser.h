@@ -18,7 +18,7 @@ namespace EffectConfigParser
 
 ModifierOp_t ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
-StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSource);
+StatModifierEffect_t::AmountSourceSpec_t ParseAmountSource(const nlohmann::json& rSource);
 
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue);

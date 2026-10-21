@@ -68,9 +68,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
-    CHECK(ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
-    CHECK(ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
-    CHECK(ParseStatId("negative_morale_scale") == StatId_t::NegativeMoraleScale);
+    CHECK(ParseStatId("morale_rank") == StatId_t::MoraleRank);
+    CHECK(ParseStatId("morale_extra") == StatId_t::MoraleExtra);
     CHECK(ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(ParseStatId("starting_size") == StatId_t::StartingSize);
     CHECK(ParseStatId("max_base_size") == StatId_t::MaxBaseSize);
@@ -124,6 +123,18 @@ TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
     CHECK(EffectConfigParser::ParseEffectScope("ThisTile") == EffectScope_t::ThisTile);
     CHECK(EffectConfigParser::ParseEffectScope("ThisTech") == EffectScope_t::ThisTech);
     CHECK_THROWS(EffectConfigParser::ParseEffectScope("Global"));
+}
+
+TEST_CASE("CompareSatisfied: Eq, Le, Ge", "[effects][compare]")
+{
+    CHECK(CompareSatisfied(2, CompareOp_t::Eq, 2));
+    CHECK_FALSE(CompareSatisfied(2, CompareOp_t::Eq, 3));
+    CHECK(CompareSatisfied(-1, CompareOp_t::Le, -1));
+    CHECK(CompareSatisfied(-2, CompareOp_t::Le, -1));
+    CHECK_FALSE(CompareSatisfied(0, CompareOp_t::Le, -1));
+    CHECK(CompareSatisfied(1, CompareOp_t::Ge, 1));
+    CHECK(CompareSatisfied(2, CompareOp_t::Ge, 1));
+    CHECK_FALSE(CompareSatisfied(0, CompareOp_t::Ge, 1));
 }
 
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
@@ -268,7 +279,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergy",
+                "amount_source": { "kind": "ElevationEnergy" },
                 "amount": 2,
                 "op": "Add"
             }
@@ -278,7 +289,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy);
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::ElevationEnergy);
         CHECK(pMod->amount == Approx(2.0));
     }
 
@@ -287,7 +298,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "ElevationEnergy" } }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
@@ -301,7 +312,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "minerals", "amount_source": "ElevationEnergy" }
+            "parameters": { "stat": "minerals", "amount_source": { "kind": "ElevationEnergy" } }
         })")));
     }
 
@@ -310,7 +321,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "ElevationEnergy" } }
         })")));
     }
 
@@ -319,7 +330,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "MoonPhase" }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "MoonPhase" } }
         })")));
     }
 
@@ -328,7 +339,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "ElevationEnergy" } }
         })")));
     }
 
@@ -344,21 +355,21 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "parameters": {
                 "stat": "drones",
                 "amount": 1,
-                "amount_source": "BaseSize",
+                "amount_source": { "kind": "BaseSize" },
                 "op": "MaxClamp"
             }
         })"));
         const auto* pMod = std::get_if<StatModifierEffect_t>(&clamp.effect);
         REQUIRE(pMod != nullptr);
         CHECK(pMod->op == ModifierOp_t::MaxClamp);
-        CHECK(pMod->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize);
+        CHECK(pMod->HasAmountSource(StatModifierEffect_t::AmountSource_t::BaseSize));
 
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergy",
+                "amount_source": { "kind": "ElevationEnergy" },
                 "op": "MultiplyGeometric"
             }
         })")));
@@ -369,7 +380,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisUnit",
             "parameters": {
                 "stat": "attack",
-                "amount_source": "BaseSize",
+                "amount_source": { "kind": "BaseSize" },
                 "op": "MaxClamp"
             }
         })")));
@@ -382,7 +393,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "econ",
-                "amount_source": "MineralsConverted",
+                "amount_source": { "kind": "MineralsConverted" },
                 "amount": 0.5,
                 "op": "Add"
             }
@@ -392,7 +403,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted);
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::MineralsConverted);
         CHECK(pMod->amount == Approx(0.5));
         CHECK(pMod->stat == StatId_t::Econ);
     }
@@ -402,7 +413,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "nutrients", "amount_source": "MineralsConverted", "amount": 1 }
+            "parameters": { "stat": "nutrients", "amount_source": { "kind": "MineralsConverted" }, "amount": 1 }
         })")));
     }
 
@@ -411,7 +422,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "minerals", "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "minerals", "amount_source": { "kind": "MineralsConverted" } }
         })")));
     }
 
@@ -422,7 +433,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "energy", "amount_source": "MineralsConverted", "amount": 1 }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "MineralsConverted" }, "amount": 1 }
         })")));
     }
 
@@ -431,7 +442,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "econ", "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "econ", "amount_source": { "kind": "MineralsConverted" } }
         })")));
     }
 
@@ -440,7 +451,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "econ", "amount": 0, "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "econ", "amount": 0, "amount_source": { "kind": "MineralsConverted" } }
         })")));
     }
 
@@ -451,7 +462,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "econ",
-                "amount_source": "MineralsConverted",
+                "amount_source": { "kind": "MineralsConverted" },
                 "selector": { "kind": "BaseTile" }
             }
         })")));
@@ -464,7 +475,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "drones",
-                "amount_source": "BaseSize",
+                "amount_source": { "kind": "BaseSize" },
                 "amount": 0.25,
                 "op": "Add"
             }
@@ -472,7 +483,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize);
+        CHECK(pMod->HasAmountSource(StatModifierEffect_t::AmountSource_t::BaseSize));
         CHECK(pMod->amount == Approx(0.25));
     }
 
@@ -481,7 +492,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "AllOwnerBases",
-            "parameters": { "stat": "drones", "amount_source": "BaseSize", "amount": 0.25 }
+            "parameters": { "stat": "drones", "amount_source": { "kind": "BaseSize" }, "amount": 0.25 }
         })")));
     }
 
@@ -490,7 +501,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "drones", "amount_source": "BaseSize", "amount": 0.25 }
+            "parameters": { "stat": "drones", "amount_source": { "kind": "BaseSize" }, "amount": 0.25 }
         })")));
     }
 
@@ -501,7 +512,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "BaseSize",
+                "amount_source": { "kind": "BaseSize" },
                 "amount": 1,
                 "selector": { "kind": "BaseTile" }
             }
@@ -513,7 +524,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "attack", "amount_source": "BaseSize", "amount": 0.25 }
+            "parameters": { "stat": "attack", "amount_source": { "kind": "BaseSize" }, "amount": 0.25 }
         })")));
     }
 
@@ -524,7 +535,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisUnit",
             "parameters": {
                 "stat": "attack",
-                "amount_source": "BasesOwned",
+                "amount_source": { "kind": "BasesOwned" },
                 "amount": 1,
                 "op": "Add"
             }
@@ -532,7 +543,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned);
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::BasesOwned);
         CHECK(pMod->amount == Approx(1.0));
     }
 
@@ -543,7 +554,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisUnit",
             "parameters": {
                 "stat": "cargo_capacity",
-                "amount_source": "IntrinsicXp",
+                "amount_source": { "kind": "IntrinsicXp" },
                 "amount": 1,
                 "op": "Add"
             }
@@ -551,7 +562,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::IntrinsicXp);
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::IntrinsicXp);
         CHECK(pMod->amount == Approx(1.0));
     }
 
@@ -562,7 +573,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisUnit",
             "parameters": {
                 "stat": "cargo_capacity",
-                "amount_source": "IntrinsicXp",
+                "amount_source": { "kind": "IntrinsicXp" },
                 "amount": 1,
                 "op": "AddPercent"
             }
@@ -574,7 +585,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "attack", "amount_source": "BasesOwned", "amount": 1 }
+            "parameters": { "stat": "attack", "amount_source": { "kind": "BasesOwned" }, "amount": 1 }
         })")));
     }
 
@@ -583,7 +594,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisUnit",
-            "parameters": { "stat": "drones", "amount_source": "BasesOwned", "amount": 1 }
+            "parameters": { "stat": "drones", "amount_source": { "kind": "BasesOwned" }, "amount": 1 }
         })")));
     }
 
@@ -594,7 +605,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "econ",
-                "amount_source": "BuildingUpkeep",
+                "amount_source": { "kind": "BuildingUpkeep" },
                 "amount": 1,
                 "op": "MaxClamp"
             }
@@ -602,7 +613,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BuildingUpkeep);
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::BuildingUpkeep);
         CHECK(pMod->op == ModifierOp_t::MaxClamp);
         CHECK(pMod->amount == Approx(1.0));
     }
@@ -614,7 +625,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "BuildingUpkeep",
+                "amount_source": { "kind": "BuildingUpkeep" },
                 "op": "MaxClamp"
             }
         })")));
@@ -625,7 +636,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "econ", "amount_source": "BuildingUpkeep", "op": "Add" }
+            "parameters": { "stat": "econ", "amount_source": { "kind": "BuildingUpkeep" }, "op": "Add" }
         })")));
     }
 
@@ -637,7 +648,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "type": "StatModifier",
             "scope": "ThisTile",
             "radius": 1,
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy", "amount": 1 }
+            "parameters": { "stat": "energy", "amount_source": { "kind": "ElevationEnergy" }, "amount": 1 }
         })")));
     }
 
@@ -651,7 +662,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisBase",
             "parameters": {
                 "stat": "nutrients",
-                "amount_source": "BaseSize",
+                "amount_source": { "kind": "BaseSize" },
                 "amount": 1,
                 "selector": { "kind": "Improvement", "improvement": "Farm" }
             }
@@ -661,9 +672,119 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergy",
+                "amount_source": { "kind": "ElevationEnergy" },
                 "amount": 1,
                 "selector": { "kind": "Improvement", "improvement": "Mine" }
+            }
+        })")));
+    }
+}
+
+TEST_CASE("ParseEffectConfig: StatModifier amount_source SocialRating table", "[effects][parser]")
+{
+    SECTION("table parses")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "parameters": {
+                "stat": "morale_extra",
+                "op": "Add",
+                "amount_source": {
+                    "kind": "SocialRating",
+                    "rating": "morale",
+                    "amounts": { "-4": 4, "0": 1, "2": -1 }
+                }
+            }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(pMod->amountSource->kind == StatModifierEffect_t::AmountSource_t::SocialRating);
+        CHECK(pMod->amountSource->rating == SocialRatingId_t::Morale);
+        REQUIRE(pMod->amountSource->amounts.has_value());
+        REQUIRE(pMod->amountSource->amounts->size() == 3);
+        CHECK(pMod->amountSource->amounts->at(-4) == Approx(4.0));
+        CHECK(pMod->amountSource->amounts->at(0) == Approx(1.0));
+        CHECK(pMod->amountSource->amounts->at(2) == Approx(-1.0));
+    }
+
+    SECTION("empty amounts throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "parameters": {
+                "stat": "morale_extra",
+                "amount_source": {
+                    "kind": "SocialRating",
+                    "rating": "morale",
+                    "amounts": {}
+                }
+            }
+        })")));
+    }
+
+    SECTION("SocialRating without rating throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "parameters": {
+                "stat": "morale_extra",
+                "amount_source": { "kind": "SocialRating", "amounts": { "0": 1 } }
+            }
+        })")));
+    }
+
+    SECTION("SocialRating without amounts throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "parameters": {
+                "stat": "morale_extra",
+                "amount_source": { "kind": "SocialRating", "rating": "morale" }
+            }
+        })")));
+    }
+
+    SECTION("amount plus amounts throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "parameters": {
+                "stat": "morale_extra",
+                "amount": 1,
+                "amount_source": {
+                    "kind": "SocialRating",
+                    "rating": "morale",
+                    "amounts": { "0": 1 }
+                }
+            }
+        })")));
+    }
+
+    SECTION("string amount_source throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
+        })")));
+    }
+
+    SECTION("rating on a scale source throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": { "kind": "ElevationEnergy", "rating": "morale" }
             }
         })")));
     }
@@ -805,6 +926,41 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
     {
         CHECK_THROWS(EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "TargetIsShiny", "value": "x" })")));
+    }
+
+    SECTION("SubjectIsOnOriginBase, SocialRating, and OriginBaseHasBuilding parse")
+    {
+        CHECK(std::holds_alternative<SubjectIsOnOriginBase_t>(
+            EffectConfigParser::ParseCondition(
+                json::parse(R"({ "kind": "SubjectIsOnOriginBase" })"))
+                .AsVariant()));
+
+        const Condition_t rating = EffectConfigParser::ParseCondition(json::parse(R"({
+            "kind": "SocialRating", "rating": "morale", "op": "Le", "value": -1
+        })"));
+        const auto* pRating = std::get_if<SocialRating_t>(&rating.AsVariant());
+        REQUIRE(pRating);
+        CHECK(pRating->rating == SocialRatingId_t::Morale);
+        CHECK(pRating->op == CompareOp_t::Le);
+        CHECK(pRating->value == -1);
+
+        const Condition_t hasBuilding = EffectConfigParser::ParseCondition(json::parse(R"({
+            "kind": "OriginBaseHasBuilding", "building": "Childrens_Creche", "value": false
+        })"));
+        const auto* pHas = std::get_if<OriginBaseHasBuilding_t>(&hasBuilding.AsVariant());
+        REQUIRE(pHas);
+        CHECK(pHas->buildingId == "Childrens_Creche");
+        CHECK_FALSE(pHas->bPresent);
+
+        const Condition_t attacking = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "IsDefending", "value": false })"));
+        const auto* pAtk = std::get_if<IsDefending_t>(&attacking.AsVariant());
+        REQUIRE(pAtk);
+        CHECK_FALSE(pAtk->bMatches);
+
+        CHECK(std::holds_alternative<IsInCombat_t>(
+            EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "IsInCombat" })"))
+                .AsVariant()));
     }
 
     SECTION("IsHeadquarters condition")

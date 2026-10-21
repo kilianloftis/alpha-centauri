@@ -40,6 +40,10 @@ void ValidateContiguousLevels_(const MoraleConfig_t& rConfig)
     {
         throw std::runtime_error("morale_levels.json: defense_floor_index out of level range");
     }
+    if (rConfig.FindLevel(rConfig.baselineIndex) == nullptr)
+    {
+        throw std::runtime_error("morale_levels.json: baseline_index out of level range");
+    }
 }
 
 void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
@@ -75,10 +79,7 @@ void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
     {
         case StatId_t::Attack:
         case StatId_t::Defense:
-            if (pMod->op != ModifierOp_t::AddPercent)
-            {
-                fail("attack/defense morale effects must use AddPercent");
-            }
+            fail("attack/defense combat scale is percent_per_level, not a level effect");
             break;
         case StatId_t::PromotionChance:
             switch (pMod->op)
@@ -99,8 +100,7 @@ void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
             }
             break;
         default:
-            fail("stat is not allowed on morale levels (use attack, defense, "
-                 "promotion_chance, or planet_pearls)");
+            fail("stat is not allowed on morale levels (use promotion_chance or planet_pearls)");
     }
 }
 
@@ -113,6 +113,16 @@ void ValidateMoraleLevelEffects_(const MoraleConfig_t& rConfig)
             ValidateMoraleLevelEffect_(rEffect, rLevel.index);
         }
     }
+}
+
+int RequireInt_(const json& rRoot, const char* pKey)
+{
+    if (!rRoot.contains(pKey) || !rRoot.at(pKey).is_number_integer())
+    {
+        throw std::runtime_error(std::string("morale_levels.json: '") + pKey
+                                 + "' must be an integer");
+    }
+    return rRoot.at(pKey).get<int>();
 }
 
 } // namespace
@@ -131,6 +141,8 @@ MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
     MoraleConfig_t config;
     config.startingIntrinsic = root.value("starting_intrinsic", 1);
     config.defenseFloorIndex = root.value("defense_floor_index", 1);
+    config.percentPerLevel = EffectConfigParser::RequireNumber(root, "percent_per_level");
+    config.baselineIndex = RequireInt_(root, "baseline_index");
     if (!root.contains("promotion_seed_formula") || !root.at("promotion_seed_formula").is_string())
     {
         throw std::runtime_error(

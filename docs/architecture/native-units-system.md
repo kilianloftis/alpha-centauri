@@ -71,7 +71,7 @@ unit homed at a base pays no mineral support when `UnitSupport` runs if its tile
 
 ## Isle cargo (IntrinsicXp)
 
-Isle of the Deep uses `amount_source: IntrinsicXp` on `cargo_capacity` (scale 1) plus
+Isle of the Deep uses `amount_source: { "kind": "IntrinsicXp" }` on `cargo_capacity` (scale 1) plus
 `TransportParams` `carries: [land]`. Live capacity is `Unit::GetXp() * amount` (intrinsic
 lifecycle index, not SE-shifted effective morale). Design-only resolve drops the contribution.
 

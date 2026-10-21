@@ -370,8 +370,8 @@ Moved functions keep their names and signatures.
     - `int BaseIntrinsicXp(const Unit&, const MoraleCalculator&)`
     - `int EffectiveMoraleLevel(const Unit&, const EffectContext_t&, const MoraleCalculator&)`
     - `std::span<const EffectConfig_t> EffectiveLevelEffects(const Unit&, const EffectContext_t&, const MoraleCalculator&)`
-    - `const std::string& MoraleDisplayName(const Unit&, const MoraleCalculator&)`
-    - the live-bonus helpers (`SumMoraleBonus_`, `HomeBaseHasCreche_`, `AdjustLiveBonus_`) move with them
+    - `const std::string& MoraleDisplayName(const Unit&, const EffectContext_t&, const MoraleCalculator&)`
+    - `CombatMoraleLevel` adds in-square extras and applies the defense floor after extras
   - New `combat/MoraleMutations.h`: `bool TryPromote(Unit& rSurvivor, int attackStrength, int defenseStrength, const MoraleCalculator&, std::mt19937&)`. It rolls against `PromotionChance` and sets XP.
 - **`economy/CommerceCalculator`** evaluates the commerce formula only.
   - `int PairValue(const CommercePairInputs_t&) const`. `CommercePairInputs_t` holds `energyOurs`, `energyTheirs`, `commerceTech` and `techDenominator`; `pair_multiplier` comes from config.

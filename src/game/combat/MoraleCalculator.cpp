@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <stdexcept>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace ac
@@ -45,14 +44,9 @@ int MoraleCalculator::StartingIntrinsicXp() const
     return m_rConfig.startingIntrinsic;
 }
 
-int MoraleCalculator::MoraleLevel(int xp, int liveBonus, CombatRole_t role) const
+int MoraleCalculator::MoraleLevel(int xp, int liveBonus) const
 {
-    const int level = std::clamp(xp + liveBonus, m_rConfig.MinLevel(), m_rConfig.MaxLevel());
-    if (role == CombatRole_t::Defender)
-    {
-        return std::max(level, m_rConfig.defenseFloorIndex);
-    }
-    return level;
+    return std::clamp(xp + liveBonus, m_rConfig.MinLevel(), m_rConfig.MaxLevel());
 }
 
 std::span<const EffectConfig_t> MoraleCalculator::LevelEffects(int level) const
@@ -63,6 +57,12 @@ std::span<const EffectConfig_t> MoraleCalculator::LevelEffects(int level) const
         throw std::runtime_error("No morale level found for level " + std::to_string(level));
     }
     return pLevel->effects;
+}
+
+double MoraleCalculator::CombatAddPercent(int combatLevel) const
+{
+    const double delta = static_cast<double>(combatLevel - m_rConfig.baselineIndex);
+    return delta * m_rConfig.percentPerLevel;
 }
 
 const std::string& MoraleCalculator::DisplayName(int level, MoraleLifecycle_t lifecycle) const

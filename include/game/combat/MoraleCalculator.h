@@ -1,6 +1,5 @@
 #pragma once
 
-#include "game/effects/ActiveEffect.h"
 #include "game/combat/MoraleConfig.h"
 
 #include <span>
@@ -17,8 +16,8 @@ enum class MoraleLifecycle_t
     Native,
 };
 
-// Morale / XP rank formulas over the game-wide MoraleConfig_t. It only picks the level:
-// ResolveCombatUnitStat folds in each MoraleLevel_t's Attack/Defense effects.
+// Morale / XP rank formulas over the game-wide MoraleConfig_t. Combat Attack/Defense
+// scale is CombatAddPercent; named rows keep promotion_chance and planet_pearls.
 class MoraleCalculator
 {
 public:
@@ -28,11 +27,16 @@ public:
 
     int StartingIntrinsicXp() const;
 
-    // Clamped to the configured levels, with the defense floor for a defender.
-    int MoraleLevel(int xp, int liveBonus, CombatRole_t role) const;
+    // Clamped to the configured levels. Combat-role floor is applied to the combined
+    // defense level in CombatStrength, not here.
+    int MoraleLevel(int xp, int liveBonus) const;
 
     // Includes promotion_chance modifiers; combat resolve ignores stats it does not query.
     std::span<const EffectConfig_t> LevelEffects(int level) const;
+
+    // (combatLevel - baselineIndex) * percentPerLevel. Unbounded: attack may sit
+    // outside the named rows.
+    double CombatAddPercent(int combatLevel) const;
 
     const std::string& DisplayName(int level, MoraleLifecycle_t lifecycle) const;
 

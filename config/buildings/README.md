@@ -1,6 +1,6 @@
 # Building Configuration
 
-All `.json` files in this directory are loaded alphabetically and merged into the building registry at startup. Modders can add new files here without modifying any existing file.
+All `.json` files in this directory are loaded alphabetically and merged into the building registry at startup. Modders can add new files here without modifying any existing file. Subdirectories are not loaded — [`manual/creche_morale_manual.json`](manual/creche_morale_manual.json) records the manual/wiki Children's Crèche overlay (`morale_rank` `MinClamp` 1 while `SubjectIsOnOriginBase`) for a future profile; it is not on `GameDataPaths`.
 
 ---
 

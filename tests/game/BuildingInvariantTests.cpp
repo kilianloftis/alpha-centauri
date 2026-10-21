@@ -220,7 +220,7 @@ TEST_CASE("The building parser rejects rather than silently defaulting", "[build
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])");
         CHECK_THROWS_WITH(registry.Load(path),

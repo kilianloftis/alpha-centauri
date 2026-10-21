@@ -7,6 +7,7 @@
 #include <magic_enum.hpp>
 #include <cmath>
 #include <cstddef>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -48,7 +49,7 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
     const StatId_t stat = rMod.stat;
     const EffectScope_t scope = rEffect.scope;
     const double amount = rMod.amount;
-    switch (*rMod.amountSource)
+    switch (rMod.amountSource->kind)
     {
         case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
             // Required subject: Tile (+ the world's tile_yield_rules). Allowed: energy +
@@ -221,6 +222,33 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                     "(percent per elevation level)");
             }
             break;
+        case StatModifierEffect_t::AmountSource_t::SocialRating:
+            if (DomainFor(stat) != ResolveDomain_t::Unit)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' SocialRating is only valid on a Unit-domain "
+                    "stat, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::FactionUnits)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' SocialRating requires scope ThisUnit or "
+                    "FactionUnits");
+            }
+            if (rMod.op != ModifierOp_t::Add)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' SocialRating requires op Add");
+            }
+            if (!rMod.amountSource || !rMod.amountSource->amounts.has_value()
+                || rMod.amountSource->amounts->empty())
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' SocialRating requires a non-empty 'amounts' "
+                    "object");
+            }
+            break;
     }
 }
 
@@ -257,6 +285,37 @@ void ParseInfiltration_(const nlohmann::json& /*parameters*/, EffectConfig_t& rE
             "the continuous 'Infiltration'");
     }
     rEffect.effect = InfiltrationEffect_t{};
+}
+
+std::map<int, double> ParseAmountMap_(const nlohmann::json& rAmounts)
+{
+    if (!rAmounts.is_object() || rAmounts.empty())
+    {
+        throw std::runtime_error(
+            "StatModifier amount_source amounts must be a non-empty object");
+    }
+    std::map<int, double> amounts;
+    for (const auto& [rKey, rValue] : rAmounts.items())
+    {
+        std::size_t consumed = 0;
+        int key = 0;
+        try
+        {
+            key = std::stoi(rKey, &consumed);
+        }
+        catch (const std::exception&)
+        {
+            throw std::runtime_error(
+                "StatModifier amount_source amounts keys must be integers, got '" + rKey + "'");
+        }
+        if (consumed != rKey.size())
+        {
+            throw std::runtime_error(
+                "StatModifier amount_source amounts keys must be integers, got '" + rKey + "'");
+        }
+        amounts[key] = rValue.get<double>();
+    }
+    return amounts;
 }
 
 void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
@@ -300,10 +359,20 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
         // which is op-agnostic. So "MaxClamp at base size" resolves exactly like "Add 0.25 per
         // pop" — the per-source legality rules below (stat domain, scope, finiteness) are what
         // actually constrain this, not the op.
-        statModifier.amountSource =
-            ParseAmountSource(parameters.at("amount_source").get<std::string>());
-        // amount is the per-source scale when amount_source is set (default 1).
-        statModifier.amount = ParseNumber(parameters, "amount", 1.0);
+        statModifier.amountSource = ParseAmountSource(parameters.at("amount_source"));
+        if (statModifier.amountSource->amounts)
+        {
+            if (parameters.contains("amount"))
+            {
+                throw std::runtime_error(
+                    "StatModifier amount_source amounts cannot be combined with 'amount'");
+            }
+        }
+        else
+        {
+            // amount is the per-source scale when amount_source is set (default 1).
+            statModifier.amount = ParseNumber(parameters, "amount", 1.0);
+        }
         ValidateAmountSourceLegality_(statModifier, rEffect, parameters.value("stat", ""));
     }
     else
@@ -814,14 +883,55 @@ ModifierOp_t ParseModifierOp(const std::string& rOp)
     return *op;
 }
 
-StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSource)
+StatModifierEffect_t::AmountSourceSpec_t ParseAmountSource(const nlohmann::json& rSource)
 {
-    const auto source = magic_enum::enum_cast<StatModifierEffect_t::AmountSource_t>(rSource);
-    if (!source.has_value())
+    if (!rSource.is_object())
     {
-        throw std::runtime_error("Unknown amount_source: '" + rSource + "'");
+        throw std::runtime_error("StatModifier amount_source must be an object with 'kind'");
     }
-    return *source;
+    if (!rSource.contains("kind"))
+    {
+        throw std::runtime_error("StatModifier amount_source requires 'kind'");
+    }
+    const std::string kindWire = rSource.at("kind").get<std::string>();
+    const auto kind =
+        magic_enum::enum_cast<StatModifierEffect_t::AmountSource_t>(kindWire);
+    if (!kind.has_value())
+    {
+        throw std::runtime_error("Unknown amount_source kind '" + kindWire + "'");
+    }
+    StatModifierEffect_t::AmountSourceSpec_t spec;
+    spec.kind = *kind;
+    switch (spec.kind)
+    {
+        case StatModifierEffect_t::AmountSource_t::SocialRating:
+            if (!rSource.contains("rating"))
+            {
+                throw std::runtime_error(
+                    "StatModifier amount_source SocialRating requires 'rating'");
+            }
+            spec.rating = ParseSocialRatingId(rSource.at("rating").get<std::string>());
+            if (!rSource.contains("amounts"))
+            {
+                throw std::runtime_error(
+                    "StatModifier amount_source SocialRating requires 'amounts'");
+            }
+            spec.amounts = ParseAmountMap_(rSource.at("amounts"));
+            break;
+        default:
+            if (rSource.contains("rating"))
+            {
+                throw std::runtime_error(
+                    "StatModifier amount_source '" + kindWire + "' does not take 'rating'");
+            }
+            if (rSource.contains("amounts"))
+            {
+                throw std::runtime_error(
+                    "StatModifier amount_source '" + kindWire + "' does not take 'amounts'");
+            }
+            break;
+    }
+    return spec;
 }
 
 EffectScope_t ParseEffectScope(const std::string& rScope)
@@ -887,15 +997,68 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     const std::string kindStr = conditionJson.value("kind", "");
     if (kindStr == "IsDefending")
     {
-        return IsDefending_t{};
+        IsDefending_t defending;
+        if (conditionJson.contains("value"))
+        {
+            if (!conditionJson.at("value").is_boolean())
+            {
+                throw std::runtime_error("IsDefending condition 'value' must be a boolean");
+            }
+            defending.bMatches = conditionJson.at("value").get<bool>();
+        }
+        return defending;
     }
-    if (kindStr == "OriginBaseIsTargetBase")
+    if (kindStr == "IsInCombat")
     {
-        return OriginBaseIsTargetBase_t{};
+        return IsInCombat_t{};
     }
     if (kindStr == "OriginBaseIsHomeBase")
     {
         return OriginBaseIsHomeBase_t{};
+    }
+    if (kindStr == "SubjectIsOnOriginBase")
+    {
+        return SubjectIsOnOriginBase_t{};
+    }
+    if (kindStr == "SocialRating")
+    {
+        const std::string ratingStr = conditionJson.value("rating", "");
+        if (ratingStr.empty())
+        {
+            throw std::runtime_error("SocialRating condition requires a non-empty 'rating'");
+        }
+        const std::string opStr = conditionJson.value("op", "");
+        const auto op = magic_enum::enum_cast<CompareOp_t>(opStr);
+        if (!op.has_value())
+        {
+            throw std::runtime_error("SocialRating condition 'op' must be Eq, Le, or Ge");
+        }
+        if (!conditionJson.contains("value") || !conditionJson.at("value").is_number_integer())
+        {
+            throw std::runtime_error("SocialRating condition requires an integer 'value'");
+        }
+        return SocialRating_t{ParseSocialRatingId(ratingStr), *op,
+                              conditionJson.at("value").get<int>()};
+    }
+    if (kindStr == "OriginBaseHasBuilding")
+    {
+        const std::string buildingId = conditionJson.value("building", "");
+        if (buildingId.empty())
+        {
+            throw std::runtime_error(
+                "OriginBaseHasBuilding condition requires a non-empty 'building' id");
+        }
+        OriginBaseHasBuilding_t hasBuilding{buildingId};
+        if (conditionJson.contains("value"))
+        {
+            if (!conditionJson.at("value").is_boolean())
+            {
+                throw std::runtime_error(
+                    "OriginBaseHasBuilding condition 'value' must be a boolean");
+            }
+            hasBuilding.bPresent = conditionJson.at("value").get<bool>();
+        }
+        return hasBuilding;
     }
     if (kindStr == "AttackerIsEmbarked")
     {
@@ -1249,7 +1412,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
 
     const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
     if (pStatModifier
-        && pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted
+        && pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::MineralsConverted)
         && sourceKind != EffectSourceKind_t::Stockpile)
     {
         throw std::runtime_error(

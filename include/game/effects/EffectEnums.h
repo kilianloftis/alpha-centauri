@@ -128,15 +128,13 @@ enum class StatId_t
     // Minerals credited to a newly founded base's production stockpile (resolved once at
     // founding from the new base's effect list plus the founding unit). Not a live yield.
     StartingMinerals,
-    // Live morale-level offset (SE Morale, Creche in-base, etc.). Added to Unit::m_xp when
-    // computing effective combat morale; not seeded into m_xp.
-    MoraleBonus,
-    // Scales positive *conditional* morale_bonus contributions (Creche in-base, etc.).
-    // PureMultiplier (seed 1.0); SE Morale ≤ -2 uses AddPercent -50 ("+ modifiers halved").
-    PositiveMoraleScale,
-    // Scales negative *unconditional* morale_bonus (SE penalties). PureMultiplier (seed 1.0);
-    // Children's Crèche uses AddPercent -50 on FactionUnits with OriginBaseIsHomeBase.
-    NegativeMoraleScale,
+    // Shifts the displayed rank word (morale_veh): SE table, home Crèche, riot in combat.
+    // Added to Unit::m_xp and clamped; not seeded into m_xp.
+    MoraleRank,
+    // Extra morale levels after the rank word (plus-marks / combat). In-square Crèche /
+    // Brood and SE +2/+3 defend-in-base. Does not change the name. Attack vs defense rows
+    // use IsDefending.
+    MoraleExtra,
     // Post-combat promotion probability (RawScaled). Resolve site seeds D/(A+D) from final
     // combat weapon/armor strengths; morale level effects apply MinClamp / MultiplyGeometric /
     // MaxClamp. Not resolved during combat stat passes.
@@ -310,7 +308,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::StartingMinerals:
         case StatId_t::StartingSize:
         case StatId_t::MaxBaseSize:
-        case StatId_t::MoraleBonus:
+        case StatId_t::MoraleRank:
+        case StatId_t::MoraleExtra:
         case StatId_t::ProbeDefense:
         case StatId_t::TechCost:
         case StatId_t::LastDefenderPopLoss:
@@ -337,8 +336,6 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
-        case StatId_t::PositiveMoraleScale:
-        case StatId_t::NegativeMoraleScale:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:
@@ -462,9 +459,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PoliceEffectiveness:
         case StatId_t::AwayFromHomeDrones:
         case StatId_t::ProbeFailureScale:
-        case StatId_t::MoraleBonus:
-        case StatId_t::PositiveMoraleScale:
-        case StatId_t::NegativeMoraleScale:
+        case StatId_t::MoraleRank:
+        case StatId_t::MoraleExtra:
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
@@ -528,9 +524,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
-    if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
-    if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
-    if (rStat == "negative_morale_scale")   return StatId_t::NegativeMoraleScale;
+    if (rStat == "morale_rank")             return StatId_t::MoraleRank;
+    if (rStat == "morale_extra")            return StatId_t::MoraleExtra;
     if (rStat == "promotion_chance")        return StatId_t::PromotionChance;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "starting_size")           return StatId_t::StartingSize;
@@ -842,6 +837,25 @@ enum class ModifierOp_t
     // Clamp the resolved stat value to be >= amount.
     MinClamp,
 };
+
+// Live integer vs a bound. Numeric conditions share this (`SocialRating_t` today).
+enum class CompareOp_t
+{
+    Eq,
+    Le,
+    Ge,
+};
+
+inline bool CompareSatisfied(int live, CompareOp_t op, int bound)
+{
+    switch (op)
+    {
+        case CompareOp_t::Eq: return live == bound;
+        case CompareOp_t::Le: return live <= bound;
+        case CompareOp_t::Ge: return live >= bound;
+    }
+    return false;
+}
 
 // World-state change id (sea level / climate) for the triggered WorldParameterEffect_t.
 enum class WorldParameterId_t

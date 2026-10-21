@@ -10,7 +10,7 @@
         "parameters": {
           "stat": "econ",
           "amount": 0.5,
-          "amount_source": "MineralsConverted",
+          "amount_source": { "kind": "MineralsConverted" },
           "op": "Add"
         }
       }

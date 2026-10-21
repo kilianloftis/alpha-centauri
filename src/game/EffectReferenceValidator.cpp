@@ -273,7 +273,8 @@ void ValidateConditionReferences_(const Condition_t& rCondition,
                         ThrowBadReference(rSourceId, "condition design", rAlt.designId);
                     }
                 }
-                else if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
+                else if constexpr (std::is_same_v<T, BaseHasBuilding_t>
+                                   || std::is_same_v<T, OriginBaseHasBuilding_t>)
                 {
                     if (pBuildings && !pBuildings->Find(rAlt.buildingId))
                     {
@@ -281,8 +282,10 @@ void ValidateConditionReferences_(const Condition_t& rCondition,
                     }
                 }
                 else if constexpr (std::is_same_v<T, IsDefending_t>
-                                   || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                                   || std::is_same_v<T, IsInCombat_t>
                                    || std::is_same_v<T, OriginBaseIsHomeBase_t>
+                                   || std::is_same_v<T, SubjectIsOnOriginBase_t>
+                                   || std::is_same_v<T, SocialRating_t>
                                    || std::is_same_v<T, AttackerIsEmbarked_t>
                                    || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                    || std::is_same_v<T, AttackerDomain_t>

@@ -84,7 +84,7 @@ std::string MineralsConverted_(const char* pStat, const char* pAmount)
     return std::string(R"({ "type": "StatModifier", "scope": "ThisBase",
         "parameters": { "stat": ")")
         + pStat + R"(", "amount": )" + pAmount
-        + R"(, "amount_source": "MineralsConverted" } })";
+        + R"(, "amount_source": { "kind": "MineralsConverted" } } })";
 }
 
 std::string StockpileJson_(const char* pId, const char* pName, const char* pStat,
@@ -342,7 +342,7 @@ TEST_CASE("Percentage modifiers on the stockpile scale conversion yield",
           "effects": [
             { "type": "StatModifier", "scope": "ThisBase",
               "parameters": { "stat": "econ", "amount": 0.5,
-                              "amount_source": "MineralsConverted" } },
+                              "amount_source": { "kind": "MineralsConverted" } } },
             { "type": "StatModifier", "scope": "ThisBase",
               "parameters": { "stat": "econ", "amount": 100, "op": "AddPercent" } }
           ] }
@@ -458,10 +458,10 @@ TEST_CASE("A stockpile can credit more than one output stat", "[production][stoc
           "effects": [
             { "type": "StatModifier", "scope": "ThisBase",
               "parameters": { "stat": "econ", "amount": 0.5,
-                              "amount_source": "MineralsConverted" } },
+                              "amount_source": { "kind": "MineralsConverted" } } },
             { "type": "StatModifier", "scope": "ThisBase",
               "parameters": { "stat": "nutrients", "amount": 0.25,
-                              "amount_source": "MineralsConverted" } }
+                              "amount_source": { "kind": "MineralsConverted" } } }
           ] }
     ])"));
 

@@ -48,7 +48,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")));
         const StockpileConfig_t* pStockpile = registry.Find("Stockpile_Energy");
@@ -60,7 +60,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
         const auto* pMod = std::get_if<StatModifierEffect_t>(&pStockpile->effects.front().effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted);
+        CHECK(pMod->HasAmountSource(StatModifierEffect_t::AmountSource_t::MineralsConverted));
         CHECK(pMod->stat == StatId_t::Econ);
     }
 
@@ -73,7 +73,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")),
                           Catch::Matchers::ContainsSubstring("no_rounding")
@@ -87,7 +87,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")),
                           Catch::Matchers::ContainsSubstring("banker"));
@@ -110,7 +110,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "minerals", "amount": 1,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")),
                           Catch::Matchers::ContainsSubstring("MineralsConverted"));
@@ -125,7 +125,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "energy", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")));
     }
@@ -139,7 +139,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [
                 { "type": "StatModifier", "scope": "ThisBase",
                   "parameters": { "stat": "econ", "amount": 0.5,
-                                  "amount_source": "MineralsConverted" } },
+                                  "amount_source": { "kind": "MineralsConverted" } } },
                 { "type": "StatModifier", "scope": "ThisBase",
                   "parameters": { "stat": "econ", "amount": 3, "op": "Add" } }
               ] }
@@ -156,7 +156,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [
                 { "type": "StatModifier", "scope": "ThisBase",
                   "parameters": { "stat": "labs", "amount": 1,
-                                  "amount_source": "MineralsConverted" } },
+                                  "amount_source": { "kind": "MineralsConverted" } } },
                 { "type": "StatModifier", "scope": "ThisBase",
                   "parameters": { "stat": "labs", "amount": 25, "op": "AddPercent" } }
               ] }
@@ -177,7 +177,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")),
                           Catch::Matchers::ContainsSubstring("paid")
@@ -188,7 +188,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               "effects": [{
                 "type": "StatModifier", "scope": "ThisBase",
                 "parameters": { "stat": "econ", "amount": 0.5,
-                                "amount_source": "MineralsConverted" }
+                                "amount_source": { "kind": "MineralsConverted" } }
               }] }
         ])")),
                           Catch::Matchers::ContainsSubstring("secret_project"));
@@ -204,14 +204,14 @@ TEST_CASE("StockpileRegistry::FindFallback ranks by priority behind the tech gat
           "effects": [{
             "type": "StatModifier", "scope": "ThisBase",
             "parameters": { "stat": "econ", "amount": 0.5,
-                            "amount_source": "MineralsConverted" }
+                            "amount_source": { "kind": "MineralsConverted" } }
           }] },
         { "id": "advanced", "name": "Advanced", "rounding": "down",
           "required_tech": "advanced_build", "fallback_priority": 10,
           "effects": [{
             "type": "StatModifier", "scope": "ThisBase",
             "parameters": { "stat": "labs", "amount": 1,
-                            "amount_source": "MineralsConverted" }
+                            "amount_source": { "kind": "MineralsConverted" } }
           }] }
     ])"));
 
@@ -229,7 +229,7 @@ TEST_CASE("StockpileRegistry::FindFallback returns nullptr when nothing is avail
           "effects": [{
             "type": "StatModifier", "scope": "ThisBase",
             "parameters": { "stat": "econ", "amount": 0.5,
-                            "amount_source": "MineralsConverted" }
+                            "amount_source": { "kind": "MineralsConverted" } }
           }] }
     ])"));
 

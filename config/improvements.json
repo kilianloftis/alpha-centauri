@@ -346,7 +346,7 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergy",
+          "amount_source": { "kind": "ElevationEnergy" },
           "amount": 1,
           "op": "Add"
         }
@@ -603,7 +603,7 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergy",
+          "amount_source": { "kind": "ElevationEnergy" },
           "amount": 1,
           "op": "Add"
         }

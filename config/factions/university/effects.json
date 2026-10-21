@@ -7,7 +7,7 @@
         "stat": "drones",
         "amount": 0.25,
         "op": "Add",
-        "amount_source": "BaseSize"
+        "amount_source": { "kind": "BaseSize" }
       }
     },
     {

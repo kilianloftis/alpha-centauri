@@ -659,18 +659,9 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -3,
             "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionUnits",
-          "parameters": {
-            "stat": "positive_morale_scale",
-            "amount": -50,
-            "op": "AddPercent"
           }
         }
       ],
@@ -679,18 +670,9 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -2,
             "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionUnits",
-          "parameters": {
-            "stat": "positive_morale_scale",
-            "amount": -50,
-            "op": "AddPercent"
           }
         }
       ],
@@ -699,18 +681,9 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -1,
             "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionUnits",
-          "parameters": {
-            "stat": "positive_morale_scale",
-            "amount": -50,
-            "op": "AddPercent"
           }
         }
       ],
@@ -719,7 +692,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -1,
             "op": "Add"
           }
@@ -730,7 +703,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 1,
             "op": "Add"
           }
@@ -741,7 +714,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 1,
             "op": "Add"
           }
@@ -762,7 +735,7 @@
             ]
           },
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_extra",
             "amount": 1,
             "op": "Add"
           }
@@ -773,7 +746,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 2,
             "op": "Add"
           }
@@ -794,7 +767,7 @@
             ]
           },
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_extra",
             "amount": 1,
             "op": "Add"
           }
@@ -805,7 +778,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 3,
             "op": "Add"
           }
@@ -1251,7 +1224,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 1,
             "op": "Add"
           },
@@ -1275,7 +1248,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 2,
             "op": "Add"
           },
@@ -1299,7 +1272,7 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": 3,
             "op": "Add"
           },

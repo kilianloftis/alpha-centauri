@@ -47,7 +47,7 @@ struct ActiveEffect_t
     const EffectConfig_t* config;
     std::string sourceId;           // "command_nexus", "free_market", etc — for breakdown/UI
     // Set for ThisBase / ProducedAtThisBase (pool tagging / stamp source), and for FactionUnits
-    // collected from a base (per-base attribution for conditions like OriginBaseIsTargetBase —
+    // collected from a base (per-base attribution for conditions like SubjectIsOnOriginBase —
     // not a membership filter). Cleared on Unit production-grant stamps after construction.
     const BaseManager* originBase = nullptr;
     // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
@@ -149,7 +149,8 @@ struct StockpileConversionSubject_t
 // Combat sets targetTile to the defender's tile so TargetTileHas conditions can inspect it.
 // Tile yield sets targetTile to the *receiving* tile — for a radius aura that is the tile
 // being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
-// combatRole enables IsDefending (SE Morale defense-in-base extras).
+// combatRole enables IsInCombat (riot rank) and IsDefending (SE +2/+3 extra, attack-only
+// Crèche extras).
 // pAttacker enables AttackerIsEmbarked / AttackerDomain (and future attacker-side conditions).
 // pDefender enables DefenderDomain (e.g. Air Superiority attack vs air / orbital).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
@@ -215,7 +216,8 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
 EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCtx);
 
 // True if config carries no condition, or its condition is satisfied by ctx.
-// OriginBaseIsTargetBase / OriginBaseIsHomeBase require pOriginBase (ActiveEffect_t::originBase).
+// SubjectIsOnOriginBase / OriginBaseIsHomeBase / OriginBaseHasBuilding require pOriginBase
+// (ActiveEffect_t::originBase).
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase = nullptr);
 bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
@@ -396,8 +398,8 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Any condition (identity or situational) and amount_source effects are excluded from
-        // true context-free resolution. Live units apply identity conditions in
+        // Any condition (identity or situational) and amount_source effects are excluded
+        // from true context-free resolution. Live units apply identity conditions in
         // CollectLiveUnitEffects and re-check via FilterByStatIdInContext with pUnit stamped.
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
             && !pStatModifier->amountSource
@@ -447,32 +449,37 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     // Drop an amount_source whose subject this context lacks, rather than letting
     // AmountSourceValue throw on it further down. MineralsConverted is not listed: it only
     // ever resolves on the stockpile path, which builds its own filter.
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BaseSize)
         && ctx.pBase == nullptr)
     {
         return false;
     }
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BuildingUpkeep
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BuildingUpkeep)
         && ctx.pBase == nullptr)
     {
         return false;
     }
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BasesOwned)
         && ctx.pFaction == nullptr)
     {
         return false;
     }
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::IntrinsicXp
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::IntrinsicXp)
         && ctx.pUnit == nullptr)
     {
         return false;
     }
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::SocialRating)
+        && ctx.pUnit == nullptr)
+    {
+        return false;
+    }
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::ElevationEnergy)
         && (ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr))
     {
         return false;
     }
-    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent
+    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent)
         && OpposingCombatant_(ctx) == nullptr)
     {
         return false;
@@ -519,7 +526,7 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
         }
         if (pStatModifier->amountSource)
         {
-            const auto source = *pStatModifier->amountSource;
+            const auto source = pStatModifier->amountSource->kind;
             if (source != StatModifierEffect_t::AmountSource_t::BaseSize
                 && source != StatModifierEffect_t::AmountSource_t::BuildingUpkeep)
             {
@@ -551,14 +558,18 @@ double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, doubl
                        const EffectContext_t* pCtx = nullptr);
 
 // Live-unit Attack/Defense for combat: same Unit-domain resolve as ResolveUnitStat /
-// ResolveStat (amount sources included), then folds moraleLevelEffects (from the unit's
-// effective MoraleLevel_t) into the same stack. Morale Attack/Defense AddPercents must
-// share the AddPercent bucket with other unit modifiers — not a post-multiply.
+// ResolveStat (amount sources included). extraEffects is for named MoraleLevel_t rows
+// (planet_pearls). moraleAddPercent is CombatAddPercent — it shares the AddPercent
+// bucket with other unit modifiers, not a post-multiply.
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          std::span<const EffectConfig_t> moraleLevelEffects);
+                          std::span<const EffectConfig_t> extraEffects = {});
+int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
+                          double moraleAddPercent);
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                            const EffectContext_t& rCtx,
-                                           std::span<const EffectConfig_t> moraleLevelEffects);
+                                           std::span<const EffectConfig_t> extraEffects);
+double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                           const EffectContext_t& rCtx, double moraleAddPercent);
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.

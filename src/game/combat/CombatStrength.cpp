@@ -37,15 +37,18 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
                                       : StatId_t::Defense;
     strength.bPsiCombat = ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
                           || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
+    const int attackLevel = CombatMoraleLevel(rAttacker, attackCtx, rMorale);
+    const int defenseLevel = CombatMoraleLevel(rDefender, defenseCtx, rMorale);
+    const double attackPercent = rMorale.CombatAddPercent(attackLevel);
+    const double defensePercent = rMorale.CombatAddPercent(defenseLevel);
+
     double attackRating = 0.0;
     if (strength.bPsiCombat)
     {
         attackRating = ResolveCombatUnitMultiplicativeStat(
-            rAttacker, StatId_t::Attack, 1.0, attackCtx,
-            EffectiveLevelEffects(rAttacker, attackCtx, rMorale));
+            rAttacker, StatId_t::Attack, 1.0, attackCtx, attackPercent);
         const double defenseRating = ResolveCombatUnitMultiplicativeStat(
-            rDefender, defenderStat, 1.0, defenseCtx,
-            EffectiveLevelEffects(rDefender, defenseCtx, rMorale));
+            rDefender, defenderStat, 1.0, defenseCtx, defensePercent);
         strength.attackStrength = static_cast<int>(
             std::lround(attackRating * k_CombatStrengthScale));
         strength.defenseStrength = static_cast<int>(std::lround(
@@ -54,11 +57,9 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     else
     {
         const int conventionalAttack = ResolveCombatUnitStat(
-            rAttacker, StatId_t::Attack, attackCtx,
-            EffectiveLevelEffects(rAttacker, attackCtx, rMorale));
+            rAttacker, StatId_t::Attack, attackCtx, attackPercent);
         const int defenseRating = ResolveCombatUnitStat(
-            rDefender, defenderStat, defenseCtx,
-            EffectiveLevelEffects(rDefender, defenseCtx, rMorale));
+            rDefender, defenderStat, defenseCtx, defensePercent);
         attackRating = static_cast<double>(conventionalAttack);
         strength.attackStrength = conventionalAttack * k_CombatStrengthScale;
         strength.defenseStrength = static_cast<int>(std::lround(

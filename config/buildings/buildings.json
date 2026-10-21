@@ -34,12 +34,52 @@
         "type": "StatModifier",
         "scope": "FactionUnits",
         "condition": {
-          "kind": "OriginBaseIsHomeBase"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "OriginBaseIsHomeBase"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
         },
         "parameters": {
-          "stat": "negative_morale_scale",
-          "amount": -50,
-          "op": "AddPercent"
+          "stat": "morale_rank",
+          "op": "Add",
+          "amount_source": {
+            "kind": "SocialRating",
+            "rating": "morale",
+            "amounts": {
+              "-4": 2,
+              "-3": 1,
+              "-2": 1,
+              "-1": 1
+            }
+          }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "SubjectIsOnOriginBase"
+        },
+        "parameters": {
+          "stat": "morale_extra",
+          "op": "Add",
+          "amount_source": {
+            "kind": "SocialRating",
+            "rating": "morale",
+            "amounts": {
+              "-4": 4,
+              "-3": 3,
+              "-2": 2,
+              "-1": 2,
+              "0": 1
+            }
+          }
         }
       },
       {
@@ -49,21 +89,52 @@
           "kind": "AllOf",
           "conditions": [
             {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
               "kind": "IsDefending"
             },
             {
-              "kind": "TargetTileHas",
-              "value": "Base"
-            },
-            {
-              "kind": "OriginBaseIsTargetBase"
+              "kind": "SocialRating",
+              "rating": "morale",
+              "op": "Ge",
+              "value": 1
             }
           ]
         },
         "parameters": {
-          "stat": "morale_bonus",
+          "stat": "morale_extra",
           "amount": 1,
           "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsDefending",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_extra",
+          "op": "Add",
+          "amount_source": {
+            "kind": "SocialRating",
+            "rating": "morale",
+            "amounts": {
+              "2": -1,
+              "3": -2,
+              "4": -3
+            }
+          }
         }
       }
     ]
@@ -526,7 +597,67 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "centauri_genetics",
-    "icon": "assets/sprites/facilities/xfac034.png"
+    "icon": "assets/sprites/facilities/xfac034.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_extra",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "OriginBaseHasBuilding",
+              "building": "Childrens_Creche",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_extra",
+          "op": "Add",
+          "amount_source": {
+            "kind": "SocialRating",
+            "rating": "morale",
+            "amounts": {
+              "-4": 3,
+              "-3": 2,
+              "-2": 1,
+              "-1": 1,
+              "1": -1,
+              "2": -2,
+              "3": -3,
+              "4": -4
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "Aquafarm",

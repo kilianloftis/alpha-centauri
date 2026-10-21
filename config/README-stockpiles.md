@@ -17,7 +17,7 @@ not exist here and are rejected as unknown.
 | `required_tech` | string | No | `""` | Tech that must be discovered before this stockpile is selectable; omit or empty = always available |
 | `fallback_priority` | int | No | `0` | Ranking for the empty-queue default: among available stockpiles the highest wins, ties broken by load order |
 | `rounding` | string | **Yes** | — | How a fractional yield becomes an integer: `"down"`, `"up"`, or `"nearest"` |
-| `effects` | Effect[] | Yes | — | Must contain at least one `StatModifier` with `amount_source: "MineralsConverted"` |
+| `effects` | Effect[] | Yes | — | Must contain at least one `StatModifier` with `amount_source: { "kind": "MineralsConverted" }` |
 
 ## The conversion
 
@@ -80,7 +80,7 @@ charges the retool penalty, since the player did not choose it. If no stockpile 
         "parameters": {
           "stat": "econ",
           "amount": 0.5,
-          "amount_source": "MineralsConverted",
+          "amount_source": { "kind": "MineralsConverted" },
           "op": "Add"
         }
       }

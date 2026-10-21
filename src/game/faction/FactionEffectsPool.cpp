@@ -403,7 +403,7 @@ void FactionEffectsPool::Rebuild_() const
     ApplyRemovedByTech_(factionEffects, rResearch);
 
     // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →
-    // morale_bonus). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
+    // morale_rank). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
     ExpandFactionLaneSocialRatingEffects(factionEffects, m_rSocialRatings);
 
     // Rating level effects are the last derivatives; gate them too.

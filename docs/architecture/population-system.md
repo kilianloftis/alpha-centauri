@@ -54,7 +54,7 @@ Drone 2. There is no combined drone formula — pressure is an ordinary resolved
 is the sum of the terms that need real math.
 
 The floor and the base-size cap are effects too, in `pop_composition.json`: `MinClamp 0` and
-`MaxClamp` with `amount_source: BaseSize`. `ApplyModifierStack` applies clamps after the Add
+`MaxClamp` with `amount_source: { "kind": "BaseSize" }`. `ApplyModifierStack` applies clamps after the Add
 math, so this is exactly the old `max(0, min(base_size, ...))` with nothing left in C++.
 
 Riot weight is a **different quantity**: a Super Drone absorbs two drones of pressure but riots

@@ -34,8 +34,8 @@ auto FilterStockpileYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t
             return false;
         }
         if (pStatModifier->amountSource
-            && *pStatModifier->amountSource
-                   != StatModifierEffect_t::AmountSource_t::MineralsConverted)
+            && !pStatModifier->HasAmountSource(
+                   StatModifierEffect_t::AmountSource_t::MineralsConverted))
         {
             return false;
         }

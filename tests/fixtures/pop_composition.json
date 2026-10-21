@@ -26,7 +26,7 @@
         "stat": "drones",
         "amount": 1,
         "op": "MaxClamp",
-        "amount_source": "BaseSize"
+        "amount_source": { "kind": "BaseSize" }
       }
     }
   ],
@@ -70,7 +70,7 @@
             "stat": "econ",
             "op": "MaxClamp",
             "amount": 1,
-            "amount_source": "BuildingUpkeep"
+            "amount_source": { "kind": "BuildingUpkeep" }
           }
         },
         {
@@ -84,10 +84,14 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "condition": {
-            "kind": "OriginBaseIsHomeBase"
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "OriginBaseIsHomeBase" },
+              { "kind": "IsInCombat" }
+            ]
           },
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -1,
             "op": "Add"
           }
@@ -122,7 +126,7 @@
             "stat": "econ",
             "op": "MaxClamp",
             "amount": 1,
-            "amount_source": "BuildingUpkeep"
+            "amount_source": { "kind": "BuildingUpkeep" }
           }
         },
         {
@@ -136,10 +140,14 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "condition": {
-            "kind": "OriginBaseIsHomeBase"
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "OriginBaseIsHomeBase" },
+              { "kind": "IsInCombat" }
+            ]
           },
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -1,
             "op": "Add"
           }
@@ -184,7 +192,7 @@
             "stat": "econ",
             "op": "MaxClamp",
             "amount": 1,
-            "amount_source": "BuildingUpkeep"
+            "amount_source": { "kind": "BuildingUpkeep" }
           }
         },
         {
@@ -198,10 +206,14 @@
           "type": "StatModifier",
           "scope": "FactionUnits",
           "condition": {
-            "kind": "OriginBaseIsHomeBase"
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "OriginBaseIsHomeBase" },
+              { "kind": "IsInCombat" }
+            ]
           },
           "parameters": {
-            "stat": "morale_bonus",
+            "stat": "morale_rank",
             "amount": -1,
             "op": "Add"
           }

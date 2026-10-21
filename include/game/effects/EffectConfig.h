@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
@@ -95,8 +96,24 @@ struct StatModifierEffect_t
         // opposing combatant. Levels are meters / reference_level_meters. A gap under one
         // level, or being lower, contributes 0. Needs both combatants on EffectContext_t.
         LevelsAboveOpponent,
+        // Lookup (or, later, scale) a faction social rating. Needs pUnit and `rating`.
+        // `amounts` selects amounts[rating]; a missing key contributes 0. Requires amounts
+        // today — there is no linear SocialRating caller.
+        SocialRating,
     };
-    std::optional<AmountSource_t> amountSource;
+    struct AmountSourceSpec_t
+    {
+        AmountSource_t kind = AmountSource_t::BaseSize;
+        SocialRatingId_t rating = SocialRatingId_t::Morale;
+        std::optional<std::map<int, double>> amounts;
+        AmountSourceSpec_t() = default;
+        AmountSourceSpec_t(AmountSource_t sourceKind) : kind(sourceKind) {}
+    };
+    std::optional<AmountSourceSpec_t> amountSource;
+    bool HasAmountSource(AmountSource_t kind) const
+    {
+        return amountSource.has_value() && amountSource->kind == kind;
+    }
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
     // whose features satisfy the selector (e.g. "+1 mineral to every worked Mine"), rather
     // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
@@ -308,22 +325,47 @@ struct AnyOf_t
     std::vector<Condition_t> conditions;
 };
 
-// True when EffectContext_t::combatRole is Defender (defense-only SE Morale extras).
+// True when EffectContext_t::combatRole is Defender, matching bMatches. Omit value in JSON
+// to require Defender; "value": false matches the attacker. CombatRole None fails closed
+// for value true and matches value false (not defending).
 struct IsDefending_t
 {
+    bool bMatches = true;
 };
 
-
-// True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
-// (Creche combat bonus for the base being defended, not the unit's home).
-struct OriginBaseIsTargetBase_t
+// True when combatRole is Attacker or Defender. Display and other non-combat resolves
+// leave it None, so rank-word callers skip combat-only rank shifts (riot).
+struct IsInCombat_t
 {
 };
 
 // True when ActiveEffect_t::originBase is EffectContext_t::pUnit's home base
-// (home-base aura, distinct from OriginBaseIsTargetBase which keys on the combat tile).
+// (home-base aura: Crèche stated-morale offsets, riot penalty).
 struct OriginBaseIsHomeBase_t
 {
+};
+
+// True when pUnit stands on the effect's originBase tile (in-square Crèche / Brood Pit).
+// Distinct from OriginBaseIsHomeBase (home, any location). Fail closed if either is missing.
+struct SubjectIsOnOriginBase_t
+{
+};
+
+// True when the unit owner's faction-wide social rating satisfies CompareOp_t against value.
+// Fail closed if pUnit is absent.
+struct SocialRating_t
+{
+    SocialRatingId_t rating = SocialRatingId_t::Morale;
+    CompareOp_t op = CompareOp_t::Eq;
+    int value = 0;
+};
+
+// True when the effect's originBase has a constructed copy of buildingId, matching bPresent.
+// Distinct from BaseHasBuilding (EffectContext_t::pBase). Fail closed if originBase is absent.
+struct OriginBaseHasBuilding_t
+{
+    std::string buildingId;
+    bool bPresent = true;
 };
 
 // True when EffectContext_t::pAttacker is non-null and embarked.
@@ -410,7 +452,8 @@ struct BaseHasBuilding_t
 };
 
 using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
-                                        OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
+                                        IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
+                                        SocialRating_t, OriginBaseHasBuilding_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
