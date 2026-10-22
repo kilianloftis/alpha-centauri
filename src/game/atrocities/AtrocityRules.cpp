@@ -10,7 +10,6 @@
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/faction/Faction.h"
 
-#include <stdexcept>
 
 namespace ac
 {
@@ -97,40 +96,21 @@ bool CharterInForce_(const GameState& rGameState)
 // off the same level.
 int AtrocityThreshold_(const GameState& rGameState, const Faction& rPerpetrator)
 {
-    const GameDataContext& rData = rGameState.GetGameData();
-    if (!rData.difficultyConfig)
-    {
-        throw std::runtime_error("CommitAtrocity requires a difficultyConfig");
-    }
     const std::string& rDifficultyId = rGameState.GetSettings().GetGameRules().difficultyId;
     const DifficultyRules_t& rRules =
-        rData.difficultyConfig->RequireForSession(rDifficultyId).rules;
+        rGameState.GetGameData().difficultyConfig->RequireForSession(rDifficultyId).rules;
     return rPerpetrator.IsPlayerControlled() ? rRules.playerAtrocityThreshold
                                              : rRules.aiAtrocityThreshold;
 }
 
-} // namespace
-
-// AI: Apply SRP
-AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pVictim,
-                                  AtrocitySeverityId_t authored)
+// Whether the act is answered for at all: who the victim is, the Charter, and the species
+// exemption.
+AtrocityOutcome_t Answerability_(const GameState& rGameState, const Faction& rPerpetrator,
+                                 const Faction* pVictim)
 {
-    const GameState& rGameState = CurrentGameState();
-    const GameDataContext& rData = rGameState.GetGameData();
-    if (!rData.atrocitiesConfig)
-    {
-        throw std::runtime_error("CommitAtrocity requires an atrocitiesConfig");
-    }
-    const AtrocitiesConfig_t& rConfig = *rData.atrocitiesConfig;
-    const FactionId_t perpetratorId = rPerpetrator.GetFactionId();
-    if (pVictim && pVictim->GetFactionId() == perpetratorId)
-    {
-        pVictim = nullptr;
-    }
-
     AtrocityOutcome_t outcome;
     std::optional<FactionSpecies_t> victimSpecies;
-    if (pVictim)
+    if (pVictim && pVictim->GetFactionId() != rPerpetrator.GetFactionId())
     {
         outcome.victimId = pVictim->GetFactionId();
         victimSpecies = pVictim->GetDefinition().identity.species;
@@ -147,23 +127,40 @@ AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pV
         outcome.excuse = AtrocityExcuse_t::ProgenitorParty;
     }
     outcome.bCounted = PenaltiesApply(outcome.bCharterInForce, bSpeciesExempt);
-    outcome.severity = authored;
-    if (!outcome.bCounted)
-    {
-        return outcome;
-    }
+    return outcome;
+}
 
-    const int priorSimple = rGameState.GetAtrocityLedger().SimpleCount(perpetratorId);
+// The severity a counted act is answered at, after escalation, and what that severity carries.
+void SetPenalties_(const GameState& rGameState, const Faction& rPerpetrator,
+                   AtrocitySeverityId_t authored, AtrocityOutcome_t& rOutcome)
+{
+    const AtrocitiesConfig_t& rConfig = *rGameState.GetGameData().atrocitiesConfig;
+    const int priorSimple =
+        rGameState.GetAtrocityLedger().SimpleCount(rPerpetrator.GetFactionId());
     const int threshold = AtrocityThreshold_(rGameState, rPerpetrator);
-    outcome.severity = EffectiveSeverityId(authored, priorSimple, threshold);
+    rOutcome.severity = EffectiveSeverityId(authored, priorSimple, threshold);
     // A Major act, including a Simple one that just escalated, carries no commerce sanction.
-    if (outcome.severity == AtrocitySeverityId_t::Simple)
+    if (rOutcome.severity == AtrocitySeverityId_t::Simple)
     {
-        outcome.sanctionYears = SanctionYearsAdded(rConfig, priorSimple + 1);
+        rOutcome.sanctionYears = SanctionYearsAdded(rConfig, priorSimple + 1);
     }
-    const AtrocitySeverityConfig_t& rSeverity = rConfig.For(outcome.severity);
-    outcome.bUniversalVendetta = rSeverity.bUniversalVendetta;
-    outcome.bExpelFromCouncil = rSeverity.bExpelFromCouncil;
+    const AtrocitySeverityConfig_t& rSeverity = rConfig.For(rOutcome.severity);
+    rOutcome.bUniversalVendetta = rSeverity.bUniversalVendetta;
+    rOutcome.bExpelFromCouncil = rSeverity.bExpelFromCouncil;
+}
+
+} // namespace
+
+AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pVictim,
+                                  AtrocitySeverityId_t authored)
+{
+    const GameState& rGameState = CurrentGameState();
+    AtrocityOutcome_t outcome = Answerability_(rGameState, rPerpetrator, pVictim);
+    outcome.severity = authored;
+    if (outcome.bCounted)
+    {
+        SetPenalties_(rGameState, rPerpetrator, authored, outcome);
+    }
     return outcome;
 }
 
