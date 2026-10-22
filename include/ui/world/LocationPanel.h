@@ -12,9 +12,7 @@ class MapRenderer;
 class SpriteLibrary;
 class Tile;
 
-// Dashboard location column: preview of the selected map tile, drawn by MapRenderer as the
-// player knows it (no fog), plus feature names from ImprovementConfig_t::name (terrain +
-// improvements in improvements.json).
+// The selected tile's preview, as the player knows it, with its feature names.
 class LocationPanel : public UIElement
 {
 public:

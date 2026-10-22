@@ -14,9 +14,7 @@ namespace ac
 
 class WorldDisplay;
 
-// Plays back a resolved CombatResult_t for the map UI: each round draws a hit graphic over
-// the damaged unit, then waits before advancing. Resolve has already applied HP /
-// DestroyUnit / retreat; this class only presents the recorded history.
+// Plays back a resolved fight round by round; Resolve has already applied everything.
 class CombatPresentation
 {
 public:
@@ -24,9 +22,8 @@ public:
         int damageFlashMs = Style().combatPresentation.defaultDamageFlashMs,
         int interRoundDelayMs = Style().combatPresentation.defaultInterRoundDelayMs);
 
-    // Copies rResult and records the combatants' tiles for ghost hit overlays when a unit
-    // was destroyed during Resolve. No-op (clears) when rounds is empty, unless
-    // bBombardPlayback is set — that still flashes once on the defender tile.
+    // Copies rResult and the combatants' tiles. Empty rounds clear it unless bBombardPlayback,
+    // which still flashes the defender's tile.
     void Begin(const CombatResult_t& rResult,
                const Tile& rAttackerTile,
                const Tile& rDefenderTile);
@@ -46,9 +43,7 @@ public:
     std::optional<size_t> GetDisplayedRoundIndex() const;
     const CombatRound_t* GetDisplayedRound() const;
 
-    // Draws the hit graphic over the damaged unit (placeholder until a hit animation exists).
-    // Live units use UnitMarkerRenderer's last-frame cache; destroyed units fall back to
-    // their pre-fight tile.
+    // The hit graphic over the damaged unit, at its last drawn position or its pre-fight tile.
     void Render(Graphics& rGraphics,
                 const WorldDisplay& rDisplay) const;
 

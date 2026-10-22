@@ -17,12 +17,8 @@ class Graphics;
 class MapRenderer;
 class MapViewport;
 
-// Full-map terrain overview in the world dashboard right panel. Each tile takes
-// MapRenderer::TileColor as the player sees it: the same elevation / fog / shroud colours as
-// WorldDisplay, without per-tile labels or overlays.
-// Brick layout matching the main view: width×height image, tile (x,y) fills pixels
-// x and x+1 of row y, drawn with 2:1 pixel aspect. Left-click centers the camera.
-// Viewport frame is in map units (split at the seam when it wraps).
+// The whole map in MapRenderer::TileColor, as the player sees it, two pixels per tile in brick
+// layout. Left-click centres the camera.
 class MinimapDisplay : public UIElement
 {
 public:

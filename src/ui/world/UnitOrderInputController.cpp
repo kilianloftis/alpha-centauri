@@ -43,9 +43,8 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         valid.push_back(action);
     };
 
-    // Unload, disband, and attach are available for any selected unit. WorldView runs the
-    // order, and attach falls through when boarding fails. The rest wait for a unit that
-    // can actually do them, so a shared chord can mean a different order.
+    // Unload, disband and attach apply to any selected unit; the rest wait for one that can do
+    // them, so a shared chord can mean a different order.
     consider(HotkeyAction_t::UnloadTransport, true);
     consider(HotkeyAction_t::Disband, true);
     consider(HotkeyAction_t::AttachTransport, true);
@@ -215,9 +214,8 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
     }
 
     CancelPreview();
-    // Long-press on another tile that did not yield an order is an aborted pathfinding
-    // gesture — consume it so the map does not fall through to tile / unit selection.
-    // Short clicks (below the hold threshold) still fall through for normal selection.
+    // A long press elsewhere that gave no order is an aborted path gesture, consumed; short
+    // clicks still fall through to selection.
     return bOtherTile && bHeldLongEnough;
 }
 
@@ -236,9 +234,8 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
     }
 
     const bool bAdjacent = AreChebyshevAdjacent(rMover.GetTile(), rDest, rMap.GetWidth());
-    // Act-on questions are the game layer's: CanOpenProbeActions for probes;
-    // FindAttackableHostileOnTile matches TryAttack's declare gate. A visible but
-    // non-attackable hostile still steers move orders (planner contact path).
+    // Whether to act on the tile is the game layer's question. A visible but non-attackable
+    // hostile still steers a move order.
     const Unit* pVisibleHostile =
         pGameState ? FindVisibleHostileOnTile(rMover, rDest)
                    : nullptr;
@@ -283,12 +280,8 @@ bool UnitOrderInputController::TryAdjacentInteract_(Unit& rMover, const Tile& rD
 bool UnitOrderInputController::TryAssignMoveOrder_(Unit& rMover, const Tile& rDest,
                                                    const Unit* pVisibleHostile)
 {
-    // Everything else is a move. A seen hostile is the one case the planner refuses
-    // to route into, so order the move anyway and let Execute_ close in via
-    // DesiredContactStep. Undefended bases plan fine (only units and ZoC block a
-    // step), and concealed occupants are invisible to the planner too — so both
-    // take the ordinary reachability path, and the step that fails on arrival
-    // reveals whatever was hiding there.
+    // Everything else is a move. A seen hostile is the one target the planner will not route into,
+    // so the move is ordered anyway and Execute_ closes in.
     if (!pVisibleHostile && !(m_bPreviewActive && m_pathPreview.bReachable))
     {
         return false;

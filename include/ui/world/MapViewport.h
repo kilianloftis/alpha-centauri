@@ -16,9 +16,8 @@
 namespace ac
 {
 
-// Camera window over a WorldMap that wraps horizontally (cylinder). Presentation is a
-// SMAC-style rectangular brick of diamonds: tile (x, y) sits at ((x-camX)·½w, (y-camY)·½h).
-// Gameplay topology stays the square lattice.
+// Camera over a map that wraps horizontally, laid out as SMAC's brick of diamonds: tile (x, y)
+// at ((x-camX)·½w, (y-camY)·½h).
 class MapViewport
 {
 public:
@@ -51,9 +50,8 @@ public:
     int RowStart() const;
     int RowEnd() const;
 
-    // Top-left of the tile's footprint (the diamond's bounding box seated at the mean of its
-    // four corner lifts), if the camera-relative wrap instance nearest the camera intersects the
-    // layout.
+    // Top-left of the tile's footprint, seated at the mean of its corner lifts, for the wrap
+    // instance nearest the camera; empty if off screen.
     std::optional<std::pair<float, float>> PixelOriginOf(int worldX, int worldY) const;
     // The centre of that footprint.
     std::optional<std::pair<float, float>> PixelCenterOf(const Tile& rTile) const;

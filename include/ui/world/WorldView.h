@@ -74,9 +74,7 @@ public:
     // While CombatView is up, skip drawing the normal dashboard (combat panels cover it).
     void SetSuppressDashboard(bool bSuppress);
 
-    // Runs the auto end-turn callback if one was queued by the last UpdatePresentation pass
-    // (Pause at End of Turn off, no units left needing orders). Called from UIManager::Update(),
-    // between ProcessInput and Render, so turn advance never runs on the paint path.
+    // Runs a queued auto end-turn, from UIManager::Update, never the paint path.
     void ProcessPendingAutoEndTurn() override;
 
     // InteractionPresenter: camera focus and in-view modals for queue Front items.
@@ -89,9 +87,8 @@ private:
     void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
     void SetSelectedTile_(const Tile* pTile);
     void SelectUnitAtTile_(int tileX, int tileY);
-    // Auto-cycle: fill empty selection, or advance past a unit that no longer needs orders.
-    // Does not steal a manual selection (empty tile browse, or a unit that already moved /
-    // has an order).
+    // Fills an empty selection, or moves past a unit that no longer needs orders; never overrides
+    // a manual selection.
     void SelectNextAvailableUnitIfNeeded_();
     // After an order/action — keep the selection if that unit still needs orders
     // (e.g. a short move with moves left); otherwise jump to the next unit that does.

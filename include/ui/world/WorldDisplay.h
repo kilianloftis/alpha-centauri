@@ -17,10 +17,7 @@ class WorldMap;
 class Tile;
 struct Path_t;
 
-// Displays the world map as a grid of tiles.
-// MapRenderer paints the viewport's tiles as the player sees them: fog over remembered tiles,
-// every base, and the units the player can see. Bases, Sensors, Monoliths, and units are read
-// live from GameState / WorldMap — no per-frame DTO rebuild.
+// The world map as the player sees it, drawn by MapRenderer from live game state.
 class WorldDisplay
 {
 public:

@@ -142,9 +142,8 @@ WorldView::WorldView(
     m_pEndTurnButton = pEndTurn.get();
     m_elements.push_back(std::move(pEndTurn));
 
-    // Every faction exists by the time WorldView is constructed (Engine::Initialize_ creates
-    // them all up front) and none are added later, so wiring here covers unit death for the
-    // whole game: without this, m_pSelectedUnit would dangle the moment a unit dies.
+    // Every faction exists by now and none are added later, so this covers unit death for the
+    // whole game.
     for (Faction& rFaction : m_rGameState.Factions())
     {
         rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed) {
@@ -153,9 +152,7 @@ WorldView::WorldView(
                 SetSelectedUnit_(nullptr, false);
             }
         });
-        // Transfer preserves identity (the pointer does not dangle), but a unit that just
-        // left this faction is no longer "my" selection — drop it rather than keep showing
-        // a foreign unit as selected (see docs/architecture/high-level.md, "Object lifetime").
+        // A unit that left this faction is no longer the player's selection, though still alive.
         rFaction.GetUnitManager().OnUnitReleased.Connect([this](Unit& rReleased) {
             if (m_pSelectedUnit == &rReleased)
             {
@@ -381,9 +378,7 @@ void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
 
 void WorldView::SelectNextAvailableUnit_()
 {
-    // Short moves clear the order but leave move fragments — stay on this unit so the
-    // player can keep issuing orders. GetNextAvailableUnit(nullptr) alone would jump to the
-    // first faction unit that needs orders, which is often a different unit.
+    // A short move leaves moves, so stay on this unit rather than jump to the next one.
     if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
     {
         SetSelectedUnit_(m_pSelectedUnit, m_bManualSelection);
@@ -472,11 +467,8 @@ void WorldView::Update_()
     // Ready highlight only when pause-at-end is on and the interaction phase is finished.
     m_pEndTurnButton->SetReady(bPauseAtEnd && !bNeedOrders && !m_bSuppressDashboard);
 
-    // When pause is off, advance automatically once the last unit that needed orders is done.
-    // Queue even if an in-view modal currently blocks Advance — ProcessPendingAutoEndTurn
-    // keeps the flag until CanAdvanceTurn is clear. Do not call m_onProcessTurn() here:
-    // UpdatePresentation runs from UIManager::Update, and Advance must never run on the paint
-    // path.
+    // With pause off, queue the auto end-turn once the last unit is done; never run Advance from
+    // the paint path.
     if (!bPauseAtEnd && !m_bSuppressDashboard && m_bHadUnitsNeedingOrders && !bNeedOrders)
     {
         m_bHadUnitsNeedingOrders = false;
@@ -493,10 +485,8 @@ void WorldView::Update_()
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
-    // Exclusive modal capture (probe/supply popups, ...): while one is open it is the only
-    // thing that sees the key, so Enter cannot end the turn and map/unit hotkeys cannot
-    // mutate selection/orders underneath it. Always return true so UIManager does not run
-    // global view shortcuts (F2/E/…) while a Unit*-capturing modal is open on WorldView.
+    // An open modal element is the only thing that sees the key, and the key always reports
+    // handled so global shortcuts cannot fire under it.
     if (UIElement* pModal = GetTopModalElement())
     {
         (void)pModal->HandleKey(rEvent);
@@ -653,9 +643,8 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 {
-    // Exclusive modal capture: every press goes to the topmost modal element, even outside
-    // its own Contains rect (so outside-click dismiss works), and neither chrome nor the map
-    // underneath ever sees it. Release events are dropped, matching IGameView's default.
+    // Every press goes to the topmost modal element, even outside it (outside-click dismiss);
+    // release events are dropped.
     if (UIElement* pModal = GetTopModalElement())
     {
         if (rEvent.bPressed)
@@ -984,9 +973,8 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
         return;
     }
 
-    // Capture the tile, not the base/unit on it: WorldMap owns tiles for the whole game,
-    // whereas the target may be captured or killed while the popup is open. TryProbeAction
-    // re-resolves and rejects cleanly if it is gone.
+    // The tile, not what is on it: the target may die while the popup is open, and TryProbeAction
+    // re-resolves it.
     Unit* pProbe = &rProbe;
     const Tile* pTargetTile = &rTargetTile;
 

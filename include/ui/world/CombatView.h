@@ -15,9 +15,8 @@ class WorldDisplay;
 class InfoPanelElement;
 class SpriteLibrary;
 
-// Overlay shown while CombatPresentation plays back a resolved fight. Covers the world
-// dashboard with combat panels, swallows all input, and closes itself when playback ends.
-// WorldView keeps rendering the map underneath.
+// Covers the dashboard with combat panels during playback, swallows input, and closes when
+// playback ends.
 class CombatView : public IGameView
 {
 public:
