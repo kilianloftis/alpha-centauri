@@ -44,10 +44,8 @@ namespace ac
 namespace
 {
 
-// A source reached a subject overload with no evaluation for it. Unreachable from the
-// EffectContext_t dispatch, which routes every source to its own subject — this fires only if
-// a new source's case there names a subject whose overload was never taught to evaluate it,
-// so the message says which pairing is missing rather than "wrong subject".
+// Unreachable from the context dispatch unless a new source names a subject whose overload
+// cannot evaluate it; the message names the pairing.
 [[noreturn]] void ThrowNoEvaluation_(StatModifierEffect_t::AmountSource_t source,
                                      std::string_view subject)
 {
@@ -112,9 +110,8 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
                 throw std::runtime_error(
                     "AmountSourceValue: elevation_energy_step_meters must be > 0");
             }
-            // Rounded up, so any land above sea level is worth at least one point. Clamped
-            // at 0 rather than reading a negative band off the sea floor — an ocean tile
-            // yields nothing here, whatever a mod lets you build on it.
+            // Rounded up, so any land above sea level is worth a point; ocean
+            // yields nothing.
             const double bands = std::ceil(static_cast<double>(rTile.GetElevation())
                                            / static_cast<double>(rYieldRules.elevationEnergyStepMeters));
             return std::max(0.0, bands) * scale;
@@ -353,10 +350,8 @@ namespace
 // different bases granting the same building must each expand independently.
 using ProcessedGrantedIds_t = std::set<std::pair<const BaseManager*, std::string>>;
 
-// True if buildingId appears as a segment of a chained sourceId ("a -> b -> c").
-// Used to break grant cycles: a grant whose target is already an ancestor in its own
-// chain (the constructed root or an earlier grant) is already contributing its effects,
-// so expanding it again would duplicate them.
+// Breaks grant cycles: a grant of a building already in its own chain is already
+// contributing.
 bool GrantChainContains_(const std::string& rSourceChain, const std::string& rBuildingId)
 {
     const std::string_view chain(rSourceChain);
@@ -384,9 +379,8 @@ bool IsPerBaseGrantScope_(EffectScope_t scope)
         || scope == EffectScope_t::ProducedAtThisBase;
 }
 
-// Mark buildings already constructed on rBases as processed so a later grant of the same
-// id does not double-count continuous effects (SMAC Command Nexus / Perimeter Defense).
-// Seeds both {pBase, id} (ThisBase half) and {nullptr, id} (FactionGlobal half).
+// Buildings already built count as granted, so a grant of the same id does not double-count
+// (Command Nexus, Perimeter Defense).
 void SeedProcessedGrantedIdsFromConstructed_(
     const std::vector<const BaseManager*>& rBases,
     ProcessedGrantedIds_t& rProcessed)
@@ -927,10 +921,7 @@ void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveD
     }
 }
 
-// A live unit's full effect list: design components, all FactionUnits, WorldGlobal
-// unit-domain stats and rule flags, and permanent ProducedAtThisBase grants stamped onto
-// the unit at construction. Identity conditions are applied here; situational conditions
-// remain for in-context resolve.
+// Identity conditions apply here; situational ones remain for in-context resolve.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
@@ -993,10 +984,8 @@ double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t stat
     {
         throw std::logic_error("ResolveFactionStat: DomainFor(stat) is not Faction");
     }
-    // Same stamping ResolveBaseStat / ResolveUnitStat do: the bundle's subject is what faction
-    // amount sources resolve against, so a caller never supplies it twice. Conditions still
-    // need a caller context — without one this stays a context-free resolve and
-    // condition-carrying effects are skipped, exactly as FilterByStatId does.
+    // The bundle's subject, so a caller never supplies it twice. Without a caller context,
+    // condition-carrying effects are skipped.
     EffectContext_t ctx = pCtx ? *pCtx : EffectContext_t{};
     if (!ctx.pFaction)
     {
@@ -1032,9 +1021,7 @@ double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, doubl
 namespace
 {
 
-// The one multiplicative-only unit resolve: AddPercent / MultiplyGeometric contributions
-// seeded at baseValue, Adds deliberately ignored. Shared by psi combat and the morale
-// scale steps in MoraleRules so the two cannot drift.
+// Shared by psi combat and MoraleRules' scale steps so they cannot drift.
 double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t statId,
                                   double baseValue, const EffectContext_t& rCtx)
 {
@@ -1210,9 +1197,7 @@ bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 namespace
 {
 
-// Shared by both tile-flag overloads: does rEffect declare flagId as an unconditional
-// ThisTile flag on the host tile itself (radius 0, no condition)? Radius auras are excluded
-// deliberately — a tile capability describes its host, not the host's neighbourhood.
+// An unconditional radius-0 ThisTile flag: a capability describes its host tile.
 bool DeclaresTileFlag_(const EffectConfig_t& rEffect, RuleFlagId_t flagId)
 {
     const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);

@@ -17,7 +17,6 @@
 namespace ac
 {
 
-// Forward declarations
 class BaseManager;
 class Faction;
 class GameState;
@@ -46,37 +45,26 @@ struct ActiveEffect_t
 
     const EffectConfig_t* config;
     std::string sourceId;           // "command_nexus", "free_market", etc — for breakdown/UI
-    // Set for ThisBase / ProducedAtThisBase (pool tagging / stamp source), and for FactionUnits
-    // collected from a base (per-base attribution for conditions like SubjectIsOnOriginBase —
-    // not a membership filter). Cleared on Unit production-grant stamps after construction.
+    // The base an effect is tagged with or stamped from, for ThisBase, ProducedAtThisBase and
+    // FactionUnits. Cleared on a unit's production grants.
     const BaseManager* originBase = nullptr;
-    // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
-    // the host tile's territory at collection time. Also set for unit-projected ThisTile auras
-    // from the projecting unit's faction. When set, tile defense / fog vision / area Conceal
-    // only apply for that faction (unset = universal, e.g. Rocky defense, Fungus Conceal).
-    // Detect requires a stamped owner — see AppliesForFaction vs VisibilityRules's fail-closed
-    // Detect gate. Unowned territory stores k_NoFactionOwner (has_value, matches nobody).
+    // The faction a territory-owned improvement or a unit-projected aura serves; unset applies to
+    // everyone. k_NoFactionOwner matches nobody.
     std::optional<FactionId_t> ownerFaction;
     // Set for FactionPair effects: the other faction of the pair. They match only a context
     // whose pPartner is that faction.
     std::optional<FactionId_t> partnerFaction;
 };
 
-// General faction gate for attributed tile effects: unset ownerFaction ⇒ applies to all
-// (terrain defense / Fungus Conceal). Detect must additionally require has_value at the
-// consumer — an unattributed Detect never pierces.
+// Unset ownerFaction applies to all. Detect must also require one: unattributed, it never
+// pierces.
 inline bool AppliesForFaction(const ActiveEffect_t& rEffect, FactionId_t forFaction)
 {
     return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
 }
 
-// The faction-wide effect pool: what CollectActiveEffects gathers (buildings with grants
-// expanded, social policies, pop/unit faction-lane effects), plus — when the faction is bound
-// to a session world source — other factions' WorldGlobal and council extras. Deliberately a
-// distinct type from BaseEffects_t: the pool still holds every base's ThisBase effects and the
-// FactionUnits lane, so resolving base stats directly against it would count effects that don't
-// apply — FilterForBase is the only path from a pool to a base's effect list.
-// Subject is constructor-injected so ResolveFactionStat / amount sources cannot omit it.
+// The faction-wide pool, with other factions' WorldGlobal and council extras when bound to a
+// session. Holds every base's ThisBase effects, so FilterForBase is the only way to a base.
 struct FactionEffects_t
 {
     explicit FactionEffects_t(const Faction& rFaction)
@@ -91,12 +79,8 @@ struct FactionEffects_t
     std::vector<ActiveEffect_t> effects;
 };
 
-// One base's effect list: FilterForBase over the faction pool, then the base's pop-generated
-// ThisBase effects (CollectFromPops) and expanded social-rating effects
-// (ResolveSocialRatingLevelEffects) merged in — see BaseEffectsCache::Get. Every entry
-// applies to that single base, which is the precondition for base-level resolution
-// (FilterBaseLevelByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
-// Subject is constructor-injected so ResolveBaseStat / amount sources cannot omit it.
+// One base's effects: FilterForBase over the pool plus its pops' and social ratings' ThisBase
+// effects. Everything applies to this base.
 struct BaseEffects_t
 {
     explicit BaseEffects_t(const BaseManager& rBase)
@@ -133,34 +117,14 @@ enum class CombatRole_t
     Defender,
 };
 
-// Stockpile conversion subject for the MineralsConverted amount_source (not a ResolveDomain
-// DomainFor target — resource stats stay Base). A named subject rather than a bare int on
-// EffectContext_t: conversion can grow subject fields without widening the context, and the
-// subject has one home instead of two.
+// Stockpile conversion subject for MineralsConverted, named so conversion can grow fields.
 struct StockpileConversionSubject_t
 {
     int mineralsConverted = 0;
 };
 
-// Runtime context an effect's condition is evaluated against, and the bag of subjects
-// amount_source evaluation reads. Fields are optional; a condition that references an absent
-// field evaluates false, and an amount_source whose subject is absent is dropped by the
-// filters (StatModifierMatchesInContext / FilterBaseLevelByStatId) before resolve.
-// Combat sets targetTile to the defender's tile so TargetTileHas conditions can inspect it.
-// Tile yield sets targetTile to the *receiving* tile — for a radius aura that is the tile
-// being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
-// combatRole enables IsInCombat (riot rank) and IsDefending (SE +2/+3 extra, attack-only
-// Crèche extras).
-// pAttacker enables AttackerIsEmbarked / AttackerDomain (and future attacker-side conditions).
-// pDefender enables DefenderDomain (e.g. Air Superiority attack vs air / orbital).
-// pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
-// BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
-// pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
-// it from the live unit via UnitSubjectContext.
-// pUnit is the *effect subject*: the unit CollectLiveUnitEffects is resolving for, the unit
-// a GrantXp / identity condition gates, OriginBaseIsHomeBase's home owner. Not the combat
-// attacker — use pAttacker / AttackerDomain for that.
-// pStockpile carries this turn's consumed minerals for the MineralsConverted amount_source.
+// What conditions and amount sources read. A condition on an absent field is false; an amount
+// source without its subject is filtered out before resolve.
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
@@ -181,12 +145,8 @@ struct EffectContext_t
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
 
-// Per-subject amount_source evaluation: `scale` is the modifier's `amount`, and the subject
-// supplies the runtime value it multiplies. One overload per subject type; a new
-// AmountSource_t adds a case to the one overload that owns its subject, not to all four.
-// The others keep `default:` — the dispatch below routes each source to its own subject, so
-// a wrong-subject call is unreachable and enumerating the rejects would be per-source
-// bookkeeping for a branch that never fires.
+// One overload per subject: a new AmountSource_t adds a case only to its subject's overload.
+// Dispatch routes every source to its own subject, so the others keep `default:`.
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const BaseManager& rBase);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
@@ -198,35 +158,23 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const Unit& rUnit);
 
-// Literal `amount` when amountSource is absent; otherwise dispatches to the subject overload
-// above using the matching EffectContext_t field. Missing required subject throws (no silent
-// 0.0) — the filters drop such modifiers first, so reaching the throw means a resolve path
-// admitted a modifier it could not evaluate.
-//
-// This switch carries no `default:`, so -Werror=switch (see src/CMakeLists.txt) makes a new
-// AmountSource_t a compile error here. It is the single place that must name a source's
-// subject; ValidateAmountSourceLegality_ in the parser is the single place that must state
-// its legality. Two forced edits per source, not one per subject overload.
+// The literal amount, or the source's value from the matching subject; a missing subject
+// throws. No `default:`, so a new source fails to compile here.
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx);
 
-// Fills the faction and unit subjects from a live unit when the caller left them unset, so
-// Unit-domain amount sources (BasesOwned) and conditions (OriginBaseIsHomeBase) resolve
-// without every unit call site remembering to stamp them. pUnit null (design-only preview)
-// leaves those subjects absent and those modifiers / conditions filter out.
+// Stamps the faction and unit subjects from a live unit where unset, so unit sources and
+// conditions resolve without every call site doing it.
 EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCtx);
 
-// True if config carries no condition, or its condition is satisfied by ctx.
-// SubjectIsOnOriginBase / OriginBaseIsHomeBase / OriginBaseHasBuilding require pOriginBase
-// (ActiveEffect_t::originBase).
+// True if config has no condition or ctx satisfies it. Origin-base conditions need
+// pOriginBase.
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase = nullptr);
 bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase = nullptr);
 
-// True when the condition tree needs tile/combat/HQ (or similar) subjects beyond pUnit.
-// Identity-only trees (SubjectDomain, HasComponent, IsPrototype, …) return false. Used to keep
-// situational modifiers out of context-free FilterByStatId while still allowing identity
-// gates in CollectLiveUnitEffects / in-context resolve.
+// True when the condition needs subjects beyond pUnit, keeping it out of context-free
+// resolution.
 bool ConditionNeedsSituationalContext(const Condition_t& rCondition);
 
 struct BuildingConfig_t;
@@ -235,44 +183,30 @@ struct BuildingConfig_t;
 // (All / BuildingId / Category). Used when resolving FacilityEnergyUpkeep per type.
 bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_t& rBuilding);
 
-// True when config has no PlayerType factionFilter, or that filter matches the owning
-// faction's player/AI control. Used when injecting continuous effects into a faction pool
-// (difficulty). Distinct from FactionFilterCoversTarget (cross-faction targets only).
+// True unless a PlayerType factionFilter excludes the owning faction.
 bool FactionFilterMatchesOwner(const EffectConfig_t& rConfig, bool bPlayerControlled);
 
-// Appends effects from a config list as ActiveEffect_t instances.
-// Used by building, pop, unit, and tile effect collection; pOriginBase is recorded when
-// TagsOriginBase(scope) (ThisBase, ProducedAtThisBase, FactionUnits). This (and its
-// filtered variants below) is the single config->ActiveEffect_t conversion — new effect
-// sources should collect through one of these rather than hand-rolling the loop.
-// Accepts span so stable stores (e.g. CouncilEffects deques) can append one config at a time.
+// The one config-to-ActiveEffect_t conversion, recording pOriginBase where TagsOriginBase
+// says. New sources collect through it or its filtered variants.
 void AppendActiveEffects(std::span<const EffectConfig_t> rEffects,
                          const BaseManager* pOriginBase,
                          const std::string& sourceId,
                          std::vector<ActiveEffect_t>& rOut);
 
-// As AppendActiveEffects, but keeps only faction-lane scopes (see IsFactionLane): what a
-// source contributes to the faction pool when its base/pop/unit/tile-local scopes are
-// resolved elsewhere. Used by Faction's pop and mood collectors. pOriginBase is still
-// recorded where TagsOriginBase says to (FactionUnits), which is what lets a FactionUnits
-// effect carry a per-base condition like OriginBaseIsHomeBase.
+// Faction-lane scopes only, for sources whose local scopes resolve elsewhere.
 void AppendFactionLaneEffects(std::span<const EffectConfig_t> rEffects,
                               const BaseManager* pOriginBase,
                               const std::string& sourceId,
                               std::vector<ActiveEffect_t>& rOut);
 
-// The complement: keeps only Base-lane scopes, for a source whose faction-lane half is
-// collected into the pool separately. Together the two partition a config array so no
-// effect is counted on both paths.
+// Base-lane scopes only; with AppendFactionLaneEffects it partitions a config array.
 void AppendBaseLaneEffects(std::span<const EffectConfig_t> rEffects,
                            const BaseManager* pOriginBase,
                            const std::string& sourceId,
                            std::vector<ActiveEffect_t>& rOut);
 
-// True if rEffect projects onto a tile `distance` tiles from its host: ThisTile lane,
-// Continuous, and minRadius <= distance <= radius. distance 0 = the host tile itself, which
-// minRadius 1 excludes (the Echelon Mirror's ring). The single filter for a tile's own
-// effects, neighboring improvement/terrain auras, and unit-projected auras.
+// True if rEffect, a continuous ThisTile effect, reaches `distance` tiles from its host:
+// minRadius <= distance <= radius.
 bool TileEffectReaches(const EffectConfig_t& rEffect, int distance);
 
 // As AppendActiveEffects, but keeps only effects satisfying TileEffectReaches(e, distance).
@@ -283,12 +217,8 @@ void AppendTileEffects(std::span<const EffectConfig_t> rEffects,
 
 class BuildingRegistry;
 
-// Expands any GrantBuildingEffect_t entries in `effects`, appending the granted
-// building's own effects. rBases is used to attribute ThisBase-scoped sub-effects
-// to the correct base when the grant itself has no originBase (faction-global scope).
-// Constructed buildings on rBases pre-seed the grant dedupe set so a grant of a
-// building already built does not double-count that building's continuous effects.
-// Returns the expanded vector by value.
+// Appends each granted building's effects, attributing ThisBase ones to rBases. Buildings
+// already built pre-seed the dedupe set, so a grant does not double-count them.
 std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     std::vector<ActiveEffect_t> effects,
     const BuildingRegistry& rRegistry,
@@ -310,30 +240,18 @@ struct StatBreakdown_t
 
 const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider);
 
-// Apply a stack of modifier contributions to a base value using the standard formula:
-//   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric
-// Each pair is {amount, op}. Ops are partitioned by kind (all Adds, then all AddPercents,
-// then all MultiplyGeometrics) — contribution order within a kind does not change the result.
+// result = (base + adds) * (1 + percents/100) * geometric; order within a kind does not
+// matter.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
 
-// Single float→int rule for any resolved modifier total (ResolveStat, combat, council votes,
-// ResourceManager, pop tile multipliers). Half-away from zero via std::lround — do not truncate
-// or std::round the same stack elsewhere.
+// The one float-to-int rule for resolved totals: half away from zero.
 inline int FinalizeResolvedStat(double value)
 {
     return static_cast<int>(std::lround(value));
 }
 
-// baseValue seeds the additive total before contributions are summed. It is deliberately
-// NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.
-// CostMultiplier, TileDefense) silently resolve to 0 from a 0 base, so every caller must
-// state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
-// modifiers scale (tile yield, growth rate's 100). Templated on the input range so it
-// accepts both an owned vector and a lazy Filter* view below without materializing one.
-// pCtx resolves amount_source modifiers; pass nullptr only for context-free resolves, whose
-// filters drop every amount_source effect. Whatever pCtx the matching range was filtered with
-// must be the pCtx passed here — the filters admit an amount source on the strength of a
-// subject this call then has to evaluate against.
+// Never defaulted: a pure multiplier from a 0 base resolves to 0, so callers state the seed.
+// Pass the pCtx the range was filtered with, or nullptr for context-free resolves.
 template <std::ranges::input_range Range>
 StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
                                      const EffectContext_t* pCtx = nullptr)
@@ -398,9 +316,7 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Any condition (identity or situational) and amount_source effects are excluded
-        // from true context-free resolution. Live units apply identity conditions in
-        // CollectLiveUnitEffects and re-check via FilterByStatIdInContext with pUnit stamped.
+        // Conditions and amount sources stay out of context-free resolution.
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
             && !pStatModifier->amountSource
             && LaneFor(effect.config->scope) != EffectLane_t::FactionPair;
@@ -408,11 +324,8 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
 }
 inline auto FilterByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statId) = delete;
 
-// The single in-context matching rule: a StatModifier on statId whose condition ctx satisfies.
-// Shared by FilterByStatIdInContext and by callers filtering something other than a
-// vector<ActiveEffect_t> (e.g. the tile-yield pointer lanes) so the rule cannot drift.
-// The other unit in a combat pair. Null when either combatant is missing, or pUnit is
-// not one of them. LevelsAboveOpponent filters out in that case.
+// The one in-context matching rule, shared by every caller so it cannot drift.
+// The other unit in a combat pair, or null when pUnit is not one of them.
 inline const Unit* OpposingCombatant_(const EffectContext_t& ctx)
 {
     if (ctx.pUnit == nullptr || ctx.pAttacker == nullptr || ctx.pDefender == nullptr)
@@ -446,9 +359,7 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
-    // Drop an amount_source whose subject this context lacks, rather than letting
-    // AmountSourceValue throw on it further down. MineralsConverted is not listed: it only
-    // ever resolves on the stockpile path, which builds its own filter.
+    // Drops an amount source this context cannot evaluate, rather than throwing at resolve.
     if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BaseSize)
         && ctx.pBase == nullptr)
     {
@@ -487,9 +398,7 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     return ConditionSatisfied(*effect.config, ctx, effect.originBase);
 }
 
-// Like FilterByStatId, but for a specific runtime context: includes unconditional effects
-// plus any condition-carrying effect whose condition is satisfied by ctx. This is the entry
-// point for context-dependent resolution such as combat (attack/defense vs a given target).
+// FilterByStatId for a runtime context such as combat: conditions satisfied by ctx pass.
 inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
                                     StatId_t statId, const EffectContext_t& ctx)
 {
@@ -501,18 +410,8 @@ inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
 inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
                                     StatId_t statId, const EffectContext_t& ctx) = delete;
 
-// Like FilterByStatId, but for base-level resolution only: excludes per-tile modifiers
-// (StatModifiers carrying a tile selector). ElevationEnergySeed / MineralsConverted
-// amount_sources stay off this filter (tile yield / stockpile paths).
-// Accepting BaseEffects_t (never a raw vector or the pool) makes running this filter at any
-// other stage a compile error instead of a doc violation.
-//
-// BaseSize / BuildingUpkeep are admitted only when pCtx->pBase is set — deliberately keyed
-// on the context and NOT on the bundle's own subject, because the same pCtx is what
-// ResolveStatModifiers later evaluates the amount source against. Admitting on the bundle
-// while resolving on the context is what let a base-level BaseSize modifier pass the filter
-// and then throw at resolve. Prefer ResolveBaseStat, which stamps pBase from the bundle
-// into both.
+// Base-level resolution only, with no per-tile selectors; takes BaseEffects_t so no other
+// stage can run it. Amount sources pass on pCtx's subject, which resolve then evaluates.
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr)
 {
@@ -557,10 +456,7 @@ double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t stat
 double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, double seed,
                        const EffectContext_t* pCtx = nullptr);
 
-// Live-unit Attack/Defense for combat: same Unit-domain resolve as ResolveUnitStat /
-// ResolveStat (amount sources included). extraEffects is for named MoraleLevel_t rows
-// (planet_pearls). moraleAddPercent is CombatAddPercent — it shares the AddPercent
-// bucket with other unit modifiers, not a post-multiply.
+// Live-unit Attack or Defense for combat. moraleAddPercent joins the AddPercent bucket.
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
                           std::span<const EffectConfig_t> extraEffects = {});
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
@@ -571,10 +467,8 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                            const EffectContext_t& rCtx, double moraleAddPercent);
 
-// Narrows the faction pool to the effects that apply to the given base: ThisBase effects
-// originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
-// The only constructor of a BaseEffects_t from a pool. Eager, not a view: the result is an
-// independently-owned collection meant to be cached (see BaseEffectsCache::Get).
+// The base's share of the pool: its own ThisBase effects and every faction-wide one. The only
+// way to build a BaseEffects_t, and eager so it can be cached.
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase);
 
 // Returns a lazy view of effects whose scope matches exactly.
@@ -600,51 +494,34 @@ bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId);
 // MultiplyGeometric — the SMAC-style base combat rating (e.g. laser 2, not 2 * 1.25).
 int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId);
 
-// A live unit's full effect list: design components, FactionUnits (all faction units),
-// WorldGlobal unit-domain stat modifiers and rule flags from the composed pool, and
-// permanent ProducedAtThisBase grants stamped on the unit at construction. Returned
-// effects already satisfy identity conditions (Domain / IsPrototype / …) against this unit
-// — consumers (ResolveStat, ResolveFlag, etc.) need not re-check those. Situational
-// conditions remain on the entries for in-context resolve.
+// A live unit's effects: design, FactionUnits, WorldGlobal and production grants, already
+// filtered by identity conditions. Situational conditions remain.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
 
-// WorldGlobal entries from rPool that this consumer can apply: stat modifiers whose
-// DomainFor matches domain, and rule flags. Base- and faction-domain modifiers stay on
-// the resolvers that already read the composed pool.
+// WorldGlobal stat modifiers in `domain`, and rule flags.
 void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
                               std::vector<ActiveEffect_t>& rOut);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
-// Resolves only multiplicative contributions (AddPercent / MultiplyGeometric), seeded at
-// baseValue. Add contributions are deliberately ignored. Used by psi combat, whose Attack
-// and Defense strengths start at 1 instead of using conventional additive weapon/armour.
+// Only AddPercent and MultiplyGeometric, from baseValue: psi combat strengths start at 1.
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                  const EffectContext_t& rCtx = {});
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
-// Resolve a faction-wide RuleFlag from the continuous effect pool (buildings, SPs, etc.).
-// Context-free: effects carrying a condition are skipped.
-// Note: Social-rating expansions of FactionGlobal effects are applied per-base
-// (ResolveSocialRatingLevelEffects) and are NOT visible here — use ResolveFlag(BaseManager).
+// Context-free. Misses social-rating effects, which expand per base: use
+// ResolveFlag(BaseManager).
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 
-// Resolve a RuleFlag from a base's final effect list (FilterForBase + SE rating expansion +
-// buildings). Prefer this for ThisBase flags (Headquarters) and for FactionGlobal SE effects
-// (e.g. probe_subversion_immune). Context-free: effects carrying a condition are skipped.
+// From the base's full effect list, social ratings included. Context-free.
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
 
-// True if any of rTile's own features (terrain + improvements) declares flagId as an
-// unconditional ThisTile rule flag on the tile itself. Radius auras don't project flags —
-// a flag describes the host tile, not its neighbourhood.
+// True if one of rTile's own features declares the flag; auras do not project flags.
 bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId);
 
-// The above, OR a non-embarked unit of factionId standing on rTile whose design projects
-// flagId at ThisTile (Carrier Deck). Lets a consumer ask what a tile can do for it without
-// naming which improvements or components supply the capability. Flags use this function's
-// on-tile unit faction check; projected auras stamp ownerFaction from the unit separately.
+// The above, or a non-embarked unit of factionId on rTile projecting it (Carrier Deck).
 bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
                       FactionId_t factionId);
 
@@ -661,11 +538,8 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
 // Origin is tagged at AppendActiveEffects time; ThisPop tile multipliers are excluded.
 std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, const BaseManager& rOriginBase);
 
-// Collects every ThisTile-scoped effect from rTile's own features only: terrain feature
-// configs (rockiness, moisture, river, fungus) plus each improvement config held on the tile.
-// sourceId is the matching feature's id. Does NOT include aura effects from nearby tiles —
-// use TileEffectsContext::CollectAreaEffects for that (which needs WorldMap).
-// Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
+// ThisTile effects from rTile's own terrain and improvements, without auras
+// (TileEffectsContext::CollectAreaEffects).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 
 } // namespace ac

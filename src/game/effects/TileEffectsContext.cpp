@@ -337,9 +337,8 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
                                          StatId_t stat, bool bIncludeClamps) const
 {
-    // targetTile is the receiving tile, so an aura's ElevationEnergy would read the tile it
-    // lands on, not its host. Only radius-0 effects use it today (a solar collector yields
-    // off its own elevation), and min_radius keeps the Mirror's ring a flat +1.
+    // The receiving tile: only radius-0 effects use ElevationEnergy, and min_radius keeps the
+    // Mirror's ring flat.
     const EffectContext_t ctx{.targetTile = &rTile, .pTileYieldRules = &m_rYieldRules};
     auto matching = effects
         | std::views::transform([](const ActiveEffect_t* pEffect) -> const ActiveEffect_t& {
@@ -369,9 +368,7 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
     std::vector<const ActiveEffect_t*> bypassClamp;
     PartitionYieldEffects_(rTile, effects, beforeClamp, bypassClamp);
 
-    // Every resource seeds at 0: a bare tile yields no energy of its own. Elevation energy
-    // comes from SolarCollector/Mirror amount_source effects (ElevationEnergy), not a
-    // hardcoded improvement-id gate.
+    // Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
     const TileResources_t preClamped{
         ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients, /*bIncludeClamps*/ true),
         ResolveResource_(rTile, beforeClamp, StatId_t::Energy, /*bIncludeClamps*/ true),
@@ -457,10 +454,8 @@ void TileEffectsContext::OnTileChanged(Tile& rTile, std::string_view keepId)
     }
 
     m_bSweepingOccupancy = true;
-    // Two passes: the first clears what the new occupant displaces while holding it exempt,
-    // the second re-judges it against what is left. Nothing is permanently exempt — an
-    // improvement built past a stock exclude survives on the waiver the tile recorded for
-    // it, not on being the most recent arrival.
+    // First clears what the new occupant displaces, then re-judges it. It survives a stock
+    // exclude only on a waiver the tile recorded.
     RemoveImprovementsThatCannotRemain_(rTile, keepId);
     if (!keepId.empty())
     {

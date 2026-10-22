@@ -12,10 +12,8 @@ struct ActiveEffect_t;
 struct EffectConfig_t;
 struct EffectContext_t;
 
-// Which grids these effects carry an InteractionOverride for. Callers cache the result on
-// long-lived sources (designs, faction pools) so a resolve can skip effect collection when
-// no override could possibly match. Conservative — scope and condition are all
-// ignored, so a set bit means "maybe" and a clear bit means "definitely not".
+// Grids these effects may override, ignoring scope and condition: a clear bit means
+// "definitely not".
 InteractionGridMask_t InteractionMaskOf(std::span<const EffectConfig_t> effects);
 InteractionGridMask_t InteractionMaskOf(std::span<const ActiveEffect_t> effects);
 
@@ -37,11 +35,8 @@ struct InteractionQuery_t
 // What rUnit is standing on. Purely a property of the unit — no target tile involved.
 InteractionFooting_t FootingFor(const Unit& rUnit);
 
-// The acting unit's first matching InteractionOverride whose cell differs from stock, else
-// the stock grid cell. Overrides that restate stock are skipped (non-default only), so for
-// any concrete query only one polarity can fire. The unit is the only override source: rules
-// that belong to a *tile* (a port, a landing pad) are plain code at their call site, so this
-// function's inputs never vary by caller. pActingUnit may be null when no unit is in play.
+// The acting unit's first non-stock override, else the stock cell. Tile rules (ports, pads)
+// live at their call sites. pActingUnit may be null.
 InteractionCell_t ResolveInteractionCell(const InteractionGridsConfig_t& rGrids,
                                          const InteractionQuery_t& rQuery,
                                          const Unit* pActingUnit,

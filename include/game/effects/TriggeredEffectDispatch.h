@@ -24,10 +24,8 @@ class GameState;
 class Tile;
 class Unit;
 
-// What a triggered effect actually did. The dispatcher returns these so callers can report —
-// probe missions need the destroyed facility's id for their result detail, and riot tiers need
-// the same to tell the player what rioting cost them. An entry that fired but had nothing to do
-// (no eligible facility, no placeable tile) still reports, with an empty list or a zero count.
+// What a triggered effect did, for callers that report it. An entry with nothing to do still
+// reports, empty.
 
 struct FacilitiesDestroyed_t
 {
@@ -158,9 +156,8 @@ using TriggeredEffectResult_t = std::variant<
     VirtualMineralsAdded_t
 >;
 
-// Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
-// read through Subjects(), which materialises a const EffectContext_t bag — the same shape
-// continuous resolve uses — without sharing a const_cast seam.
+// Trigger fields and mutable subjects; Subjects() gives conditions the same const context
+// continuous resolve uses.
 struct TriggeredEffectContext_t
 {
     TriggeredEffectContext_t(GameState& rGameStateIn, std::vector<Faction*> factionsIn)
@@ -181,9 +178,8 @@ struct TriggeredEffectContext_t
     std::optional<std::string> hostImprovementId;
     // Set by the trigger site and read-only to the arms: the probed base's owner, and so on.
     std::optional<FactionId_t> actionTarget;
-    // Written by an arm that works out who it wronged (Explosion), read by CommitAtrocity.
-    // Separate from actionTarget so an arm cannot silently redirect the ActionTarget faction
-    // filter for everything authored after it.
+    // Set by an arm that works out who it wronged (Explosion), for CommitAtrocity. Separate so it
+    // cannot redirect the ActionTarget filter.
     std::optional<FactionId_t> derivedVictim;
     // Set by a production completion: no ModifyPopulation shrinks the base below it.
     int populationFloor = 0;
@@ -202,12 +198,8 @@ struct TriggeredEffectContext_t
     }
 };
 
-// Fire every entry in order against rContext, returning what each one did (entries that report
-// nothing contribute no result). Entries carrying `oncePer` are skipped when their subject has
-// already consumed that key, and record it when they fire — so a list applies partially and
-// honestly rather than all-or-nothing. Entries with a `condition` that fails against
-// Subjects() (after pFaction is stamped for the current apply) are skipped without spending
-// oncePer.
+// Fires each entry in order and returns what each did. oncePer and condition skip entries
+// without spending the key, so a list can apply in part.
 std::vector<TriggeredEffectResult_t>
 ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
                       TriggeredEffectContext_t& rContext);
@@ -226,9 +218,8 @@ void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const Te
 // Run the design's on_hold_effects. A DestroyUnit entry in that list removes the subject.
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit);
 
-// Run the design's on_detonate_effects against the unit's own tile. This is how a missile
-// that cannot declare an attack delivers its payload; a DestroyUnit entry in that list spends
-// the missile. Returns false when the design has no detonation.
+// Runs on_detonate_effects on the unit's own tile, for a missile that cannot attack. False
+// without a detonation.
 bool ApplyDetonation(GameState& rGameState, Unit& rUnit);
 
 } // namespace ac

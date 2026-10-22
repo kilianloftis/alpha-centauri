@@ -79,9 +79,7 @@ std::mt19937& TriggeredEffectContext_t::Rng() const
 namespace
 {
 
-// The subject that remembers a oncePer key. Absent when the context has no such subject — an
-// entry scoped to a unit cannot fire from a trigger that has none, so it is skipped rather
-// than silently treated as un-consumed and re-fired forever.
+// Absent when the context has no such subject: the entry is skipped, not re-fired forever.
 std::set<std::string>* OnceSubjectFor_(const OncePer_t& rOncePer, TriggeredEffectContext_t& rCtx,
                                        Faction& rFaction)
 {
@@ -147,9 +145,8 @@ bool AddBuilding_(TriggeredEffectContext_t& rCtx, const AddBuildingEffect_t& rAd
     return true;
 }
 
-// The subject faction is the perpetrator; the victim is whoever actionTarget names (the probed
-// base's owner, or the territory a warhead went off in). A victimless act is legal — an atrocity
-// is answered for on the strength of the act, not on finding someone to have wronged.
+// The subject is the perpetrator and actionTarget the victim. A victimless act is still an
+// atrocity.
 bool CommitAtrocity_(TriggeredEffectContext_t& rCtx, const CommitAtrocityEffect_t& rConfig,
                      Faction& rPerpetrator, std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -275,9 +272,7 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     return true;
 }
 
-// Aquifer and river are tile bools; every other terrain occupant is a config pointer in the
-// tile's optional-terrain list. Terrain derived from other state has no branch here and is
-// rejected at load.
+// Aquifer and river are tile bools; other occupants are optional terrain.
 bool SetTerrainFeature_(TriggeredEffectContext_t& rCtx, const SetTerrainFeatureEffect_t& rConfig,
                         std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -362,10 +357,8 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
     }
     const ElevationRulesConfig_t& rRules = rCtx.pTile->MapRules();
     const UnitDomain_t domain = rCtx.pUnit->GetDomain();
-    // No room check here: whether a Former may start is FormerElevationChangeAllowed's job at
-    // order time. By the time this fires the energy is spent and the turns are gone, so a roll
-    // past the floor lands on the floor rather than failing, and only a delta that changes
-    // nothing at all reports false.
+    // Whether a Former may start was checked at order time. Now the cost is paid, so a roll past
+    // the floor lands on it; only no change at all reports false.
     const int roll = RollLevelMeters(rCtx.Rng(), rRules);
     const int delta = rConfig.bRaise ? roll : -roll;
     const int floor =
@@ -436,10 +429,8 @@ bool Explosion_(TriggeredEffectContext_t& rCtx, const ExplosionEffect_t& rConfig
     return true;
 }
 
-// Which subject an entry acts on. A faction-subject effect applies once per faction in the
-// context — that is what makes a council GrantEnergy credit every member. A base-, unit- or
-// world-subject effect has exactly one subject and applies once, however many factions the
-// context lists, so a DestroyFacility cannot hit the same base once per member.
+// A faction-subject effect applies once per listed faction (council GrantEnergy); any other
+// applies once, so a DestroyFacility cannot hit a base per member.
 bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
 {
     return std::visit(
@@ -516,9 +507,7 @@ int ApplyModifyPopulation_(BaseManager& rBase, const ModifyPopulationEffect_t& r
     return 0;
 }
 
-// Returns whether the entry actually changed anything. A `oncePer` key is only spent on a
-// true — an entry that found nothing to do (no eligible facility, no placeable tile, a tech
-// the faction already knew) has not been used up and may fire again later.
+// Whether the entry changed anything; oncePer is spent only on true.
 bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t& rCtx,
                Faction& rFaction, std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -546,10 +535,8 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             }
             else if constexpr (std::is_same_v<T, WorldParameterEffect_t>)
             {
-                // TODO: world-map mutation (sea level, climate) unfolds gradually over turns
-                // through the WorldEvents system. Once that system exposes a trigger API,
-                // request the world event here. The council must never mutate the map itself.
-                // Reports false meanwhile, so a oncePer key is not spent on the no-op.
+                // TODO: change sea level and climate through WorldEvents once it
+                // has a trigger API. False meanwhile, so oncePer is not spent.
                 return false;
             }
             else if constexpr (std::is_same_v<T, SetInfiltrationEffect_t>)
@@ -723,9 +710,8 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
     std::vector<TriggeredEffectResult_t> results;
     for (const TriggeredEffectConfig_t& rConfig : rEffects)
     {
-        // One application per subject: every listed faction for a faction-subject entry, and
-        // exactly one for a base- or unit-subject entry (attributed to the base's owner, which
-        // need not be a listed faction — a probe mission acts on the target's base).
+        // Once per listed faction for a faction-subject entry, once otherwise (attributed to the
+        // base's owner).
         const auto applyFor = [&](Faction* pFaction)
         {
             if (!pFaction)

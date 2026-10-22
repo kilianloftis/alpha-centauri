@@ -20,19 +20,13 @@ class WorldMap;
 struct TileYieldRulesConfig_t;
 struct InteractionGridsConfig_t;
 
-// Bundles WorldMap and ImprovementRegistry into a single dependency that knows how to resolve
-// tile-level effects - yield, defense multipliers, and terrain mutations like Condenser moisture.
-// Passed into sub-systems (WorkerAssignmentManager, ResourceManager) as a single reference so
-// they don't need to know about WorldMap or ImprovementRegistry individually.
+// Resolves tile-level effects (yield, defence, terrain mutations) over WorldMap and
+// ImprovementRegistry.
 class TileEffectsContext : public TileChangeListener
 {
 public:
-    // pUnitComponents is only used to size the aura scan radius: unit components can carry
-    // ThisTile-scoped effects with a radius (mobile auras, e.g. a sensor pod), and the scan
-    // bound must cover the largest such radius. Pass nullptr if units never project auras.
-    // rYieldRules must outlive this context: it is stamped into every per-tile EffectContext_t
-    // so terrain-scaled amount sources (ElevationEnergy) can read the world's yield scalars.
-    // rInteractionGrids must outlive this context: movement / attack / ZOC consult it.
+    // pUnitComponents sizes the aura scan; nullptr if units never project auras. rYieldRules and
+    // rInteractionGrids must outlive this.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                        const UnitComponentRegistry* pUnitComponents,
                        const TileYieldRulesConfig_t& rYieldRules,
@@ -48,59 +42,38 @@ public:
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;
 
-    // Collects this tile's own effects plus any radius-extending effects from nearby tiles —
-    // improvements/terrain (e.g. a Sensor or Mirror whose effect radius reaches rTile) and
-    // units whose components project ThisTile effects (including units standing on rTile
-    // itself). Used by all three resolvers below.
+    // rTile's own effects plus auras reaching it from nearby tiles and units.
     std::vector<ActiveEffect_t> CollectAreaEffects(const Tile& rTile) const;
 
-    // Combined nutrient/mineral/energy yield including aura effects (e.g. nearby Mirror).
-    // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers
-    // and no tech-gated MaxClamp. bypass_clamp modifiers are included.
-    // effective == potential when no MaxClamp/MinClamp is present in the effect list.
+    // Yield from the tile and its auras, without base modifiers or tech caps.
     TileYieldView_t ResolveTileYield(const Tile& rTile) const;
 
-    // As above, but also folds in any per-tile StatModifier from rBaseEffects whose selector
-    // matches this tile (including AnyTile MaxClamp resource caps). bypass_clamp modifiers
-    // are added after clamps. Caps whose removed_by_tech has been discovered are already
-    // absent from the faction pool. Production reads .effective; UI preview for unworked
-    // tiles uses the same path with bIsBaseTile == false (as-if-worked tile-level yield,
-    // without pop multipliers).
+    // Also folds in rBaseEffects' per-tile modifiers that match, caps included; bypass_clamp ones
+    // add after clamps.
     TileYieldView_t ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
                                      const BaseEffects_t& rBaseEffects) const;
 
-    // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
-    // forFaction selects which territory-owned improvement auras apply (Sensor only benefits
-    // the faction that owns the Sensor's tile). Terrain and non-owned improvements always apply.
+    // Defence multiplier with auras. Territory-owned auras count only for forFaction.
     double ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const;
 
     const ImprovementRegistry& GetImprovements() const;
 
     const InteractionGridsConfig_t& GetInteractionGrids() const { return m_rInteractionGrids; }
 
-    // Re-derives rTile's effective moisture from its stored base moisture plus any Condenser
-    // aura in range, then calls Tile::SetMoisture(). Always recomputed from scratch so
-    // multiple overlapping Condensers and add/remove order never cause drift.
+    // Recomputed from base moisture plus Condensers in range, so overlap and order never drift.
     void RecomputeMoisture(Tile& rTile);
 
-    // Adds occupantId to rTile, on whichever list its config's placement names. The tile
-    // notifies this context, which drops improvements that can no longer be built there, then
-    // re-runs RecomputeMoisture for every tile within that occupant's radius so any
-    // terrain-mutating effect (e.g. Condenser) takes effect immediately. Always use this
-    // instead of Tile::AddOccupant directly when the add can change moisture or rivers.
+    // Adds occupantId, drops improvements that can no longer stay, and recomputes moisture in its
+    // radius. Use instead of Tile::AddOccupant.
     void AddOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
     void OnTileChanged(Tile& rTile, std::string_view keepId) override;
 
-    // Removes occupantId from rTile, then re-runs RecomputeMoisture over the same radius so
-    // the bonus reverts cleanly even when other Condensers still cover some of those tiles.
-    // An id no longer in the registry removes nothing.
+    // Removes occupantId and recomputes moisture over its radius. An unknown id removes nothing.
     void RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
 private:
-    // Resolves one resource lane from an already-partitioned pointer list (no ActiveEffect_t
-    // copies). When bIncludeClamps is false, MaxClamp / MinClamp contributions are skipped
-    // (UI potential yield).
+    // One resource lane from partitioned pointers; without clamps for UI potential yield.
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
                          StatId_t stat, bool bIncludeClamps) const;
 

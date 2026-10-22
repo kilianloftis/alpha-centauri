@@ -9,18 +9,15 @@ namespace ac
 
 class Faction;
 
-// Session surface that supplies effects originating outside a faction's own local pool:
-// other factions' WorldGlobal contributions, Planetary Council world laws, and governor
-// FactionGlobal extras for that faction. Bound onto Faction (mirror BindWorldMap) so
-// IEffectsProvider::GetActiveEffects is one composed pool for every consumer.
+// Effects from outside a faction's own pool: peers' WorldGlobal, council laws and governor
+// extras.
 class IWorldEffectsSource
 {
 public:
     virtual ~IWorldEffectsSource() = default;
 
-    // Extras for rFor. Must not include rFor's own WorldGlobal (already in its local pool).
-    // Cross-faction harvest must read peer *local* pools only so council extras are not
-    // double-counted when peers also compose.
+    // Excludes rFor's own WorldGlobal, and reads peers' local pools so council extras are not
+    // counted twice.
     virtual std::vector<ActiveEffect_t> CollectWorldExtras(const Faction& rFor) const = 0;
 
     // Stamp that changes whenever CollectWorldExtras(rFor) could change (peer local pool
