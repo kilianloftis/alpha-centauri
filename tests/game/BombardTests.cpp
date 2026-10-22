@@ -357,7 +357,7 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
     const int attackLevel = CombatMoraleLevel(attacker, ctx, fixture.morale());
     const double attackPercent = fixture.morale().CombatAddPercent(attackLevel);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 6);
-    CHECK(attacker.GetStat(StatId_t::Attack) == 4);
+    CHECK(ResolveStat(attacker, StatId_t::Attack) == 4);
 
     fixture.At(8, 8).SetElevation(999);
     CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 4);

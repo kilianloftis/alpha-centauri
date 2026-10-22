@@ -379,17 +379,17 @@ TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_empire_pulse"});
 
     // Flat +1 Attack; BasesOwned contribution is 0 with no bases.
-    CHECK(unit.GetStat(StatId_t::Attack) == 1);
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 1);
     // IDesign-only resolve has no faction subject, so BasesOwned is dropped.
     CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 1);
 
     fixture.MakeFactionBase(faction, 8, 4);
     CHECK(faction.GetBaseCount() == 1);
-    CHECK(unit.GetStat(StatId_t::Attack) == 2);
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 2);
 
     fixture.MakeFactionBase(faction, 8, 12);
     CHECK(faction.GetBaseCount() == 2);
-    CHECK(unit.GetStat(StatId_t::Attack) == 3);
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 3);
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")

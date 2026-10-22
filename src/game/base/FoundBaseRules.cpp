@@ -81,7 +81,7 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
 
 bool CanFoundBase(const Unit& rUnit)
 {
-    if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
+    if (!ResolveFlag(rUnit, RuleFlagId_t::FoundBase))
     {
         return false;
     }

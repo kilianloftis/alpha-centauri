@@ -21,10 +21,34 @@
 namespace ac
 {
 
+namespace
+{
+
+// ProducedAtThisBase grants from the base that built rUnit, with no origin, so a later transfer
+// or razed base is never consulted.
+std::vector<ActiveEffect_t> ProductionGrants_(const Unit& rUnit, const Faction& rFaction,
+                                              const BaseManager& rBuiltAt)
+{
+    EffectContext_t context;
+    context.pUnit = &rUnit;
+    std::vector<ActiveEffect_t> grants;
+    for (const ActiveEffect_t& rEffect : rFaction.GetActiveEffects().effects)
+    {
+        if (rEffect.config->scope == EffectScope_t::ProducedAtThisBase
+            && rEffect.originBase == &rBuiltAt
+            && ConditionSatisfied(*rEffect.config, context, rEffect.originBase))
+        {
+            grants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
+        }
+    }
+    return grants;
+}
+
+} // namespace
+
 bool IsCrawlResource(StatId_t resource)
 {
-    return std::find(k_CrawlResources.begin(), k_CrawlResources.end(), resource)
-           != k_CrawlResources.end();
+    return std::ranges::contains(k_CrawlResources, resource);
 }
 
 Unit::Unit(UnitId_t unitId,
@@ -54,30 +78,16 @@ Unit::Unit(UnitId_t unitId,
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    // ProducedAtThisBase grants from the base that built the unit.
     if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
     {
-        EffectContext_t stampCtx;
-        stampCtx.pUnit = this;
-        for (const ActiveEffect_t& rEffect : rFaction.GetActiveEffects().effects)
-        {
-            if (rEffect.config->scope != EffectScope_t::ProducedAtThisBase
-                || rEffect.originBase != pBuiltAt
-                || !ConditionSatisfied(*rEffect.config, stampCtx, rEffect.originBase))
-            {
-                continue;
-            }
-            // No origin, so a later transfer or razed base is never consulted.
-            m_productionGrants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
-        }
+        m_productionGrants = ProductionGrants_(*this, rFaction, *pBuiltAt);
     }
 
     // Here, once ResolveStat can read the members, so a new unit starts at its live maxima,
     // faction effects included.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
     m_currentFuel = GetMaxFuel();
-    m_moveFragmentsRemaining =
-        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_moveFragmentsRemaining = MaxMoveFragments_();
     m_xp = m_rMorale.StartingIntrinsicXp();
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
@@ -92,19 +102,15 @@ void Unit::ClearCargoLinks_()
 {
     if (m_pCarrier)
     {
-        auto& rCargo = m_pCarrier->m_cargo;
-        rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
+        std::erase(m_pCarrier->m_cargo, this);
         m_pCarrier = nullptr;
         // Still listed as cargo in the index until Unregister_ / RemoveFromTile_.
     }
     for (Unit* pPassenger : m_cargo)
     {
-        if (pPassenger && pPassenger->m_pCarrier == this)
-        {
-            pPassenger->m_pCarrier = nullptr;
-            // Orphaned passenger becomes an independent occupant on the same tile.
-            m_rPositions.NoteDisembarked_(*pPassenger);
-        }
+        pPassenger->m_pCarrier = nullptr;
+        // Orphaned passenger becomes an independent occupant on the same tile.
+        m_rPositions.NoteDisembarked_(*pPassenger);
     }
     m_cargo.clear();
 }
@@ -170,8 +176,7 @@ void Unit::Disembark()
     {
         return;
     }
-    auto& rCargo = m_pCarrier->m_cargo;
-    rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
+    std::erase(m_pCarrier->m_cargo, this);
     m_pCarrier = nullptr;
     m_rPositions.NoteDisembarked_(*this);
 }
@@ -179,21 +184,6 @@ void Unit::Disembark()
 UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
 const IDesign& Unit::GetDesign() const { return m_rDesign; }
-
-int Unit::GetStat(StatId_t statId) const
-{
-    return ResolveStat(*this, statId);
-}
-
-int Unit::GetStat(StatId_t statId, const EffectContext_t& rCtx) const
-{
-    return ResolveStat(*this, statId, rCtx);
-}
-
-bool Unit::GetFlag(RuleFlagId_t flagId) const
-{
-    return ResolveFlag(*this, flagId);
-}
 
 UnitDomain_t Unit::GetDomain() const
 {
@@ -238,15 +228,17 @@ void Unit::SetCurrentFuel(int fuel)
 }
 void Unit::SetMoveFragmentsRemaining(int fragments)
 {
-    const int maxFragments =
-        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
+    m_moveFragmentsRemaining = std::clamp(fragments, 0, MaxMoveFragments_());
+}
+
+int Unit::MaxMoveFragments_() const
+{
+    return GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
 }
 
 void Unit::BeginTurn()
 {
-    SetMoveFragmentsRemaining(
-        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+    SetMoveFragmentsRemaining(MaxMoveFragments_());
     AdvanceAttackHistory();
     ClearAirdroppedThisTurn();
 }
@@ -328,7 +320,7 @@ bool Unit::TryStartSupplyCrawl(StatId_t resource)
         throw std::runtime_error("TryStartSupplyCrawl: resource must be nutrients, minerals, or energy");
     }
     BaseManager* pHomeBase = GetHomeBase();
-    if (!GetFlag(RuleFlagId_t::SupplyCrawl) || !pHomeBase)
+    if (!ResolveFlag(*this, RuleFlagId_t::SupplyCrawl) || !pHomeBase)
     {
         return false;
     }

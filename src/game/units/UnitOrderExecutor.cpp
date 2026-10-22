@@ -46,6 +46,28 @@
 namespace ac
 {
 
+namespace
+{
+
+// The map's own tile, for callers that hold it const.
+Tile& MutableTile_(WorldMap& rWorldMap, const Tile& rTile)
+{
+    Tile* pTile = rWorldMap.GetTile(rTile.GetX(), rTile.GetY());
+    if (!pTile)
+    {
+        throw std::logic_error("UnitOrderExecutor: tile is not on this map");
+    }
+    return *pTile;
+}
+
+// A move that stops short goes on next turn, unless contact cleared its order.
+OrderProgress_t ProgressOfHaltedMove_(const Unit& rUnit)
+{
+    return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue : OrderProgress_t::Complete;
+}
+
+} // namespace
+
 UnitOrderExecutor::UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                                      const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
@@ -70,8 +92,8 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostRules& rMoveCosts,
 
 OrderProgress_t UnitOrderExecutor::ExpendIfSingleUse_(const Unit& rUnit) const
 {
-    return rUnit.GetFlag(RuleFlagId_t::SingleUse) ? OrderProgress_t::Expended
-                                                  : OrderProgress_t::Complete;
+    return ResolveFlag(rUnit, RuleFlagId_t::SingleUse) ? OrderProgress_t::Expended
+                                                       : OrderProgress_t::Complete;
 }
 
 void UnitOrderExecutor::PromoteOnKill_(Unit& rAttacker, Unit& rDefender,
@@ -131,10 +153,7 @@ void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_
     FactionRevealedUnits& rRevealed = rMover.GetFaction().GetRevealedUnits();
     for (Unit* pUnit : rEval.blockingUnits)
     {
-        if (pUnit)
-        {
-            rRevealed.Reveal(*pUnit);
-        }
+        rRevealed.Reveal(*pUnit);
     }
 }
 
@@ -182,27 +201,6 @@ void UnitOrderExecutor::CancelMoveOrderIfNewHostile_(
     {
         rMover.ClearOrder();
     }
-}
-
-Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
-                                                  const Tile& rTile) const
-{
-    return ac::FindVisibleHostileOnTile(rObserver, rTile);
-}
-
-bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger)
-{
-    return ac::TryAttachToTransport(rPassenger);
-}
-
-bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
-{
-    return ac::TryAutoAttachWhenMustLand(rPassenger);
-}
-
-bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
-{
-    return TryUnloadTransportInPlace(rCarrier);
 }
 
 UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUnit,
@@ -343,21 +341,9 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
     // move either side before the blow lands.
     const HostileAct_t act = HostileActAgainst(rAttacker, *pDefender);
-    if (m_pWorld)
+    if (std::optional<CombatResult_t> intercepted = TryIntercept_(rAttacker, *pDefender, act))
     {
-        if (std::optional<CombatResult_t> intercepted =
-                m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rRng))
-        {
-            // A defender lost to its own intercept was never fought: the attack is spent, with no
-            // kill to promote and no last defender lost in battle.
-            if (!intercepted->bAttackerDestroyed
-                && SpendAttackAction_(rAttacker, AttackKind_t::Attack))
-            {
-                intercepted->bAttackerDestroyed = true;
-            }
-            m_pWorld->OnHostileAct(act);
-            return intercepted;
-        }
+        return intercepted;
     }
 
     // Snapshot before Resolve may DestroyUnit the defender (and free its tile reference).
@@ -389,6 +375,29 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         m_pWorld->OnHostileAct(act);
     }
     return result;
+}
+
+std::optional<CombatResult_t> UnitOrderExecutor::TryIntercept_(Unit& rAttacker, Unit& rDefender,
+                                                              const HostileAct_t& rAct)
+{
+    if (!m_pWorld)
+    {
+        return std::nullopt;
+    }
+    std::optional<CombatResult_t> intercepted =
+        m_pWorld->TryInterceptAttack(rAttacker, rDefender, m_rRng);
+    if (!intercepted)
+    {
+        return std::nullopt;
+    }
+    // A defender lost to its own intercept was never fought: the attack is spent, with no kill
+    // to promote and no last defender lost in battle.
+    if (!intercepted->bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Attack))
+    {
+        intercepted->bAttackerDestroyed = true;
+    }
+    m_pWorld->OnHostileAct(rAct);
+    return intercepted;
 }
 
 std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
@@ -424,13 +433,7 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
 
     if (!improvementTargets.empty())
     {
-        std::uniform_int_distribution<size_t> pick(0, improvementTargets.size() - 1);
-        const std::string id = improvementTargets[pick(m_rRng)];
-        if (Tile* pTile = m_rWorldMap.GetTile(rTargetTile.GetX(), rTargetTile.GetY()))
-        {
-            m_rTileEffects.RemoveOccupantWithEffects(*pTile, id);
-            result.destroyedImprovementId = id;
-        }
+        result.destroyedImprovementId = DestroyRandomImprovement_(rTargetTile, improvementTargets);
     }
 
     if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Bombard))
@@ -438,11 +441,8 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
         result.bAttackerDestroyed = true;
     }
 
-    bool bAnyDefenderDestroyed = false;
-    for (const CombatResult_t& rCombat : result.combats)
-    {
-        bAnyDefenderDestroyed = bAnyDefenderDestroyed || rCombat.bDefenderDestroyed;
-    }
+    const bool bAnyDefenderDestroyed = std::ranges::any_of(
+        result.combats, [](const CombatResult_t& rCombat) { return rCombat.bDefenderDestroyed; });
     if (bAnyDefenderDestroyed && !result.bAttackerDestroyed
         && ApplyLastDefenderConquest_(rAttacker, rTargetTile))
     {
@@ -459,6 +459,15 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
     return result;
 }
 
+std::string UnitOrderExecutor::DestroyRandomImprovement_(
+    const Tile& rTile, const std::vector<std::string>& rCandidates)
+{
+    std::uniform_int_distribution<size_t> pick(0, rCandidates.size() - 1);
+    const std::string id = rCandidates[pick(m_rRng)];
+    m_rTileEffects.RemoveOccupantWithEffects(MutableTile_(m_rWorldMap, rTile), id);
+    return id;
+}
+
 BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
 {
     if (!CanFoundBase(rUnit))
@@ -467,19 +476,12 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
     }
 
     Faction& rFaction = rUnit.GetFaction();
-    const Tile& rUnitTile = rUnit.GetTile();
-
-    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnitTile.GetX(), rUnitTile.GetY());
-    if (!pTile)
-    {
-        return nullptr;
-    }
-
+    Tile& rTile = MutableTile_(rGameState.GetWorldMap(), rUnit.GetTile());
     const bool bMayOccupyWater = FoundedBaseMayOccupyWater(rUnit);
     BaseManager* pBase = rFaction.CreateBase(
         rGameState.AllocateBaseId(),
         rFaction.SuggestBaseName(),
-        pTile,
+        &rTile,
         rGameState.GetTileEffects(),
         std::nullopt,
         bMayOccupyWater);
@@ -552,14 +554,16 @@ void UnitOrderExecutor::OnTurnStart(Unit& rUnit)
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
 {
     if (!rOrder.pDestination)
+    {
         throw std::runtime_error("MoveOrder has null destination");
+    }
 
     // Snapshot: TryStep may ClearOrder on new hostiles, invalidating rOrder.
-    const Tile* const pDestination = rOrder.pDestination;
+    const Tile& rDestination = *rOrder.pDestination;
 
     while (true)
     {
-        if (&rUnit.GetTile() == pDestination)
+        if (&rUnit.GetTile() == &rDestination)
         {
             return OrderProgress_t::Complete;
         }
@@ -573,17 +577,10 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         MoveOrder_t& rLiveOrder = std::get<MoveOrder_t>(*rUnit.GetOrder());
 
         // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
-        const Tile* pNext = m_rPathfinder.NextStep(rUnit, *pDestination);
+        const Tile* pNext = m_rPathfinder.NextStep(rUnit, rDestination);
         if (!pNext)
         {
-            const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *pDestination);
-            if (pDesired && TryStep(rUnit, *pDesired, rLiveOrder).bMoverDestroyed)
-            {
-                return OrderProgress_t::UnitDestroyed;
-            }
-            // Order may have been cleared by contact; otherwise keep it for next turn.
-            return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
-                                                : OrderProgress_t::Complete;
+            return StepTowardContact_(rUnit, rDestination, rLiveOrder);
         }
 
         if (m_rSteps.EvaluateStep(rUnit, rUnit.GetTile(), *pNext).outcome
@@ -602,8 +599,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         }
         if (!stepped.bEntered)
         {
-            return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
-                                                : OrderProgress_t::Complete;
+            return ProgressOfHaltedMove_(rUnit);
         }
 
         if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
@@ -618,6 +614,17 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
     }
 }
 
+OrderProgress_t UnitOrderExecutor::StepTowardContact_(Unit& rUnit, const Tile& rDestination,
+                                                      MoveOrder_t& rOrder)
+{
+    const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, rDestination);
+    if (pDesired && TryStep(rUnit, *pDesired, rOrder).bMoverDestroyed)
+    {
+        return OrderProgress_t::UnitDestroyed;
+    }
+    return ProgressOfHaltedMove_(rUnit);
+}
+
 OrderProgress_t UnitOrderExecutor::RefuseTerritoryEntry_(Unit& rUnit, const Tile& rNext)
 {
     if (m_pWorld && rUnit.GetFaction().IsPlayerControlled())
@@ -629,25 +636,20 @@ OrderProgress_t UnitOrderExecutor::RefuseTerritoryEntry_(Unit& rUnit, const Tile
     return OrderProgress_t::Complete;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit&, HoldOrder_t&)
 {
-    (void)rUnit;
-    (void)rOrder;
     return OrderProgress_t::Continue;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit&, HoldUntilHealedOrder_t&)
 {
     // TODO: per-turn healing. Repair inside a base must check MayRepairAt (DiplomaticPermissionRules.h).
     // Clear the order when the unit reaches full HP.
-    (void)rUnit;
-    (void)rOrder;
     return OrderProgress_t::Continue;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit&, HoldForTurnsOrder_t& rOrder)
 {
-    (void)rUnit;
     if (rOrder.turnsRemaining <= 0)
     {
         return OrderProgress_t::Complete;
@@ -658,20 +660,16 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rO
                                       : OrderProgress_t::Continue;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, SkipTurnOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit&, SkipTurnOrder_t&)
 {
     // Persist for the rest of this turn (needs-orders exclusion / cancellable). Cleared in
     // OnTurnStart when moves refresh — not here, or a mid-pass Yield would re-prompt.
-    (void)rUnit;
-    (void)rOrder;
     return OrderProgress_t::Continue;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit&, SupplyCrawlOrder_t&)
 {
     // Harvest happens in ResourceCollection via HomeBaseIndex units in ResourceManager.
-    (void)rUnit;
-    (void)rOrder;
     return OrderProgress_t::Continue;
 }
 
@@ -689,27 +687,15 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     }
 
     // Order remains until Execute clears on Complete — safe to read rOrder here.
-    const std::optional<TerraformProject_t> project = FindTerraformProject(
-        rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
-    if (!project)
-    {
-        std::cerr << "Terraform completed with no effect: project '" << rOrder.projectId
-                  << "' is not in the registry\n";
-        return OrderProgress_t::Complete;
-    }
-
-    Tile* pTile = m_rWorldMap.GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
-    if (!pTile)
-    {
-        std::cerr << "Terraform completed with no effect: unit is not on a valid tile\n";
-        return OrderProgress_t::Complete;
-    }
+    const TerraformProject_t project = FindTerraformProject(
+        rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations).value();
+    Tile& rTile = MutableTile_(m_rWorldMap, rUnit.GetTile());
 
     // Fails only on a surface the project cannot change, such as the wrong depth band.
-    if (!ApplyTerraformResult(*pTile, *project, m_rTileEffects, rUnit, m_rRng, m_pWorld))
+    if (!ApplyTerraformResult(rTile, project, m_rTileEffects, rUnit, m_rRng, m_pWorld))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.projectId
-                  << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()
+                  << "' could not be applied at (" << rTile.GetX() << ", " << rTile.GetY()
                   << ") — the tile's surface will not take it\n";
     }
     return OrderProgress_t::Complete;

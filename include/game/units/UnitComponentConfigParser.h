@@ -16,9 +16,6 @@ void ValidateComponentChassisRequirements(const UnitComponentRegistry& rRegistry
 class UnitComponentConfigParser
 {
 public:
-    UnitComponentConfigParser() = default;
-    ~UnitComponentConfigParser() = default;
-
     std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
 
     // Public for unit tests of a single component entry.

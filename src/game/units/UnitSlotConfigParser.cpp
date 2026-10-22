@@ -34,9 +34,9 @@ std::vector<UnitSlotConfig_t> UnitSlotConfigParser::ParseConfig(const std::strin
             slot.id            = ConfigFields::ParseId(rSlotJson);
             slot.displayName   = ConfigFields::ParseName(rSlotJson, slot.id, "display_name");
             slot.componentType = rSlotJson.at("component_type").get<std::string>();
+            const std::string column = rSlotJson.value("column", std::string("left"));
             slot.required      = rSlotJson.value("required", true);
-            slot.column        = ParseColumn_(rSlotJson.value("column", std::string("left")),
-                                              slot.id);
+            slot.column        = ParseColumn_(column, slot.id);
             slot.costModifier  = rSlotJson.value("cost_modifier", 1.0f);
             slot.requiredTech  = ConfigFields::ParseRequiredTech(rSlotJson);
             return slot;

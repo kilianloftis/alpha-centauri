@@ -9,92 +9,100 @@
 namespace ac
 {
 
+namespace
+{
+
+using ComponentsBySlot_t = std::unordered_map<std::string, const UnitComponentConfig_t*>;
+
+// rSlot's component from rComponents, or nullptr for an empty optional slot.
+const UnitComponentConfig_t* SlotComponent_(const UnitSlotConfig_t& rSlot,
+                                            const ComponentsBySlot_t& rComponents)
+{
+    const auto it = rComponents.find(rSlot.id);
+    const UnitComponentConfig_t* pComp = it == rComponents.end() ? nullptr : it->second;
+    if (rSlot.required && !pComp)
+    {
+        throw std::runtime_error("Required slot '" + rSlot.id + "' has no component assigned");
+    }
+    if (pComp && pComp->type != rSlot.componentType)
+    {
+        throw std::runtime_error(
+            "Type mismatch for slot '" + rSlot.id +
+            "': expected '" + rSlot.componentType + "', got '" + pComp->type + "'"
+        );
+    }
+    return pComp;
+}
+
+void RequireChassisFits_(const std::vector<const UnitComponentConfig_t*>& rComponents)
+{
+    const auto chassis = std::ranges::find(rComponents, std::string("chassis"),
+                                           &UnitComponentConfig_t::type);
+    const std::string chassisId = chassis == rComponents.end() ? std::string() : (*chassis)->id;
+    for (const UnitComponentConfig_t* pComp : rComponents)
+    {
+        if (!ChassisRequirementMet(*pComp, chassisId))
+        {
+            throw std::runtime_error(
+                "Component '" + pComp->id + "' cannot be designed on chassis '" + chassisId + "'");
+        }
+    }
+}
+
+// Every component, abilities included, so the id is unique to the combination.
+std::string JoinComponentIds_(const std::vector<const UnitComponentConfig_t*>& rComponents)
+{
+    std::string id;
+    for (const UnitComponentConfig_t* pComp : rComponents)
+    {
+        if (!id.empty())
+        {
+            id += "_";
+        }
+        id += pComp->id;
+    }
+    return id;
+}
+
+// SMAC orders the name weapon, armour, chassis, whatever the slot table's order.
+std::string UnitNameOf_(const UnitDesign& rDesign)
+{
+    std::string name;
+    for (const char* slotId : {"weapon", "armour", "chassis"})
+    {
+        const UnitComponentConfig_t* pComp = rDesign.GetComponentForSlot(slotId);
+        if (!pComp || pComp->unitName.empty())
+        {
+            continue;
+        }
+        if (!name.empty())
+        {
+            name += " ";
+        }
+        name += pComp->unitName;
+    }
+    return name;
+}
+
+} // namespace
+
 UnitDesign::UnitDesign(
     const std::vector<UnitSlotConfig_t>& rSlots,
     const std::unordered_map<std::string, const UnitComponentConfig_t*>& rComponents
 )
 {
-    for (const auto& rSlot : rSlots)
+    for (const UnitSlotConfig_t& rSlot : rSlots)
     {
-        const UnitComponentConfig_t* pComp = nullptr;
-        auto it = rComponents.find(rSlot.id);
-        if (it != rComponents.end())
-        {
-            pComp = it->second;
-        }
-
-        if (rSlot.required && !pComp)
-        {
-            throw std::runtime_error("Required slot '" + rSlot.id + "' has no component assigned");
-        }
-
-        if (pComp && pComp->type != rSlot.componentType)
-        {
-            throw std::runtime_error(
-                "Type mismatch for slot '" + rSlot.id +
-                "': expected '" + rSlot.componentType + "', got '" + pComp->type + "'"
-            );
-        }
-
+        const UnitComponentConfig_t* pComp = SlotComponent_(rSlot, rComponents);
         m_slotComponents.push_back({rSlot, pComp});
         if (pComp)
         {
             m_components.push_back(pComp);
         }
     }
-
-    const UnitComponentConfig_t* pChassis = nullptr;
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        if (pComp && pComp->type == "chassis")
-        {
-            pChassis = pComp;
-            break;
-        }
-    }
-    const std::string chassisId = pChassis ? pChassis->id : std::string();
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        if (!pComp || ChassisRequirementMet(*pComp, chassisId))
-        {
-            continue;
-        }
-        throw std::runtime_error(
-            "Component '" + pComp->id + "' cannot be designed on chassis '" + chassisId + "'");
-    }
-
-    // Stable unique id from every filled slot (abilities included).
-    bool bFirstId = true;
-    for (const auto& [rSlot, pComp] : m_slotComponents)
-    {
-        if (!pComp)
-        {
-            continue;
-        }
-        if (!bFirstId)
-        {
-            m_id += "_";
-        }
-        m_id += pComp->id;
-        bFirstId = false;
-    }
-
-    // Display name: Weapon Armour Chassis unit_name fragments (empty parts omitted).
-    // Order is fixed SMAC-style, not slot-table order.
-    auto appendUnitNamePart = [this](const UnitComponentConfig_t* pComp) {
-        if (!pComp || pComp->unitName.empty())
-        {
-            return;
-        }
-        if (!m_name.empty())
-        {
-            m_name += " ";
-        }
-        m_name += pComp->unitName;
-    };
-    appendUnitNamePart(GetComponentForSlot("weapon"));
-    appendUnitNamePart(GetComponentForSlot("armour"));
-    appendUnitNamePart(GetComponentForSlot("chassis"));
+    RequireChassisFits_(m_components);
+    m_id = JoinComponentIds_(m_components);
+    m_name = UnitNameOf_(*this);
 
     const int turnsOfFuel = ResolveStat(*this, StatId_t::TurnsOfFuel);
     m_bUsesFuel = turnsOfFuel > 0;
@@ -133,21 +141,14 @@ bool UnitDesign::IsCombatUnit() const
 
 bool UnitDesign::HasComponent(const std::string& rComponentId) const
 {
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        if (pComp && pComp->id == rComponentId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::contains(m_components, rComponentId, &UnitComponentConfig_t::id);
 }
 
 bool UnitDesign::IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
 {
     for (const UnitComponentConfig_t* pComp : m_components)
     {
-        if (pComp && !pComp->IsAvailable(rDiscoveredTechs))
+        if (!pComp->IsAvailable(rDiscoveredTechs))
         {
             return false;
         }
@@ -160,10 +161,7 @@ std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
     std::vector<ActiveEffect_t> result;
     for (const UnitComponentConfig_t* pComp : m_components)
     {
-        if (pComp)
-        {
-            AppendActiveEffects(pComp->effects, nullptr, pComp->id, result);
-        }
+        AppendActiveEffects(pComp->effects, nullptr, pComp->id, result);
     }
     return result;
 }
@@ -173,10 +171,6 @@ std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnHoldEffects() const
     std::vector<TriggeredEffectConfig_t> result;
     for (const UnitComponentConfig_t* pComp : m_components)
     {
-        if (!pComp)
-        {
-            continue;
-        }
         result.insert(result.end(), pComp->onHoldEffects.begin(), pComp->onHoldEffects.end());
     }
     return result;
@@ -187,10 +181,6 @@ std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnDetonateEffects() cons
     std::vector<TriggeredEffectConfig_t> result;
     for (const UnitComponentConfig_t* pComp : m_components)
     {
-        if (!pComp)
-        {
-            continue;
-        }
         result.insert(result.end(), pComp->onDetonateEffects.begin(),
                       pComp->onDetonateEffects.end());
     }
@@ -202,13 +192,16 @@ int UnitDesign::GetBaseCost() const
     int rawCost = 0;
     for (const auto& [rSlot, pComp] : m_slotComponents)
     {
-        if (!pComp) continue;
-        rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
+        if (pComp)
+        {
+            rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
+        }
     }
 
     const std::vector<ActiveEffect_t> allEffects = CollectEffects();
-    const StatBreakdown_t breakdown =
-        ResolveStatModifiers(FilterByStatId(allEffects, StatId_t::CostMultiplier), SeedFor(StatId_t::CostMultiplier));
+    auto costEffects = FilterByStatId(allEffects, StatId_t::CostMultiplier);
+    const double seed = SeedFor(StatId_t::CostMultiplier);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(costEffects, seed);
     const float costMult = static_cast<float>(breakdown.total);
 
     return FinalizeResolvedStat(static_cast<double>(rawCost) * costMult);
@@ -226,16 +219,11 @@ int UnitDesign::MaxFuel() const
 
 UnitDomain_t UnitDesign::GetDomain() const
 {
-    for (const auto& [rSlot, pComp] : m_slotComponents)
+    for (const UnitComponentConfig_t* pComp : m_components)
     {
-        if (pComp && pComp->type == "chassis")
+        if (pComp->type == "chassis")
         {
-            if (!pComp->domain.has_value())
-            {
-                throw std::runtime_error(
-                    "Chassis component '" + pComp->id + "' has no domain");
-            }
-            return *pComp->domain;
+            return pComp->domain.value();
         }
     }
     throw std::runtime_error("UnitDesign '" + m_id + "' has no chassis component");
@@ -245,19 +233,14 @@ namespace
 {
 
 std::string DecorateCombatRatingField_(
-    const std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>>& rSlotComponents,
+    const std::vector<const UnitComponentConfig_t*>& rComponents,
     CombatRatingTarget_t target,
     const std::string& rValue)
 {
     std::string prefixes;
     std::string suffixes;
-    for (const auto& [rSlot, pComp] : rSlotComponents)
+    for (const UnitComponentConfig_t* pComp : rComponents)
     {
-        (void)rSlot;
-        if (!pComp)
-        {
-            continue;
-        }
         for (const CombatRatingModifier_t& rMod : pComp->combatRatingModifiers)
         {
             if (rMod.target != target)
@@ -275,31 +258,22 @@ std::string DecorateCombatRatingField_(
 
 std::string UnitDesign::FormatCombatRating() const
 {
-    const std::string attack = DecorateCombatRatingField_(
-        m_slotComponents,
-        CombatRatingTarget_t::Attack,
-        std::to_string(ResolveAdditiveStat(*this, StatId_t::Attack)));
-    const std::string defense = DecorateCombatRatingField_(
-        m_slotComponents,
-        CombatRatingTarget_t::Defense,
-        std::to_string(ResolveAdditiveStat(*this, StatId_t::Defense)));
-    const std::string movement = DecorateCombatRatingField_(
-        m_slotComponents,
-        CombatRatingTarget_t::Movement,
-        std::to_string(ResolveAdditiveStat(*this, StatId_t::Movement)));
+    const auto decorate = [this](CombatRatingTarget_t target, StatId_t statId)
+    {
+        const std::string value = std::to_string(ResolveAdditiveStat(*this, statId));
+        return DecorateCombatRatingField_(m_components, target, value);
+    };
+    const std::string attack = decorate(CombatRatingTarget_t::Attack, StatId_t::Attack);
+    const std::string defense = decorate(CombatRatingTarget_t::Defense, StatId_t::Defense);
+    const std::string movement = decorate(CombatRatingTarget_t::Movement, StatId_t::Movement);
 
     std::string rating = DecorateCombatRatingField_(
-        m_slotComponents,
+        m_components,
         CombatRatingTarget_t::Rating,
         attack + "-" + defense + "-" + movement);
 
-    for (const auto& [rSlot, pComp] : m_slotComponents)
+    for (const UnitComponentConfig_t* pComp : m_components)
     {
-        (void)rSlot;
-        if (!pComp)
-        {
-            continue;
-        }
         for (const std::string& rLabel : pComp->combatRatingLabels)
         {
             rating += ", ";

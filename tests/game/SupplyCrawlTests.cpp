@@ -22,7 +22,7 @@ TEST_CASE("Supply crawl claims a free tile and registers via home base", "[unit]
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     Unit& crawler = fixture.MakeUnit(faction, 12, 12, {"test_chassis", "test_supply_crawler"}, &base);
-    REQUIRE(crawler.GetFlag(RuleFlagId_t::SupplyCrawl));
+    REQUIRE(ResolveFlag(crawler, RuleFlagId_t::SupplyCrawl));
 
     CHECK(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
     REQUIRE(crawler.IsSupplyCrawling());

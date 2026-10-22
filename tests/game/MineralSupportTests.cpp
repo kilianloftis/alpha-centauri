@@ -77,7 +77,7 @@ TEST_CASE("UnitDesign mineral upkeep floors at zero", "[unit][support]")
     };
     const UnitDesign design(slots, assigned);
 
-    CHECK(design.GetStat(StatId_t::MineralUpkeep) == -4);
+    CHECK(ResolveStat(design, StatId_t::MineralUpkeep) == -4);
     CHECK(design.GetMineralUpkeep() == 0);
 }
 

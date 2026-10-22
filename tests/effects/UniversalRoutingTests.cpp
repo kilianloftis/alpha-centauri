@@ -78,16 +78,16 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_weapon"}, &base); // 4 attack intrinsic
-    CHECK(unit.GetStat(StatId_t::Attack) == 4);
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 4);
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
-    CHECK(unit.GetStat(StatId_t::Attack) == 5); // 4 * 1.25
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 5); // 4 * 1.25
 
     // The design (unit-designer view) keeps showing intrinsic values.
-    CHECK(unit.GetDesign().GetStat(StatId_t::Attack) == 4);
+    CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 4);
 
     base.GetBuildingManager().DestroyBuilding("unit_attack_array");
-    CHECK(unit.GetStat(StatId_t::Attack) == 4);
+    CHECK(ResolveStat(unit, StatId_t::Attack) == 4);
 }
 
 TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride applies to live units",
@@ -135,8 +135,8 @@ TEST_CASE("ResolveFlag: context-free resolution skips condition-carrying RuleFla
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_conditional_psi_flag"});
-    CHECK_FALSE(unit.GetFlag(RuleFlagId_t::ForcesPsiCombat));
-    CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::ForcesPsiCombat));
+    CHECK_FALSE(ResolveFlag(unit, RuleFlagId_t::ForcesPsiCombat));
+    CHECK_FALSE(ResolveFlag(unit.GetDesign(), RuleFlagId_t::ForcesPsiCombat));
 }
 
 TEST_CASE("on_unit_produced GrantXp: Aerospace Complex only boosts air starting XP",
@@ -191,12 +191,12 @@ TEST_CASE("FactionUnits condition HasComponent: only matching designs receive th
 
     Unit& armed = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
     Unit& unarmed = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
-    CHECK(armed.GetStat(StatId_t::Attack) == 4);
-    CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
+    CHECK(ResolveStat(armed, StatId_t::Attack) == 4);
+    CHECK(ResolveStat(unarmed, StatId_t::Attack) == 0);
 
     base.GetBuildingManager().AddBuilding("component_attack_array"); // +1 attack if HasComponent test_weapon
-    CHECK(armed.GetStat(StatId_t::Attack) == 5);
-    CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
+    CHECK(ResolveStat(armed, StatId_t::Attack) == 5);
+    CHECK(ResolveStat(unarmed, StatId_t::Attack) == 0);
 }
 
 TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other factions' bases",
@@ -270,13 +270,13 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
     Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_weapon"});
-    const int attackBefore = unitB.GetStat(StatId_t::Attack);
+    const int attackBefore = ResolveStat(unitB, StatId_t::Attack);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, base domain
-    CHECK(unitB.GetStat(StatId_t::Attack) == attackBefore);
+    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackBefore);
 
     baseA.GetBuildingManager().AddBuilding("world_unit_attack"); // +1 attack, unit domain
-    CHECK(unitB.GetStat(StatId_t::Attack) == attackBefore + 1);
+    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackBefore + 1);
 }
 
 TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on the base",

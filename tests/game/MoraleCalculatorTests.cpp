@@ -469,7 +469,7 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     attacker.SetXp(1);
     defender.SetXp(1);
     // Glass cannon defender: 0 armor so attacker wins quickly.
-    attacker.SetCurrentHp(attacker.GetStat(StatId_t::HitPoints));
+    attacker.SetCurrentHp(ResolveStat(attacker, StatId_t::HitPoints));
 
     MoveCostRules moveCosts(fixture.improvements);
     StepEvaluator steps(fixture.map, fixture.ctx);

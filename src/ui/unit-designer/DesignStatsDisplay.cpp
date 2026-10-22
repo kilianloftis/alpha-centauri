@@ -77,10 +77,10 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
         y += lineH;
     };
 
-    drawStat("Attack",   design.GetStat(StatId_t::Attack));
-    drawStat("Defense",  design.GetStat(StatId_t::Defense));
+    drawStat("Attack",   ResolveStat(design, StatId_t::Attack));
+    drawStat("Defense",  ResolveStat(design, StatId_t::Defense));
     drawStat("Movement", design.GetMovementPoints());
-    drawStat("HP",       design.GetStat(StatId_t::HitPoints));
+    drawStat("HP",       ResolveStat(design, StatId_t::HitPoints));
     if (design.UsesFuel())
     {
         drawStat("Fuel", design.MaxFuel());

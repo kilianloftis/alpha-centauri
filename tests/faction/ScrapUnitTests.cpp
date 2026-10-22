@@ -254,6 +254,7 @@ TEST_CASE("Unit component scrap parses formula and refund_type overrides", "[uni
         "id": "scrap_crawler",
         "name": "Scrap Crawler",
         "type": "weapon",
+        "mineral_cost": 0,
         "scrap": { "formula": "minerals", "refund_type": "energy_credits" }
     })json");
     const UnitComponentConfig_t config = parser.ParseComponentConfig(j);

@@ -20,7 +20,6 @@ public:
         const std::vector<UnitSlotConfig_t>& rSlots,
         const std::unordered_map<std::string, const UnitComponentConfig_t*>& rComponents
     );
-    ~UnitDesign() override = default;
 
     const std::string& GetId() const override;
     const std::string& GetName() const override;

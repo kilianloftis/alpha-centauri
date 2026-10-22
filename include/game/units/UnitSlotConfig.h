@@ -25,12 +25,7 @@ struct UnitSlotConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(rDiscoveredTechs.begin(), rDiscoveredTechs.end(), requiredTech)
-               != rDiscoveredTechs.end();
+        return requiredTech.empty() || std::ranges::contains(rDiscoveredTechs, requiredTech);
     }
 };
 

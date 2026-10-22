@@ -303,7 +303,7 @@ TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat]
 
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_single_use_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
-    REQUIRE(attacker.GetFlag(RuleFlagId_t::SingleUse));
+    REQUIRE(ResolveFlag(attacker, RuleFlagId_t::SingleUse));
 
     // Expenditure is on UnitOrderExecutor::TryAttack, not CombatResolver::Resolve.
     OrderHarness_ harness(fixture, /*seed*/ 42);

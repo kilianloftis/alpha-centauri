@@ -37,6 +37,7 @@ TEST_CASE("UnitComponentConfigParser reads unit_name", "[unit][naming][parser]")
         {"name", "Hand Weapons"},
         {"unit_name", "Scout"},
         {"type", "weapon"},
+        {"mineral_cost", 0},
         {"effects", json::array()}
     };
 

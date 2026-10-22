@@ -261,7 +261,7 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
         {
             return false;
         }
-        levels = rCtx.pUnit->GetStat(*rConfig.levelsStat);
+        levels = ResolveStat(*rCtx.pUnit, *rConfig.levelsStat);
     }
     // The tile already carries the map rules WorldMap bound to it, so the quake needs no
     // GameDataContext of its own.
@@ -394,7 +394,7 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
         {
             return false;
         }
-        tiles = rCtx.pUnit->GetStat(*rConfig.tilesStat);
+        tiles = ResolveStat(*rCtx.pUnit, *rConfig.tilesStat);
     }
     const FungalBloomResult_t result = ApplyFungalBloom(
         *rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(), rCtx.rGameState);

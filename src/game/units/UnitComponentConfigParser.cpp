@@ -6,6 +6,8 @@
 #include "game/effects/TriggeredEffectParser.h"
 #include "game/production/ScrapConfigParser.h"
 
+#include <magic_enum.hpp>
+
 #include <stdexcept>
 
 namespace ac
@@ -16,13 +18,15 @@ namespace
 
 CombatRatingTarget_t ParseCombatRatingTarget_(const std::string& rTarget)
 {
-    if (rTarget == "attack")   return CombatRatingTarget_t::Attack;
-    if (rTarget == "defense")  return CombatRatingTarget_t::Defense;
-    if (rTarget == "movement") return CombatRatingTarget_t::Movement;
-    if (rTarget == "rating")   return CombatRatingTarget_t::Rating;
-    throw std::runtime_error(
-        "Unknown combat_rating target '" + rTarget
-        + "' (expected attack, defense, movement, or rating)");
+    const auto parsed =
+        magic_enum::enum_cast<CombatRatingTarget_t>(rTarget, magic_enum::case_insensitive);
+    if (!parsed)
+    {
+        throw std::runtime_error(
+            "Unknown combat_rating target '" + rTarget
+            + "' (expected attack, defense, movement, or rating)");
+    }
+    return *parsed;
 }
 
 std::vector<CombatRatingModifier_t> ParseCombatRatingModifiers_(
@@ -76,6 +80,51 @@ std::vector<std::string> ParseCombatRatingLabels_(
     return labels;
 }
 
+std::vector<std::string> ParseRequiresChassis_(const nlohmann::json& rComponentJson,
+                                               const std::string& rComponentId)
+{
+    if (!rComponentJson.contains("requires_chassis"))
+    {
+        return {};
+    }
+    std::vector<std::string> chassisIds =
+        ConfigFields::ParseStringArray(rComponentJson, "requires_chassis");
+    if (chassisIds.empty())
+    {
+        throw std::runtime_error(
+            "Component '" + rComponentId + "': requires_chassis must be a non-empty array");
+    }
+    if (std::ranges::contains(chassisIds, std::string()))
+    {
+        throw std::runtime_error(
+            "Component '" + rComponentId + "': requires_chassis must not contain empty strings");
+    }
+    return chassisIds;
+}
+
+// Only a chassis has a domain, and every chassis must.
+std::optional<UnitDomain_t> ParseDomain_(const nlohmann::json& rComponentJson,
+                                         const UnitComponentConfig_t& rConfig)
+{
+    const bool bHasDomain = rComponentJson.contains("domain");
+    if (rConfig.type != "chassis")
+    {
+        if (bHasDomain)
+        {
+            throw std::runtime_error(
+                "Component '" + rConfig.id + "' of type '" + rConfig.type
+                + "' must not declare 'domain' (chassis only)");
+        }
+        return std::nullopt;
+    }
+    if (!bHasDomain)
+    {
+        throw std::runtime_error("Chassis component '" + rConfig.id + "' missing required 'domain'");
+    }
+    const std::string domain = rComponentJson.at("domain").get<std::string>();
+    return EffectConfigParser::ParseUnitDomain(domain);
+}
+
 } // namespace
 
 std::vector<UnitComponentConfig_t> UnitComponentConfigParser::ParseConfig(const std::string& rConfigPath)
@@ -93,25 +142,8 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     config.unitName = rComponentJson.value("unit_name", "");
     config.type = rComponentJson.at("type").get<std::string>();
     config.requiredTech = ConfigFields::ParseRequiredTech(rComponentJson);
-    config.mineralCost = rComponentJson.value("mineral_cost", 0);
-    if (rComponentJson.contains("requires_chassis"))
-    {
-        config.requiresChassis = ConfigFields::ParseStringArray(rComponentJson, "requires_chassis");
-        if (config.requiresChassis.empty())
-        {
-            throw std::runtime_error(
-                "Component '" + config.id + "': requires_chassis must be a non-empty array");
-        }
-        for (const std::string& rChassisId : config.requiresChassis)
-        {
-            if (rChassisId.empty())
-            {
-                throw std::runtime_error(
-                    "Component '" + config.id
-                    + "': requires_chassis must not contain empty strings");
-            }
-        }
-    }
+    config.mineralCost = rComponentJson.at("mineral_cost").get<int>();
+    config.requiresChassis = ParseRequiresChassis_(rComponentJson, config.id);
     config.effects = EffectConfigParser::ParseEffects(rComponentJson, EffectSourceKind_t::UnitComponent, config.id);
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rComponentJson, "on_complete_effects", config.id);
@@ -126,23 +158,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
         config.scrap = ScrapConfigParser::ParseOverride(rComponentJson.at("scrap"),
                                                 "Component '" + config.id + "' scrap");
     }
-
-    const bool bHasDomain = rComponentJson.contains("domain");
-    if (config.type == "chassis")
-    {
-        if (!bHasDomain)
-        {
-            throw std::runtime_error("Chassis component '" + config.id + "' missing required 'domain'");
-        }
-        config.domain = EffectConfigParser::ParseUnitDomain(rComponentJson.at("domain").get<std::string>());
-    }
-    else if (bHasDomain)
-    {
-        throw std::runtime_error(
-            "Component '" + config.id + "' of type '" + config.type
-            + "' must not declare 'domain' (chassis only)");
-    }
-
+    config.domain = ParseDomain_(rComponentJson, config);
     return config;
 }
 

@@ -41,10 +41,6 @@ public:
 
     virtual UnitDomain_t GetDomain() const = 0;
 
-    // From the design's own effects only.
-    int GetStat(StatId_t statId) const;
-    int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
-    bool GetFlag(RuleFlagId_t flagId) const;
     // RuleFlag native_life on this blueprint (a native's effects, or a filled component).
     bool IsNativeLife() const;
 

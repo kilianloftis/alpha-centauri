@@ -63,8 +63,8 @@ TEST_CASE("Combat unit away from home adds drones at home base; former does not"
     Unit& former = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_terraformer"}, &home);
     CHECK(combat.IsCombatUnit());
     CHECK_FALSE(former.IsCombatUnit());
-    CHECK(combat.GetStat(StatId_t::AwayFromHomeDrones) == 1);
-    CHECK(former.GetStat(StatId_t::AwayFromHomeDrones) == 0);
+    CHECK(ResolveStat(combat, StatId_t::AwayFromHomeDrones) == 1);
+    CHECK(ResolveStat(former, StatId_t::AwayFromHomeDrones) == 0);
 
     fixture.MoveUnit(combat, 8, 40);
     fixture.MoveUnit(former, 9, 41);
@@ -128,7 +128,7 @@ TEST_CASE("Police 0: one garrison combat unit suppresses; second does not; adjac
     REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Police) == 0);
 
     Unit& first = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
-    CHECK(first.GetStat(StatId_t::PoliceEffectiveness) == 1);
+    CHECK(ResolveStat(first, StatId_t::PoliceEffectiveness) == 1);
     CHECK(ComputeGarrisonPoliceSuppression(base) == 1);
     CHECK(CombinedPoliceDroneDelta_(base) == -1);
 
@@ -152,8 +152,8 @@ TEST_CASE("Garrison police fills slots by effectiveness, not spawn order", "[pol
     Unit& stock = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
     Unit& nlm = fixture.MakeUnit(
         faction, 8, 8, {"test_chassis", "test_weapon", "Non_Lethal_Methods"}, &base);
-    REQUIRE(stock.GetStat(StatId_t::PoliceEffectiveness) == 1);
-    REQUIRE(nlm.GetStat(StatId_t::PoliceEffectiveness) == 2);
+    REQUIRE(ResolveStat(stock, StatId_t::PoliceEffectiveness) == 1);
+    REQUIRE(ResolveStat(nlm, StatId_t::PoliceEffectiveness) == 2);
     CHECK(ComputeGarrisonPoliceSuppression(base) == 2);
 }
 
@@ -167,13 +167,13 @@ TEST_CASE("Police 3 + Non_Lethal_Methods suppresses 3, not 4", "[police][garriso
     REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Police) == 3);
 
     Unit& stock = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
-    CHECK(stock.GetStat(StatId_t::PoliceEffectiveness) == 2);
+    CHECK(ResolveStat(stock, StatId_t::PoliceEffectiveness) == 2);
     CHECK(ComputeGarrisonPoliceSuppression(base) == 2);
 
     faction.GetUnitManager().DestroyUnit(stock);
     Unit& nlm = fixture.MakeUnit(
         faction, 8, 8, {"test_chassis", "test_weapon", "Non_Lethal_Methods"}, &base);
-    CHECK(nlm.GetStat(StatId_t::PoliceEffectiveness) == 3);
+    CHECK(ResolveStat(nlm, StatId_t::PoliceEffectiveness) == 3);
     CHECK(ComputeGarrisonPoliceSuppression(base) == 3);
 
     // Over-cap: NLM (3) preferred over stock (2); max_police 3.

@@ -56,9 +56,10 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
 {
     if (!CanPlaceUnitOnTile(rTile, rPositions))
     {
-        throw std::runtime_error("UnitManager: tile (" + std::to_string(rTile.GetX())
-                                 + ", " + std::to_string(rTile.GetY())
-                                 + ") already holds a unit (single-unit-per-tile rule)");
+        const std::string where =
+            "(" + std::to_string(rTile.GetX()) + ", " + std::to_string(rTile.GetY()) + ")";
+        throw std::runtime_error("UnitManager: tile " + where
+                                 + " already holds a unit (single-unit-per-tile rule)");
     }
 
     auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction,
@@ -85,32 +86,18 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     const Tile& rCarrierTile = rUnit.GetTile();
     for (Unit* pPassenger : cargo)
     {
-        if (!pPassenger || pPassenger == &rUnit)
-        {
-            continue;
-        }
         // A ship sunk in port sets its passengers down; at sea they go down with it.
         if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
         {
             pPassenger->Disembark();
         }
-        else if (&pPassenger->GetFaction() == &m_rFaction)
+        else
         {
             DestroyUnit(*pPassenger);
         }
     }
 
-    auto it = std::find_if(m_units.begin(), m_units.end(),
-        [&rUnit](const std::unique_ptr<Unit>& pUnit)
-        {
-            return pUnit.get() == &rUnit;
-        });
-
-    if (it == m_units.end())
-    {
-        throw std::runtime_error("Unit not found in UnitManager");
-    }
-
+    const auto it = FindOwned_(rUnit);
     OnUnitDestroyed.Emit(rUnit);
     if (m_destructionDeferralDepth > 0)
     {
@@ -127,16 +114,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
 
 std::unique_ptr<Unit> UnitManager::ReleaseUnit(Unit& rUnit)
 {
-    auto it = std::find_if(m_units.begin(), m_units.end(),
-        [&rUnit](const std::unique_ptr<Unit>& pUnit)
-        {
-            return pUnit.get() == &rUnit;
-        });
-    if (it == m_units.end())
-    {
-        throw std::runtime_error("UnitManager::ReleaseUnit: unit not found");
-    }
-
+    const auto it = FindOwned_(rUnit);
     // While the unit is still owned, as DestroyUnit does.
     OnUnitReleased.Emit(rUnit);
 
@@ -160,6 +138,16 @@ Unit& UnitManager::AdoptUnit(std::unique_ptr<Unit> pUnit)
     m_rFaction.RebuildVisibility();
     OnUnitAdopted.Emit(rUnit);
     return rUnit;
+}
+
+UnitManager::OwnedUnits_t::iterator UnitManager::FindOwned_(const Unit& rUnit)
+{
+    const auto it = std::ranges::find(m_units, &rUnit, &std::unique_ptr<Unit>::get);
+    if (it == m_units.end())
+    {
+        throw std::runtime_error("UnitManager: unit is not owned by this manager");
+    }
+    return it;
 }
 
 bool UnitManager::IsPendingDestruction(const Unit& rUnit) const
@@ -189,13 +177,20 @@ void UnitManager::FlushPendingDestructions_()
     std::erase(m_units, nullptr);
 }
 
+Unit* UnitManager::GetFirstAvailableUnit() const
+{
+    for (const std::unique_ptr<Unit>& pUnit : m_units)
+    {
+        if (pUnit && pUnit->RequiresOrders())
+        {
+            return pUnit.get();
+        }
+    }
+    return nullptr;
+}
+
 Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 {
-    auto requiresOrders = [](const Unit& rUnit)
-    {
-        return rUnit.RequiresOrders();
-    };
-
     Unit* pFirst = nullptr;
     bool bSeenAfter = (pAfter == nullptr);
 
@@ -203,7 +198,7 @@ Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
     {
         // Null slots exist while a DeferredDestructionScope is open (DestroyUnit moves the
         // owning pointer out but defers compaction); a destroyed unit must not be offered.
-        if (!pUnit || !requiresOrders(*pUnit))
+        if (!pUnit || !pUnit->RequiresOrders())
         {
             continue;
         }
@@ -229,7 +224,7 @@ Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 
 bool UnitManager::HasUnitsRequiringOrders() const
 {
-    return GetNextAvailableUnit() != nullptr;
+    return GetFirstAvailableUnit() != nullptr;
 }
 
 } // namespace ac

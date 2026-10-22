@@ -7,34 +7,19 @@
 namespace ac
 {
 
-int IDesign::GetStat(StatId_t statId) const
-{
-    return ResolveStat(*this, statId);
-}
-
-int IDesign::GetStat(StatId_t statId, const EffectContext_t& rCtx) const
-{
-    return ResolveStat(*this, statId, rCtx);
-}
-
-bool IDesign::GetFlag(RuleFlagId_t flagId) const
-{
-    return ResolveFlag(*this, flagId);
-}
-
 bool IDesign::IsNativeLife() const
 {
-    return GetFlag(RuleFlagId_t::NativeLife);
+    return ResolveFlag(*this, RuleFlagId_t::NativeLife);
 }
 
 int IDesign::GetMovementPoints() const
 {
-    return GetStat(StatId_t::Movement);
+    return ResolveStat(*this, StatId_t::Movement);
 }
 
 int IDesign::GetMineralUpkeep() const
 {
-    return std::max(0, GetStat(StatId_t::MineralUpkeep));
+    return std::max(0, ResolveStat(*this, StatId_t::MineralUpkeep));
 }
 
 } // namespace ac

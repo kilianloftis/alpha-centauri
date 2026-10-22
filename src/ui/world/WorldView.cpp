@@ -382,7 +382,7 @@ void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
 void WorldView::SelectNextAvailableUnit_()
 {
     // Short moves clear the order but leave move fragments — stay on this unit so the
-    // player can keep issuing orders. GetNextAvailableUnit() alone would jump to the
+    // player can keep issuing orders. GetFirstAvailableUnit() alone would jump to the
     // first faction unit that needs orders, which is often a different unit.
     if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
     {
@@ -391,7 +391,7 @@ void WorldView::SelectNextAvailableUnit_()
     }
 
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr;
+    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetFirstAvailableUnit() : nullptr;
     SetSelectedUnit_(pNext, false);
     if (pNext)
     {
@@ -420,7 +420,7 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     }
 
     // Empty selection, or the auto-cycled unit is done (out of moves / has an order).
-    if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit())
+    if (Unit* pNext = pPlayer->GetUnitManager().GetFirstAvailableUnit())
     {
         SetSelectedUnit_(pNext, false);
         TryAutoReturnLowFuel_(*pNext);
@@ -509,7 +509,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         if (m_pUnitOrderInputController->WasAttachTransportRequested())
         {
             if (pControllable
-                && m_rGameState.GetUnitOrderExecutor().TryAttachToTransport(*pControllable))
+                && TryAttachToTransport(*pControllable))
             {
                 return true;
             }
@@ -519,7 +519,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         {
             if (pControllable)
             {
-                m_rGameState.GetUnitOrderExecutor().TryUnloadTransport(*pControllable);
+                TryUnloadTransportInPlace(*pControllable);
             }
             return true;
         }
@@ -828,7 +828,7 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
     }
 
     std::vector<std::string> projects;
-    if (rUnit.GetFlag(RuleFlagId_t::Terraform))
+    if (ResolveFlag(rUnit, RuleFlagId_t::Terraform))
     {
         for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
         {

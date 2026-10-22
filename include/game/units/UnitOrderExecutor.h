@@ -50,7 +50,6 @@ public:
                       const TerrainOperationRegistry& rTerrainOperations,
                       std::mt19937& rRng,
                       IUnitOrderWorld* pWorld = nullptr);
-    ~UnitOrderExecutor() = default;
 
     // Handles arrival on tiles with on_visit_effects. Unset skips them.
     using ImprovementVisitHandler = std::function<void(Unit&)>;
@@ -92,19 +91,6 @@ public:
     // Starts projectId, paying its energy up front. False when the unit may not.
     bool TryStartTerraform(Unit& rUnit, const std::string& projectId, GameState& rGameState);
 
-    // Forwards to AttackRules::FindVisibleHostileOnTile (visibility + embark-in-base
-    // targeting). Input/AI use this; declare-attack legality is FindAttackableHostileOnTile.
-    Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile) const;
-
-    // Attach rPassenger to the first boardable transport on its tile (L key / UI).
-    bool TryAttachToTransport(Unit& rPassenger);
-
-    // Landing / stranded path: attach when a boardable carrier is present.
-    bool TryAutoAttachWhenMustLand(Unit& rPassenger);
-
-    // Air carrier: unload all passengers onto the current tile (Shift+U).
-    bool TryUnloadTransport(Unit& rCarrier);
-
     // Drops rUnit onto rDest with landing damage. failReason says why it could not.
     struct AirdropActionResult_t
     {
@@ -121,6 +107,9 @@ private:
     OrderProgress_t ExpendIfSingleUse_(const Unit& rUnit) const;
 
     OrderProgress_t Execute_(Unit& rUnit, MoveOrder_t& rOrder);
+    // No path to rDestination: steps into contact with what blocks it, if anything.
+    OrderProgress_t StepTowardContact_(Unit& rUnit, const Tile& rDestination,
+                                       MoveOrder_t& rOrder);
     // The move's next step enters territory the unit may not enter. A player unit keeps its
     // order and the world asks the player; any other unit drops the order.
     OrderProgress_t RefuseTerritoryEntry_(Unit& rUnit, const Tile& rNext);
@@ -130,6 +119,13 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, SkipTurnOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
+
+    // A ready intercept fights the attack in the defender's place; nullopt when none does.
+    std::optional<CombatResult_t> TryIntercept_(Unit& rAttacker, Unit& rDefender,
+                                                const HostileAct_t& rAct);
+    // Returns the destroyed improvement's id.
+    std::string DestroyRandomImprovement_(const Tile& rTile,
+                                          const std::vector<std::string>& rCandidates);
 
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
     void PromoteOnKill_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);

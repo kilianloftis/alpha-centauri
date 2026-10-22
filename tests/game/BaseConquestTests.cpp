@@ -295,7 +295,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
         rCaptured.GetBuildingManager().HasBuilding("test_facility_a")
         && rCaptured.GetBuildingManager().HasBuilding("Headquarters");
     CHECK_FALSE(bKeptBothNonSp);
-    CHECK(attacker.GetCurrentHp() == attacker.GetStat(StatId_t::HitPoints));
+    CHECK(attacker.GetCurrentHp() == ResolveStat(attacker, StatId_t::HitPoints));
 }
 
 TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss still applies",

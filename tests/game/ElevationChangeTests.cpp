@@ -346,6 +346,7 @@ TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
             "id": "Orphan_Payload",
             "name": "Orphan Payload",
             "type": "weapon",
+            "mineral_cost": 0,
             "requires_chassis": ["NotAChassis"]
         }])";
     }
@@ -470,7 +471,7 @@ TEST_CASE("Detonating a warhead raises its own tile and spends the carrier",
     Unit& warhead = game.MakeWarhead(8, 8, /*reactorLevels=*/2);
     REQUIRE(UnitCount_(*game.pFaction) == 1);
     REQUIRE(UnitCanDetonate(warhead));
-    REQUIRE(warhead.GetStat(StatId_t::EarthquakeLevels) == 2);
+    REQUIRE(ResolveStat(warhead, StatId_t::EarthquakeLevels) == 2);
 
     const int before = At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation();
     REQUIRE(ApplyDetonation(game.fixtures.state, warhead));

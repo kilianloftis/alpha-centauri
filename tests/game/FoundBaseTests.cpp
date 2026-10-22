@@ -172,8 +172,8 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
-    REQUIRE(pod.GetFlag(RuleFlagId_t::FoundBase));
-    REQUIRE(pod.GetFlag(RuleFlagId_t::SingleUse));
+    REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
+    REQUIRE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     REQUIRE(CountUnits_(*game.pPlayer) == 1);
 
@@ -291,8 +291,8 @@ TEST_CASE("TryFoundBase without SingleUse leaves the unit alive", "[unit][found-
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_found_base_only"}, &home);
-    REQUIRE(pod.GetFlag(RuleFlagId_t::FoundBase));
-    REQUIRE_FALSE(pod.GetFlag(RuleFlagId_t::SingleUse));
+    REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
+    REQUIRE_FALSE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
 
     BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
         pod, game.fixtures.state);

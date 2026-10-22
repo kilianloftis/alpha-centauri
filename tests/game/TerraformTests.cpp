@@ -118,7 +118,7 @@ TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terrafor
     TerraformGame_ game;
     BaseManager& home = game.MakeBase(8, 8);
     Unit& former = game.MakeFormer(10, 10, &home);
-    REQUIRE(former.GetFlag(RuleFlagId_t::Terraform));
+    REQUIRE(ResolveFlag(former, RuleFlagId_t::Terraform));
 
     Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     REQUIRE_FALSE(tile.HasImprovement("Road"));

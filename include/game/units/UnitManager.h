@@ -41,7 +41,6 @@ public:
 
     // Every unit this manager creates borrows rMorale.
     UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
-    ~UnitManager() = default;
 
     // Throws when rTile already holds a unit. pProducedAt is as in Unit's constructor.
     Unit& CreateUnit(UnitId_t unitId, const IDesign& rDesign, UnitPositionIndex& rPositions,
@@ -83,9 +82,11 @@ public:
               });
     }
 
+    // The first unit needing orders, or nullptr.
+    Unit* GetFirstAvailableUnit() const;
     // The next unit needing orders after pAfter, wrapping; the first when pAfter is null or
-    // does not need orders. nullptr when no unit needs orders.
-    Unit* GetNextAvailableUnit(const Unit* pAfter = nullptr) const;
+    // does not need orders.
+    Unit* GetNextAvailableUnit(const Unit* pAfter) const;
     bool HasUnitsRequiringOrders() const;
 
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.
@@ -101,14 +102,18 @@ public:
     Signal<Unit&> OnUnitAdopted;
 
 private:
+    using OwnedUnits_t = std::vector<std::unique_ptr<Unit>>;
+
+    // Throws when this manager does not own rUnit.
+    OwnedUnits_t::iterator FindOwned_(const Unit& rUnit);
     void BeginDestructionDeferral_();
     void EndDestructionDeferral_();
     void FlushPendingDestructions_();
 
     Faction& m_rFaction;
     const MoraleCalculator& m_rMorale;
-    std::vector<std::unique_ptr<Unit>> m_units;
-    std::vector<std::unique_ptr<Unit>> m_pendingDestructions;
+    OwnedUnits_t m_units;
+    OwnedUnits_t m_pendingDestructions;
     std::size_t m_destructionDeferralDepth = 0;
     Revision m_revision;
 };

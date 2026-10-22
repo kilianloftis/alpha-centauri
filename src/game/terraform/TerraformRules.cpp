@@ -212,7 +212,7 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
 {
-    if (!rUnit.GetFlag(RuleFlagId_t::Terraform))
+    if (!ResolveFlag(rUnit, RuleFlagId_t::Terraform))
     {
         return false;
     }

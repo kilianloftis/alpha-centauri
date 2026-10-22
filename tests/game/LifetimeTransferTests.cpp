@@ -142,23 +142,23 @@ TEST_CASE("ProducedAtThisBase stamp survives rehome and ownership transfer",
         fixture.MakeUnit(giver, 9, 5, {"test_chassis", "test_weapon"}, &giverBase, &giverBase);
     Unit* pAddress = &unit;
     // test_weapon Attack 4 + stamped +1 from production base.
-    REQUIRE(unit.GetStat(StatId_t::Attack) == 5);
+    REQUIRE(ResolveStat(unit, StatId_t::Attack) == 5);
     REQUIRE(unit.GetProductionGrants().size() == 1);
     CHECK(unit.GetProductionGrants().front().originBase == nullptr);
 
     unit.SetHomeBase(&otherBase);
     CHECK(pAddress->GetHomeBase() == &otherBase);
-    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(ResolveStat(*pAddress, StatId_t::Attack) == 5);
     CHECK(pAddress->GetProductionGrants().size() == 1);
 
     giver.TransferUnitTo(unit.GetUnitId(), receiver);
     CHECK(pAddress->GetHomeBase() == nullptr);
-    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(ResolveStat(*pAddress, StatId_t::Attack) == 5);
     CHECK(pAddress->GetProductionGrants().size() == 1);
 
     // Capturing the production base does not strip or re-query stamps.
     giver.TransferBaseTo(giverBase.GetBaseId(), receiver);
-    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(ResolveStat(*pAddress, StatId_t::Attack) == 5);
     CHECK(pAddress->GetProductionGrants().size() == 1);
 }
 

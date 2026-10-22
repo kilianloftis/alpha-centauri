@@ -176,7 +176,7 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
 
 bool CanBombard(const Unit& rAttacker)
 {
-    return rAttacker.GetFlag(RuleFlagId_t::Bombard)
+    return ResolveFlag(rAttacker, RuleFlagId_t::Bombard)
            && rAttacker.GetMoveFragmentsRemaining() > 0;
 }
 
@@ -189,7 +189,7 @@ bool IsWithinBombardRange(const Unit& rAttacker, const Tile& rTargetTile)
     const GameState& rGame = CurrentGameState();
     const WorldMap& rWorldMap = rGame.GetWorldMap();
     const int distance = ChebyshevDistance(rAttacker.GetTile(), rTargetTile, rWorldMap.GetWidth());
-    const int range = rAttacker.GetStat(StatId_t::BombardRange);
+    const int range = ResolveStat(rAttacker, StatId_t::BombardRange);
     return distance >= 1 && distance <= range;
 }
 
@@ -205,7 +205,7 @@ Unit* ArtilleryDuelTarget(const Unit& rAttacker, const Tile& rTargetTile)
     std::vector<Unit*> duellists;
     for (Unit* pHostile : hostiles)
     {
-        if (pHostile->GetFlag(RuleFlagId_t::Bombard)
+        if (ResolveFlag(*pHostile, RuleFlagId_t::Bombard)
             && PassesAttackUnit_(rAttacker, *pHostile, rTargetTile, rWorldMap, rGrids))
         {
             duellists.push_back(pHostile);
@@ -226,7 +226,7 @@ std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTarg
     std::vector<Unit*> targets;
     for (Unit* pHostile : hostiles)
     {
-        if (pHostile->GetFlag(RuleFlagId_t::Bombard))
+        if (ResolveFlag(*pHostile, RuleFlagId_t::Bombard))
         {
             return {};
         }
@@ -260,7 +260,7 @@ std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile)
 
 int AttackMoveFragments(const Unit& rAttacker, AttackKind_t kind)
 {
-    if (kind == AttackKind_t::Bombard || rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn))
+    if (kind == AttackKind_t::Bombard || ResolveFlag(rAttacker, RuleFlagId_t::AttackingEndsTurn))
     {
         return rAttacker.GetMoveFragmentsRemaining();
     }

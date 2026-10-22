@@ -436,7 +436,7 @@ TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMonoB, "Monolith");
 
     Unit& unit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
-    const int maxHp = unit.GetStat(StatId_t::HitPoints);
+    const int maxHp = ResolveStat(unit, StatId_t::HitPoints);
     unit.SetCurrentHp(1);
     const int xpBefore = unit.GetXp();
 
@@ -503,7 +503,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     CHECK(playerUnit.GetXp() == xpBefore);
 
     ApplyVisitEffects(game.fixtures.state, playerUnit, game.fixtures.state.GetRng());
-    CHECK(playerUnit.GetCurrentHp() == playerUnit.GetStat(StatId_t::HitPoints));
+    CHECK(playerUnit.GetCurrentHp() == ResolveStat(playerUnit, StatId_t::HitPoints));
     CHECK(playerUnit.GetXp() == xpBefore + 1);
 
     // AI faction auto-Investigate on arrival (no queue item).
@@ -522,7 +522,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     MoveOrder_t aiMove;
     REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(aiMover, rMono2, aiMove).bEntered);
     CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
-    CHECK(aiMover.GetCurrentHp() == aiMover.GetStat(StatId_t::HitPoints));
+    CHECK(aiMover.GetCurrentHp() == ResolveStat(aiMover, StatId_t::HitPoints));
     CHECK(aiMover.GetXp() == aiXp + 1);
 }
 

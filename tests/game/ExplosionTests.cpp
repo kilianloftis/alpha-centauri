@@ -276,7 +276,7 @@ TEST_CASE("Detonating a planet buster spends the missile after the blast",
     Unit& rOutsider = game.MakeChassisUnit_(10, 10);
     game.MakeChassisUnit_(7, 7);
 
-    REQUIRE(rMissile.GetStat(StatId_t::ExplosionRadius) == 1);
+    REQUIRE(ResolveStat(rMissile, StatId_t::ExplosionRadius) == 1);
     REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
     CHECK(UnitCount_(*game.pPlayer) == 1);
     CHECK(StillAlive_(*game.pPlayer, rOutsider));
@@ -433,5 +433,5 @@ TEST_CASE("A blast sized by a unit stat needs a detonator; a fixed blast does no
     CHECK(ExplosionRadius(fixed, nullptr) == 2);
     CHECK(ExplosionRadius(fixed, &rUnit) == 2);
     CHECK_FALSE(ExplosionRadius(sized, nullptr).has_value());
-    CHECK(ExplosionRadius(sized, &rUnit) == rUnit.GetStat(StatId_t::ExplosionRadius));
+    CHECK(ExplosionRadius(sized, &rUnit) == ResolveStat(rUnit, StatId_t::ExplosionRadius));
 }

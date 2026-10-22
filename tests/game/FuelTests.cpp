@@ -84,7 +84,7 @@ TEST_CASE("Max fuel equals turns_of_fuel times movement", "[fuel]")
     Unit& jet = fixture.MakeUnit(faction, 8, 8, {"test_fuel_flight_chassis"});
 
     REQUIRE(jet.GetMovementPoints() == 4);
-    REQUIRE(jet.GetStat(StatId_t::TurnsOfFuel) == 2);
+    REQUIRE(ResolveStat(jet, StatId_t::TurnsOfFuel) == 2);
     CHECK(jet.GetDesign().UsesFuel());
     CHECK(jet.GetMaxFuel() == 8);
     CHECK(jet.GetCurrentFuel() == 8);
@@ -135,7 +135,7 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     Faction& enemy = fixture.MakeFaction();
     Unit& jet = fixture.MakeUnit(player, 8, 8, {"test_fuel_flight_chassis", "test_weapon"});
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
-    REQUIRE(jet.GetFlag(RuleFlagId_t::AttackingEndsTurn));
+    REQUIRE(ResolveFlag(jet, RuleFlagId_t::AttackingEndsTurn));
     REQUIRE(jet.GetCurrentFuel() == 8);
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
@@ -158,7 +158,7 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
         jet.SetCurrentFuel(1);
         ProcessFuelAtTurnEnd(jet);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
-        CHECK(jet.GetCurrentHp() == jet.GetStat(StatId_t::HitPoints));
+        CHECK(jet.GetCurrentHp() == ResolveStat(jet, StatId_t::HitPoints));
     }
 
     SECTION("Airbase")
@@ -283,7 +283,7 @@ TEST_CASE("Chassis without turns_of_fuel ignores turn-end fuel processing", "[fu
 
     ProcessFuelAtTurnEnd(grav);
     CHECK(grav.GetCurrentFuel() == 0);
-    CHECK(grav.GetCurrentHp() == grav.GetStat(StatId_t::HitPoints));
+    CHECK(grav.GetCurrentHp() == ResolveStat(grav, StatId_t::HitPoints));
     CHECK(CountUnits_(faction) == 1);
 }
 
@@ -297,8 +297,8 @@ TEST_CASE("NeedsAutoReturnToFuel when this turn's out-of-fuel damage would destr
 
     REQUIRE(jet.GetMaxFuel() == 8);
     REQUIRE(jet.GetMovementPoints() == 4);
-    REQUIRE(jet.GetStat(StatId_t::DamageFromOutOfFuel) == 100);
-    REQUIRE(copter.GetStat(StatId_t::DamageFromOutOfFuel) == 30);
+    REQUIRE(ResolveStat(jet, StatId_t::DamageFromOutOfFuel) == 100);
+    REQUIRE(ResolveStat(copter, StatId_t::DamageFromOutOfFuel) == 30);
 
     CHECK_FALSE(NeedsAutoReturnToFuel(jet)); // full tank survives this turn's burn
     jet.SetCurrentFuel(4);

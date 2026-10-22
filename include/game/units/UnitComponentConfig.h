@@ -60,24 +60,15 @@ struct UnitComponentConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(rDiscoveredTechs.begin(), rDiscoveredTechs.end(), requiredTech)
-               != rDiscoveredTechs.end();
+        return requiredTech.empty() || std::ranges::contains(rDiscoveredTechs, requiredTech);
     }
 };
 
 inline bool ChassisRequirementMet(const UnitComponentConfig_t& rComponent,
                                   const std::string& rChassisId)
 {
-    if (rComponent.requiresChassis.empty())
-    {
-        return true;
-    }
-    return std::find(rComponent.requiresChassis.begin(), rComponent.requiresChassis.end(),
-                     rChassisId) != rComponent.requiresChassis.end();
+    return rComponent.requiresChassis.empty()
+           || std::ranges::contains(rComponent.requiresChassis, rChassisId);
 }
 
 } // namespace ac

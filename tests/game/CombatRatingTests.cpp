@@ -38,6 +38,7 @@ TEST_CASE("UnitComponentConfigParser reads combat rating modifiers and labels",
         {"id", "AAA_Tracking"},
         {"name", "AAA Tracking"},
         {"type", "ability"},
+        {"mineral_cost", 0},
         {"effects", json::array()},
         {"combat_rating_modifiers", json::array({
             {{"target", "defense"}, {"prefix", "<"}, {"suffix", ">"}}
@@ -65,6 +66,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
             {"id", "bad"},
             {"name", "Bad"},
             {"type", "ability"},
+            {"mineral_cost", 0},
             {"effects", json::array()},
             {"combat_rating_modifiers", json::array({
                 {{"target", "hp"}, {"suffix", "!"}}
@@ -79,6 +81,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
             {"id", "bad"},
             {"name", "Bad"},
             {"type", "ability"},
+            {"mineral_cost", 0},
             {"effects", json::array()},
             {"combat_rating_modifiers", json::array({
                 {{"target", "attack"}}
@@ -93,6 +96,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
             {"id", "bad"},
             {"name", "Bad"},
             {"type", "ability"},
+            {"mineral_cost", 0},
             {"effects", json::array()},
             {"combat_rating_labels", json::array({""})}
         };

@@ -47,9 +47,9 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
-    CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
+    CHECK(unit.GetCurrentHp() == ResolveStat(unit, StatId_t::HitPoints));
     CHECK(unit.GetCurrentFuel() == unit.GetMaxFuel());
-    CHECK(unit.GetMovementPoints() == unit.GetStat(StatId_t::Movement));
+    CHECK(unit.GetMovementPoints() == ResolveStat(unit, StatId_t::Movement));
     CHECK(unit.GetMoveFragmentsRemaining()
           == unit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
     // Free spawn: no pProducedAt, so no prototype GrantXp (first one you built).
@@ -67,8 +67,8 @@ TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")
     CHECK(unit.GetCurrentHp() == 0);
 
     // Healing past the maximum is capped at the live max.
-    unit.SetCurrentHp(unit.GetStat(StatId_t::HitPoints) + 100);
-    CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
+    unit.SetCurrentHp(ResolveStat(unit, StatId_t::HitPoints) + 100);
+    CHECK(unit.GetCurrentHp() == ResolveStat(unit, StatId_t::HitPoints));
 
     unit.SetCurrentFuel(-1);
     CHECK(unit.GetCurrentFuel() == 0);

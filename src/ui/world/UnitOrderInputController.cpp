@@ -50,8 +50,8 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
     consider(HotkeyAction_t::Disband, true);
     consider(HotkeyAction_t::AttachTransport, true);
     consider(HotkeyAction_t::SupplyCrawl,
-             pSelectedUnit->GetFlag(RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase());
-    consider(HotkeyAction_t::FoundBase, pSelectedUnit->GetFlag(RuleFlagId_t::FoundBase));
+             ResolveFlag(*pSelectedUnit, RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase());
+    consider(HotkeyAction_t::FoundBase, ResolveFlag(*pSelectedUnit, RuleFlagId_t::FoundBase));
     consider(HotkeyAction_t::Detonate, UnitCanDetonate(*pSelectedUnit));
     consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(*pSelectedUnit).Ok());
     consider(HotkeyAction_t::Hold, true);
@@ -226,7 +226,7 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
                                                       GameState* pGameState)
 {
     const WorldMap& rMap = rPathfinder.GetWorldMap();
-    if (rMover.GetFlag(RuleFlagId_t::Bombard) && pGameState
+    if (ResolveFlag(rMover, RuleFlagId_t::Bombard) && pGameState
         && IsWithinBombardRange(rMover, rDest))
     {
         m_bBombardRequested = true;
@@ -240,10 +240,10 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
     // FindAttackableHostileOnTile matches TryAttack's declare gate. A visible but
     // non-attackable hostile still steers move orders (planner contact path).
     const Unit* pVisibleHostile =
-        pGameState ? pGameState->GetUnitOrderExecutor().FindVisibleHostileOnTile(rMover, rDest)
+        pGameState ? FindVisibleHostileOnTile(rMover, rDest)
                    : nullptr;
     const Unit* pAttackableHostile =
-        (pGameState && !rMover.GetFlag(RuleFlagId_t::Bombard))
+        (pGameState && !ResolveFlag(rMover, RuleFlagId_t::Bombard))
             ? FindAttackableHostileOnTile(rMover, rDest)
             : nullptr;
 

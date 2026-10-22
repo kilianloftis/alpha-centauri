@@ -360,6 +360,7 @@
     "id": "Bombard",
     "name": "Bombard",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",

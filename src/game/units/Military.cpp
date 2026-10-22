@@ -3,6 +3,8 @@
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 
+#include <stdexcept>
+
 namespace ac
 {
 
@@ -13,7 +15,7 @@ bool Military::AddDesign(std::unique_ptr<IDesign> pDesign)
 {
     if (!pDesign)
     {
-        return false;
+        throw std::invalid_argument("Military::AddDesign: pDesign is null");
     }
 
     const std::string newDesignId = pDesign->GetId();
@@ -60,10 +62,7 @@ void Military::RecordBuiltComponents(const IDesign& rDesign)
     }
     for (const UnitComponentConfig_t* pComp : pUnitDesign->GetComponents())
     {
-        if (pComp)
-        {
-            m_builtComponentIds.insert(pComp->id);
-        }
+        m_builtComponentIds.insert(pComp->id);
     }
 }
 

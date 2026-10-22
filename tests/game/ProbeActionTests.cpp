@@ -170,7 +170,7 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
-    REQUIRE(probe.GetFlag(RuleFlagId_t::ProbeTeam));
+    REQUIRE(ResolveFlag(probe, RuleFlagId_t::ProbeTeam));
 
     const int xpBefore = probe.GetXp();
     const ProbeActionResult_t result =

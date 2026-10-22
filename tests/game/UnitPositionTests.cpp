@@ -130,11 +130,11 @@ TEST_CASE("Deferred destruction keeps unit iteration safe", "[unit][lifetime]")
 
             // Queries must tolerate the null slots the deferral leaves in the unit list
             // and never offer a destroyed unit.
-            CHECK(rUnits.GetNextAvailableUnit() != &rUnit);
+            CHECK(rUnits.GetFirstAvailableUnit() != &rUnit);
         }
 
         CHECK(rUnits.Units().empty());
-        CHECK(rUnits.GetNextAvailableUnit() == nullptr);
+        CHECK(rUnits.GetFirstAvailableUnit() == nullptr);
         CHECK_FALSE(rUnits.HasUnitsRequiringOrders());
     }
 

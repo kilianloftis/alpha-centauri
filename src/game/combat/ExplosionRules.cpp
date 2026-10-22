@@ -16,7 +16,7 @@ std::optional<int> ExplosionRadius(const ExplosionEffect_t& rConfig, const Unit*
     {
         return std::nullopt;
     }
-    return pDetonator->GetStat(*rConfig.radiusStat);
+    return ResolveStat(*pDetonator, *rConfig.radiusStat);
 }
 
 } // namespace ac

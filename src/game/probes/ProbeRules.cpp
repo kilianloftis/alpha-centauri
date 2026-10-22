@@ -62,7 +62,7 @@ int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t
         {
             continue;
         }
-        if (pUnit->GetStat(StatId_t::Attack) > 0 || pUnit->GetStat(StatId_t::Defense) > 0)
+        if (ResolveStat(*pUnit, StatId_t::Attack) > 0 || ResolveStat(*pUnit, StatId_t::Defense) > 0)
         {
             ++count;
         }
@@ -147,7 +147,7 @@ std::optional<int> QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Un
 
 bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAction)
 {
-    if (!rProbe.GetFlag(RuleFlagId_t::ProbeTeam))
+    if (!ResolveFlag(rProbe, RuleFlagId_t::ProbeTeam))
     {
         return false;
     }
@@ -279,7 +279,7 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
         return false;
     }
 
-    const bool bIgnoresBlock = rProbe.GetFlag(RuleFlagId_t::IgnoresProbeBlock);
+    const bool bIgnoresBlock = ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
     if (!bIgnoresBlock && TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
     {
         return false;

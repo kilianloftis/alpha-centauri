@@ -8,7 +8,6 @@
 #include "game/units/UnitSlotConfig.h"
 
 #include <memory>
-#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -29,29 +28,25 @@ const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegist
     int slotIndex = 0;
     for (const std::string& rId : componentIds)
     {
-        const UnitComponentConfig_t* pComponent = rComponents.Find(rId);
-        if (!pComponent)
-        {
-            throw std::runtime_error("EnsureAdHocDesign: component '" + rId
-                                     + "' is not in the unit component registry");
-        }
+        const UnitComponentConfig_t& rComponent = rComponents.Get(rId);
         UnitSlotConfig_t slot;
         slot.id = std::string(slotPrefix) + "_slot_" + std::to_string(slotIndex++);
         slot.displayName = slot.id;
-        slot.componentType = pComponent->type;
+        slot.componentType = rComponent.type;
         slot.required = true;
-        assigned[slot.id] = pComponent;
+        assigned[slot.id] = &rComponent;
         slots.push_back(slot);
     }
 
     auto pDesign = std::make_unique<UnitDesign>(slots, assigned);
-    const std::string designId = pDesign->GetId();
-    if (const IDesign* pExisting = rFaction.GetMilitary().GetDesign(designId))
+    Military& rMilitary = rFaction.GetMilitary();
+    if (const IDesign* pExisting = rMilitary.GetDesign(pDesign->GetId()))
     {
         return dynamic_cast<const UnitDesign*>(pExisting);
     }
-    rFaction.GetMilitary().AddDesign(std::move(pDesign));
-    return dynamic_cast<const UnitDesign*>(rFaction.GetMilitary().GetDesign(designId));
+    const UnitDesign* pAdded = pDesign.get();
+    rMilitary.AddDesign(std::move(pDesign));
+    return pAdded;
 }
 
 } // namespace ac

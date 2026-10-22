@@ -52,11 +52,6 @@ public:
     UnitId_t GetUnitId() const;
 
     const IDesign& GetDesign() const;
-
-    // Design effects plus the faction's FactionUnits effects.
-    int GetStat(StatId_t statId) const;
-    int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
-    bool GetFlag(RuleFlagId_t flagId) const;
     UnitDomain_t GetDomain() const;
 
     // Map position (UnitPositionIndex). Distinct from GetWorkedTile().
@@ -164,6 +159,7 @@ private:
     void DetachFromWorld_();
     void ReleaseWorkedTile_();
     void ClearCargoLinks_();
+    int MaxMoveFragments_() const;
 
     UnitId_t m_unitId;
     const IDesign& m_rDesign;

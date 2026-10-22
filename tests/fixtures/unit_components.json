@@ -4,6 +4,7 @@
     "name": "Test Chassis",
     "unit_name": "Speeder",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "land",
     "effects": [
       {
@@ -45,6 +46,7 @@
     "id": "test_slow_chassis",
     "name": "Test Slow Chassis (1 move)",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "land",
     "effects": [
       {
@@ -86,6 +88,7 @@
     "id": "test_sea_chassis",
     "name": "Test Sea Chassis",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "sea",
     "effects": [
       {
@@ -127,6 +130,7 @@
     "id": "test_flight_chassis",
     "name": "Test Flight Chassis",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "air",
     "effects": [
       {
@@ -168,6 +172,7 @@
     "id": "test_orbital_chassis",
     "name": "Test Orbital Chassis",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "orbital",
     "effects": [
       {
@@ -216,6 +221,7 @@
     "id": "test_sam_escort",
     "name": "Test SAM Escort",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Intercept",
@@ -236,6 +242,7 @@
     "id": "test_sam_misfire",
     "name": "Test SAM Misfire",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Intercept",
@@ -257,6 +264,7 @@
     "id": "ignore_zoc",
     "name": "Ignore Zone of Control",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "InteractionOverride",
@@ -287,6 +295,7 @@
     "id": "covert",
     "name": "Covert",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -302,6 +311,7 @@
     "name": "Test Weapon",
     "unit_name": "Laser",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -318,6 +328,7 @@
     "name": "Test Empire Pulse",
     "unit_name": "Empire",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -345,6 +356,7 @@
     "name": "Test Empire Morale",
     "unit_name": "Morale",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -363,6 +375,7 @@
     "name": "Test Weak Weapon",
     "unit_name": "Hand Weapon",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -379,6 +392,7 @@
     "name": "Test Armor",
     "unit_name": "Plasteel",
     "type": "armor",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -394,6 +408,7 @@
     "id": "test_psi",
     "name": "Test Psi Combat",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -408,6 +423,7 @@
     "id": "test_psi_attack_modifiers",
     "name": "Test Psi Attack Modifiers",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -433,6 +449,7 @@
     "id": "test_psi_defense_modifiers",
     "name": "Test Psi Defense Modifiers",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -458,6 +475,7 @@
     "id": "test_psi_tier_2",
     "name": "Test Psi Tier 2",
     "type": "reactor",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -474,6 +492,7 @@
     "id": "test_collateral_1",
     "name": "Test Collateral 1",
     "type": "reactor",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -490,6 +509,7 @@
     "id": "test_collateral_2",
     "name": "Test Collateral 2",
     "type": "reactor",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -506,6 +526,7 @@
     "id": "comm_jammer",
     "name": "Comm Jammer",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -520,6 +541,7 @@
     "id": "air_superiority",
     "name": "Air Superiority",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "InteractionOverride",
@@ -604,6 +626,7 @@
     "id": "drop_pods",
     "name": "Drop Pods",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -648,6 +671,7 @@
     "id": "singularity_inductor",
     "name": "Singularity Inductor",
     "type": "reactor",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -682,6 +706,7 @@
     "id": "aaa_tracking",
     "name": "AAA Tracking",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -720,6 +745,7 @@
     "id": "sensor_pod",
     "name": "Sensor Pod (mobile ThisTile aura, radius 2)",
     "type": "special",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -737,6 +763,7 @@
     "id": "cloak_detector_pod",
     "name": "Mobile cloak Detect aura (ThisTile, radius 2)",
     "type": "special",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Detect",
@@ -752,6 +779,7 @@
     "id": "cloak_field",
     "name": "Mobile cloak Conceal aura (ThisTile, radius 1)",
     "type": "special",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Conceal",
@@ -767,6 +795,7 @@
     "id": "Cloaking_Device",
     "name": "Cloaking Device",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Conceal",
@@ -789,6 +818,7 @@
     "id": "treat_fungus_as_road",
     "name": "Treat Fungus as Road",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -802,6 +832,7 @@
     "id": "ignores_difficult_terrain",
     "name": "Ignores Difficult Terrain",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -816,6 +847,7 @@
     "id": "deep_pressure_hull",
     "name": "Deep Pressure Hull",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "Conceal",
@@ -859,6 +891,7 @@
     "id": "test_colony_pod",
     "name": "Test Colony Pod",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -904,6 +937,7 @@
     "id": "test_colony_pod_rich",
     "name": "Test Colony Pod With Extra Starting Minerals",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -949,6 +983,7 @@
     "id": "Probe_Team",
     "name": "Probe Team",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -994,6 +1029,7 @@
     "id": "test_terraformer",
     "name": "Test Terraformer",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -1015,6 +1051,7 @@
     "id": "test_found_base_only",
     "name": "Test Found Base Without Single Use",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -1036,6 +1073,7 @@
     "id": "test_single_use_weapon",
     "name": "Test Single-Use Weapon (missile stand-in)",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1059,6 +1097,7 @@
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1074,6 +1113,7 @@
     "id": "morale_beacon",
     "name": "Morale Beacon (faction-lane SocialRatingModifier on a component)",
     "type": "special",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "SocialRatingModifier",
@@ -1089,6 +1129,7 @@
     "id": "test_conditional_psi_flag",
     "name": "Test Conditional Psi Flag",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -1107,6 +1148,7 @@
     "id": "test_amphibious",
     "name": "Test Amphibious Pods",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "InteractionOverride",
@@ -1139,6 +1181,7 @@
     "id": "test_transport",
     "name": "Test Troop Transport",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1234,6 +1277,7 @@
     "id": "test_transport_2",
     "name": "Test Troop Transport Capacity 2",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1266,6 +1310,7 @@
     "id": "test_carrier_deck",
     "name": "Test Carrier Deck",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "TransportParams",
@@ -1286,6 +1331,7 @@
     "id": "test_air_transport",
     "name": "Test Air Transport",
     "type": "weapon",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1319,6 +1365,7 @@
     "id": "test_fuel_flight_chassis",
     "name": "Test Fuel Flight Chassis (Needlejet stand-in)",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "air",
     "effects": [
       {
@@ -1397,6 +1444,7 @@
     "id": "test_copter_chassis",
     "name": "Test Copter Chassis",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "air",
     "effects": [
       {
@@ -1468,6 +1516,7 @@
     "id": "test_no_conquest_repair",
     "name": "Test No Conquest Repair (Battle Ogre stand-in)",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -1482,6 +1531,7 @@
     "id": "test_always_disengages",
     "name": "Test Always Disengages",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1497,6 +1547,7 @@
     "id": "test_never_disengages",
     "name": "Test Never Disengages",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1512,6 +1563,7 @@
     "id": "test_gated_ability",
     "name": "Test Gated Ability",
     "type": "ability",
+    "mineral_cost": 0,
     "required_tech": "advanced_build",
     "effects": []
   },
@@ -1519,6 +1571,7 @@
     "id": "test_clean_reactor",
     "name": "Test Clean Reactor (zero mineral upkeep)",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1604,6 +1657,7 @@
     "id": "test_susceptibility_0",
     "name": "Test Susceptibility 0",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
@@ -1620,6 +1674,7 @@
     "id": "test_native_life",
     "name": "Test Native Life",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
@@ -1632,6 +1687,7 @@
     "id": "native_life_chassis",
     "name": "Native Life Chassis",
     "type": "chassis",
+    "mineral_cost": 0,
     "domain": "land",
     "effects": [
       {
@@ -1660,6 +1716,7 @@
     "id": "bombard",
     "name": "Bombard",
     "type": "ability",
+    "mineral_cost": 0,
     "effects": [
       {
         "type": "RuleFlag",
