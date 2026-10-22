@@ -116,9 +116,9 @@ void ApplyRadialPeakSculpt_(WorldMap& rWorld, const Tile& rAnchor, int radius,
             }
             const float dist = std::sqrt(static_cast<float>(p * p + q * q));
             const float t = 1.0f - dist / static_cast<float>(radius + 1);
-            const int elev = std::min(
-                rSculpt.peakElevation,
-                static_cast<int>(std::lround(static_cast<float>(rSculpt.baseElevation) + t * rise)));
+            const float sculpted = static_cast<float>(rSculpt.baseElevation) + t * rise;
+            const int rounded = static_cast<int>(std::lround(sculpted));
+            const int elev = std::min(rSculpt.peakElevation, rounded);
             if (pTile->GetElevation() < elev)
             {
                 pTile->SetElevation(elev);

@@ -143,8 +143,8 @@ void PlacePatches_(WorldMap& rWorld,
         return;
     }
 
-    const int targetTotal = static_cast<int>(std::lround(
-        fraction * static_cast<float>(candidates.size())));
+    const float share = fraction * static_cast<float>(candidates.size());
+    const int targetTotal = static_cast<int>(std::lround(share));
     if (targetTotal <= 0)
     {
         return;

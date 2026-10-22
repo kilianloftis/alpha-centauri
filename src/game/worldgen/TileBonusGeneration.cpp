@@ -106,8 +106,8 @@ int PlaceTileBonuses(WorldMap& rWorld,
         return 0;
     }
 
-    const int target = static_cast<int>(std::lround(
-        rConfig.fraction * static_cast<float>(candidates.size())));
+    const float share = rConfig.fraction * static_cast<float>(candidates.size());
+    const int target = static_cast<int>(std::lround(share));
     if (target <= 0)
     {
         return 0;

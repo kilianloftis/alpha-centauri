@@ -65,11 +65,12 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     // them; rain follows rivers (SMAC world_climate order); bonuses go last for their excludes.
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
-    GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);
-    GenerateLandmarks_(*pWorld, rLandmarks, rOccupants);
+    const ImprovementConfig_t& rFungus = rOccupants.Get(std::string(ImprovementIds::k_Fungus));
+    PlaceFungus(*pWorld, rDecoration.fungus, rFungus, m_rng);
+    PlaceLandmarks(*pWorld, rLandmarks, rOccupants, m_rng);
     GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
-    GenerateMoisture_(*pWorld, rDecoration.moisture, rConfig.rainfall);
-    GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rOccupants);
+    moisture_gen::GenerateRainfall(*pWorld, rDecoration.moisture, rConfig.rainfall);
+    PlaceTileBonuses(*pWorld, rDecoration.tileBonuses, rOccupants, m_rng);
 
     return pWorld;
 }
@@ -84,7 +85,8 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
 
     // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
     // session seed, never of rConfig.seed (the request, where 0 means "pick one").
-    FbmNoise noise(static_cast<int>(m_rng()), rPreset);
+    const int noiseSeed = static_cast<int>(m_rng());
+    FbmNoise noise(noiseSeed, rPreset);
 
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
@@ -138,8 +140,8 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
 
     for (const auto& pTile : rWorld.GetTiles())
     {
-        const size_t index =
-            static_cast<size_t>(TileIndex(pTile->GetX(), pTile->GetY(), width));
+        const int tileIndex = TileIndex(pTile->GetX(), pTile->GetY(), width);
+        const size_t index = static_cast<size_t>(tileIndex);
         const float value = field[index];
         int elevation = 0;
         if (value < threshold)
@@ -147,14 +149,14 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
             const float belowWaterline =
                 Remap_(value, minValue, threshold, 1.0f, 0.0f);
             const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
-            elevation = static_cast<int>(std::lround(
-                -1.0f + depth * static_cast<float>(rPreset.minElevation + 1)));
+            const float deepest = static_cast<float>(rPreset.minElevation + 1);
+            elevation = static_cast<int>(std::lround(-1.0f + depth * deepest));
         }
         else
         {
-            elevation = static_cast<int>(std::lround(
-                Remap_(value, threshold, maxValue,
-                       0.0f, static_cast<float>(rPreset.maxElevation))));
+            const float highest = static_cast<float>(rPreset.maxElevation);
+            const float raised = Remap_(value, threshold, maxValue, 0.0f, highest);
+            elevation = static_cast<int>(std::lround(raised));
         }
         pTile->SetElevation(elevation);
     }
@@ -201,13 +203,6 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
     return value;
 }
 
-void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
-                                       const MoistureDecorationConfig_t& rMoisture,
-                                       Rainfall_t rainfall)
-{
-    moisture_gen::GenerateRainfall(rWorld, rMoisture, rainfall);
-}
-
 void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
                                         ErosiveForces_t erosiveForces,
                                         const RockinessDecorationConfig_t& rRockiness)
@@ -218,7 +213,8 @@ void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
 
     for (const auto& pTile : rWorld.GetTiles())
     {
-        pTile->SetRockiness(SampleRockiness(rWeights, RandomFloat_()));
+        const Rockiness_t rockiness = SampleRockiness(rWeights, RandomFloat_());
+        pTile->SetRockiness(rockiness);
     }
 }
 
@@ -239,8 +235,8 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     if (!candidates.empty() && rAquifers.fraction > 0.0f)
     {
         std::shuffle(candidates.begin(), candidates.end(), m_rng);
-        const size_t target = static_cast<size_t>(
-            std::lround(rAquifers.fraction * static_cast<float>(candidates.size())));
+        const float share = rAquifers.fraction * static_cast<float>(candidates.size());
+        const size_t target = static_cast<size_t>(std::lround(share));
         const size_t count = std::min(target, candidates.size());
         for (size_t i = 0; i < count; ++i)
         {
@@ -249,26 +245,6 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     }
 
     RecomputeRivers(rWorld);
-}
-
-void WorldGenerator::GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
-                                     const ImprovementRegistry& rOccupants)
-{
-    PlaceFungus(rWorld, rFungus, rOccupants.Get(std::string(ImprovementIds::k_Fungus)), m_rng);
-}
-
-void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,
-                                        const std::vector<LandmarkConfig_t>& rLandmarks,
-                                        const ImprovementRegistry& rOccupants)
-{
-    PlaceLandmarks(rWorld, rLandmarks, rOccupants, m_rng);
-}
-
-void WorldGenerator::GenerateTileBonuses_(WorldMap& rWorld,
-                                          const TileBonusDecorationConfig_t& rBonuses,
-                                          const ImprovementRegistry& rOccupants)
-{
-    PlaceTileBonuses(rWorld, rBonuses, rOccupants, m_rng);
 }
 
 float WorldGenerator::RandomFloat_()

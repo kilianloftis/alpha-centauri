@@ -15,7 +15,7 @@ public:
     // non-empty. Sculpt elevations are checked against the preset later.
     std::vector<LandmarkConfig_t> ParseConfig(
         const std::string& configPath,
-        const std::vector<std::string>& rKnownImprovementIds = {});
+        const std::vector<std::string>& rKnownImprovementIds);
 
     // A sculptor's peak and base must lie inside the preset elevation range.
     static void ValidateSculptAgainstPreset(const LandmarkConfig_t& rLandmark,

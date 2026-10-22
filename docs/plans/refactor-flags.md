@@ -92,6 +92,11 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** fixtures load occupants this way and tests flip the stacking rule; both
   need a fixture path through `LoadMapOccupants` and the session config.
 
+### `NativeUnitRegistry::SetFungalBloomLifeforms` — used only by a test
+- **Where:** `include/game/natives/NativeUnitRegistry.h:18`; one test caller
+- **Problem:** a setter so a test can change the bloom lifeform list after load.
+- **Why not local:** the test needs a fixture native_units config with that list.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -122,6 +127,13 @@ One entry per violation, under the rule it breaks:
 - **Where:** `src/game/map/ImprovementConfigParser.cpp`, 116 lines
 - **Problem:** expands tags in four different lists inline.
 - **Why not local:** over 100 lines; the per-list expansion shares the tag index being built.
+
+### `moisture_gen::GenerateRainfall`
+- **Where:** `src/game/worldgen/MoistureGeneration.cpp`, 281 lines, nesting 9
+- **Problem:** the whole Thinker world_rainfall port is one function.
+- **Why not local:** over 100 lines; its passes (cloudmass, ocean moisture, rain belts,
+  smoothing) share several grids, so splitting it needs a state struct. Confirm each pass
+  against the disassembly while splitting.
 
 ## Duplicated logic
 

@@ -37,22 +37,11 @@ private:
     void GenerateElevation_(WorldMap& rWorld,
                             const MapGenerationConfig_t& rConfig,
                             const WorldGenPresetConfig_t& rPreset);
-    void GenerateMoisture_(WorldMap& rWorld,
-                           const MoistureDecorationConfig_t& rMoisture,
-                           Rainfall_t rainfall);
     void GenerateRockiness_(WorldMap& rWorld,
                             ErosiveForces_t erosiveForces,
                             const RockinessDecorationConfig_t& rRockiness);
     void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers,
                            const ImprovementRegistry& rOccupants);
-    void GenerateFungus_(WorldMap& rWorld, const FungusDecorationConfig_t& rFungus,
-                         const ImprovementRegistry& rOccupants);
-    void GenerateLandmarks_(WorldMap& rWorld,
-                            const std::vector<LandmarkConfig_t>& rLandmarks,
-                            const ImprovementRegistry& rOccupants);
-    void GenerateTileBonuses_(WorldMap& rWorld,
-                              const TileBonusDecorationConfig_t& rBonuses,
-                              const ImprovementRegistry& rOccupants);
 
     float ApplyLandmassMask_(float noiseValue,
                              float nx,
