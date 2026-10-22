@@ -223,8 +223,8 @@ void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTile
 
                 Tile* pHost = nullptr;
                 int bestDistance = searchRadius + 1;
-                ForEachTileInChebyshevRadius(
-                    rBaseTile, rMap, searchRadius, /*includeOrigin=*/false,
+                ForEachNeighborInChebyshevRadius(
+                    rBaseTile, rMap, searchRadius,
                     [&](Tile* pTile, int distance) {
                         if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
                             || !CanBuildImprovement(*pTile, rConfig, {}, {})
@@ -254,8 +254,8 @@ void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTile
             {
                 Tile* pHost = nullptr;
                 int bestDistance = searchRadius + 1;
-                ForEachTileInChebyshevRadius(
-                    rBaseTile, rMap, searchRadius, /*includeOrigin=*/false,
+                ForEachNeighborInChebyshevRadius(
+                    rBaseTile, rMap, searchRadius,
                     [&](Tile* pTile, int distance) {
                         if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
                             || pTile->HasImprovement(ImprovementIds::k_Farm)

@@ -94,7 +94,7 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
             continue;
         }
 
-        ForEachTileInChebyshevRadius(*pFrom, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+        ForEachNeighborInChebyshevRadius(*pFrom, m_rWorldMap, /*radius=*/1,
             [&](const Tile* pNeighbor, int /*distance*/)
             {
                 if (!m_rSteps.CanPlanStep(rMover, *pFrom, *pNeighbor))
@@ -171,7 +171,7 @@ const Tile* Pathfinder::DesiredContactStep(const Unit& rMover, const Tile& rDest
     const Tile* pBest = nullptr;
     int bestDist = currentDist;
 
-    ForEachTileInChebyshevRadius(rFrom, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+    ForEachNeighborInChebyshevRadius(rFrom, m_rWorldMap, /*radius=*/1,
         [&](const Tile* pTile, int /*distance*/)
         {
             const StepEvaluation_t eval = m_rSteps.EvaluateStep(rMover, rFrom, *pTile);

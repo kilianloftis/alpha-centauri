@@ -158,11 +158,10 @@ void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& f
     }
 }
 
-// fn(tile, distance) for every tile within Chebyshev `radius` of rOrigin, wrapping in X and
-// skipping rows off the map.
+// fn(tile, distance) for every tile within Chebyshev `radius` of rOrigin, the origin included,
+// wrapping in X and skipping rows off the map.
 template<typename WorldMapT, typename Fn>
-void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
-                                   int radius, bool includeOrigin, Fn&& fn)
+void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap, int radius, Fn&& fn)
 {
     for (int q = -radius; q <= radius; ++q)
     {
@@ -170,10 +169,6 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
         {
             const int distance = std::max(std::abs(p), std::abs(q));
             if (distance > radius)
-            {
-                continue;
-            }
-            if (!includeOrigin && distance == 0)
             {
                 continue;
             }
@@ -185,6 +180,20 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
             }
         }
     }
+}
+
+// The same, without rOrigin itself.
+template<typename WorldMapT, typename Fn>
+void ForEachNeighborInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap, int radius,
+                                      Fn&& fn)
+{
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius, [&fn](auto* pTile, int distance)
+    {
+        if (distance > 0)
+        {
+            fn(pTile, distance);
+        }
+    });
 }
 
 // Calls fn(tile_ptr, distSq) for every tile in the discrete Euclidean disk on the lattice

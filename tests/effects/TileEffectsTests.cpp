@@ -729,7 +729,7 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves f
     world.ctx.AddOccupantWithEffects(origin, "Forest");
 
     // Fungus blocks forest. The open wet tile is the legal neighbor.
-    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
             pNeighbor->SetElevation(-1000); // sea: ineligible for Forest
@@ -760,7 +760,7 @@ TEST_CASE("TrySpreadTerraformFromTile does not spread Forest onto Rocky tiles",
     origin.SetElevation(100);
     world.ctx.AddOccupantWithEffects(origin, "Forest");
 
-    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
             pNeighbor->SetElevation(100);
@@ -769,7 +769,7 @@ TEST_CASE("TrySpreadTerraformFromTile does not spread Forest onto Rocky tiles",
         });
 
     CHECK_FALSE(TrySpreadTerraformFromTile(origin, world.map, world.ctx));
-    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
             CHECK_FALSE(pNeighbor->HasImprovement("Forest"));
@@ -791,7 +791,7 @@ TEST_CASE("SpreadTerraformImprovements eventually spreads from a sampled Forest"
     neighbor.SetMoisture(Moisture_t::Arid);
 
     // Leave other adjacent tiles rocky so only `neighbor` can receive the spread.
-    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
             if (pNeighbor != &neighbor)
@@ -817,7 +817,7 @@ TEST_CASE("Forest spread prefers the arid, flat neighbour and changes nothing wh
     Tile& origin = world.At(8, 8);
     origin.SetElevation(100);
     world.ctx.AddOccupantWithEffects(origin, "Forest");
-    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
             pNeighbor->SetElevation(-1000);

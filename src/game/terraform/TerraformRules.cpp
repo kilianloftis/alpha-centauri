@@ -419,7 +419,7 @@ void RelaxAdjacentSlopes_(const std::vector<const Tile*>& rSeeds, const WorldMap
         pending.pop_front();
         queued.erase(pTile);
 
-        ForEachTileInChebyshevRadius(*pTile, rWorldMap, 1, false,
+        ForEachNeighborInChebyshevRadius(*pTile, rWorldMap, 1,
             [&](const Tile* pNeighbor, int /*distance*/)
             {
                 const int tileElev = rWorking.Get(*pTile);
@@ -498,7 +498,7 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
 
     const Tile* pBest = nullptr;
     int bestScore = 0;
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, 1, false,
+    ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, 1,
         [&](const Tile* pNeighbor, int /*distance*/)
         {
             if (!IsEligibleSpreadNeighbor_(*pNeighbor, bWantSea, rConfig))

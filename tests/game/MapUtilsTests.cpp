@@ -203,7 +203,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
     SECTION("Chebyshev radius 1 and 2 are the 3x3 and 5x5 lattice squares")
     {
         int ringOne = 0;
-        ForEachTileInChebyshevRadius(rOrigin, map, 1, false, [&](const Tile*, int distance)
+        ForEachNeighborInChebyshevRadius(rOrigin, map, 1, [&](const Tile*, int distance)
         {
             CHECK(distance == 1);
             ++ringOne;
@@ -211,7 +211,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
         CHECK(ringOne == 8);
 
         int withOrigin = 0;
-        ForEachTileInChebyshevRadius(rOrigin, map, 2, true, [&](const Tile*, int)
+        ForEachTileInChebyshevRadius(rOrigin, map, 2, [&](const Tile*, int)
         {
             ++withOrigin;
         });
@@ -221,7 +221,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
     SECTION("Chebyshev radius never yields a tile twice")
     {
         std::set<const Tile*> seen;
-        ForEachTileInChebyshevRadius(rOrigin, map, 3, true, [&](const Tile* pTile, int)
+        ForEachTileInChebyshevRadius(rOrigin, map, 3, [&](const Tile* pTile, int)
         {
             CHECK(seen.insert(pTile).second);
         });

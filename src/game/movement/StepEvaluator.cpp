@@ -56,7 +56,7 @@ template <typename Fn>
 void ForEachZocProjectorAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                                 Fn&& rFn)
 {
-    ForEachTileInChebyshevRadius(rTile, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+    ForEachNeighborInChebyshevRadius(rTile, rWorldMap, /*radius=*/1,
         [&](const Tile* pNeighbor, int /*distance*/)
         {
             for (Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNeighbor))

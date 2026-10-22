@@ -27,21 +27,21 @@ int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules);
 // slope around every changed tile. False when the origin does not change.
 bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
                          const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
-                         TileEffectsContext* pTileEffects = nullptr,
-                         IUnitOrderWorld* pWorld = nullptr);
+                         TileEffectsContext* pTileEffects,
+                         IUnitOrderWorld* pWorld);
 
 // Raise rOrigin by levelCount independent level rolls, clamped to Planet's elevation range.
 // levelCount <= 0 changes nothing. Not invoked from combat. Occupancy matches ApplyElevationDelta.
 bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt19937& rRng,
                      const ElevationRulesConfig_t& rRules,
-                     TileEffectsContext* pTileEffects = nullptr,
-                     IUnitOrderWorld* pWorld = nullptr);
+                     TileEffectsContext* pTileEffects,
+                     IUnitOrderWorld* pWorld);
 
 // Drops each tile one rolled level, then relaxes the slope once, so no neighbour is pulled
 // before its own roll. False when nothing changes.
 bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt19937& rRng,
                         const ElevationRulesConfig_t& rRules,
-                        TileEffectsContext* pTileEffects = nullptr,
-                        IUnitOrderWorld* pWorld = nullptr);
+                        TileEffectsContext* pTileEffects,
+                        IUnitOrderWorld* pWorld);
 
 } // namespace ac

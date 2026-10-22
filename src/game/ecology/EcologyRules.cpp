@@ -77,18 +77,21 @@ EcoDamageInputs_t EcoDamageInputs(const BaseManager& rBase)
     inputs.terraformScale = ResolveBaseStat(rEffects, StatId_t::EcoTerraformScale,
                                             SeedFor(StatId_t::EcoTerraformScale), nullptr);
     inputs.minerals = rBase.GetMineralProduction();
-    inputs.mineralOffset = FinalizeResolvedStat(ResolveBaseStat(
-        rEffects, StatId_t::EcoMineralOffset, SeedFor(StatId_t::EcoMineralOffset), nullptr));
-    inputs.cleanMinerals = FinalizeResolvedStat(ResolveFactionStat(
-        rFaction.GetActiveEffects(), StatId_t::EcoCleanMinerals,
-        SeedFor(StatId_t::EcoCleanMinerals), nullptr));
+    const double mineralOffset = ResolveBaseStat(
+        rEffects, StatId_t::EcoMineralOffset, SeedFor(StatId_t::EcoMineralOffset), nullptr);
+    inputs.mineralOffset = FinalizeResolvedStat(mineralOffset);
+    const double cleanMinerals = ResolveFactionStat(rFaction.GetActiveEffects(),
+                                                    StatId_t::EcoCleanMinerals,
+                                                    SeedFor(StatId_t::EcoCleanMinerals), nullptr);
+    inputs.cleanMinerals = FinalizeResolvedStat(cleanMinerals);
     inputs.fungalBlooms = rEcology.FungalBlooms(factionId);
     inputs.cleanMineralGrants = rEcology.CleanMineralGrants(factionId);
     const int atrocityMinerals =
         AtrocityEcoMinerals(rGameState.GetAtrocityLedger(), factionId);
     inputs.virtualMinerals = atrocityMinerals + rEcology.VirtualMinerals(factionId);
-    inputs.damageReduction = FinalizeResolvedStat(ResolveBaseStat(
-        rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction), nullptr));
+    const double damageReduction = ResolveBaseStat(
+        rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction), nullptr);
+    inputs.damageReduction = FinalizeResolvedStat(damageReduction);
     inputs.techs = static_cast<int>(rFaction.GetResearch().GetDiscoveredTechs().size());
     inputs.ecoScale = ResolveBaseStat(rEffects, StatId_t::EcologicalDamage,
                                       SeedFor(StatId_t::EcologicalDamage), nullptr);
@@ -159,7 +162,7 @@ BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin)
         candidates.pOrigin = &rOrigin;
     }
     const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+    ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1,
         [&](const Tile* pTile, int /*distance*/)
         {
             if (pTile->HasImprovement(ImprovementIds::k_Base)

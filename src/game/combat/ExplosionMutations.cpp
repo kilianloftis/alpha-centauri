@@ -97,7 +97,7 @@ ExplosionResult_t ApplyExplosion(Tile& rOrigin, WorldMap& rWorldMap, int radius,
     result.radius = radius;
 
     std::vector<Tile*> disk;
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius, /*includeOrigin=*/true,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius,
         [&](Tile* pTile, int /*distance*/)
         {
             if (!pTile)

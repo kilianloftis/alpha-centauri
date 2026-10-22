@@ -36,7 +36,7 @@ void FactionVisibleMap::RevealAround_(const Tile& rOrigin, int radius, const Wor
         return;
     }
 
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius, /*includeOrigin=*/true,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius,
         [this, &rExplored](const Tile* pTile, int /*distance*/)
         {
             Mark_(*pTile);

@@ -100,7 +100,7 @@ void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
 void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWorldMap,
                                        int maxRadius, std::vector<ActiveEffect_t>& rOut)
 {
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, true,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius,
         [&](const Tile* pNearby, int distance)
         {
             if (distance > 0)
@@ -188,7 +188,7 @@ void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects
 void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffectsContext& rCtx,
                                  WorldMap& rWorldMap)
 {
-    ForEachTileInChebyshevRadius(rChangedTile, rWorldMap, radius, true,
+    ForEachTileInChebyshevRadius(rChangedTile, rWorldMap, radius,
         [&](Tile* pAffected, int /*distance*/)
         {
             rCtx.RecomputeMoisture(*pAffected);

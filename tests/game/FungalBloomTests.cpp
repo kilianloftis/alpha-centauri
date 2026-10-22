@@ -127,7 +127,7 @@ TEST_CASE("A fungal bloom skips neighbors that already have fungus", "[map][fung
 {
     BloomSession_ session(0, 0, false, false);
     Tile& rOrigin = session.At_(8, 8);
-    ForEachTileInChebyshevRadius(rOrigin, session.fixtures.state.GetWorldMap(), 1, false,
+    ForEachNeighborInChebyshevRadius(rOrigin, session.fixtures.state.GetWorldMap(), 1,
         [&](Tile* pTile, int distance)
         {
             if (distance == 1 && !(pTile->GetX() == 9 && pTile->GetY() == 9))

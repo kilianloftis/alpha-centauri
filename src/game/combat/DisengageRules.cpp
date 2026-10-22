@@ -87,8 +87,7 @@ std::vector<const Tile*> DisengageRules::CollectRetreatTiles(const Unit& rUnit) 
 {
     std::vector<const Tile*> candidates;
     const MoveCostRules::Query costs = m_rMoveCosts.ForUnit(rUnit, m_rWorldMap);
-    ForEachTileInChebyshevRadius(rUnit.GetTile(), m_rWorldMap, /*radius=*/1,
-                                 /*includeOrigin=*/false,
+    ForEachNeighborInChebyshevRadius(rUnit.GetTile(), m_rWorldMap, /*radius=*/1,
         [&](const Tile* pTile, int /*distance*/)
         {
             // Legal covers terrain domain, occupants, and ZOC→ZOC violations.

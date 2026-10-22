@@ -93,7 +93,7 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     WorldMap& rMap = rGameState.GetWorldMap();
     UnitPositionIndex& rPositions = rMap.GetUnitPositions();
     std::vector<Tile*> candidates;
-    ForEachTileInChebyshevRadius(rOrigin, rMap, 1, /*includeOrigin=*/false,
+    ForEachNeighborInChebyshevRadius(rOrigin, rMap, 1,
         [&](Tile* pTile, int /*distance*/)
         {
             if (pTile && CanPlaceUnitOnTile(*pTile, rPositions))

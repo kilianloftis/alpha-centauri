@@ -42,7 +42,7 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
 
     // One disk pass: territory pads, plus boardable carriers already in range
     // (GetUnitsOnTile) instead of scanning the whole faction roster.
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, rangePoints, /*includeOrigin=*/true,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, rangePoints,
         [&](const Tile* pTile, int /*distance*/)
         {
             if (!pTile)

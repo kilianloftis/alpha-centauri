@@ -89,7 +89,7 @@ std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& r
     // The hardcoded 2 is terrible design, but I think we'll get rid of single-tile mode
     for (int radius = 1; found.size() < static_cast<size_t>(needed) && radius <= 2; ++radius)
     {
-        ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius, /*includeOrigin=*/false,
+        ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, radius,
             [&](const Tile* pTile, int distance)
             {
                 if (distance == radius)
