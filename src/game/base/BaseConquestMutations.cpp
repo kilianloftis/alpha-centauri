@@ -107,7 +107,8 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     }
 
     std::shuffle(candidates.begin(), candidates.end(), rRng);
-    const int spawnCount = std::min(podCount, static_cast<int>(candidates.size()));
+    const int candidateCount = static_cast<int>(candidates.size());
+    const int spawnCount = std::min(podCount, candidateCount);
     for (int i = 0; i < spawnCount; ++i)
     {
         rFleeingFaction.GetUnitManager().CreateUnit(
@@ -130,7 +131,7 @@ void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutc
     std::shuffle(candidates.begin(), candidates.end(), rRng);
     for (int i = 0; i < toDestroy; ++i)
     {
-        DestroyBuildingAndNotify(rBase, *candidates[static_cast<size_t>(i)]);
+        rBase.GetBuildingManager().DestroyBuilding(candidates[static_cast<size_t>(i)]->id);
     }
     rResult.facilitiesDestroyed = toDestroy;
 }
@@ -155,7 +156,7 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, std::mt
     if (bDestroyFacility)
     {
         std::uniform_int_distribution<size_t> pick(0, plan.facilityCandidates.size() - 1);
-        DestroyBuildingAndNotify(rBase, *plan.facilityCandidates[pick(rRng)]);
+        rBase.GetBuildingManager().DestroyBuilding(plan.facilityCandidates[pick(rRng)]->id);
         result.facilitiesDestroyed = 1;
     }
     else

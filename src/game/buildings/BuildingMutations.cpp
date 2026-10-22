@@ -31,11 +31,6 @@ void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
 
 } // namespace
 
-void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuilding)
-{
-    rBase.GetBuildingManager().DestroyBuilding(rBuilding.id);
-}
-
 std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
                                                   bool bExcludeSecretProjects, std::mt19937& rRng)
 {
@@ -59,7 +54,7 @@ std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count,
     {
         const BuildingConfig_t& rBuilding = *candidates[static_cast<size_t>(i)];
         destroyed.push_back(rBuilding.id);
-        DestroyBuildingAndNotify(rBase, rBuilding);
+        rBase.GetBuildingManager().DestroyBuilding(rBuilding.id);
     }
     return destroyed;
 }

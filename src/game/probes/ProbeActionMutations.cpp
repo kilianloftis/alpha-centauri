@@ -126,7 +126,8 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
             rResult.detail = ProbeActionStatus_t::NoTarget;
             return false;
         }
-        DestroyBuildingAndNotify(rBase, *pTarget);
+        // TODO: whether sabotage should permanently delete a secret project is unconfirmed.
+        rBase.GetBuildingManager().DestroyBuilding(pTarget->id);
         rResult.detail = ProbeDestroyedFacility_t{facilityId};
         return true;
     }

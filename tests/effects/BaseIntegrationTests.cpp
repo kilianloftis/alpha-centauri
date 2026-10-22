@@ -202,7 +202,7 @@ TEST_CASE("Building production without spawn services completes without on_compl
                          fixture.settings, actest::k_TestFactionSeed);
     auto pBase = std::make_unique<BaseManager>(
         unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
-        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
+        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3, false);
     BaseManager& base = *pBase;
     REQUIRE(fixture.state.Factions().empty());
 
@@ -240,7 +240,7 @@ TEST_CASE("Unit production without spawn services throws before spawning",
                          fixture.settings, actest::k_TestFactionSeed);
     auto pBase = std::make_unique<BaseManager>(
         unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
-        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
+        MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3, false);
     BaseManager& base = *pBase;
     REQUIRE(fixture.state.Factions().empty());
 

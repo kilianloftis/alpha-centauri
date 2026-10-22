@@ -24,14 +24,14 @@ struct BuildingUpkeepLine_t
 // One copy's energy upkeep, context-free. Base-tagged scopes need a matching pOriginBase.
 int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
                                        std::span<const ActiveEffect_t> rEffects,
-                                       const BaseManager* pOriginBase = nullptr);
+                                       const BaseManager* pOriginBase);
 
 // Group building copies by id; resolve upkeepPerCopy via FacilityEnergyUpkeep modifiers.
 // Lines are sorted ascending by id for stable UI order.
 std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     const std::vector<const BuildingConfig_t*>& rBuildings,
     std::span<const ActiveEffect_t> rEffects,
-    const BaseManager* pOriginBase = nullptr);
+    const BaseManager* pOriginBase);
 
 // Sum of TotalUpkeep() across lines.
 int SumBuildingUpkeep(const std::vector<BuildingUpkeepLine_t>& rLines);

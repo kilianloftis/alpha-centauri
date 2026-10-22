@@ -125,8 +125,9 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
         }
     }
 
-    const int raw = FinalizeResolvedStat(
-        ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals), &ctx).total);
+    const double total =
+        ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals), &ctx).total;
+    const int raw = FinalizeResolvedStat(total);
     return std::max(0, raw);
 }
 

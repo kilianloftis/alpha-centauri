@@ -401,7 +401,7 @@ struct BaseFixture : WorldFixture
             rFaction, state.AllocateBaseId(), "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
             ctx,
-            initialPopulation);
+            initialPopulation, false);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

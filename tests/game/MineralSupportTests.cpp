@@ -5,6 +5,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/economy/EconomyMutations.h"
 #include "game/faction/Faction.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/units/UnitManager.h"
@@ -105,7 +106,7 @@ TEST_CASE("Clean reactor ability zeroes mineral upkeep without taking a free slo
     // Support 0 emits 2 free slots — enough for `paid` without a facility.
     LeaveMineralBank_(base, 0);
 
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     // Zero-upkeep unit does not consume a free slot; one free slot covers `paid`.
     CHECK(base.GetHomeUnits().GetUnits().size() == 2);
@@ -124,7 +125,7 @@ TEST_CASE("Support 0 grants two free unit slots per base", "[unit][support][rati
     const UnitId_t newestId = newest.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     // Two free slots cover a+b; newest costs 1 with bank 0 → disbanded.
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 2);
@@ -150,7 +151,7 @@ TEST_CASE("Facility free_unit_support stacks on Support 0", "[unit][support]")
     base.GetBuildingManager().AddBuilding("free_support_depot"); // +2 → 4 free total
     LeaveMineralBank_(base, 0);
 
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     // Four free slots cover oldest…newest; fifth costs 1 with bank 0 → disbanded.
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 4);
@@ -179,7 +180,7 @@ TEST_CASE("Support +2 grants four free unit slots", "[unit][support][rating]")
     const UnitId_t fifthId = fifth.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 4);
     CHECK_FALSE(UnitStillLive_(faction, fifthId));
@@ -200,7 +201,7 @@ TEST_CASE("Support -2 grants one free unit slot", "[unit][support][rating]")
     const UnitId_t paidId = paid.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 1);
     CHECK(base.GetHomeUnits().GetUnits().front() == &free);
@@ -222,7 +223,7 @@ TEST_CASE("Support -4 doubles mineral upkeep and zeroes free slots",
     CHECK(unit.GetMineralUpkeep() == 2);
 
     LeaveMineralBank_(base, 2);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().size() == 1);
     CHECK(base.GetResources().GetMineralBank() == 0);
@@ -246,7 +247,7 @@ TEST_CASE("FactionUnits mineral_upkeep Add increases support charge", "[unit][su
     CHECK(unit.GetMineralUpkeep() == 3);
 
     LeaveMineralBank_(base, 3);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().size() == 1);
     CHECK(base.GetResources().GetMineralBank() == 0);
@@ -265,7 +266,7 @@ TEST_CASE("Insufficient minerals disband newest charged home units first", "[uni
     const UnitId_t cId = c.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     REQUIRE(base.GetHomeUnits().GetUnits().size() == 2);
     CHECK(base.GetHomeUnits().GetUnits()[0] == &a);
@@ -345,7 +346,7 @@ TEST_CASE("Mineral support leaves remainder for production", "[unit][support]")
     fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
     LeaveMineralBank_(base, 5);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().size() == 3);
     CHECK(base.GetResources().GetMineralBank() == 4);
@@ -367,7 +368,7 @@ TEST_CASE("Native life on fungus pays no mineral support", "[unit][support]")
     CHECK(lifeform.GetMineralUpkeep() == 2);
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().size() == 1);
     CHECK(base.GetResources().GetMineralBank() == 0);
@@ -387,7 +388,7 @@ TEST_CASE("Native life off fungus still pays mineral support", "[unit][support]"
     const UnitId_t lifeformId = lifeform.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().empty());
     CHECK_FALSE(UnitStillLive_(faction, lifeformId));
@@ -407,7 +408,7 @@ TEST_CASE("A non-lifeform on fungus still pays mineral support", "[unit][support
     const UnitId_t unitId = unit.GetUnitId();
 
     LeaveMineralBank_(base, 0);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
 
     CHECK(base.GetHomeUnits().GetUnits().empty());
     CHECK_FALSE(UnitStillLive_(faction, unitId));

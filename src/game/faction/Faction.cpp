@@ -36,6 +36,7 @@
 #include "game/faction/AIProfile.h"
 #include "game/faction/FactionFlavor.h"
 #include "game/economy/EconomyManager.h"
+#include "game/economy/EconomyMutations.h"
 #include "game/units/Military.h"
 #include "game/units/IDesign.h"
 #include "game/research/ResearchManager.h"
@@ -869,7 +870,7 @@ void Faction::ApplyMineralSupport()
 {
     for (BaseManager& rBase : Bases())
     {
-        rBase.ApplyMineralSupport();
+        ApplyMineralSupportAtBase(rBase);
     }
 }
 

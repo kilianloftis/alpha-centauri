@@ -21,10 +21,6 @@ struct OrbitalAttackResult_t
     BuildingId_t targetBuildingId;
 };
 
-// Destroys one built building; OnBuildingDestroyed fans out to the deploy ledger and SP
-// tombstones.
-// TODO: whether sabotage should permanently delete a secret project is unconfirmed.
-void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuilding);
 
 // Destroy up to `count` uniformly shuffled eligible facilities. Returns the destroyed ids
 // (empty when nothing was eligible).

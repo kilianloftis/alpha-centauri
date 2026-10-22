@@ -75,10 +75,10 @@ int ResolveFoundingPopulation_(Faction& rFaction, std::optional<int> initialPopu
     }
     // StartingSize is Base-domain; resolve the Additive stack from the faction pool directly
     // (AllOwnerBases baselines need no base subject).
-    const int size = FinalizeResolvedStat(
-        ResolveStatModifiersTotal(
-            FilterByStatId(rFaction.GetActiveEffects().effects, StatId_t::StartingSize),
-            SeedFor(StatId_t::StartingSize), nullptr));
+    const double total = ResolveStatModifiersTotal(
+        FilterByStatId(rFaction.GetActiveEffects().effects, StatId_t::StartingSize),
+        SeedFor(StatId_t::StartingSize), nullptr);
+    const int size = FinalizeResolvedStat(total);
     if (size <= 0)
     {
         throw std::runtime_error(
@@ -586,11 +586,6 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 void BaseManager::ProduceResources()
 {
     m_pResources->ProduceResources(m_effects.Get());
-}
-
-void BaseManager::ApplyMineralSupport()
-{
-    ApplyMineralSupportAtBase(*this);
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const

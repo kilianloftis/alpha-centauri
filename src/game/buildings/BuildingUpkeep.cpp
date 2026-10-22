@@ -68,8 +68,8 @@ int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
     const std::vector<ActiveEffect_t> matching =
         MatchingFacilityUpkeepEffects_(rBuilding, effects, pOriginBase, ctx);
     // FacilityEnergyUpkeep is RawScaled: seed with the building's base upkeep.
-    const int resolved = FinalizeResolvedStat(
-        ResolveStatModifiers(matching, static_cast<double>(rBuilding.upkeep), &ctx).total);
+    const double seed = static_cast<double>(rBuilding.upkeep);
+    const int resolved = FinalizeResolvedStat(ResolveStatModifiers(matching, seed, &ctx).total);
     return std::max(0, resolved);
 }
 
@@ -98,8 +98,8 @@ std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     {
         const std::vector<ActiveEffect_t> matching =
             MatchingFacilityUpkeepEffects_(*rLine.pConfig, effects, pOriginBase, ctx);
-        const int resolved = FinalizeResolvedStat(
-            ResolveStatModifiers(matching, static_cast<double>(rLine.pConfig->upkeep), &ctx).total);
+        const double seed = static_cast<double>(rLine.pConfig->upkeep);
+        const int resolved = FinalizeResolvedStat(ResolveStatModifiers(matching, seed, &ctx).total);
         rLine.upkeepPerCopy = std::max(0, resolved);
         lines.push_back(rLine);
     }

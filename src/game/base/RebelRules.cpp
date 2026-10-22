@@ -50,7 +50,8 @@ int DistanceBonus_(const Faction& rCandidate, const BaseManager& rRebelling,
         {
             // Candidates are pre-filtered to factions with at least one base, so this is set.
             const BaseManager* pNearest = rCandidate.FindNearestBase(rFrom);
-            return FadedBonus_(ChebyshevDistance(rFrom, pNearest->GetTile(), mapWidth), rConfig);
+            const int distance = ChebyshevDistance(rFrom, pNearest->GetTile(), mapWidth);
+            return FadedBonus_(distance, rConfig);
         }
         case RebelDistanceMode_t::HqDistance:
             return FadedBonus_(HqDistance_(rCandidate, rFrom, mapWidth, rConfig), rConfig);
@@ -59,8 +60,8 @@ int DistanceBonus_(const Faction& rCandidate, const BaseManager& rRebelling,
             int total = 0;
             for (const BaseManager& rBase : rCandidate.Bases())
             {
-                total += FadedBonus_(ChebyshevDistance(rFrom, rBase.GetTile(), mapWidth),
-                                     rConfig);
+                const int distance = ChebyshevDistance(rFrom, rBase.GetTile(), mapWidth);
+                total += FadedBonus_(distance, rConfig);
             }
             return total;
         }

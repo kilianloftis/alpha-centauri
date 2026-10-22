@@ -340,7 +340,7 @@ TEST_CASE("The score needs the faction bound to a session", "[ecology]")
                   inputs.dataContext, map, inputs.settings, k_TestFactionSeed);
     Tile& rTile = *map.GetTile(8, 8);
     BaseManager base(owner, /*baseId*/ 1, "TestBase", rTile, MakeBaseRuleset(inputs.dataContext),
-                     ctx, /*initialPopulation*/ 3);
+                     ctx, /*initialPopulation*/ 3, false);
     REQUIRE(FindCurrentGameState() == nullptr);
     CHECK_THROWS_AS(base.GetEcologicalDamage(), std::logic_error);
 }

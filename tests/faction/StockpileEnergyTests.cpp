@@ -5,6 +5,7 @@
 
 #include "GameFixtures.h"
 
+#include "game/economy/EconomyMutations.h"
 #include "game/CurrentGameState.h"
 #include "game/production/IConstructable.h"
 #include "game/faction/Faction.h"
@@ -117,7 +118,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.state.AllocateBaseId(),
                                                "TestBase", rFixtures.At(8, 8), rules,
-                                               rFixtures.ctx);
+                                               rFixtures.ctx, std::nullopt, false);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;
@@ -587,7 +588,7 @@ TEST_CASE("Mineral support claims the bank before stockpile conversion",
 
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
-    base.ApplyMineralSupport();
+    ApplyMineralSupportAtBase(base);
     CHECK(base.GetResources().GetMineralBank() == 4);
 
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::InProgress);

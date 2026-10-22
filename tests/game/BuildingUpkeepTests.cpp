@@ -235,13 +235,13 @@ TEST_CASE("FacilityEnergyUpkeep modifiers apply via buildingFilter", "[building]
     ActiveEffect_t idFx{rId, "test", nullptr};
     ActiveEffect_t catFx{rCat, "test", nullptr};
 
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, {}) == 2);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{allFx}) == 1);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{idFx}) == 1);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{idFx}) == 5);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, {}, nullptr) == 2);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{allFx}, nullptr) == 1);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{idFx}, nullptr) == 1);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{idFx}, nullptr) == 5);
     // Discover category −50% on granted_hall (upkeep 5): 5 × 0.5 → lround 3
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{catFx}) == 3);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{catFx}) == 2);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{catFx}, nullptr) == 3);
+    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{catFx}, nullptr) == 2);
 }
 
 TEST_CASE("Discovered tech FacilityEnergyUpkeep reduces maintenance", "[building][upkeep][tech]")

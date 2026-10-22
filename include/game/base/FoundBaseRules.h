@@ -34,6 +34,6 @@ bool FoundedBaseMayOccupyWater(const Unit& rUnit);
 
 // Resolve StartingMinerals for a newly created base: base-level effects (SE, secret
 // projects, …) plus the founding unit's live effects when provided. Floored at 0.
-int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit = nullptr);
+int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit);
 
 } // namespace ac

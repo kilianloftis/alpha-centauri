@@ -95,8 +95,8 @@ public:
         Tile& tile,
         const BaseRuleset_t& rRules,
         TileEffectsContext& rTileEffects,
-        std::optional<int> initialPopulation = std::nullopt,
-        bool bMayOccupyWater = false);
+        std::optional<int> initialPopulation,
+        bool bMayOccupyWater);
     ~BaseManager();
 
     // Capture identity, size, buildings, production, and stockpiles for transfer.
@@ -214,9 +214,6 @@ public:
     // Collects nutrients and minerals and splits energy, once per turn in ResourceCollection.
     void ProduceResources();
 
-    // Charges home-unit support against this turn's minerals, disbanding if short, between
-    // ProduceResources and BaseProduction.
-    void ApplyMineralSupport();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
     std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;

@@ -48,6 +48,13 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** each caller should take its size, colour and thickness from its style, which
   touches every UI slice.
 
+### `CollectDestroyableFacilities` and `DestroyRandomFacilities` — two exclusion flags
+- **Where:** `include/game/buildings/BuildingRules.h:40-41`, `BuildingMutations.h:31-32`;
+  conquest passes literal `false, true`, the DestroyFacility effect passes config fields
+- **Problem:** `bExcludeHq` and `bExcludeSecretProjects` choose which facilities qualify.
+- **Why not local:** an exclusion policy type would be shared with `DestroyFacilityEffect_t`,
+  which already carries the same two fields.
+
 ## Rule 6: speculative code
 
 ### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
@@ -128,6 +135,13 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** each needs its tests rewritten, and the snapshot pair is a save/load design
   question.
 
+### Base and building queries used only by tests
+- **Where:** `BaseManager::GetMineralSupportCost` (2), `GetDroneModifier` (3),
+  `GetTalentModifier` (3); `BuildingConfig_t::GetUpkeep` (1); `BuildingUpkeepLine_t::UpkeepPerCopy`
+  (6); `ResolveFacilityEnergyUpkeepPerCopy` (7); `CountFactionOrbitalBuildings` (6)
+- **Problem:** no production caller.
+- **Why not local:** each needs its tests rewritten against behaviour.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -165,6 +179,12 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** over 100 lines; its passes (cloudmass, ocean moisture, rain belts,
   smoothing) share several grids, so splitting it needs a state struct. Confirm each pass
   against the disassembly while splitting.
+
+### `BaseManager::BaseManager`
+- **Where:** `src/game/base/BaseManager.cpp`, 103 lines, eight parameters
+- **Problem:** the member initializer list builds every subsystem with nested calls.
+- **Why not local:** over 100 lines; naming the intermediate values needs factory helpers for
+  the subsystems, since an initializer list has no statements.
 
 ## Duplicated logic
 
