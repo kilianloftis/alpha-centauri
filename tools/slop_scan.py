@@ -31,7 +31,7 @@ CONTROL_KEYWORDS = {
     "noexcept", "throw", "co_return", "static_assert", "alignas", "requires", "defined",
 }
 HISTORY_PHRASES = re.compile(
-    r"\b(used to|no longer|previously|formerly|was a bug|it was|replaces|replaced|legacy|"
+    r"\b(used to|no longer|previously|formerly|was a bug|replaces|replaced|legacy|"
     r"backwards?[- ]compat\w*|old code|anymore|any more|now (?:uses|reads|takes|lives|goes|"
     r"calls|returns|throws|happens|runs))\b",
     re.IGNORECASE,
@@ -330,6 +330,8 @@ def check_pass_through(path: Path, code: str) -> list[Hit]:
         if not re.match(r"^[\w:\.\->\*\[\]]+\s*(?:<[^()]*>)?\s*\(.*\)$", statement):
             continue
         if re.search(r"[+\-*/%<>]=?\s|&&|\|\||\?", statement.split("(")[0]):
+            continue
+        if re.search(r"&&|\|\||\?|==|!=", statement):
             continue
         hits.append(Hit(path, fn.line, "4", f"{fn.name} forwards to {statement.split('(')[0]}"))
     return hits
