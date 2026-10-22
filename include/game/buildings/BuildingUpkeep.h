@@ -9,10 +9,7 @@
 namespace ac
 {
 
-// One building type's contribution to energy-credit upkeep (owned copy count × effective
-// per-copy upkeep). Built for UI: name/id via pConfig, resolved per-copy cost, and line total.
-// Only constructed buildings count — continuous GrantBuilding expansions (e.g. Command Nexus)
-// never enter BuildingManager and therefore never appear here.
+// One building type's upkeep line for the UI. Only constructed copies count, never grants.
 struct BuildingUpkeepLine_t
 {
     const BuildingConfig_t* pConfig = nullptr;
@@ -24,9 +21,7 @@ struct BuildingUpkeepLine_t
     int TotalUpkeep() const { return count * upkeepPerCopy; }
 };
 
-// Effective energy upkeep for one copy of rBuilding given the faction's active effects.
-// Context-free (skips conditioned effects). TagsOriginBase scopes apply only when
-// pOriginBase is non-null and matches ActiveEffect_t::originBase.
+// One copy's energy upkeep, context-free. Base-tagged scopes need a matching pOriginBase.
 int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
                                        std::span<const ActiveEffect_t> rEffects,
                                        const BaseManager* pOriginBase = nullptr);

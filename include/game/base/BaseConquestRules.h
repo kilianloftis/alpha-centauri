@@ -17,10 +17,8 @@ struct BuildingConfig_t;
 // Owner units that still hold the base against capture.
 bool HasBaseGarrison(const BaseManager& rBase);
 
-// Capturer may take an undefended base once on its tile. Domain / channel-crossing
-// entry is gated by TryStep (CanEnterTile) and the garrison by HasBaseGarrison, so this
-// asks only about the unit: CannotCaptureBases is the sole veto (Needlejet / Missile
-// chassis, noncombat weapon modules).
+// Whether this unit may take an undefended base it stands on; CannotCaptureBases is the only
+// veto. Entry and garrison are checked elsewhere.
 bool CanCaptureBase(const Unit& rCapturer);
 
 // Human ↔ Progenitor conquest uses the harsher population rule.

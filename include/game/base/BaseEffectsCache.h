@@ -13,23 +13,12 @@ class BaseManager;
 class IEffectsProvider;
 class SocialRatingRegistry;
 
-// Assembles the effect list a base resolves against, and memoizes it.
-//
-// Three lists, deliberately distinct:
-//   - the *local* list, used only to accumulate this base's social ratings
-//   - the *composed* list, which also carries world / council effects
-//   - the final list, which is the composed one plus the gameplay effects of the rating
-//     levels the local one produced
-//
-// Ratings are a faction-internal axis, so they must accumulate from the local pool even though
-// the base resolves against the composed one. Keeping that asymmetry in one class is the point:
-// the number the UI reports and the effects the base resolves cannot disagree.
+// Assembles and memoizes a base's effects. Ratings accumulate from the local list, but the base
+// resolves the composed list plus their level effects, so UI and rules agree.
 class BaseEffectsCache
 {
 public:
-    // rBase is the base being assembled for; it must outlive this cache, which it does because
-    // BaseManager owns it. The provider is a constructor argument because the cache is unusable
-    // without one, and rebindable because a base changes owner.
+    // rBase owns this cache. The provider is rebindable, since a base changes owner.
     BaseEffectsCache(const BaseManager& rBase, const SocialRatingRegistry& rSocialRatings,
                      const IEffectsProvider& rProvider);
     ~BaseEffectsCache() = default;

@@ -62,11 +62,8 @@ std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEf
 
 WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& tile)
 {
-    // The base tile is worked for free by this base alone, so it is claimed in the world
-    // index for the base's lifetime — another base can never work it. A worker currently
-    // on the tile is displaced, and its own base auto-reassigns it to the best free tile
-    // in its radius. Throws only if the tile is another base's own tile, which a founding
-    // flow must never allow.
+    // The base works its own tile, claimed for life; a worker there is displaced and its base
+    // reassigns it. Throws only if the tile is another base's.
     return rTileEffects.GetWorldMap().GetWorkedTiles().ClaimDisplacing(tile, /*bUserAssigned*/false);
 }
 
@@ -160,10 +157,8 @@ BaseManager::BaseManager(
     m_pWorkerAssignments->AutoAssignWorkers();
     m_pPopulation->OnPopLost.Connect([this](int newSize) {
         OnPopLost.Emit(newSize);
-        // The one place "a base with no pops is gone" is decided, whatever emptied it —
-        // starvation, a production pop cost, genetic plague, conquest, a world event.
-        // RazeBase only marks; this object stays alive until the next ReapRazedBases, so
-        // returning into the middle of whatever caused the loss is safe.
+        // The one place an empty base is decided gone, whatever emptied it. RazeBase only marks, so
+        // returning into the caller is safe.
         if (newSize == 0)
         {
             m_pFaction->RazeBase(*this);
@@ -216,9 +211,7 @@ BaseManager::~BaseManager()
         // MarkRazed_ already did both, back when the base left the game.
         return;
     }
-    // Emitted first, while every member is still fully alive, so an observer (BaseView's
-    // pop-on-destroy) can drop its reference before the object actually goes away — mirrors
-    // UnitManager::OnUnitDestroyed's "signal before erase" contract.
+    // First, while every member is alive, so observers can drop their reference.
     OnDestroyed.Emit();
     m_rTileEffects.RemoveOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 }
@@ -689,10 +682,8 @@ void BaseManager::RebindFaction(Faction& rFaction)
     m_pBuildings->RebindResearch(rFaction.GetResearch());
     m_pResources->RebindCommerce(rFaction.GetCommerce());
 
-    // Buildings and stockpiles live in shared registries, so a pointer stays valid when
-    // the new owner has the required tech. Unit designs are owned by Military: re-home to
-    // the new owner's copy when they have the design and the component techs, otherwise
-    // drop that slot (mineral stockpile kept either way).
+    // Buildings and stockpiles are shared configs and stay if the new owner has the tech. A unit
+    // design re-homes to the new owner's copy if it can build it, else the slot drops.
     const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
     auto rehome = [&](const IConstructable* pItem) -> const IConstructable*
     {

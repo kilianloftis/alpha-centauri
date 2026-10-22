@@ -14,9 +14,7 @@ class BaseManager;
 class BuildingRegistry;
 class ResearchManager;
 
-// BuildingManager tracks all buildings present in a single base.
-// Buildings are added by id (looked up via BuildingRegistry) and destroyed by id.
-// Provides aggregate bonus queries that sum across all held buildings.
+// The buildings in one base.
 class BuildingManager
 {
 public:
@@ -24,19 +22,15 @@ public:
                     const ResearchManager& rResearchManager);
     ~BuildingManager();
 
-    // Whether buildingId may be added here: unknown ids and duplicates of a non-allowMultiple
-    // building are rejected, as is a secret project already built or destroyed anywhere in the
-    // world. Throws only if the id is unknown, or a secret project is queried with no current
-    // game state.
+    // Rejects unknown ids, duplicates of a single-copy building, and secret projects built or
+    // destroyed anywhere. Throws for an unknown id.
     bool CanAddBuilding(const BuildingId_t& buildingId) const;
 
     // Add a building by id. Throws unless CanAddBuilding holds — callers that can legitimately
     // lose a race (production completion) must check first.
     void AddBuilding(const BuildingId_t& buildingId);
 
-    // Destroy the first building with the given id. No-op if not present. Emits
-    // OnBuildingDestroyed after a successful erase so deploy ledger / SP tombstone subscribers
-    // do not have to be hand-wired at every call site.
+    // Destroys the first copy, then emits OnBuildingDestroyed. No-op if absent.
     void DestroyBuilding(const BuildingId_t& buildingId);
 
     // Fired after DestroyBuilding removes a constructed copy (config pointer is registry-owned).
@@ -56,17 +50,13 @@ public:
     // Passes rOriginBase into AppendActiveEffects so TagsOriginBase scopes are tagged.
     std::vector<ActiveEffect_t> CollectEffects(const BaseManager& rOriginBase) const;
 
-    // Get a list of buildings that can be constructed at this base.
-    // Discovered techs are read from the associated ResearchManager.
-    // Base-local rules (allowMultiple, already built) are applied here.
+    // Buildings this base can construct now, by tech and base-local rules.
     std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction() const;
 
     // Bumped on every building mutation; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
-    // Ownership transfer (BaseManager::RebindFaction): tech-gated construction availability
-    // must read the new owner's discovered techs from the next
-    // GetBuildingsAvailableForConstruction call.
+    // For ownership transfer: availability reads the new owner's techs from now on.
     void RebindResearch(const ResearchManager& rResearch);
 
 private:

@@ -34,10 +34,8 @@ bool FacilityUpkeepEffectApplies_(const ActiveEffect_t& rEffect,
     return true;
 }
 
-// rCtx carries pOriginBase as the base subject so a BaseSize-scaled upkeep modifier resolves
-// (FacilityEnergyUpkeep is Base-domain, and this is the stat's only resolve site). Conditional
-// effects are still rejected by FacilityUpkeepEffectApplies_ — per-building upkeep has no
-// defined conditional rule yet.
+// pOriginBase is the base subject, so BaseSize-scaled upkeep resolves. Conditional effects
+// are still rejected: per-building upkeep has no conditional rule yet.
 std::vector<ActiveEffect_t> MatchingFacilityUpkeepEffects_(
     const BuildingConfig_t& rBuilding,
     const std::vector<ActiveEffect_t>& rEffects,

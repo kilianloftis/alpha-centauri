@@ -11,10 +11,8 @@ namespace ac
 namespace
 {
 
-// Unconditional abort with a diagnostic. Used by the noexcept claim paths below, where an
-// invariant violation is a programming error that must not be swallowed: throwing would
-// call std::terminate without a message, and assert() would compile out under NDEBUG and
-// leave the erase() calls to corrupt the index silently.
+// Aborts with a message, for the noexcept claim paths: a throw would terminate silently, and
+// assert() compiles out under NDEBUG.
 [[noreturn]] void FatalInvariant_(const char* pMessage)
 {
     std::fprintf(stderr, "FATAL: %s\n", pMessage);
@@ -105,9 +103,7 @@ HomeBaseClaim HomeBaseIndex::Claim(Unit& rUnit)
 
 void HomeBaseIndex::Release_(HomeBaseClaim& rClaim)
 {
-    // Reached from ~HomeBaseClaim (implicitly noexcept) and operator=(&&) (declared noexcept):
-    // an invariant violation here is a programming error, not a recoverable runtime condition,
-    // so it aborts rather than throws — see FatalInvariant_.
+    // Reached from noexcept destructors and moves, so a violation aborts (FatalInvariant_).
     auto claimIt = std::find(m_claims.begin(), m_claims.end(), &rClaim);
     if (claimIt == m_claims.end())
     {

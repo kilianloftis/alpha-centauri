@@ -53,10 +53,7 @@ BaseEffects_t BaseEffectsCache::Build(const FactionEffects_t& rFactionEffects) c
 {
     BaseEffects_t baseEffects = CollectBaseLocal_(rFactionEffects);
 
-    // Ratings are a faction-internal axis: accumulate from the local pool only, then append
-    // the level effects onto the composed base list (which may also carry world/council
-    // StatModifiers). The two lists differ, which is why the resolver returns its effects
-    // instead of expanding in place.
+    // Ratings accumulate from the local pool, and their level effects join the composed list.
     const std::vector<ActiveEffect_t> ratingEffects =
         ResolveSocialRatingLevelEffects(CollectRatingSource(), m_rSocialRatings);
     baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),

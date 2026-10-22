@@ -17,9 +17,8 @@ struct TileResources_t
     int minerals;
 };
 
-// Per-tile yield as shown to the UI / collected in production.
-// `effective` honours MaxClamp / MinClamp on the pre-bypass lane; `potential` is the same
-// resolve with those clamps stripped (resource-bonus bypass_clamp contributions are in both).
+// Per-tile yield. `effective` honours the clamps; `potential` drops them. bypass_clamp
+// contributions are in both.
 struct TileYieldView_t
 {
     TileResources_t effective;

@@ -9,9 +9,7 @@ namespace ac
 
 void ApplyStartingMinerals(BaseManager& rBase, const Unit* pFoundingUnit)
 {
-    // Founding-only: call once from TryFoundBase after CreateBase. Transfers keep the
-    // existing ProductionManager (RebindFaction); snapshot restore uses SetMineralStockpile.
-    // Retool stays free while turn original is still null (see ProductionManager).
+    // Founding only; retooling stays free while the turn original is null.
     rBase.GetProduction().SetMineralStockpile(
         ResolveStartingMinerals(rBase, pFoundingUnit));
 }

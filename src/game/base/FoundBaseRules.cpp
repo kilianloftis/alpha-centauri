@@ -104,8 +104,8 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
 {
     std::vector<ActiveEffect_t> combined;
     const BaseEffects_t& rBaseEffects = rBase.GetBaseEffects();
-    // The same ctx filters and resolves: the base lane may carry a BaseSize amount_source, and
-    // admitting one on a subject the resolve step doesn't get is how it throws instead of scaling.
+    // The same ctx filters and resolves, so a BaseSize amount_source admitted here can be
+    // evaluated.
     const EffectContext_t ctx{.pBase = &rBase};
     for (const ActiveEffect_t& rEffect :
          FilterBaseLevelByStatId(rBaseEffects, StatId_t::StartingMinerals, &ctx))

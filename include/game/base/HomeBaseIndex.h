@@ -10,12 +10,8 @@ class BaseManager;
 class Unit;
 class HomeBaseIndex;
 
-// Move-only handle to a unit's home-base registration in HomeBaseIndex. Holding the claim
-// IS the home-base link: GetBase() is the home base while the claim is live, and destruction /
-// overwrite / clear releases the unit from that base's index. Unlike WorkedTileClaim there is
-// no exclusivity — many units may claim the same base. Only HomeBaseIndex::Claim can create a
-// non-empty claim. The index (owned by BaseManager) must outlive its claims, or destroy them
-// first: ~HomeBaseIndex orphans every outstanding claim so units never keep a dangling base.
+// Holding the claim is the home-base link; many units may claim one base. Only
+// HomeBaseIndex::Claim mints one, and ~HomeBaseIndex orphans any left.
 class HomeBaseClaim
 {
 public:
@@ -41,9 +37,8 @@ private:
     HomeBaseIndex* m_pIndex = nullptr;
 };
 
-// Per-base owner of "which units call this base home". Owned by BaseManager. Mutation happens
-// exclusively through Claim and claim release/orphan, so a destroyed base can never leave
-// units pointing at it — ~HomeBaseIndex clears every claim before the BaseManager is gone.
+// Which units call this base home. Changes only through Claim and release, so a destroyed base
+// leaves no unit pointing at it.
 class HomeBaseIndex
 {
 public:

@@ -21,12 +21,9 @@ struct OrbitalAttackResult_t
     BuildingId_t targetBuildingId;
 };
 
-// Destroy one constructed building. BuildingManager::OnBuildingDestroyed fans out to the
-// owning faction (deploy ledger) and secret-project tombstone subscribers.
-//
-// TODO: that is consistent with raze / ASAT / intercept, but the SMAC rule for *sabotage*
-// specifically is not recorded — one probe mission permanently deleting a secret project may
-// not be right.
+// Destroys one built building; OnBuildingDestroyed fans out to the deploy ledger and SP
+// tombstones.
+// TODO: whether sabotage should permanently delete a secret project is unconfirmed.
 void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuilding);
 
 // Destroy up to `count` uniformly shuffled eligible facilities. Returns the destroyed ids
@@ -34,12 +31,8 @@ void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuild
 std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
                                                   bool bExcludeSecretProjects, std::mt19937& rRng);
 
-// Player/AI-initiated ASAT using a chosen ready attacker building. Deploys that building
-// (hit or miss). On hit, destroys one instance of an orbital building on the defender.
-// On miss, may destroy the attacker per chanceOfDestructionOnFail.
-// bAttempted == false when the target is missing/non-orbital, or attackerBuildingId is not a
-// ready OrbitalAttack source for rAttacker.
-// Throws std::logic_error when rAttacker and rDefender are the same faction.
+// ASAT with a chosen ready attacker building, which deploys either way. A hit destroys one
+// defender orbital; a miss may lose the attacker. Throws for the same faction.
 OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
                                          Faction& rAttacker,
                                          Faction& rDefender,

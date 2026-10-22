@@ -27,7 +27,6 @@
 namespace ac
 {
 
-// Forward declarations
 class Pop;
 class PopulationManager;
 class WorkerAssignmentManager;
@@ -68,7 +67,7 @@ struct BaseSnapshot_t
     std::vector<std::string> productionItemIds;
     int mineralStockpile = 0;  // progress toward current production
     int nutrientStockpile = 0; // growth bank
-    // Mood state (riot / golden age). Previously not persisted — riots reset on save/load.
+    // Mood state (riot / golden age).
     MoodState_t mood;
     // Set when a sea colony pod founds this base on water. Survives transfer.
     bool bMayOccupyWater = false;
@@ -83,25 +82,12 @@ struct ProductionCompleted_t
     Unit* pUnit = nullptr; // null for buildings
 };
 
-// BaseManager coordinates base management subsystems.
-// Provides identity, position, and access to sub-managers. Sub-managers own their full
-// API surface; a method lives here only when it coordinates two or more subsystems
-// (e.g. production consuming resources, growth resolving faction effects).
+// Coordinates a base's subsystems. A method lives here only when it spans two or more.
 class BaseManager
 {
 public:
-    // rFaction is the owning faction; its lifetime must outlive this base.
-    //
-    // rRules names the ruleset pieces a base reads rather than taking the whole
-    // GameDataContext; the constructor copies each into the member or part that uses it. They
-    // are references: the composition root always supplies them, and the pointer form had
-    // three different null behaviours — throw, silent skip of all social-rating expansion, and
-    // a no-op RecalculateComposition — which is how fixture bases came to resolve ratings
-    // differently from real ones.
-    //
-    // Research manager, economy manager and effects provider are NOT parameters: they are the
-    // owning faction's, and passing them separately let a caller inject one faction's economy
-    // into another faction's base while RebindFaction silently overrode it on transfer.
+    // rFaction must outlive the base. rRules names the ruleset pieces a base reads. Research,
+    // economy and effects come from the owning faction.
     BaseManager(
         Faction& rFaction,
         BaseId_t baseId,
@@ -137,10 +123,8 @@ public:
     WorkerAssignmentManager& GetWorkerAssignments();
     const WorkerAssignmentManager& GetWorkerAssignments() const;
 
-    // Find the best available pop and user-assign them to the given tile.
-    // Priority: unassigned worker → specialist converted to worker → steal an assigned worker.
-    // No-op if the tile is not workable or no pop can be found.
-    // See WorkerAssignmentManager::UserAssignBestAvailableWorker. False means nothing changed.
+    // User-assigns the best available pop to pTile: unassigned, then a specialist, then another
+    // worker. False when nothing changed.
     bool UserAssignBestAvailableWorker(const Tile* pTile);
 
     // Resource production per turn (calculated live).
@@ -148,9 +132,7 @@ public:
     int GetMineralProduction() const;
     // Home-unit mineral support this turn (free slots applied; current roster, no disband).
     int GetMineralSupportCost() const;
-    // Turns until the queued item reaches cost at MineralsForProduction(). Empty when
-    // nothing is queued, the item never completes, or the rate is 0 with minerals still owed.
-    // Already-met cost is 1 (completes this turn).
+    // Turns until the queued item completes; empty when it never will. 1 if already met.
     std::optional<int> GetTurnsToProductionCompletion() const;
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
     // Does not include commerce.
@@ -181,9 +163,7 @@ public:
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
 
-    // Buildings this base currently receives via continuous GrantBuilding (Secret Project,
-    // etc.). Unique by id, not stored on BuildingManager. Includes a grant of a building
-    // this base has also constructed, so the UI can mark those copies.
+    // Buildings granted by continuous GrantBuilding, by id, including ones also built here.
     std::vector<const BuildingConfig_t*> GetGrantedBuildings() const;
 
 
@@ -191,21 +171,16 @@ public:
     ProductionManager& GetProduction();
     const ProductionManager& GetProduction() const;
 
-    // Bank this turn's leftover minerals into production and convert if the queue is a
-    // stockpile. Does not complete a build — BaseProduction calls TryCompleteReady, then
-    // validates the queue. Under DisableProduction returns InProgress without consuming
-    // the mineral bank.
+    // Banks this turn's leftover minerals, converting if a stockpile is queued. Does not complete;
+    // under DisableProduction it consumes nothing.
     ProductionApplyResult_t ApplyProduction();
 
-    // Complete the queued item if the stockpile already meets the current cost, without
-    // touching this turn's mineral bank. Used when a sibling prototype finishes and this
-    // queue's surcharge drops, and after hurry. Honours the same confirmation gate. An
-    // unconstructable head is not completed.
+    // Completes the queued item if its stockpile already meets cost, without this turn's bank
+    // (after a prototype surcharge drop, or a hurry).
     ProductionApplyResult_t TryCompleteReadyProduction();
 
-    // True when the DisableProduction RuleFlag is in force at this base. That is riot, and only
-    // riot: ApplyProduction does not consume minerals, hurry throws, and completion is blocked.
-    // A deferred completion is a different thing entirely — see ProductionManager::IsCompletionBlocked.
+    // DisableProduction is in force, which means riot. A deferred completion is something else
+    // (ProductionManager::IsCompletionBlocked).
     bool IsProductionDisabled() const;
 
 
@@ -225,34 +200,22 @@ public:
     const StockpileRegistry& GetStockpileRegistry() const { return m_rStockpileRegistry; }
     const SocialRatingRegistry& GetSocialRatings() const { return m_rSocialRatings; }
 
-    // Effective mineral cost of the current production item after CostMultiplier effects
-    // (e.g. Industry social-rating levels expanded into the base effect list) and the
-    // prototype surcharge when the queued unit fields a component this faction has not
-    // built. Returns 0 when nothing is queued or the item is a stockpile.
+    // The queued item's mineral cost with CostMultiplier and any prototype surcharge; 0 for none or
+    // a stockpile.
     int GetMineralCost() const;
 
-    // Energy-credit cost to finish the queued item outright. bAvailable is false when nothing
-    // is queued or the item's kind has no hurry entry (stockpiles, and anything a mod has
-    // switched off) — that is the "grey the button out" answer, not an error.
+    // bAvailable is false when nothing is queued or its kind cannot be hurried.
     HurryQuote_t QuoteHurry() const;
 
-    // Spend up to energyCredits from the owning faction treasury on minerals for the queued
-    // item, at the price QuoteHurry reports. Credits that would not buy a whole mineral are
-    // left unspent. Completes immediately when the stockpile then meets cost (same
-    // confirmation gate as TryCompleteReadyProduction). Throws if credits is not positive, if the
-    // item cannot be hurried, production is disabled, or if the treasury cannot cover
-    // the charge.
+    // Spends up to energyCredits on whole minerals at QuoteHurry's price, completing if the
+    // stockpile then meets cost. Throws on bad credits, an unhurriable item or a short treasury.
     HurryResult_t HurryProduction(int energyCredits);
 
-    // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
-    // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
-    // Resolves against the composed provider pool (BaseEffectsCache memo).
-    // Commerce is resolved inside ResourceManager via the injected CommerceCache.
+    // Collects nutrients and minerals and splits energy, once per turn in ResourceCollection.
     void ProduceResources();
 
-    // Charge home-unit mineral support against this turn's mineral bank; disband if short.
-    // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),
-    // after ProduceResources and before BaseProduction disposes leftovers.
+    // Charges home-unit support against this turn's minerals, disbanding if short, between
+    // ProduceResources and BaseProduction.
     void ApplyMineralSupport();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
@@ -263,10 +226,7 @@ public:
     // GrowthRate modifiers resolve against the same memoized base effect list.
     void ApplyGrowth();
 
-    // This base's effective social rating on one axis: faction-wide SocialRatingModifier
-    // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
-    // +1 Growth), accumulated from the faction's local pool only — peer WorldGlobal and
-    // council effects do not move ratings.
+    // Faction-wide and this base's own ThisBase rating modifiers, from the local pool only.
     int GetEffectiveSocialRating(SocialRatingId_t rating) const;
 
     int GetNutrientsRequired() const;
@@ -291,7 +251,6 @@ public:
     TileEffectsContext& GetTileEffects();
     const TileEffectsContext& GetTileEffects() const;
 
-    // Base identity
     const std::string& GetName() const;
     Faction& GetFaction();
     const Faction& GetFaction() const;
@@ -302,29 +261,19 @@ public:
     HomeBaseIndex& GetHomeUnits();
     const HomeBaseIndex& GetHomeUnits() const;
 
-    // Ownership transfer (Faction::TransferBaseTo): rebind to the new owner in place — same
-    // object, same baseId, same tile/HomeBaseIndex/WorkerAssignmentManager. Re-points every
-    // per-faction dependency this base resolves through (effects provider, research, economy)
-    // so production/tech-gated buildings and the econ split use the new owner from the next
-    // resolve. Caller still owns recalculating composition/worker assignment afterward (psych
-    // may differ under the new owner). See docs/architecture/high-level.md, "Object lifetime".
+    // For ownership transfer: the same base, re-pointed at the new owner's research, economy and
+    // effects. The caller recalculates composition and workers.
     void RebindFaction(Faction& rFaction);
 
-    // Fired exactly once, when this base leaves the game: at Faction::RazeBase if it is razed,
-    // otherwise at the start of ~BaseManager. Either way the object is still fully valid, so
-    // observers (e.g. an open BaseView) can invalidate their reference before it dangles. Not
-    // fired on ownership transfer — the object survives that; see RebindFaction / GetFaction().
+    // Once, when the base leaves the game (raze, or destruction), while still valid. Not on
+    // transfer.
     Signal<> OnDestroyed;
 
-    // True once Faction::RazeBase has run. A razed base is already out of the game — Bases()
-    // skips it and FindBase does not return it — but the object stays alive until the next
-    // Faction::ReapRazedBases, so references held across the raze do not dangle.
+    // Out of the game, but alive until the next ReapRazedBases.
     bool IsRazed() const;
 
 
-    // Keys of triggered effects carrying `oncePer` that this base has already consumed
-    // (see TriggeredEffectConfig_t::oncePer). Authored keys, so the rule spans instances
-    // rather than being tied to one config entry.
+    // oncePer keys this base has used; authored, so a rule can span config entries.
     std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
     const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
 
@@ -341,9 +290,7 @@ private:
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;
-    // The base works its own tile for free (no pop), so it holds the tile's claim in the
-    // world WorkedTileIndex for its whole life — no other base, friendly or enemy, can
-    // ever work another base's tile. Released automatically when the base is destroyed.
+    // The base's own tile, claimed for life so no other base can work it.
     WorkedTileClaim m_centerTileClaim;
     // Units that call this base home. Destroyed with the base; orphans outstanding claims
     // so units never keep a dangling BaseManager*.
@@ -356,10 +303,8 @@ private:
     const HurryProductionCalculator& m_rHurryCalculator;
     const ScrapRefundCalculator& m_rScrapCalculator;
     const ProductionConfig_t& m_rProductionConfig;
-    // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
-    // because it is rebindable; never null.
-    // Declaration order is construction order: resources depends on worker assignments
-    // and buildings, so it is declared after both.
+    // Always the owning faction; a pointer only to be rebindable.
+    // Declared after workers and buildings, which resources depends on.
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<BuildingManager> m_pBuildings;
