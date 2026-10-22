@@ -30,11 +30,6 @@ void PlayerActions::OnExitImpl()
     ResetPassState_();
 }
 
-bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
-{
-    return rUnit.RequiresOrders();
-}
-
 StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     EnsureActiveFaction_(rFaction);
@@ -96,7 +91,7 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
             continue;
         }
 
-        if (bPlayer && DoesUnitRequireOrders_(rUnit))
+        if (bPlayer && rUnit.RequiresOrders())
         {
             return StageResult_t::Yield;
         }

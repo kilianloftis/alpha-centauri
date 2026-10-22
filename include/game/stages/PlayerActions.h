@@ -32,7 +32,6 @@ private:
     // units are not recorded so a new order assigned after a mid-pass Yield can still run.
     std::unordered_set<UnitId_t> m_advancedUnitIds;
 
-    static bool DoesUnitRequireOrders_(const Unit& rUnit);
 };
 
 } // namespace ac

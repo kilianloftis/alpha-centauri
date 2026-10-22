@@ -223,6 +223,13 @@ One entry per violation, under the rule it breaks:
 - **Problem:** parses every block of production.json inline.
 - **Why not local:** over 100 lines; each block's parser fills the same config struct.
 
+### `ParseOccupantArt` and `ParseTileSet_`
+- **Where:** `src/game/display/OccupantArtParser.cpp`: `ParseOccupantArt` (107 lines),
+  `ParseTileSet_` (86 lines, nesting 6)
+- **Problem:** every art shape is parsed inline.
+- **Why not local:** over 100 lines; one parser per art shape (variants, tile sets, yield rows)
+  would each fill the shared occupant art struct.
+
 ## Duplicated logic
 
 ### Required-tech availability, in six places
