@@ -25,3 +25,13 @@ One entry per violation, under the rule it breaks:
 ## Rule 6: speculative code
 
 ## Rule 7: long functions
+
+## Single responsibility
+
+Classes that look like more than one responsibility. Record which signals they show:
+
+- after rule 7, the extracted helpers fall into groups that each touch a different subset of
+  members;
+- describing the class in one sentence needs "and";
+- the header includes from unrelated domains;
+- methods read none of the members the rest of the class shares.

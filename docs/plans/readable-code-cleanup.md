@@ -145,6 +145,8 @@ left as it is.
 - **Rule 7:** extract the steps of a long or deeply nested function into named functions in the
   same file, including the steps commit A noted. A function over 100 lines, or one whose steps
   share so much state that splitting it needs a new struct, is flagged.
+- **Single responsibility:** classes are not split in this pass. A class that shows the signals
+  in the SRP section of `refactor-flags.md` gets an entry there.
 - Changes reach callers outside the slice in the same commit.
 - If a removed component appears in `docs/architecture/`, the doc is updated in the same commit.
 

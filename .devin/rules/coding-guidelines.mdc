@@ -84,7 +84,7 @@ value-line per array, not one element per line). Do not rewrite them with
 
 ## Design
 - Each class and function has one reason to change; `code-kinds.mdc` says which kind of file
-  it belongs in.
+  it belongs in. A class can be described in one sentence without "and".
 - Derived classes are substitutable for their base. Interfaces stay narrow.
 - Depend on an interface only when it has two implementations, or a test double needs one.
 
