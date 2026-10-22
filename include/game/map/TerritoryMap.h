@@ -15,11 +15,7 @@ class BaseManager;
 // Sentinel for an unclaimed tile. FactionIds from IdAllocator are non-negative.
 inline constexpr FactionId_t k_NoFactionOwner = -1;
 
-// World-scoped ownership grid: mutually exclusive faction territory, as ClaimTerritory
-// assigns it from the live bases.
-//
-// Rebuild when a base is created, destroyed, or changes hands (GameState::RebuildTerritory
-// via Faction::OnBaseListChanged). Queries read the last rebuilt owners.
+// Faction territory, rebuilt whenever a base is created, destroyed or changes hands.
 class TerritoryMap
 {
 public:

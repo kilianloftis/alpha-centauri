@@ -158,9 +158,8 @@ void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& f
     }
 }
 
-// Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` lattice steps of
-// rOrigin. When includeOrigin is false, rOrigin itself is skipped.
-// X wraps via GetTileAtLatticeOffset; null tiles (Y out of bounds) are skipped.
+// fn(tile, distance) for every tile within Chebyshev `radius` of rOrigin, wrapping in X and
+// skipping rows off the map.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                                    int radius, bool includeOrigin, Fn&& fn)

@@ -18,10 +18,8 @@ class Unit;
 class WorldMap
 {
 public:
-    // Throws unless both dimensions are positive and width is even. width is the SMAC x
-    // wrap period (two units per tile in a row); the map holds width*height/2 tiles.
-    // Copies rMapRules and binds every tile to that copy. The map is immovable so those
-    // tile pointers stay valid.
+    // Throws unless both dimensions are positive and width (the SMAC x wrap period) is even.
+    // Immovable, since every tile points at its copy of rMapRules.
     WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules);
     WorldMap(const WorldMap&) = delete;
     WorldMap& operator=(const WorldMap&) = delete;
@@ -29,7 +27,6 @@ public:
     WorldMap& operator=(WorldMap&&) = delete;
     ~WorldMap();
 
-    // Map dimensions
     int GetWidth() const;
     int GetHeight() const;
 
@@ -42,15 +39,10 @@ public:
     int GetTileIndex(int x, int y) const;
     int GetTileIndex(const Tile& rTile) const;
 
-    // All tiles, row-major. Const-element span, not the owning vector: units, bases,
-    // UnitPositionIndex and WorkedTileIndex all hold raw Tile*, so tile addresses must stay put
-    // for the lifetime of the map. Tiles remain mutable through the pointer; reseating and
-    // clearing are what the span forbids.
+    // Row-major. A const span, so tile addresses that units and indexes hold cannot move.
     std::span<const std::unique_ptr<Tile>> GetTiles() const;
 
-    // Unit occupancy: the single owner of unit-position state. Units register/unregister
-    // themselves at construction/destruction; movement goes through
-    // UnitPositionIndex::MoveUnit (see UnitPositionIndex).
+    // The owner of unit positions.
     UnitPositionIndex& GetUnitPositions();
     const UnitPositionIndex& GetUnitPositions() const;
     // Occupants only (non-embarked). See UnitPositionIndex.

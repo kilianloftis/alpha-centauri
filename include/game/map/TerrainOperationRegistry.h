@@ -6,9 +6,7 @@
 namespace ac
 {
 
-// Former projects that place no improvement. The set is open: an operation is defined by the
-// triggered effects it runs, so a new one is a terrain.json entry rather than a code change.
-// Normally assigned from TerrainFile_t rather than loaded as its own array file.
+// Former projects that place no improvement. Assigned from TerrainFile_t.
 class TerrainOperationRegistry : public Registry<TerrainOperationConfig_t, TerrainOperationConfigParser>
 {
 };

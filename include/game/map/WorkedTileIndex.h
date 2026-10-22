@@ -10,18 +10,11 @@ namespace ac
 class Tile;
 class WorkedTileIndex;
 
-// Invoked after a claim is displaced (see WorkedTileIndex::ClaimDisplacing) so the previous
-// owner can react — a WorkerAssignmentManager re-runs auto-assignment to move the displaced
-// worker to its best remaining tile. Must remain valid for the claim's whole lifetime.
+// Called after a claim is displaced, so the owner can reassign; valid for the claim's life.
 using DisplacedWorkerHandler = std::function<void()>;
 
-// Move-only handle to a worked-tile claim in WorkedTileIndex. Holding the claim IS the
-// worker assignment: it records which tile is worked and whether the player made the
-// assignment, and it releases the tile in the index when destroyed, overwritten, or
-// cleared. Only WorkedTileIndex::TryClaim/ClaimDisplacing can create a non-empty claim,
-// so a tile can never be worked twice — the invariant is structural, not a convention.
-// The index must outlive every claim: WorldMap (which owns the index) is destroyed after
-// all factions/bases/pops — see GameState's member ordering.
+// Holding the claim is the worker assignment, and only the index mints one, so no tile is
+// worked twice. Released when destroyed or overwritten; the index must outlive it.
 class WorkedTileClaim
 {
 public:
@@ -56,12 +49,8 @@ private:
     DisplacedWorkerHandler m_onDisplaced;
 };
 
-// World-scoped owner of the "which tiles are currently worked" state — the single point
-// that enforces the one-worker-per-tile rule across ALL bases and factions (two nearby
-// bases, friendly or enemy, may never work the same tile). Owned by WorldMap, next to
-// UnitPositionIndex. Mutation happens exclusively through TryClaim/ClaimDisplacing and
-// claim release, so there is exactly one place to extend when assignments must be
-// repaired (e.g. a tile turning hostile) or reconciled after a future save-game load.
+// Which tiles are worked, across every base and faction. Changes only through TryClaim,
+// ClaimDisplacing and release.
 class WorkedTileIndex
 {
 public:
@@ -76,19 +65,13 @@ public:
     // or a base occupies it.
     bool IsWorked(const Tile& rTile) const;
 
-    // Claim rTile for a worker. Returns an empty claim (GetTile() == nullptr) if the tile
-    // is already worked — an expected outcome while probing tiles during assignment, not
-    // an error. onDisplaced, when provided, makes the claim displaceable by a base
-    // founding (see ClaimDisplacing) and is invoked after the displacement.
+    // Empty if the tile is already worked, an expected outcome while probing. onDisplaced makes
+    // the claim displaceable by a founding.
     WorkedTileClaim TryClaim(const Tile& rTile, bool bUserAssigned,
                              DisplacedWorkerHandler onDisplaced = {});
 
-    // Claim rTile for a base's own tile, displacing the worker currently on it (if any):
-    // the worker's claim is emptied and its DisplacedWorkerHandler is invoked AFTER the
-    // new claim is registered, so the previous owner's re-assignment can never take this
-    // tile back. The returned claim carries no handler and is itself not displaceable.
-    // Throws if rTile is already a base's own tile — a founding flow must never allow
-    // founding on top of an existing base.
+    // Claims a base's own tile, displacing its worker after this claim is registered, so the
+    // worker cannot take it back. Throws if it is already a base tile.
     WorkedTileClaim ClaimDisplacing(const Tile& rTile, bool bUserAssigned);
 
     // Bumped on every claim and release; consumed by derived-state caches (see lib/Revision.h).

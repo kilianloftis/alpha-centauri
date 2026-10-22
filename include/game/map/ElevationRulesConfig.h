@@ -3,9 +3,8 @@
 namespace ac
 {
 
-// config/map_rules.json — ocean line and play-time elevation edits.
-// The inclusive storage range is the world-gen preset's min_elevation / max_elevation,
-// copied onto these fields when the map is created. Yield energy uses tile_yield_rules.json.
+// config/map_rules.json: the ocean line and play-time elevation edits. The storage range is
+// copied from the world-gen preset.
 struct ElevationRulesConfig_t
 {
     // Inclusive storage range from the preset that generated this world.
@@ -23,9 +22,8 @@ struct ElevationRulesConfig_t
     int maxAdjacentDifferenceMeters = 0;
     // Former eligibility and the raise/lower energy band. Not the rolled level size.
     int referenceLevelMeters = 0;
-    // Land above this only takes forest/fungus spread when it is moist or wet. Ships the same
-    // number as reference_level_meters, but one is a spread rule and the other a terraform
-    // rule, and a mod may want to move either alone.
+    // Land above this takes forest and fungus spread only when moist or wet. Separate from
+    // reference_level_meters so a mod can move either.
     int spreadAltitudeLimitMeters = 0;
 };
 

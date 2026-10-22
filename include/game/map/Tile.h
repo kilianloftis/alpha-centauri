@@ -29,12 +29,8 @@ enum class Moisture_t
     Wet
 };
 
-// Feature ids Tile::HasFeature resolves from intrinsic tile state (elevation and the terrain
-// bools) rather than from an occupant list. Enumerator names ARE the corresponding
-// ImprovementConfig_t::id strings - magic_enum maps between the two, so there is no second
-// place to keep them in sync - and every one must exist in config/terrain.json, which
-// ValidateTerrainFeatures enforces at load. Water is not exclusive with the depth bands: a
-// submerged tile carries Water (shared sea rules) plus exactly one of Ocean/OceanShelf.
+// Features answered from intrinsic tile state. Names are the terrain.json ids (magic_enum).
+// Water is not exclusive with the depth bands: a submerged tile has one of Ocean/OceanShelf.
 enum class TerrainFeature_t
 {
     Water,
@@ -59,13 +55,8 @@ public:
     int GetX() const;
     int GetY() const;
 
-    // Terrain characteristics. GetMoisture()/SetMoisture() are the CURRENT/effective value -
-    // what rendering and GetTerrainFeatures() see, and what a Condenser's MoistureTier effect
-    // mutates via RecomputeMoisture(). GetBaseMoisture()/SetBaseMoisture() are the natural,
-    // un-condensed terrain truth set once by world generation; RecomputeMoisture always
-    // re-derives the current value from the base plus whatever Condensers currently reach
-    // this tile, so the bonus disappears cleanly the moment a Condenser is removed - never
-    // mutated incrementally, to avoid drift from overlapping Condensers or add/remove order.
+    // The effective moisture, which RecomputeMoisture re-derives from the base moisture world gen
+    // set plus Condensers in range.
     void SetMoisture(Moisture_t moisture);
     Moisture_t GetMoisture() const;
 
@@ -95,9 +86,7 @@ public:
     void SetHasAquifer(bool bHasAquifer);
     bool GetHasAquifer() const;
 
-    // Binds this tile to the occupant registry so terrain enums/bools can be mirrored as
-    // non-owning config pointers (see GetTerrainFeatures). Call once after the registry is
-    // loaded. Terrain setters refresh the cached configs whenever the registry is bound.
+    // Binds the tile to the occupant registry so terrain is mirrored as configs. Call once.
     void BindOccupants(const ImprovementRegistry& rOccupants);
 
     // Bound-registry lookup (not limited to occupants currently on this tile). Null when
@@ -112,47 +101,33 @@ public:
     void BindTileChangeListener(TileChangeListener* pListener);
     void UnbindTileChangeListener(TileChangeListener& rListener);
 
-    // Improvements placed on this tile, held as non-owning pointers into ImprovementRegistry
-    // (the same way BuildingManager holds BuildingConfig_t*): player-built improvements
-    // (Farm, Mine, Bunker) and the "Base" marker added when a base is founded here (see
-    // BaseManager). Configs are resolved by the caller (the registry funnel is
-    // TileEffectsContext); Tile never looks them up itself.
+    // Built improvements and the Base marker, as pointers into ImprovementRegistry. The caller
+    // resolves configs.
     void AddImprovement(const ImprovementConfig_t& rConfig);
     void RemoveImprovement(std::string_view improvementId);
     bool HasImprovement(std::string_view improvementId) const;
     const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
-    // Optional terrain occupants (fungus, landmarks, resource bonuses, Monolith). Axes,
-    // rivers, and aquifers stay on their own fields and are mirrored alongside these.
-    // HasTerrainFeature reports what is stored, including terrain the tile's intrinsic terrain
-    // keeps dormant (suppress_terrain); HasFeature and GetTerrainFeatures see active terrain only.
+    // Optional terrain (fungus, landmarks, Monolith). HasTerrainFeature includes dormant terrain;
+    // HasFeature and GetTerrainFeatures do not.
     void AddTerrainFeature(const ImprovementConfig_t& rConfig);
     void RemoveTerrainFeature(std::string_view featureId);
     bool HasTerrainFeature(std::string_view featureId) const;
 
-    // Routes an occupant to the list its ImprovementConfig_t::placement names. Callers that
-    // hold a config use these rather than each re-deriving which of the two lists it lives in.
+    // Routes an occupant to the list its placement names.
     void AddOccupant(const ImprovementConfig_t& rConfig);
     void RemoveOccupant(const ImprovementConfig_t& rConfig);
 
-    // Coexistence waivers earned at construction: (improvement id, occupant id) pairs a
-    // CoexistenceOverride allowed past a stock exclude. They live on the tile, not on the
-    // former, so a later occupancy sweep does not evict what was legitimately built. Dropped
-    // with the improvement they belong to (RemoveImprovement) and with the occupant they name
-    // (any terrain change), so a licence never outlives the pair it was granted for.
+    // (improvement, occupant) pairs an override allowed at construction, so a later sweep does not
+    // evict them. Dropped with either side.
     void AddCoexistenceWaiver(const std::string& rImprovementId, const std::string& rFeatureId);
     const std::vector<std::pair<std::string, std::string>>& GetCoexistenceWaivers() const;
 
-    // Terrain configs: rockiness, moisture, every active TerrainFeature_t, then optional
-    // terrain that is not dormant. Intrinsic properties are mirrored as registry pointers after BindOccupants,
-    // ordered general-to-specific (Water before its depth band).
-    // Improvements are NOT included — effect collectors iterate GetImprovements().
+    // Rockiness, moisture, active TerrainFeature_t and active optional terrain, general to
+    // specific. Not improvements.
     const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
 
-    // Every occupant on this tile: terrain configs first (general-to-specific), then
-    // improvements. fn takes a const ImprovementConfig_t& and returns true to stop the walk;
-    // ForEachOccupant returns whether it stopped, so a search reads as a predicate and a full
-    // sweep simply never returns true. Null entries are skipped.
+    // Terrain then improvements; fn returns true to stop, and so does ForEachOccupant.
     template <typename Fn>
     bool ForEachOccupant(Fn&& fn) const
     {
@@ -173,9 +148,7 @@ public:
         return false;
     }
 
-    // Returns true if featureId matches any active feature on this tile: a rockiness/moisture
-    // name, an active TerrainFeature_t, or an improvement id. Used by conditions/selectors and
-    // CanBuildImprovement, which reference features by string id.
+    // True if featureId is an active feature: an axis value, a TerrainFeature_t or an improvement.
     bool HasFeature(std::string_view featureId) const;
 
 private:
@@ -207,9 +180,8 @@ private:
     std::vector<std::pair<std::string, std::string>> m_coexistenceWaivers;
 };
 
-// Holds tile-change notifications until the batch finishes, then delivers one per tile.
-// RecomputeRivers and ApplyElevationDelta use it so a half-updated river or slope is not
-// reassessed. Nested deferrals deliver when the outermost one ends.
+// Holds tile-change notifications until the outermost deferral ends, so half-updated rivers or
+// slopes are not reassessed.
 class TileChangeDeferral
 {
 public:

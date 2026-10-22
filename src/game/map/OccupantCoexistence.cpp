@@ -55,9 +55,8 @@ const ImprovementConfig_t* FindOccupant_(const Tile& rTile, std::string_view id)
     return pFound;
 }
 
-// Stock deny when either side names the other. An override applies only when its cell
-// differs from that stock answer; a recorded waiver is a standing Allow, so it is consulted
-// only once the pair is otherwise denied and never outranks an explicit override.
+// Stock deny when either side names the other. An override applies only where it differs
+// from stock; a recorded waiver is a standing Allow that never outranks one.
 bool PairDenied_(const ImprovementConfig_t& rCandidate, std::string_view otherId,
                  const ImprovementConfig_t* pOther,
                  std::span<const CoexistenceOverrideEffect_t> overrides,
@@ -105,9 +104,8 @@ bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCand
     // an improvement built under a waiver survives later occupancy sweeps that pass none.
     const std::span<const WaiverPair_t> waivers = rTile.GetCoexistenceWaivers();
 
-    // pKnownOther is the occupant the caller is already holding; the excludes pass has only
-    // an id, and resolves it lazily so a candidate that names many absent features does not
-    // scan the tile once per name.
+    // The excludes pass has only an id, resolved lazily so a long excludes list does not rescan
+    // the tile per name.
     const auto blocked = [&](std::string_view otherId, const ImprovementConfig_t* pKnownOther)
     {
         if (otherId.empty()

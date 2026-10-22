@@ -55,10 +55,8 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     {
         return;
     }
-    // Enforced at the mutation boundary, not only at the planning layer. Callers that reason
-    // about legality first (StepEvaluator, UnitManager::CreateUnit) still do, but a caller that
-    // forgets can no longer overstack the index behind their back. Embarked passengers are
-    // exempt: they ride with their carrier and are not independent occupants.
+    // Enforced here too, so a caller that skips the legality check cannot overstack. Embarked
+    // passengers ride with their carrier and are exempt.
     if (!rUnit.IsEmbarked() && !CanPlaceUnit(rNewTile))
     {
         throw std::logic_error(
@@ -160,9 +158,8 @@ void UnitPositionIndex::NoteDisembarked_(Unit& rUnit)
 
 void UnitPositionIndex::RemoveFromTile_(Unit& rUnit)
 {
-    // rUnit.m_pTile is maintained exclusively by this class, so the lookup cannot miss.
-    // Search both lists: ClearCargoLinks_ may clear m_pCarrier before Unregister_, so
-    // IsEmbarked() is not a reliable guide to which vector still holds the pointer.
+    // Only this class sets m_pTile, so the lookup cannot miss. Both lists are searched:
+    // ClearCargoLinks_ may clear m_pCarrier before Unregister_.
     auto it = m_index.find(rUnit.m_pTile);
     if (it == m_index.end())
     {

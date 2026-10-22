@@ -111,9 +111,8 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
     std::unordered_map<std::string, std::vector<std::string>> tagToIds;
     for (const ImprovementConfig_t* pConfig : configs)
     {
-        // Derived from the entry rather than authored, so a rule about "anything a former
-        // builds" stays true for improvements that do not exist yet. Reserved: declaring it
-        // by hand would mean two sources for one tag.
+        // Derived, not authored, so a rule about "anything a former builds" covers future
+        // improvements. Declaring it by hand is rejected.
         if (IsBuildable(*pConfig))
         {
             tagToIds[std::string(k_BuildableTag)].push_back(pConfig->id);

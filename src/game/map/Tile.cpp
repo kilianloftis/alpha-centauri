@@ -383,11 +383,8 @@ const std::vector<std::pair<std::string, std::string>>& Tile::GetCoexistenceWaiv
     return m_coexistenceWaivers;
 }
 
-// A waiver licenses one improvement to share the tile with one occupant. Once that occupant
-// is gone the licence is spent: keeping it would silently re-apply if the occupant ever came
-// back (remove fungus, replant it) to an improvement no former re-earned it for. The
-// improvement side is dropped by RemoveImprovement; this covers the occupant side, and runs
-// from RefreshTerrainFeatures_ so every terrain setter is covered by one call.
+// A waiver is spent once its occupant leaves, so it cannot re-apply if the occupant returns.
+// Called from RefreshTerrainFeatures_, so every terrain setter is covered.
 void Tile::DropWaiversForAbsentOccupants_()
 {
     std::erase_if(m_coexistenceWaivers, [&](const std::pair<std::string, std::string>& rWaiver) {
@@ -402,9 +399,8 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
 
 bool Tile::HasFeature(std::string_view featureId) const
 {
-    // Intrinsic features answer from tile state, never from the improvement list - a tile
-    // cannot carry "River" or a depth band as a built improvement. The switch is
-    // exhaustive so adding a TerrainFeature_t enumerator fails to compile until handled here.
+    // Intrinsic features answer from tile state, never the improvement list. The switch is
+    // exhaustive over TerrainFeature_t.
     if (const auto feature = magic_enum::enum_cast<TerrainFeature_t>(featureId))
     {
         switch (*feature)

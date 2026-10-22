@@ -74,8 +74,7 @@ void ValidateTerrainFeatures(const ImprovementRegistry& rOccupants)
     RequireTerrainEnum_<Moisture_t>(rOccupants, "moisture");
     RequireTerrainEnum_<TerrainFeature_t>(rOccupants, "terrain feature");
 
-    // Named in C++ rather than by a terrain enum. A missing entry cannot be placed, and the
-    // caller has no later diagnostic: spread would no-op, and fungus placement would throw
+    // Named in C++, not by an enum: without the entry, spread no-ops and fungus placement throws
     // at the first patch.
     RequireOccupant_(rOccupants, ImprovementIds::k_Fungus, OccupantPlacement_t::Terrain,
                      "fungus placement");

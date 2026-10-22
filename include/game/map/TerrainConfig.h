@@ -23,16 +23,13 @@ enum class FormerDomainRule_t
     Any,         // either Former, whatever the tile is (raising and lowering land)
 };
 
-// A Former project that places no improvement: its whole result is its on_complete_effects,
-// which run against the Former's tile. The set is open — a new operation is a terrain.json
-// entry composed from the triggered effects that already exist, not a C++ change.
+// A Former project whose whole result is its on_complete_effects. New ones are terrain.json
+// entries, not C++.
 struct TerrainOperationConfig_t
 {
     std::string id;
     std::string name;
-    // Same former-project half a buildable improvement carries, so resolving either into a
-    // TerraformProject_t is one assignment rather than a field-by-field copy. Always present:
-    // an operation exists only to be run by a former.
+    // The same former-project half an improvement carries; always present.
     FormerProject_t project;
     EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;

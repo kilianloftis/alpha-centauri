@@ -16,17 +16,8 @@ class Tile;
 // Which occupants may share a tile. Kept apart from the config parser: parsing turns JSON
 // into ImprovementConfig_t, and this answers a game-rules question about two of them.
 
-// The one coexistence predicate. rCandidate is blocked by its domain, or by any occupant
-// still on the tile that either side's `excludes` names. Modders declare the relationship
-// once, on whichever side reads better, and every placement path honours it.
-//
-// leavingIds are occupants the caller is about to remove (or is re-evaluating in place), so
-// they do not block. Re-checking an occupant that is already on the tile therefore names its
-// own id, and a self-exclude does not evict the copy that is already there.
-//
-// overrides are the acting former's coexistence overrides whose conditions already passed.
-// An override applies only when its cell differs from the stock exclude. The tile's own
-// recorded waivers are folded in after them, so an override still wins a contested pair.
+// The one coexistence predicate: blocked by domain, or by an occupant either side excludes.
+// leavingIds do not block; overrides then the tile's waivers can allow a denied pair.
 bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                              std::span<const std::string> leavingIds = {},
                              std::span<const CoexistenceOverrideEffect_t> overrides = {});
@@ -43,9 +34,8 @@ std::vector<std::pair<std::string, std::string>> WaivedPairsFor(
     const Tile& rTile, const ImprovementConfig_t& rCandidate,
     std::span<const CoexistenceOverrideEffect_t> overrides);
 
-// Improvements already on the tile that cannot share it with rIncoming. Either side's
-// excludes is enough, unless an override or a recorded waiver allows the pair. Terrain
-// occupants are not listed: placing an improvement never removes terrain.
+// Improvements that cannot share the tile with rIncoming. Placing an improvement never
+// removes terrain.
 std::vector<std::string> ImprovementsDisplacedBy(
     const Tile& rTile, const ImprovementConfig_t& rIncoming,
     std::span<const CoexistenceOverrideEffect_t> overrides = {});

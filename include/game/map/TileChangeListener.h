@@ -7,9 +7,7 @@ namespace ac
 
 class Tile;
 
-// Told after a tile's improvements or characteristics change. Tile does not know what the
-// listener does with that. The session binds TileEffectsContext, which drops improvements
-// CanBuildImprovement now rejects.
+// Told after a tile's improvements or characteristics change.
 class TileChangeListener
 {
 public:
