@@ -20,7 +20,7 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
 {
     PopTypeConfig_t config;
     config.id = ConfigFields::ParseId(popJson);
-    config.name = ConfigFields::ParseName(popJson, config.id);
+    config.name = ConfigFields::ParseName(popJson, config.id, "name");
     if (!popJson.contains("display_glyph"))
     {
         throw std::runtime_error("Pop type '" + config.id

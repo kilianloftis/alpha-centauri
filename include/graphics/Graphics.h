@@ -37,22 +37,6 @@ struct Color_t
     {
         return Color_t{255, 255, 255, 255};
     }
-    static Color_t Green()
-    {
-        return Color_t{0, 255, 0, 255};
-    }
-    static Color_t Red()
-    {
-        return Color_t{255, 0, 0, 255};
-    }
-    static Color_t Blue()
-    {
-        return Color_t{0, 0, 255, 255};
-    }
-    static Color_t Yellow()
-    {
-        return Color_t{255, 255, 0, 255};
-    }
     static Color_t Black()
     {
         return Color_t{0, 0, 0, 255};
@@ -114,11 +98,8 @@ public:
     virtual float MeasureTextWidth(const std::string& text, unsigned int size) const = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;
-    // Isometric tile diamond whose axis-aligned bounding box is (x, y, width, height).
-    // Vertices: top, right, bottom, left of that box.
-    virtual void DrawDiamond(float x, float y, float width, float height, const Color_t& color,
-                             float thickness = 1.0f) = 0;
-    virtual void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness = 1.0f) = 0;
+    virtual void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color,
+                          float thickness) = 0;
     virtual unsigned int GetWindowWidth() const = 0;
     virtual unsigned int GetWindowHeight() const = 0;
 
@@ -133,6 +114,6 @@ public:
 // rEvents receives whatever this backend's window produces; the composition root owns it and
 // passes the same one to CreateInput. Throws if the backend cannot reach a usable state.
 std::unique_ptr<Graphics> CreateGraphics(PlatformEventQueue& rEvents,
-                                         const GraphicsConfig_t& rConfig = {});
+                                         const GraphicsConfig_t& rConfig);
 
 } // namespace ac

@@ -37,7 +37,8 @@ Rational_t Rational_t::Parse(const std::string& rText)
     }
 
     const int numerator = std::stoi(rText.substr(0, slash));
-    const int denominator = RequirePositiveDenominator_(std::stoi(rText.substr(slash + 1)));
+    const int rawDenominator = std::stoi(rText.substr(slash + 1));
+    const int denominator = RequirePositiveDenominator_(rawDenominator);
     return Rational_t{numerator, denominator};
 }
 
@@ -49,7 +50,8 @@ Rational_t Rational_t::ParseJson(const nlohmann::json& rJson)
     }
     if (rJson.is_number_unsigned())
     {
-        return FromInt(static_cast<int>(rJson.get<unsigned>()));
+        const int value = static_cast<int>(rJson.get<unsigned>());
+        return FromInt(value);
     }
     if (rJson.is_string())
     {

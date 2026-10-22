@@ -207,7 +207,7 @@ TEST_CASE("LoadFactionColorsFile reads text and faction primary colours", "[ui][
     CHECK(colors.textPrimary.r == 10);
     CHECK(colors.textPrimary.g == 20);
     CHECK(colors.textPrimary.b == 30);
-    CHECK(colors.LabelColor(Color_t::Yellow()).r == 10);
+    CHECK(colors.LabelColor(Color_t{255, 255, 0, 255}).r == 10);
 
     std::filesystem::remove_all("assets/factions/_test_colors");
 }

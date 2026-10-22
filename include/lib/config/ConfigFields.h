@@ -14,9 +14,8 @@ namespace ConfigFields
 // Required unique id. Reads j["id"], throwing if it is absent.
 std::string ParseId(const nlohmann::json& j);
 
-// Display name. Reads j[key] (default key "name"), falling back to `id` when absent so an
-// entry never has an empty name.
-std::string ParseName(const nlohmann::json& j, const std::string& id, const char* key = "name");
+// Required display name at j[key]. id names the entry in the error when it is absent.
+std::string ParseName(const nlohmann::json& j, const std::string& id, const char* key);
 
 // Single tech prerequisite. Reads j["required_tech"], or "" when the entry is not tech-gated.
 std::string ParseRequiredTech(const nlohmann::json& j);

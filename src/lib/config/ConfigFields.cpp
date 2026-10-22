@@ -14,7 +14,11 @@ std::string ParseId(const nlohmann::json& j)
 
 std::string ParseName(const nlohmann::json& j, const std::string& id, const char* key)
 {
-    return j.value(key, id);
+    if (!j.contains(key))
+    {
+        throw std::runtime_error("Config entry '" + id + "' is missing '" + key + "'");
+    }
+    return j.at(key).get<std::string>();
 }
 
 std::string ParseRequiredTech(const nlohmann::json& j)

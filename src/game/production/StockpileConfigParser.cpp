@@ -84,7 +84,7 @@ StockpileConfig_t StockpileConfigParser::ParseStockpileConfig_(const nlohmann::j
 {
     StockpileConfig_t config;
     config.id = ConfigFields::ParseId(stockpileJson);
-    config.name = ConfigFields::ParseName(stockpileJson, config.id);
+    config.name = ConfigFields::ParseName(stockpileJson, config.id, "name");
 
     for (const auto& [rKey, rUnused] : stockpileJson.items())
     {

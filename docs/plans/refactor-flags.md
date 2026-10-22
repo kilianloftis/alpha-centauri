@@ -31,6 +31,14 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the fix is a type or named constructors for the three origins, and every
   caller picks one.
 
+### `Graphics::DrawText` and `DrawRect` — default size, colour and thickness
+- **Where:** `include/graphics/Graphics.h:97-99`; 112 `DrawText` calls and 31 `DrawRect` calls,
+  most relying on the defaults
+- **Problem:** `size = 24`, `color = White` and `thickness = 1.0f` are UI style values hidden in
+  the graphics interface.
+- **Why not local:** each caller should take its size, colour and thickness from its style, which
+  touches every UI slice.
+
 ## Rule 6: speculative code
 
 ### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
@@ -52,6 +60,13 @@ One entry per violation, under the rule it breaks:
   three test files (`ScrapUnitTests`, `CombatRatingTests`, `UnitNamingTests`)
 - **Problem:** public only so tests can parse one entry from inline JSON.
 - **Why not local:** those tests have to go through `ParseConfig` with a temp file.
+
+### `EventBus::Unsubscribe` and `ScopedConnection::IsConnected` — used only by tests
+- **Where:** `include/lib/EventBus.h:29`, `include/lib/Signal.h:73`; `tests/lib/EventBusTests.cpp`,
+  `tests/lib/SignalTests.cpp`
+- **Problem:** no production caller; the tests check unsubscribe semantics for mod handlers that
+  do not exist yet.
+- **Why not local:** removing them drops those tests' subject; decide with the mod seams.
 
 ## Rule 7: long functions
 

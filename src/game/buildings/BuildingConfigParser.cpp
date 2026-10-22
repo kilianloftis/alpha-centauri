@@ -103,7 +103,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
 {
     BuildingConfig_t config;
     config.id = ConfigFields::ParseId(buildingJson);
-    config.name = ConfigFields::ParseName(buildingJson, config.id);
+    config.name = ConfigFields::ParseName(buildingJson, config.id, "name");
 
     for (const auto& [rKey, rUnused] : buildingJson.items())
     {

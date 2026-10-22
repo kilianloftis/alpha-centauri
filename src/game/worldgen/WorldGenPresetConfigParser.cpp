@@ -37,7 +37,7 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
 {
     WorldGenPresetConfig_t config;
     config.id = ConfigFields::ParseId(presetJson);
-    config.name = ConfigFields::ParseName(presetJson, config.id);
+    config.name = ConfigFields::ParseName(presetJson, config.id, "name");
     config.type = ParseType_(presetJson.at("type").get<std::string>());
 
     config.frequency = presetJson.value("frequency", config.frequency);

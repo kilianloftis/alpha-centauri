@@ -137,12 +137,6 @@ public:
         rects.push_back(RectDraw_t{x, y, width, height, true, rColor, drawCount++});
     }
 
-    void DrawDiamond(float x, float y, float width, float height, const ac::Color_t& rColor,
-                     float) override
-    {
-        rects.push_back(RectDraw_t{x, y, width, height, false, rColor, drawCount++});
-    }
-
     void DrawLine(float x1, float y1, float x2, float y2, const ac::Color_t& rColor,
                   float) override
     {

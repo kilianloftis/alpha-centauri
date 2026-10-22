@@ -8,6 +8,55 @@
 namespace ac
 {
 
+namespace
+{
+
+// Sets vars as globals for one evaluation and clears them however it ends.
+class ScopedGlobals_
+{
+public:
+    ScopedGlobals_(sol::state& rLua, const std::unordered_map<std::string, double>& rVars)
+        : m_rLua(rLua)
+        , m_rVars(rVars)
+    {
+        for (const auto& [name, value] : m_rVars)
+        {
+            m_rLua[name] = value;
+        }
+    }
+    ScopedGlobals_(const ScopedGlobals_&) = delete;
+    ScopedGlobals_& operator=(const ScopedGlobals_&) = delete;
+    ~ScopedGlobals_()
+    {
+        for (const auto& [name, value] : m_rVars)
+        {
+            m_rLua[name] = sol::lua_nil;
+        }
+    }
+
+private:
+    sol::state& m_rLua;
+    const std::unordered_map<std::string, double>& m_rVars;
+};
+
+lua_Number ResultNumber_(const sol::protected_function_result& rResult,
+                         const std::string& formula)
+{
+    if (!rResult.valid())
+    {
+        const sol::error err = rResult;
+        throw std::runtime_error("Lua formula error (\"" + formula + "\"): " + err.what());
+    }
+    const sol::optional<lua_Number> value = rResult.get<sol::optional<lua_Number>>();
+    if (!value)
+    {
+        throw std::runtime_error("Lua formula (\"" + formula + "\") did not return a number");
+    }
+    return *value;
+}
+
+} // namespace
+
 LuaRuntime::LuaRuntime()
 {
     // Open safe standard libraries only
@@ -56,8 +105,8 @@ sol::protected_function& LuaRuntime::LoadChunk_(const std::string& formula)
     return m_chunks.emplace(formula, chunk.get<sol::protected_function>()).first->second;
 }
 
-double LuaRuntime::EvalNumber_(const std::string& formula,
-                               const std::unordered_map<std::string, double>& vars)
+double LuaRuntime::EvalDouble(const std::string& formula,
+                              const std::unordered_map<std::string, double>& vars)
 {
     if (formula.empty())
     {
@@ -66,44 +115,13 @@ double LuaRuntime::EvalNumber_(const std::string& formula,
 
     // Before the globals are set: a formula that does not compile cannot leave any behind.
     sol::protected_function& rChunk = LoadChunk_(formula);
-
-    // Globals, so helper functions defined by config scripts can see them. Cleared afterwards so a
-    // later formula cannot read an input it forgot to set.
-    for (const auto& [name, value] : vars)
-    {
-        m_lua[name] = value;
-    }
-    const auto clearVars = [this, &vars]() {
-        for (const auto& [name, value] : vars)
-        {
-            m_lua[name] = sol::lua_nil;
-        }
-    };
-
     lua_Number number = 0.0;
-    try
     {
-        sol::protected_function_result result = rChunk();
-
-        if (!result.valid())
-        {
-            const sol::error err = result;
-            throw std::runtime_error("Lua formula error (\"" + formula + "\"): " + err.what());
-        }
-
-        const sol::optional<lua_Number> value = result.get<sol::optional<lua_Number>>();
-        if (!value)
-        {
-            throw std::runtime_error("Lua formula (\"" + formula + "\") did not return a number");
-        }
-        number = *value;
+        // Globals, so helper functions defined by config scripts can see them. Cleared afterwards
+        // so a later formula cannot read an input it forgot to set.
+        const ScopedGlobals_ globals(m_lua, vars);
+        number = ResultNumber_(rChunk(), formula);
     }
-    catch (...)
-    {
-        clearVars();
-        throw;
-    }
-    clearVars();
 
     if (!std::isfinite(number))
     {
@@ -113,16 +131,10 @@ double LuaRuntime::EvalNumber_(const std::string& formula,
     return static_cast<double>(number);
 }
 
-double LuaRuntime::EvalDouble(const std::string& formula,
-                              const std::unordered_map<std::string, double>& vars)
-{
-    return EvalNumber_(formula, vars);
-}
-
 int LuaRuntime::EvalInt(const std::string& formula,
                         const std::unordered_map<std::string, double>& vars)
 {
-    const double number = EvalNumber_(formula, vars);
+    const double number = EvalDouble(formula, vars);
 
     double integral = 0.0;
     if (std::modf(number, &integral) != 0.0)

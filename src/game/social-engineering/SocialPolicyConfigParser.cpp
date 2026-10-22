@@ -19,7 +19,7 @@ SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig_(const nlohmann
 {
     SocialPolicyConfig_t config;
     config.id = ConfigFields::ParseId(policyJson);
-    config.name = ConfigFields::ParseName(policyJson, config.id);
+    config.name = ConfigFields::ParseName(policyJson, config.id, "name");
     config.category = ParseCategory_(policyJson.at("category"));
     config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
     config.bDefault = policyJson.value("default", false);

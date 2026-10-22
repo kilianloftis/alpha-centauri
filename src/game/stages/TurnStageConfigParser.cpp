@@ -56,7 +56,7 @@ TurnStageConfig_t TurnStageConfigParser::ParseStageConfig_(const nlohmann::json&
     TurnStageConfig_t config;
     config.id = ConfigFields::ParseId(stageJson);
     config.hookContext = HookContext(config.id);
-    config.name = ConfigFields::ParseName(stageJson, config.id);
+    config.name = ConfigFields::ParseName(stageJson, config.id, "name");
     config.description = stageJson.value("description", "");
 
     if (!stageJson.contains("repeatForEachFaction"))

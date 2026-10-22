@@ -255,7 +255,7 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
 {
     ImprovementConfig_t config;
     config.id = ConfigFields::ParseId(rImprovementJson);
-    config.name = ConfigFields::ParseName(rImprovementJson, config.id);
+    config.name = ConfigFields::ParseName(rImprovementJson, config.id, "name");
     config.description = rImprovementJson.value("description", "");
     config.placement = placement;
     if (rImprovementJson.contains("mineral_cost") || rImprovementJson.contains("terraform"))

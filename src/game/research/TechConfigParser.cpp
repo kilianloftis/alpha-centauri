@@ -26,7 +26,7 @@ TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
 
     TechConfig_t config;
     config.id = ConfigFields::ParseId(techJson);
-    config.name = ConfigFields::ParseName(techJson, config.id);
+    config.name = ConfigFields::ParseName(techJson, config.id, "name");
 
     for (const auto& [rKey, rUnused] : techJson.items())
     {

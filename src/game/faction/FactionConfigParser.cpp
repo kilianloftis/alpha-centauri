@@ -93,7 +93,7 @@ FactionIdentityConfig FactionConfigParser::ParseIdentity(const nlohmann::json& j
                                                          const std::string& idFallback)
 {
     FactionIdentityConfig identity;
-    identity.name = ConfigFields::ParseName(j, idFallback);
+    identity.name = ConfigFields::ParseName(j, idFallback, "name");
     identity.descriptiveName = j.value("descriptive_name", identity.name);
     identity.noun = j.value("noun", identity.name);
     identity.adjective = j.value("adjective", identity.name);

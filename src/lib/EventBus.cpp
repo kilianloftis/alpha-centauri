@@ -15,10 +15,7 @@ SubscriptionId EventBus::Subscribe(Handler handler)
 
 void EventBus::Unsubscribe(SubscriptionId id)
 {
-    m_handlers.erase(
-        std::remove_if(m_handlers.begin(), m_handlers.end(),
-            [id](const auto& p) { return p.first == id; }),
-        m_handlers.end());
+    std::erase_if(m_handlers, [id](const auto& p) { return p.first == id; });
 }
 
 void EventBus::Publish(GameEvent event)

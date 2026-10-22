@@ -69,7 +69,7 @@ TerrainOperationConfig_t ParseOperation_(const nlohmann::json& rJson)
 {
     TerrainOperationConfig_t config;
     config.id = ConfigFields::ParseId(rJson);
-    config.name = ConfigFields::ParseName(rJson, config.id);
+    config.name = ConfigFields::ParseName(rJson, config.id, "name");
     config.energyCostSource = ParseEnumField_(rJson, "energy_cost_source",
                                               EnergyCostSource_t::Flat, config.id);
     config.formerDomain =

@@ -75,7 +75,7 @@ NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const nlohmann:
 {
     NativeUnitConfig_t config;
     config.id = ConfigFields::ParseId(rJson);
-    config.name = ConfigFields::ParseName(rJson, config.id);
+    config.name = ConfigFields::ParseName(rJson, config.id, "name");
     if (!rJson.contains("domain"))
     {
         throw std::runtime_error("Native unit '" + config.id + "' missing required 'domain'");

@@ -108,15 +108,13 @@ public:
             // Created on first use so signals nobody scopes a connection to pay nothing.
             m_pAliveToken = std::make_shared<const char>('\0');
         }
-        return ScopedConnection(this, Connect(std::move(slot)), m_pAliveToken);
+        const SlotId_t id = Connect(std::move(slot));
+        return ScopedConnection(this, id, m_pAliveToken);
     }
 
     void Disconnect(SlotId_t id)
     {
-        m_slots.erase(
-            std::remove_if(m_slots.begin(), m_slots.end(),
-                [id](const auto& entry) { return entry.first == id; }),
-            m_slots.end());
+        std::erase_if(m_slots, [id](const auto& entry) { return entry.first == id; });
     }
 
     void Emit(Args... args) const

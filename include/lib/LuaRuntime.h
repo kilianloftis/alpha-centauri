@@ -30,9 +30,6 @@ public:
                       const std::unordered_map<std::string, double>& vars);
 
 private:
-    double EvalNumber_(const std::string& formula,
-                       const std::unordered_map<std::string, double>& vars);
-
     // Compiled "return <formula>" for a formula string, compiling it on first use. Throws if
     // the formula does not compile.
     sol::protected_function& LoadChunk_(const std::string& formula);

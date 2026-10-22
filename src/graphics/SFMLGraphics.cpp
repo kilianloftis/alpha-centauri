@@ -109,7 +109,8 @@ void main()
 sf::Color ShadeColor_(float shade)
 {
     const long encoded = std::lround((shade + k_ShadeBias) * k_ShadeScale);
-    return sf::Color(static_cast<std::uint8_t>(std::clamp(encoded, 0L, 255L)), 0, 0, 255);
+    const auto red = static_cast<std::uint8_t>(std::clamp(encoded, 0L, 255L));
+    return sf::Color(red, 0, 0, 255);
 }
 
 class SFMLGraphics : public Graphics
@@ -118,8 +119,7 @@ public:
     SFMLGraphics(PlatformEventQueue& rEvents, const GraphicsConfig_t& rConfig)
         : m_rEvents(rEvents)
         , m_framerateLimit(rConfig.framerateLimit)
-        , m_window(sf::VideoMode(sf::Vector2u(rConfig.windowWidth, rConfig.windowHeight)),
-                   rConfig.windowTitle)
+        , m_window(sf::VideoMode({rConfig.windowWidth, rConfig.windowHeight}), rConfig.windowTitle)
     {
         std::cout << "[SFMLGraphics] Creating window...\n";
         if (!m_window.isOpen())
@@ -366,19 +366,6 @@ public:
         m_window.draw(rect);
     }
 
-    void DrawDiamond(float x, float y, float width, float height, const Color_t& color,
-                     float thickness) override
-    {
-        const float xMid = x + width * 0.5f;
-        const float yMid = y + height * 0.5f;
-        const float xRight = x + width;
-        const float yBottom = y + height;
-        DrawLine(xMid, y, xRight, yMid, color, thickness);
-        DrawLine(xRight, yMid, xMid, yBottom, color, thickness);
-        DrawLine(xMid, yBottom, x, yMid, color, thickness);
-        DrawLine(x, yMid, xMid, y, color, thickness);
-    }
-
     void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness) override
     {
         const float dx = x2 - x1;
@@ -392,7 +379,8 @@ public:
         sf::RectangleShape line(sf::Vector2f(length, thickness));
         line.setOrigin({0.f, thickness * 0.5f});
         line.setPosition({x1, y1});
-        line.setRotation(sf::radians(std::atan2(dy, dx)));
+        const sf::Angle angle = sf::radians(std::atan2(dy, dx));
+        line.setRotation(angle);
         line.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
         m_window.draw(line);
     }
@@ -513,9 +501,10 @@ private:
 
         if (const auto* pResized = rEvent.getIf<sf::Event::Resized>())
         {
-            m_window.setView(sf::View(sf::FloatRect(
-                {0.f, 0.f},
-                {static_cast<float>(pResized->size.x), static_cast<float>(pResized->size.y)})));
+            const sf::Vector2f size{static_cast<float>(pResized->size.x),
+                                    static_cast<float>(pResized->size.y)};
+            const sf::FloatRect area({0.f, 0.f}, size);
+            m_window.setView(sf::View(area));
             return;
         }
 
@@ -530,13 +519,13 @@ private:
 
         if (const auto* pMouse = rEvent.getIf<sf::Event::MouseButtonPressed>())
         {
-            PushMouseButton_(*pMouse, /*bPressed=*/true);
+            PushMouseButton_(*pMouse);
             return;
         }
 
         if (const auto* pMouse = rEvent.getIf<sf::Event::MouseButtonReleased>())
         {
-            PushMouseButton_(*pMouse, /*bPressed=*/false);
+            PushMouseButton_(*pMouse);
             return;
         }
 
@@ -548,8 +537,9 @@ private:
     }
 
     template <typename TMouseEvent>
-    void PushMouseButton_(const TMouseEvent& rEvent, bool bPressed)
+    void PushMouseButton_(const TMouseEvent& rEvent)
     {
+        constexpr bool bPressed = std::is_same_v<TMouseEvent, sf::Event::MouseButtonPressed>;
         if (auto mapped = MouseButtonFromSfButton(rEvent.button))
         {
             m_rEvents.PushMouse({*mapped, static_cast<int>(rEvent.position.x),

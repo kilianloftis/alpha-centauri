@@ -82,7 +82,7 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig_(
 {
     CouncilProposalConfig_t config;
     config.id = ConfigFields::ParseId(proposalJson);
-    config.name = ConfigFields::ParseName(proposalJson, config.id);
+    config.name = ConfigFields::ParseName(proposalJson, config.id, "name");
     config.description = proposalJson.value("description", std::string());
     config.kind = ParseKind_(proposalJson.value("kind", "standard"));
     config.voteWeight = ParseVoteWeight_(proposalJson.value("vote_weight", "representative"));

@@ -26,7 +26,8 @@ Enum_t EnumFromName(const std::string& rValue, std::string_view what)
     const std::string normalized = ToLowerAscii(rValue);
     for (const Enum_t value : magic_enum::enum_values<Enum_t>())
     {
-        if (ToLowerAscii(std::string(magic_enum::enum_name(value))) == normalized)
+        const std::string name(magic_enum::enum_name(value));
+        if (ToLowerAscii(name) == normalized)
         {
             return value;
         }

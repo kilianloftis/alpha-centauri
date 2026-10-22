@@ -138,7 +138,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
 {
     UnitComponentConfig_t config;
     config.id = ConfigFields::ParseId(rComponentJson);
-    config.name = ConfigFields::ParseName(rComponentJson, config.id);
+    config.name = ConfigFields::ParseName(rComponentJson, config.id, "name");
     config.unitName = rComponentJson.value("unit_name", "");
     config.type = rComponentJson.at("type").get<std::string>();
     config.requiredTech = ConfigFields::ParseRequiredTech(rComponentJson);
