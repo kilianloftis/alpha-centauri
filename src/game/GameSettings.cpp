@@ -17,9 +17,8 @@ namespace ac
 namespace
 {
 
-// user_settings.json is hand-editable, so Load is a trust boundary: a value that reaches
-// WorldGenerator has already been checked here, and the message names the file and the key
-// rather than surfacing from inside generation.
+// user_settings.json is hand-edited, so values are checked here, with the file and key in the
+// message.
 void ValidateMapGeneration_(const MapGenerationConfig_t& rConfig, const std::string& rPath)
 {
     const auto fail = [&rPath](const std::string& rMessage) {
@@ -45,8 +44,8 @@ void ValidateMapGeneration_(const MapGenerationConfig_t& rConfig, const std::str
     }
 }
 
-// A section that is present but not an object is a hand-edit mistake, not an absent section:
-// silently substituting defaults is how a user loses their settings without being told.
+// A section that is present but not an object is a hand-edit mistake; defaulting it would
+// lose the user's settings silently.
 const nlohmann::json* FindSection_(const nlohmann::json& rJson, const char* name,
                                    const std::string& rPath)
 {
@@ -103,8 +102,7 @@ void LoadGraphics_(const nlohmann::json& rJson, GraphicsConfig_t& rConfig,
     rConfig.framerateLimit = pSection->value("framerate_limit", rConfig.framerateLimit);
     if (pSection->contains("font_paths"))
     {
-        // Replaces the defaults rather than appending: a player naming a font wants that font,
-        // and the built-in paths are only a guess at where a distro puts one.
+        // A player naming a font wants that font, so the list is replaced, not appended to.
         rConfig.fontPaths =
             ConfigFields::ParseStringArray(*pSection, "font_paths");
     }
@@ -346,8 +344,7 @@ void GameSettings::Save() const
 
 void GameSettings::Save(const std::string& path) const
 {
-    // One block per config struct, so a new knob has an obvious home and Save/Load do not have
-    // to be kept in lockstep by hand.
+    // One block per config struct, so a new knob has an obvious home.
     nlohmann::json json;
     json["game_rules"] = {
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},

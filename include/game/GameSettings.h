@@ -13,10 +13,8 @@
 namespace ac
 {
 
-// Cross-save player preferences (not part of GameState / save-game serialization).
-// Owned by Engine; GameState holds a non-owning reference for stage and UI access.
-// Domain getters are const-only; mutate via Set* (emits the matching domain signal when
-// the value actually changes).
+// Player preferences kept across saves, owned by Engine. Set* emits the domain's signal when the
+// value changes.
 class GameSettings
 {
 public:
@@ -24,8 +22,7 @@ public:
 
     const GameRulesConfig_t& GetGameRules() const { return m_gameRules; }
     void SetGameRules(const GameRulesConfig_t& rConfig);
-    // Bumped whenever game rules actually change. FactionEffectsPool samples it so a
-    // mid-campaign difficulty switch invalidates every faction's cached effect list.
+    // Bumped when game rules change, so a difficulty switch refreshes every faction's effects.
     const Revision& GetGameRulesRevision() const { return m_gameRulesRevision; }
 
     const VisibilityConfig_t& GetVisibility() const { return m_visibility; }
@@ -34,7 +31,6 @@ public:
     const PauseOnEventsConfig_t& GetPauseOnEvents() const { return m_pauseOnEvents; }
     void SetPauseOnEvents(const PauseOnEventsConfig_t& rConfig);
 
-    // Convenience accessors used by UI and turn flow.
     bool IsPauseAtEndOfTurn() const { return m_gameRules.pauseAtEndOfTurn; }
     void SetPauseAtEndOfTurn(bool value);
 
@@ -50,22 +46,14 @@ public:
     // Read once, when Engine builds the graphics backend; there is no runtime re-apply.
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
-    // Missing file leaves defaults (pause off, lethal low-fuel auto-return on, shroud/fog
-    // on, all pause-on-events prompts on, default map generation).
-    // Unreadable or corrupt file throws. Remembers the path, so Save() round-trips to wherever
-    // this object was loaded from.
+    // A missing file leaves the defaults; an unreadable one throws. Remembers the path for Save.
     void Load(const std::string& path = kDefaultPath);
 
-    // Writes to the remembered path. A settings object that has never been loaded writes to
-    // kDefaultPath *relative to the current working directory*, which is why the path is
-    // remembered rather than defaulted at every call site: the settings UI saves on every
-    // toggle, and a process run from elsewhere would otherwise scribble a fresh file there.
+    // Writes to the remembered path, or kDefaultPath under the working directory if never loaded.
     void Save() const;
     void Save(const std::string& path) const;
 
-    // Point this object at a different file without reading it. For tests and for any future
-    // profile switching; without it, exercising the settings UI overwrites the developer's own
-    // user_settings.json.
+    // Points Save at another file, so tests do not overwrite the developer's settings.
     void SetSavePath(std::string path) { m_path = std::move(path); }
 
     Signal<> OnGameRulesChanged;

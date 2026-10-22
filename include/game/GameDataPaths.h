@@ -5,14 +5,12 @@
 namespace ac
 {
 
-// Default filesystem locations for every config LoadGameData reads. Tests can override
-// individual fields to point at fixtures / temp files.
+// Where LoadGameData reads each config. Tests point fields at fixtures.
 struct GameDataPaths
 {
     std::string popTypes = "config/pop_types.json";
     std::string buildings = "config/buildings";
-    // Channel id → default draw layer for building map overlays (not under buildings/, which
-    // merges every top-level *.json as a building array).
+    // Not under buildings/, which loads every *.json there as buildings.
     std::string mapOverlayChannels = "config/map_overlay_channels.json";
     // Population → map base size stage (size1…sizeN) and optional stage-bump buildings.
     std::string baseSpriteSizes = "config/base_sprite_sizes.json";

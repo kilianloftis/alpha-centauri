@@ -53,9 +53,8 @@ void ValidateRequiredTech(const std::vector<TConfig>& rConfigs, const TechRegist
     }
 }
 
-// required_tech on the former-project half of an entry. An improvement carries one only when
-// a former can build it; every terrain operation carries one. Both shapes are the same struct,
-// so one check covers them.
+// An improvement's former project has a tech only when a former can build it; every terrain
+// operation has one.
 void ValidateProjectTech_(const std::string& rId, const FormerProject_t& rProject,
                           const TechRegistry& rTechs, const char* what)
 {

@@ -73,9 +73,8 @@ GameDataContext& GameDataContext::operator=(GameDataContext&&) noexcept = defaul
 
 void ThrowIfIncomplete(const GameDataContext& rData)
 {
-    // Consumers take these as references and dereference without checking, so an incomplete
-    // context must never escape the loader. Named individually: "something is null" is not a
-    // diagnostic a modder can act on.
+    // Consumers dereference these without checking. Named one by one, so a modder can act on the
+    // message.
     const std::pair<const void*, const char*> required[] = {
         {rData.buildingRegistry.get(), "buildingRegistry"},
         {rData.mapOverlayChannels.get(), "mapOverlayChannels"},
@@ -266,9 +265,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     BaseConquestConfigParser conquestParser;
     rData.baseConquestConfig =
         std::make_unique<BaseConquestConfig_t>(conquestParser.ParseConfig(rPaths.baseConquest));
-    // Escape-pod components are only assembled on a cross-species capture, which can be hours
-    // into a session. Validating the ids here turns a typo in base_conquest.json into a startup
-    // error naming the file, instead of a mid-game failure at the one moment the rule fires.
+    // Escape pods are assembled only on a cross-species capture, so their ids are checked at load.
     for (const std::string& rComponentId : rData.baseConquestConfig->escapeColonyPod.componentIds)
     {
         if (!rData.unitComponentRegistry->Find(rComponentId))
@@ -290,8 +287,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.atrocitiesConfig =
         std::make_unique<AtrocitiesConfig_t>(atrocitiesParser.ParseConfig(rPaths.atrocities));
 
-    // Effect-declaring, not a Lua formula: prototype starting-XP (and any other universal
-    // production rules) live here, so ValidateEffectReferences must see this before it runs.
+    // Declares effects (prototype starting XP), so it loads before ValidateEffectReferences.
     ProductionConfigParser productionParser;
     rData.productionConfig =
         std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
@@ -316,8 +312,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>(
         worldEventsParser.ParseConfig(rPaths.worldEvents));
 
-    // pop_composition.json: drone clamps (effects) plus mood thresholds (plain scalars). Loaded
-    // before the Lua-backed calculators that consume it.
+    // Drone clamps and mood thresholds, loaded before the Lua calculators that use them.
     PopCompositionConfigParser compositionParser;
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
         compositionParser.ParseConfig(rPaths.popComposition));
@@ -337,8 +332,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         }
     }
 
-    // Effect-declaring and Lua-backed at once: the runtime is created here so eco_damage.lua
-    // can load before ValidateEffectReferences walks eco_damage.json's effect lists.
+    // Created here so eco_damage.lua loads before ValidateEffectReferences walks eco_damage.json.
     rData.luaRuntime = std::make_unique<LuaRuntime>();
     EcoDamageConfigParser ecoDamageParser;
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(

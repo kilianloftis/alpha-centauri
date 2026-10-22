@@ -56,13 +56,9 @@ private:
     // Over m_pGraphics, so it is declared after it and torn down before it.
     std::unique_ptr<SpriteLibrary> m_pSprites;
     std::unique_ptr<Input> m_pInput;
-    // Declared before every live-state member below: Faction, BaseManager, and
-    // TileEffectsContext all hold non-owning references into the definition data, so it
-    // must outlive them. Members are destroyed in reverse declaration order, so GameState
-    // (and every faction/base/unit it owns) is torn down while this is still alive.
+    // Before every live-state member: factions, bases and tile effects hold references into it.
     std::unique_ptr<const GameDataContext> m_gameDataContext;
-    // Resolved once in Initialize_ (map config seed, or a drawn one when that is 0) and used to
-    // derive every per-faction seed, so a session's random choices are reproducible.
+    // Resolved once by StartNewGame_; every per-faction seed derives from it.
     unsigned int m_sessionSeed = 0;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;

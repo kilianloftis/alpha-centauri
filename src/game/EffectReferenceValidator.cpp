@@ -102,9 +102,8 @@ struct EffectPayloadValidator
     void operator()(const RuleFlagEffect_t&) const {}
     void operator()(const SocialEngineeringOverrideEffect_t&) const {}
     void operator()(const DiplomaticModifierEffect_t&) const {}
-    // The rating axis has to exist in the rating registry: SocialRatingResolver looks the table
-    // up whenever the accumulated total is non-zero, which is the first turn after a player
-    // adopts the policy that declares this modifier.
+    // The rating axis must exist: SocialRatingResolver looks it up once the policy's total is
+    // non-zero.
     void operator()(const SocialRatingModifierEffect_t& rModifier) const
     {
         if (pSocialRatings && !pSocialRatings->Find(SocialRatingIdToString(rModifier.rating)))
@@ -138,9 +137,7 @@ struct EffectPayloadValidator
     }
 };
 
-// The same for TriggeredEffectVariant_t. A separate visitor rather than a shared one: the two
-// variants have no alternatives in common, and an exhaustive visitor per family is what makes
-// adding an alternative to either break the build here.
+// The same for TriggeredEffectVariant_t, exhaustive so a new alternative breaks the build here.
 struct TriggeredPayloadValidator
 {
     const std::string& rSourceId;
@@ -169,8 +166,7 @@ struct TriggeredPayloadValidator
         }
     }
 
-    // Validated here rather than at spawn: a granted unit may be assembled hours into a
-    // session, and a typo should fail at startup naming the config, not mid-rule.
+    // Checked at load: a unit may be granted hours into a session.
     void operator()(const GrantUnitEffect_t& rGrant) const
     {
         if (!pUnitComponents)
@@ -206,9 +202,8 @@ struct TriggeredPayloadValidator
     void operator()(const GrantCleanMineralsEffect_t&) const {}
     void operator()(const AddVirtualMineralsEffect_t&) const {}
 
-    // Only terrain a tile stores in its own right can be set: the depth bands come from
-    // elevation and the two axes are always present, so writing either here would be undone
-    // by the state it is derived from.
+    // Only terrain a tile stores itself can be set; depth bands and the two axes derive from
+    // elevation.
     void operator()(const SetTerrainFeatureEffect_t& rSet) const
     {
         if (!pImprovements)
@@ -373,8 +368,7 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
 
 void ValidateEffectReferences(const GameDataContext& rData)
 {
-    // Target registries LoadGameData always installs — unexpected null means every id check
-    // for that family would otherwise pass vacuously.
+    // Registries LoadGameData always installs; a null one would pass every id check vacuously.
     const BuildingRegistry& rBuildings =
         RequireRegistry(rData.buildingRegistry, "buildingRegistry");
     const StockpileRegistry& rStockpiles =
@@ -445,8 +439,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onVisitEffects, rConfig.id);
     }
-    // A terrain operation is nothing but its effects, so a typo in one is the whole project
-    // silently doing nothing. Optional: movement-only harnesses install no operations.
+    // A terrain operation is only its effects, so a typo makes it do nothing. Absent in
+    // movement-only harnesses.
     if (rData.terrainOperationRegistry)
     {
         for (const TerrainOperationConfig_t& rConfig : rData.terrainOperationRegistry->GetAll())

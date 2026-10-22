@@ -74,8 +74,7 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
     if (const auto* pDesign =
         dynamic_cast<const UnitDesign*>(rFaction.GetMilitary().GetDesign(rCompleted.itemId)))
     {
-        // Only a produced unit pays its components' completion costs: a free spawn
-        // (escape pod, starting unit, a granted unit) never goes through here.
+        // Only a produced unit pays completion costs; free spawns never come through here.
         TriggeredEffectContext_t context(rGameState, rBase);
         context.pUnit = rCompleted.pUnit;
         context.populationFloor = CompletionPopulationFloor();
@@ -112,11 +111,8 @@ void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
                     at,
                 });
         });
-    // TODO: unlike a riot, a pending golden age is not something the player can or would want
-    // to avert, so warning about it before Mood commits may be noise rather than a decision.
-    // Whether a golden age should announce on the verge or only on arrival is an unrecorded
-    // rules question; the forecast/commit split itself is still needed to keep both moods on
-    // one lifecycle.
+    // TODO: should a golden age announce on the verge or only on arrival? Unlike a riot, the player
+    // has nothing to avert.
     rPopulation.OnWillGoldenAge.Connect(
         [&rGameState, &rBase]()
         {
@@ -165,16 +161,14 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pFirstContact = std::make_unique<FirstContactResolver>(
         *m_pDiplomacy, m_factions);
-    // UnitPositionIndex owns position only; visibility rebuild stays on Faction (same
-    // pattern as create/destroy in UnitManager, and OnUnitDestroyed side effects here).
+    // Visibility stays on Faction; the position index owns position only.
     m_worldMap->GetUnitPositions().OnUnitMoved.Connect([this](Unit& rMoved)
     {
         rMoved.GetFaction().RebuildVisibility();
         // Stationary factions whose vision already covers the new tile must also meet.
         m_pFirstContact->ConsiderUnit(rMoved);
     });
-    // Passing *this is safe here: the executor only stores the pointer and never calls back
-    // during GameState's own construction.
+    // Safe: the executor only stores the pointer during construction.
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
         *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, this);
@@ -196,8 +190,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
 
 GameState::~GameState()
 {
-    // Base teardown recomputes moisture through this context. Factions are already
-    // partially destroyed by then, so the session list must not be queried.
+    // Factions are partly destroyed by now, so the session list must not be queried.
     if (m_pTileEffects)
     {
         m_pTileEffects->UnbindWorldEffects();
@@ -271,8 +264,8 @@ const PlayerInteractionQueue& GameState::GetPlayerInteractions() const
 
 uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
 {
-    // Mix peer local-pool versions and council revision. Using local versions (not composed)
-    // keeps council extras from feeding back into the stamp when peers also compose.
+    // Mixes peers' local pool versions, not composed ones, so council extras do not feed back into
+    // the stamp.
     auto mix = [](uint64_t a, uint64_t b) -> uint64_t
     {
         return a ^ (b + 0x9e3779b97f4a7c15ULL + (a << 6) + (a >> 2));
@@ -327,8 +320,7 @@ void GameState::AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffec
     }
     if (m_pCouncil)
     {
-        // CouncilEffects keeps config addresses stable across rebuilds; revision bumps still
-        // force composed-pool caches to pick up the new active set.
+        // Council config addresses are stable across rebuilds; the revision bump refreshes caches.
         const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
         rOut.insert(rOut.end(), councilWorld.begin(), councilWorld.end());
         if (pFor != nullptr)
@@ -356,11 +348,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
         throw std::invalid_argument(
             "GameState::AddFaction: faction was built against another WorldMap");
     }
-    // Register first, attach second. The faction must already be in m_factions before any
-    // observer runs: AttachToSession_ ends with a visibility/territory sweep, and both
-    // ConsiderObserver and RebuildTerritory iterate Factions(). Wiring before the push (the
-    // previous order) meant a faction arriving with bases already on the map — load-game, or
-    // any future runtime creation — was never scanned for contact or territory.
+    // In m_factions before AttachToSession_, whose closing sweep iterates Factions().
     m_factions.push_back(std::move(pFaction));
     Faction& rAdded = *m_factions.back();
     AttachToSession_(rAdded);
@@ -369,9 +357,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 
 void GameState::AttachToSession_(Faction& rFaction)
 {
-    // The whole session wiring for one faction, in one place. World map and settings are
-    // constructor dependencies (see Faction's constructor); what remains is the container
-    // back-pointer and the observers, which necessarily close over this GameState.
+    // The session wiring that has to close over this GameState.
     rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
                                    GetWorldMap().GetUnitPositions());
     rFaction.OnSecretProjectDestroyed.Connect([this](const BuildingId_t& rBuildingId)
@@ -418,9 +404,7 @@ void GameState::AttachToSession_(Faction& rFaction)
         });
     rFaction.GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
     {
-        // Transfer is not a birth (see UnitManager::OnUnitAdopted), but the unit now sits in
-        // observers' vision under a faction they may not have met yet — same first-contact
-        // scan as a genuine creation.
+        // A transfer is not a birth, but the unit may still be seen by a faction it has not met.
         m_pFirstContact->ConsiderUnit(rAdopted);
     });
 
@@ -444,16 +428,11 @@ void GameState::AttachToSession_(Faction& rFaction)
         wireBaseSession(rBase);
     }
 
-    // Catch up on anything the faction already owns. A freshly-constructed faction has no
-    // bases and no units, so this is a no-op for the new-game path; it is what makes an
-    // already-populated faction correct.
+    // Catches up on bases and units the faction already owns; a no-op for a new faction.
     RebuildTerritory();
     rFaction.RebuildVisibility();
-    // Contact is symmetric, so the sweep must be too. rFaction.RebuildVisibility() only asks
-    // "what can the newcomer see"; an incumbent whose vision already covers the newcomer's
-    // bases would never be re-examined, and would stay unaware of a faction sitting inside its
-    // own sight radius until some unrelated later event. Same full sweep the base-list handler
-    // above performs, for the same reason.
+    // Contact is symmetric: an incumbent who already sees the newcomer's bases must learn of it
+    // too.
     for (Faction& rObserver : Factions())
     {
         m_pFirstContact->ConsiderObserver(rObserver);

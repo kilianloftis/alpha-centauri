@@ -199,8 +199,8 @@ void PlacePreviewFactionBases_(GameState& rGameState, Faction& rPlayer,
 }
 
 #ifdef AC_PLACE_TEST_IMPROVEMENTS
-// Temporary test setup: one of each buildable improvement around every starting base so
-// sprites, coexistence, and tile-effect auras are easy to eyeball in a new game.
+// Temporary test setup: one of each buildable improvement around every starting base, to eyeball
+// sprites, coexistence and auras.
 void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTileEffects,
                                        const ImprovementRegistry& rImprovements,
                                        GameState& rGameState)
@@ -337,17 +337,14 @@ void Engine::GameLoop_()
         m_pGraphics->PumpEvents();
         if (m_platformEvents.TakeCloseRequest())
         {
-            // Routed through the same exit flag as every other quit path, so "did the user
-            // quit?" has one answer.
-            // TODO: SMAC prompts to save before quitting; that UI flow does not exist yet, so
-            // the close button quits immediately.
+            // The same exit flag as every other quit path.
+            // TODO: SMAC prompts to save before quitting.
             m_uiManager->RequestExit();
             continue;
         }
 
         m_uiManager->ProcessInput();
-        // Between input and paint: consumes UI-queued turn-advance requests (WorldView auto
-        // end-turn) so Advance never runs from the Render path.
+        // Between input and paint, so a UI-queued turn advance never runs from Render.
         m_uiManager->Update();
         if (m_interactionPresenter)
         {
@@ -359,14 +356,8 @@ void Engine::GameLoop_()
 
 void Engine::ProcessTurn_()
 {
-    // Turn processing can mutate/destroy pops (starvation) and other base state that
-    // base-level popups (e.g. PopTypeSelectorPopup) hold live references to. UIManager's
-    // modal/overlay contract (UIManager::CanAdvanceTurn) is the single source of truth for
-    // whether it is safe to resume: an overlay is on the stack, or the world view reports a
-    // blocking in-view modal (probe/supply popup, ...). This is a soft gate, not a
-    // programmer-error assert — an ordinary player End Turn / Enter / auto-advance while a
-    // modal is open is expected UI traffic, not a bypass of view-stack routing, so it simply
-    // no-ops instead of throwing.
+    // Turn processing can destroy pops and base state that open popups hold. An open modal is
+    // ordinary UI traffic, so the turn just waits.
     if (!m_uiManager->CanAdvanceTurn())
     {
         return;
@@ -381,11 +372,8 @@ void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
 
-    // Three explicit phases. App data is process-wide and survives any number of sessions;
-    // the session is everything a "new game" builds; the UI is bound to the session that
-    // exists by then. Keeping them separate is what will let load-game reuse StartNewGame_'s
-    // successor without re-running config parsing, and lets tests build a session without a
-    // graphics backend.
+    // App data outlives sessions; the session is what a new game builds; the UI binds to the
+    // session. Tests build a session without graphics.
     InitializeApp_();
     StartNewGame_();
     InitializeUi_();
@@ -396,14 +384,12 @@ void Engine::InitializeApp_()
     // Settings are already loaded: the constructor needs them to open the window.
     UiStyle::Load("config/ui/style.json");
 
-    // Every config parser + cross-config id validation (including HasComponent conditions).
-    // Returns complete or throws: nothing downstream has to check a member for null.
+    // Every parser plus cross-config id validation; complete or throws.
     m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
     ValidateTerrainArtReferences(Style().tileRenderer.waterShading,
                                  *m_gameDataContext->improvementRegistry);
 
-    // Settings name a difficulty by id; reject an unknown one here, where the message can
-    // still point at the settings file, rather than from the first Faction constructor.
+    // Here, so the message can still point at the settings file.
     m_gameDataContext->difficultyConfig->RequireForSession(
         m_pSettings->GetGameRules().difficultyId);
     m_gameDataContext->nativeLifeLevelConfig->RequireForSession(
@@ -412,13 +398,8 @@ void Engine::InitializeApp_()
 
 void Engine::StartNewGame_()
 {
-    // One session seed, resolved once and handed down. `seed == 0` in the map config means
-    // "pick one"; resolving it here (rather than letting each sub-object reach for
-    // std::random_device) is what makes a session reproducible — every per-faction random
-    // choice derives from this value.
-    // TODO: persist the resolved seed once a save system exists. It must not go back through
-    // GameSettings::SetMapGeneration - that would turn `seed: 0` ("pick one") into a fixed seed
-    // for every later new game.
+    // One session seed (`seed == 0` picks one); every per-faction random choice derives from it.
+    // TODO: save the resolved seed once saves exist, outside GameSettings.
     const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
     m_sessionSeed = rWorldConfig.seed != 0 ? rWorldConfig.seed : std::random_device{}();
     std::cout << "Session seed: " << m_sessionSeed << "\n";
@@ -435,8 +416,7 @@ void Engine::StartNewGame_()
                           m_sessionSeed),
         *m_gameDataContext,
         *m_pSettings,
-        // Distinct sub-stream from world generation, so changing map size does not shift
-        // combat rolls (and vice versa).
+        // Separate from world generation, so map size does not shift combat rolls.
         static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
     m_pGameStateScope = std::make_unique<GameStateScope>(*m_pGameState);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
@@ -455,10 +435,8 @@ void Engine::StartNewGame_()
         }
     });
 
-    // Create factions from config with a starting base each.
-    // Player base prefers x=0 so horizontal wrap is easy to exercise in the viewport.
-    // Spacing must respect k_MinBaseFoundingSeparation; extra factions must not reuse
-    // an earlier slot (modulo over a short list used to place two factions on the same tile).
+    // One starting base per faction. The player prefers x=0 so wrap is easy to exercise; slots keep
+    // k_MinBaseFoundingSeparation and are never reused.
     const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
     const int mapWidth = m_pGameState->GetWorldMap().GetWidth();
     std::vector<std::pair<int, int>> preferredStartPositions;
@@ -471,9 +449,7 @@ void Engine::StartNewGame_()
     size_t positionIndex = 0;
     for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
     {
-        // Single-player for now: the first faction created is the human player, the rest are
-        // AI-controlled. IsPlayerControlled() (rather than an index-0 convention) is what
-        // GameState::GetPlayerFaction() searches for.
+        // Single-player for now: the first faction is the human player.
         const bool bNativeLife = IsNativeLifeFaction(rFactionConfig.identity.species);
         const bool bIsPlayerControlled = (positionIndex == 0) && !bNativeLife;
         auto pFaction = std::make_unique<Faction>(
@@ -483,13 +459,11 @@ void Engine::StartNewGame_()
             *m_gameDataContext,
             m_pGameState->GetWorldMap(),
             *m_pSettings,
-            // Per-faction sub-stream of the session seed, so factions do not share a sequence
-            // and adding one does not shift another's picks.
+            // Per faction, so adding a faction does not shift another's picks.
             static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1)));
 
-        // Wire EventBridge to every base this faction ever introduces — founding (below),
-        // future load, and capture/trade adopt alike — via the single Faction::OnBaseAdded
-        // hook, rather than a per-call-site WireBase chore (see EventBridge::WireBase).
+        // Every base the faction ever gains (founding, capture, trade) reaches the bridge through
+        // OnBaseAdded.
         pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
 
         if (bNativeLife)
@@ -516,8 +490,7 @@ void Engine::StartNewGame_()
         placedBases.push_back(pBase);
 
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
-        // After AddFaction: the faction's id and subsystems are final, and the bridge captures
-        // the id rather than the object.
+        // After AddFaction, once the faction's id is final.
         m_eventBridge->WireFaction(rFaction);
         rFaction.GetEconomy().AddEnergy(10);
 
@@ -651,9 +624,7 @@ void Engine::StartNewGame_()
         PlacePreviewFactionBases_(*m_pGameState, *pPlayer, placedBases);
     }
 
-    // Bases are founded before AddFaction, so each faction's territory is folded in by
-    // AttachToSession_'s catch-up sweep as it is registered. This final rebuild is the
-    // whole-world pass once every faction exists.
+    // Each AddFaction folded in its own territory; this is the whole-world pass.
     m_pGameState->RebuildTerritory();
 
     // Temporary: give the player commerce partners — first AI Pact, second AI Treaty.

@@ -3,8 +3,7 @@
 namespace ac
 {
 
-// How the world map shows elevation: not at all, following elevation continuously, or in SMAC's
-// whole altitude levels.
+// How the map shows elevation: not at all, continuously, or in SMAC's whole altitude levels.
 enum class ReliefMode_t
 {
     Flat,

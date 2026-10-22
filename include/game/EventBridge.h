@@ -15,17 +15,11 @@ class EventBridge
 public:
     explicit EventBridge(EventBus& rBus);
 
-    // Wire a base's signals to the EventBus. Idempotent: a base already wired is a no-op, so
-    // this may be connected once per faction to Faction::OnBaseAdded (the single "base
-    // introduced" hook — founding, load, and post-transfer adopt all fire it) without
-    // double-wiring startup bases that also call this explicitly, and callers never need to
-    // remember to call it. Keyed by object, not baseId: identity-preserving transfer keeps the
-    // address (so it stays a no-op), while a *reconstructed* base reuses its baseId at a new
-    // address and must be wired again — keying by id would silently leave it unwired.
+    // Idempotent, so it can hang off Faction::OnBaseAdded. Keyed by object: a transfer keeps the
+    // address, while a rebuilt base reuses its id at a new one.
     void WireBase(BaseManager& rBase);
 
-    // Wire a faction's own signals (tech discovery, and base-built via OnBaseAdded). Idempotent
-    // per faction object, same reasoning as WireBase.
+    // Tech discovery and OnBaseAdded. Idempotent per faction.
     void WireFaction(Faction& rFaction);
 
 private:

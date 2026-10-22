@@ -49,12 +49,8 @@ public:
     static constexpr int k_StartingMissionYear = 2099;
     static constexpr int k_FirstPlayableMissionYear = k_StartingMissionYear + 1;
 
-    // Throws if pWorldMap is null.
-    // rGameData is the ruleset this session plays by. It must outlive this GameState.
-    // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
-    // rngSeed seeds the session RNG behind every combat, promotion and probe roll. Injected
-    // rather than drawn from std::random_device so a session is reproducible from the seed the
-    // composition root resolves and reports; tests pass a fixed value to keep rolls stable.
+    // Throws if pWorldMap is null. rGameData must outlive this. rngSeed makes the session's rolls
+    // reproducible.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const GameDataContext& rGameData,
               GameSettings& rSettings,
@@ -68,7 +64,6 @@ public:
     // Registries, configs and calculators: the rules every stage, rule module and view reads.
     const GameDataContext& GetGameData() const;
 
-    // Mission year
     int GetMissionYear() const;
     void SetMissionYear(int year);
     void IncrementMissionYear();
@@ -94,10 +89,8 @@ public:
     std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
     const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
 
-    // Factions. Registration only: the faction is already valid when it arrives (world map and
-    // settings are constructor dependencies). This adds the session wiring that must close over
-    // GameState — see AttachToSession_ — and works for a faction that already owns bases/units.
-    // Throws std::invalid_argument when the faction was built against another WorldMap.
+    // Registers an already valid faction and wires it into the session, even one that owns bases.
+    // Throws when it was built against another WorldMap.
     Faction& AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
     // Iterate factions by reference without exposing the owning unique_ptrs.
@@ -130,14 +123,11 @@ public:
 
     DiplomaticActionExecutor& GetDiplomaticActionExecutor();
 
-    // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
-    // IDs, so any runtime faction, base, or unit creation (not just the composition root)
-    // has a place to get a unique ID from.
+    // The only source of faction, base and unit ids.
     FactionId_t AllocateFactionId();
     BaseId_t AllocateBaseId();
     UnitId_t AllocateUnitId();
 
-    // World map
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;
 
@@ -155,8 +145,7 @@ public:
     bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
                                        Unit& rFormer, std::mt19937& rRng) override;
 
-    // IWorldEffectsSource — peer WorldGlobal (from local pools) + council extras for rFor.
-    // Bound onto each Faction in AddFaction so GetActiveEffects composes one pool.
+    // Peer WorldGlobal effects and council extras, bound onto each faction's pool.
     std::vector<ActiveEffect_t> CollectWorldExtras(const Faction& rFor) const override;
     uint64_t GetWorldCompositionStamp(const Faction& rFor) const override;
     std::vector<ActiveEffect_t> CollectSessionWorldEffects() const override;
@@ -171,9 +160,8 @@ public:
 
     UnitOrderExecutor& GetUnitOrderExecutor();
 
-    // Hold order whose design list matches this friendly base: the player is asked to link;
-    // an AI holder applies the list immediately. Also runs when a building is completed
-    // under a unit that is already Holding.
+    // A Hold whose design matches this friendly base: the player is asked to link, an AI links at
+    // once. Also runs when a building completes under a Holding unit.
     void ConsiderHoldLink(Unit& rUnit);
 
     ProbeActionExecutor& GetProbeActions();
@@ -204,9 +192,7 @@ public:
 
     bool IsSecretProjectDestroyed(const std::string& buildingId) const;
 
-    // Destroy every base razed since the last call, across all factions. Razing itself is
-    // Faction::RazeBase, driven by the pop-loss signal; this only reclaims the objects, at a
-    // point where nothing is iterating bases (TurnProcessor::Advance, between stages).
+    // Frees bases razed since the last call, between stages where nothing iterates bases.
     void ReapRazedBases();
 
     // Public orbital building census (buildings with orbital == true). Visible to all factions.
@@ -216,8 +202,7 @@ public:
     // Ready OrbitalAttack buildings for rFaction (UI selection list).
     std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction) const;
 
-    // ASAT using a chosen ready attacker building against another faction's orbital.
-    // Uses GameState RNG.
+    // ASAT strike by a ready attacker building on another faction's orbital.
     OrbitalAttackResult_t TryAttackSatellite(Faction& rAttacker,
                                              Faction& rDefender,
                                              const BuildingId_t& attackerBuildingId,
@@ -225,13 +210,10 @@ public:
 
 private:
     void OnVisibilitySettingsChanged_();
-    // One source list for both collectors, so the session set and a faction's extras cannot
-    // drift. pFor composes its own pool itself, and alone gets the council's faction effects.
+    // One source list for both collectors, so they cannot drift.
     void AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffect_t>& rOut) const;
-    // All session wiring for one faction (back-pointer + observers), applied by AddFaction
-    // after the faction is in m_factions — the observers iterate Factions(), so the order is
-    // load-bearing. Ends with a territory/visibility sweep so a faction that arrives already
-    // populated is scanned rather than silently skipped.
+    // Applied after the faction is in m_factions, since the observers iterate Factions(). Ends
+    // with a territory and visibility sweep.
     void AttachToSession_(Faction& rFaction);
 
     int m_missionYear;
@@ -241,9 +223,7 @@ private:
     std::unique_ptr<EventBus> m_pEventBus;
     PlayerInteractionQueue m_playerInteractions;
     std::set<std::string> m_consumedTriggerKeys;
-    // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
-    // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in
-    // reverse declaration order, so m_factions is destroyed before these two.
+    // Before m_factions, so they outlive the BaseManagers that reference TileEffectsContext.
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
     std::unique_ptr<MoveCostRules> m_pMoveCosts;
@@ -256,8 +236,7 @@ private:
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;
-    // Shared combat / promotion / probe roll stream. Declared before the executors that
-    // hold references into it.
+    // Before the executors that reference it.
     std::mt19937 m_rng;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::unique_ptr<ProbeActionExecutor> m_pProbeActions;

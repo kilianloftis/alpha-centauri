@@ -59,8 +59,7 @@ struct ProductionIdleInteraction_t
     std::vector<PauseOnEventId_t> completedEvents;
 };
 
-// Current production is no longer constructable; this turn's minerals already banked onto it.
-// Offer Continue or Zoom to base control, gated by BuildOrdersOutOfDate.
+// The current item can no longer be built; this turn's minerals are already on it.
 struct ProductionPreemptedInteraction_t
 {
     FactionId_t factionId = 0;
@@ -75,17 +74,15 @@ struct ImprovementVisitInteraction_t
     UnitId_t unitId = 0;
 };
 
-// A unit whose design has a matching on_hold_effects entry was ordered to Hold at a friendly
-// base, or a building was completed under a unit already Holding there. Link applies that
-// list; Do nothing leaves the Hold.
+// A Hold at a friendly base with a matching on_hold_effects entry, or a building completed
+// under one. Link applies the list.
 struct ArtifactLinkInteraction_t
 {
     UnitId_t unitId = 0;
 };
 
-// aggressor attacked allyId, and the player's status with allyId carries a defensive
-// obligation. Declare Vendetta on aggressor, or decline and let the agreement with allyId
-// step down.
+// aggressor attacked allyId, to whom the player owes defence: declare Vendetta on aggressor, or
+// decline and let the agreement with allyId step down.
 struct PactObligationInteraction_t
 {
     FactionId_t allyId = 0;

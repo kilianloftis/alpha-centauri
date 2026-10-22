@@ -3,11 +3,8 @@
 namespace ac
 {
 
-// Mid-turn pause reasons the player can disable. InteractionPresenter Completes without UI
-// when the matching flag is false so the turn does not stall. Transcendence delay is stored
-// for the settings UI; nothing enqueues it yet. PrototypeBuilt is one of possibly several
-// gates on a unit completion (OR-matched with combat / non-combat); it means first fielding
-// of a component.
+// Mid-turn pauses the player can turn off; the presenter completes a disabled one without UI.
+// Nothing enqueues TranscendenceDelay yet.
 enum class PauseOnEventId_t
 {
     NewFacilityBuilt,

@@ -56,19 +56,14 @@ struct WorldEventsConfig_t;
 struct CommerceConfig_t;
 struct DiplomacyConfig_t;
 
-// Owns the definition data loaded once at startup (registries and config structs, all
-// reconstructible from config files) plus the calculators/services built from that data.
-// Individual pieces are not mutated after loading, but this is not a blanket immutability
-// guarantee: LuaRuntime carries mutable interpreter state used internally by every formula
-// evaluation (see code-review-findings.md 3.6). Deliberately excludes anything that reads
-// live save-game state; rules read that through CurrentGameState().
+// Definition data loaded once at startup, and the calculators built from it. Holds no save
+// state; rules read that through CurrentGameState().
 struct GameDataContext
 {
     GameDataContext();
     ~GameDataContext();
 
-    // Move-only: LoadGameData returns one by value, and the composition root owns exactly one.
-    // Defined out-of-line because the members are incomplete types here.
+    // Move-only; out of line because the members are incomplete here.
     GameDataContext(GameDataContext&&) noexcept;
     GameDataContext& operator=(GameDataContext&&) noexcept;
     GameDataContext(const GameDataContext&) = delete;
@@ -98,8 +93,7 @@ struct GameDataContext
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
     std::vector<LandmarkConfig_t> worldGenLandmarks;
-    // FactionGlobal MaxClamp resource-cap rules (and any other universal tile-yield effects), plus
-    // the world yield scalars TileEffectsContext stamps into per-tile resolution.
+    // Resource-cap and other universal tile-yield effects, and the world yield scalars.
     TileYieldRulesConfig_t tileYieldRules;
     // Former raise/lower and earthquake level size, slope limit, and former ceiling.
     ElevationRulesConfig_t elevationRules;
@@ -130,35 +124,19 @@ struct GameDataContext
     std::unique_ptr<HurryProductionCalculator> hurryProductionCalculator;
     std::unique_ptr<ScrapRefundCalculator> scrapRefundCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
-    // Stateless view over moraleConfig — reads no live save-game state, so it belongs here
-    // beside techCostCalculator rather than on GameState. Every faction, unit, and combat
-    // path borrows this one instance.
+    // Reads no save state, so it lives here; every faction, unit and combat path borrows it.
     std::unique_ptr<MoraleCalculator> moraleCalculator;
     std::unique_ptr<CommerceCalculator> commerceCalculator;
 
-    // The paths this context was loaded from, so a caller that needs a config file LoadGameData
-    // does not parse (the UI's terraform bindings) resolves it the same way as everything else
-    // rather than hardcoding a second root.
+    // For config files LoadGameData does not parse, so they resolve against the same root.
     GameDataPaths paths;
 };
 
-// Single entry point that runs every config parser and returns a *complete* context. Load
-// order is deliberate: registries that are reference targets (techs, improvements, unit
-// components) load before configs that may cite them; effect-declaring configs (including
-// production) load next; then ValidateEffectReferences / ValidateRequiredTechReferences run
-// once everything they walk is present — so a typo'd HasComponent condition id (or
-// grant/tech/selector id) fails here instead of becoming a silent no-op. Formula configs
-// and the calculators built from them load last.
-//
-// Returns by value rather than filling a caller-supplied bag so there is no window in which a
-// half-populated context is observable: every member is non-null when this returns, or it threw.
-// ThrowIfIncomplete enforces that before returning, naming the first missing member — consumers
-// may therefore dereference any member without checking. Call from Engine::Initialize_; do not
-// re-order individual Load calls at other call sites.
+// Runs every parser in dependency order and validates cross-config ids. Returns a complete
+// context or throws, so consumers may dereference any member.
 GameDataContext LoadGameData(const GameDataPaths& rPaths = {});
 
-// Throw naming the first null member. Called by LoadGameData; also the check a test fixture
-// should run once it has finished assembling a context by hand.
+// Throws naming the first null member. Test fixtures that assemble a context run it too.
 void ThrowIfIncomplete(const GameDataContext& rData);
 
 } // namespace ac

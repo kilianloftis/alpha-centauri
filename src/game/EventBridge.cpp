@@ -10,8 +10,8 @@ namespace ac
 EventBridge::EventBridge(EventBus& rBus)
     : m_rBus(rBus)
 {
-    // Faction-scoped signals are wired per faction by WireFaction; there is nothing to do at
-    // construction. There is deliberately no elimination event — factions are never removed.
+    // Faction signals are wired per faction by WireFaction. Factions are never removed, so there is
+    // no elimination event.
 }
 
 void EventBridge::WireBase(BaseManager& rBase)
