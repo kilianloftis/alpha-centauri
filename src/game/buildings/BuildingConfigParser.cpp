@@ -117,7 +117,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     // Optional: nothing reads category yet. Tighten to required when something does.
     if (buildingJson.contains("category") && !buildingJson.at("category").is_null())
     {
-        config.category = ParseGameCategoryField(buildingJson);
+        config.category = ParseGameCategoryField(buildingJson, "category");
     }
     config.upkeep = ParseTyped_<int>(buildingJson, "upkeep", config.id, 0,
                                     &nlohmann::json::is_number_integer, "an integer");

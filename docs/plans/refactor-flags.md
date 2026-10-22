@@ -18,6 +18,15 @@ One entry per violation, under the rule it breaks:
 
 ## Rule 3: impossible-case guards
 
+### Effect reference validators — null registries for partial test contexts
+- **Where:** `include/game/EffectReferenceValidator.h:21-36` (three `= nullptr` defaults on each
+  list overload), the `if (!pRegistry) return;` arms in `src/game/EffectReferenceValidator.cpp`;
+  34 callers
+- **Problem:** every registry pointer may be null so tests can validate with part of the data;
+  production always passes all of them through the `GameDataContext` overload.
+- **Why not local:** the list overloads should take the context (or references), and the tests
+  that pass partial registries need a fixture context.
+
 ## Rule 4: pass-through functions
 
 ## Rule 5: flag parameters
@@ -68,7 +77,22 @@ One entry per violation, under the rule it breaks:
   do not exist yet.
 - **Why not local:** removing them drops those tests' subject; decide with the mod seams.
 
+### Session accessors used only by tests
+- **Where:** `GameState::SetMissionYear` (12 test callers), `GameState::GetDiplomaticActionExecutor`
+  (5), `PlayerInteractionQueue::Size` (26), `GameSettings::SetSavePath` (3),
+  `GameCategoryToString` (4)
+- **Problem:** no production caller.
+- **Why not local:** each needs its tests rewritten against behavior, or a fixture seam.
+
 ## Rule 7: long functions
+
+### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
+- **Where:** `src/game/GameDataContext.cpp` (`LoadGameData`, 203 lines), `src/game/Engine.cpp`
+  (`StartNewGame_`, 234 lines; `InitializeUi_`, 92), `src/game/EffectReferenceValidator.cpp`
+  (the context overload, 156 lines)
+- **Problem:** each runs every phase of startup inline.
+- **Why not local:** over 100 lines; the phases share the context being built, and `Engine` is
+  still the ad hoc test setup, so its split belongs with the composition-root work.
 
 ## Duplicated logic
 

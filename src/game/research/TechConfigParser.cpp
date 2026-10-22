@@ -36,7 +36,7 @@ TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
         }
     }
 
-    config.category = ParseGameCategoryField(techJson);
+    config.category = ParseGameCategoryField(techJson, "category");
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
     if (techJson.contains("icon"))
     {

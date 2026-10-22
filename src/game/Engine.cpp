@@ -296,7 +296,7 @@ Engine::Engine()
     : m_pSettings(std::make_unique<GameSettings>())
 {
     // Settings first: the window this opens is sized, titled and fonted from them.
-    m_pSettings->Load();
+    m_pSettings->Load(GameSettings::k_DefaultPath);
 
     m_pGraphics = CreateGraphics(m_platformEvents, m_pSettings->GetGraphics());
     m_pInput = CreateInput(m_platformEvents);
@@ -385,7 +385,7 @@ void Engine::InitializeApp_()
     UiStyle::Load("config/ui/style.json");
 
     // Every parser plus cross-config id validation; complete or throws.
-    m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
+    m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData(GameDataPaths{}));
     ValidateTerrainArtReferences(Style().tileRenderer.waterShading,
                                  *m_gameDataContext->improvementRegistry);
 
@@ -724,8 +724,9 @@ void Engine::InitializeUi_()
                WorldDisplay& rWorldDisplay,
                WindowLayout_t mapLayout,
                std::function<void()> onFinished) {
-            m_uiManager->PushView(m_viewFactory->CreateCombatView(
-                m_viewFactory->GetFullscreenLayout(),
+            const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
+            auto pCombatView = m_viewFactory->CreateCombatView(
+                fullscreen,
                 std::move(result),
                 rAttackerTile,
                 rDefenderTile,
@@ -733,15 +734,17 @@ void Engine::InitializeUi_()
                 std::move(defenderName),
                 rWorldDisplay,
                 mapLayout,
-                std::move(onFinished)));
+                std::move(onFinished));
+            m_uiManager->PushView(std::move(pCombatView));
         },
         [this]() {
             const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
-            m_uiManager->PushView(m_viewFactory->CreateCommlinksView(
+            auto pCommlinks = m_viewFactory->CreateCommlinksView(
                 fullscreen,
                 [this, fullscreen]() {
                     m_uiManager->PushView(m_viewFactory->CreateCouncilVoteView(fullscreen));
-                }));
+                });
+            m_uiManager->PushView(std::move(pCommlinks));
         }
     );
     WorldView& rWorldView = *pWorldView;

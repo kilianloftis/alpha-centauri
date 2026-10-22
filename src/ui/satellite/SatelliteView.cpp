@@ -207,7 +207,7 @@ void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
         throw std::runtime_error("SatelliteView: no player faction; cannot open the attacker list");
     }
 
-    auto attackers = m_rGameState.ListReadyOrbitalAttackers(*pPlayer);
+    auto attackers = ListReadyOrbitalAttackers(*pPlayer, m_rGameState.GetMissionYear());
     if (attackers.empty())
     {
         ShowOutcome_("No ready orbital attackers.");
@@ -235,8 +235,9 @@ void SatelliteView::CommenceAttack_(BuildingId_t attackerBuildingId,
         return;
     }
 
-    const OrbitalAttackResult_t result = m_rGameState.TryAttackSatellite(
-        *pPlayer, *pTarget, attackerBuildingId, targetBuildingId);
+    const OrbitalAttackResult_t result = TryAttackSatellite(m_rGameState, *pPlayer, *pTarget,
+                                                            attackerBuildingId, targetBuildingId,
+                                                            m_rGameState.GetRng());
     m_pendingOutcomeMessage = FormatAttackOutcome_(result, m_rBuildings);
     m_bPendingAttackRefresh = true;
 }
@@ -329,7 +330,7 @@ void SatelliteView::RefreshTargetList_()
     std::unordered_map<BuildingId_t, int> ownedCounts;
     if (m_selectedFactionId)
     {
-        for (const OrbitalCensusEntry_t& rEntry : m_rGameState.GetOrbitalCensus())
+        for (const OrbitalCensusEntry_t& rEntry : BuildOrbitalCensus())
         {
             if (rEntry.factionId == *m_selectedFactionId && rEntry.count > 0)
             {

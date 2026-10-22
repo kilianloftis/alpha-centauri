@@ -18,7 +18,7 @@ namespace ac
 class GameSettings
 {
 public:
-    static constexpr const char* kDefaultPath = "user_settings.json";
+    static constexpr const char* k_DefaultPath = "user_settings.json";
 
     const GameRulesConfig_t& GetGameRules() const { return m_gameRules; }
     void SetGameRules(const GameRulesConfig_t& rConfig);
@@ -47,9 +47,9 @@ public:
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
     // A missing file leaves the defaults; an unreadable one throws. Remembers the path for Save.
-    void Load(const std::string& path = kDefaultPath);
+    void Load(const std::string& path);
 
-    // Writes to the remembered path, or kDefaultPath under the working directory if never loaded.
+    // Writes to the remembered path, or k_DefaultPath under the working directory if never loaded.
     void Save() const;
     void Save(const std::string& path) const;
 
@@ -70,8 +70,8 @@ private:
     MapGenerationConfig_t m_mapGeneration;
     MapDisplayConfig_t m_mapDisplay;
     GraphicsConfig_t m_graphics;
-    // Where Save() writes. Set by Load / SetSavePath; kDefaultPath until then.
-    std::string m_path = kDefaultPath;
+    // Where Save() writes. Set by Load / SetSavePath; k_DefaultPath until then.
+    std::string m_path = k_DefaultPath;
 };
 
 } // namespace ac

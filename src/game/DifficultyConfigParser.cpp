@@ -1,6 +1,7 @@
 #include "game/DifficultyConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
+#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
@@ -165,7 +166,7 @@ DifficultyLevel_t ParseLevel_(const nlohmann::json& rJson)
     }
     DifficultyLevel_t level;
     level.id = rJson.at("id").get<std::string>();
-    level.name = rJson.value("name", level.id);
+    level.name = ConfigFields::ParseName(rJson, level.id, "name");
 
     if (!rJson.contains("rules"))
     {

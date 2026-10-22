@@ -161,7 +161,7 @@ def is_call_paren(code: str, index: int) -> bool:
     if prev < 0:
         return False
     if code[prev] in ")]":
-        return code[prev] == "]" or prev == index - 1
+        return code[prev] == ")" and prev == index - 1
     word, _ = word_before(code, index)
     if not word or word[0].isdigit():
         return False

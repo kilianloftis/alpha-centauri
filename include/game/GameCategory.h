@@ -24,6 +24,6 @@ GameCategory_t ParseGameCategory(const std::string& category);
 
 // Named apart from ParseGameCategory(const std::string&): a string literal converts to both a
 // string and a json, so an overload would be ambiguous.
-GameCategory_t ParseGameCategoryField(const nlohmann::json& j, const char* key = "category");
+GameCategory_t ParseGameCategoryField(const nlohmann::json& j, const char* key);
 
 } // namespace ac

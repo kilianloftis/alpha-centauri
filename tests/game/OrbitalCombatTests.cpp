@@ -130,13 +130,13 @@ TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbita
     // Non-orbital must not appear.
     playerBase.GetBuildingManager().AddBuilding("granted_hall");
 
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
+    CHECK(CountFactionOrbitalBuildings(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
           == 2);
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
+    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
           == 1);
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pPlayer->GetFactionId(), "granted_hall") == 0);
+    CHECK(CountFactionOrbitalBuildings(game.pPlayer->GetFactionId(), "granted_hall") == 0);
 
-    const auto census = game.fixtures.state.GetOrbitalCensus();
+    const auto census = BuildOrbitalCensus();
     int sky = 0;
     int power = 0;
     for (const OrbitalCensusEntry_t& rEntry : census)
@@ -187,12 +187,14 @@ TEST_CASE("TryAttackSatellite hit destroys one orbital and deploys the pod", "[o
     const int year = game.fixtures.state.GetMissionYear();
     REQUIRE(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 1);
 
-    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "test_odp_always_hit", "Sky_Hydroponics_Lab");
+    const OrbitalAttackResult_t result = TryAttackSatellite(game.fixtures.state, *game.pPlayer,
+                                                            *game.pAi, "test_odp_always_hit",
+                                                            "Sky_Hydroponics_Lab",
+                                                            game.fixtures.state.GetRng());
     CHECK(result.bAttempted);
     CHECK(result.bHit);
     CHECK(result.attackerBuildingId == "test_odp_always_hit");
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 0);
     // Still unavailable early next year.
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year + 1) == 0);
@@ -207,12 +209,14 @@ TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "test_odp_always_miss", "Sky_Hydroponics_Lab");
+    const OrbitalAttackResult_t result = TryAttackSatellite(game.fixtures.state, *game.pPlayer,
+                                                            *game.pAi, "test_odp_always_miss",
+                                                            "Sky_Hydroponics_Lab",
+                                                            game.fixtures.state.GetRng());
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK_FALSE(result.bAttackerDestroyed);
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.fixtures.state.GetMissionYear())
           == 0);
@@ -226,12 +230,14 @@ TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbit
     attackerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const OrbitalAttackResult_t result = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "test_odp_miss_destroy", "Sky_Hydroponics_Lab");
+    const OrbitalAttackResult_t result = TryAttackSatellite(game.fixtures.state, *game.pPlayer,
+                                                            *game.pAi, "test_odp_miss_destroy",
+                                                            "Sky_Hydroponics_Lab",
+                                                            game.fixtures.state.GetRng());
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK(result.bAttackerDestroyed);
-    CHECK(game.fixtures.state.CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 
@@ -243,17 +249,22 @@ TEST_CASE("TryAttackSatellite fails without ready pods or non-orbital target", "
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     defenderBase.GetBuildingManager().AddBuilding("granted_hall");
 
-    OrbitalAttackResult_t noPod = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "test_odp_always_hit", "Sky_Hydroponics_Lab");
+    OrbitalAttackResult_t noPod = TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi,
+                                                     "test_odp_always_hit", "Sky_Hydroponics_Lab",
+                                                     game.fixtures.state.GetRng());
     CHECK_FALSE(noPod.bAttempted);
 
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
-    OrbitalAttackResult_t nonOrbital = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "test_odp_always_hit", "granted_hall");
+    OrbitalAttackResult_t nonOrbital = TryAttackSatellite(game.fixtures.state, *game.pPlayer,
+                                                          *game.pAi, "test_odp_always_hit",
+                                                          "granted_hall",
+                                                          game.fixtures.state.GetRng());
     CHECK_FALSE(nonOrbital.bAttempted);
 
-    OrbitalAttackResult_t badAttacker = game.fixtures.state.TryAttackSatellite(
-        *game.pPlayer, *game.pAi, "Sky_Hydroponics_Lab", "Sky_Hydroponics_Lab");
+    OrbitalAttackResult_t badAttacker = TryAttackSatellite(game.fixtures.state, *game.pPlayer,
+                                                           *game.pAi, "Sky_Hydroponics_Lab",
+                                                           "Sky_Hydroponics_Lab",
+                                                           game.fixtures.state.GetRng());
     CHECK_FALSE(badAttacker.bAttempted);
 }
 
@@ -265,9 +276,8 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    REQUIRE(game.fixtures.state.
-                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
-                                     "Sky_Hydroponics_Lab")
+    REQUIRE(TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi, "test_odp_always_hit",
+                                     "Sky_Hydroponics_Lab", game.fixtures.state.GetRng())
                 .bAttempted);
 
     Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
@@ -407,16 +417,14 @@ TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][d
     aiBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
     aiBase.GetBuildingManager().AddBuilding("Orbital_Power_Transmitter");
 
-    REQUIRE(game.fixtures.state.
-                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
-                                     "Sky_Hydroponics_Lab")
+    REQUIRE(TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi, "test_odp_always_hit",
+                                     "Sky_Hydroponics_Lab", game.fixtures.state.GetRng())
                 .bHit);
     const int year = game.fixtures.state.GetMissionYear();
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 1);
 
-    REQUIRE(game.fixtures.state.
-                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
-                                     "Orbital_Power_Transmitter")
+    REQUIRE(TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi, "test_odp_always_hit",
+                                     "Orbital_Power_Transmitter", game.fixtures.state.GetRng())
                 .bHit);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 0);
 }
@@ -427,14 +435,15 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
     BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 8, 4);
     BaseManager& defenderBase = game.MakeBase(*game.pAi, 8, 12);
     defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
-    CHECK(game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer).empty());
+    CHECK(ListReadyOrbitalAttackers(*game.pPlayer, game.fixtures.state.GetMissionYear()).empty());
 
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_hit");
     attackerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
     attackerBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
 
-    const auto options = game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer);
+    const auto options = ListReadyOrbitalAttackers(*game.pPlayer,
+                                                   game.fixtures.state.GetMissionYear());
     REQUIRE(options.size() == 2);
 
     const OrbitalAttackerOption_t* pHit = nullptr;
@@ -459,12 +468,13 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
     CHECK(pMiss->readyCount == 1);
     CHECK(pMiss->chance == 0);
 
-    REQUIRE(game.fixtures.state.
-                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_miss",
-                                     "Sky_Hydroponics_Lab")
+    REQUIRE(TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi,
+                               "test_odp_always_miss",
+                                     "Sky_Hydroponics_Lab", game.fixtures.state.GetRng())
                 .bAttempted);
 
-    const auto after = game.fixtures.state.ListReadyOrbitalAttackers(*game.pPlayer);
+    const auto after = ListReadyOrbitalAttackers(*game.pPlayer,
+                                                 game.fixtures.state.GetMissionYear());
     REQUIRE(after.size() == 1);
     CHECK(after.front().buildingId == "test_odp_always_hit");
     CHECK(after.front().readyCount == 2);
@@ -653,9 +663,8 @@ TEST_CASE("A satellite attack needs a ready copy and an orbital target the defen
     CHECK_FALSE(ready("test_odp_always_hit", "granted_hall", year));
     CHECK_FALSE(ready("Sky_Hydroponics_Lab", "Sky_Hydroponics_Lab", year));
 
-    REQUIRE(game.fixtures.state.
-                TryAttackSatellite(*game.pPlayer, *game.pAi, "test_odp_always_hit",
-                                     "Sky_Hydroponics_Lab")
+    REQUIRE(TryAttackSatellite(game.fixtures.state, *game.pPlayer, *game.pAi, "test_odp_always_hit",
+                                     "Sky_Hydroponics_Lab", game.fixtures.state.GetRng())
                 .bAttempted);
     CHECK_FALSE(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year));
     CHECK(ready("test_odp_always_hit", "Sky_Hydroponics_Lab", year + 2));

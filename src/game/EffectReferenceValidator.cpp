@@ -223,85 +223,95 @@ struct TriggeredPayloadValidator
     }
 };
 
-void ValidateConditionReferences_(const Condition_t& rCondition,
-                                  const std::string& rSourceId,
-                                  const ImprovementRegistry* pImprovements,
-                                  const UnitComponentRegistry* pUnitComponents,
-                                  const NativeUnitRegistry* pNativeUnits,
-                                  const BuildingRegistry* pBuildings)
+// Exhaustive over Condition_t, as EffectPayloadValidator is over effects.
+struct ConditionReferenceValidator
 {
-    auto checkFeature = [&](const std::string& rFeatureId)
+    const std::string& rSourceId;
+    const ImprovementRegistry* pImprovements;
+    const UnitComponentRegistry* pUnitComponents;
+    const NativeUnitRegistry* pNativeUnits;
+    const BuildingRegistry* pBuildings;
+
+    void Check(const Condition_t& rCondition) const
     {
-        if (pImprovements && !pImprovements->Find(rFeatureId))
+        std::visit(*this, rCondition.AsVariant());
+    }
+
+    void operator()(const TargetTileHas_t& rHas) const
+    {
+        if (pImprovements && !pImprovements->Find(rHas.featureId))
         {
-            ThrowBadReference(rSourceId, "condition feature", rFeatureId);
+            ThrowBadReference(rSourceId, "condition feature", rHas.featureId);
         }
-    };
-    std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
+    }
+
+    void operator()(const AllOf_t& rAll) const
     {
-        std::visit(
-            [&](const auto& rAlt)
-            {
-                using T = std::decay_t<decltype(rAlt)>;
-                if constexpr (std::is_same_v<T, TargetTileHas_t>)
-                {
-                    checkFeature(rAlt.featureId);
-                }
-                else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
-                {
-                    for (const Condition_t& rNested : rAlt.conditions)
-                    {
-                        checkCondition(rNested);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, HasComponent_t>)
-                {
-                    if (pUnitComponents && !pUnitComponents->Find(rAlt.component))
-                    {
-                        ThrowBadReference(rSourceId, "condition component", rAlt.component);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, SubjectDesign_t>)
-                {
-                    if (pNativeUnits && !pNativeUnits->Find(rAlt.designId))
-                    {
-                        ThrowBadReference(rSourceId, "condition design", rAlt.designId);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, BaseHasBuilding_t>
-                                   || std::is_same_v<T, OriginBaseHasBuilding_t>)
-                {
-                    if (pBuildings && !pBuildings->Find(rAlt.buildingId))
-                    {
-                        ThrowBadReference(rSourceId, "condition building", rAlt.buildingId);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, IsDefending_t>
-                                   || std::is_same_v<T, IsInCombat_t>
-                                   || std::is_same_v<T, OriginBaseIsHomeBase_t>
-                                   || std::is_same_v<T, SubjectIsOnOriginBase_t>
-                                   || std::is_same_v<T, SocialRating_t>
-                                   || std::is_same_v<T, AttackerIsEmbarked_t>
-                                   || std::is_same_v<T, HasAirdroppedThisTurn_t>
-                                   || std::is_same_v<T, AttackerDomain_t>
-                                   || std::is_same_v<T, DefenderDomain_t>
-                                   || std::is_same_v<T, IsHeadquarters_t>
-                                   || std::is_same_v<T, SubjectDomain_t>
-                                   || std::is_same_v<T, HasFlag_t>
-                                   || std::is_same_v<T, IsPrototype_t>
-                                   || std::is_same_v<T, IsCombatUnit_t>
-                                   || std::is_same_v<T, IsNativeLife_t>)
-                {
-                }
-                else
-                {
-                    static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
-                }
-            },
-            rCond.AsVariant());
-    };
-    checkCondition(rCondition);
-}
+        for (const Condition_t& rNested : rAll.conditions)
+        {
+            Check(rNested);
+        }
+    }
+
+    void operator()(const AnyOf_t& rAny) const
+    {
+        for (const Condition_t& rNested : rAny.conditions)
+        {
+            Check(rNested);
+        }
+    }
+
+    void operator()(const HasComponent_t& rHas) const
+    {
+        if (pUnitComponents && !pUnitComponents->Find(rHas.component))
+        {
+            ThrowBadReference(rSourceId, "condition component", rHas.component);
+        }
+    }
+
+    void operator()(const SubjectDesign_t& rDesign) const
+    {
+        if (pNativeUnits && !pNativeUnits->Find(rDesign.designId))
+        {
+            ThrowBadReference(rSourceId, "condition design", rDesign.designId);
+        }
+    }
+
+    void operator()(const BaseHasBuilding_t& rHas) const
+    {
+        CheckBuilding_(rHas.buildingId);
+    }
+
+    void operator()(const OriginBaseHasBuilding_t& rHas) const
+    {
+        CheckBuilding_(rHas.buildingId);
+    }
+
+    void operator()(const IsDefending_t&) const {}
+    void operator()(const IsInCombat_t&) const {}
+    void operator()(const OriginBaseIsHomeBase_t&) const {}
+    void operator()(const SubjectIsOnOriginBase_t&) const {}
+    void operator()(const SocialRating_t&) const {}
+    void operator()(const AttackerIsEmbarked_t&) const {}
+    void operator()(const HasAirdroppedThisTurn_t&) const {}
+    void operator()(const AttackerDomain_t&) const {}
+    void operator()(const DefenderDomain_t&) const {}
+    void operator()(const IsHeadquarters_t&) const {}
+    void operator()(const SubjectDomain_t&) const {}
+    void operator()(const HasFlag_t&) const {}
+    void operator()(const IsPrototype_t&) const {}
+    void operator()(const IsCombatUnit_t&) const {}
+    void operator()(const IsNativeLife_t&) const {}
+
+private:
+    void CheckBuilding_(const std::string& rBuildingId) const
+    {
+        if (pBuildings && !pBuildings->Find(rBuildingId))
+        {
+            ThrowBadReference(rSourceId, "condition building", rBuildingId);
+        }
+    }
+};
 
 } // namespace
 
@@ -327,8 +337,9 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
 
         if (rEffect.condition)
         {
-            ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
-                                         pUnitComponents, pNativeUnits, pBuildings);
+            const ConditionReferenceValidator conditions{rSourceId, pImprovements, pUnitComponents,
+                                                         pNativeUnits, pBuildings};
+            conditions.Check(*rEffect.condition);
         }
 
         if (rEffect.buildingFilter && pBuildings)
@@ -360,8 +371,9 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
             rEffect.effect);
         if (rEffect.condition)
         {
-            ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
-                                         pUnitComponents, pNativeUnits, pBuildings);
+            const ConditionReferenceValidator conditions{rSourceId, pImprovements, pUnitComponents,
+                                                         pNativeUnits, pBuildings};
+            conditions.Check(*rEffect.condition);
         }
     }
 }

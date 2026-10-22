@@ -134,7 +134,7 @@ struct GameDataContext
 
 // Runs every parser in dependency order and validates cross-config ids. Returns a complete
 // context or throws, so consumers may dereference any member.
-GameDataContext LoadGameData(const GameDataPaths& rPaths = {});
+GameDataContext LoadGameData(const GameDataPaths& rPaths);
 
 // Throws naming the first null member. Test fixtures that assemble a context run it too.
 void ThrowIfIncomplete(const GameDataContext& rData);

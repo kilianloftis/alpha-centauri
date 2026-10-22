@@ -42,7 +42,7 @@ void SatelliteSummaryPanel::Refresh()
     }
 
     m_counts.clear();
-    for (const OrbitalCensusEntry_t& rEntry : m_rGameState.GetOrbitalCensus())
+    for (const OrbitalCensusEntry_t& rEntry : BuildOrbitalCensus())
     {
         m_counts[std::to_string(rEntry.factionId) + ":" + rEntry.buildingId] = rEntry.count;
     }

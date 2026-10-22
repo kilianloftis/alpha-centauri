@@ -1291,7 +1291,7 @@ BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson)
     }
     if (kindStr == "Category")
     {
-        return BuildingFilterCategory_t{ParseGameCategoryField(filterJson)};
+        return BuildingFilterCategory_t{ParseGameCategoryField(filterJson, "category")};
     }
 
     throw std::runtime_error("Unknown buildingFilter kind: '" + kindStr + "'");

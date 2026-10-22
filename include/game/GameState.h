@@ -167,8 +167,6 @@ public:
     ProbeActionExecutor& GetProbeActions();
     const ProbeActionExecutor& GetProbeActions() const;
 
-    FirstContactResolver& GetFirstContactResolver();
-    const FirstContactResolver& GetFirstContactResolver() const;
 
     // Null until CreatePlanetaryCouncil (most unit-test fixtures never create one).
     PlanetaryCouncil* GetPlanetaryCouncil();
@@ -196,17 +194,8 @@ public:
     void ReapRazedBases();
 
     // Public orbital building census (buildings with orbital == true). Visible to all factions.
-    std::vector<OrbitalCensusEntry_t> GetOrbitalCensus() const;
-    int CountOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId) const;
 
-    // Ready OrbitalAttack buildings for rFaction (UI selection list).
-    std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction) const;
 
-    // ASAT strike by a ready attacker building on another faction's orbital.
-    OrbitalAttackResult_t TryAttackSatellite(Faction& rAttacker,
-                                             Faction& rDefender,
-                                             const BuildingId_t& attackerBuildingId,
-                                             const BuildingId_t& targetOrbitalBuildingId);
 
 private:
     void OnVisibilitySettingsChanged_();
@@ -215,6 +204,9 @@ private:
     // Applied after the faction is in m_factions, since the observers iterate Factions(). Ends
     // with a territory and visibility sweep.
     void AttachToSession_(Faction& rFaction);
+    void WireFactionObservers_(Faction& rFaction);
+    void WireUnitObservers_(UnitManager& rUnits);
+    void WireBaseObservers_(Faction& rFaction);
 
     int m_missionYear;
     GameSettings& m_rSettings;

@@ -360,6 +360,23 @@ void GameState::AttachToSession_(Faction& rFaction)
     // The session wiring that has to close over this GameState.
     rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
                                    GetWorldMap().GetUnitPositions());
+    WireFactionObservers_(rFaction);
+    WireUnitObservers_(rFaction.GetUnitManager());
+    WireBaseObservers_(rFaction);
+
+    // Catches up on bases and units the faction already owns; a no-op for a new faction.
+    RebuildTerritory();
+    rFaction.RebuildVisibility();
+    // Contact is symmetric: an incumbent who already sees the newcomer's bases must learn of it
+    // too.
+    for (Faction& rObserver : Factions())
+    {
+        m_pFirstContact->ConsiderObserver(rObserver);
+    }
+}
+
+void GameState::WireFactionObservers_(Faction& rFaction)
+{
     rFaction.OnSecretProjectDestroyed.Connect([this](const BuildingId_t& rBuildingId)
     {
         MarkSecretProjectDestroyed(rBuildingId);
@@ -383,8 +400,12 @@ void GameState::AttachToSession_(Faction& rFaction)
     {
         m_pFirstContact->ConsiderObserver(rObserver);
     });
+}
+
+void GameState::WireUnitObservers_(UnitManager& rUnits)
+{
     // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
-    rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed)
+    rUnits.OnUnitDestroyed.Connect([this](Unit& rDestroyed)
     {
         for (Faction& rOther : Factions())
         {
@@ -392,7 +413,7 @@ void GameState::AttachToSession_(Faction& rFaction)
         }
     });
     // Unit-produced triggers before first-contact so XP/grants are applied when peers scan.
-    rFaction.GetUnitManager().OnUnitCreated.Connect(
+    rUnits.OnUnitCreated.Connect(
         [this](Unit& rCreated, BaseManager* pBuiltAt)
         {
             if (pBuiltAt)
@@ -402,12 +423,15 @@ void GameState::AttachToSession_(Faction& rFaction)
             // Created into another faction's existing vision (no move event).
             m_pFirstContact->ConsiderUnit(rCreated);
         });
-    rFaction.GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
+    rUnits.OnUnitAdopted.Connect([this](Unit& rAdopted)
     {
         // A transfer is not a birth, but the unit may still be seen by a faction it has not met.
         m_pFirstContact->ConsiderUnit(rAdopted);
     });
+}
 
+void GameState::WireBaseObservers_(Faction& rFaction)
+{
     auto wireBaseSession = [this](BaseManager& rBase)
     {
         if (!m_sessionWiredBases.insert(&rBase).second)
@@ -426,16 +450,6 @@ void GameState::AttachToSession_(Faction& rFaction)
     for (BaseManager& rBase : rFaction.Bases())
     {
         wireBaseSession(rBase);
-    }
-
-    // Catches up on bases and units the faction already owns; a no-op for a new faction.
-    RebuildTerritory();
-    rFaction.RebuildVisibility();
-    // Contact is symmetric: an incumbent who already sees the newcomer's bases must learn of it
-    // too.
-    for (Faction& rObserver : Factions())
-    {
-        m_pFirstContact->ConsiderObserver(rObserver);
     }
 }
 
@@ -697,16 +711,6 @@ const ProbeActionExecutor& GameState::GetProbeActions() const
     return *m_pProbeActions;
 }
 
-FirstContactResolver& GameState::GetFirstContactResolver()
-{
-    return *m_pFirstContact;
-}
-
-const FirstContactResolver& GameState::GetFirstContactResolver() const
-{
-    return *m_pFirstContact;
-}
-
 void GameState::CreateWorldEvents()
 {
     if (m_pWorldEvents)
@@ -791,31 +795,6 @@ void GameState::MarkSecretProjectDestroyed(const std::string& buildingId)
 bool GameState::IsSecretProjectDestroyed(const std::string& buildingId) const
 {
     return m_destroyedSecretProjects.contains(buildingId);
-}
-
-std::vector<OrbitalCensusEntry_t> GameState::GetOrbitalCensus() const
-{
-    return BuildOrbitalCensus();
-}
-
-int GameState::CountOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId) const
-{
-    return CountFactionOrbitalBuildings(factionId, buildingId);
-}
-
-std::vector<OrbitalAttackerOption_t> GameState::ListReadyOrbitalAttackers(
-    const Faction& rFaction) const
-{
-    return ::ac::ListReadyOrbitalAttackers(rFaction, m_missionYear);
-}
-
-OrbitalAttackResult_t GameState::TryAttackSatellite(Faction& rAttacker,
-                                                    Faction& rDefender,
-                                                    const BuildingId_t& attackerBuildingId,
-                                                    const BuildingId_t& targetOrbitalBuildingId)
-{
-    return ::ac::TryAttackSatellite(*this, rAttacker, rDefender, attackerBuildingId,
-                                    targetOrbitalBuildingId, m_rng);
 }
 
 void GameState::OnVisibilitySettingsChanged_()
