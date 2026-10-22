@@ -41,29 +41,23 @@ struct UnitComponentConfig_t
     int mineralCost = 0;
     // Required when type == "chassis"; must be unset for other component types.
     std::optional<UnitDomain_t> domain;
-    // Absent (empty) means any chassis. A present list is the only chassis ids this component
-    // may be designed with.
+    // The only chassis this component may be designed on; empty means any.
     std::vector<std::string> requiresChassis;
     std::vector<EffectConfig_t> effects;
-    // One-shot effects fired once, when a unit carrying this component finishes production
-    // (the colony pod's population cost). Free spawns never pay these — see BaseManager.
+    // Fired once when a unit with this component finishes production (a colony pod's pop cost).
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;
     // Considered when a unit carrying this component is ordered to Hold, and again when a
     // building is completed on its tile. UnitDesign gathers these in slot order.
     std::vector<TriggeredEffectConfig_t> onHoldEffects;
-    // Fired when a unit carrying this component is ordered to detonate in place — the
-    // delivery path for a warhead that cannot declare an attack. A DestroyUnit entry spends
-    // the carrier. UnitDesign gathers these in slot order.
+    // Fired when the unit is ordered to detonate in place, for a warhead that cannot attack.
     std::vector<TriggeredEffectConfig_t> onDetonateEffects;
-    // Optional partial override of kinds.unit.default_scrap, folded per design by
-    // MergeScrapOverride: later occupied slots win on a given key. `"formula": null` denies
+    // Overrides kinds.unit.default_scrap per key, later slots winning. A null formula denies
     // scrap.
     std::optional<ScrapOverride_t> scrap;
     // Display-only annotations for FormatCombatRating (not gameplay effects).
     std::vector<CombatRatingModifier_t> combatRatingModifiers;
     std::vector<std::string> combatRatingLabels;
 
-    // Empty requiredTech = always available (matches BuildingConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
         if (requiredTech.empty())
@@ -75,7 +69,6 @@ struct UnitComponentConfig_t
     }
 };
 
-// Empty requiresChassis allows every chassis. Otherwise rChassisId must be in the list.
 inline bool ChassisRequirementMet(const UnitComponentConfig_t& rComponent,
                                   const std::string& rChassisId)
 {

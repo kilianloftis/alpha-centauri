@@ -41,9 +41,6 @@ Unit::Unit(UnitId_t unitId,
     , m_pTile(&rTile)
     , m_pFaction(&rFaction)
     , m_rMorale(rMorale)
-    // Seed current stats from the *live* resolved maxima (design effects + the faction's
-    // active FactionUnits effects), not the design's context-free values. A fresh unit
-    // therefore starts at its true max, so current-vs-max is well defined from spawn.
     , m_currentHp(0)
     , m_currentFuel(0)
     , m_moveFragmentsRemaining(0)
@@ -57,8 +54,7 @@ Unit::Unit(UnitId_t unitId,
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    // Stamp ProducedAtThisBase grants once from the ephemeral production base. Omitted falls
-    // back to home; explicit nullptr means built nowhere (gift) — no stamp.
+    // ProducedAtThisBase grants from the base that built the unit.
     if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
     {
         EffectContext_t stampCtx;
@@ -71,13 +67,13 @@ Unit::Unit(UnitId_t unitId,
             {
                 continue;
             }
-            // Membership was one-shot; clear origin so transfer / destroyed bases cannot
-            // be consulted again.
+            // No origin, so a later transfer or razed base is never consulted.
             m_productionGrants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
         }
     }
 
-    // Members used by ResolveStat are initialised above; seed after the mem-init list.
+    // Here, once ResolveStat can read the members, so a new unit starts at its live maxima,
+    // faction effects included.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
     m_currentFuel = GetMaxFuel();
     m_moveFragmentsRemaining =
@@ -145,10 +141,6 @@ void Unit::EmbarkInto(Unit& rCarrier)
     {
         return;
     }
-    // The invariants used to be documented as caller duties, which meant one missed call site
-    // could overfill m_cargo (FreeCargoSlots then goes negative) or link a passenger to a
-    // carrier on another tile, which MoveUnit would still tow. Enforced here so the cargo graph
-    // cannot be put into a state the rules say is impossible.
     if (&rCarrier == this)
     {
         throw std::invalid_argument("Unit::EmbarkInto: a unit cannot carry itself");
@@ -235,9 +227,7 @@ int Unit::GetXp() const                     { return m_xp; }
 bool Unit::IsPrototype() const              { return m_bPrototype; }
 bool Unit::IsCombatUnit() const             { return m_rDesign.IsCombatUnit(); }
 
-// Current stats are clamped to [0, live max] so the invariant 0 <= current <= max holds
-// regardless of caller arithmetic (overkill damage, refuel past capacity, ...). The maxima
-// are the live resolved values, so they track faction-effect changes made after spawn.
+// Clamped to [0, live max], which follows faction effects gained after spawn.
 void Unit::SetCurrentHp(int hp)
 {
     m_currentHp = std::clamp(hp, 0, ResolveStat(*this, StatId_t::HitPoints));

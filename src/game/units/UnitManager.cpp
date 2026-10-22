@@ -65,8 +65,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                                         m_rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
-    // After construction: the unit latches IsPrototype in its constructor, and this
-    // is what makes the next one of the same design ordinary.
+    // After construction, so the unit has already latched IsPrototype.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
     // Same three-valued production base as Unit's stamp path: omit → home; explicit null → skip.
     BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase;
@@ -81,10 +80,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     // One rebuild for the carrier and everything aboard, not one per hull.
     Faction::VisibilityRebuildScope visibilityScope = m_rFaction.DeferVisibilityRebuild();
 
-    // Cargo that can hold the carrier's tile by itself is set down there — a ship sunk in
-    // port does not drown the garrison; anything over open water goes down with it. Snapshot
-    // first, since both branches clear the cargo links. Only passengers this manager owns are
-    // ours to destroy; a carrier never holds another faction's units (CanCarryPassenger).
+    // A copy, since both branches below unlink the passenger.
     const std::vector<Unit*> cargo = rUnit.GetCargo();
     const Tile& rCarrierTile = rUnit.GetTile();
     for (Unit* pPassenger : cargo)
@@ -93,6 +89,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
         {
             continue;
         }
+        // A ship sunk in port sets its passengers down; at sea they go down with it.
         if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
         {
             pPassenger->Disembark();
@@ -140,7 +137,7 @@ std::unique_ptr<Unit> UnitManager::ReleaseUnit(Unit& rUnit)
         throw std::runtime_error("UnitManager::ReleaseUnit: unit not found");
     }
 
-    // Emit while still owned/live, mirroring DestroyUnit's "signal before erase" contract.
+    // While the unit is still owned, as DestroyUnit does.
     OnUnitReleased.Emit(rUnit);
 
     std::unique_ptr<Unit> pReleased = std::move(*it);

@@ -29,25 +29,18 @@ class GameState;
 class IUnitOrderWorld;
 class TerrainOperationRegistry;
 
-// Outcome of one applied step. A native raider is consumed by the base it raids, so a step
-// can legally end with the mover gone; bMoverDestroyed is the signal that no caller may
-// touch rMover again.
+// A native raider is consumed by the base it raids, so a step can end with the mover gone.
 struct StepResult_t
 {
     bool bEntered = false;
     bool bMoverDestroyed = false;
 };
 
-// Applies step/attack/order/use actions using shared MoveCostRules, StepEvaluator, and
-// Pathfinder references. Path search and step legality are shared world queries owned by
-// GameState; this class owns only the mutation logic. SingleUse expenditure lives here
-// (ExpendIfSingleUse_), not in CombatResolver or FoundBaseRules.
+// Carries out unit orders and actions, and spends SingleUse units.
 class UnitOrderExecutor
 {
 public:
-    // pWorld supplies the session-scoped queries (base lookup, intercept, conquest) that the
-    // map and pathfinder cannot answer; GameState passes itself. Movement-only harnesses may
-    // pass nullptr, which disables intercept and base conquest.
+    // A null pWorld disables intercept and base conquest.
     UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
@@ -59,50 +52,28 @@ public:
                       IUnitOrderWorld* pWorld = nullptr);
     ~UnitOrderExecutor() = default;
 
-    // Session visit/investigate policy for tiles with on_visit_effects. Unset skips visit
-    // handling (movement-only harnesses). Engine / GameState set after construction.
+    // Handles arrival on tiles with on_visit_effects. Unset skips them.
     using ImprovementVisitHandler = std::function<void(Unit&)>;
     void SetImprovementVisitHandler(ImprovementVisitHandler handler)
     {
         m_improvementVisitHandler = std::move(handler);
     }
 
-    // Advance the unit's current order one pass. Returns Continue if the order remains,
-    // Complete if it finished and the unit survives, Expended if SingleUse should be
-    // DestroyUnit'd by the caller (PlayerActions under DeferDestruction), or UnitDestroyed
-    // if the unit died advancing the order and is already gone.
-    // Clears the unit's order whenever progress is not Continue.
-    // When a world is bound, entering an undefended foreign base may capture it or trigger a
-    // native raid.
+    // Advances the unit's order one pass, and clears the order once it ends.
     OrderProgress_t Execute(Unit& rUnit);
 
-    // Drop turn-scoped orders (currently SkipTurn) when moves refresh at TurnStart.
+    // Drops turn-scoped orders (SkipTurn) when moves refresh.
     void OnTurnStart(Unit& rUnit);
 
-    // Apply one legal empty-tile step (MoveUnit + spend tile move-cost fragments). On
-    // BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units.
-    // Newly revealed hostiles (contact or fog) cancel a pending MoveOrder on rMover.
-    // Fungus multi-turn charge progress is stored on rMoveOrder.
-    // Stop using rMover when the result reports bMoverDestroyed.
+    // One step onto rTo. A blocked step reveals its blockers, and a newly seen hostile cancels
+    // a move order. Multi-turn fungus entry progress is kept on rMoveOrder.
     [[nodiscard]] StepResult_t TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
 
-    // Attack a hostile-occupied adjacent tile without moving onto it. Costs one movement
-    // point; neither side changes tile. Returns nullopt when FindAttackableHostileOnTile
-    // denies the declare (moves / adjacency / visibility / CanAttackTile). Otherwise
-    // resolves combat (HP / DestroyUnit) and returns the round-by-round result for UI
-    // playback. SingleUse attackers return as destroyed after the caller (or this method)
-    // runs DestroyUnit on OrderProgress_t::Expended.
-    // When world is bound, ready Intercept effects may destroy the attacker before
-    // CombatResolver runs. Otherwise an eligible Scramble unit may path onto the
-    // target tile hop-by-hop and become the combat defender. After the last garrison dies on a
-    // base tile, last-defender casualties / adjacent native raid apply when a world is bound —
-    // ownership transfer still requires a later enter-tile order while moves remain.
+    // Attacks a hostile on an adjacent tile without moving. nullopt when the attack is not
+    // allowed; otherwise the result, for playback. An intercept or scrambler can change it.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
-    // One bombard shot. nullopt when the attacker lacks the flag, has no movement
-    // fragments, or the tile is outside bombard_range. Otherwise contact-reveals every
-    // unit on the tile, resolves a duel, one strike per legal hostile, or one random
-    // non-base improvement, then spends every remaining movement fragment.
+    // One bombard shot, spending all remaining moves. nullopt when the unit cannot bombard.
     struct BombardResult_t
     {
         std::vector<CombatResult_t> combats;
@@ -111,19 +82,14 @@ public:
     };
     std::optional<BombardResult_t> TryBombard(Unit& rAttacker, const Tile& rTargetTile);
 
-    // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
-    // territory). Observers hang off Faction::OnBaseAdded, which CreateBase fires — callers do
-    // not wire anything (see EventBridge::WireBase). SingleUse colony pods are DestroyUnit'd
-    // here on Expended. Returns the new base, or nullptr.
+    // Founds a base on the unit's tile, spending a SingleUse unit. nullptr when it may not.
     BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState);
 
     // Whether rUnit may start projectId (a buildable improvement or a terrain operation) on
     // its tile now, under the rules of the world it stands in.
     bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId) const;
 
-    // Begin a Former terraform project for projectId (a buildable improvement or a terrain
-    // operation). Spends energy up front and
-    // assigns TerraformOrder_t. Returns false if ineligible.
+    // Starts projectId, paying its energy up front. False when the unit may not.
     bool TryStartTerraform(Unit& rUnit, const std::string& projectId, GameState& rGameState);
 
     // Forwards to AttackRules::FindVisibleHostileOnTile (visibility + embark-in-base
@@ -139,10 +105,7 @@ public:
     // Air carrier: unload all passengers onto the current tile (Shift+U).
     bool TryUnloadTransport(Unit& rCarrier);
 
-    // Airdrop rUnit onto rDest (teleport enter, no terrain spend). Returns eligibility fail
-    // reason on deny; on success marks airdropped, applies landing damage, EnterTile_ +
-    // arrival, and drains remaining moves for non-combat units. Stop using rUnit when
-    // bMoverDestroyed.
+    // Drops rUnit onto rDest with landing damage. failReason says why it could not.
     struct AirdropActionResult_t
     {
         AirdropFailReason_t failReason = AirdropFailReason_t::None;

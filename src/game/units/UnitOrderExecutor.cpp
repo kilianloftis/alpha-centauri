@@ -120,8 +120,7 @@ CombatResult_t UnitOrderExecutor::ResolveBombardExchange_(Unit& rAttacker, Unit&
     PromoteOnKill_(rAttacker, rDefender, combat);
     if (!combat.bDefenderDestroyed)
     {
-        // TODO: per-turn healing is not implemented. When it is, a unit subjected to
-        // bombard must not heal this turn. ClearOrder does not do that by itself.
+        // TODO: a bombarded unit must not heal this turn, once per-turn healing exists.
         rDefender.ClearOrder();
     }
     return combat;
@@ -145,13 +144,7 @@ void UnitOrderExecutor::CollectVisibleHostileIds_(const Unit& rObserver,
     const Faction& rFaction = rObserver.GetFaction();
     const FactionId_t observerId = rFaction.GetFactionId();
 
-    // Sweep the position index, not the map. This runs twice per attempted step (before and
-    // after), so a multi-step move used to pay O(steps x tiles x units) — dominated by empty
-    // fog on a real map. The index holds only occupied tiles, making it O(units) per sweep.
-    //
-    // TODO: still O(units) per step. Restricting the sweep to units whose visibility could have
-    // changed (a dirty set invalidated by reveal/move) would make it proportional to what
-    // actually moved, but needs a visibility-revision seam that does not exist yet.
+    // TODO: sweep only units whose visibility may have changed; needs a visibility revision.
     m_rWorldMap.GetUnitPositions().ForEachUnit([&](const Unit& rUnit)
     {
         if (rUnit.GetFaction().GetFactionId() != observerId
@@ -250,9 +243,7 @@ UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUn
 
 bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
 {
-    // Board a transport on this tile only when the mover cannot hold the tile itself
-    // (step onto open water / ship-to-ship transfer); entering a base leaves it a garrison,
-    // not cargo.
+    // Boards only when the mover cannot hold the tile itself; in a base it stays a garrison.
     ac::TryAutoAttachOnEntry(rMover);
 
     if (TileHasVisitEffects(rMover.GetTile()))
@@ -266,8 +257,6 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
         }
     }
 
-    // No world bound means no session to conquer into — a legitimate mode for movement-only
-    // harnesses.
     if (!m_pWorld)
     {
         return true;
@@ -389,9 +378,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         result.bAttackerDestroyed = true;
     }
 
-    // Last-defender casualties / adjacent native raid — not ownership transfer. Capture
-    // requires a separate enter-tile order after combat. A native raider spends itself on
-    // the raid; report that so UI playback does not show a survivor that no longer exists.
+    // A native raider spends itself on the raid, so playback must not show it surviving.
     if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase
         && ApplyLastDefenderConquest_(rAttacker, rDefenderTile))
     {
@@ -539,7 +526,7 @@ OrderProgress_t UnitOrderExecutor::Execute(Unit& rUnit)
         return OrderProgress_t::Complete;
     }
 
-    // non-const visit — allows mutating HoldForTurnsOrder_t / TerraformOrder_t
+    // Non-const, since Execute_ counts down an order's turns.
     const OrderProgress_t progress = std::visit([&](auto& rOrder) -> OrderProgress_t
     {
         return Execute_(rUnit, rOrder);
@@ -644,7 +631,6 @@ OrderProgress_t UnitOrderExecutor::RefuseTerritoryEntry_(Unit& rUnit, const Tile
 
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
 {
-    // Hold indefinitely — nothing to do each turn
     (void)rUnit;
     (void)rOrder;
     return OrderProgress_t::Continue;
@@ -702,11 +688,6 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Continue;
     }
 
-    // Energy was already debited and the turns are spent. Place clears features that cannot
-    // share the tile, then adds its improvement, so an incompatible feature is not a failed
-    // completion. A false return is a surface the order does not change (a depth band, or the
-    // tile left the improvement's domain).
-
     // Order remains until Execute clears on Complete — safe to read rOrder here.
     const std::optional<TerraformProject_t> project = FindTerraformProject(
         rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
@@ -724,6 +705,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Complete;
     }
 
+    // Fails only on a surface the project cannot change, such as the wrong depth band.
     if (!ApplyTerraformResult(*pTile, *project, m_rTileEffects, rUnit, m_rRng, m_pWorld))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.projectId

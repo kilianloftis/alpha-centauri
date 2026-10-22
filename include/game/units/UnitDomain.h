@@ -3,7 +3,7 @@
 namespace ac
 {
 
-// Movement / ZOC domain. Required on chassis components; land = neither sea nor air.
+// Movement and ZOC domain, set by a unit's chassis.
 enum class UnitDomain_t
 {
     Land,

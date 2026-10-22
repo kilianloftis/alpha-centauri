@@ -39,44 +39,29 @@ public:
         UnitManager* m_pManager;
     };
 
-    // rMorale is the game-wide calculator owned by GameDataContext; every unit this manager
-    // creates borrows it, so morale rules need not be threaded through create/transfer calls.
+    // Every unit this manager creates borrows rMorale.
     UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
     ~UnitManager() = default;
 
-    // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
-    // constructor). Rejects the tile under the stacking rule (MovementRules) before
-    // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
-    // pProducedAt is three-valued (see Unit's constructor): omit it to stamp from pHomeBase,
-    // or pass an explicit nullptr for a unit that is homed but built nowhere (no production grants).
+    // Throws when rTile already holds a unit. pProducedAt is as in Unit's constructor.
     Unit& CreateUnit(UnitId_t unitId, const IDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile,
                      BaseManager* pHomeBase = nullptr,
                      std::optional<BaseManager*> pProducedAt = std::nullopt);
     void DestroyUnit(Unit& rUnit);
 
-    // Ownership transfer, giver side (Faction::TransferUnitTo): removes rUnit from this
-    // manager and returns it, WITHOUT applying DestroyUnit's combat carrier-loss rules and
-    // WITHOUT emitting OnUnitDestroyed — the unit is not dying, it is leaving. Cargo / carrier
-    // links, position registration, and world occupancy are untouched; the caller decides what
-    // to do with them (see docs/architecture/high-level.md, "Object lifetime"). Throws if
-    // rUnit is not owned by this manager.
+    // Giver side of an ownership transfer: removes rUnit without destroying it, so no carrier
+    // loss and no OnUnitDestroyed. Its cargo links and position are the caller's to handle.
     std::unique_ptr<Unit> ReleaseUnit(Unit& rUnit);
-    // Ownership transfer, receiver side: takes a unit released from another manager (or newly
-    // built off-manager), rebinds it to this manager's faction, and adds it as live. Does not
-    // re-check tile placement (the unit never left the map) and does not emit OnUnitCreated —
-    // observers that must react to "a unit now exists under this faction" without treating it
-    // as a birth should use OnUnitAdopted. Throws if pUnit is null.
+    // Receiver side of an ownership transfer. Emits OnUnitAdopted, not OnUnitCreated.
     Unit& AdoptUnit(std::unique_ptr<Unit> pUnit);
 
-    // Keep destroyed objects alive until the scope ends so a pass may safely destroy its
-    // current unit. DestroyUnit still removes the unit immediately from occupancy and all
-    // Units() views; only memory reclamation is deferred. Scopes may be nested.
+    // Until the scope ends, destroyed units leave the map and Units() but are not freed, so a
+    // pass may destroy the unit it is on. Scopes nest.
     [[nodiscard]] DeferredDestructionScope DeferDestruction();
     bool IsPendingDestruction(const Unit& rUnit) const;
 
-    // Iterate live units by reference without exposing the owning unique_ptrs. Null slots
-    // left by deferred destruction are skipped.
+    // Live units, skipping the slots deferred destruction leaves empty.
     auto Units()
     {
         return m_units
@@ -98,28 +83,21 @@ public:
               });
     }
 
-    // First unit with moves remaining and no order, or nullptr.
-    // If pAfter is set, returns the next such unit after it (wrapping), or the first if
-    // pAfter is not among units that require orders.
+    // The next unit needing orders after pAfter, wrapping; the first when pAfter is null or
+    // does not need orders. nullptr when no unit needs orders.
     Unit* GetNextAvailableUnit(const Unit* pAfter = nullptr) const;
     bool HasUnitsRequiringOrders() const;
 
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
-    // Fired from DestroyUnit before the unit is removed, so observers (e.g. WorldView's
-    // unit selection) can drop any reference to it while it is still valid.
+    // Before a unit is destroyed, while observers can still read it.
     Signal<Unit&> OnUnitDestroyed;
-    // Fired after CreateUnit finishes (unit is live and visibility has been rebuilt).
+    // After a unit is created and visibility rebuilt.
     Signal<Unit&, BaseManager*> OnUnitCreated;
-    // Fired from ReleaseUnit before the unit is removed from this manager (giver side of a
-    // transfer). Distinct from OnUnitDestroyed: the unit is not dying. Observers holding a
-    // raw Unit* for "my faction's unit" (e.g. WorldView selection) should drop it here even
-    // though the pointer itself stays valid — see docs/architecture/high-level.md.
+    // Before a unit leaves for another faction. Observers holding it as "mine" drop it here.
     Signal<Unit&> OnUnitReleased;
-    // Fired after AdoptUnit finishes (receiver side of a transfer): unit is live under the
-    // new faction and visibility has been rebuilt. Distinct from OnUnitCreated so mods do not
-    // see a fake birth for a unit that already existed under another faction.
+    // After a unit joins from another faction. Not a birth, so not OnUnitCreated.
     Signal<Unit&> OnUnitAdopted;
 
 private:

@@ -41,7 +41,7 @@ public:
 
     virtual UnitDomain_t GetDomain() const = 0;
 
-    // Intrinsic (design-only) stat / flag resolution. Prefer free ResolveStat / ResolveFlag.
+    // From the design's own effects only.
     int GetStat(StatId_t statId) const;
     int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
     bool GetFlag(RuleFlagId_t flagId) const;

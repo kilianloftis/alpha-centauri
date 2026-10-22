@@ -32,16 +32,13 @@ public:
     bool HasComponent(const std::string& rComponentId) const override;
     bool IsCombatUnit() const override;
 
-    // True when every filled component's requiredTech is discovered (empty requiredTech
-    // always passes). Used when deciding whether a transferred base may keep a queued design.
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const;
 
     std::vector<ActiveEffect_t> CollectEffects() const override;
     std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const override;
     std::vector<TriggeredEffectConfig_t> CollectOnDetonateEffects() const override;
 
-    // Filled (non-null) components in slot order. On-complete production
-    // dispatch walks these; continuous consumers should prefer CollectEffects().
+    // Filled components, in slot order.
     const std::vector<const UnitComponentConfig_t*>& GetComponents() const { return m_components; }
 
     InteractionGridMask_t GetInteractionMask() const override { return m_interactionMask; }

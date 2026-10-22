@@ -9,8 +9,7 @@ namespace ac
 
 class Tile;
 
-// Result of advancing a unit's current order one execution step (PlayerActions pass or
-// an immediate use-action). Callers use this instead of inspecting post-hoc order/unit state.
+// Result of advancing a unit's order one step.
 enum class OrderProgress_t
 {
     Continue,      // order persists into next turn
@@ -63,9 +62,7 @@ struct SupplyCrawlOrder_t
     std::string ToString() const;
 };
 
-// Multi-turn Former project. projectId names either a buildable ImprovementConfig_t or a
-// TerrainOperationConfig_t; FindTerraformProject resolves which. turnsRemaining counts down
-// each PlayerActions pass.
+// Multi-turn Former project: a buildable improvement or a terrain operation.
 struct TerraformOrder_t
 {
     std::string projectId;

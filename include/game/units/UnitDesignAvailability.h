@@ -12,8 +12,7 @@ namespace ac
 class UnitComponentRegistry;
 class UnitSlotRegistry;
 
-// Tech-gated unit-design options. Callers (UI, AI) consume these lists; they do not re-check
-// ResearchManager themselves.
+// Unit-design options the discovered techs allow.
 
 std::vector<UnitSlotConfig_t> GetAvailableUnitSlots(
     const UnitSlotRegistry& rSlots,

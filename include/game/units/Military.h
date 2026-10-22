@@ -23,8 +23,7 @@ public:
 
     bool HasBuiltComponent(const std::string& componentId) const;
 
-    // Mark every filled component on a UnitDesign as fielded. No-op for NativeDesign.
-    // Idempotent. Called from UnitManager::CreateUnit.
+    // Marks rDesign's components as fielded; a NativeDesign has none.
     void RecordBuiltComponents(const IDesign& rDesign);
 
 private:

@@ -7,8 +7,6 @@
 namespace ac
 {
 
-// Which designer column a slot is laid out in. A string here meant every value that was not
-// "right" — including a typo — silently became left.
 enum class SlotColumn_t
 {
     Left,
@@ -25,7 +23,6 @@ struct UnitSlotConfig_t
     float costModifier = 1.0f; // scales this slot's component mineral cost
     std::string requiredTech;  // slot is only available once this tech is discovered
 
-    // Empty requiredTech = always available (matches BuildingConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
         if (requiredTech.empty())

@@ -11,23 +11,10 @@ class Faction;
 class UnitComponentRegistry;
 class UnitDesign;
 
-// Assembles a UnitDesign from a bare list of component ids and registers it with the faction's
-// Military, returning the design (or the existing one, since UnitDesign::GetId is derived from
-// the components — building the same list twice yields the same design).
-//
-// This is how config declares a unit without going through the player's unit designer: escape
-// colony pods and triggered GrantUnit effects both name components rather than a design id,
-// because designs are per-faction and player-authored and there is no registry of named ones.
-//
-// Empty componentIds returns nullptr — a legitimate "this ruleset has no such unit". An id that
-// is not in rComponents throws: callers validate their ids at load (see LoadGameData), so
-// reaching here with a bad one is a programmer error, and returning null would silently swallow
-// the unit at the one moment the rule fires.
-//
-// slotPrefix names the generated slots ("escape_slot_0", …); it only has to be unique within
-// one design.
+// Builds and registers a design from component ids, or returns the faction's existing one.
+// Config grants units by their components, since designs have no shared names.
 const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegistry& rComponents,
-                                    std::span<const std::string> componentIds,
-                                    std::string_view slotPrefix);
+                                    std::span<const std::string> componentIds, // empty: nullptr
+                                    std::string_view slotPrefix); // unique within one design
 
 } // namespace ac

@@ -29,8 +29,6 @@ const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegist
     int slotIndex = 0;
     for (const std::string& rId : componentIds)
     {
-        // Unreachable for validated ids: every caller's ids are checked against the registry at
-        // load, so a typo fails at startup naming the file rather than here, mid-rule.
         const UnitComponentConfig_t* pComponent = rComponents.Find(rId);
         if (!pComponent)
         {

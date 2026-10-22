@@ -16,9 +16,7 @@ class Tile;
 class Unit;
 struct TerraformProject_t;
 
-// Narrow session surface UnitOrderExecutor needs beyond the map / pathfinder it already
-// holds. GameState implements it; movement-only harnesses construct the executor with a
-// null world, which disables intercept and base conquest.
+// The session queries UnitOrderExecutor needs beyond its map and pathfinder.
 class IUnitOrderWorld
 {
 public:

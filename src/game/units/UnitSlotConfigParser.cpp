@@ -11,8 +11,6 @@ namespace ac
 namespace
 {
 
-// Wire form differs from the enumerator only by case, but an unknown value is a config error
-// rather than a silent left-column slot.
 SlotColumn_t ParseColumn_(const std::string& rColumn, const std::string& rSlotId)
 {
     const auto parsed = magic_enum::enum_cast<SlotColumn_t>(rColumn, magic_enum::case_insensitive);
