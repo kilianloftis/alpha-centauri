@@ -51,7 +51,7 @@ public:
     void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                        const MapAppearance& rAppearance) const;
     void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
-                       const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf = {}) const;
+                       const MapAppearance& rAppearance, const YieldLookup_t& rYieldOf) const;
 
 private:
     static constexpr std::size_t k_CoastPartCount = 2;

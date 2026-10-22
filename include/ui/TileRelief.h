@@ -17,10 +17,6 @@ using TileShades_t = DiamondValues_t<float>;
 TileLifts_t ResolveTileLifts(const Tile& rTile, const WorldMap& rMap, ReliefMode_t mode,
                              const ReliefStyle_t& rStyle);
 
-// The largest lift any tile on a map with these rules can have, in tile widths.
-float MaxTileLift(const ElevationRulesConfig_t& rRules, ReliefMode_t mode,
-                  const ReliefStyle_t& rStyle);
-
 // SMAC's slope shading: facets lighter facing the lower right, vertices averaging their facets,
 // land lightening with height, all within −4…4. Water and Flat give 0.
 TileShades_t ResolveTileShades(const Tile& rTile, const WorldMap& rMap, ReliefMode_t mode,

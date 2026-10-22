@@ -41,7 +41,9 @@ void MixHash_(std::uint64_t& rHash, std::uint64_t value)
 
 uint8_t LerpChannel_(uint8_t a, uint8_t b, float t)
 {
-    return static_cast<uint8_t>(std::lround(static_cast<float>(a) + (static_cast<float>(b) - static_cast<float>(a)) * t));
+    const float from = static_cast<float>(a);
+    const float to = static_cast<float>(b);
+    return static_cast<uint8_t>(std::lround(from + (to - from) * t));
 }
 
 Color_t LerpColor_(const Color_t& a, const Color_t& b, float t)
@@ -58,12 +60,12 @@ Color_t LerpColor_(const Color_t& a, const Color_t& b, float t)
 Color_t DimColor_(const Color_t& color, float ratio)
 {
     ratio = std::clamp(ratio, 0.0f, 1.0f);
-    return Color_t{
-        static_cast<uint8_t>(std::lround(static_cast<float>(color.r) * ratio)),
-        static_cast<uint8_t>(std::lround(static_cast<float>(color.g) * ratio)),
-        static_cast<uint8_t>(std::lround(static_cast<float>(color.b) * ratio)),
-        color.a,
+    const auto dim = [ratio](uint8_t channel)
+    {
+        const float scaled = static_cast<float>(channel) * ratio;
+        return static_cast<uint8_t>(std::lround(scaled));
     };
+    return Color_t{dim(color.r), dim(color.g), dim(color.b), color.a};
 }
 
 float Remap01_(float value, float inMin, float inMax)
@@ -108,8 +110,8 @@ const std::string& VariantSpritePath_(const ImprovementConfig_t& rOccupant, cons
 {
     const OccupantSpritePaths_t& rVariants =
         std::get<OccupantSpritePaths_t>(ArtOf_(rOccupant).sprites);
-    return PickSpritePath(rVariants.ForSurface(rTile.IsWater()), rTile.GetX(), rTile.GetY(),
-                          rOccupant.id);
+    const auto& rPaths = rVariants.ForSurface(rTile.IsWater());
+    return PickSpritePath(rPaths, rTile.GetX(), rTile.GetY(), rOccupant.id);
 }
 
 using NeighborRule_t = std::function<bool(const Tile& rNeighbor)>;
@@ -230,7 +232,12 @@ std::string ObjectSpritePath_(const ImprovementConfig_t& rConfig, const Tile& rT
         {
             return {};
         }
-        const int yield = rYieldOf ? YieldOf_(rYieldOf(rTile), pRows->stat) : 1;
+        int yield = 1;
+        if (rYieldOf)
+        {
+            const TileResources_t resources = rYieldOf(rTile);
+            yield = YieldOf_(resources, pRows->stat);
+        }
         const int row = std::clamp(yield - 1, 0, static_cast<int>(rRows.size()) - 1);
         return rRows[static_cast<std::size_t>(row)];
     }
@@ -267,8 +274,10 @@ size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t 
         return 0;
     }
     std::uint64_t hash = k_FnvOffset;
-    MixHash_(hash, static_cast<std::uint64_t>(static_cast<std::uint32_t>(tileX)));
-    MixHash_(hash, static_cast<std::uint64_t>(static_cast<std::uint32_t>(tileY)));
+    const auto bitsX = static_cast<std::uint32_t>(tileX);
+    const auto bitsY = static_cast<std::uint32_t>(tileY);
+    MixHash_(hash, static_cast<std::uint64_t>(bitsX));
+    MixHash_(hash, static_cast<std::uint64_t>(bitsY));
     for (const unsigned char ch : contentId)
     {
         MixHash_(hash, ch);

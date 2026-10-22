@@ -62,7 +62,7 @@ TEST_CASE("A choice without an action is rejected at construction", "[ui][select
     std::vector<PopupChoice_t> choices;
     choices.push_back({"First", [] {}});
     choices.push_back({"Second", nullptr});
-    CHECK_THROWS_AS(ListSelectorPopup("Title", "Empty", std::move(choices), k_Layout, style),
+    CHECK_THROWS_AS(ListSelectorPopup("Title", "Empty", std::move(choices), k_Layout, style, nullptr),
                     std::invalid_argument);
 }
 
@@ -71,7 +71,7 @@ TEST_CASE("Clicking a row reports its index", "[ui][selector]")
     const ListSelectorPopupStyle_t style = Style_();
     std::optional<size_t> selected;
     ListSelectorPopup popup("Title", "Empty", Rows_(3, [&](size_t index) { selected = index; }),
-                            k_Layout, style);
+                            k_Layout, style, nullptr);
 
     // Rows start at headerLineOffset * lineHeight = 20, each 10 tall.
     popup.HandleMouseClick(ClickAt_(5, 25));
@@ -90,7 +90,7 @@ TEST_CASE("The popup is already closing when the handler runs", "[ui][selector]"
     const ListSelectorPopup* pPopup = nullptr;
     ListSelectorPopup popup(
         "Title", "Empty", Rows_(3, [&](size_t) { bClosingDuringHandler = pPopup->ShouldClose(); }),
-        k_Layout, style);
+        k_Layout, style, nullptr);
     pPopup = &popup;
 
     popup.HandleMouseClick(ClickAt_(5, 25));
@@ -104,7 +104,7 @@ TEST_CASE("A click outside the popup dismisses it without selecting", "[ui][sele
     const ListSelectorPopupStyle_t style = Style_();
     bool bSelected = false;
     ListSelectorPopup popup("Title", "Empty", Rows_(3, [&](size_t) { bSelected = true; }),
-                            k_Layout, style);
+                            k_Layout, style, nullptr);
 
     popup.HandleMouseClick(ClickAt_(500, 500));
     CHECK(popup.ShouldClose());
@@ -114,7 +114,7 @@ TEST_CASE("A click outside the popup dismisses it without selecting", "[ui][sele
 TEST_CASE("Escape closes the popup", "[ui][selector]")
 {
     const ListSelectorPopupStyle_t style = Style_();
-    ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout, style);
+    ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout, style, nullptr);
 
     CHECK(popup.HandleKey(KeyEvent_t{Key_t::Escape, {}}));
     CHECK(popup.ShouldClose());
@@ -127,7 +127,7 @@ TEST_CASE("A long list is bounded to the content area and scrolls", "[ui][select
     const ListSelectorPopupStyle_t style = Style_();
     std::optional<size_t> selected;
     ListSelectorPopup popup("Title", "Empty", Rows_(20, [&](size_t index) { selected = index; }),
-                            k_Layout, style);
+                            k_Layout, style, nullptr);
 
     RecordingGraphics graphics;
     popup.Render(graphics);
@@ -163,7 +163,7 @@ TEST_CASE("A long list is bounded to the content area and scrolls", "[ui][select
 TEST_CASE("Scrolling stops at both ends of the list", "[ui][selector]")
 {
     const ListSelectorPopupStyle_t style = Style_();
-    ListSelectorPopup popup("Title", "Empty", Rows_(10), k_Layout, style);
+    ListSelectorPopup popup("Title", "Empty", Rows_(10), k_Layout, style, nullptr);
 
     // Already at the top.
     CHECK_FALSE(popup.HandleKey(KeyEvent_t{Key_t::ArrowUp, {}}));
@@ -178,7 +178,7 @@ TEST_CASE("Scrolling stops at both ends of the list", "[ui][selector]")
 TEST_CASE("A list that fits does not scroll or advertise overflow", "[ui][selector]")
 {
     const ListSelectorPopupStyle_t style = Style_();
-    ListSelectorPopup popup("Title", "Empty", Rows_(4), k_Layout, style);
+    ListSelectorPopup popup("Title", "Empty", Rows_(4), k_Layout, style, nullptr);
 
     CHECK_FALSE(popup.HandleKey(KeyEvent_t{Key_t::ArrowDown, {}}));
 
@@ -192,7 +192,7 @@ TEST_CASE("An empty list shows its message and selects nothing", "[ui][selector]
     const ListSelectorPopupStyle_t style = Style_();
     bool bSelected = false;
     ListSelectorPopup popup("Title", "Nothing here", Rows_(0, [&](size_t) { bSelected = true; }),
-                            k_Layout, style);
+                            k_Layout, style, nullptr);
 
     RecordingGraphics graphics;
     popup.Render(graphics);
@@ -218,13 +218,13 @@ TEST_CASE("Each choice runs its own action", "[ui][selector]")
         return choices;
     };
 
-    ListSelectorPopup popup("Title", "Empty", build(), k_Layout, style);
+    ListSelectorPopup popup("Title", "Empty", build(), k_Layout, style, nullptr);
     popup.HandleMouseClick(ClickAt_(5, 25));
     CHECK(firstClicks == 1);
     CHECK(secondClicks == 0);
     CHECK(popup.ShouldClose());
 
-    ListSelectorPopup secondPopup("Title", "Empty", build(), k_Layout, style);
+    ListSelectorPopup secondPopup("Title", "Empty", build(), k_Layout, style, nullptr);
     secondPopup.HandleMouseClick(ClickAt_(5, 35));
     CHECK(firstClicks == 1);
     CHECK(secondClicks == 1);

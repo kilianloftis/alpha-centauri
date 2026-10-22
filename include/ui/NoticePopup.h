@@ -21,8 +21,8 @@ public:
     NoticePopup(WindowLayout_t layout,
                 std::string title,
                 std::string message,
-                std::function<void()> onOk = {},
-                SpriteLibrary* pSprites = nullptr);
+                std::function<void()> onOk,
+                SpriteLibrary* pSprites);
     // Out of line: m_pOkButton's type is only forward-declared here.
     ~NoticePopup() override;
 

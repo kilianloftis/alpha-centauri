@@ -77,7 +77,8 @@ std::optional<HotkeyAction_t> FindBuiltin(const std::string& rName)
     const std::string normalized = ToLowerAscii(rName);
     for (const HotkeyAction_t value : magic_enum::enum_values<HotkeyAction_t>())
     {
-        if (ToLowerAscii(std::string(magic_enum::enum_name(value))) == normalized)
+        const std::string name(magic_enum::enum_name(value));
+        if (ToLowerAscii(name) == normalized)
         {
             return value;
         }

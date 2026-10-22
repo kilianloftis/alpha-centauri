@@ -118,7 +118,7 @@ inline FixedPlacement_t PlaceFixedLayout(const WindowLayout_t& rParent, const Fi
 // A full-width band from the parent top down to rBelow.y + overlapIntoBelow.
 inline WindowLayout_t MapBandAbove(const WindowLayout_t& rParent,
                                    const WindowLayout_t& rBelow,
-                                   float overlapIntoBelow = 0.0f)
+                                   float overlapIntoBelow)
 {
     const float bottom = rBelow.y + overlapIntoBelow;
     const float height = bottom - rParent.y;

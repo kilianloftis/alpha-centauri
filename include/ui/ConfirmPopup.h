@@ -22,7 +22,7 @@ inline std::unique_ptr<ListSelectorPopup> MakeConfirmPopup(std::string message,
     choices.push_back({"OK", std::move(onOk)});
     choices.push_back({"Cancel", [] {}});
     return std::make_unique<ListSelectorPopup>(std::move(message), "", std::move(choices), layout,
-                                               rStyle);
+                                               rStyle, nullptr);
 }
 
 } // namespace ac

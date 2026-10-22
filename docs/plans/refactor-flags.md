@@ -169,6 +169,11 @@ One entry per violation, under the rule it breaks:
   or AI is not built; `MayRepairAt` waits on per-turn healing.
 - **Why not local:** each waits on its caller, or its tests move to the production path.
 
+### `UIManager::PopView` — used only by tests
+- **Where:** `include/ui/UIManager.h:36`; 2 test callers
+- **Problem:** views close themselves; nothing in production pops one.
+- **Why not local:** the tests would close views the way production does.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -229,6 +234,14 @@ One entry per violation, under the rule it breaks:
 - **Problem:** every art shape is parsed inline.
 - **Why not local:** over 100 lines; one parser per art shape (variants, tile sets, yield rows)
   would each fill the shared occupant art struct.
+
+### `HotkeyConfig::Load` and `TileRenderer::DrawLinkNetworks_`
+- **Where:** `src/ui/HotkeyConfig.cpp` (`Load`, 86 lines, nesting 4), `src/ui/TileRenderer.cpp`
+  (`DrawLinkNetworks_`, 93 lines, complexity 28)
+- **Problem:** each does several passes inline: binding parse and validation; per-neighbour link,
+  replacement and hub drawing.
+- **Why not local:** the link drawing shares the neighbour masks across passes, and its art rules
+  are SMAC's, so splitting it should be checked against screenshots.
 
 ## Duplicated logic
 

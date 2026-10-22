@@ -131,7 +131,7 @@ void CouncilVoteView::OpenBallotSelector_()
 
         m_elements.push_back(std::make_unique<ListSelectorPopup>(
             "Cast Ballot", "No candidates", std::move(choices), popupLayout,
-            Style().listSelectorPopup));
+            Style().listSelectorPopup, nullptr));
         return;
     }
 
@@ -142,7 +142,7 @@ void CouncilVoteView::OpenBallotSelector_()
 
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Cast Ballot", "No ballot options", std::move(choices), popupLayout,
-        Style().listSelectorPopup));
+        Style().listSelectorPopup, nullptr));
 }
 
 void CouncilVoteView::CastElectionVote_(Faction* pCandidate)

@@ -250,8 +250,10 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
     const auto [originX, originY] = FootprintOrigin(rShape);
     // TODO: Show capture animation when base capture is implemented
     // TODO: Show population size below name
+    const std::string name =
+        FitBaseName_(rGraphics, rBase.GetName(), fontSize, tileWidth * s.baseNameWidthRatio);
     rGraphics.DrawText(
-        FitBaseName_(rGraphics, rBase.GetName(), fontSize, tileWidth * s.baseNameWidthRatio),
+        name,
         originX + tileWidth * s.baseNameOffsetXRatio,
         originY + tileWidth * s.baseNameOffsetYRatio, fontSize, nameColor);
 }

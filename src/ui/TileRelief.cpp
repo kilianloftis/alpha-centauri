@@ -138,21 +138,15 @@ float CornerShade_(const Tile& rTile, const WorldMap& rMap, DiamondCorner_t corn
         const LatticeOffset_t& rOffset = neighbors[i];
         if (const Tile* pNeighbor = GetTileAtLatticeOffset(rMap, rTile, rOffset.p, rOffset.q))
         {
-            sum += touching(
-                FacetShades_(*pNeighbor, Levels_(*pNeighbor, rMap, mode, rStyle), rStyle),
-                (cornerIndex + 1 + i) % k_DiamondCornerCount);
+            const TileLevels_t levels = Levels_(*pNeighbor, rMap, mode, rStyle);
+            sum += touching(FacetShades_(*pNeighbor, levels, rStyle),
+                            (cornerIndex + 1 + i) % k_DiamondCornerCount);
         }
     }
     return sum / 8.0f;
 }
 
 } // namespace
-
-float MaxTileLift(const ElevationRulesConfig_t& rRules, ReliefMode_t mode,
-                  const ReliefStyle_t& rStyle)
-{
-    return LevelsAbove_(rRules.maxElevationMeters, rRules, mode, rStyle) * rStyle.liftPerLevelRatio;
-}
 
 TileLifts_t ResolveTileLifts(const Tile& rTile, const WorldMap& rMap, ReliefMode_t mode,
                              const ReliefStyle_t& rStyle)

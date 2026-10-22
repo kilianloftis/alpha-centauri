@@ -98,7 +98,7 @@ void CommlinksView::OpenCouncilProposals_()
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Council Proposals", "No proposals available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup));
+        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup, nullptr));
 }
 
 void CommlinksView::ShowNotice_(std::string message)
@@ -107,7 +107,7 @@ void CommlinksView::ShowNotice_(std::string message)
     m_elements.push_back(std::make_unique<NoticePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         "Planetary Council",
-        std::move(message)));
+        std::move(message), std::function<void()>{}, nullptr));
 }
 
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)

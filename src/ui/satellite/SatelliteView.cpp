@@ -193,7 +193,7 @@ void SatelliteView::ShowOutcome_(std::string message)
     m_elements.push_back(std::make_unique<NoticePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         "Orbital Attack",
-        std::move(message)));
+        std::move(message), std::function<void()>{}, nullptr));
 }
 
 void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,

@@ -36,7 +36,7 @@ public:
                       std::vector<PopupChoice_t> choices,
                       WindowLayout_t layout,
                       const ListSelectorPopupStyle_t& rStyle,
-                      SpriteLibrary* pSprites = nullptr);
+                      SpriteLibrary* pSprites);
 
     ~ListSelectorPopup() override = default;
 

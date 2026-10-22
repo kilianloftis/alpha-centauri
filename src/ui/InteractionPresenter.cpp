@@ -144,11 +144,10 @@ void InteractionPresenter::PresentNotice_(const NoticeInteraction_t& rNotice)
     {
         m_rWorldView.CenterOnTile(rNotice.cameraTile->first, rNotice.cameraTile->second);
     }
-    m_rWorldView.PushModal(std::make_unique<NoticePopup>(
-        m_rWorldView.GetPopupLayout(),
-        rNotice.title,
-        rNotice.body,
-        [this]() { CompleteAndAdvance_(); }));
+    const WindowLayout_t layout = m_rWorldView.GetPopupLayout();
+    auto pPopup = std::make_unique<NoticePopup>(
+        layout, rNotice.title, rNotice.body, [this]() { CompleteAndAdvance_(); }, nullptr);
+    m_rWorldView.PushModal(std::move(pPopup));
 }
 
 void InteractionPresenter::PresentOpenView_(const OpenViewInteraction_t& rOpen)
@@ -204,27 +203,28 @@ void InteractionPresenter::PresentProductionWouldEmpty_(
     const BaseId_t baseId = rWouldEmpty.baseId;
     const FactionId_t factionId = rWouldEmpty.factionId;
 
-    auto resolveChoice = [this, baseId, factionId](bool bComplete)
+    // The base, if it is still there and still waiting for this answer.
+    auto pendingBase = [this, baseId, factionId]() -> BaseManager*
     {
-        BaseManager* pResolve = FindAudienceBase_(factionId, baseId);
-        if (pResolve && pResolve->HasPendingProductionConfirmation())
-        {
-            if (bComplete)
-            {
-                pResolve->CompletePendingProduction();
-            }
-            else
-            {
-                pResolve->DeferProductionCompletion();
-            }
-        }
-        CompleteAndAdvance_();
+        BaseManager* pBase = FindAudienceBase_(factionId, baseId);
+        return pBase && pBase->HasPendingProductionConfirmation() ? pBase : nullptr;
     };
 
     std::vector<PopupChoice_t> choices;
-    choices.push_back({"Complete " + itemName + " anyway",
-                       [resolveChoice] { resolveChoice(true); }});
-    choices.push_back({"Not this turn", [resolveChoice] { resolveChoice(false); }});
+    choices.push_back({"Complete " + itemName + " anyway", [this, pendingBase] {
+                           if (BaseManager* pResolve = pendingBase())
+                           {
+                               pResolve->CompletePendingProduction();
+                           }
+                           CompleteAndAdvance_();
+                       }});
+    choices.push_back({"Not this turn", [this, pendingBase] {
+                           if (BaseManager* pResolve = pendingBase())
+                           {
+                               pResolve->DeferProductionCompletion();
+                           }
+                           CompleteAndAdvance_();
+                       }});
     PushChoice_("Completing this would empty " + pBase->GetName() + ".", std::move(choices));
 }
 
@@ -488,12 +488,11 @@ void InteractionPresenter::FocusBase_(const BaseManager& rBase)
 
 void InteractionPresenter::PushChoice_(std::string title, std::vector<PopupChoice_t> choices)
 {
-    m_rWorldView.PushModal(std::make_unique<ListSelectorPopup>(
-        std::move(title),
-        "No options",
-        std::move(choices),
-        m_rWorldView.GetPopupLayout(),
-        Style().listSelectorPopup));
+    const WindowLayout_t layout = m_rWorldView.GetPopupLayout();
+    auto pPopup = std::make_unique<ListSelectorPopup>(
+        std::move(title), "No options", std::move(choices), layout, Style().listSelectorPopup,
+        nullptr);
+    m_rWorldView.PushModal(std::move(pPopup));
 }
 
 void InteractionPresenter::OpenView_(std::unique_ptr<IGameView> pView,

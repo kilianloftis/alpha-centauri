@@ -1204,7 +1204,7 @@ TEST_CASE("TileRenderer draws on the given shape and shades only land terrain in
         CHECK(FirstSpriteIndex_(terrain, bonusPath) < 0);
 
         RecordingGraphics objects;
-        rig.renderer.RenderObjects(objects, rLand, shape, Live_(world.map));
+        rig.renderer.RenderObjects(objects, rLand, shape, Live_(world.map), ac::TileRenderer::YieldLookup_t{});
         CHECK(FirstSpriteIndex_(objects, bonusPath) >= 0);
         CHECK(FirstSpriteIndex_(objects, moistPrefix) < 0);
         CHECK(objects.rects.empty());
@@ -1427,7 +1427,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         std::get<OccupantSpritePaths_t>(missing.art->sprites).land = {"tests/fixtures/sprites/missing/no_such_art.png"};
         rLand.AddImprovement(missing);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map), ac::TileRenderer::YieldLookup_t{});
 
         const auto cells = checkerCells(graphics);
         REQUIRE(cells.size() == 4);
@@ -1453,7 +1453,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         rig.AddOccupant(rCondenser);
         rLand.AddImprovement(rCondenser);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map), ac::TileRenderer::YieldLookup_t{});
         CHECK(checkerCells(graphics).empty());
     }
 
@@ -1463,7 +1463,7 @@ TEST_CASE("Object art that fails to load shows a magenta and black checker", "[u
         artless.art.reset();
         rLand.AddImprovement(artless);
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map));
+        rig.renderer.RenderObjects(graphics, rLand, shape, Live_(world.map), ac::TileRenderer::YieldLookup_t{});
         CHECK(checkerCells(graphics).empty());
         CHECK(graphics.sprites.empty());
     }
@@ -1486,7 +1486,7 @@ TEST_CASE("Tiles out of sight draw the occupants the faction last saw", "[ui][ti
 
     const auto drawsCondenser = [&] {
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rTile, shape, MapAppearance::Fogged(fixture.map, &faction));
+        rig.renderer.RenderObjects(graphics, rTile, shape, MapAppearance::Fogged(fixture.map, &faction), ac::TileRenderer::YieldLookup_t{});
         return std::ranges::any_of(graphics.sprites, [&rArt](const auto& rSprite) {
             return std::ranges::find(rArt, rSprite.textureId) != rArt.end();
         });
@@ -1536,7 +1536,7 @@ TEST_CASE("Tiles out of sight draw the occupants the faction last saw", "[ui][ti
         rTile.AddImprovement(rCondenser);
 
         RecordingGraphics graphics;
-        rig.renderer.RenderObjects(graphics, rTile, shape, Live_(fixture.map));
+        rig.renderer.RenderObjects(graphics, rTile, shape, Live_(fixture.map), ac::TileRenderer::YieldLookup_t{});
         CHECK(std::ranges::any_of(graphics.sprites, [&rArt](const auto& rSprite) {
             return std::ranges::find(rArt, rSprite.textureId) != rArt.end();
         }));

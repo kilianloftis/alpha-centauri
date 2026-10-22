@@ -183,9 +183,10 @@ void UnitDesignerView::ShowComponentSelector_(
     }
 
     DismissOpenModals_();
+    const WindowLayout_t layout = ResolveLayout(m_layout, Style().layouts.popupSmall);
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Select " + rSlotDisplayName, "No components available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().componentSelectorPopup));
+        "Select " + rSlotDisplayName, "No components available", std::move(choices), layout,
+        Style().componentSelectorPopup, nullptr));
 }
 
 void UnitDesignerView::ClearIncompatibleComponents_(const std::string& rChassisId)

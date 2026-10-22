@@ -42,10 +42,10 @@ int ShadeAt_(double elevation, const ElevationRulesConfig_t& rRules,
              const WaterShadingStyle_t& rShading)
 {
     const std::vector<int>& rTable = rShading.depthShades;
-    const double detail = std::floor(static_cast<double>(rTable.size())
-                                     + (elevation - rRules.oceanLevelMeters) / rShading.detailMeters);
-    const std::size_t index =
-        std::min(static_cast<std::size_t>(std::max(detail, 0.0)), rTable.size() - 1);
+    const double steps = (elevation - rRules.oceanLevelMeters) / rShading.detailMeters;
+    const double detail = std::floor(static_cast<double>(rTable.size()) + steps);
+    const auto clampedDetail = static_cast<std::size_t>(std::max(detail, 0.0));
+    const std::size_t index = std::min(clampedDetail, rTable.size() - 1);
     return rTable[index];
 }
 
