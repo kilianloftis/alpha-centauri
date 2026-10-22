@@ -470,13 +470,6 @@ bool IsTriggeredEffectType(const std::string& rTypeName)
     return TypeParsers_().count(rTypeName) != 0;
 }
 
-bool IsContinuousEffectType(const std::string& rTypeName)
-{
-    // The continuous parser's own table, so a new continuous type is reported as belonging in
-    // `effects`.
-    return EffectConfigParser::IsEffectType(rTypeName);
-}
-
 TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJson,
                                                    const std::string& rListName)
 {
@@ -487,7 +480,9 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
     const auto it = parsers.find(typeStr);
     if (it == parsers.end())
     {
-        if (IsContinuousEffectType(typeStr))
+        // The continuous parser's own table, so a new continuous type is reported as belonging
+        // in `effects`.
+        if (EffectConfigParser::IsEffectType(typeStr))
         {
             throw std::runtime_error(
                 "'" + typeStr + "' is a continuous effect and belongs in 'effects', not '"

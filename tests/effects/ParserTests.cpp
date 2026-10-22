@@ -1562,7 +1562,7 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
     {
         INFO(pType);
         CHECK(EffectConfigParser::IsEffectType(pType));
-        CHECK(TriggeredEffectParser::IsContinuousEffectType(pType));
+        CHECK(EffectConfigParser::IsEffectType(pType));
         CHECK_FALSE(TriggeredEffectParser::IsTriggeredEffectType(pType));
     }
     CHECK_FALSE(EffectConfigParser::IsEffectType("Rebel"));

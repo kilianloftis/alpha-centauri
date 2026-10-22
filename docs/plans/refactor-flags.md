@@ -94,6 +94,14 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** over 100 lines; the phases share the context being built, and `Engine` is
   still the ad hoc test setup, so its split belongs with the composition-root work.
 
+### `EffectConfigParser` — per-kind parsing in one function each
+- **Where:** `src/game/effects/EffectConfigParser.cpp`: `ParseCondition` (243 lines),
+  `ValidateAmountSourceLegality_` (197), `ParseInteractionOverride_` (142),
+  `ValidateEffectForSource` (113), `ParseStatModifier_` (97)
+- **Problem:** each walks every kind in one if-chain.
+- **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
+  changes how each kind's parser and validator are registered.
+
 ## Duplicated logic
 
 ### Required-tech availability, in six places

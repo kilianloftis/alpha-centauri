@@ -765,7 +765,8 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
                 throw std::runtime_error(
                     "TransportParams carries entries must be strings");
             }
-            transport.carries.push_back(ParseUnitDomain(rDomainJson.get<std::string>()));
+            const std::string domain = rDomainJson.get<std::string>();
+            transport.carries.push_back(ParseUnitDomain(domain));
         }
     }
     transport.requiresHarbor = parameters.value("requires_harbor", false);
@@ -1073,7 +1074,8 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
                 throw std::runtime_error(
                     "AttackerDomain condition domains must be strings");
             }
-            attackerDomain.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+            const std::string domain = rDomain.get<std::string>();
+            attackerDomain.domains.push_back(ParseUnitDomain(domain));
         }
         return attackerDomain;
     }
@@ -1093,7 +1095,8 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
                 throw std::runtime_error(
                     "DefenderDomain condition domains must be strings");
             }
-            defenderDomain.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+            const std::string domain = rDomain.get<std::string>();
+            defenderDomain.domains.push_back(ParseUnitDomain(domain));
         }
         return defenderDomain;
     }

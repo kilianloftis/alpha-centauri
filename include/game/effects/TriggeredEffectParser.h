@@ -18,9 +18,6 @@ namespace TriggeredEffectParser
 // triggered entry found in a continuous `effects` array can say which list it belongs in.
 bool IsTriggeredEffectType(const std::string& rTypeName);
 
-// True when typeName is a continuous effect type, for the mirror-image error.
-bool IsContinuousEffectType(const std::string& rTypeName);
-
 // Parses one entry of a triggered list (type / factionFilter / once_per / parameters).
 // rListName appears in error messages only.
 TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJson,
