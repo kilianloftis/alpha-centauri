@@ -16,10 +16,8 @@ namespace ac
 
 using DiamondShades_t = DiamondValues_t<int>;
 
-// SMAC's depth detail picks each vertex's shade from depthShades: one step per detailMeters
-// below ocean level, counted back from the table's last entry, with anything deeper taking the
-// first. The centre takes the tile's own depth; a corner takes the average depth of the tiles
-// that share it, with land at ocean level. Rows off the map are left out; x wraps.
+// SMAC's depth detail: one shade step per detailMeters below ocean, counted back from the
+// table's end. Corners average their tiles' depths, land at ocean level. x wraps.
 DiamondShades_t ResolveWaterShades(const Tile& rTile, const WorldMap& rMap,
                                    const WaterShadingStyle_t& rShading);
 

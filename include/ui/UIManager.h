@@ -23,9 +23,7 @@ public:
     ~UIManager();
 
     void ProcessInput();
-    // Consumes UI-queued, non-input-driven turn advance requests (e.g. WorldView's auto
-    // end-turn once no units need orders). Called once per frame between ProcessInput and
-    // Render so turn advance never runs from the paint path.
+    // Consumes queued turn advance requests once a frame, between input and Render.
     void Update();
     void Render();
 
@@ -38,9 +36,7 @@ public:
     void PopView();
     bool HasOverlayView() const;
 
-    // False while an overlay is on the stack, or the world view reports a blocking in-view
-    // modal (probe/supply popup, ...). Engine::ProcessTurn_ soft-gates TurnProcessor::Advance
-    // on this instead of throwing for an ordinary UI-initiated End Turn under a modal.
+    // False while an overlay is open or the world view has a blocking modal.
     bool CanAdvanceTurn() const;
 
     bool ShouldExit() const;

@@ -9,16 +9,12 @@
 namespace ac
 {
 
-// TODO: SatelliteLabeledButton is a generic labelled button with a satellite-scoped name and
-// style block. Moving it to ui/ would let this widget stop reaching into another screen's
-// namespace; it needs its own style section first.
+// TODO: move SatelliteLabeledButton to ui/ with its own style section, so this stops reaching
+// into the satellite screen.
 class SatelliteLabeledButton;
 class SpriteLibrary;
 
-// A modal "here is what happened / why that did not work" popup: title, message, OK.
-// Was OrbitalAttackOutcomePopup, which was already generic apart from a hardcoded header — the
-// council gates needed exactly this widget, and a second copy is how the seven list-picker
-// clones in package 14 started.
+// A modal title, message and OK.
 class NoticePopup : public UIElement
 {
 public:

@@ -20,9 +20,7 @@ class Unit;
 class ViewFactory;
 class WorldView;
 
-// Engine-owned coordinator: maps PlayerInteractionQueue::Front to Notice / OpenView (and
-// production-typed arms). Completing an interaction calls CompleteFront then onAdvance
-// (Engine::ProcessTurn_).
+// Presents PlayerInteractionQueue::Front; completing calls CompleteFront, then onAdvance.
 class InteractionPresenter
 {
 public:

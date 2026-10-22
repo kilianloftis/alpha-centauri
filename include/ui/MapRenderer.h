@@ -37,12 +37,8 @@ struct MapContent_t
 // Where Render drew each unit's marker.
 using UnitMarkerRects_t = std::unordered_map<UnitId_t, Rectangle_t>;
 
-// The one path map tiles take to the screen: the world map, a base's workable area, the location
-// preview, and the minimap's colours. A display passes the tiles it placed (back to front), the
-// MapAppearance of the viewer it shows, and the content it shows on them. Render draws in SMAC's
-// order: each tile's terrain, grid edges and objects; then each tile's base, art and name, so
-// nothing in front covers its overhang; then one unit marker per tile (none on a drawn base
-// unless that unit is selected).
+// The one path tiles take to the screen. Draws in SMAC's order: each tile's terrain, grid and
+// objects; then bases, art and names; then one unit marker per tile.
 class MapRenderer
 {
 public:

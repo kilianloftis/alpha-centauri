@@ -24,18 +24,13 @@ struct PopupChoice_t
     std::string iconPath;
 };
 
-// The one modal list-selector: a title, a column of choices, click or Escape.
-//
-// Every popup that offers "pick one of these" uses this, which is what keeps dismiss,
-// hit-testing, clipping and the empty-list message from drifting apart.
+// The one modal list selector (title, choices, click or Escape), so every "pick one" popup
+// behaves the same.
 class ListSelectorPopup : public UIElement
 {
 public:
-    // rStyle lets a screen keep its own colours and metrics without a second widget; it must
-    // outlive the popup (they are all members of the loaded UiStyle).
-    // Throws if any choice has no action: a row whose click does nothing is a programmer error,
-    // and silently swallowing the click leaves the popup open with no feedback.
-    // pSprites is optional; when null, iconPath on choices is ignored (text-only rows).
+    // rStyle must outlive the popup. Throws if a choice has no action. Without pSprites, choice
+    // icons are ignored.
     ListSelectorPopup(std::string title,
                       std::string emptyMessage,
                       std::vector<PopupChoice_t> choices,

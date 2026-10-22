@@ -8,14 +8,8 @@
 namespace ac
 {
 
-// What UIManager needs from the persistent world view, beyond IGameView.
-//
-// The seam exists so UIManager can be built and tested without the whole concrete view tree:
-// WorldView pulls in GameState, every registry, the map renderer and the input controllers, so
-// naming it directly made UIManager untestable and put the manager's own rules (push/pop, the
-// modal gate, when closed views are pruned) out of reach of any test.
-//
-// BlocksTurnAdvance is not here: IGameView already declares it virtual with a default.
+// What UIManager needs from the world view, so UIManager can be tested without the concrete
+// view tree.
 class IWorldView : public IGameView
 {
 public:

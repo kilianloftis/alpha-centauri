@@ -105,9 +105,7 @@ public:
     WindowLayout_t GetFullscreenLayout() const;
 
 private:
-    // A view that needs the player faction cannot render anything meaningful without it, and
-    // every caller reached here from a player action. Throws rather than returning a null view
-    // for PushView to dereference.
+    // Throws rather than handing PushView a null view.
     Faction* RequirePlayerFaction_() const;
 
     GameState& m_rGameState;

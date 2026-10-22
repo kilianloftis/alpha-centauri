@@ -79,9 +79,7 @@ void UIManager::ProcessKeys_()
         {
             continue;
         }
-        // Global view shortcuts (F2 research, E social engineering, ...) must not stack a
-        // second overlay while one is already active, and must not push while the world view
-        // has a blocking in-view modal (same gate as CanAdvanceTurn).
+        // View shortcuts never stack a second overlay, nor open over a blocking in-view modal.
         if (!CanAdvanceTurn())
         {
             continue;
@@ -158,11 +156,8 @@ void UIManager::Update()
         }
     }
 
-    // Only the world view queues an out-of-band advance request (auto end-turn). It must stay
-    // queued while the turn is gated: ProcessPendingAutoEndTurn clears the flag before calling
-    // through, and Engine::ProcessTurn_'s own gate then returns without advancing, so the
-    // request would be lost and never re-armed. WorldView already does this for its in-view
-    // modal; the overlay stack is the half it cannot see.
+    // The auto end-turn request stays queued while the turn is gated; otherwise
+    // Engine::ProcessTurn_'s gate would drop it unarmed.
     if (CanAdvanceTurn())
     {
         m_pWorldView->ProcessPendingAutoEndTurn();

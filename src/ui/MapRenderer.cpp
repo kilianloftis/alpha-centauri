@@ -139,10 +139,8 @@ Color_t MapRenderer::TileColor(const Tile& rTile, const MapAppearance& rAppearan
     return m_tiles.FillColor(rTile, rAppearance);
 }
 
-// Each placed tile draws its back edges (NW, NE), and its front edges (SE, SW) where the tile in
-// front is not placed, so an edge between two placed tiles draws once and a partial scene keeps a
-// closed outline. Raised tiles in front cover lines behind. Edges touching water need the ocean
-// grid; anything next to shroud takes the land colour so the grid does not reveal coastlines.
+// Back edges always, front edges only where the tile in front is not placed, so shared edges
+// draw once. Edges next to shroud take the land colour, hiding coastlines.
 void MapRenderer::DrawGrid_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
                             const PlacedSet_t& rPlacedSet, const MapAppearance& rAppearance) const
 {
@@ -201,10 +199,8 @@ void MapRenderer::DrawBase_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
     DrawBaseName_(rGraphics, *pBase, rPlaced.shape);
 }
 
-// The bare base and its building map overlays, seated like SMAC: from FootprintOrigin down, one
-// cell size for every stage (100×75 on a 100×50 footprint). Optional per-stage origin_y_ratio
-// lifts stages that sit low in the faction sheet. A base whose art does not load draws none;
-// its name still marks it.
+// Seated like SMAC: from FootprintOrigin down, one 100×75 cell per stage, lifted by
+// origin_y_ratio. Art that fails to load draws nothing; the name still marks the base.
 void MapRenderer::DrawBaseArt_(Graphics& rGraphics, const BaseManager& rBase,
                                const TileShape_t& rShape)
 {
@@ -260,10 +256,8 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
         originY + tileWidth * s.baseNameOffsetYRatio, fontSize, nameColor);
 }
 
-// One marker per tile. The selected unit wins when it stands here and the content shows it;
-// otherwise the first unit the content shows. A tile whose base is drawn shows nothing unless
-// that selected unit is the one. Units keep their own visibility rule, so they draw even on a
-// shrouded tile when the content allows — a shrouded base is not drawn, so it does not hide them.
+// One marker per tile: the selected unit if it is here, else the first shown. A drawn base
+// hides other units, but a shrouded base is not drawn.
 void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
                              const MapAppearance& rAppearance, const MapContent_t& rContent,
                              UnitMarkerRects_t& rMarkers) const

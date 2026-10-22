@@ -31,20 +31,8 @@ size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t 
 const std::string& PickSpritePath(const std::vector<std::string>& paths, int tileX, int tileY,
                                   std::string_view contentId);
 
-// Paints one tile for MapRenderer, as the MapAppearance shows it to its viewer.
-// Fills by an occupant's fill_color or elevation (blue water / brown land), then draws each
-// occupant's art by its ArtLayer_t, bottom to top. The occupants a tile draws, and those its
-// neighbors count for tile sets and road networks, come from the MapAppearance: remembered on
-// tiles out of sight. Elevation and surface (coast, water shading) are always the live tile's.
-// The appearance's cover decides the rest: shroud draws only the shroud colour; fog draws land
-// art fog_land_shade steps darker under a haze, with object sprites clear on top. Terrain art is
-// palette indices shaded as SMAC does: moisture, rockiness and river by relief shades; fungus,
-// forest and other keyed overlays as painted (fog still applies fog_land_shade); water per vertex
-// by depth. Art that fails to load draws nothing under terrain (the fill shows) and a checker for
-// objects.
-// Footprint is a 2:1 isometric diamond (width = size, height = size / 2).
-// When an art's variants list multiple assets, PickSpritePath chooses one per tile. Sprites load
-// through the SpriteLibrary the renderer was built over; the style is the one it was built with.
+// Paints one tile as its MapAppearance shows it: a fill, then occupant art by layer, shaded
+// as SMAC does (docs/thinker/smac-palette-lighting.md); fog darkens land art under a haze.
 class TileRenderer
 {
 public:
@@ -58,14 +46,8 @@ public:
     // the elevation gradient, dimmed under fog.
     Color_t FillColor(const Tile& rTile, const MapAppearance& rAppearance) const;
 
-    // A tile's two halves, so MapRenderer can draw its grid lines between them as SMAC does.
-    // RenderTerrain draws the fill, the landform to vegetation layers (an improvement's ground in
-    // place of the moisture base), coast, river, road networks and fog haze on rShape's four
-    // triangles (land at its vertex shades); under shroud, only the shroud. RenderObjects draws
-    // the object art of terrain occupants and then of improvements (skipping those another
-    // occupant hides) on a flat footprint seated at the mean of the shape's four corners, and
-    // nothing under shroud. An object whose configured art is missing draws a magenta and black
-    // checker in its place.
+    // RenderTerrain draws everything up to fog haze on the shape's triangles; RenderObjects draws
+    // object art at the corners' mean. Shroud shows only shroud; missing art draws a checker.
     void RenderTerrain(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,
                        const MapAppearance& rAppearance) const;
     void RenderObjects(Graphics& rGraphics, const Tile& rTile, const TileShape_t& rShape,

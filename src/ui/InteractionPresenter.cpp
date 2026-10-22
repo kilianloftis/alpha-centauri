@@ -86,10 +86,8 @@ void InteractionPresenter::Update()
         return;
     }
 
-    // Something already owns the screen: either the prompt for this item, or an unrelated
-    // overlay / in-view modal this must not stack on top of. Once the screen is free the
-    // front is presented again — a queued item is only cleared by completing it, so
-    // dismissing a prompt with Escape re-opens it rather than stranding the turn.
+    // Something owns the screen already. Only completing clears an item, so dismissing a prompt
+    // with Escape re-opens it rather than stranding the turn.
     if (m_rUi.HasOverlayView() || m_rWorldView.HasModalElement())
     {
         return;

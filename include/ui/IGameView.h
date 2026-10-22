@@ -35,9 +35,8 @@ public:
 
     virtual bool HandleKey(const KeyEvent_t& rEvent)
     {
-        // Exclusive routing: while a modal element is open it is the only thing that may see
-        // the key. Always report handled so UIManager does not fall through to global view
-        // shortcuts under an in-view modal (WorldView has no overlay suppression).
+        // An open modal element is the only thing that sees the key, and the key always reports
+        // handled so global shortcuts cannot fire under it.
         if (UIElement* pModal = GetTopModalElement())
         {
             (void)pModal->HandleKey(rEvent);
@@ -84,15 +83,10 @@ public:
 
     bool ShouldClose() const { return m_bShouldClose; }
 
-    // True while this view has a topmost element reporting IsModal() that is not already
-    // closing. Overlay = UIManager stack entry; in-view modal = this. Both gate turn advance
-    // (see UIManager::CanAdvanceTurn).
+    // A topmost modal element that is not closing. Both it and an overlay gate turn advance.
     bool HasModalElement() const { return GetTopModalElement() != nullptr; }
 
-    // Whether this view currently forbids TurnProcessor::Advance (Package 1's yield/resume
-    // contract only says "the UI decides when to resume interaction"; this is that decision).
-    // Default: any open modal element blocks advance. Views with additional non-element
-    // reasons to block (none today) may override.
+    // Whether this view forbids TurnProcessor::Advance; any open modal element does.
     virtual bool BlocksTurnAdvance() const { return HasModalElement(); }
 
     // Per-frame logic that must run even when paint is skipped (timers, panel refresh).
@@ -102,10 +96,7 @@ public:
     virtual bool NeedsContinuousRedraw() const { return false; }
 
 protected:
-    // Topmost element (z-order, checked back-to-front) reporting IsModal() and not already
-    // closing, or nullptr. Shared by the default HandleKey/HandleMouse above and by views
-    // (e.g. WorldView) that override both and must apply the identical exclusive-capture rule
-    // rather than reinventing it.
+    // The topmost modal element not already closing, or nullptr; the one exclusive-capture rule.
     UIElement* GetTopModalElement() const
     {
         for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)

@@ -218,9 +218,8 @@ int YieldOf_(const TileResources_t& rYield, YieldStat_t stat)
     throw std::runtime_error("YieldOf_: unhandled YieldStat_t");
 }
 
-// An object's sprite on this tile's surface: a yield row when it has them, else a variant of
-// its sprite paths. Empty when it has none.
-// TODO: confirm which yield SMAC uses for remembered farm structures
+// A yield row if the object has them, else a sprite variant; empty when it has none.
+// TODO: confirm which yield SMAC uses for remembered farm structures.
 std::string ObjectSpritePath_(const ImprovementConfig_t& rConfig, const Tile& rTile,
                               const TileRenderer::YieldLookup_t& rYieldOf)
 {
@@ -366,9 +365,8 @@ const std::string& TileRenderer::CoastSpritePath_(std::size_t part,
     return m_coastPaths[part][static_cast<std::size_t>(rArt.corner)][coastCase];
 }
 
-// Ocean and shore art baked per diamond corner (extract_terrain.py). The water is shaded by the
-// depths around the land tile's own vertices, so it meets the neighboring water's shading at
-// their shared corners; the shore draws at shoreShade.
+// Ocean and shore art baked per diamond corner, water shaded by the depths at the tile's own
+// vertices so it meets neighbouring water.
 void TileRenderer::DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
                                      const TileShape_t& rShape, float shoreShade) const
 {
@@ -399,9 +397,8 @@ void TileRenderer::DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, con
     }
 }
 
-// Object sprites are a ter1.pcx cell: a tile-high footprint plus their overhang ratio. SMAC draws
-// the cell from the tile's top corner down, seated at the mean of the tile's four corners rather
-// than its raised centre; the art sits high in its cells, so a tile bonus lands mid-tile.
+// A ter1.pcx cell: a tile-high footprint plus overhang, drawn from the top corner and seated at
+// the mean of the four corners, as SMAC does.
 bool TileRenderer::TryDrawOccupantPath_(Graphics& rGraphics, const OccupantArt_t& rArt,
                                         const std::string& path, const TileShape_t& rShape,
                                         const Color_t& tint) const
@@ -422,9 +419,8 @@ bool TileRenderer::TryDrawLayerSprite_(Graphics& rGraphics, const Tile& rTile,
     return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, rOccupant, rAppearance), rShape);
 }
 
-// Water art shaded per vertex by depth within the shade range of the landform's depth_shade; a
-// landform without one draws as painted. The deep and shelf landforms trade art by depth, as SMAC
-// picks its deep or shelf texture per tile.
+// Water art shaded per vertex by depth within the landform's depth_shade; deep and shelf art
+// swap by depth, as SMAC picks them.
 bool TileRenderer::TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
                                          const ImprovementConfig_t& rOccupant,
                                          const MapAppearance& rAppearance,
@@ -451,9 +447,8 @@ bool TileRenderer::TryDrawWaterLandform_(Graphics& rGraphics, const Tile& rTile,
     return TryDrawTileSprite_(rGraphics, LayerSpritePath_(rTile, *pArt, rAppearance), water);
 }
 
-// Road-style networks (layout "links"), as SMAC draws roads and mag tubes: a cell toward every
-// land neighbor carrying the same network, the replacing network's cell where both tiles carry
-// it, and a hub on a tile that has the network's own occupant but drew no link.
+// Roads and mag tubes as SMAC draws them: a link toward each land neighbour on the network,
+// the replacing network's link where both have it, and a hub otherwise.
 void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile,
                                      const MapAppearance& rAppearance,
                                      const TileShape_t& rShape) const

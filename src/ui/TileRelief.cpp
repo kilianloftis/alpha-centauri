@@ -90,10 +90,8 @@ float CornerLevel_(const TileLevels_t& rLevels, DiamondCorner_t corner)
     return 0.0f;
 }
 
-// Facet k lies between corners k and k + 1. Its shade is SMAC's
-// −3·(s + t) / |(s, t)| with (s, t) the two corners' heights above the centre in quarter levels,
-// turned a quarter turn per facet. Flooring the length at the full-shade rise fades gentler
-// slopes; a floor of at most one quarter level keeps SMAC's whole-level results.
+// Facet k lies between corners k and k + 1; SMAC shades it −3·(s + t) / |(s, t)| from the
+// corners' quarter-level heights, with the length floored at the full-shade rise.
 std::array<float, k_DiamondCornerCount> FacetShades_(const Tile& rTile, const TileLevels_t& rLevels,
                                                      const ReliefStyle_t& rStyle)
 {
