@@ -171,14 +171,14 @@ TEST_CASE("ComputeProbeChances matches wiki tables for RISK 0-2", "[probe][rules
     ProbeSuccessFormula_t formula;
     // Elite (6), target Probe 0 → strength = 6/2 - 0 + 1 = 4
     {
-        const ProbeChance_t c = ComputeProbeChances(6, 0, 0, formula);
+        const ProbeChance_t c = ComputeProbeChances(6, 0, 0, formula, 1.0, 1.0);
         CHECK(c.successRate == 100);
         // escape failure = 1/6 → survival 100 - 16 = 84? (1*100)/6 = 16
         CHECK(c.survivalRate == 100 - (100 / 6));
     }
     // Disciplined (2), RISK 1, target 0 → strength = 1 - 0 + 1 = 2; failure = 50%
     {
-        const ProbeChance_t c = ComputeProbeChances(2, 1, 0, formula);
+        const ProbeChance_t c = ComputeProbeChances(2, 1, 0, formula, 1.0, 1.0);
         CHECK(c.probeStrength == 2);
         CHECK(c.successRate == 50);
         // escape: (1+1)/2 = 100% loss → survival 0
@@ -186,7 +186,7 @@ TEST_CASE("ComputeProbeChances matches wiki tables for RISK 0-2", "[probe][rules
     }
     // Hardened (3), RISK 2, target -2 → strength = 1 - (-2) + 1 = 4; failure = 50%
     {
-        const ProbeChance_t c = ComputeProbeChances(3, 2, -2, formula);
+        const ProbeChance_t c = ComputeProbeChances(3, 2, -2, formula, 1.0, 1.0);
         CHECK(c.probeStrength == 4);
         CHECK(c.successRate == 50);
     }
@@ -210,7 +210,7 @@ TEST_CASE("Algo enhancement halves failure; HSA halves success", "[probe][rules]
 TEST_CASE("RollProbeAction RISK 0 always succeeds mission", "[probe][rules]")
 {
     ProbeSuccessFormula_t formula;
-    const ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula);
+    const ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
     std::mt19937 rng(1);
     for (int i = 0; i < 20; ++i)
     {

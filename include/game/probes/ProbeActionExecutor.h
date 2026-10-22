@@ -43,7 +43,7 @@ public:
     // Pays, rolls mission and escape, applies the effect, promotes on full success and destroys a
     // failed probe. Whether it is a repeat attempt is session history, decided here.
     ProbeActionResult_t TryProbeAction(Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile,
-                                       GameState& rGameState, const BuildingId_t& facilityId = {});
+                                       GameState& rGameState, const BuildingId_t& facilityId);
 
 private:
     bool CanTryProbeAction_(const Unit& rUnit, const ProbeActionConfig_t& rAction,

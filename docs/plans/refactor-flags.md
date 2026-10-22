@@ -105,6 +105,14 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the tests assert the ZOC and fog rules through these entry points and
   would move to the production ones.
 
+### Combat queries used only by tests
+- **Where:** `CanDeclareAttack` in `include/game/combat/AttackRules.h` (14 test callers),
+  `MoraleCalculator::LevelEffects` (2)
+- **Problem:** no production caller; production declares attacks through
+  `FindAttackableHostileOnTile`.
+- **Why not local:** the tests assert attack legality through it and would move to the
+  production entry point.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`

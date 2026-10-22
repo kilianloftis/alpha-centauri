@@ -54,8 +54,8 @@ double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget);
 ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   int targetProbeEffect,
                                   const ProbeSuccessFormula_t& rFormula,
-                                  double failureScale = 1.0,
-                                  double successScale = 1.0);
+                                  double failureScale,
+                                  double successScale);
 
 // The action's risk, or its repeat risk at a base this faction has probed before. Sabotaging a
 // chosen facility at a headquarters is at least risk 2.

@@ -175,7 +175,7 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     const int xpBefore = probe.GetXp();
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
+            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -212,7 +212,7 @@ TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")
 
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), game.fixtures.state);
+            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -234,7 +234,7 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
 
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
+            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -259,7 +259,7 @@ TEST_CASE("TryProbeAction steal_tech skips techs whose prerequisites the actor l
 
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
+            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -320,12 +320,12 @@ TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][acti
     // Two probes, so whether the first survives does not decide the second attempt.
     Unit& first = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t firstResult = game.fixtures.state.GetProbeActions().TryProbeAction(
-        first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
+        first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
     CHECK(firstResult.chances.risk == pAction->risk);
 
     Unit& second = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t secondResult = game.fixtures.state.GetProbeActions().TryProbeAction(
-        second, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state);
+        second, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
     CHECK(secondResult.chances.risk == *pAction->riskRepeat);
 }
 
@@ -562,7 +562,7 @@ TEST_CASE("Mind Control adds 4 to the actor's mind-control total, not the former
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&target.GetFaction() == game.pPlayer);
@@ -580,7 +580,7 @@ TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
@@ -598,7 +598,7 @@ TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total"
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&target.GetFaction() == game.pAi);
@@ -614,7 +614,7 @@ TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][acti
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&victim.GetFaction() == game.pPlayer);
@@ -633,7 +633,7 @@ TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total"
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&victim.GetFaction() == game.pAi);
@@ -718,7 +718,7 @@ TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
@@ -734,7 +734,7 @@ TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy
         game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
@@ -750,7 +750,7 @@ TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomac
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "covert"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state);
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);

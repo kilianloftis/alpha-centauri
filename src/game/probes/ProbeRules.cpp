@@ -82,7 +82,8 @@ int DistanceToHeadquarters_(const Faction& rFaction, const Tile& rTile, int mapW
 
 int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
 {
-    return std::max(1, static_cast<int>(std::lround(rawCost * multiplier)));
+    const int scaled = static_cast<int>(std::lround(rawCost * multiplier));
+    return std::max(1, scaled);
 }
 
 // (garrison + actorMindControlTotal / divisor + pop) * (energy + bias) / (dist + bias), then SE
@@ -120,26 +121,24 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int acto
                                         const Faction& rTargetFaction, const WorldMap& rMap,
                                         double costMultiplier)
 {
-    return QuoteMindControlBaseCost_(
-        rCost,
-        CountCombatUnitsOnTile_(rBase.GetTile(), rMap, rTargetFaction.GetFactionId()),
-        actorMindControlTotal,
-        rBase.GetPopulation().GetSize(),
-        rTargetFaction.GetEconomy().GetEnergy(),
-        DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth()),
-        costMultiplier);
+    const int garrison =
+        CountCombatUnitsOnTile_(rBase.GetTile(), rMap, rTargetFaction.GetFactionId());
+    const int distance = DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
+    return QuoteMindControlBaseCost_(rCost, garrison, actorMindControlTotal,
+                                     rBase.GetPopulation().GetSize(),
+                                     rTargetFaction.GetEconomy().GetEnergy(), distance,
+                                     costMultiplier);
 }
 
 std::optional<int> QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Unit& rTargetUnit,
                                         const Faction& rTargetFaction, const WorldMap& rMap,
                                         double costMultiplier)
 {
-    return QuoteSubvertUnitCost_(
-        rCost,
-        std::max(1, rTargetUnit.GetDesign().GetBaseCost()),
-        rTargetFaction.GetEconomy().GetEnergy(),
-        DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth()),
-        costMultiplier);
+    const int mineralCost = std::max(1, rTargetUnit.GetDesign().GetBaseCost());
+    const int distance =
+        DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth());
+    return QuoteSubvertUnitCost_(rCost, mineralCost, rTargetFaction.GetEconomy().GetEnergy(),
+                                 distance, costMultiplier);
 }
 
 bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAction)
@@ -345,9 +344,8 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             using T = std::decay_t<decltype(rConcrete)>;
             if constexpr (std::is_same_v<T, ProbeBaseTarget_t>)
             {
-                return QuoteBaseActionCost_(*rAction.cost,
-                                            rMindControl.Total(rActor.GetFactionId()),
-                                            rConcrete.rBase,
+                const int mindControl = rMindControl.Total(rActor.GetFactionId());
+                return QuoteBaseActionCost_(*rAction.cost, mindControl, rConcrete.rBase,
                                             rTarget.rFaction, rMap, costMultiplier);
             }
             else

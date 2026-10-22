@@ -96,10 +96,11 @@ int CombatResolver::BombardHpFloor_(const Unit& rDefender) const
     const int hitPoints = ResolveStat(rDefender, StatId_t::HitPoints);
     const std::vector<ActiveEffect_t> effects =
         m_rTileEffects.CollectAreaEffects(rDefender.GetTile());
-    const int percent = FinalizeResolvedStat(ResolveStatModifiers(
-        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0, nullptr).total);
-    return static_cast<int>(std::ceil(static_cast<double>(hitPoints)
-                                      * static_cast<double>(percent) / 100.0));
+    const double percentTotal = ResolveStatModifiers(
+        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0, nullptr).total;
+    const int percent = FinalizeResolvedStat(percentTotal);
+    const double floorHp = static_cast<double>(hitPoints) * static_cast<double>(percent) / 100.0;
+    return static_cast<int>(std::ceil(floorHp));
 }
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,

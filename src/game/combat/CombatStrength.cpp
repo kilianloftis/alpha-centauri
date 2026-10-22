@@ -69,10 +69,10 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     const int remainingFragments = rAttacker.GetMoveFragmentsRemaining();
     if (remainingFragments < MovementConstants_t::k_moveFragmentsPerPoint)
     {
-        strength.attackStrength = static_cast<int>(std::lround(
-            attackRating * static_cast<double>(remainingFragments)
-            / static_cast<double>(MovementConstants_t::k_moveFragmentsPerPoint)
-            * k_CombatStrengthScale));
+        const double perPoint = static_cast<double>(MovementConstants_t::k_moveFragmentsPerPoint);
+        const double scaled = attackRating * static_cast<double>(remainingFragments) / perPoint
+                              * k_CombatStrengthScale;
+        strength.attackStrength = static_cast<int>(std::lround(scaled));
     }
     return strength;
 }

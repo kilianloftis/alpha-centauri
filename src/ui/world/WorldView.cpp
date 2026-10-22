@@ -1003,7 +1003,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
                                }
                                const ProbeActionResult_t result =
                                    m_rGameState.GetProbeActions().TryProbeAction(
-                                       *pProbe, id, *pTargetTile, m_rGameState);
+                                       *pProbe, id, *pTargetTile, m_rGameState, BuildingId_t{});
                                if (result.outcome != ProbeActionOutcome_t::Rejected)
                                {
                                    SelectNextAvailableUnit_();
