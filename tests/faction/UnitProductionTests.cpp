@@ -110,7 +110,7 @@ struct UnitProductionGame_
         BaseManager* pBase = rFaction.CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", fixtures.state.GetWorldMap().GetTile(x, y),
             fixtures.state.GetTileEffects(),
-            /*initialPopulation*/ 3);
+            /*initialPopulation*/ 3, false);
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

@@ -88,7 +88,7 @@ struct ProbeGame_
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", pTile,
-            fixtures.state.GetTileEffects());
+            fixtures.state.GetTileEffects(), std::nullopt, false);
         REQUIRE(pBase);
         return *pBase;
     }

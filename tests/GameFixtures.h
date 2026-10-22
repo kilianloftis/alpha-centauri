@@ -542,7 +542,7 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& 
 {
     ac::BaseManager* pBase = rFaction.CreateBase(
         rFixtures.state.AllocateBaseId(), "TestBase", rFixtures.map.GetTile(x, y),
-        rFixtures.ctx);
+        rFixtures.ctx, std::nullopt, false);
     if (!pBase)
     {
         throw std::runtime_error("MakeSessionBase: CreateBase failed");

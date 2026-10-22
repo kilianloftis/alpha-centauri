@@ -22,7 +22,7 @@ class SocialRatingRegistry;
 // ThisBase modifiers cannot inflate it.
 std::map<SocialRatingId_t, int> AccumulateSocialRatings(
     const std::vector<ActiveEffect_t>& rEffects,
-    std::optional<EffectLane_t> laneFilter = std::nullopt);
+    std::optional<EffectLane_t> laneFilter);
 
 // The level to look up after clamping total to the table (SMAC). Throws on an empty table.
 int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);

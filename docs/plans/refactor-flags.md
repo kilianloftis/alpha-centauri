@@ -113,6 +113,21 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the tests assert attack legality through it and would move to the
   production entry point.
 
+### `AIProfile` — tendencies nothing reads
+- **Where:** `include/game/faction/AIProfile.h`; `InterestedInWealth`, `InterestedInPower`,
+  `InterestedInGrowth` and `InterestedInTech` have no caller
+- **Problem:** the class only holds the parsed `ai.json` tendencies for an AI that does not exist.
+- **Why not local:** removing it touches `Faction`, the faction config and the parser; it may be
+  wanted once AI lands.
+
+### Faction save/load and flavour paths used only by tests
+- **Where:** `Faction::ExtractBase` (7 test callers), `Faction::CreateBaseFromSnapshot` (2),
+  `FactionFlavor::PickPhrase` (2), `ResearchSelector::SetCategoryEnabled` (20)
+- **Problem:** `CreateBaseFromSnapshot` and `ExtractBase` exist for a save/load that is not
+  built; the others are reached only from tests.
+- **Why not local:** each needs its tests rewritten, and the snapshot pair is a save/load design
+  question.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`

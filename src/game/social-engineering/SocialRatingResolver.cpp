@@ -120,8 +120,9 @@ std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings)
 {
     std::vector<ActiveEffect_t> levelEffects;
-    AppendRatingLevelEffects_(AccumulateSocialRatings(rRatingSource.effects), rRatings,
-                              std::nullopt, levelEffects);
+    const std::map<SocialRatingId_t, int> totals =
+        AccumulateSocialRatings(rRatingSource.effects, std::nullopt);
+    AppendRatingLevelEffects_(totals, rRatings, std::nullopt, levelEffects);
     return levelEffects;
 }
 
@@ -129,9 +130,10 @@ void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings)
 {
     // FactionWide modifiers only, so ThisBase shrines cannot inflate FactionUnits bonuses.
-    AppendRatingLevelEffects_(
-        AccumulateSocialRatings(rFactionEffects.effects, EffectLane_t::FactionWide), rRatings,
-        EffectLane_t::FactionUnits, rFactionEffects.effects);
+    const std::map<SocialRatingId_t, int> totals =
+        AccumulateSocialRatings(rFactionEffects.effects, EffectLane_t::FactionWide);
+    AppendRatingLevelEffects_(totals, rRatings, EffectLane_t::FactionUnits,
+                              rFactionEffects.effects);
 }
 
 } // namespace ac

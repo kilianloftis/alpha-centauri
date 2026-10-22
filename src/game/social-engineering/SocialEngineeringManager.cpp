@@ -63,7 +63,7 @@ const std::map<SocialRatingId_t, int>& SocialEngineeringManager::AccumulatedRati
     const uint64_t revision = m_revision.Get();
     if (m_cachedRatingsRevision != revision)
     {
-        m_cachedRatings = AccumulateSocialRatings(CollectEffects());
+        m_cachedRatings = AccumulateSocialRatings(CollectEffects(), std::nullopt);
         m_cachedRatingsRevision = revision;
     }
     return m_cachedRatings;

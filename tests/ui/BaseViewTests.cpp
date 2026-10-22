@@ -728,7 +728,7 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
     BaseManager* pPartnerBase = rPartner.CreateBase(
         fixture.state.AllocateBaseId(), "PartnerBase",
         fixture.state.GetWorldMap().GetTile(12, 8),
-        fixture.state.GetTileEffects());
+        fixture.state.GetTileEffects(), std::nullopt, false);
     REQUIRE(pPartnerBase != nullptr);
     pPartnerBase->GetBuildingManager().AddBuilding("world_beacon");
 

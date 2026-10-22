@@ -47,7 +47,7 @@ struct QueueGame_
     {
         BaseManager* pBase = pFaction->CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", fixtures.state.GetWorldMap().GetTile(8, 8),
-            fixtures.state.GetTileEffects(), 3);
+            fixtures.state.GetTileEffects(), 3, false);
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

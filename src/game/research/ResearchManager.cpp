@@ -188,9 +188,4 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
     OnTechDiscovered.Emit(m_discoveredTechs.back());
 }
 
-void ResearchManager::ResetAccumulatedPoints_()
-{
-    m_accumulatedPoints = 0;
-}
-
 } // namespace ac

@@ -69,7 +69,7 @@ struct BuildingGame_
     {
         BaseManager* pBase = rFaction.CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", fixtures.state.GetWorldMap().GetTile(x, y),
-            fixtures.state.GetTileEffects());
+            fixtures.state.GetTileEffects(), std::nullopt, false);
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

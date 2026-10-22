@@ -243,7 +243,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
         fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
-        fixtures.ctx);
+        fixtures.ctx, std::nullopt, false);
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("test_secret_project");

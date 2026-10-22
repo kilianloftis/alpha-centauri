@@ -34,7 +34,7 @@ TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][ra
         Active(pool.StatMod(StatId_t::Energy, 1.0), "unrelated"),
     }};
 
-    const auto totals = AccumulateSocialRatings(baseEffects.effects);
+    const auto totals = AccumulateSocialRatings(baseEffects.effects, std::nullopt);
     CHECK(totals.at(SocialRatingId_t::Growth) == 3);
     CHECK(totals.at(SocialRatingId_t::Police) == -2);
     CHECK(totals.count(SocialRatingId_t::Economy) == 0);

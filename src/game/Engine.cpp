@@ -488,7 +488,7 @@ void Engine::StartNewGame_()
         BaseManager* pBase = pFaction->CreateBase(
             m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
             m_pGameState->GetTileEffects(),
-            /*initialPopulation=*/3);
+            /*initialPopulation=*/3, false);
         placedBases.push_back(pBase);
 
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));

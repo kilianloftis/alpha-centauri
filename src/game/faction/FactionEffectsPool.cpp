@@ -261,13 +261,10 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectGrowthEffects_() const
 void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
                                              const ResearchManager& rResearch)
 {
-    rEffects.effects.erase(
-        std::remove_if(rEffects.effects.begin(), rEffects.effects.end(),
-                       [&](const ActiveEffect_t& rEffect) {
-                           return !rEffect.config->removedByTech.empty()
-                               && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
-                       }),
-        rEffects.effects.end());
+    std::erase_if(rEffects.effects, [&](const ActiveEffect_t& rEffect) {
+        return !rEffect.config->removedByTech.empty()
+            && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
+    });
 }
 
 void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
@@ -286,7 +283,8 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
         // A different current game state must not hit this cache.
         rOut.push_back(reinterpret_cast<uintptr_t>(pState));
         rOut.push_back(pState->GetDiplomacyLedger().GetRevision());
-        rOut.push_back(static_cast<uint64_t>(pState->GetNumFactions()));
+        const int factionCount = pState->GetNumFactions();
+        rOut.push_back(static_cast<uint64_t>(factionCount));
     }
     for (const BaseManager& rBase : m_rFaction.Bases())
     {

@@ -74,7 +74,6 @@ private:
     mutable uint64_t m_costResearchRevision = 0;
     Revision m_revision;
 
-    void ResetAccumulatedPoints_();
 
     // Compute the cost of the current target and record the provider / research revisions.
     void ComputePointsNeeded_() const;

@@ -85,7 +85,7 @@ int BaseEffectsCache::GetEffectiveRating(SocialRatingId_t rating) const
     // Local-only ratings: peer WorldGlobal / council SocialRatingModifiers never move this
     // axis (see AccumulateSocialRatings). Same source list as the base-lane expansion.
     const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(CollectRatingSource().effects);
+        AccumulateSocialRatings(CollectRatingSource().effects, std::nullopt);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }

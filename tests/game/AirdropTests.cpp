@@ -78,7 +78,7 @@ struct AirdropGame_
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", pTile,
-            fixtures.state.GetTileEffects());
+            fixtures.state.GetTileEffects(), std::nullopt, false);
         REQUIRE(pBase);
         while (pBase->GetPopulation().GetSize() < pop)
         {
