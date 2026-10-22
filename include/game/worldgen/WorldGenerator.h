@@ -21,13 +21,8 @@ public:
     WorldGenerator();
     ~WorldGenerator();
 
-    // Generate a new world map from session knobs + a resolved landmass preset
-    // and post-elevation decoration (moisture, aquifers, landmarks, …).
-    //
-    // seed is supplied by the caller rather than re-derived from rConfig.seed here: the
-    // composition root resolves one session seed (and reports it), so a map generated from a
-    // config seed of 0 must come from that resolved value. Deriving a time-based seed here
-    // instead meant the reported session seed did not reproduce the map.
+    // Generates a world from the session knobs and a landmass preset. seed is the session seed the
+    // composition root resolved, so the reported seed reproduces the map.
     std::unique_ptr<WorldMap> Generate(const MapGenerationConfig_t& rConfig,
                                        const WorldGenPresetConfig_t& rPreset,
                                        const WorldGenDecorationConfig_t& rDecoration,

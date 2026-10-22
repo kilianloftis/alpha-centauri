@@ -32,10 +32,8 @@ int AltitudeBand(int elevationMeters,
 // world_temperature (solar/thermal/orbit/council); do not persist on Tile.
 int StubTemperature(int y, int mapHeight);
 
-// Port of Thinker world_rainfall (vanilla 0x5C4470): cloudmass west-wet / east-dry belts,
-// ocean moisture blown east, rain-belt row scan, neighbor smooth to moist.
-// Call after rivers (and landmarks) so BIT_RIVER / jungle / dunes / unity match SMAC.
-// Condenser bits stay in RecomputeMoisture; forest humidity omitted (no world-gen forests).
+// Port of Thinker world_rainfall (vanilla 0x5C4470): cloudmass belts, ocean moisture blown
+// east, rain-belt scan, smoothing. Call after rivers and landmarks.
 void GenerateRainfall(WorldMap& rWorld,
                       const MoistureDecorationConfig_t& rConfig,
                       Rainfall_t rainfall);

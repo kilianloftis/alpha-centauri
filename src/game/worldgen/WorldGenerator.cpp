@@ -54,19 +54,15 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     WorldGenPresetConfigParser::ApplyElevationRange(rules, rPreset);
     auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules);
 
-    // Bound before any stage runs: CanBuildImprovement reads a tile's terrain-feature configs
-    // to enforce the incumbent side of `excludes`, and those are empty until binding. An
-    // unbound tile answers a coexistence question differently from the same tile in play.
+    // Bound before any stage runs: an unbound tile answers coexistence questions differently from
+    // the same tile in play.
     for (const auto& pTile : pWorld->GetTiles())
     {
         pTile->BindOccupants(rOccupants);
     }
 
-    // Landmarks run before aquifers because they are the last stage that changes elevation
-    // (the Mount Planet sculpt) or stamps a terminates_river feature (BoreholeCluster), and
-    // RecomputeRivers has to see both. Rainfall follows rivers (SMAC world_climate order) so
-    // river tiles seed rain belts; it also sees post-sculpt elevation for cloudmass. Bonuses
-    // stay last so @resource_bonus excludes apply. Landmark anchors do not filter on moisture.
+    // Landmarks are the last stage to change elevation or stamp terminates_river, so rivers follow
+    // them; rain follows rivers (SMAC world_climate order); bonuses go last for their excludes.
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     GenerateFungus_(*pWorld, rDecoration.fungus, rOccupants);

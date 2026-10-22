@@ -11,9 +11,8 @@ namespace ac
 class LandmarkConfigParser
 {
 public:
-    // Load config/worldGen/landmarks.json (top-level array). Throws on parse errors.
-    // Validates that every improvement_id exists when rKnownImprovementIds is non-empty.
-    // Sculpt elevations are checked against the chosen preset, not here.
+    // Loads config/worldGen/landmarks.json, checking improvement ids when rKnownImprovementIds is
+    // non-empty. Sculpt elevations are checked against the preset later.
     std::vector<LandmarkConfig_t> ParseConfig(
         const std::string& configPath,
         const std::vector<std::string>& rKnownImprovementIds = {});

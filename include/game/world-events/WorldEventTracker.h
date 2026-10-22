@@ -10,9 +10,8 @@
 namespace ac
 {
 
-// Which world events are active this turn. GameState owns one once Engine creates it; the
-// WorldEvents stage advances it, and GameState::CollectWorldExtras serves the active events'
-// effects to every faction.
+// Which world events are active. The WorldEvents stage advances it; CollectWorldExtras serves
+// their effects.
 class WorldEventTracker
 {
 public:

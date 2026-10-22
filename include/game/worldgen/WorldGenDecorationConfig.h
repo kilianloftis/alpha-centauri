@@ -24,9 +24,7 @@ struct RockinessWeights_t
     float rocky = 0.10f;
 };
 
-// Rockiness decoration: one weight table per ErosiveForces_t.
-// Higher erosive forces → flatter (more Flat, less Rocky), matching classic SMAC.
-// decoration.json must define every enum value (parser throws otherwise).
+// One rockiness weight table per ErosiveForces_t; every value is required.
 struct RockinessDecorationConfig_t
 {
     RockinessWeights_t low{0.45f, 0.35f, 0.20f};
@@ -40,9 +38,8 @@ struct AquiferDecorationConfig_t
     float fraction = 0.02f;
 };
 
-// Fungus decoration: orthogonal patch growth from single tiles to large swaths.
-// Target size is drawn from [minPatchTiles, maxPatchTiles] with a power skew:
-// size = min + floor((max-min+1) * u^patchSizeSkew). skew 1 = uniform; higher → smaller.
+// Fungus patches grow orthogonally to min + floor((max-min+1) * u^patchSizeSkew) tiles;
+// skew 1 is uniform.
 struct FungusDecorationConfig_t
 {
     // Target fraction of tiles the fungus entry can occupy (CanBuildImprovement).

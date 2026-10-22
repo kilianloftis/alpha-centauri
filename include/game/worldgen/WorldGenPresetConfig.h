@@ -37,9 +37,7 @@ struct WorldGenPresetConfig_t
     // power: 1 is linear, below 1 deepens water quickly away from the coast.
     float oceanDepthExponent = 1.0f;
 
-    // Inclusive storage range for a world generated from this preset, in meters.
-    // Min is below ocean level; max is at or above it, and the range covers the
-    // ocean shelf and the spread-altitude limit from map_rules.json.
+    // Inclusive elevation range in meters, covering the ocean shelf and the spread-altitude limit.
     int minElevation = -4000;
     int maxElevation = 4000;
 };

@@ -10,9 +10,8 @@ namespace ac
 class ImprovementRegistry;
 class WorldMap;
 
-// Place frequency-weighted tile bonuses (Nutrients, Minerals, Energy, Monolith, …)
-// on land. Improvements with frequency <= 0 are skipped. Relative frequencies act
-// as selection weights among candidates that can coexist on a given tile.
+// Places tile bonuses on land, weighted by frequency among those that can coexist on each tile;
+// frequency <= 0 is skipped.
 int PlaceTileBonuses(WorldMap& rWorld,
                      const TileBonusDecorationConfig_t& rConfig,
                      const ImprovementRegistry& rOccupants,

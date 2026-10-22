@@ -8,9 +8,8 @@
 namespace ac
 {
 
-// One planet-wide native life abundance setting (rare / normal / abundant). A campaign
-// property like difficulty: GameRulesConfig_t::nativeLifeLevelId names it, and its continuous
-// effects enter every faction's pool.
+// One native life abundance level, a campaign property like difficulty; its effects enter every
+// faction's pool.
 struct NativeLifeLevel_t
 {
     std::string id;
