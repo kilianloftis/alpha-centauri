@@ -89,7 +89,7 @@ TEST_CASE("MaxBaseSize Adds stack with the pop_growth baseline", "[population][g
     // Baseline 7 + Hab-Dome-style large Add → classic-ish hard cap.
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
     fixture.dataContext.growthConfig->effects.push_back(
-        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 120.0));
+        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 120.0, ModifierOp_t::Add));
 
     BaseManager& base = fixture.MakeBase(8, 4);
     CHECK(base.GetPopulation().GetMaxSize() == 127);

@@ -34,8 +34,9 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
 
     SizeDroneInputs_t size;
     size.baseSize = baseSize;
-    size.sizeFreeDrones = FinalizeResolvedStat(ResolveBaseStat(
-        rBaseEffects, StatId_t::SizeFreeDrones, SeedFor(StatId_t::SizeFreeDrones), nullptr));
+    const double sizeFreeDrones = ResolveBaseStat(
+        rBaseEffects, StatId_t::SizeFreeDrones, SeedFor(StatId_t::SizeFreeDrones), nullptr);
+    size.sizeFreeDrones = FinalizeResolvedStat(sizeFreeDrones);
 
     OccupationDroneInputs_t occupation;
     occupation.baseSize = baseSize;
@@ -57,8 +58,9 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
     CompositionEffectInputs_t inputs;
     inputs.dronePressure =
         FinalizeResolvedStat(ResolveBaseStat(rBaseEffects, StatId_t::Drones, seed, nullptr));
-    inputs.resolvedTalents = FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, StatId_t::Talents, SeedFor(StatId_t::Talents), nullptr));
+    const double talents =
+        ResolveBaseStat(rBaseEffects, StatId_t::Talents, SeedFor(StatId_t::Talents), nullptr);
+    inputs.resolvedTalents = FinalizeResolvedStat(talents);
     inputs.psychAvailable = rBase.GetPsychProduction();
     return inputs;
 }

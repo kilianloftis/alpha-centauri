@@ -57,7 +57,8 @@ int ComputeAwayFromHomeDrones(const BaseManager& rBase)
                                                         StatId_t::AwayFromHomeDrones, &ctx),
                                 weightSum, &ctx)
                                 .total;
-    return static_cast<int>(std::floor(std::max(0.0, resolved)));
+    const double floored = std::floor(std::max(0.0, resolved));
+    return static_cast<int>(floored);
 }
 
 } // namespace ac

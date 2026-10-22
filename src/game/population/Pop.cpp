@@ -67,9 +67,9 @@ MoodWeights_t Pop::GetMoodWeights() const
 
     auto resolve = [&](StatId_t statId) -> int
     {
-        return FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(popEffects, statId), SeedFor(statId),
-            nullptr).total);
+        const double total = ResolveStatModifiers(FilterByStatId(popEffects, statId),
+                                                  SeedFor(statId), nullptr).total;
+        return FinalizeResolvedStat(total);
     };
 
     return MoodWeights_t{resolve(StatId_t::RiotWeight), resolve(StatId_t::GoldenAgeWeight)};
@@ -126,9 +126,10 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
 
     auto scaleByMultiplier = [&](StatId_t statId, int rawValue) -> int
     {
-        return FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(tileEffects, statId),
-                                 static_cast<double>(rawValue), nullptr).total);
+        const double seed = static_cast<double>(rawValue);
+        const double total =
+            ResolveStatModifiers(FilterByStatId(tileEffects, statId), seed, nullptr).total;
+        return FinalizeResolvedStat(total);
     };
 
     return TileResources_t{
@@ -144,9 +145,9 @@ SpecialistOutput_t Pop::GetSpecialistOutput() const
 
     auto resolveFlat = [&](StatId_t statId) -> int
     {
-        return FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(flatEffects, statId), SeedFor(statId),
-            nullptr).total);
+        const double total = ResolveStatModifiers(FilterByStatId(flatEffects, statId),
+                                                  SeedFor(statId), nullptr).total;
+        return FinalizeResolvedStat(total);
     };
 
     return SpecialistOutput_t{

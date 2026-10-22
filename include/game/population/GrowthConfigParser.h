@@ -11,7 +11,7 @@ namespace ac
 
 // Baseline AllOwnerBases StatModifiers for programmatic GrowthConfig_t (tests / defaults).
 inline EffectConfig_t MakeGrowthBaselineStat(StatId_t stat, double amount,
-                                             ModifierOp_t op = ModifierOp_t::Add)
+                                             ModifierOp_t op)
 {
     EffectConfig_t effect;
     effect.scope = EffectScope_t::AllOwnerBases;
@@ -26,8 +26,8 @@ inline EffectConfig_t MakeGrowthBaselineStat(StatId_t stat, double amount,
 inline std::vector<EffectConfig_t> MakeDefaultGrowthEffects()
 {
     return {
-        MakeGrowthBaselineStat(StatId_t::StartingSize, 1.0),
-        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 7.0),
+        MakeGrowthBaselineStat(StatId_t::StartingSize, 1.0, ModifierOp_t::Add),
+        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 7.0, ModifierOp_t::Add),
     };
 }
 

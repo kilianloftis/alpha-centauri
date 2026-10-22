@@ -142,6 +142,14 @@ One entry per violation, under the rule it breaks:
 - **Problem:** no production caller.
 - **Why not local:** each needs its tests rewritten against behaviour.
 
+### Population helpers used only by tests
+- **Where:** `AssimilationTracker::IsAssimilating` (10 test callers), `Pop::GetDroneWeight` (2);
+  `MakeGrowthBaselineStat`, `MakeDefaultGrowthEffects` and the `GrowthConfig_t` member defaults
+  in `include/game/population/GrowthConfigParser.h`
+- **Problem:** no production caller; the growth helpers and defaults exist so tests can build a
+  growth config by hand, which `calculator-config.mdc` says should come from a fixture.
+- **Why not local:** the tests that build `GrowthConfig_t` in code need a fixture file.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -185,6 +193,11 @@ One entry per violation, under the rule it breaks:
 - **Problem:** the member initializer list builds every subsystem with nested calls.
 - **Why not local:** over 100 lines; naming the intermediate values needs factory helpers for
   the subsystems, since an initializer list has no statements.
+
+### `PopCompositionConfigParser::ParseConfig`
+- **Where:** `src/game/population/PopCompositionConfigParser.cpp`, 160 lines
+- **Problem:** parses every section of pop_composition.json inline.
+- **Why not local:** over 100 lines; each section's parser would take the config being filled.
 
 ## Duplicated logic
 

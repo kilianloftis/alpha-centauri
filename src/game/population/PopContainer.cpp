@@ -96,16 +96,6 @@ void PopContainer::ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig)
     m_revision.Bump();
 }
 
-int PopContainer::ComputePsychOutput() const
-{
-    int total = 0;
-    for (const auto& pPop : m_pops)
-    {
-        total += pPop->GetSpecialistOutput().psych;
-    }
-    return total;
-}
-
 int PopContainer::CountPops_(bool (*predicate)(const Pop*)) const
 {
     int count = 0;

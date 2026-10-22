@@ -78,7 +78,7 @@ void PopulationManager::AddPop(const std::string& typeId)
     // Resolved like any conversion: creating a pop of an obsoleted type would seat something
     // no conversion path can produce, which is the asymmetry this package removed.
     m_container.AddPop(ResolveType_(typeId));
-    NotifyPopGained_();
+    OnPopGained.Emit(GetSize());
     m_riot.NotifyPopGrown(RiotConditionMet_());
 }
 
@@ -91,7 +91,7 @@ void PopulationManager::RemovePop()
     // Targets depend on base size, so a removal recalculates at once (AddPop does not, since its
     // caller names the type). Before OnPopLost, whose observers read the composition.
     MaybeRecalculateComposition_();
-    NotifyPopLost_();
+    OnPopLost.Emit(GetSize());
 }
 
 const PopTypeConfig_t& PopulationManager::ResolveType_(const std::string& typeId) const
@@ -176,9 +176,9 @@ PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
 
 int PopulationManager::GetMaxSize() const
 {
-    return FinalizeResolvedStat(
-        ResolveBaseStat(m_rBase.GetBaseEffects(), StatId_t::MaxBaseSize,
-                        SeedFor(StatId_t::MaxBaseSize), nullptr));
+    const double total = ResolveBaseStat(m_rBase.GetBaseEffects(), StatId_t::MaxBaseSize,
+                                         SeedFor(StatId_t::MaxBaseSize), nullptr);
+    return FinalizeResolvedStat(total);
 }
 
 int PopulationManager::GetNutrientStockpile() const
@@ -271,11 +271,6 @@ bool PopulationManager::IsInGoldenAge() const
     return m_goldenAge.IsActive();
 }
 
-bool PopulationManager::IsPendingGoldenAge() const
-{
-    return m_goldenAge.IsPending();
-}
-
 void PopulationManager::ForceRiot(int turns)
 {
     m_riot.ForceRiot(turns);
@@ -309,19 +304,9 @@ void PopulationManager::ResetMoodEscalation()
     m_moodRevision.Bump();
 }
 
-bool PopulationManager::IsDestroyed() const
-{
-    return m_container.GetSize() == 0;
-}
-
-CompositionEffectInputs_t PopulationManager::BuildCompositionInputs_() const
-{
-    return BuildCompositionInputs(m_rBase, m_rDroneCalculator);
-}
-
 PopCompositionResult_t PopulationManager::ComputeComposition() const
 {
-    const CompositionEffectInputs_t effects = BuildCompositionInputs_();
+    const CompositionEffectInputs_t effects = BuildCompositionInputs(m_rBase, m_rDroneCalculator);
 
     PopCompositionInputs_t inputs;
     inputs.dronePressure = effects.dronePressure;
@@ -451,16 +436,6 @@ bool PopulationManager::GoldenAgeConditionMet_() const
     inputs.droneCount = m_container.GetDroneCount();
     inputs.goldenAgeSum = m_container.GetMoodWeightSums().goldenAge;
     return GoldenAgeConditionMet(inputs, GetCompositionConfig());
-}
-
-void PopulationManager::NotifyPopGained_()
-{
-    OnPopGained.Emit(GetSize());
-}
-
-void PopulationManager::NotifyPopLost_()
-{
-    OnPopLost.Emit(GetSize());
 }
 
 } // namespace ac

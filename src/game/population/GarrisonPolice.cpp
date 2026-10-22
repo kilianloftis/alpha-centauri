@@ -24,9 +24,9 @@ int UnitPoliceEffectiveness_(const Unit& rUnit)
 
 int ResolveMaxPolice_(const BaseManager& rBase)
 {
-    const int raw = FinalizeResolvedStat(
-        ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::MaxPolice, SeedFor(StatId_t::MaxPolice),
-        nullptr));
+    const double total = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::MaxPolice,
+                                         SeedFor(StatId_t::MaxPolice), nullptr);
+    const int raw = FinalizeResolvedStat(total);
     return std::max(0, raw);
 }
 

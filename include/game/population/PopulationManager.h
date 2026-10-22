@@ -110,7 +110,6 @@ public:
     // Consecutive Mood commits while rioting; selects the active riot tier. 0 when calm.
     int GetConsecutiveRiotTurns() const;
     bool IsInGoldenAge() const;
-    bool IsPendingGoldenAge() const;
 
     // Probe Incite Drone Riots: force a riot for the next `turns` Mood commits.
     void ForceRiot(int turns);
@@ -122,8 +121,6 @@ public:
     // starts the tier ladder over rather than inheriting a rebel-tier base.
     void ResetMoodEscalation();
 
-    // Drone and talent calculations
-    bool IsDestroyed() const;
 
     // Run phase 1 of composition and reconcile actual pops (phase 2).
     void RecalculateComposition();
@@ -211,13 +208,10 @@ private:
     AssimilationTracker m_assimilation;
     Revision m_moodRevision;
 
-    CompositionEffectInputs_t BuildCompositionInputs_() const;
     GrowthOutcome_t ResolveGrowth_(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
     bool RiotConditionMet_() const;
     bool GoldenAgeConditionMet_() const;
 
-    void NotifyPopGained_();
-    void NotifyPopLost_();
     void MaybeRecalculateComposition_();
     // Always re-runs phase 1+2 (or marks the batch dirty). Used when seating may have diverged
     // without CompositionInputKey_t changing — ConvertTo of pool members.

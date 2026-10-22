@@ -227,7 +227,7 @@ inline void SetGrowthBaseline(ac::GrowthConfig_t& rConfig, ac::StatId_t stat, do
             return;
         }
     }
-    rConfig.effects.push_back(ac::MakeGrowthBaselineStat(stat, amount));
+    rConfig.effects.push_back(ac::MakeGrowthBaselineStat(stat, amount, ac::ModifierOp_t::Add));
 }
 
 inline void SetMaxBaseSize(ac::GrowthConfig_t& rConfig, double maxSize)

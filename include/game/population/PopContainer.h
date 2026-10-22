@@ -52,8 +52,6 @@ public:
     // Installs a type the caller already resolved (PopulationManager::ConvertTo).
     void ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig);
 
-    // Compute total psych output across all pops
-    int ComputePsychOutput() const;
 
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
