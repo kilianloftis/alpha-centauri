@@ -41,13 +41,8 @@ const PopCompositionConfig_t& PopCompositionCalculator::GetConfig() const
     return m_rConfig;
 }
 
-// Fill every available body at the lightest tier, then spend the remaining pressure on the
-// cheapest upgrade available. "Cheapest first" is what makes the result prefer the lightest
-// types: with weights {1,2,3}, 3 bodies and 5 pressure this yields {2,2,1}, not {3,1,1}.
-//
-// Never overshoots. With non-contiguous weights that can strand a remainder smaller than the
-// next upgrade step ({1,3} with 2 bodies and 3 pressure seats {1,1} and drops 1), which is
-// preferred over inventing pressure that no source produced.
+// Every body at the lightest tier, then the cheapest upgrades, so lighter types win ({1,2,3},
+// 3 bodies, 5 pressure gives {2,2,1}). Never overshoots; a remainder too small to upgrade drops.
 std::vector<DroneSeat_t> PopCompositionCalculator::SeatPressure_(int pressure, int bodies,
                                                                  int& rDropped) const
 {
@@ -110,9 +105,8 @@ PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs) const
     int psych = std::max(0, rInputs.psychAvailable);
     const int pool = std::max(0, rInputs.poolSize);
 
-    // Psych ladder, worst-first. Every drone-side step moves one body down one tier, which
-    // removes exactly one unit of pressure; the cost is that type's own psych_to_promote, so
-    // the heaviest seated tier is paid for first.
+    // Worst first: each step moves one body down a tier for one pressure, at that type's
+    // psych_to_promote.
     while (pressure > 0)
     {
         int ignoredDropped = 0;
@@ -137,9 +131,8 @@ PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs) const
 
     int talents = std::max(0, rInputs.resolvedTalents);
 
-    // Once no drone pressure remains, further psych promotes plain workers to talents along the
-    // same ladder, at the default type's own cost. Bounded by the bodies left after the talents
-    // already seated by the Talents stat.
+    // With no pressure left, psych promotes plain workers to talents at the default type's cost,
+    // within the bodies left.
     while (m_workerPsychToPromote > 0 && psych >= m_workerPsychToPromote && pressure == 0
            && talents < pool)
     {

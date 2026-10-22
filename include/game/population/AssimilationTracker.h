@@ -18,10 +18,8 @@ struct AssimilationState
     bool IsActive() const { return durationTurns > 0 && turnsElapsed < durationTurns; }
 };
 
-// Occupier penalty plus reclaim claims. Each faction that loses the base while a window is
-// still running keeps a claim keyed by their id, so a later recapture (including after a
-// third party took the base) inverts that faction's own elapsed time instead of starting a
-// fresh 5-drone / 50-turn penalty. Claims expire independently of the current occupier window.
+// The occupier's penalty plus each previous owner's claim, so a recapture inverts that
+// faction's elapsed time instead of starting a new penalty.
 class AssimilationTracker
 {
 public:

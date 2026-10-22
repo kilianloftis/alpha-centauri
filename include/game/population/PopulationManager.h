@@ -28,9 +28,7 @@ struct PopCompositionResult_t;
 class ResearchManager;
 class BaseManager;
 
-// PopulationManager is the API surface for the population component.
-// It manages pop counts, composition, growth, and riot state for a single base,
-// and provides hooks (signals) for external systems to react to population events.
+// Pop counts, composition, growth and mood for one base, with signals for outside systems.
 class PopulationManager
 {
 public:
@@ -46,7 +44,6 @@ public:
                       int initialSize);
     ~PopulationManager();
 
-    // Population size management
     int GetSize() const;
     bool CanGrow() const;
 
@@ -71,9 +68,7 @@ public:
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_container.GetRevision(); }
 
-    // Bumped on every mood transition, including each commit while a riot continues — the
-    // consecutive count selects the riot tier, so the tier's effects change without any pop
-    // mutation. Sampled by FactionEffectsPool and BaseEffectsCache.
+    // Bumped on every mood transition, including each riot commit, since the tier changes.
     uint64_t GetMoodRevision() const { return m_moodRevision.Get(); }
 
     // Add a pop of the default type (growth) or of an explicit type.
@@ -82,10 +77,8 @@ public:
     void AddPop(const std::string& typeId);
     void RemovePop();
 
-    // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian").
-    // Forces composition when the pop participates in the composition pool before or after
-    // (Drone ↔ Worker leaves phase-1 inputs unchanged, so EnsureCompositionCurrent would skip),
-    // or when crossing the specialist boundary (psych output changes talent targets).
+    // Converts a pop by type id, forcing composition when it is in the pool or crosses the
+    // specialist boundary.
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
     // Convert a pop to the registry default worker type (same composition rules as ConvertTo).
@@ -97,10 +90,7 @@ public:
 
     const PopCompositionConfig_t& GetCompositionConfig() const;
 
-    // Combat capture / probe mind-control: start or reverse the recently-conquered drone
-    // window. Call before TransferBaseTo so the transfer's composition recalculation sees
-    // the new peak/duration. Recapture by a faction that still has a claim (including the
-    // original owner after a third party took the base) inverts that faction's elapsed time.
+    // Starts or reverses the recently-conquered drone window; call before TransferBaseTo.
     void NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner);
     void AdvanceAssimilation();
 
@@ -142,19 +132,15 @@ public:
     // frequently — compares ReadCompositionInputKey and skips work when nothing moved.
     void EnsureCompositionCurrent();
 
-    // Reconcile against an explicit phase-1 result. Reset-then-seat: participating pops
-    // return to default workers, then drone tiers and talents are seated. Never touches
-    // specialists or player-choice types. Uses ConvertResolved_ — not ConvertTo — to avoid
-    // re-entering recalculation.
+    // Resets the participating pops to default workers, then seats drones and talents.
+    // Specialists and player-choice types are untouched.
     void ApplyCompositionResult(const PopCompositionResult_t& rResult);
 
     // Phase 1's answer for this base, recomputed on demand. Exposed because the UI previews
     // what this turn's psych will do to the base before the player commits to it.
     PopCompositionResult_t ComputeComposition() const;
 
-    // Defers ConvertTo-driven RecalculateComposition until the outermost batch ends, so
-    // multi-pop conversions (reset / auto-assign overflow) apply composition once. Flush
-    // forces recalculation — dirty can mean seating changed under an unchanged input key.
+    // Defers composition until the outermost batch ends; Flush forces it.
     class BatchCompositionUpdate
     {
     public:
@@ -184,29 +170,21 @@ public:
     // Applies ResolveGrowth (GrowthRules) to this turn's gross nutrient production.
     void ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 
-    // Ownership transfer (BaseManager::RebindFaction): pop fallback/obsolescence resolution
-    // is research-gated, so a transferred base's pops must read the new owner's discovered
-    // techs from the next conversion.
+    // For ownership transfer: type resolution reads the new owner's techs from now on.
     void RebindResearch(const ResearchManager& rResearch);
 
-    // Signals
     Signal<int> OnPopGained;   // new size
     Signal<int> OnPopLost;     // new size
-    // Emitted with the pop about to be removed, while it is still valid, so an observer can
-    // drop its reference — the guarantee UnitManager::OnUnitDestroyed already provides.
-    // OnPopLost follows with the new size once the pop is gone.
+    // With the pop about to be removed, while still valid; OnPopLost follows with the new size.
     Signal<const Pop&> OnPopRemoved;
 
-    // Riot signals
     Signal<> OnWillRiot;    // Forecast: conditions met, riot not yet active
     Signal<> OnIsRioting;   // Mood Commit: riot newly active
     Signal<> OnRiotEnded;   // Mood Commit: riot ended
 
-    // Growth signals
     Signal<> OnGrowth;       // base has gained a pop
     Signal<> OnStarvation;   // base has lost a pop
 
-    // Golden age signals
     Signal<> OnWillGoldenAge;   // Forecast: conditions met, age not yet active
     Signal<> OnGoldenAgeStarted;
     Signal<> OnGoldenAgeEnded;
@@ -214,8 +192,8 @@ public:
 private:
     PopContainer m_container;
     const PopTypeRegistry& m_rRegistry;
-    // The rules services the container used to hold. They live here because this class owns
-    // population policy — conversion legality, the obsolescence chain, composition targets.
+    // Population policy lives here: conversion legality, the obsolescence chain, composition
+    // targets.
     const PopTypeAvailabilityCalculator& m_rAvailabilityCalculator;
     // A pointer only because RebindResearch re-points it when the base changes owner.
     const ResearchManager* m_pResearch;

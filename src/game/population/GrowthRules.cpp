@@ -13,14 +13,12 @@ namespace ac
 int ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize,
                              const BaseEffects_t& rBaseEffects)
 {
-    // GrowthRate is RawScaled (see KindFor): modifiers scale the 100% baseline seed.
-    // TODO: consume RuleFlagId_t::NearZeroGrowth / PopulationBoom (emitted by the growth
-    // rating's extreme levels in config) once their gameplay rules are defined.
+    // GrowthRate scales the 100% baseline (RawScaled).
+    // TODO: consume NearZeroGrowth and PopulationBoom once their gameplay rules are defined.
     const double growthRate = ResolveBaseStat(rBaseEffects, StatId_t::GrowthRate, 100.0, nullptr);
 
-    // GrowthRate ≤ 0 is not a defined nutrient-threshold rule (SMAC uses the
-    // NearZeroGrowth flag at the extreme instead of a zero/negative multiplier).
-    // Do not silently treat it as normal growth — block threshold-based growth.
+    // GrowthRate ≤ 0 has no threshold rule (SMAC flags NearZeroGrowth instead), so it blocks
+    // threshold growth.
     if (growthRate <= 0.0)
     {
         return std::numeric_limits<int>::max();

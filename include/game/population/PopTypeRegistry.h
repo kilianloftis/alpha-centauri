@@ -75,10 +75,8 @@ protected:
     }
 
 private:
-    // The promotion graph must be one chain running through the is_default type, because the
-    // citizen classes are read off position relative to that type. A branch has no defined
-    // answer, and would misclassify silently rather than error. Branching graphs are a deferred
-    // feature; rejecting them is not deferred.
+    // One chain through the default type, since classes are read off position on it; a branch would
+    // misclassify, so it is rejected.
     void ValidatePromotionGraph_() const
     {
         for (const PopTypeConfig_t& rConfig : this->m_configs)
@@ -199,11 +197,8 @@ private:
         }
     }
 
-    // drone_weight seats pressure; class comes from the graph. The two must agree, and weight
-    // order along the chain must match promote order (heavier = farther from the default), or
-    // the psych ladder's "worst first" (by seated weight) would disagree with graph depth.
-    // Fixtures with no promotion edges (fallback/obsoletes-only) skip the "need a drone" rule —
-    // there is nothing to seat — but a stray drone_weight is still rejected.
+    // drone_weight and class must agree, and weight must grow with distance from the default.
+    // Graphs without promotion edges need no drone, but reject a stray weight.
     void ValidateDroneWeights_() const
     {
         bool bAnyPromoteEdge = false;
@@ -278,9 +273,7 @@ private:
         }
     }
 
-    // PopTypeAvailabilityCalculator walks this graph for every pop of every base, every turn.
-    // A cycle there is a config error, and it has to be reported here rather than from the
-    // middle of a turn.
+    // A cycle would be walked every turn, so it is reported at load.
     void ValidateNoObsolescenceCycles_() const
     {
         enum class Mark_t

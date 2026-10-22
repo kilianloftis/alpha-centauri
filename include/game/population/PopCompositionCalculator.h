@@ -39,12 +39,8 @@ struct PopCompositionResult_t
     int psychSpent = 0;
 };
 
-// Phase 1 of composition: turns drone pressure, talents and psych into the counts a base
-// should have. Works entirely on counts — no pop instance is touched here, which is why it can
-// run before phase 2 exists.
-//
-// Order: psych ladder, then annihilate drone/talent pairs that do not fit, then seat the
-// remaining pressure lightest-type-first.
+// Phase 1: turns drone pressure, talents and psych into target counts, without touching pops.
+// Psych ladder, then annihilate unfit pairs, then seat lightest first.
 class PopCompositionCalculator
 {
 public:

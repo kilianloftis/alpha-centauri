@@ -88,25 +88,16 @@ void PopulationManager::RemovePop()
     OnPopRemoved.Emit(rDoomed);
     m_container.Remove(rDoomed);
 
-    // Targets are a function of base size, so a removal invalidates them immediately. Conquest,
-    // a probe pop-kill and starvation all shrink a base mid-turn and used to leave the
-    // drone/talent split describing the size the base no longer has until the next Population
-    // stage. Not done on AddPop: the caller there names the type it wants, and reconciling
-    // inside the add would silently overwrite it.
-    //
-    // Before OnPopLost, not after: observers of that signal — including EventBridge's
-    // EvBaseLostPop, which is mod-facing — read the composition, and announcing the new size
-    // alongside the old split just moves the staleness into them.
+    // Targets depend on base size, so a removal recalculates at once (AddPop does not, since its
+    // caller names the type). Before OnPopLost, whose observers read the composition.
     MaybeRecalculateComposition_();
     NotifyPopLost_();
 }
 
 const PopTypeConfig_t& PopulationManager::ResolveType_(const std::string& typeId) const
 {
-    // The single place a requested pop type becomes an actual one. Every conversion path goes
-    // through the obsolescence chain, so a pop always lands on the most current non-obsoleted
-    // successor of what was asked for. Previously only the fallback path did this, and plain
-    // ConvertTo installed the raw id — so it could seat a type the fallback path would refuse.
+    // The one place a requested type becomes an actual one: the most current non-obsoleted
+    // successor.
     return m_rAvailabilityCalculator.ResolveCurrentType(typeId,
                                                         m_pResearch->GetDiscoveredTechs());
 }
@@ -118,9 +109,8 @@ void PopulationManager::ConvertResolved_(Pop& rPop, const std::string& typeId)
 
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    // Pool participation: Drone ↔ Worker (and Talent player-choice edges) can leave phase-1
-    // inputs identical while seating is wrong — EnsureCompositionCurrent would skip. Specialist
-    // boundary: psych output changes, which is a composition input.
+    // Drone ↔ Worker can leave the phase-1 inputs equal while seating is wrong, and the
+    // specialist boundary changes psych, so both force composition.
     const bool bWasParticipating = rPop.ParticipatesInComposition();
     const bool bWasSpecialist = !rPop.IsWorker();
     ConvertResolved_(rPop, typeId);
@@ -166,12 +156,8 @@ PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
         return;
     }
     m_rPops.m_bCompositionDirty = false;
-    // Destructors are implicitly noexcept, and the deferred work here can throw: it reaches
-    // GetDefaultPopType_ (registry) and ResolveType_ (obsolescence chain), both of which throw
-    // on a config the registry cannot satisfy. Letting that escape calls std::terminate — and
-    // this guard sits on the hot worker-assignment paths, so it would take the process down
-    // rather than surface a config error. Report and swallow instead; the composition is left
-    // stale, which is recoverable, unlike termination.
+    // The deferred work can throw on a bad config, and this runs in a noexcept destructor on hot
+    // paths, so it reports and leaves composition stale rather than terminate.
     try
     {
         // Force: dirty may mean ConvertTo mutated seating under an unchanged input key.

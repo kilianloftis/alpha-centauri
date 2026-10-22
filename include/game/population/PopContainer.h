@@ -13,21 +13,14 @@ namespace ac
 
 class PopTypeRegistry;
 
-// Storage for a base's pops: the vector, the counts, and the revision. Deliberately owns no
-// population *policy* — which types a pop may become, how the obsolescence chain resolves, and
-// how composition targets are reconciled all live in PopulationManager. Keeping the rules out
-// of here is what makes them enforceable in one place: this class used to hold the availability
-// calculator and apply it on one conversion path (ConvertToFallback) but not the other
-// (ConvertTo), so ConvertTo could install a pop type the fallback path would have refused.
+// Storage for a base's pops, counts and revision. The rules about types live in
+// PopulationManager, so every conversion path applies them.
 class PopContainer
 {
 public:
-    // The registry is a reference: a null one used to construct a base with zero pops and then
-    // throw on the first AddPop, which is a failure reported at the wrong place and time.
     PopContainer(const PopTypeRegistry& rRegistry, int initialSize);
     ~PopContainer() = default;
 
-    // Container access
     int GetSize() const;
     // Iterate pops by reference without exposing the owning unique_ptrs.
     auto Pops() { return DerefView(m_pops); }
@@ -37,10 +30,7 @@ public:
     // PopulationManager; the container only owns the storage.
     void Remove(const Pop& rPop);
 
-    // Population counts by type.
-    // GetWorkerCount is every tile-capable pop — plain workers *and* drones *and* talents — so
-    // it does not partition the population against the counts below. Callers that need the
-    // disjoint "worker, not drone, not talent" bucket want GetPlainWorkerCount.
+    // GetWorkerCount includes drones and talents; GetPlainWorkerCount does not.
     int GetWorkerCount() const;
     int GetPlainWorkerCount() const;
     int GetTalentCount() const;
@@ -59,9 +49,7 @@ public:
     // does: which types are legal is PopulationManager's decision, not the container's.
     void AddPop(const PopTypeConfig_t& rConfig);
 
-    // Install an already-resolved type on a pop. The caller decides *which* type is legal —
-    // see PopulationManager::ConvertTo, which resolves the id through the obsolescence chain
-    // first, so every conversion path applies the same rule.
+    // Installs a type the caller already resolved (PopulationManager::ConvertTo).
     void ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig);
 
     // Compute total psych output across all pops

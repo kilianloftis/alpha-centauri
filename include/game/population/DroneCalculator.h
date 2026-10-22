@@ -11,9 +11,7 @@ namespace ac
 
 class LuaRuntime;
 
-// One input struct per drone source rather than one wide struct shared by all of them: each
-// term is evaluated on its own formula, so a struct that carried every field would hand each
-// calculator two thirds of it as noise.
+// One input struct per drone source, since each term has its own formula.
 
 // Residue class past the bureaucracy limit — the empire-size penalty.
 struct BureaucracyDroneInputs_t
@@ -49,10 +47,8 @@ struct OccupationDroneInputs_t
 
 uint64_t StableBaseHash(int baseId);
 
-// Computes the drone-pressure terms that need real math. Each result is a contribution to
-// StatId_t::Drones, which BaseManager sums and seeds ResolveBaseStat with — facilities and SE
-// then Add on top of it through the ordinary effect pipeline. There is no combined drone
-// formula: "how much pressure is there" is a resolved stat, not a Lua expression.
+// The drone terms that need real math, each a contribution to the Drones seed; effects add on
+// top. There is no combined drone formula.
 class DroneCalculator
 {
 public:

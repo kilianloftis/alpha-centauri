@@ -184,9 +184,7 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
                 }
             }
 
-            // Required, and every field within it: these are the rebellion's tuning numbers,
-            // so a missing key must fail at load rather than silently resolve to whatever a
-            // C++ member initializer happened to say.
+            // Required, every field: these are the rebellion's tuning numbers.
             if (!rJson.contains("rebel_selection") || !rJson.at("rebel_selection").is_object())
             {
                 fail("'rebel_selection' must be an object");

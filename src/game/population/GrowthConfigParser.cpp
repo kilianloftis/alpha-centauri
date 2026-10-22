@@ -12,9 +12,8 @@ namespace ac
 namespace
 {
 
-// pop_growth.json carries exactly the two population baselines. Anything else reaching this
-// list would join the faction pool as an AllOwnerBases continuous effect from a file whose
-// name says nothing about it, so the stat set is closed rather than open.
+// Exactly the two population baselines, so nothing joins the faction pool from a file whose
+// name does not say so.
 void ValidateGrowthEffects_(const std::vector<EffectConfig_t>& rEffects,
                             const std::string& rConfigPath)
 {
@@ -48,9 +47,8 @@ void ValidateGrowthEffects_(const std::vector<EffectConfig_t>& rEffects,
             fail("population baselines must be > 0, got " + std::to_string(pMod->amount));
         }
     }
-    // Absent, these resolve to the Additive seed 0: StartingSize 0 throws on the first base
-    // founded and MaxBaseSize 0 silently stops every base from ever growing. Both belong at
-    // load time, next to the scalar keys they replaced.
+    // Absent, StartingSize 0 throws at the first founding and MaxBaseSize 0 stops all growth, so
+    // both are required at load.
     if (!bHasStartingSize)
     {
         fail("'effects' must contain a starting_size StatModifier");
@@ -67,9 +65,7 @@ GrowthConfig_t GrowthConfigParser::ParseConfig(const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<GrowthConfig_t>(
         configPath, "population growth", [&configPath](const nlohmann::json& rJson) {
-            // Required, not defaulted: nutrients_per_pop of 0 makes the growth threshold
-            // identically 0, so every base grows every turn. The struct defaults exist for
-            // programmatic construction, not for papering over a typo'd key.
+            // Required: a nutrients_per_pop of 0 would make every base grow every turn.
             const auto readPositive = [&](const char* key) {
                 const auto fail = [&](const std::string& rMessage) {
                     throw std::runtime_error("Growth config '" + configPath + "': '" + key + "' "

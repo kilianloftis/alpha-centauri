@@ -13,9 +13,8 @@ struct RiotTier_t
 {
     // Minimum consecutive committed riot turns for this tier (inclusive).
     int minTurns = 1;
-    // Continuous effects while this tier is the active (highest matching) tier. ThisBase
-    // entries resolve through BaseEffectsCache; FactionUnits entries reach units homed at the
-    // rioting base through the faction pool. See BaseMoodEffects.
+    // While this is the highest matching tier. ThisBase entries resolve at the base, FactionUnits
+    // through the faction pool (BaseMoodEffects).
     std::vector<EffectConfig_t> effects;
     // One-shot effects fired each Mood commit while at this tier.
     std::vector<TriggeredEffectConfig_t> onEnterEffects;
@@ -68,9 +67,7 @@ struct RebelSelectionConfig_t
 struct PopCompositionConfig_t
 {
     std::string bureaucracyLimitFormula;
-    // One formula per drone source, rather than a single expression summing all of them. Each
-    // is evaluated on its own inputs and contributes to the Drones seed, which makes a term
-    // testable in isolation and lets a mod replace one source without restating the others.
+    // One formula per drone source, so a mod can replace one without restating the others.
     std::string bureaucracyDroneFormula;
     std::string sizeDroneFormula;
     std::string occupationDroneFormula;
