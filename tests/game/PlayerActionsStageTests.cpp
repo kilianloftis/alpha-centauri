@@ -214,7 +214,7 @@ TEST_CASE("SkipTurn persists without spending moves or re-opening needs-orders",
     REQUIRE(awaitingMoves > 0);
 
     skipped.SetOrder(SkipTurnOrder_t{});
-    CHECK(game.pPlayer->GetUnitManager().GetFirstAvailableUnit() == &awaiting);
+    CHECK(game.pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr) == &awaiting);
     CHECK(game.pPlayer->GetUnitManager().HasUnitsRequiringOrders());
 
     awaiting.SetOrder(SkipTurnOrder_t{});
@@ -253,7 +253,7 @@ TEST_CASE("SkipTurn stays out of needs-orders when another unit yields mid-pass"
     REQUIRE(skipped.GetOrder().has_value());
     CHECK(std::holds_alternative<SkipTurnOrder_t>(*skipped.GetOrder()));
     CHECK(skipped.GetMoveFragmentsRemaining() == skippedMoves);
-    CHECK(game.pPlayer->GetUnitManager().GetFirstAvailableUnit() == &shortHold);
+    CHECK(game.pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr) == &shortHold);
 }
 
 TEST_CASE("Population forecasts and Mood commits riot and golden-age state",

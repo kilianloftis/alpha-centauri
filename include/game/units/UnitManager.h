@@ -82,8 +82,6 @@ public:
               });
     }
 
-    // The first unit needing orders, or nullptr.
-    Unit* GetFirstAvailableUnit() const;
     // The next unit needing orders after pAfter, wrapping; the first when pAfter is null or
     // does not need orders.
     Unit* GetNextAvailableUnit(const Unit* pAfter) const;

@@ -382,7 +382,7 @@ void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
 void WorldView::SelectNextAvailableUnit_()
 {
     // Short moves clear the order but leave move fragments — stay on this unit so the
-    // player can keep issuing orders. GetFirstAvailableUnit() alone would jump to the
+    // player can keep issuing orders. GetNextAvailableUnit(nullptr) alone would jump to the
     // first faction unit that needs orders, which is often a different unit.
     if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
     {
@@ -391,7 +391,7 @@ void WorldView::SelectNextAvailableUnit_()
     }
 
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetFirstAvailableUnit() : nullptr;
+    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr) : nullptr;
     SetSelectedUnit_(pNext, false);
     if (pNext)
     {
@@ -420,7 +420,7 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     }
 
     // Empty selection, or the auto-cycled unit is done (out of moves / has an order).
-    if (Unit* pNext = pPlayer->GetUnitManager().GetFirstAvailableUnit())
+    if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr))
     {
         SetSelectedUnit_(pNext, false);
         TryAutoReturnLowFuel_(*pNext);

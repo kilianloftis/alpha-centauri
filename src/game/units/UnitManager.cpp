@@ -176,18 +176,6 @@ void UnitManager::FlushPendingDestructions_()
     std::erase(m_units, nullptr);
 }
 
-Unit* UnitManager::GetFirstAvailableUnit() const
-{
-    for (const std::unique_ptr<Unit>& pUnit : m_units)
-    {
-        if (pUnit && pUnit->RequiresOrders())
-        {
-            return pUnit.get();
-        }
-    }
-    return nullptr;
-}
-
 Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 {
     Unit* pFirst = nullptr;
@@ -223,7 +211,7 @@ Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 
 bool UnitManager::HasUnitsRequiringOrders() const
 {
-    return GetFirstAvailableUnit() != nullptr;
+    return GetNextAvailableUnit(nullptr) != nullptr;
 }
 
 } // namespace ac
