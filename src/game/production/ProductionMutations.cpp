@@ -5,6 +5,7 @@
 #include "game/economy/ResourceManager.h"
 #include "game/faction/Faction.h"
 #include "game/production/ProductionManager.h"
+#include "game/production/ProductionRules.h"
 #include "game/production/ScrapConfig.h"
 
 #include <stdexcept>

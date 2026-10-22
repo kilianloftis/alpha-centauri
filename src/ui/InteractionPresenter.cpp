@@ -111,6 +111,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
                 PresentProductionWouldEmpty_(rWouldEmpty);
             },
             [this](const ProductionIdleInteraction_t& rIdle) { PresentProductionIdle_(rIdle); },
+            [this](const ProductionPreemptedInteraction_t& rPreempted) {
+                PresentProductionPreempted_(rPreempted);
+            },
             [this](const ImprovementVisitInteraction_t& rVisit) {
                 PresentImprovementVisit_(rVisit);
             },
@@ -247,14 +250,40 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
         return;
     }
 
-    FocusBase_(*pBase);
-
     const std::string title = rIdle.afterCompletion
         ? ("Base '" + pBase->GetName() + "' completed " + rIdle.completedItemName + ".")
         : ("No production at " + pBase->GetName());
-    const BaseId_t baseId = rIdle.baseId;
-    const FactionId_t factionId = rIdle.factionId;
+    PresentContinueOrZoomBase_(*pBase, title);
+}
 
+void InteractionPresenter::PresentProductionPreempted_(
+    const ProductionPreemptedInteraction_t& rPreempted)
+{
+    BaseManager* pBase = FindAudienceBase_(rPreempted.factionId, rPreempted.baseId);
+    if (!pBase)
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const PauseOnEventsConfig_t& rPause = m_rGameState.GetSettings().GetPauseOnEvents();
+    if (!rPause.Allows(PauseOnEventId_t::BuildOrdersOutOfDate))
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const std::string title = "Base '" + pBase->GetName() + "' can no longer produce "
+                             + rPreempted.droppedItemName + ".";
+    PresentContinueOrZoomBase_(*pBase, title);
+}
+
+void InteractionPresenter::PresentContinueOrZoomBase_(const BaseManager& rBase, std::string title)
+{
+    FocusBase_(rBase);
+
+    const BaseId_t baseId = rBase.GetBaseId();
+    const FactionId_t factionId = rBase.GetFactionId();
     std::vector<PopupChoice_t> choices;
     choices.push_back({"Continue", [this] { CompleteAndAdvance_(); }});
     choices.push_back({"Zoom to base control",
@@ -267,9 +296,10 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
                                m_onAdvance();
                                return;
                            }
-                           OpenView_(m_rViews.CreateBaseView(*pOpen), [this] { m_onAdvance(); });
+                           auto pView = m_rViews.CreateBaseView(*pOpen);
+                           OpenView_(std::move(pView), [this] { m_onAdvance(); });
                        }});
-    PushChoice_(title, std::move(choices));
+    PushChoice_(std::move(title), std::move(choices));
 }
 
 void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitInteraction_t& rVisit)

@@ -206,6 +206,12 @@ std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase)
     return available;
 }
 
+bool CanProduceItem(const BaseManager& rBase, const IConstructable& rItem)
+{
+    const std::vector<const IConstructable*> available = ConstructableItems(rBase);
+    return std::ranges::contains(available, &rItem);
+}
+
 int CompletionPopulationFloor()
 {
     const GameState& rGameState = CurrentGameState();

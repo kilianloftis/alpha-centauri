@@ -44,6 +44,8 @@ private:
     void PresentOpenView_(const OpenViewInteraction_t& rOpen);
     void PresentProductionWouldEmpty_(const ProductionWouldEmptyInteraction_t& rWouldEmpty);
     void PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle);
+    void PresentProductionPreempted_(const ProductionPreemptedInteraction_t& rPreempted);
+    void PresentContinueOrZoomBase_(const BaseManager& rBase, std::string title);
     void PresentImprovementVisit_(const ImprovementVisitInteraction_t& rVisit);
     void PresentArtifactLink_(const ArtifactLinkInteraction_t& rLink);
     void PresentPactObligation_(const PactObligationInteraction_t& rObligation);

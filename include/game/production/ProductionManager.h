@@ -65,8 +65,8 @@ public:
     // founding mineral bank, stay free until the first BankProduction with something queued).
     void BankProduction(int minerals);
 
-    // After leftovers are banked: convert if the queue is a stockpile, otherwise try to
-    // complete. One exclusive path per call — never both.
+    // After leftovers are banked: convert if the queue is a stockpile, otherwise leave the
+    // minerals on the current item. Completion is a separate step (TryCompleteReady).
     ProductionApplyResult_t ApplyProduction();
 
     // Finish the queued item if cost is already met, without banking new minerals.
@@ -100,9 +100,8 @@ private:
         const ProductionCompletion::EvaluateResult_t& outcome);
 
     // Ungated spend: only FinishReady_ after Completion returns ReadyToFinish. Game code must
-    // go through ApplyProduction / TryCompleteReady / CompletePending so abandon / riot /
-    // deferral gates apply. Completing also clears the turn original: the default fallback
-    // is not a player choice.
+    // go through TryCompleteReady / CompletePending so abandon / riot / deferral gates apply.
+    // Completing also clears the turn original: the default fallback is not a player choice.
     std::string CompleteProduction_();
 
     // Charging the penalty: what this base was producing when the player got control this turn.

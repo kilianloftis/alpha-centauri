@@ -214,7 +214,9 @@ about a pending riot without being a yielding stage.
   bank ResourceCollection just filled; surplus units disband. A native-life home unit
   standing on fungus is charged nothing.
 - **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
-  convert them through a stockpile, then complete funded items. Ordered after `UnitSupport` and
+  convert them through a stockpile. Then, if the item is still constructable, complete funded
+  items; otherwise notify the player (or switch an AI queue to the default) without completing.
+  Ordered after `UnitSupport` and
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
   The colony-pod abandon prompt judges the base's current size, as SMAC's does, and a pop cost

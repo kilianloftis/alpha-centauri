@@ -44,6 +44,20 @@ base early.
 
 ### `base_production` (`0x4F07E0`)
 
+**This turn's minerals** (`0x4F08EC`–`0x4F0907`): if `mineral_surplus` (`BASE`+0xD4) ≥ 0, the
+queue is not Stockpile Energy (`queue_items[0]`+0x50 ≠ −69), and the base is not rioting
+(`state_flags`+0x30 bit 1), add the surplus into `minerals_accumulated` (`BASE`+0x40). This
+runs before any completion or "already built" check.
+
+**Secret project already completed** (`0x4F0A39`): after that add, a queued project whose
+`SecretProjects[id]` (`0x9A6514`) is not `SP_Unbuilt` (−1) jumps to `0x4F1A93`. The item is
+not completed and the queue is not changed. A human (unless the governor is managing
+production) is shown `ALREADYPROJECT` / `ALREADYPROJECT1` / `ALREADYPROJECT2` via `popb`
+(`0x48C650`) with `WARN_STOP_BUILD_OUT_OF_DATE` (`0x200`) at `0x4F1B95`. `popb` always offers
+Continue and Zoom to Base Control; Continue does not pick a new item. AI / governor calls
+`base_reset` (`0x4E5FE0`) at `0x4F1BA7` instead of the popup. Thinker's `mod_base_production`
+follows the same add-then-notice order.
+
 **Colony pod at size 1** (`0x4F0BF6`): if the item's `plan` is colony, `pop_size == 1` and
 the faction's `diff_level > 1`, completion is gated. The gate reads the current size only. It
 does not predict growth or starvation this turn.

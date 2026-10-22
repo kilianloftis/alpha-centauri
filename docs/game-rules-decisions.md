@@ -336,6 +336,21 @@ tiles.
 
 **Implemented** 2026-09-29.
 
+## 14. A pre-empted production item
+
+**Rule:** this turn's leftover minerals bank onto the queued item first. Then, if that item is
+no longer constructable — a secret project another faction finished, a building this base
+already holds, a stockpile whose tech is gone — it is **not completed**. The minerals stay
+on it. The player is told (`ProductionPreemptedInteraction_t`) with Continue and Zoom to
+base control, gated by `BuildOrdersOutOfDate`; Continue leaves the dropped item queued.
+The AI switches to the default fallback without a retool charge and keeps the mineral
+stockpile; conversion waits for a later tick.
+
+A second copy that still reaches `FinishReady_` in the same pass is dropped without installing
+it; that is a backstop, not the player-visible path.
+
+**Implemented** 2026-10-21.
+
 ## Deferred by decision, not by uncertainty
 
 - **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a

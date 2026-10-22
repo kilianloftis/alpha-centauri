@@ -190,15 +190,16 @@ public:
     ProductionManager& GetProduction();
     const ProductionManager& GetProduction() const;
 
-    // Bank this turn's leftover minerals into production, then convert (stockpile) or try to
-    // complete. Under DisableProduction returns InProgress without consuming the mineral bank.
-    // Completing may return AwaitingConfirmation until CompletePendingProduction or
-    // DeferProductionCompletion.
+    // Bank this turn's leftover minerals into production and convert if the queue is a
+    // stockpile. Does not complete a build — BaseProduction checks that the item is still
+    // constructable, then calls TryCompleteReady. Under DisableProduction returns
+    // InProgress without consuming the mineral bank.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
     // touching this turn's mineral bank. Used when a sibling prototype finishes and this
-    // queue's surcharge drops, and after hurry. Honours the same confirmation gate.
+    // queue's surcharge drops, and after hurry. Honours the same confirmation gate. An
+    // unconstructable queue is left in place and not completed.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
     // True when the DisableProduction RuleFlag is in force at this base. That is riot, and only
@@ -237,7 +238,7 @@ public:
     // Spend up to energyCredits from the owning faction treasury on minerals for the queued
     // item, at the price QuoteHurry reports. Credits that would not buy a whole mineral are
     // left unspent. Completes immediately when the stockpile then meets cost (same
-    // confirmation gate as ApplyProduction). Throws if credits is not positive, if the
+    // confirmation gate as TryCompleteReadyProduction). Throws if credits is not positive, if the
     // item cannot be hurried, production is disabled, or if the treasury cannot cover
     // the charge.
     HurryResult_t HurryProduction(int energyCredits);

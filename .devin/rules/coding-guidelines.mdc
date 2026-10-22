@@ -7,11 +7,12 @@ alwaysApply: true
 
 ## Readable code: hard rules
 
-These six rules apply to every new or changed line. Existing code is not rewritten to meet them
+These seven rules apply to every new or changed line. Existing code is not rewritten to meet them
 unless a change touches it. A change that breaks one is not finished.
 
 1. **One call deep.** A call may take another call's result as an argument, but not a call of a
-   call. Casts count as calls. Name the intermediate value instead.
+   call. Casts count as calls. Name the intermediate value instead, with a name that says
+   something the expression did not (`weight`, not `result` or `value`).
    ```cpp
    // No
    return static_cast<int>(std::lround(ResolveFactionStat(rFaction.GetActiveEffects(),
@@ -22,19 +23,38 @@ unless a change touches it. A change that breaks one is not finished.
        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed);
    return static_cast<int>(std::lround(weight));
    ```
-2. **Comments say why, in two lines or fewer.** Never what the code does. Never history: no "used
-   to", "now", "no longer", "was a bug" or "replaces". Never a reference to a plan, review or
-   finding. History belongs in the commit message.
+   A chain of accessors (`rUnit.GetFaction().GetFactionId()`) reads left to right and is fine.
+2. **Comments say why, briefly.** Most comments are one line, some two. Put a short comment at
+   the line it explains, not a block above the function. A comment that names a step is a
+   function name waiting to happen. Never what the code does, and never a label a name already
+   gives (`// Base management`). Never history: no "used to", "now", "no longer", "previously",
+   "was a bug" or "replaces". Never the alternative that was not taken ("rather than",
+   "instead of"). Never a reference to a plan, review or finding. History belongs in the commit
+   message; subsystem design belongs in `docs/architecture/`; confirmed SMAC behavior belongs in
+   `docs/thinker/terranx-map.md`, which a one-line comment can cite. A change that makes a
+   comment wrong or redundant fixes or deletes it.
 3. **No guards for cases that cannot happen.** Do not null-check a reference, or a pointer the code
    already guarantees. Do not re-check what a parser validated at load. A pointer that must not be
-   null throws; never `continue` or `return` past it silently.
+   null throws; never `continue` or `return` past it silently. A parser requires every key whose
+   absence has no meaning; `.value("key", fallback)` is only for a key the config docs call
+   optional.
 4. **No pass-through functions.** Do not add a function whose body only calls another, unless it
-   implements an interface. When logic moves, its callers call the new home.
-5. **No flag parameters.** A `bool` that chooses what a function does becomes an enum or two
-   functions. A `bool` that describes the input, like `bNowWater`, is fine.
+   implements an interface. A member that forwards to a free function with `*this`, or to a
+   member's method, is a pass-through; returning a member is a getter. When logic moves, its
+   callers call the new home.
+5. **No flag parameters.** A `bool` that chooses what a function does is derived from an object the
+   caller already passes, or the function splits in two (named constructors for a type). An enum
+   parameter is the last resort. A `bool` that describes the input, like `bNowWater`, is fine. No
+   default argument added to spare callers an update.
 6. **Nothing speculative.** No function, getter, setter, type, interface or template without a
-   caller that needs it now. A struct is a return type only when a function returns more than one
+   caller that needs it now. A config or Lua file in the repo counts as a caller, so a mod seam
+   lands with one that uses it. An interface is needed when it narrows what its consumer can reach
+   or breaks a header cycle. A test is not a caller for a getter, setter or hook added only so the
+   test can reach inside. A struct is a return type only when a function returns more than one
    thing.
+7. **One level of abstraction per function.** A function either does the work or calls the steps
+   that do it. When it passes about 40 lines or nests three deep, its steps become named
+   functions. A long `switch` that maps one value to another is a table, not a long function.
 
 ## General
 
@@ -62,33 +82,16 @@ When asked to address review findings or implement a review/plan, treat every fi
 value-line per array, not one element per line). Do not rewrite them with
 `json.dumps(..., indent=2)`. Run `python tools/format_ui_style_json.py` after bulk edits.
 
-## SOLID Principles
-All code must adhere to SOLID principles:
-- **S**ingle Responsibility Principle: Each class/function should have one reason to change
-- **O**pen/Closed Principle: Open for extension, closed for modification
-- **L**iskov Substitution Principle: Derived classes must be substitutable for base classes
-- **I**nterface Segregation Principle: Clients shouldn't depend on interfaces they don't use
-- **D**ependency Inversion Principle: Depend on abstractions, not concretions
+## Design
+- Each class and function has one reason to change; `code-kinds.mdc` says which kind of file
+  it belongs in.
+- Derived classes are substitutable for their base. Interfaces stay narrow.
+- Depend on an interface only when it has two implementations, or a test double needs one.
 
-## Moddability and Customization
-All code should be written with moddability and customization in mind:
-- Use configuration files or parameters for customizable behavior
-- Provide hooks for lua or binary plugins
-
-### Calculators
-A calculator's numeric rates, percents, thresholds, and formulas belong in JSON (or the Lua
-formula file that JSON already points at). Do not hard-code those values in the calculator,
-and do not invent a C++ default that silently substitutes for a missing key.
-
-- Put the parameters in the config file that already owns that subsystem (`production.json`
-  for production/hurry/scrap, `pop_growth.json` for growth, and so on).
-- The parser requires the keys and rejects invalid values at load. An empty `kinds` object
-  may turn hurry and scrap off for every kind.
-- The calculator reads `ProductionConfig_t` (or the equivalent config struct). Tests that
-  care about a rate use a fixture for that config. They do not load the shipping file or
-  bake its number into the calculator.
-- Effects that already live in the effect list (`CostMultiplier`, and so on) stay effects.
-  This rule is for the calculator's own coefficients.
+## Moddability
+- Numbers, ids and switches a modder would change live in config, not C++. Calculator
+  coefficients follow `calculator-config.mdc`.
+- A Lua or plugin hook is added with the mod feature that calls it.
 
 ## Code Formatting
 

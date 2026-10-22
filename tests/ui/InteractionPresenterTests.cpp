@@ -176,6 +176,46 @@ TEST_CASE("Prototype combat still pauses when only combat-unit-built is enabled"
     CHECK(harness.pWorldView->HasModalElement());
 }
 
+TEST_CASE("A pre-empted queue presents Continue and Zoom to base control",
+          "[ui][InteractionPresenter][PlayerInteraction]")
+{
+    PresenterHarness_ harness;
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
+    harness.Enqueue(ProductionPreemptedInteraction_t{
+        harness.fixture.pPlayer->GetFactionId(),
+        rBase.GetBaseId(),
+        "Command Center",
+    });
+
+    harness.pPresenter->Update();
+
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
+    CHECK(harness.advanceCount == 0);
+    CHECK(harness.pWorldView->HasModalElement());
+}
+
+TEST_CASE("Disabled build-orders-out-of-date skips the pre-empt prompt",
+          "[ui][InteractionPresenter][PlayerInteraction]")
+{
+    PresenterHarness_ harness;
+    PauseOnEventsConfig_t config = harness.fixture.settings.GetPauseOnEvents();
+    config.buildOrdersOutOfDate = false;
+    harness.fixture.settings.SetPauseOnEvents(config);
+
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
+    harness.Enqueue(ProductionPreemptedInteraction_t{
+        harness.fixture.pPlayer->GetFactionId(),
+        rBase.GetBaseId(),
+        "Command Center",
+    });
+
+    harness.pPresenter->Update();
+
+    CHECK(harness.fixture.state.GetPlayerInteractions().Empty());
+    CHECK(harness.advanceCount == 1);
+    CHECK_FALSE(harness.pWorldView->HasModalElement());
+}
+
 TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
           "[ui][InteractionPresenter][PlayerInteraction]")
 {
@@ -229,7 +269,9 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     const UnitDesign& rPod = AddPodDesign_(harness.fixture);
     rBase.GetProduction().SetProduction(&rPod, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(rBase.GetMineralCost());
-    REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    rBase.ApplyProduction();
+    REQUIRE(rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true).kind
+            == ProductionApplyKind_t::AwaitingConfirmation);
     REQUIRE(rBase.HasPendingProductionConfirmation());
 
     harness.Enqueue(ProductionWouldEmptyInteraction_t{

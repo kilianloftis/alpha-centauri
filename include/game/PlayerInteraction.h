@@ -59,6 +59,15 @@ struct ProductionIdleInteraction_t
     std::vector<PauseOnEventId_t> completedEvents;
 };
 
+// Queued item is no longer constructable; this turn's minerals already banked onto it.
+// Offer Continue or Zoom to base control, gated by BuildOrdersOutOfDate.
+struct ProductionPreemptedInteraction_t
+{
+    FactionId_t factionId = 0;
+    BaseId_t baseId = 0;
+    std::string droppedItemName;
+};
+
 // Unit stepped onto a tile with improvement on_visit_effects (Monolith). Investigate applies
 // those effects to this unit; Leave it Alone completes without firing.
 struct ImprovementVisitInteraction_t
@@ -97,6 +106,7 @@ using PlayerInteraction_t = std::variant<
     OpenViewInteraction_t,
     ProductionWouldEmptyInteraction_t,
     ProductionIdleInteraction_t,
+    ProductionPreemptedInteraction_t,
     ImprovementVisitInteraction_t,
     ArtifactLinkInteraction_t,
     PactObligationInteraction_t,

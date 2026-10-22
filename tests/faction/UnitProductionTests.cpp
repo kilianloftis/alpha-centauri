@@ -14,6 +14,7 @@
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/economy/EconomyManager.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/economy/ResourceManager.h"
@@ -151,7 +152,143 @@ void CheckQueuedStockpileEnergy_(const BaseManager& rBase, UnitProductionGame_& 
     CHECK(rBase.GetProduction().GetCurrentProduction() == StockpileEnergyOf_(rGame));
 }
 
+ProductionApplyResult_t ApplyAndComplete_(BaseManager& rBase)
+{
+    rBase.ApplyProduction();
+    return rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true);
+}
+
 } // namespace
+
+TEST_CASE("CanProduceItem follows ConstructableItems", "[production]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(8, 4);
+    const BuildingConfig_t& rCenter = game.fixtures.buildings().Get("Command_Center");
+    CHECK(CanProduceItem(base, rCenter));
+
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    CHECK_FALSE(CanProduceItem(base, rCenter));
+
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
+    CHECK(CanProduceItem(base, rDesign));
+}
+
+TEST_CASE("ApplyProduction banks minerals onto an already-built facility without completing it",
+          "[production]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(8, 4);
+    const BuildingConfig_t& rCenter = game.fixtures.buildings().Get("Command_Center");
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    base.GetProduction().SetProduction(&rCenter, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(40);
+
+    const ProductionApplyResult_t applied = base.ApplyProduction();
+    CHECK(applied.kind == ProductionApplyKind_t::InProgress);
+    CHECK_FALSE(applied.preempted);
+    CHECK(base.GetProduction().GetCurrentProduction() == &rCenter);
+    CHECK(base.GetProduction().GetMineralStockpile() == 40);
+}
+
+TEST_CASE("BaseProduction enqueues a pre-empt prompt and leaves the queue on the dropped item",
+          "[production][BaseProduction][PlayerInteraction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(8, 8);
+    const BuildingConfig_t& rCenter = game.fixtures.buildings().Get("Command_Center");
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    base.GetProduction().SetProduction(&rCenter, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(40);
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(game.fixtures.state);
+
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
+    {
+        const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
+            game.fixtures.state.GetPlayerInteractions().Front()->payload);
+        CHECK(rPreempted.baseId == base.GetBaseId());
+        CHECK(rPreempted.droppedItemName == rCenter.GetName());
+    }
+    CHECK(base.GetProduction().GetCurrentProduction() == &rCenter);
+    CHECK(base.GetProduction().GetMineralStockpile() == 40);
+
+    game.fixtures.state.GetPlayerInteractions().CompleteFront();
+    processor.Advance(game.fixtures.state);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
+}
+
+TEST_CASE("BaseProduction AI pre-empts without yielding",
+          "[production][BaseProduction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(*game.pOther, 8, 8);
+    const BuildingConfig_t& rCenter = game.fixtures.buildings().Get("Command_Center");
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    base.GetProduction().SetProduction(&rCenter, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(40);
+
+    BaseProduction stage(HookContext{});
+    CHECK(stage.Execute(game.fixtures.state, *game.pOther) == StageResult_t::Continue);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
+    CHECK(base.GetProduction().GetCurrentProduction() == StockpileEnergyOf_(game));
+    CHECK(base.GetProduction().GetMineralStockpile() == 40);
+}
+
+TEST_CASE("BaseProduction pre-empts a sibling still queued on a just-finished secret project",
+          "[production][BaseProduction][secret-project][PlayerInteraction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& winner = game.MakeBase(8, 4);
+    BaseManager& loser = game.MakeBase(12, 8);
+    const BuildingConfig_t& rProject = game.fixtures.buildings().Get("test_secret_project");
+
+    winner.GetProduction().SetProduction(&rProject, winner.GetBaseEffects());
+    winner.GetProduction().SetMineralStockpile(winner.GetMineralCost());
+    loser.GetProduction().SetProduction(&rProject, loser.GetBaseEffects());
+    loser.GetProduction().SetMineralStockpile(loser.GetMineralCost());
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(game.fixtures.state);
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
+    {
+        const auto& rIdle = std::get<ProductionIdleInteraction_t>(
+            game.fixtures.state.GetPlayerInteractions().Front()->payload);
+        CHECK(rIdle.afterCompletion);
+        CHECK(rIdle.completedItemId == rProject.GetId());
+        CHECK((rIdle.baseId == winner.GetBaseId() || rIdle.baseId == loser.GetBaseId()));
+    }
+    CHECK(game.pFaction->CountBuildings("test_secret_project") == 1);
+
+    game.fixtures.state.GetPlayerInteractions().CompleteFront();
+    processor.Advance(game.fixtures.state);
+
+    REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
+    {
+        const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
+            game.fixtures.state.GetPlayerInteractions().Front()->payload);
+        CHECK((rPreempted.baseId == winner.GetBaseId() || rPreempted.baseId == loser.GetBaseId()));
+        CHECK(rPreempted.droppedItemName == rProject.GetName());
+        const BaseManager* pPreemptedBase = rPreempted.baseId == winner.GetBaseId() ? &winner : &loser;
+        CHECK_FALSE(pPreemptedBase->GetBuildingManager().HasBuilding("test_secret_project"));
+        CHECK(pPreemptedBase->GetProduction().GetCurrentProduction() == &rProject);
+    }
+    CHECK(game.pFaction->CountBuildings("test_secret_project") == 1);
+}
 
 TEST_CASE("All unit designs appear in the base constructable list", "[production][unit]")
 {
@@ -183,7 +320,7 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    const ProductionApplyResult_t applied = base.ApplyProduction();
+    const ProductionApplyResult_t applied = ApplyAndComplete_(base);
     CHECK(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == rPod.GetId());
     CHECK(base.GetPopulation().GetSize() == 2);
@@ -210,7 +347,7 @@ TEST_CASE("Colony pod that would abandon the base asks for confirmation",
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    const ProductionApplyResult_t applied = base.ApplyProduction();
+    const ProductionApplyResult_t applied = ApplyAndComplete_(base);
     CHECK(applied.kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.HasPendingProductionConfirmation());
     CHECK(CompletionAbandonsBase(base));
@@ -236,7 +373,7 @@ TEST_CASE("CompletePendingProduction completes the unit and empties the base",
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     REQUIRE(base.HasPendingProductionConfirmation());
 
     CHECK(base.CompletePendingProduction() == rPod.GetId());
@@ -266,7 +403,7 @@ TEST_CASE("Deferring completion keeps the base and does not disable production",
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     const int stockpile = base.GetMineralCost() + 5;
     base.GetProduction().SetMineralStockpile(stockpile);
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     REQUIRE(base.HasPendingProductionConfirmation());
 
     base.DeferProductionCompletion();
@@ -296,7 +433,7 @@ TEST_CASE("Deferring completion keeps the base and does not disable production",
     const int stockpileBefore = base.GetProduction().GetMineralStockpile();
     const int bank = base.GetResources().GetMineralBank();
     // A new turn asks again — and banks this turn's leftovers onto the funded item.
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.HasPendingProductionConfirmation());
     CHECK(base.GetResources().GetMineralBank() == 0);
     CHECK(base.GetProduction().GetMineralStockpile() == stockpileBefore + bank);
@@ -317,14 +454,14 @@ TEST_CASE("A deferred item completes on its own once the base has grown",
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     base.DeferProductionCompletion();
 
     base.GetPopulation().AddPop();
     REQUIRE(base.GetPopulation().GetSize() == 2);
     CHECK_FALSE(CompletionAbandonsBase(base));
 
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
     CHECK_FALSE(base.HasPendingProductionConfirmation());
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK_FALSE(base.IsRazed());
@@ -352,7 +489,7 @@ TEST_CASE("A size-1 colony pod asks for confirmation even when the base is about
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     CHECK(CompletionAbandonsBase(base));
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK_FALSE(base.IsRazed());
 }
@@ -372,7 +509,7 @@ TEST_CASE("A size-2 colony pod completes without asking even when the base is st
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     CHECK_FALSE(CompletionAbandonsBase(base));
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
     CHECK(base.GetPopulation().GetSize() == 1);
 }
 
@@ -395,7 +532,7 @@ TEST_CASE("At Citizen a colony pod completes in a size-1 base, which keeps its c
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     CHECK_FALSE(CompletionAbandonsBase(base));
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK_FALSE(base.IsRazed());
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
@@ -418,7 +555,7 @@ TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     CHECK_FALSE(CompletionAbandonsBase(base));
-    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 }
 
 TEST_CASE("CreateUnit without production does not apply on-complete component effects",
@@ -558,7 +695,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     REQUIRE(base.GetMineralCost() >= 1);
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    const ProductionApplyResult_t applied = base.ApplyProduction();
+    const ProductionApplyResult_t applied = ApplyAndComplete_(base);
     CHECK(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == rDesign.GetId());
     CheckQueuedStockpileEnergy_(base, game);
@@ -700,7 +837,7 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     CHECK(prototypeCost > rDesign.GetBaseCost());
 
     base.GetProduction().SetMineralStockpile(prototypeCost);
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
     const std::vector<Unit*> onTile =
@@ -753,7 +890,7 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
     CHECK(without.GetMineralCost() == prototypeCost);
 
     withSkunk.GetProduction().SetMineralStockpile(standardCost);
-    REQUIRE(withSkunk.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(withSkunk).kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
         game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(withSkunk.GetTile());
@@ -790,7 +927,7 @@ TEST_CASE("Probe Team GrantXp applies on production complete, not on CreateUnit"
         const UnitDesign& rDesign = game.AddDesign({"test_chassis", "Probe_Team"});
         base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
         base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-        REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+        REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
         const std::vector<Unit*> onTile =
             game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
@@ -829,7 +966,7 @@ TEST_CASE("High Morale GrantXp applies on production complete, not on CreateUnit
             game.AddDesign({"test_chassis", "test_weapon", "test_high_morale"});
         base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
         base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-        REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+        REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
         const std::vector<Unit*> onTile =
             game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
@@ -871,7 +1008,7 @@ TEST_CASE("Prototype GrantXp stacks with on_unit_produced train bonuses",
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
         game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
@@ -911,10 +1048,10 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
     REQUIRE(prototypeCost > standardCost);
 
     first.GetProduction().SetMineralStockpile(standardCost);
-    CHECK(first.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
+    CHECK(ApplyAndComplete_(first).kind == ProductionApplyKind_t::InProgress);
 
     second.GetProduction().SetMineralStockpile(prototypeCost);
-    const ProductionApplyResult_t finished = second.ApplyProduction();
+    const ProductionApplyResult_t finished = ApplyAndComplete_(second);
     REQUIRE(finished.kind == ProductionApplyKind_t::Completed);
     CHECK(std::find(finished.completedEvents.begin(), finished.completedEvents.end(),
                     PauseOnEventId_t::PrototypeBuilt)
@@ -941,7 +1078,7 @@ TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
 
     base.GetProduction().SetProduction(&rFirst, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
     CHECK_FALSE(IsPrototype(*game.pFaction, rFirst));
     REQUIRE(IsPrototype(*game.pFaction, rSecond));
@@ -964,7 +1101,7 @@ TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
 
     playerBase.GetProduction().SetProduction(&rPlayer, playerBase.GetBaseEffects());
     playerBase.GetProduction().SetMineralStockpile(playerBase.GetMineralCost());
-    REQUIRE(playerBase.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(playerBase).kind == ProductionApplyKind_t::Completed);
 
     aiBase.GetProduction().SetProduction(&rAi, aiBase.GetBaseEffects());
     CHECK(IsPrototype(*game.pOther, rAi));
@@ -1118,7 +1255,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onTile =
         game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
@@ -1134,7 +1271,7 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     BaseManager& second = game.MakeBase(8, 12);
     second.GetProduction().SetProduction(&rDesign, second.GetBaseEffects());
     second.GetProduction().SetMineralStockpile(second.GetMineralCost());
-    REQUIRE(second.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE(ApplyAndComplete_(second).kind == ProductionApplyKind_t::Completed);
 
     const std::vector<Unit*> onSecondTile =
         game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(second.GetTile());
@@ -1204,7 +1341,7 @@ TEST_CASE("PostActionsProduction keeps a same-turn abandon deferral deferred",
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::AwaitingConfirmation);
     base.DeferProductionCompletion();
     REQUIRE_FALSE(base.HasPendingProductionConfirmation());
 

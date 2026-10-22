@@ -868,7 +868,9 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
     pBase->GetProduction().SetProduction(pCommons, pBase->GetBaseEffects());
     pBase->GetProduction().SetMineralStockpile(pBase->GetMineralCost());
 
-    const ac::ProductionApplyResult_t applied = pBase->ApplyProduction();
+    pBase->ApplyProduction();
+    const ac::ProductionApplyResult_t applied =
+        pBase->GetProduction().TryCompleteReady(/*bNewTurn=*/true);
     REQUIRE(applied.kind == ac::ProductionApplyKind_t::Completed);
     REQUIRE(pBase->GetBuildingManager().HasBuilding("Recreation_Commons"));
 

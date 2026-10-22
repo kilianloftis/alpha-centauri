@@ -164,12 +164,15 @@ ProductionManager::ApplyCompletionOutcome_(const ProductionCompletion::EvaluateR
 
 ProductionApplyResult_t ProductionManager::ApplyProduction()
 {
-    if (m_pCurrentItem && m_pCurrentItem->IsStockpile())
+    if (!m_pCurrentItem)
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+    }
+    if (m_pCurrentItem->IsStockpile())
     {
         return ConvertStockpile_();
     }
-    return ApplyCompletionOutcome_(
-        m_completion.TryCompleteReady(BuildCompletionProbe_(), /*bNewTurn=*/true));
+    return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
 }
 
 ProductionApplyResult_t ProductionManager::ConvertStockpile_()

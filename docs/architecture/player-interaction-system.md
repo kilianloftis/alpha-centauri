@@ -63,7 +63,8 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `NoticeInteraction_t` | `NoticePopup` on WorldView (+ optional camera tile) |
 | `OpenViewInteraction_t` | `PushView` Base / Research / UnitDesigner / SE; close Completes |
 | `ProductionAbandonInteraction_t` | Confirm / Defer → `BaseManager` API → Complete |
-| `ProductionIdleInteraction_t` | Assign (open BaseView) / Later |
+| `ProductionIdleInteraction_t` | Continue / Zoom to base control |
+| `ProductionPreemptedInteraction_t` | Continue / Zoom to base control |
 | `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
 | `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `HonorDefensiveObligation` / `DeclineDefensiveObligation` → Complete. Completes without asking when the obligation no longer stands (`IsObligedToDefend`) |
 | `TerritoryEntryInteraction_t` | Break the agreement → `BreakAgreementAndContinue` (`movement/TerritoryEntryMutations.h`) / Cancel the order → `Unit::ClearOrder` → Complete |
@@ -80,6 +81,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 
 - Production would empty base → `ProductionAbandonInteraction_t`
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
+- Queued item no longer constructable → `ProductionPreemptedInteraction_t` (after this turn's minerals have already been banked onto it)
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
 - A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct` and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)

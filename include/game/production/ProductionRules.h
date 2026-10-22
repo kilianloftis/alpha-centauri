@@ -68,6 +68,9 @@ bool CanScrapBuilding(const BuildingConfig_t& rBuilding);
 
 std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase);
 
+// True when rItem is in ConstructableItems: the player could still queue it at this base.
+bool CanProduceItem(const BaseManager& rBase, const IConstructable& rItem);
+
 // The smallest size a completed item's pop cost may leave: 1 at a difficulty that preserves a
 // size-1 base (Citizen), otherwise 0.
 int CompletionPopulationFloor();

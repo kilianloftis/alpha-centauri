@@ -3,6 +3,7 @@
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/production/IConstructable.h"
+#include "game/production/ProductionRules.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/base/BaseManager.h"
@@ -11,6 +12,7 @@
 #include "game/stages/TurnStageRegistrar.h"
 
 #include <iostream>
+#include <optional>
 #include <utility>
 
 namespace ac
@@ -25,7 +27,34 @@ BaseProduction::BaseProduction(HookContext hookContext)
 
 ProductionApplyResult_t BaseProduction::TickBase_(BaseManager& rBase)
 {
-    return rBase.ApplyProduction();
+    rBase.ApplyProduction();
+    if (std::optional<ProductionPreempt_t> dropped = UnconstructableQueue_(rBase))
+    {
+        ProductionApplyResult_t result{ProductionApplyKind_t::InProgress, {}};
+        result.preempted = std::move(dropped);
+        return result;
+    }
+    ProductionManager& rProduction = rBase.GetProduction();
+    return rProduction.TryCompleteReady(/*bNewTurn=*/true);
+}
+
+std::optional<ProductionPreempt_t> BaseProduction::UnconstructableQueue_(const BaseManager& rBase)
+{
+    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
+    if (!pItem || CanProduceItem(rBase, *pItem))
+    {
+        return std::nullopt;
+    }
+    return ProductionPreempt_t{pItem->GetName()};
+}
+
+ProductionApplyResult_t BaseProduction::TryCompleteIfConstructable_(BaseManager& rBase)
+{
+    if (UnconstructableQueue_(rBase))
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+    }
+    return rBase.TryCompleteReadyProduction();
 }
 
 void BaseProduction::OnResetPassState_()
@@ -36,6 +65,22 @@ void BaseProduction::OnResetPassState_()
 void BaseProduction::OnExitImpl()
 {
     ResetPassState_();
+}
+
+StageResult_t BaseProduction::HandlePreempted_(GameState& rGameState, Faction& rFaction,
+                                              BaseManager& rBase,
+                                              const ProductionPreempt_t& rPreempted)
+{
+    if (!rFaction.IsPlayerControlled())
+    {
+        rBase.GetProduction().RebindProductionItem(nullptr);
+        return StageResult_t::Continue;
+    }
+
+    EnqueueForPlayer(rGameState,
+                     ProductionPreemptedInteraction_t{
+                         rFaction.GetFactionId(), rBase.GetBaseId(), rPreempted.droppedName});
+    return StageResult_t::Yield;
 }
 
 StageResult_t BaseProduction::HandleAwaitingConfirmation_(GameState& rGameState,
@@ -86,6 +131,12 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
 void BaseProduction::LogProductionTick_(const BaseManager& rBase,
                                         const ProductionApplyResult_t& rResult)
 {
+    if (rResult.preempted)
+    {
+        std::cout << "  Base '" << rBase.GetName() << "' can no longer produce "
+                  << rResult.preempted->droppedName << "\n";
+        return;
+    }
     if (rResult.kind == ProductionApplyKind_t::Completed)
     {
         std::cout << "  Base '" << rBase.GetName() << "' completed production: "
@@ -115,6 +166,11 @@ StageResult_t BaseProduction::HandleApplyResult_(GameState& rGameState, Faction&
                                                 BaseManager& rBase,
                                                 const ProductionApplyResult_t& rResult)
 {
+    if (rResult.preempted)
+    {
+        return HandlePreempted_(rGameState, rFaction, rBase, *rResult.preempted);
+    }
+
     switch (rResult.kind)
     {
     case ProductionApplyKind_t::AwaitingConfirmation:
@@ -145,7 +201,7 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
                 continue;
             }
 
-            const ProductionApplyResult_t result = rBase.TryCompleteReadyProduction();
+            const ProductionApplyResult_t result = TryCompleteIfConstructable_(rBase);
             if (result.kind != ProductionApplyKind_t::Completed
                 && result.kind != ProductionApplyKind_t::AwaitingConfirmation)
             {

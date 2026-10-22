@@ -38,6 +38,7 @@
 #include "game/PauseOnEventsConfig.h"
 #include <algorithm>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -175,12 +176,8 @@ BaseManager::BaseManager(
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(itemId))
         {
-            // Losing a race for a secret project, or finishing a copy of something already here, is
-            // an ordinary game outcome — the player can queue the same project in two bases, and
-            // both are offered it. Report and drop the item; AddBuilding's throw stays a
-            // programmer-error backstop.
-            // TODO: SMAC's rule for a pre-empted build (refund the minerals? auto-switch?) is not
-            // recorded here, so the stockpile is simply left as ProductionManager set it.
+            // A second copy can still reach FinishReady_ in the same pass. Drop it; AddBuilding's
+            // throw stays a programmer-error backstop.
             if (!m_pBuildings->CanAddBuilding(itemId))
             {
                 std::cerr << "Base " << m_baseId << " completed '" << itemId

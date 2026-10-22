@@ -14,6 +14,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
 
@@ -146,12 +147,9 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
                     std::runtime_error);
 }
 
-TEST_CASE("Losing a secret-project race drops the item instead of killing the turn",
+TEST_CASE("Losing a secret-project race does not complete a second copy",
           "[building][secret-project][production]")
 {
-    // The player can queue the same project in two of their own bases — both are offered it,
-    // and nothing revokes an already-queued item when one completes. Completing the second must
-    // not throw: nothing catches between here and main().
     BuildingGame_ game;
     BaseManager& winner = game.MakeBase(*game.pPlayer, 8, 4);
     BaseManager& loser = game.MakeBase(*game.pPlayer, 12, 8);
@@ -162,9 +160,13 @@ TEST_CASE("Losing a secret-project race drops the item instead of killing the tu
     const BuildingConfig_t& rProject =
         game.fixtures.dataContext.buildingRegistry->Get("test_secret_project");
     loser.GetProduction().SetProduction(&rProject, loser.GetBaseEffects());
-    loser.GetProduction().SetMineralStockpile(10000); // far past any cost, so it completes now
+    loser.GetProduction().SetMineralStockpile(10000);
 
-    CHECK_NOTHROW(loser.ApplyProduction());
+    const ProductionApplyResult_t applied = loser.ApplyProduction();
+    CHECK(applied.kind == ProductionApplyKind_t::InProgress);
+    CHECK_FALSE(applied.preempted);
+    CHECK(loser.GetProduction().GetCurrentProduction() == &rProject);
+    CHECK(loser.GetProduction().GetMineralStockpile() == 10000);
     CHECK(game.pPlayer->CountBuildings("test_secret_project") == 1);
     CHECK_FALSE(loser.GetBuildingManager().HasBuilding("test_secret_project"));
 }

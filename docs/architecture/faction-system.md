@@ -296,7 +296,7 @@ See `docs/architecture/diplomacy-system.md`.
   - Let `WorkerAssignmentManager` validate tiles against the workable set and auto-assign idle workers; one-worker-per-tile uniqueness is enforced structurally by `WorkedTileIndex::TryClaim`
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
-  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `OnProductionCompleted` and adds the building to the base when finished
+  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `OnProductionCompleted` and adds the building to the base when finished. `BaseProduction` banks leftovers first, then skips completion when the queued item is no longer constructable (the player is notified; the AI falls back to the default stockpile)
   - Calculate resource output based on worker assignments:
     - Workers/Talents work tiles (produce nutrients, energy, minerals)
     - Lab workers contribute to research
