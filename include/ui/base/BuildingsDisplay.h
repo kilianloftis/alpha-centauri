@@ -24,7 +24,7 @@ public:
     BuildingsDisplay(const BaseManager& rBase,
                      SpriteLibrary& rSprites,
                      WindowLayout_t layout,
-                     BuildingClickCallback_t onBuildingClick = {});
+                     BuildingClickCallback_t onBuildingClick);
 
     void Render(Graphics& rGraphics) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;

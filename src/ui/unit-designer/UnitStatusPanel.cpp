@@ -11,89 +11,63 @@ namespace ac
 
 UnitStatusPanel::UnitStatusPanel(
     std::function<const UnitDesign*()> getSelectedDesign,
-    const UnitManager* pUnitManager,
+    const UnitManager& rUnitManager,
     WindowLayout_t layout
 )
     : UIElement(layout)
     , m_getSelectedDesign(std::move(getSelectedDesign))
-    , m_pUnitManager(pUnitManager)
+    , m_rUnitManager(rUnitManager)
 {}
 
 void UnitStatusPanel::Render(Graphics& rGraphics)
 {
+    const auto& style = Style().unitStatusPanel;
     rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().unitStatusPanel.backgroundColor
-    );
-    rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().unitStatusPanel.borderColor
-    );
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    const float padding = m_layout.width * Style().unitStatusPanel.paddingRatio;
-    const unsigned int headerSize = static_cast<unsigned int>(
-        m_layout.width * Style().unitStatusPanel.headerFontSizeRatio);
-    const unsigned int statSize = static_cast<unsigned int>(
-        m_layout.width * Style().unitStatusPanel.statFontSizeRatio);
-    const float lineH = m_layout.width * Style().unitStatusPanel.lineHeightRatio;
+    const float padding = m_layout.width * style.paddingRatio;
+    const unsigned int headerSize =
+        static_cast<unsigned int>(m_layout.width * style.headerFontSizeRatio);
+    const unsigned int statSize =
+        static_cast<unsigned int>(m_layout.width * style.statFontSizeRatio);
+    const float lineH = m_layout.width * style.lineHeightRatio;
+    const float textX = m_layout.x + padding;
+    const float top = m_layout.y + padding;
 
-    rGraphics.DrawText(
-        "Unit Status",
-        m_layout.x + padding,
-        m_layout.y + padding,
-        headerSize,
-        Style().unitStatusPanel.headerColor
-    );
+    rGraphics.DrawText("Unit Status", textX, top, headerSize, style.headerColor);
 
     const UnitDesign* pDesign = m_getSelectedDesign();
     if (!pDesign)
     {
         rGraphics.DrawText(
-            "No design\nselected",
-            m_layout.x + padding,
-            m_layout.y + padding + lineH,
-            statSize,
-            Style().unitStatusPanel.mutedTextColor
-        );
+            "No design\nselected", textX, top + lineH, statSize, style.mutedTextColor);
         return;
     }
 
     rGraphics.DrawText(
-        pDesign->GetName(),
-        m_layout.x + padding,
-        m_layout.y + padding + lineH * Style().unitStatusPanel.designNameLineIndex,
-        statSize
-    );
-
-    int activeCount = 0;
-    if (m_pUnitManager)
-    {
-        for (const Unit& rUnit : m_pUnitManager->Units())
-        {
-            if (&rUnit.GetDesign() == pDesign)
-            {
-                ++activeCount;
-            }
-        }
-    }
+        pDesign->GetName(), textX, top + lineH * style.designNameLineIndex, statSize);
 
     std::ostringstream oss;
-    oss << "Active: " << activeCount;
-    rGraphics.DrawText(
-        oss.str(),
-        m_layout.x + padding,
-        m_layout.y + padding + lineH * Style().unitStatusPanel.activeCountLineIndex,
-        statSize
-    );
+    oss << "Active: " << CountActive_(*pDesign);
+    rGraphics.DrawText(oss.str(), textX, top + lineH * style.activeCountLineIndex, statSize);
 
     // TODO: count in-production once base production integrates with UnitDesign
     rGraphics.DrawText(
-        "In Prod: -",
-        m_layout.x + padding,
-        m_layout.y + padding + lineH * Style().unitStatusPanel.inProdLineIndex,
-        statSize,
-        Style().unitStatusPanel.mutedTextColor
-    );
+        "In Prod: -", textX, top + lineH * style.inProdLineIndex, statSize, style.mutedTextColor);
+}
+
+int UnitStatusPanel::CountActive_(const UnitDesign& rDesign) const
+{
+    int count = 0;
+    for (const Unit& rUnit : m_rUnitManager.Units())
+    {
+        if (&rUnit.GetDesign() == &rDesign)
+        {
+            ++count;
+        }
+    }
+    return count;
 }
 
 } // namespace ac

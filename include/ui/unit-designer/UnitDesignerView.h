@@ -3,6 +3,7 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
 #include "ui/IGameView.h"
+#include "ui/unit-designer/SlotColumnPanel.h"
 #include "ui/unit-designer/UnitDesignerState.h"
 
 #include <functional>
@@ -25,7 +26,7 @@ public:
         Military& rMilitary,
         std::vector<UnitSlotConfig_t> availableSlots,
         std::vector<const UnitComponentConfig_t*> availableComponents,
-        const UnitManager* pUnitManager,
+        const UnitManager& rUnitManager,
         WindowLayout_t layout
     );
     ~UnitDesignerView() override = default;
@@ -33,8 +34,9 @@ public:
     bool HandleKey(const KeyEvent_t& rEvent) override;
 
 private:
-    void BuildUnitStatusPanel_(const UnitManager* pUnitManager);
+    void BuildUnitStatusPanel_(const UnitManager& rUnitManager);
     void BuildTopPanelElements_();
+    SlotColumnPanel::SlotEntry_t MakeSlotEntry_(const UnitSlotConfig_t& rSlot);
     void BuildDesignListPanel_();
     void OnDesignSelected_(const UnitDesign* pDesign);
     // Editing a slot makes the draft something other than the design the list is highlighting.

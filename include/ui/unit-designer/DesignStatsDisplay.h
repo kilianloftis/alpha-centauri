@@ -16,7 +16,7 @@ public:
         const UnitDesignerState_t* pState,
         const std::vector<UnitSlotConfig_t>* pSlots,
         WindowLayout_t layout,
-        std::function<void()> onSaveDesign = nullptr
+        std::function<void()> onSaveDesign
     );
     ~DesignStatsDisplay() override = default;
 

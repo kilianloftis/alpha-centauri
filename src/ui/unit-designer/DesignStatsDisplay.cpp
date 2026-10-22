@@ -13,6 +13,74 @@ namespace ac
 namespace
 {
 
+struct StatsMetrics_t
+{
+    float padding;
+    unsigned int headerSize;
+    unsigned int statSize;
+    float lineH;
+};
+
+StatsMetrics_t MetricsFor_(const WindowLayout_t& rLayout)
+{
+    const auto& style = Style().designStatsDisplay;
+    return {
+        rLayout.height * style.paddingRatio,
+        static_cast<unsigned int>(rLayout.height * style.headerFontSizeRatio),
+        static_cast<unsigned int>(rLayout.height * style.statFontSizeRatio),
+        rLayout.height * style.lineHeightRatio
+    };
+}
+
+void DrawStats_(Graphics& rGraphics,
+                const UnitDesign& rDesign,
+                const WindowLayout_t& rLayout,
+                const StatsMetrics_t& rMetrics)
+{
+    float y = rLayout.y + rMetrics.padding + rMetrics.lineH;
+    auto drawStat = [&](const std::string& rLabel, int value)
+    {
+        std::ostringstream oss;
+        oss << rLabel << ": " << value;
+        rGraphics.DrawText(oss.str(), rLayout.x + rMetrics.padding, y, rMetrics.statSize,
+                           Style().designStatsDisplay.statTextColor);
+        y += rMetrics.lineH;
+    };
+
+    drawStat("Attack",   ResolveStat(rDesign, StatId_t::Attack));
+    drawStat("Defense",  ResolveStat(rDesign, StatId_t::Defense));
+    drawStat("Movement", rDesign.GetMovementPoints());
+    drawStat("HP",       ResolveStat(rDesign, StatId_t::HitPoints));
+    if (rDesign.UsesFuel())
+    {
+        drawStat("Fuel", rDesign.MaxFuel());
+    }
+    drawStat("Cost", rDesign.GetBaseCost());
+}
+
+// Returns the button's rect, which is also its click target.
+Rectangle_t DrawSaveButton_(Graphics& rGraphics,
+                            const WindowLayout_t& rLayout,
+                            const StatsMetrics_t& rMetrics)
+{
+    const auto& style = Style().designStatsDisplay;
+    const float padding = rMetrics.padding;
+    const float buttonH = rLayout.height * style.saveButtonHeightRatio;
+    const Rectangle_t rect{
+        rLayout.x + padding,
+        rLayout.y + rLayout.height - buttonH - padding,
+        rLayout.width - padding * style.horizontalPaddingMultiplier,
+        buttonH
+    };
+
+    rGraphics.DrawFilledRect(rect.x, rect.y, rect.width, rect.height, style.saveButtonFillColor);
+    rGraphics.DrawRect(rect.x, rect.y, rect.width, rect.height, style.saveButtonBorderColor);
+    const float textY = rect.y + buttonH * style.saveButtonTextYOffsetRatio;
+    rGraphics.DrawText("Save Design", rect.x + padding, textY, rMetrics.statSize,
+                       style.saveButtonTextColor);
+    return rect;
+}
+
 } // namespace
 
 DesignStatsDisplay::DesignStatsDisplay(
@@ -29,90 +97,26 @@ DesignStatsDisplay::DesignStatsDisplay(
 
 void DesignStatsDisplay::Render(Graphics& rGraphics)
 {
+    const auto& style = Style().designStatsDisplay;
     rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().designStatsDisplay.backgroundColor
-    );
-    rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().designStatsDisplay.borderColor
-    );
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    const float padding = m_layout.height * Style().designStatsDisplay.paddingRatio;
-    const unsigned int headerSize = static_cast<unsigned int>(
-        m_layout.height * Style().designStatsDisplay.headerFontSizeRatio);
-    const unsigned int statSize = static_cast<unsigned int>(
-        m_layout.height * Style().designStatsDisplay.statFontSizeRatio);
-    const float lineH = m_layout.height * Style().designStatsDisplay.lineHeightRatio;
-
-    rGraphics.DrawText(
-        "Design Stats",
-        m_layout.x + padding,
-        m_layout.y + padding,
-        headerSize,
-        Style().designStatsDisplay.headerColor
-    );
+    const StatsMetrics_t metrics = MetricsFor_(m_layout);
+    const float textX = m_layout.x + metrics.padding;
+    const float headerY = m_layout.y + metrics.padding;
+    rGraphics.DrawText("Design Stats", textX, headerY, metrics.headerSize, style.headerColor);
 
     if (!m_pState->HasAllMandatory(*m_pSlots))
     {
-        rGraphics.DrawText(
-            "Fill all required slots",
-            m_layout.x + padding,
-            m_layout.y + padding + lineH,
-            statSize,
-            Style().designStatsDisplay.incompleteTextColor
-        );
+        rGraphics.DrawText("Fill all required slots", textX, headerY + metrics.lineH,
+                           metrics.statSize, style.incompleteTextColor);
         return;
     }
 
     const UnitDesign design(*m_pSlots, m_pState->components);
-
-    float y = m_layout.y + padding + lineH;
-    auto drawStat = [&](const std::string& rLabel, int value)
-    {
-        std::ostringstream oss;
-        oss << rLabel << ": " << value;
-        rGraphics.DrawText(oss.str(), m_layout.x + padding, y, statSize,
-                           Style().designStatsDisplay.statTextColor);
-        y += lineH;
-    };
-
-    drawStat("Attack",   ResolveStat(design, StatId_t::Attack));
-    drawStat("Defense",  ResolveStat(design, StatId_t::Defense));
-    drawStat("Movement", design.GetMovementPoints());
-    drawStat("HP",       ResolveStat(design, StatId_t::HitPoints));
-    if (design.UsesFuel())
-    {
-        drawStat("Fuel", design.MaxFuel());
-    }
-    drawStat("Cost", design.GetBaseCost());
-
-    const float saveButtonH = m_layout.height * Style().designStatsDisplay.saveButtonHeightRatio;
-    const float saveButtonY = m_layout.y + m_layout.height - saveButtonH - padding;
-    m_saveButtonRect = {
-        m_layout.x + padding,
-        saveButtonY,
-        m_layout.width - padding * Style().designStatsDisplay.horizontalPaddingMultiplier,
-        saveButtonH
-    };
-
-    rGraphics.DrawFilledRect(
-        m_saveButtonRect.x, m_saveButtonRect.y,
-        m_saveButtonRect.width, m_saveButtonRect.height,
-        Style().designStatsDisplay.saveButtonFillColor
-    );
-    rGraphics.DrawRect(
-        m_saveButtonRect.x, m_saveButtonRect.y,
-        m_saveButtonRect.width, m_saveButtonRect.height,
-        Style().designStatsDisplay.saveButtonBorderColor
-    );
-    rGraphics.DrawText(
-        "Save Design",
-        m_saveButtonRect.x + padding,
-        m_saveButtonRect.y + saveButtonH * Style().designStatsDisplay.saveButtonTextYOffsetRatio,
-        statSize,
-        Style().designStatsDisplay.saveButtonTextColor
-    );
+    DrawStats_(rGraphics, design, m_layout, metrics);
+    m_saveButtonRect = DrawSaveButton_(rGraphics, m_layout, metrics);
 }
 
 void DesignStatsDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
@@ -122,7 +126,7 @@ void DesignStatsDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    if (ContainsMouseCoord(m_saveButtonRect, rEvent) && m_onSaveDesign)
+    if (ContainsMouseCoord(m_saveButtonRect, rEvent))
     {
         m_onSaveDesign();
     }

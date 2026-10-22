@@ -69,6 +69,13 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** splitting it into manual and automatic selection needs that caller to
   branch on the stored mode, and the mode is itself view state worth a look.
 
+### `BaseView` — `bEditable`
+- **Where:** `include/ui/base/BaseView.h:35`; `ViewFactory` passes whether the base is the
+  player's
+- **Problem:** the flag decides whether the panels get click callbacks.
+- **Why not local:** the view would derive it from the base's owner and the player faction, which
+  it does not hold; or `ViewFactory` would build two named kinds of view.
+
 ## Rule 6: speculative code
 
 ### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
@@ -193,6 +200,12 @@ One entry per violation, under the rule it breaks:
   `ResolveMapOverlayPathTemplate` in `FactionBaseArt.h` (1)
 - **Problem:** no production caller.
 - **Why not local:** the tests would assert through rendering instead.
+
+### `BaseView::GetSnapshotBuildCount` — used only by tests
+- **Where:** `include/ui/base/BaseView.h`; 3 calls in `BaseViewTests.cpp`
+- **Problem:** it exists so tests can see the snapshot was not rebuilt.
+- **Why not local:** the tests need another way to observe the avoided rebuild, such as a
+  counting snapshot builder.
 
 ## Rule 7: long functions
 

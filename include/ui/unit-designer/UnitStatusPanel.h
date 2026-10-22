@@ -14,7 +14,7 @@ class UnitStatusPanel : public UIElement
 public:
     UnitStatusPanel(
         std::function<const UnitDesign*()> getSelectedDesign,
-        const UnitManager* pUnitManager,
+        const UnitManager& rUnitManager,
         WindowLayout_t layout
     );
     ~UnitStatusPanel() override = default;
@@ -23,7 +23,9 @@ public:
 
 private:
     std::function<const UnitDesign*()> m_getSelectedDesign;
-    const UnitManager* m_pUnitManager;
+    int CountActive_(const UnitDesign& rDesign) const;
+
+    const UnitManager& m_rUnitManager;
 };
 
 } // namespace ac

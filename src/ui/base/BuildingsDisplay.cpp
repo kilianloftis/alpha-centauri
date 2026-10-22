@@ -41,10 +41,7 @@ std::vector<BuildingsDisplay::BuildingRow_t> BuildingsDisplay::Rows_() const
     std::unordered_set<BuildingId_t> grantedIds;
     for (const BuildingConfig_t* pGranted : granted)
     {
-        if (pGranted)
-        {
-            grantedIds.insert(pGranted->id);
-        }
+        grantedIds.insert(pGranted->id);
     }
 
     const float lineHeight = m_layout.height * style.lineHeightRatio;
@@ -52,30 +49,33 @@ std::vector<BuildingsDisplay::BuildingRow_t> BuildingsDisplay::Rows_() const
     float y = m_layout.y + lineHeight * style.headerLineOffset;
 
     std::vector<BuildingRow_t> rows;
+    auto addRow = [&](const BuildingConfig_t* pBuilding, std::string label, Color_t color)
+    {
+        const WindowLayout_t bounds{m_layout.x, y, m_layout.width, lineHeight};
+        rows.push_back(BuildingRow_t{pBuilding, std::move(label), color, bounds});
+        y += lineHeight;
+    };
+
     for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildings())
     {
-        if (!pBuilding)
-        {
-            continue;
-        }
         if (y + lineHeight > bottom)
         {
             return rows;
         }
-        const bool bGranted = grantedIds.count(pBuilding->id) != 0;
-        BuildingRow_t row;
-        row.pConfig = pBuilding;
-        row.label = bGranted ? std::string(k_GrantedAndConstructedPrefix) + pBuilding->GetName()
-                             : pBuilding->GetName();
-        row.color = bGranted ? style.grantedTextColor : style.textColor;
-        row.bounds = WindowLayout_t{m_layout.x, y, m_layout.width, lineHeight};
-        rows.push_back(std::move(row));
-        y += lineHeight;
+        if (grantedIds.count(pBuilding->id) != 0)
+        {
+            const std::string label = k_GrantedAndConstructedPrefix + pBuilding->GetName();
+            addRow(pBuilding, label, style.grantedTextColor);
+        }
+        else
+        {
+            addRow(pBuilding, pBuilding->GetName(), style.textColor);
+        }
     }
 
     for (const BuildingConfig_t* pGranted : granted)
     {
-        if (!pGranted || rBuildings.HasBuilding(pGranted->id))
+        if (rBuildings.HasBuilding(pGranted->id))
         {
             continue;
         }
@@ -83,13 +83,7 @@ std::vector<BuildingsDisplay::BuildingRow_t> BuildingsDisplay::Rows_() const
         {
             break;
         }
-        BuildingRow_t row;
-        row.pConfig = pGranted;
-        row.label = pGranted->GetName();
-        row.color = style.grantedTextColor;
-        row.bounds = WindowLayout_t{m_layout.x, y, m_layout.width, lineHeight};
-        rows.push_back(std::move(row));
-        y += lineHeight;
+        addRow(pGranted, pGranted->GetName(), style.grantedTextColor);
     }
     return rows;
 }

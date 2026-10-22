@@ -2,6 +2,7 @@
 
 #include "input/Input.h"
 #include "ui/UIElement.h"
+#include "ui/style/UiStyle.h"
 #include <memory>
 #include <vector>
 
@@ -94,6 +95,11 @@ public:
 
     // True while this view needs a paint every frame (combat playback, etc.).
     virtual bool NeedsContinuousRedraw() const { return false; }
+
+    WindowLayout_t GetPopupLayout() const
+    {
+        return ResolveLayout(m_layout, Style().layouts.popupSmall);
+    }
 
 protected:
     // The topmost modal element not already closing, or nullptr; the one exclusive-capture rule.

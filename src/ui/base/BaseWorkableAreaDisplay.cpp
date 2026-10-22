@@ -146,10 +146,9 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
     MapContent_t content;
     content.showsBase = [](const BaseManager&) { return true; };
-    m_rMapRenderer.Render(
-        rGraphics, m_tiles,
-        MapAppearance::Clear(m_rBase.GetTileEffects().GetWorldMap(), &m_rBase.GetFaction()),
-        content);
+    const WorldMap& rMap = m_rBase.GetTileEffects().GetWorldMap();
+    const MapAppearance appearance = MapAppearance::Clear(rMap, &m_rBase.GetFaction());
+    m_rMapRenderer.Render(rGraphics, m_tiles, appearance, content);
 
     for (const PlacedTile_t& rPlaced : m_tiles)
     {

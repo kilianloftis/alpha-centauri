@@ -9,92 +9,93 @@ namespace ac
 {
 
 DesignListPanel::DesignListPanel(
-    const Military* pMilitary,
+    const Military& rMilitary,
     WindowLayout_t layout,
     std::function<void(const UnitDesign*)> onDesignSelected
 )
     : UIElement(layout)
-    , m_pMilitary(pMilitary)
+    , m_rMilitary(rMilitary)
     , m_onDesignSelected(std::move(onDesignSelected))
 {}
 
 void DesignListPanel::Render(Graphics& rGraphics)
 {
+    const auto& style = Style().designListPanel;
     rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().designListPanel.backgroundColor
-    );
-    rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().designListPanel.borderColor
-    );
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    if (!m_pMilitary)
+    const std::vector<DesignBox_t> boxes = LayoutBoxes_();
+    if (boxes.empty())
     {
-        return;
-    }
-
-    const auto& rDesigns = m_pMilitary->GetDesigns();
-
-    bool bHasPlayerDesign = false;
-    for (const auto& pDesign : rDesigns)
-    {
-        if (dynamic_cast<const UnitDesign*>(pDesign.get()))
-        {
-            bHasPlayerDesign = true;
-            break;
-        }
-    }
-
-    if (!bHasPlayerDesign)
-    {
-        const unsigned int labelSize = static_cast<unsigned int>(
-            m_layout.height * Style().designListPanel.labelFontRatio);
-        const float padding = m_layout.height * Style().designListPanel.boxPaddingRatio
-            * Style().designListPanel.emptyListPaddingMultiplier;
+        const unsigned int labelSize =
+            static_cast<unsigned int>(m_layout.height * style.labelFontRatio);
+        const float padding =
+            m_layout.height * style.boxPaddingRatio * style.emptyListPaddingMultiplier;
         rGraphics.DrawText(
             "No designs saved — select components above and click Save Design",
             m_layout.x + padding,
             m_layout.y + padding,
             labelSize,
-            Style().designListPanel.emptyListTextColor
+            style.emptyListTextColor
         );
         return;
     }
 
-    const float boxPad = m_layout.height * Style().designListPanel.boxPaddingRatio;
-    const float boxWidth = m_layout.width * Style().designListPanel.boxWidthRatio;
-    const float boxHeight =
-        m_layout.height - boxPad * Style().designListPanel.verticalPaddingMultiplier;
-    const unsigned int fontSize = static_cast<unsigned int>(
-        m_layout.height * Style().designListPanel.fontSizeRatio);
-
-    float x = m_layout.x + boxPad;
-    for (const auto& pDesign : rDesigns)
+    const unsigned int fontSize = static_cast<unsigned int>(m_layout.height * style.fontSizeRatio);
+    for (const DesignBox_t& rBox : boxes)
     {
+        const Rectangle_t& rRect = rBox.rect;
+        const bool bSelected = rBox.pDesign == m_pSelectedDesign;
+        const Color_t fillColor =
+            bSelected ? style.selectedBoxFillColor : style.unselectedBoxFillColor;
+        const Color_t borderColor =
+            bSelected ? style.selectedBoxBorderColor : style.unselectedBoxBorderColor;
+        rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, fillColor);
+        rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, borderColor);
+
+        const float textX = rRect.x + rRect.width * style.textPadRatio;
+        const float textY = rRect.y + rRect.height * style.textVerticalRatio;
+        rGraphics.DrawText(rBox.pDesign->GetName(), textX, textY, fontSize);
+    }
+}
+
+void DesignListPanel::HandleMouseClick(const MouseEvent_t& rEvent)
+{
+    if (rEvent.button != MouseButton_t::Left)
+    {
+        return;
+    }
+
+    for (const DesignBox_t& rBox : LayoutBoxes_())
+    {
+        if (ContainsMouseCoord(rBox.rect, rEvent))
+        {
+            m_pSelectedDesign = rBox.pDesign;
+            m_onDesignSelected(m_pSelectedDesign);
+            return;
+        }
+    }
+}
+
+std::vector<DesignListPanel::DesignBox_t> DesignListPanel::LayoutBoxes_() const
+{
+    const auto& style = Style().designListPanel;
+    const float boxPad = m_layout.height * style.boxPaddingRatio;
+    const float boxWidth = m_layout.width * style.boxWidthRatio;
+    const float boxHeight = m_layout.height - boxPad * style.verticalPaddingMultiplier;
+
+    std::vector<DesignBox_t> boxes;
+    float x = m_layout.x + boxPad;
+    for (const auto& pDesign : m_rMilitary.GetDesigns())
+    {
+        // Native designs are not the player's to edit.
         const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign.get());
         if (!pUnitDesign)
         {
             continue;
         }
-        const bool bSelected = pUnitDesign == m_pSelectedDesign;
-        const Color_t fillColor = bSelected
-            ? Style().designListPanel.selectedBoxFillColor
-            : Style().designListPanel.unselectedBoxFillColor;
-        const Color_t borderColor = bSelected
-            ? Style().designListPanel.selectedBoxBorderColor
-            : Style().designListPanel.unselectedBoxBorderColor;
-
-        rGraphics.DrawFilledRect(x, m_layout.y + boxPad, boxWidth, boxHeight, fillColor);
-        rGraphics.DrawRect(x, m_layout.y + boxPad, boxWidth, boxHeight, borderColor);
-
-        const float textPad = boxWidth * Style().designListPanel.textPadRatio;
-        rGraphics.DrawText(
-            pUnitDesign->GetName(),
-            x + textPad,
-            m_layout.y + boxPad + boxHeight * Style().designListPanel.textVerticalRatio,
-            fontSize
-        );
+        boxes.push_back({pUnitDesign, {x, m_layout.y + boxPad, boxWidth, boxHeight}});
 
         x += boxWidth + boxPad;
         if (x + boxWidth > m_layout.x + m_layout.width)
@@ -102,41 +103,7 @@ void DesignListPanel::Render(Graphics& rGraphics)
             break;
         }
     }
-}
-
-void DesignListPanel::HandleMouseClick(const MouseEvent_t& rEvent)
-{
-    if (rEvent.button != MouseButton_t::Left || !m_pMilitary)
-    {
-        return;
-    }
-
-    const auto& rDesigns = m_pMilitary->GetDesigns();
-    const float boxPad = m_layout.height * Style().designListPanel.boxPaddingRatio;
-    const float boxWidth = m_layout.width * Style().designListPanel.boxWidthRatio;
-    const float boxHeight =
-        m_layout.height - boxPad * Style().designListPanel.verticalPaddingMultiplier;
-
-    float x = m_layout.x + boxPad;
-    for (const auto& pDesign : rDesigns)
-    {
-        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign.get());
-        if (!pUnitDesign)
-        {
-            continue;
-        }
-        const Rectangle_t rect{x, m_layout.y + boxPad, boxWidth, boxHeight};
-        if (ContainsMouseCoord(rect, rEvent))
-        {
-            m_pSelectedDesign = pUnitDesign;
-            if (m_onDesignSelected)
-            {
-                m_onDesignSelected(m_pSelectedDesign);
-            }
-            return;
-        }
-        x += boxWidth + boxPad;
-    }
+    return boxes;
 }
 
 } // namespace ac

@@ -64,43 +64,7 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
 {
     if (NeedsScroll_())
     {
-        const bool bCanScrollUp   = m_scrollOffset > 0;
-        const bool bCanScrollDown =
-            m_scrollOffset + Style().slotColumnPanel.visibleSlots < static_cast<int>(m_slots.size());
-
-        const Color_t upColor   = bCanScrollUp
-            ? Style().slotColumnPanel.enabledArrowColor
-            : Style().slotColumnPanel.disabledArrowColor;
-        const Color_t downColor = bCanScrollDown
-            ? Style().slotColumnPanel.enabledArrowColor
-            : Style().slotColumnPanel.disabledArrowColor;
-
-        rGraphics.DrawFilledRect(
-            m_upArrowRect.x, m_upArrowRect.y,
-            m_upArrowRect.width, m_upArrowRect.height,
-            Style().slotColumnPanel.arrowFillColor
-        );
-        rGraphics.DrawRect(
-            m_upArrowRect.x, m_upArrowRect.y,
-            m_upArrowRect.width, m_upArrowRect.height,
-            Style().slotColumnPanel.arrowBorderColor
-        );
-        const unsigned int arrowFontSize = static_cast<unsigned int>(
-            m_upArrowRect.height * Style().slotColumnPanel.arrowFontSizeRatio);
-        const float arrowPadX = m_upArrowRect.width * Style().slotColumnPanel.arrowPadXRatio;
-        rGraphics.DrawText("^", m_upArrowRect.x + arrowPadX, m_upArrowRect.y, arrowFontSize, upColor);
-
-        rGraphics.DrawFilledRect(
-            m_downArrowRect.x, m_downArrowRect.y,
-            m_downArrowRect.width, m_downArrowRect.height,
-            Style().slotColumnPanel.arrowFillColor
-        );
-        rGraphics.DrawRect(
-            m_downArrowRect.x, m_downArrowRect.y,
-            m_downArrowRect.width, m_downArrowRect.height,
-            Style().slotColumnPanel.arrowBorderColor
-        );
-        rGraphics.DrawText("v", m_downArrowRect.x + arrowPadX, m_downArrowRect.y, arrowFontSize, downColor);
+        DrawScrollArrows_(rGraphics);
     }
 
     const int visibleCount = std::min(
@@ -110,45 +74,63 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
         const int slotIdx = m_scrollOffset + i;
         if (slotIdx >= static_cast<int>(m_slots.size())) break;
 
-        const SlotEntry_t& rEntry = m_slots[slotIdx];
-        const Rectangle_t& rRect = m_slotRects[i];
-
-        rGraphics.DrawFilledRect(
-            rRect.x, rRect.y, rRect.width, rRect.height,
-            Style().slotColumnPanel.slotFillColor
-        );
-        rGraphics.DrawRect(
-            rRect.x, rRect.y, rRect.width, rRect.height,
-            Style().slotColumnPanel.slotBorderColor
-        );
-
-        const float padding = rRect.height * Style().slotColumnPanel.paddingRatio;
-        const unsigned int labelSize = static_cast<unsigned int>(
-            rRect.height * Style().slotColumnPanel.labelFontSizeRatio);
-        const unsigned int nameSize = static_cast<unsigned int>(
-            rRect.height * Style().slotColumnPanel.nameFontSizeRatio);
-
-        const bool bRequired = rEntry.pSlotConfig->required;
-        const std::string label = rEntry.pSlotConfig->displayName + (bRequired ? "" : " (opt)");
-        rGraphics.DrawText(
-            label, rRect.x + padding, rRect.y + padding, labelSize,
-            Style().slotColumnPanel.labelTextColor
-        );
-
-        const UnitComponentConfig_t* pComp = rEntry.getComponent();
-        const std::string& rName = pComp ? pComp->name : "(none)";
-        const Color_t nameColor = pComp
-            ? Style().slotColumnPanel.filledNameColor
-            : Style().slotColumnPanel.emptyNameColor;
-        rGraphics.DrawText(
-            rName,
-            rRect.x + padding,
-            rRect.y + padding + static_cast<float>(labelSize)
-                * Style().slotColumnPanel.nameLabelSpacingMultiplier,
-            nameSize,
-            nameColor
-        );
+        DrawSlot_(rGraphics, m_slots[slotIdx], m_slotRects[i]);
     }
+}
+
+void SlotColumnPanel::DrawScrollArrows_(Graphics& rGraphics) const
+{
+    const auto& style = Style().slotColumnPanel;
+    const bool bCanScrollUp   = m_scrollOffset > 0;
+    const bool bCanScrollDown =
+        m_scrollOffset + style.visibleSlots < static_cast<int>(m_slots.size());
+
+    const Color_t upColor = bCanScrollUp ? style.enabledArrowColor : style.disabledArrowColor;
+    const Color_t downColor = bCanScrollDown ? style.enabledArrowColor : style.disabledArrowColor;
+    DrawArrow_(rGraphics, m_upArrowRect, "^", upColor);
+    DrawArrow_(rGraphics, m_downArrowRect, "v", downColor);
+}
+
+void SlotColumnPanel::DrawArrow_(Graphics& rGraphics,
+                                 const Rectangle_t& rRect,
+                                 const std::string& rGlyph,
+                                 Color_t glyphColor) const
+{
+    const auto& style = Style().slotColumnPanel;
+    rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, style.arrowFillColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, style.arrowBorderColor);
+
+    const unsigned int fontSize =
+        static_cast<unsigned int>(rRect.height * style.arrowFontSizeRatio);
+    const float padX = rRect.width * style.arrowPadXRatio;
+    rGraphics.DrawText(rGlyph, rRect.x + padX, rRect.y, fontSize, glyphColor);
+}
+
+void SlotColumnPanel::DrawSlot_(Graphics& rGraphics,
+                                const SlotEntry_t& rEntry,
+                                const Rectangle_t& rRect) const
+{
+    const auto& style = Style().slotColumnPanel;
+    rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, style.slotFillColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, style.slotBorderColor);
+
+    const float padding = rRect.height * style.paddingRatio;
+    const unsigned int labelSize =
+        static_cast<unsigned int>(rRect.height * style.labelFontSizeRatio);
+    const unsigned int nameSize =
+        static_cast<unsigned int>(rRect.height * style.nameFontSizeRatio);
+
+    const bool bRequired = rEntry.pSlotConfig->required;
+    const std::string label = rEntry.pSlotConfig->displayName + (bRequired ? "" : " (opt)");
+    rGraphics.DrawText(
+        label, rRect.x + padding, rRect.y + padding, labelSize, style.labelTextColor);
+
+    const UnitComponentConfig_t* pComp = rEntry.getComponent();
+    const std::string& rName = pComp ? pComp->name : "(none)";
+    const Color_t nameColor = pComp ? style.filledNameColor : style.emptyNameColor;
+    const float nameY =
+        rRect.y + padding + static_cast<float>(labelSize) * style.nameLabelSpacingMultiplier;
+    rGraphics.DrawText(rName, rRect.x + padding, nameY, nameSize, nameColor);
 }
 
 void SlotColumnPanel::HandleMouseClick(const MouseEvent_t& rEvent)

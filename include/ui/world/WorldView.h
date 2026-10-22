@@ -80,7 +80,6 @@ public:
     // InteractionPresenter: camera focus and in-view modals for queue Front items.
     void CenterOnTile(int tileX, int tileY);
     void PushModal(std::unique_ptr<UIElement> pElement);
-    WindowLayout_t GetPopupLayout() const;
 
 private:
     void Update_();

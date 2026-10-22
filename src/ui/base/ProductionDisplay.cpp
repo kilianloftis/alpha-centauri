@@ -9,7 +9,7 @@
 #include "ui/style/UiStyle.h"
 #include <functional>
 #include <optional>
-#include <sstream>
+#include <string>
 
 namespace ac
 {
@@ -34,63 +34,55 @@ void ProductionDisplay::Render(Graphics& rGraphics)
 
     DrawPanelChrome(rGraphics, &m_rSprites, m_layout, style.backgroundColor,
                     style.backgroundSprite, Color_t::Black(), 0.0f);
+    DrawHeader_(rGraphics);
 
-    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
-    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
-    const float lineHeight   = m_layout.height * style.lineHeightRatio;
-    const float leftPadding  = m_layout.width  * style.leftPaddingRatio;
+    const std::string required =
+        m_rSnapshot.bHasProduction ? std::to_string(m_rSnapshot.mineralCost) : "-";
+    const std::optional<int> turns = m_rBase.GetTurnsToProductionCompletion();
+    const std::string turnsText = turns ? std::to_string(*turns) : "-";
+    const int stockpile = m_rBase.GetProduction().GetMineralStockpile();
+
+    DrawEntry_(rGraphics, "Stockpile: " + std::to_string(stockpile), style.stockpileLineIndex);
+    DrawEntry_(rGraphics, "Required: " + required, style.requiredLineIndex);
+    DrawEntry_(rGraphics, "Minerals/turn: " + std::to_string(m_rSnapshot.mineralProduction),
+               style.productionLineIndex);
+    DrawEntry_(rGraphics, "Turns: " + turnsText, style.turnsLineIndex);
+}
+
+void ProductionDisplay::DrawHeader_(Graphics& rGraphics) const
+{
+    const auto& style = Style().productionDisplay;
+    const unsigned int fontSize =
+        static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
     const float iconSize = m_layout.height * style.iconSizeRatio;
     const float iconGap = m_layout.width * style.iconGapRatio;
 
-    float headerX = m_layout.x + leftPadding;
+    float headerX = m_layout.x + m_layout.width * style.leftPaddingRatio;
     const IConstructable* pProduction = m_rBase.GetProduction().GetCurrentProduction();
-    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pProduction))
+    const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(pProduction);
+    if (pBuilding && !pBuilding->icon.empty() && style.iconSizeRatio > 0.0f
+        && m_rSprites.Ensure(pBuilding->icon))
     {
-        if (!pBuilding->icon.empty() && style.iconSizeRatio > 0.0f
-            && m_rSprites.Ensure(pBuilding->icon))
-        {
-            rGraphics.DrawSprite(pBuilding->icon, headerX, m_layout.y, iconSize, iconSize);
-            headerX += iconSize + iconGap;
-        }
+        rGraphics.DrawSprite(pBuilding->icon, headerX, m_layout.y, iconSize, iconSize);
+        headerX += iconSize + iconGap;
     }
 
     const std::string header = m_rSnapshot.bHasProduction
                                    ? "Production: " + m_rSnapshot.productionName
                                    : "Production: (none)";
-    rGraphics.DrawText(header, headerX, m_layout.y, headerFontSize, style.textColor);
+    rGraphics.DrawText(header, headerX, m_layout.y, fontSize, style.textColor);
+}
 
-    std::ostringstream oss;
-
-    oss << "Stockpile: " << m_rBase.GetProduction().GetMineralStockpile();
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.stockpileLineIndex, entryFontSize, style.textColor);
-
-    oss.str("");
-    oss << "Required: ";
-    if (m_rSnapshot.bHasProduction)
-    {
-        oss << m_rSnapshot.mineralCost;
-    }
-    else
-    {
-        oss << "-";
-    }
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.requiredLineIndex, entryFontSize, style.textColor);
-
-    oss.str("");
-    oss << "Minerals/turn: " << m_rSnapshot.mineralProduction;
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.productionLineIndex, entryFontSize, style.textColor);
-
-    oss.str("");
-    oss << "Turns: ";
-    if (const std::optional<int> turns = m_rBase.GetTurnsToProductionCompletion())
-    {
-        oss << *turns;
-    }
-    else
-    {
-        oss << "-";
-    }
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.turnsLineIndex, entryFontSize, style.textColor);
+void ProductionDisplay::DrawEntry_(Graphics& rGraphics,
+                                   const std::string& rText,
+                                   float lineIndex) const
+{
+    const auto& style = Style().productionDisplay;
+    const unsigned int fontSize =
+        static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
+    const float x = m_layout.x + m_layout.width * style.leftPaddingRatio;
+    const float y = m_layout.y + m_layout.height * style.lineHeightRatio * lineIndex;
+    rGraphics.DrawText(rText, x, y, fontSize, style.textColor);
 }
 
 void ProductionDisplay::HandleMouseClick(const MouseEvent_t& rEvent)

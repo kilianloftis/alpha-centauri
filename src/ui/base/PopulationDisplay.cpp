@@ -5,6 +5,8 @@
 #include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace ac
 {
@@ -35,49 +37,31 @@ int SpecialistTotalOutput(const Pop& rPop)
     return out.econ + out.labs + out.psych;
 }
 
-} // namespace
-
-PopulationDisplay::PopulationDisplay(PopulationManager& rPopulation, WindowLayout_t layout,
-                                     PopClickCallback_t onPopClick)
-    : UIElement(layout)
-    , m_rPopulation(rPopulation)
-    , m_onPopClick(std::move(onPopClick))
-{}
-
-void PopulationDisplay::Render(Graphics& rGraphics)
+std::string HeaderText_(const PopulationManager& rPopulation)
 {
-    const auto& style = Style().populationDisplay;
-
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-
-    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
-
     std::ostringstream oss;
-    oss << "Population: " << m_rPopulation.GetSize();
-    if (m_rPopulation.IsRioting())
+    oss << "Population: " << rPopulation.GetSize();
+    if (rPopulation.IsRioting())
     {
-        oss << "  [Riot T" << m_rPopulation.GetConsecutiveRiotTurns() << "]";
+        oss << "  [Riot T" << rPopulation.GetConsecutiveRiotTurns() << "]";
     }
-    else if (m_rPopulation.IsPendingRiot())
+    else if (rPopulation.IsPendingRiot())
     {
         oss << "  [Riot pending]";
     }
-    if (m_rPopulation.IsInGoldenAge())
+    if (rPopulation.IsInGoldenAge())
     {
         oss << "  [Golden Age]";
     }
-    const float leftPadding = m_layout.width * style.leftPaddingRatio;
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y, headerFontSize, style.headerTextColor);
+    return oss.str();
+}
 
-    const float boxSize = m_layout.height * style.popBoxSizeRatio;
-    const float popFontSize = static_cast<unsigned int>(boxSize * style.popBoxFontSizeRatio);
-    const float startY = m_layout.y + headerFontSize + m_layout.height * style.popRowYOffsetRatio;
-
-    m_popBoxes.clear();
-
+// Drones, workers, talents, then specialists by output; ties by pop type.
+std::vector<Pop*> SortedPops_(PopulationManager& rPopulation)
+{
     std::vector<Pop*> sortedPops;
-    sortedPops.reserve(m_rPopulation.GetSize());
-    for (Pop& rPop : m_rPopulation.Pops())
+    sortedPops.reserve(rPopulation.GetSize());
+    for (Pop& rPop : rPopulation.Pops())
         sortedPops.push_back(&rPop);
 
     std::stable_sort(sortedPops.begin(), sortedPops.end(),
@@ -96,6 +80,40 @@ void PopulationDisplay::Render(Graphics& rGraphics)
             }
             return std::string_view(pA->GetPopType()) < std::string_view(pB->GetPopType());
         });
+    return sortedPops;
+}
+
+} // namespace
+
+PopulationDisplay::PopulationDisplay(PopulationManager& rPopulation, WindowLayout_t layout,
+                                     PopClickCallback_t onPopClick)
+    : UIElement(layout)
+    , m_rPopulation(rPopulation)
+    , m_onPopClick(std::move(onPopClick))
+{}
+
+void PopulationDisplay::Render(Graphics& rGraphics)
+{
+    const auto& style = Style().populationDisplay;
+
+    rGraphics.DrawFilledRect(
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+
+    const unsigned int headerFontSize =
+        static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
+
+    const std::string header = HeaderText_(m_rPopulation);
+    const float leftPadding = m_layout.width * style.leftPaddingRatio;
+    rGraphics.DrawText(
+        header, m_layout.x + leftPadding, m_layout.y, headerFontSize, style.headerTextColor);
+
+    const float boxSize = m_layout.height * style.popBoxSizeRatio;
+    const float popFontSize = static_cast<unsigned int>(boxSize * style.popBoxFontSizeRatio);
+    const float startY = m_layout.y + headerFontSize + m_layout.height * style.popRowYOffsetRatio;
+
+    m_popBoxes.clear();
+
+    const std::vector<Pop*> sortedPops = SortedPops_(m_rPopulation);
 
     const float totalBoxWidth = sortedPops.size() * boxSize;
     float boxSpacing = m_layout.height * style.popBoxSpacingRatio;

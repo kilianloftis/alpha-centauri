@@ -2,6 +2,7 @@
 
 #include "ui/UIElement.h"
 #include <functional>
+#include <string>
 
 namespace ac
 {
@@ -19,7 +20,7 @@ public:
         const BaseDisplaySnapshot_t& rSnapshot,
         SpriteLibrary& rSprites,
         WindowLayout_t layout,
-        std::function<void()> onClicked = nullptr
+        std::function<void()> onClicked
     );
     ~ProductionDisplay() override = default;
 
@@ -27,6 +28,9 @@ public:
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
+    void DrawHeader_(Graphics& rGraphics) const;
+    void DrawEntry_(Graphics& rGraphics, const std::string& rText, float lineIndex) const;
+
     std::function<void()> m_onClicked;
     const BaseManager& m_rBase;
     const BaseDisplaySnapshot_t& m_rSnapshot;

@@ -1,8 +1,10 @@
 #pragma once
 
+#include "graphics/Graphics.h"
 #include "ui/UIElement.h"
 #include "game/units/UnitSlotConfig.h"
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace ac
@@ -29,6 +31,12 @@ public:
 private:
     void CacheRects_();
     bool NeedsScroll_() const;
+    void DrawScrollArrows_(Graphics& rGraphics) const;
+    void DrawArrow_(Graphics& rGraphics,
+                    const Rectangle_t& rRect,
+                    const std::string& rGlyph,
+                    Color_t glyphColor) const;
+    void DrawSlot_(Graphics& rGraphics, const SlotEntry_t& rEntry, const Rectangle_t& rRect) const;
 
     std::vector<SlotEntry_t> m_slots;
     int m_scrollOffset = 0;

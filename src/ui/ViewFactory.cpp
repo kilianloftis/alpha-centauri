@@ -124,7 +124,7 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
         pFaction->GetMilitary(),
         GetAvailableUnitSlots(*m_rGameDataContext.unitSlotRegistry, rDiscoveredTechs),
         GetAvailableUnitComponents(*m_rGameDataContext.unitComponentRegistry, rDiscoveredTechs),
-        &pFaction->GetUnitManager(),
+        pFaction->GetUnitManager(),
         layout
     );
 }

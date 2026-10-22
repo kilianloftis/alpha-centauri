@@ -311,11 +311,6 @@ void WorldView::PushModal(std::unique_ptr<UIElement> pElement)
     m_elements.push_back(std::move(pElement));
 }
 
-WindowLayout_t WorldView::GetPopupLayout() const
-{
-    return ResolveLayout(m_layout, Style().layouts.popupSmall);
-}
-
 void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
 {
     const bool bSelectionChanged = m_pSelectedUnit != pUnit;

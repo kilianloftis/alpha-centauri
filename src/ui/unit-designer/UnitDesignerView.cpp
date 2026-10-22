@@ -1,5 +1,4 @@
 #include "ui/unit-designer/UnitDesignerView.h"
-#include "ui/unit-designer/SlotColumnPanel.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/unit-designer/DesignStatsDisplay.h"
 #include "ui/unit-designer/DesignListPanel.h"
@@ -16,7 +15,7 @@ UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
     std::vector<UnitSlotConfig_t> availableSlots,
     std::vector<const UnitComponentConfig_t*> availableComponents,
-    const UnitManager* pUnitManager,
+    const UnitManager& rUnitManager,
     WindowLayout_t layout
 )
     : IGameView(layout)
@@ -24,16 +23,16 @@ UnitDesignerView::UnitDesignerView(
     , m_availableSlots(std::move(availableSlots))
     , m_availableComponents(std::move(availableComponents))
 {
-    BuildUnitStatusPanel_(pUnitManager);
+    BuildUnitStatusPanel_(rUnitManager);
     BuildTopPanelElements_();
     BuildDesignListPanel_();
 }
 
-void UnitDesignerView::BuildUnitStatusPanel_(const UnitManager* pUnitManager)
+void UnitDesignerView::BuildUnitStatusPanel_(const UnitManager& rUnitManager)
 {
     m_elements.push_back(std::make_unique<UnitStatusPanel>(
         [this]() { return m_pSelectedDesign; },
-        pUnitManager,
+        rUnitManager,
         ResolveLayout(m_layout, Style().layouts.leftPanel)
     ));
 }
@@ -45,28 +44,7 @@ void UnitDesignerView::BuildTopPanelElements_()
 
     for (const UnitSlotConfig_t& rSlot : m_availableSlots)
     {
-        SlotColumnPanel::SlotEntry_t entry;
-        entry.pSlotConfig = &rSlot;
-        entry.getComponent = [this, slotId = rSlot.id]() -> const UnitComponentConfig_t*
-        {
-            auto it = m_state.components.find(slotId);
-            return it != m_state.components.end() ? it->second : nullptr;
-        };
-        entry.onClicked = [this, slotId = rSlot.id, compType = rSlot.componentType,
-                           slotName = rSlot.displayName]()
-        {
-            ShowComponentSelector_(compType, slotName,
-                                   [this, slotId, compType](const UnitComponentConfig_t& rComp)
-            {
-                m_state.components[slotId] = &rComp;
-                if (compType == "chassis")
-                {
-                    ClearIncompatibleComponents_(rComp.id);
-                }
-                ClearDesignSelection_();
-            });
-        };
-
+        SlotColumnPanel::SlotEntry_t entry = MakeSlotEntry_(rSlot);
         if (rSlot.column == SlotColumn_t::Right)
         {
             rightSlots.push_back(std::move(entry));
@@ -97,10 +75,36 @@ void UnitDesignerView::BuildTopPanelElements_()
     ));
 }
 
+SlotColumnPanel::SlotEntry_t UnitDesignerView::MakeSlotEntry_(const UnitSlotConfig_t& rSlot)
+{
+    SlotColumnPanel::SlotEntry_t entry;
+    entry.pSlotConfig = &rSlot;
+    entry.getComponent = [this, slotId = rSlot.id]() -> const UnitComponentConfig_t*
+    {
+        auto it = m_state.components.find(slotId);
+        return it != m_state.components.end() ? it->second : nullptr;
+    };
+    entry.onClicked = [this, slotId = rSlot.id, compType = rSlot.componentType,
+                       slotName = rSlot.displayName]()
+    {
+        ShowComponentSelector_(compType, slotName,
+                               [this, slotId, compType](const UnitComponentConfig_t& rComp)
+        {
+            m_state.components[slotId] = &rComp;
+            if (compType == "chassis")
+            {
+                ClearIncompatibleComponents_(rComp.id);
+            }
+            ClearDesignSelection_();
+        });
+    };
+    return entry;
+}
+
 void UnitDesignerView::BuildDesignListPanel_()
 {
     auto pPanel = std::make_unique<DesignListPanel>(
-        &m_rMilitary,
+        m_rMilitary,
         ResolveLayout(m_layout, Style().layouts.bottomPanel),
         [this](const UnitDesign* pDesign) { OnDesignSelected_(pDesign); }
     );
@@ -181,10 +185,10 @@ void UnitDesignerView::ShowComponentSelector_(
     }
 
     DismissOpenModals_();
-    const WindowLayout_t layout = ResolveLayout(m_layout, Style().layouts.popupSmall);
-    m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Select " + rSlotDisplayName, "No components available", std::move(choices), layout,
-        Style().componentSelectorPopup, nullptr));
+    auto pPopup = std::make_unique<ListSelectorPopup>(
+        "Select " + rSlotDisplayName, "No components available", std::move(choices),
+        GetPopupLayout(), Style().componentSelectorPopup, nullptr);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void UnitDesignerView::ClearIncompatibleComponents_(const std::string& rChassisId)

@@ -5,7 +5,10 @@
 #include "game/buildings/BuildingConfig.h"
 #include "lib/Signal.h"
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace ac
 {
@@ -19,7 +22,7 @@ class MapRenderer;
 class SpriteLibrary;
 class Unit;
 class UnitStackPanel;
-struct PopTypeConfig_t;
+struct ScrapPayout_t;
 
 class BaseView : public IGameView
 {
@@ -43,18 +46,24 @@ public:
     uint64_t GetSnapshotBuildCount() const { return m_snapshotBuildCount; }
 
 private:
+    void BuildTopPanel_(MapRenderer& rMapRenderer);
+    void BuildLeftPanel_();
+    void BuildCenterPanel_();
+    void BuildUnitStack_();
     void RefreshUnitStack_();
     void RefreshSnapshot_();
     void HandleTileClick_(const Tile* pTile);
     void HandleBaseClicked_();
     void HandlePopClick_(Pop& rPop);
-    void HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig);
     void HandleProductionDisplayClicked_();
     void HandleHurryClicked_();
     void HandleHurryConfirmed_(int credits);
     void HandleBuildingClicked_(const BuildingConfig_t& rBuilding);
-    void HandleScrapChoice_(const BuildingId_t& buildingId, bool bAllBases);
-    void HandleScrapConfirmed_(const BuildingId_t& buildingId, bool bAllBases);
+    void OfferScrapHere_(const BuildingId_t& buildingId);
+    void OfferScrapEverywhere_(const BuildingId_t& buildingId);
+    void ConfirmScrap_(const std::optional<ScrapPayout_t>& payout,
+                       std::function<void()> onConfirmed);
+    void ShowNotice_(const std::string& rTitle, const std::string& rMessage);
     void HandleUnitStackClicked_(Unit& rUnit);
 
     BaseManager& m_rBase;

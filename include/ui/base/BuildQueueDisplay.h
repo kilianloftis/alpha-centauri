@@ -17,7 +17,7 @@ public:
     BuildQueueDisplay(
         const BaseManager& rBase,
         WindowLayout_t layout,
-        std::function<void()> onHurryClicked = nullptr
+        std::function<void()> onHurryClicked
     );
     ~BuildQueueDisplay() override = default;
 
