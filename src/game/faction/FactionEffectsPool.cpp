@@ -188,9 +188,8 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() cons
     const DifficultyLevel_t& rLevel =
         m_rDifficulty.RequireForSession(m_rFaction.GetSettings().GetGameRules().difficultyId);
 
-    // Append from the level's own storage, then drop the entries this faction does not
-    // match. ActiveEffect_t borrows EffectConfig_t by pointer, so filtering into a local
-    // vector first would leave every pointer dangling the moment it went out of scope.
+    // Appended from the level's own storage and then filtered: ActiveEffect_t borrows configs
+    // by pointer, so filtering into a local vector first would leave them dangling.
     std::vector<ActiveEffect_t> result;
     AppendActiveEffects(rLevel.effects, nullptr, "difficulty", result);
     const bool bPlayerControlled = m_rFaction.IsPlayerControlled();
@@ -308,10 +307,8 @@ void FactionEffectsPool::Validate_() const
 
 void FactionEffectsPool::Rebuild_() const
 {
-    // Pipeline: collect raw → gate → expand grants → gate → expand faction-lane ratings →
-    // gate → stamp from the Validate_ scratch snapshot (do not re-collect). Every
-    // expansion is bracketed by the gate, so no derivative outlives the effect that
-    // produced it.
+    // Collect, then gate after every expansion (grants, faction-lane ratings), so no derivative
+    // outlives the effect that produced it.
     FactionEffects_t factionEffects(m_rFaction);
 
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
@@ -396,10 +393,8 @@ void FactionEffectsPool::Rebuild_() const
             std::move(factionEffects.effects), m_rBuildingRegistry, bases);
     }
 
-    // Gate the grant derivatives before anything reads them: a granted building's own
-    // effects can carry removed_by_tech, and a gated SocialRatingModifier arriving this way
-    // must not reach the accumulation below (the level effects it would produce carry no
-    // gate of their own, so the final pass could not undo it).
+    // Before anything reads the grants: a granted building's effects can be removed by tech, and
+    // the rating effects they would produce carry no gate of their own.
     ApplyRemovedByTech_(factionEffects, rResearch);
 
     // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →

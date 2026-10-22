@@ -21,9 +21,8 @@ struct TechConfig_t
     std::vector<std::string> prerequisites;
     // Optional UI icon path (research panels). Empty = text-only.
     std::string icon;
-    // Continuous bonuses while this tech is discovered (e.g. FacilityEnergyUpkeep,
-    // commerce_rating +1 for economic techs). ThisTech-scoped TechCost modifiers apply when
-    // this tech is the research target, not after discovery.
+    // Continuous while the tech is discovered. ThisTech TechCost modifiers apply while it is the
+    // research target.
     std::vector<EffectConfig_t> effects;
     // One-shot effects when this tech joins a faction's discovered set (research, probe,
     // diplomatic grant, nested GrantTech). Fired via ApplyTechDiscoverEffects.

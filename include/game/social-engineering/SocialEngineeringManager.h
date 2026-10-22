@@ -18,9 +18,7 @@ class SocialRatingRegistry;
 class SocialEngineeringManager
 {
 public:
-    // A reference: the composition root always supplies the registry, and the null branch used
-    // to skip the very default-policy validation its own comment called "fail fast".
-    // (The rating registry parameter this used to take was stored and never read.)
+    // rRegistry validates the default policies at once.
     explicit SocialEngineeringManager(const SocialPolicyRegistry& rRegistry);
     ~SocialEngineeringManager();
 
@@ -31,9 +29,7 @@ public:
     // Get the active policy config for a category. Returns nullptr if none is set.
     const SocialPolicyConfig_t* GetActivePolicy(SocialCategory_t category) const;
 
-    // Collect all active effects from the current policy selections.
-    // SocialRatingModifier effects are accumulated per-rating axis and expanded
-    // through the SocialRatingRegistry into their final gameplay EffectConfig_t entries.
+    // Effects of the current policy selections.
     std::vector<ActiveEffect_t> CollectEffects() const;
 
     // Faction-wide social rating on one axis from active policies only.
@@ -45,9 +41,7 @@ public:
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
-    // The accumulated map for every axis, rebuilt only when the policy selection changes.
-    // Answering one axis used to allocate a fresh effect vector and a fresh map per call, and
-    // the UI asks once per axis per frame.
+    // Every axis's total, rebuilt only when the selection changes; the UI asks per frame.
     const std::map<SocialRatingId_t, int>& AccumulatedRatings_() const;
 
     const SocialPolicyRegistry& m_rRegistry;

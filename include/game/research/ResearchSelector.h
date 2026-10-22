@@ -16,10 +16,7 @@ class ResearchManager;
 class ResearchSelector
 {
 public:
-    // The manager is a reference: the owning Faction always has one, and the pointer form had
-    // three different null policies for the same member (throw / return false / silent no-op).
-    // The seed is required — the convenience overload that drew from std::random_device made
-    // the starting research target unreproducible across runs of the same session.
+    // seed makes the starting research target reproducible.
     ResearchSelector(ResearchManager& rResearchManager, uint32_t seed);
 
     void SetCategoryEnabled(GameCategory_t category, bool enabled);

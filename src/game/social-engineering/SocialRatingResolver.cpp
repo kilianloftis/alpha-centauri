@@ -14,14 +14,8 @@ namespace ac
 namespace
 {
 
-// Maps each axis's accumulated total through the registry table and appends that level's
-// gameplay effects to rOut with sourceId "se_rating_<axis>_<level>" (clamped level).
-// Walks every configured axis (not only those with modifiers) so an explicit level-0 row
-// (Support free slots, Efficiency denom) applies when the axis is untouched. Total 0 never
-// clamps into a sparse table's extremes — only an exact "0" key expands. Non-zero totals
-// still clamp to the nearest configured extreme (SMAC).
-// appendLane, when set, keeps only level effects on that lane — the faction lane emits
-// FactionUnits only, while the base lane takes the whole level.
+// Appends each axis's level effects ("se_rating_<axis>_<level>"), level-0 rows included. Total
+// 0 matches only an exact "0" key; other totals clamp to the extremes (SMAC).
 void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
                                const SocialRatingRegistry& rRatings,
                                std::optional<EffectLane_t> appendLane,
@@ -134,9 +128,7 @@ std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings)
 {
-    // Faction-lane expansion only accumulates FactionWide modifiers. ThisBase rating mods
-    // stay on the per-base path after FilterForBase, so N bases with ThisBase shrines
-    // cannot inflate FactionUnits bonuses.
+    // FactionWide modifiers only, so ThisBase shrines cannot inflate FactionUnits bonuses.
     AppendRatingLevelEffects_(
         AccumulateSocialRatings(rFactionEffects.effects, EffectLane_t::FactionWide), rRatings,
         EffectLane_t::FactionUnits, rFactionEffects.effects);

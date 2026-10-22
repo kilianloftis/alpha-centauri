@@ -13,8 +13,7 @@ namespace ac
 SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry& rRegistry)
     : m_rRegistry(rRegistry)
 {
-    // Starting policies come from config (`"default": true`), not from ids compiled in here. A
-    // mod shipping its own policy set used to hard-fail every faction constructor.
+    // Starting policies come from config (`"default": true`), so a mod can ship its own set.
     for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
     {
         m_activePolicies[category] = &m_rRegistry.GetDefaultForCategory(category);
@@ -45,11 +44,8 @@ const SocialPolicyConfig_t* SocialEngineeringManager::GetActivePolicy(SocialCate
 
 std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
 {
-    // Policy effects pass through as ordinary active effects — including SocialRatingModifier
-    // entries. Rating accumulation and the rating-level -> gameplay-effects mapping happen
-    // later, per base, in ResolveSocialRatingLevelEffects (SocialRatingResolver): modifiers
-    // can come from any source (buildings, pops, ...), and ThisBase-scoped ones shift a
-    // single base's effective rating.
+    // Policy effects pass through as they are; ratings accumulate per base later, since modifiers
+    // come from any source.
     std::vector<ActiveEffect_t> result;
     for (const auto& [category, pPolicy] : m_activePolicies)
     {

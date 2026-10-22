@@ -16,12 +16,7 @@ class IEffectsProvider;
 class ResearchManager
 {
 public:
-    // The registry and cost calculator come from GameDataContext, which the composition root
-    // always supplies complete — so they are references, not a null mode this class has to
-    // second-guess (it previously dereferenced the registry unchecked in one method and
-    // returned an empty list from another). pEffectsProvider supplies the faction effect pool
-    // for TechCost modifiers and stays a pointer: the owning Faction passes `this` while it is
-    // still constructing, so a genuinely provider-less manager is representable.
+    // pEffectsProvider stays a pointer: the owning Faction passes `this` mid-construction.
     ResearchManager(const TechRegistry& rTechRegistry,
                     const TechCostCalculator& rTechCostCalculator,
                     const IEffectsProvider* pEffectsProvider);
@@ -39,9 +34,8 @@ public:
     void AddResearchPoints(int points);
     void SetAccumulatedPoints(int points);
 
-    // Cost of the current target. Revalidated against the effects provider's version and
-    // this manager's research revision (tech count is a direct cost input), so a
-    // TechCost-modifying effect or a mid-research tech discovery is reflected on the next read.
+    // Revalidated against the effects version and research revision, so a TechCost change or a
+    // new tech shows on the next read.
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
@@ -85,9 +79,7 @@ private:
     // Compute the cost of the current target and record the provider / research revisions.
     void ComputePointsNeeded_() const;
 
-    // Recompute m_pointsNeededForCurrentTech if the provider's effect pool or this
-    // manager's research revision changed since the last computation. With a null
-    // provider, still revalidates when research revision changes (tech count is a cost input).
+    // Recomputes when the effect pool or research revision changed; tech count is a cost input.
     void RevalidatePointsNeeded_() const;
 };
 

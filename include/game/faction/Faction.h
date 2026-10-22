@@ -30,7 +30,6 @@
 namespace ac
 {
 
-// Forward declarations
 class BuildingRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
@@ -55,9 +54,7 @@ class WorldMap;
 class GameSettings;
 class GameState;
 
-// Deref the owning pointers, then drop razed bases. Free rather than a member because both
-// Bases() overloads deduce their return type from it, and an in-class helper is not deduced
-// early enough for that. See Faction::Bases.
+// Free rather than a member, so both Bases() overloads can deduce their return type from it.
 template <typename Vec>
 auto LiveBasesView(Vec& rBases)
 {
@@ -68,23 +65,8 @@ auto LiveBasesView(Vec& rBases)
 class Faction : public IEffectsProvider
 {
 public:
-    // rDataContext is the game-wide definition data (registries plus the calculators built
-    // from them). It is held by reference for the faction's whole life and handed to the
-    // subsystems that need pieces of it, so adding a new kind of shared game data does not
-    // change this signature. Must outlive the faction — see Engine's member ordering.
-    //
-    // rWorldMap and rSettings are constructor dependencies rather than post-construction
-    // binds: a faction without a map used to early-return out of RebuildVisibility, so a base
-    // founded on a not-yet-wired faction silently produced no visibility, no territory rebuild
-    // and no first-contact check while every getter still returned plausible values. Taking
-    // them here makes that state unrepresentable. The constructor sizes the explored/visible
-    // maps from rWorldMap. The remaining session wiring (GameState back-pointer and the two
-    // observers) is applied by GameState::AddFaction — see AttachToSession.
-    //
-    // seed drives every per-faction random choice (base names, the starting research target).
-    // It is injected rather than drawn from std::random_device inside the sub-objects, because
-    // those choices are save-game state: an unseedable generator meant the same session could
-    // not be reproduced. The composition root derives it from the session seed.
+    // rDataContext must outlive the faction. rWorldMap sizes the fog maps; GameState::AddFaction
+    // adds the session wiring. seed drives every per-faction random choice.
     Faction(FactionId_t factionId,
              bool bIsPlayerControlled,
              const FactionConfig_t& rDefinition,
@@ -95,9 +77,7 @@ public:
     ~Faction();
 
     FactionId_t GetFactionId() const { return m_factionId; }
-    // Not multiplayer yet, but the flag (rather than an index-0 convention) is what
-    // GameState::GetPlayerFaction() searches for, so it generalizes to multiple
-    // human-controlled factions without a representation change.
+    // What GameState::GetPlayerFaction() searches for.
     bool IsPlayerControlled() const { return m_bIsPlayerControlled; }
 
     const FactionConfig_t& GetDefinition() const { return m_rDefinition; }
@@ -105,39 +85,26 @@ public:
 
     std::string SuggestBaseName();
 
-    // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
-    // Destroy the base (razed on capture) and return a snapshot of its
-    // pre-destruction state. This is the DESTROY path: home-base claims orphan, the object
-    // is gone, and CreateBaseFromSnapshot is a *reconstruction* (new address), not a live
-    // transfer. See TransferBaseTo for ownership change that preserves identity.
+    // Destroys the base and returns its snapshot; home claims are orphaned. Ownership changes
+    // that keep the base use TransferBaseTo.
     std::optional<BaseSnapshot_t> ExtractBase(BaseId_t baseId);
     // Move a base out of this faction's ownership without destroying it (identity-preserving
     // transfer's building block). Throws if baseId is missing.
     std::unique_ptr<BaseManager> ReleaseBase(BaseId_t baseId);
-    // Rebuild a base from a snapshot (recalculates pop roles and worked tiles). New object,
-    // new address — for future save/load reconstruction, NOT the live transfer path (see
-    // TransferBaseTo).
+    // Rebuilds a base from a snapshot as a new object, for save/load. Not a transfer.
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
                                         TileEffectsContext& rTileEffects);
-    // Identity-preserving ownership move: ReleaseBase → rebind owner → rReceiver.AddBase.
-    // Same BaseManager object and baseId end up owned by rReceiver; no destroy/recreate, no
-    // fake events. Recalculates composition and worker assignment under the new owner
-    // (psych may differ) and migrates this base's building deploy cooldowns.
-    // Throws if baseId is missing or rReceiver is this faction.
+    // Moves the same base object to rReceiver, recalculating its pops and workers and migrating
+    // its deploy cooldowns. Throws if baseId is missing or rReceiver is this faction.
     void TransferBaseTo(BaseId_t baseId, Faction& rReceiver);
-    // Factory method: unpacks the individual registries/calculators BaseManager needs from the
-    // faction's ruleset so BaseManager itself can declare narrow, named dependencies instead of
-    // taking the whole context. If the faction has no Headquarters, the new base is granted
-    // that building (first-base / rebuilt-HQ founding).
+    // Builds a base from the faction's ruleset; a faction without a Headquarters gets one there.
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             TileEffectsContext& rTileEffects,
                             std::optional<int> initialPopulation = std::nullopt,
                             bool bMayOccupyWater = false);
-    // Iterate live bases by reference without exposing the owning unique_ptrs. Razed bases are
-    // filtered out here rather than erased at raze time, which is what lets a base die from
-    // inside a signal handler or mid-iteration: every existing loop stops seeing it at once,
-    // while the object itself survives until ReapRazedBases.
+    // Live bases. Razed ones are filtered here, not erased, so a base can die mid-iteration; the
+    // object lasts until ReapRazedBases.
     auto Bases() { return LiveBasesView(m_bases); }
     auto Bases() const { return LiveBasesView(m_bases); }
     size_t GetBaseCount() const;
@@ -146,26 +113,17 @@ public:
     BaseManager* FindBase(BaseId_t baseId);
     const BaseManager* FindBase(BaseId_t baseId) const;
 
-    // Take rBase out of the game now: mark secret projects destroyed, orphan home-base claims,
-    // release the tile, drop deploy records, and emit BaseManager::OnDestroyed. Everything the
-    // rest of the game can observe happens here; only the object's destruction waits for
-    // ReapRazedBases. Idempotent — the pop-loss handler and a conquest path may both ask.
-    // Throws if rBase is not this faction's.
+    // Takes rBase out of the game now; only the object's destruction waits for ReapRazedBases.
+    // Idempotent. Throws if rBase is not this faction's.
     void RazeBase(BaseManager& rBase);
 
-    // Destroy the BaseManagers razed since the last call. Pure memory hygiene: a razed base is
-    // already invisible to Bases() / FindBase, so the timing carries no game meaning. Called
-    // between turn stages (TurnProcessor::Advance), where nothing is iterating bases.
+    // Frees bases razed since the last call, between turn stages.
     void ReapRazedBases();
 
-    // Fired at the end of AddBase for every insertion — founding, load, and post-transfer
-    // adopt alike. The single hook EventBridge wires from (see EventBridge::WireBase);
-    // conquest/probe/diplomacy callers do not need to remember to wire anything themselves.
+    // At the end of every AddBase: founding, load and transfer alike.
     Signal<BaseManager&> OnBaseAdded;
 
-    // Fired after any base-list membership change (add / extract / release / raze), before
-    // visibility rebuild on add. GameState rebuilds territory and first-contact from this;
-    // distinct from OnBaseAdded (add-only, carries the new BaseManager&).
+    // After any base-list change, before the visibility rebuild on add.
     Signal<> OnBaseListChanged;
 
     // Fired at the end of RebuildVisibility. GameState uses this for first-contact scans.
@@ -191,23 +149,16 @@ public:
     const BaseManager* FindBaseWithBuilding(const BuildingId_t& buildingId) const;
     // Config of any owned copy, or nullptr when the faction has none.
     const BuildingConfig_t* FindOwnedBuildingConfig(const BuildingId_t& buildingId) const;
-    // Copies not on deploy cooldown at missionYear (see DeployBuilding). A pure query: asking
-    // about a hypothetical or future year must not mutate the ledger, so the answer does not
-    // depend on what was asked before. Expiry is retired by PruneExpiredDeploys.
+    // Copies not on deploy cooldown at missionYear. A pure query; PruneExpiredDeploys retires
+    // expired records.
     int CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const;
-    // Retire every deploy record that has become ready at missionYear, so the ledger cannot
-    // grow unbounded across many deploy cycles. Called once per faction per turn (Upkeep
-    // stage); dropping a record is equivalent to it counting as ready, so this changes no
-    // CountReadyBuildings answer for the current or any later year.
+    // Retires records ready at missionYear, so the ledger cannot grow without bound. Changes no
+    // CountReadyBuildings answer.
     void PruneExpiredDeploys(int missionYear);
-    // Mark one copy of buildingId at baseId deployed until readyMissionYear (inclusive
-    // unavailable before). Keyed by base (best-effort: the caller's base attribution, not a
-    // tracked per-instance id) so the record cannot outlive that base's ownership of the
-    // copy: ReleaseBase/ExtractBase migrate or drop matching records with the base.
+    // Marks one copy at baseId deployed until readyMissionYear. Keyed by base, so records move or
+    // drop with the base.
     void DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, int readyMissionYear);
-    // Drop the deploy record for buildingId at baseId when that specific copy is destroyed.
-    // No-op if the copy at baseId was not cooling — never drops another base's record for
-    // the same buildingId.
+    // Drops the record for the copy at baseId; a no-op if it was not cooling.
     void NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId);
 
     // Fired when a secret project is permanently lost (destroyed or razed with the base).
@@ -234,16 +185,11 @@ public:
     int GetNetIncomePerTurn() const;
     std::optional<int> GetTurnsUntilBreakthrough() const;
 
-    // Resource production — routes to all bases. Each base resolves against the composed
-    // provider pool (local + world/council via GetActiveEffects), applies inefficiency,
-    // splits energy into econ/labs/psych locally (including commerce when a GameState is
-    // bound), then stockpiles. Faction collection of econ/labs is CollectIncome /
-    // CollectResearch; psych stays at the base.
+    // Each base resolves its resources against the composed pool, applies inefficiency and splits
+    // energy. CollectIncome and CollectResearch gather econ and labs.
     void ProduceBaseResources();
 
-    // Charge mineral support at every base (home units vs this turn's mineral bank).
-    // Called from the UnitSupport stage, after ResourceCollection has banked minerals and
-    // before BaseProduction allocates or converts what is left.
+    // Mineral support at every base, between ResourceCollection and BaseProduction.
     void ApplyMineralSupport();
 
     // Sum of BuildingConfig_t::upkeep across every constructed building copy (all bases).
@@ -253,9 +199,8 @@ public:
     // Constructed buildings across all bases, grouped by type for UI (name, count, upkeep).
     std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
 
-    // Deduct GetBuildingUpkeep() from the faction energy treasury.
-    // Called from Upkeep after IncomeCollection has banked this turn's econ.
-    // Throws if the treasury cannot cover the cost (no auto-sell yet).
+    // Pays GetBuildingUpkeep() from the treasury, after IncomeCollection. Throws if it cannot
+    // (no auto-sell yet).
     void ApplyBuildingUpkeep();
 
     // Apply growth to all bases, incorporating GrowthRate stat effects.
@@ -283,56 +228,34 @@ public:
     UnitManager& GetUnitManager();
     const UnitManager& GetUnitManager() const;
 
-    // Identity-preserving ownership move (subvert / trade): release from this faction's
-    // UnitManager and adopt into rReceiver's, without DestroyUnit's combat cargo-loss rules
-    // and without emitting OnUnitDestroyed/OnUnitCreated (see UnitManager::ReleaseUnit /
-    // AdoptUnit and OnUnitReleased / OnUnitAdopted). A transferred carrier's cargo travels
-    // with it; a transferred embarked passenger detaches from its carrier cleanly (no throw,
-    // no CanPlaceUnitOnTile re-check — the unit never leaves the map). Home base is cleared
-    // (a foreign home claim is invalid). Throws if unitId is missing or rReceiver is this
-    // faction.
+    // Moves the unit to rReceiver without destroying it. Cargo travels with a carrier; an
+    // embarked passenger detaches; the home claim clears. Throws if missing or self.
     void TransferUnitTo(UnitId_t unitId, Faction& rReceiver);
 
-    // Amount and sink if one constructed copy of this type were scrapped at rBase now.
-    // Empty when the id is not held there, the copy is a secret project, the kind has no
-    // default_scrap, or the item override cleared the formula. Base-destined refunds land at
-    // rBase. Throws if rBase is not this faction's.
+    // What scrapping one copy at rBase would pay, and where. Empty when it cannot be scrapped.
+    // Throws if rBase is not this faction's.
     std::optional<ScrapPayout_t> QuoteScrapBuilding(const BaseManager& rBase,
                                                    const BuildingId_t& buildingId) const;
 
-    // Player scrap: destroy one constructed copy at rBase and credit QuoteScrapBuilding.
-    // Combat / probe / raze / orbital destruction must not call this. Throws if rBase is
-    // not this faction's, or QuoteScrapBuilding is empty. Returns the amount granted.
+    // Player scrap only: destroys one copy and pays QuoteScrapBuilding. Throws if the quote is
+    // empty.
     int ScrapBuilding(BaseManager& rBase, const BuildingId_t& buildingId);
 
-    // Same quote over every constructed copy of this type across this faction's bases.
-    // Empty when no base holds a copy QuoteScrapBuilding would accept. Amount is the sum of
-    // those per-copy quotes. destBaseId is set only when every copy pays into the same sink
-    // (none for the treasury).
+    // QuoteScrapBuilding summed over every copy; destBaseId only when all pay into one sink.
     std::optional<ScrapPayout_t> QuoteScrapBuildings(const BuildingId_t& buildingId) const;
 
-    // Player scrap: destroy every constructed copy of that type at every base, each through
-    // ScrapBuilding. Same combat / probe / raze / orbital restriction. Throws if
-    // QuoteScrapBuildings is empty. Returns the amount granted.
+    // Player scrap only: ScrapBuilding for every copy. Throws if the quote is empty.
     int ScrapBuildings(const BuildingId_t& buildingId);
 
-    // Amount and sink if this unit were scrapped now. Empty when kinds.unit has no
-    // default_scrap. A base-destined refund goes to the closest friendly base, and pays 0
-    // when the unit is off this faction's territory — the unit can still be scrapped.
-    // Throws if the unit is not this faction's.
+    // What scrapping the unit would pay: to the closest friendly base, or 0 off territory. Empty
+    // without a default_scrap.
     std::optional<ScrapPayout_t> QuoteScrapUnit(const Unit& rUnit) const;
 
-    // Player scrap: destroy the unit and credit QuoteScrapUnit. Combat, support disband, and
-    // other DestroyUnit paths do not refund. Throws if QuoteScrapUnit is empty. Returns the
-    // amount granted.
+    // Player scrap only: destroys the unit and pays QuoteScrapUnit. Throws if the quote is empty.
     int ScrapUnit(Unit& rUnit);
 
-    // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
-    // The constructor sizes both from the world map and takes a first reading;
-    // RebuildVisibility refreshes current vision from units/bases (and grows explored). Unit
-    // create/destroy call it from UnitManager; moves reach it via
-    // UnitPositionIndex::OnUnitMoved (wired by GameState); base founding invokes it from
-    // AddBase.
+    // Explored memory and current vision. RebuildVisibility refreshes vision when units are
+    // created, destroyed or moved and when bases are added.
     FactionExploredMap& GetExploredMap();
     const FactionExploredMap& GetExploredMap() const;
     FactionVisibleMap& GetVisibleMap();
@@ -346,11 +269,8 @@ public:
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
     void RebuildVisibility();
 
-    // Coalesces visibility rebuilds. While any scope is open, RebuildVisibility only marks the
-    // map dirty; the outermost scope performs one rebuild on destruction. A rebuild re-reveals
-    // from every unit and base, walks every tile for vision improvements, and then drives a
-    // first-contact sweep over every other faction — so a burst of unit events (sinking a loaded
-    // transport destroys the carrier and each passenger) must not pay for it once per event.
+    // Coalesces rebuilds: the outermost scope rebuilds once, so a burst of unit events (a sunk
+    // transport) does not pay for a full rebuild and contact sweep each.
     class VisibilityRebuildScope
     {
     public:
@@ -373,10 +293,8 @@ public:
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
     const GameSettings& GetSettings() const { return m_rSettings; }
 
-    // Optional session spawn services (GameState::AttachToSession). Required to complete
-    // unit production; null when the faction is unbound.
-    // TODO: Re-examine; this callback is the faction's last link to its GameState.
-    // Suggestion: move the unit-id counter onto WorldMap and allocate through the map.
+    // Required to complete unit production.
+    // TODO: the faction's last link to its GameState; allocate unit ids through WorldMap instead?
     void BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
                                UnitPositionIndex& rPositions);
     UnitId_t AllocateUnitId() const;
@@ -387,28 +305,22 @@ public:
     void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
     bool IsFogRemoved() const { return m_bFogRemoved; }
 
-    // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
     // IEffectsProvider — composed view: local FactionEffectsPool plus bound world extras.
     const FactionEffects_t& GetActiveEffects() const override;
     uint64_t GetEffectsVersion() const override;
 
-    // Local pool only (no peer WorldGlobal / council). Used when harvesting peers for
-    // world composition, and for social-rating accumulation / faction-lane rating expand
-    // (ratings are a faction-internal axis — see SocialRatingResolver).
+    // Own contributions only, for peers' world composition and faction-internal social ratings.
     const FactionEffects_t& GetLocalActiveEffects() const override;
 
-    // Which interaction grids this faction's pooled effects carry an InteractionOverride
-    // for. OR'd with the design mask by UnitMayOverride to decide whether a movement /
-    // attack / ZOC resolve needs to collect effects at all.
+    // Grids the pooled effects override; with the design's mask, decides whether a resolve
+    // collects effects.
     InteractionGridMask_t GetInteractionMask() const;
     uint64_t GetLocalEffectsVersion() const;
 
 
-    // Keys of triggered effects carrying `oncePer` that this faction has already consumed
-    // (see TriggeredEffectConfig_t::oncePer). Authored keys, so the rule spans instances
-    // rather than being tied to one config entry.
+    // oncePer keys this faction has used; authored, so a rule can span config entries.
     std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
     const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
 
@@ -459,18 +371,13 @@ private:
     // Recomputed with m_composedEffects, so it can never go stale independently.
     mutable InteractionGridMask_t m_composedInteractionMask = 0;
 
-    // Migrate every deploy record for baseId to rReceiver (TransferBaseTo) so a cooling
-    // ASAT/interceptor copy keeps its cooldown under the new owner instead of leaking a
-    // phantom suppression in the old one. Extract/raze simply drops them (see ExtractBase).
+    // Moves baseId's deploy records to rReceiver, so cooldowns follow the base.
     void MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver);
     // Drop every deploy record for baseId (base destroyed: razed on capture).
     void DropBuildingDeploys_(BaseId_t baseId);
 
-    // ASAT / intercept deploy cooldowns, keyed by (baseId, buildingId) — the base attribution
-    // is the calling site's best-effort pick of "a base holding a copy," not a tracked
-    // per-instance id (see DeployBuilding). A copy is unavailable while
-    // missionYear < readyMissionYear. Expired records are retired by PruneExpiredDeploys,
-    // not by the CountReadyBuildings query, which is const in both senses.
+    // ASAT and intercept cooldowns, keyed by (base, building); unavailable while missionYear <
+    // readyMissionYear.
     struct BuildingDeploy_t
     {
         BaseId_t baseId = 0;

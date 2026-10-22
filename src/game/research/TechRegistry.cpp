@@ -46,9 +46,7 @@ void TechRegistry::ValidatePrerequisites_(const TechConfig_t& rConfig,
     }
 }
 
-// A cyclic component is unreachable forever: ResearchManager only offers a tech once every
-// prerequisite is discovered, so A->B->A can never be entered. That is a broken tech tree, and
-// it has to be said at load rather than by its absence from the research menu.
+// A cycle can never be researched, so it is a broken tree, reported at load.
 void TechRegistry::ValidateNoPrerequisiteCycles_() const
 {
     enum class Mark_t

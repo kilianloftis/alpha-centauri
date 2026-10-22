@@ -96,9 +96,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_composedEffects(*this)
 {
     m_pResearchSelector->EnsureResearchTarget();
-    // Size the fog maps from the map this faction is bound to for life, then take a first
-    // reading. Formerly BindWorldMap's job, which left a window where visibility silently
-    // did nothing.
+    // Sized from the map this faction is bound to for life, then a first reading.
     m_explored.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     m_visible.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     m_tileMemory.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
@@ -287,11 +285,8 @@ void Faction::DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, in
 
 void Faction::NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId)
 {
-    // Only records for this base: another base's cooling copy of the same buildingId must not
-    // be dropped just because this one shares its id. Among this base's records, drop the one
-    // with the latest readyMissionYear — the most-cooling copy. A destroyed copy must take a
-    // suppression with it, and retiring an already-expired record instead would leave a live
-    // cooldown attached to a copy that no longer exists, under-counting the ready total.
+    // This base's records only, dropping its most-cooling copy: a destroyed copy takes a
+    // suppression with it, and retiring an expired one instead would under-count ready copies.
     auto latest = m_buildingDeploys.end();
     for (auto it = m_buildingDeploys.begin(); it != m_buildingDeploys.end(); ++it)
     {
@@ -360,9 +355,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     m_baseListRevision.Bump();
     OnBaseListChanged.Emit();
     RebuildVisibility();
-    // Single "a base now exists in this faction" hook — founding, load, and post-transfer
-    // adopt alike. EventBridge wires from this so conquest/probe/diplomacy callers never
-    // need to remember WireBase (see docs/architecture/high-level.md, "Object lifetime").
+    // The single "a base now exists in this faction" hook, which EventBridge wires from.
     OnBaseAdded.Emit(rAdded);
 }
 
@@ -471,9 +464,8 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
 
-    // Psych (and thus drone/talent targets) may differ under the new owner. Must run after
-    // AddBase: composition reads GetPsychProduction, which resolves commerce and requires the
-    // base to appear in Faction::Bases().
+    // After AddBase: psych may differ under the new owner, and composition needs the base in
+    // Bases().
     pRawBase->GetPopulation().RecalculateComposition();
     pRawBase->GetWorkerAssignments().UnassignAll();
     pRawBase->GetWorkerAssignments().AutoAssignWorkers();
@@ -571,31 +563,21 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
         throw std::invalid_argument("Faction::TransferBaseTo: cannot transfer to self");
     }
 
-    // Identity-preserving move: same BaseManager object, same baseId, same address — not
-    // ExtractBase + CreateBaseFromSnapshot. RebindFaction re-points every per-faction
-    // dependency (effects provider, research, economy) the base resolves through.
+    // The same object and id, rebound to every per-faction dependency.
     std::unique_ptr<BaseManager> pBase = ReleaseBase(baseId);
     BaseManager& rBase = *pBase;
     rBase.RebindFaction(rReceiver);
     MigrateBuildingDeploys_(baseId, rReceiver);
     rReceiver.AddBase(std::move(pBase));
 
-    // The base keeps its HomeBaseIndex across the move, so units of the *previous* owner
-    // would still be homed here — and a supply crawler homed at a base feeds that base's
-    // production (WorkedYield), i.e. the captor would harvest the loser's
-    // crawlers. A claim on a base its owner does not own is a foreign home claim, which the
-    // transfer protocol treats as invalid; drop exactly those (same rule ReleaseAndAdopt_
-    // applies to unit transfer). Units the receiver already owns keep their home.
+    // A claim on a base its owner does not own is invalid, so the previous owner's units lose
+    // their home here; the receiver's own units keep theirs.
     DropForeignHomeClaims_(rBase);
 
-    // Riot escalation is a grievance against the faction that let it get this far. A base
-    // that rebelled at tier 3 must not arrive at its new owner already one commit away from
-    // rebelling again — the ladder restarts, and the natural condition re-earns it if the
-    // new owner cannot keep the base calm either.
+    // Riot escalation is a grievance against the old owner, so the ladder restarts.
     rBase.GetPopulation().ResetMoodEscalation();
 
-    // Psych (and thus drone/talent targets) may differ under the new owner — same
-    // recalculation CreateBaseFromSnapshot used to apply after reconstruct.
+    // Psych, and so drone and talent targets, may differ under the new owner.
     rBase.GetPopulation().RecalculateComposition();
     rBase.GetWorkerAssignments().UnassignAll();
     rBase.GetWorkerAssignments().AutoAssignWorkers();
@@ -616,10 +598,8 @@ Unit* FindUnitById_(Faction& rFaction, UnitId_t unitId)
     return nullptr;
 }
 
-// Release + adopt one unit (giver→receiver), clearing the home-base claim: it names a base
-// of the previous owner, and a claim on a base the receiver does not own is a foreign home
-// claim, which the transfer protocol treats as invalid (see docs/architecture/high-level.md,
-// "Object lifetime"). Production grants stamped at construction stay on the unit.
+// Release and adopt one unit, clearing its home claim, which names a base of the previous
+// owner. Production grants stay.
 Unit& ReleaseAndAdopt_(Faction& rGiver, Faction& rReceiver, Unit& rUnit)
 {
     std::unique_ptr<Unit> pReleased = rGiver.GetUnitManager().ReleaseUnit(rUnit);
@@ -643,15 +623,10 @@ void Faction::TransferUnitTo(UnitId_t unitId, Faction& rReceiver)
         throw std::runtime_error("Faction::TransferUnitTo: unit not found");
     }
 
-    // A transferred carrier's cargo travels with it (peaceful transfer never strands or
-    // sinks passengers — that is DestroyUnit's combat rule only). Snapshot before releasing:
-    // ReleaseUnit/AdoptUnit do not touch cargo/carrier links, but the vector itself is a
-    // view into pFound's live state that we are about to hand to another faction.
+    // Cargo travels with its carrier; a copy, since the vector is the carrier's live state.
     const std::vector<Unit*> cargo = pFound->GetCargo();
 
-    // A transferred embarked passenger detaches cleanly rather than dying: no throw, and no
-    // CanPlaceUnitOnTile re-check, since the unit never leaves the map (see
-    // docs/architecture/high-level.md, "Object lifetime").
+    // An embarked passenger detaches; it never leaves the map, so placement is not re-checked.
     if (pFound->IsEmbarked())
     {
         pFound->Disembark();
@@ -870,10 +845,8 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
 
-    // Founding while the faction has no HQ installs Headquarters here. ResourceManager bills
-    // k_DefaultInefficiencyHqDistance (16) when GetHeadquarters() is null, so a first base
-    // without the flag loses half its energy before IncomeCollection — credits fall even as
-    // tile production rises. Transfers use AddBase, not CreateBase, and do not grant.
+    // Without a Headquarters, inefficiency bills the no-HQ distance, so a faction's first base gets
+    // one. Transfers use AddBase and do not.
     if (GrantsHeadquarters(*this)
         && m_rDataContext.buildingRegistry->Find("Headquarters")
         && pRawBase->GetBuildingManager().CanAddBuilding("Headquarters"))
@@ -1077,10 +1050,8 @@ Faction::VisibilityRebuildScope::VisibilityRebuildScope(VisibilityRebuildScope&&
 
 Faction::VisibilityRebuildScope::~VisibilityRebuildScope()
 {
-    // The deferred rebuild runs here, so anything it can throw terminates. RebuildFromSources
-    // throws only on an unsized map, which Faction's constructor makes unreachable; the
-    // first-contact handler does not throw. Left to propagate deliberately: swallowing here
-    // would leave the faction rendering stale vision with no diagnostic.
+    // Anything the deferred rebuild throws terminates, and that is deliberate: swallowing it would
+    // leave stale vision with no diagnostic.
     if (!m_pFaction)
     {
         return;
@@ -1130,9 +1101,7 @@ uint64_t Faction::GetLocalEffectsVersion() const
 
 void Faction::EnsureComposedEffects_() const
 {
-    // GetWorldCompositionStamp sweeps every peer faction's pool, so both public accessors
-    // funnel through here rather than each recomputing it — one sweep per query, and the
-    // returned list and version can never describe different compositions.
+    // Both accessors funnel through here, so the list and version always describe one sweep.
     const IWorldEffectsSource* pWorld = FindCurrentGameState();
     const uint64_t localVersion = GetLocalEffectsVersion();
     const uint64_t worldStamp = pWorld ? pWorld->GetWorldCompositionStamp(*this) : 0;
@@ -1155,9 +1124,7 @@ void Faction::EnsureComposedEffects_() const
     m_composedLocalVersion = localVersion;
     m_composedWorldStamp = worldStamp;
     m_pComposedWorld = pWorld;
-    // Monotonic, so consumers comparing versions for equality (BaseManager's base-effect
-    // memo, ResearchManager's cost cache) cannot be fooled by a collision the way a hash of
-    // (localVersion, worldStamp) could. Starts at 1: never equal to a default-initialized 0.
+    // Monotonic and starting at 1, so equality comparisons cannot collide.
     ++m_composedVersion;
 }
 
@@ -1175,9 +1142,7 @@ InteractionGridMask_t Faction::GetInteractionMask() const
 
 uint64_t Faction::GetEffectsVersion() const
 {
-    // Moves when the local pool changes *or* when peer WorldGlobal / council inputs do, so
-    // downstream memos invalidate on world changes without those effects being folded into
-    // the local pool.
+    // Moves with the local pool and with peer or council inputs.
     EnsureComposedEffects_();
     return m_composedVersion;
 }

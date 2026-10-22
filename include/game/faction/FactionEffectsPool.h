@@ -16,17 +16,12 @@ struct DifficultyConfig_t;
 struct DiplomacyConfig_t;
 struct NativeLifeLevelConfig_t;
 
-// Assembles and memoizes the faction-wide *local* active effect pool for one owning
-// Faction (bound at construction). WorldGlobal peers and council extras are composed
-// later by Faction::GetActiveEffects — this pool never sees them.
+// The faction's local effect pool, memoized; Faction::GetActiveEffects composes world effects
+// on top.
 class FactionEffectsPool
 {
 public:
-    // All data dependencies come from GameDataContext, which the composition root always
-    // supplies complete. They were optional pointers whose null branches silently dropped
-    // whole effect lanes — no buildings, no tile-yield rules, no social-rating expansion —
-    // with no diagnostic, which is how fixture factions came to resolve ratings differently
-    // from real ones.
+    // Every dependency comes from GameDataContext, which is always complete.
     FactionEffectsPool(const Faction& rFaction,
                        const BuildingRegistry& rBuildingRegistry,
                        const Revision& rBaseListRevision,
@@ -52,9 +47,7 @@ private:
     // Raw continuous effects from constructed buildings across all bases (no grant expand).
     std::vector<ActiveEffect_t> CollectBuildingEffects_() const;
 
-    // Faction-lane effects (any scope except the locally-resolved ThisPop/ThisBase)
-    // declared by pops living in the faction's bases. ThisBase pop effects merge per base
-    // via CollectFromPops; ThisPop effects are resolved by the pop itself.
+    // Faction-lane effects from pops in the faction's bases; ThisBase and ThisPop resolve locally.
     std::vector<ActiveEffect_t> CollectPopEffects_() const;
 
     // Faction-lane effects (any scope except the locally-resolved ThisUnit/ThisTile)
@@ -83,15 +76,11 @@ private:
     std::vector<ActiveEffect_t> CollectPoliceRulesEffects_() const;
     std::vector<ActiveEffect_t> CollectPopCompositionEffects_() const;
 
-    // Faction-lane half of each base's active mood arrays (riot tier / golden age), stamped
-    // with the base that is rioting. Without this the FactionUnits morale penalty a riot
-    // tier declares would sit in that base's local list, which no unit ever reads. The
-    // ThisBase half stays on the base path via BaseEffectsCache.
+    // The faction-lane half of each base's mood effects, stamped with the base, so a riot's
+    // FactionUnits morale penalty reaches units.
     std::vector<ActiveEffect_t> CollectMoodEffects_() const;
 
-    // Session difficulty continuous effects, re-resolved from the difficulty levels and the
-    // current game rules. Not cached at construction: difficulty is changeable
-    // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.
+    // Difficulty effects, re-resolved each rebuild since difficulty can change mid-campaign.
     std::vector<ActiveEffect_t> CollectDifficultyEffects_() const;
 
     // Session native life level continuous effects; same mid-campaign rule as difficulty.
@@ -107,10 +96,8 @@ private:
     // Erase effects whose removedByTech is already discovered.
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 
-    // Fills rOut with the revision of every pool contributor in a fixed order — the
-    // single source of truth for what the pool depends on, used both to validate the
-    // cache and to stamp it after a rebuild. A new contributor must be added here and
-    // collected in Rebuild_.
+    // Every contributor's revision in fixed order, to validate and stamp the cache. A new
+    // contributor is added here and in Rebuild_.
     void CollectRevisions_(std::vector<uint64_t>& rOut) const;
 
     // Rebuild the pool if any contributor revision changed since the last stamp.
@@ -134,9 +121,8 @@ private:
     const std::vector<EffectConfig_t>& m_rEcoDamageEffects;
     const DiplomacyConfig_t& m_rDiplomacy;
 
-    // The empty initial stamp never equals a real collection, so no "never built"
-    // sentinel is needed. m_scratchRevisions is reused between validations to keep the
-    // read path allocation-free.
+    // The empty initial stamp never matches a real collection. m_scratchRevisions keeps
+    // validation allocation-free.
     mutable FactionEffects_t m_cachedPool;
     mutable std::vector<uint64_t> m_cachedStamp;
     mutable std::vector<uint64_t> m_scratchRevisions;
