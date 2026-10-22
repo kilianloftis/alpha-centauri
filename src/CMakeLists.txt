@@ -67,6 +67,8 @@ add_library(ac-core STATIC
     game/base/HomeBaseIndex.cpp
     game/buildings/BuildingManager.cpp
     game/production/ProductionManager.cpp
+    game/production/ProductionQueue.cpp
+    game/production/ProductionQueueRules.cpp
     game/production/ProductionConfigParser.cpp
     game/production/HurryProductionCalculator.cpp
     game/production/ScrapConfigParser.cpp

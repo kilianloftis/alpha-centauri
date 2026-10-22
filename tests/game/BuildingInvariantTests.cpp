@@ -164,7 +164,6 @@ TEST_CASE("Losing a secret-project race does not complete a second copy",
 
     const ProductionApplyResult_t applied = loser.ApplyProduction();
     CHECK(applied.kind == ProductionApplyKind_t::InProgress);
-    CHECK_FALSE(applied.preempted);
     CHECK(loser.GetProduction().GetCurrentProduction() == &rProject);
     CHECK(loser.GetProduction().GetMineralStockpile() == 10000);
     CHECK(game.pPlayer->CountBuildings("test_secret_project") == 1);

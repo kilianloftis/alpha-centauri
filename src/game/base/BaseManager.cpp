@@ -256,9 +256,13 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
             snapshot.buildingIds.push_back(pBuilding->id);
         }
     }
-    if (const IConstructable* pProduction = m_pProduction->GetCurrentProduction())
+    if (const IConstructable* pCurrent = m_pProduction->GetCurrentProduction())
     {
-        snapshot.productionItemId = pProduction->GetId();
+        snapshot.productionItemIds.push_back(pCurrent->GetId());
+    }
+    for (const IConstructable* pItem : m_pProduction->GetQueue())
+    {
+        snapshot.productionItemIds.push_back(pItem->GetId());
     }
     snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
     snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
@@ -685,35 +689,50 @@ void BaseManager::RebindFaction(Faction& rFaction)
     m_pBuildings->RebindResearch(rFaction.GetResearch());
     m_pResources->RebindCommerce(rFaction.GetCommerce());
 
-    // Buildings live in the shared registry, so a queued building pointer stays valid when
-    // the new owner has its required tech. Unit designs are owned by Military: re-home to the
-    // new owner's copy when they have the design and the component techs, otherwise clear
-    // (mineral stockpile kept either way).
-    if (const IConstructable* pItem = m_pProduction->GetCurrentProduction())
+    // Buildings and stockpiles live in shared registries, so a pointer stays valid when
+    // the new owner has the required tech. Unit designs are owned by Military: re-home to
+    // the new owner's copy when they have the design and the component techs, otherwise
+    // drop that slot (mineral stockpile kept either way).
+    const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
+    auto rehome = [&](const IConstructable* pItem) -> const IConstructable*
     {
-        const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
-        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
+        if (!pItem)
         {
-            if (!pBuilding->IsAvailable(rTechs))
-            {
-                m_pProduction->RebindProductionItem(nullptr);
-            }
+            return nullptr;
         }
-        else
+        const std::string& rId = pItem->GetId();
+        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(rId))
         {
-            const IDesign* pDesign = rFaction.GetMilitary().GetDesign(pItem->GetId());
-            const auto* pConstructable = dynamic_cast<const IConstructable*>(pDesign);
-            const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
-            if (!pConstructable || (pUnitDesign && !pUnitDesign->IsAvailable(rTechs)))
-            {
-                m_pProduction->RebindProductionItem(nullptr);
-            }
-            else
-            {
-                m_pProduction->RebindProductionItem(pConstructable);
-            }
+            return pBuilding->IsAvailable(rTechs) ? pBuilding : nullptr;
+        }
+        if (const StockpileConfig_t* pStockpile = m_rStockpileRegistry.Find(rId))
+        {
+            return pStockpile->IsAvailable(rTechs) ? pStockpile : nullptr;
+        }
+
+        const Military& rMilitary = rFaction.GetMilitary();
+        const IDesign* pDesign = rMilitary.GetDesign(rId);
+        const auto* pConstructable = dynamic_cast<const IConstructable*>(pDesign);
+        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
+        if (pConstructable && (!pUnitDesign || pUnitDesign->IsAvailable(rTechs)))
+        {
+            return pConstructable;
+        }
+        return nullptr;
+    };
+
+    const IConstructable* pCurrent = m_pProduction->GetCurrentProduction();
+    const IConstructable* pReboundCurrent = rehome(pCurrent);
+    std::vector<const IConstructable*> reboundQueue;
+    for (const IConstructable* pItem : m_pProduction->GetQueue())
+    {
+        if (const IConstructable* pRebound = rehome(pItem))
+        {
+            reboundQueue.push_back(pRebound);
         }
     }
+    m_pProduction->RebindCurrent(pReboundCurrent);
+    m_pProduction->RebindQueue(std::move(reboundQueue));
 }
 
 int BaseManager::GetBaseId() const

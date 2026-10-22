@@ -37,6 +37,7 @@
 #include "game/faction/FactionFlavor.h"
 #include "game/economy/EconomyManager.h"
 #include "game/units/Military.h"
+#include "game/units/IDesign.h"
 #include "game/research/ResearchManager.h"
 #include "game/research/ResearchSelector.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
@@ -428,20 +429,23 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     pBase->GetPopulation().SetNutrientStockpile(rSnapshot.nutrientStockpile);
     pBase->GetPopulation().RestoreMoodState(rSnapshot.mood);
 
-    if (!rSnapshot.productionItemId.empty())
+    ProductionManager& rProduction = pBase->GetProduction();
+    const BaseEffects_t& rEffects = pBase->GetBaseEffects();
+    bool bSetCurrent = true;
+    for (const std::string& rItemId : rSnapshot.productionItemIds)
     {
         const IConstructable* pItem = nullptr;
         if (m_rDataContext.buildingRegistry)
         {
-            pItem = m_rDataContext.buildingRegistry->Find(rSnapshot.productionItemId);
+            pItem = m_rDataContext.buildingRegistry->Find(rItemId);
         }
         if (!pItem && m_rDataContext.stockpileRegistry)
         {
-            pItem = m_rDataContext.stockpileRegistry->Find(rSnapshot.productionItemId);
+            pItem = m_rDataContext.stockpileRegistry->Find(rItemId);
         }
         if (!pItem)
         {
-            if (const IDesign* pDesign = GetMilitary().GetDesign(rSnapshot.productionItemId))
+            if (const IDesign* pDesign = GetMilitary().GetDesign(rItemId))
             {
                 pItem = dynamic_cast<const IConstructable*>(pDesign);
             }
@@ -449,10 +453,18 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         if (!pItem)
         {
             throw std::runtime_error(
-                "Faction::CreateBaseFromSnapshot: unknown production item '"
-                + rSnapshot.productionItemId + "'");
+                "Faction::CreateBaseFromSnapshot: unknown production item '" + rItemId + "'");
         }
-        pBase->GetProduction().SetProduction(pItem, pBase->GetBaseEffects());
+        if (bSetCurrent)
+        {
+            rProduction.SetProduction(pItem, rEffects);
+            bSetCurrent = false;
+        }
+        else
+        {
+            const int slot = static_cast<int>(rProduction.GetQueue().size());
+            rProduction.Insert(slot, *pItem);
+        }
     }
     pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
 

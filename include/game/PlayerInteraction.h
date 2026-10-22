@@ -59,7 +59,7 @@ struct ProductionIdleInteraction_t
     std::vector<PauseOnEventId_t> completedEvents;
 };
 
-// Queued item is no longer constructable; this turn's minerals already banked onto it.
+// Current production is no longer constructable; this turn's minerals already banked onto it.
 // Offer Continue or Zoom to base control, gated by BuildOrdersOutOfDate.
 struct ProductionPreemptedInteraction_t
 {

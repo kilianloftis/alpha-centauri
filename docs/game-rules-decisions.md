@@ -74,22 +74,23 @@ current item, **50% of the spent minerals are lost**.
 
 **Implemented** 2026-08-08. `ApplyProduction` marks the item in place once that turn's minerals
 are banked — the last thing to touch production before `PlayerActions` hands the player control —
-and `SetProduction` charges the penalty when switching to anything else. Numbers live in
+and `SetProduction` charges the penalty when switching to anything else. Editing the upcoming
+queue does not charge the penalty. Numbers live in
 `config/production.json` (`retool_penalty_threshold`, `retool_penalty_percent`). Production
 cost is `baseCost * CostMultiplier` (Industry via effects); SMAC's "minerals per row" is a UI
 presentation of progress, not a cost factor, and is not configured here. The forfeit is scaled
 by `RetoolPenaltyScale` from the base's effects (Skunkworks `MultiplyGeometric` 0 cancels it);
 callers with a live base pass `GetBaseEffects()` into `SetProduction`.
 
-Clearing production (`nullptr`) is not charged: the stockpile is kept. Re-queuing pays once a
+Clearing production (`nullptr`) is not charged: the stockpile is kept. Re-selecting pays once a
 turn original exists; while the turn original is still null (fresh base, or last
-`ApplyProduction` had nothing queued), queue and switch stay free. Integer division rounds the
+`ApplyProduction` had nothing current), `SetProduction` stays free. Integer division rounds the
 forfeit down, so an odd stockpile favours the player.
 
 **Founding minerals:** `StartingMinerals` effects (colony pod, SE, secret projects, …) are
 credited into the new base's production stockpile once at founding (`TryFoundBase` only —
 never on transfer or snapshot restore). Retooling is free while the turn original is still
-null (a fresh base has none); once `ApplyProduction` banks a turn with something queued and
+null (a fresh base has none); once `ApplyProduction` banks a turn with something current and
 stamps an original, ordinary retooling rules apply.
 
 ## 4. Faction elimination
@@ -336,15 +337,16 @@ tiles.
 
 **Implemented** 2026-09-29.
 
-## 14. A pre-empted production item
+## 14. An unconstructable production queue item
 
-**Rule:** this turn's leftover minerals bank onto the queued item first. Then, if that item is
-no longer constructable — a secret project another faction finished, a building this base
-already holds, a stockpile whose tech is gone — it is **not completed**. The minerals stay
-on it. The player is told (`ProductionPreemptedInteraction_t`) with Continue and Zoom to
-base control, gated by `BuildOrdersOutOfDate`; Continue leaves the dropped item queued.
-The AI switches to the default fallback without a retool charge and keeps the mineral
-stockpile; conversion waits for a later tick.
+**Rule:** this turn's leftover minerals bank onto the current item first. Then, if that item is
+still constructable and funded, it completes (the upcoming queue is not touched). After that,
+an unconstructable current item is cleared, and every queue slot that is no longer
+constructable — a secret project another faction finished, a building this base already holds,
+a stockpile whose tech is gone, a second copy of a once-only building — is removed. An empty
+current takes the first remaining queue item, or the default stockpile. Minerals stay there.
+The player is told when **current** production is dropped (`ProductionPreemptedInteraction_t`);
+upcoming queue slots are removed silently. The AI takes the same strip and does not yield.
 
 A second copy that still reaches `FinishReady_` in the same pass is dropped without installing
 it; that is a backstop, not the player-visible path.

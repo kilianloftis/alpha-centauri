@@ -38,6 +38,7 @@ graph TB
         BuildingManager[BuildingManager]
         ResourceManager[ResourceManager]
         ProductionManager[ProductionManager]
+        ProductionQueue[ProductionQueue]
         HomeBaseIndex[HomeBaseIndex<br/>supported units]
     end
 
@@ -79,6 +80,7 @@ graph TB
     BaseManager --> BuildingManager
     BaseManager --> ResourceManager
     BaseManager --> ProductionManager
+    ProductionManager --> ProductionQueue
     BaseManager -->|borrows| HurryProductionCalculator
     BaseManager -->|borrows| ScrapRefundCalculator
     BaseManager -->|prices via| ScrapPayout
@@ -268,7 +270,8 @@ See `docs/architecture/diplomacy-system.md`.
   - `BaseManager`: the base. (Older docs called this `Base`; there is no separate `Base` type.)
   - `PopulationManager`: API surface for the population component; manages growth and riot state for a single base, and **owns population policy** — which types a pop may become (`ResolveType_` walks the obsolescence chain against discovered techs and is the single place a requested type becomes an actual one, so `AddPop`, `ConvertTo`, `ConvertToFallback` and composition reconciliation all apply the same rule) and how composition targets are reconciled (`ApplyCompositionTargets`). The rules deliberately do not live in `PopContainer`: when they did, the tech gate was applied on one conversion path and not another.
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
-  - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `OnProductionCompleted` when the item is finished
+  - `ProductionManager`: API surface for the production component; owns current production, minerals, retool, and completion, and holds a `ProductionQueue`
+  - `ProductionQueue`: upcoming `IConstructable` items after the one the base is building. `ProductionQueueRules` decides Replace / Insert / Delete; `SetProduction` changes current production (and may retool) without editing the queue. `ValidateQueue` drops unconstructable slots, then fills an empty current from the first survivor or the default stockpile. Dropping the current item is reported so `BaseProduction` can prompt; upcoming slots are silent
   - `HurryProductionCalculator`: Prices hurrying — energy credits bought into the mineral stockpile. Owned by `GameDataContext` beside `TechCostCalculator` (it pairs `ProductionConfig_t` with the shared `LuaRuntime`), and borrowed by every `BaseManager`, so no base or faction has to carry a Lua handle of its own. `BaseManager::QuoteHurry` / `HurryProduction` are the only callers. Each kind in `production.json` `kinds.<kind>.hurry` carries its own formula, `mineral_threshold`, and `below_threshold_multiplier`; a kind with no hurry block cannot be hurried, which is how a mod switches the mechanic off for stockpiles, an item class, or the whole game. Partial payments are priced **marginally** — buying `k` minerals costs what it removes from the finish price — so paying in instalments always totals the quoted price
   - **Scrap** splits into three pieces so that pricing, routing, and paying each have one reason to change:
     - `ScrapConfig.h`: the config vocabulary — `ScrapKindConfig_t` (kind default), `ScrapOverride_t` (partial per-item override), `MergeScrapOverride` (layering rule), and the `IsScrapRefundStat` / `ScrapRefundNeedsBase` predicates. Depends on nothing but `StatId_t`, so `BuildingConfig_t` and `UnitComponentConfig_t` can carry a `scrap` override without pulling in the production subsystem. `ScrapConfigParser` reads both JSON shapes and is shared by the production, building, and unit-component parsers, so the three agree on what a scrap block may contain.
@@ -296,7 +299,7 @@ See `docs/architecture/diplomacy-system.md`.
   - Let `WorkerAssignmentManager` validate tiles against the workable set and auto-assign idle workers; one-worker-per-tile uniqueness is enforced structurally by `WorkedTileIndex::TryClaim`
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
-  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `OnProductionCompleted` and adds the building to the base when finished. `BaseProduction` banks leftovers first, then skips completion when the queued item is no longer constructable (the player is notified; the AI falls back to the default stockpile)
+  - Manage current production and an upcoming queue per base, accumulating minerals each turn until the current item's mineral cost is paid; emits `OnProductionCompleted` and adds the building to the base when finished. `BaseProduction` banks leftovers, completes if the current item is still constructable, then drops any item that is no longer constructable (prompt when current is dropped; upcoming slots are silent)
   - Calculate resource output based on worker assignments:
     - Workers/Talents work tiles (produce nutrients, energy, minerals)
     - Lab workers contribute to research

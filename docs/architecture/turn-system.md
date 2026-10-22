@@ -213,9 +213,11 @@ about a pending riot without being a yielding stage.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband. A native-life home unit
   standing on fungus is charged nothing.
-- **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
-  convert them through a stockpile. Then, if the item is still constructable, complete funded
-  items; otherwise notify the player (or switch an AI queue to the default) without completing.
+- **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the current item or
+  convert them through a stockpile. Then complete a funded constructable current item. Then
+  validate the queue and drop slots that are no longer constructable. A dropped current item
+  prompts the player (`ProductionPreemptedInteraction_t`); upcoming slots are silent. An empty
+  current takes the first survivor or the default stockpile.
   Ordered after `UnitSupport` and
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.

@@ -40,6 +40,7 @@ add_executable(effects-tests
     faction/ScrapBuildingTests.cpp
     faction/ScrapUnitTests.cpp
     faction/UnitProductionTests.cpp
+    faction/ProductionQueueTests.cpp
     faction/StockpileEnergyTests.cpp
     faction/GrowthTests.cpp
     faction/BuildingTechGateTests.cpp

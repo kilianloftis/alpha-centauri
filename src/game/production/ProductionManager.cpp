@@ -5,12 +5,12 @@
 #include "game/faction/Faction.h"
 #include "game/effects/EffectEnums.h"
 #include "game/units/Military.h"
+#include "game/production/StockpileConfig.h"
 #include "game/production/StockpileConversion.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/units/IDesign.h"
 
-#include <algorithm>
-#include <cmath>
+#include <optional>
 #include <stdexcept>
 
 namespace ac
@@ -22,11 +22,10 @@ ProductionManager::ProductionManager(const ProductionConfig_t& rConfig,
     : m_rConfig(rConfig)
     , m_defaultItemProvider(std::move(defaultItemProvider))
     , m_rBase(rBase)
-    , m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
     // A base starts on the default rather than idle. Completion is not yet listening, so this
-    // seeds the queue without clearing any confirmation state.
+    // seeds current production without clearing any confirmation state.
     ResetProduction_();
     OnProductionChanged.Connect([this]() { m_completion.NotifyProductionChanged(); });
 }
@@ -39,37 +38,77 @@ void ProductionManager::SetProduction(const IConstructable* pItem,
         ResetProduction_();
         return;
     }
-
     if (pItem == m_pCurrentItem)
     {
         return;
     }
-
     ApplyRetoolPenalty_(pItem, rBaseEffects);
+    const QueueEditPlan_t pull = PlanRemoveOnceOnlyQueueItem(m_queue, *pItem);
+    ApplyQueuePlan_(pull);
     m_pCurrentItem = pItem;
     OnProductionChanged.Emit();
 }
 
-void ProductionManager::RebindProductionItem(const IConstructable* pItem)
+void ProductionManager::Replace(int slot, const IConstructable& rItem)
 {
-    if (pItem == m_pCurrentItem)
+    const QueueEditPlan_t plan = PlanReplaceQueueItem(m_queue, slot, rItem);
+    ApplyQueuePlan_(plan);
+}
+
+void ProductionManager::Insert(int slot, const IConstructable& rItem)
+{
+    const QueueEditPlan_t plan = PlanInsertQueueItem(m_queue, slot, rItem);
+    ApplyQueuePlan_(plan);
+}
+
+void ProductionManager::Delete(int slot)
+{
+    const QueueEditPlan_t plan = PlanDeleteQueueItem(m_queue, slot);
+    ApplyQueuePlan_(plan);
+}
+
+std::optional<std::string> ProductionManager::ValidateQueue()
+{
+    const IConstructable* pOldCurrent = m_pCurrentItem;
+    std::optional<std::string> droppedCurrent;
+    if (m_pCurrentItem && !CanProduceItem(m_rBase, *m_pCurrentItem))
     {
-        return;
+        droppedCurrent = m_pCurrentItem->GetName();
+        m_pCurrentItem = nullptr;
     }
 
-    if (!pItem)
+    const std::vector<const IConstructable*> kept = ValidQueueItems(m_rBase, m_queue);
+    m_queue.Assign(kept);
+
+    if (!m_pCurrentItem)
     {
-        m_pTurnOriginalItem = nullptr;
-        ResetProduction_();
-        return;
+        if (!m_queue.Empty())
+        {
+            m_pCurrentItem = m_queue.Head();
+            m_queue.PopFront();
+        }
+        else
+        {
+            m_pCurrentItem = DefaultItem_();
+        }
     }
 
-    // Same logical item, new backing pointer: keep turn-original continuity for retool.
-    if (m_pTurnOriginalItem == m_pCurrentItem)
+    if (m_pCurrentItem != pOldCurrent)
     {
-        m_pTurnOriginalItem = pItem;
+        OnProductionChanged.Emit();
     }
-    m_pCurrentItem = pItem;
+    return droppedCurrent;
+}
+
+void ProductionManager::RebindCurrent(const IConstructable* pItem)
+{
+    m_pTurnOriginalItem = nullptr;
+    m_pCurrentItem = pItem ? pItem : DefaultItem_();
+}
+
+void ProductionManager::RebindQueue(std::vector<const IConstructable*> items)
+{
+    m_queue.Assign(std::move(items));
 }
 
 void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem,
@@ -79,6 +118,24 @@ void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem,
     const bool bReturning = pNewItem == m_pTurnOriginalItem;
     m_mineralStockpile -= RetoolForfeit(m_mineralStockpile, bHasTurnOriginal, bReturning,
                                         m_rConfig, rBaseEffects);
+}
+
+void ProductionManager::ApplyQueuePlan_(const QueueEditPlan_t& rPlan)
+{
+    if (rPlan.action != QueueEditAction_t::Apply)
+    {
+        throw std::invalid_argument("ProductionManager: queue edit refused");
+    }
+    if (rPlan.items == m_queue.Items())
+    {
+        return;
+    }
+    m_queue.Assign(rPlan.items);
+}
+
+const std::vector<const IConstructable*>& ProductionManager::GetQueue() const
+{
+    return m_queue.Items();
 }
 
 const IConstructable* ProductionManager::GetCurrentProduction() const
@@ -111,7 +168,7 @@ void ProductionManager::BankProduction(int minerals)
 
     m_mineralStockpile += minerals;
 
-    // Whatever is queued once leftover minerals are claimed is what the player sees when
+    // Whatever is current once leftover minerals are claimed is what the player sees when
     // PlayerActions hands over, so it is the item a retool this turn is measured against.
     m_pTurnOriginalItem = m_pCurrentItem;
 }
@@ -130,12 +187,12 @@ ProductionCompletionProbe_t ProductionManager::BuildCompletionProbe_() const
 ProductionApplyResult_t
 ProductionManager::FinishReady_(const ProductionCompletion::EvaluateResult_t& ready)
 {
-    if (!m_pCurrentItem)
+    const IConstructable* pItem = GetCurrentProduction();
+    if (!pItem)
     {
-        throw std::logic_error("ProductionManager::FinishReady_: nothing queued");
+        throw std::logic_error("ProductionManager::FinishReady_: nothing current");
     }
-    // Capture before CompleteProduction_ resets the queue.
-    const IConstructable& rItem = *m_pCurrentItem;
+    const IConstructable& rItem = *pItem;
     const std::string completedName = rItem.GetName();
     std::vector<PauseOnEventId_t> events =
         CollectProductionPauseGates(rItem, ready.isPrototype);
@@ -164,11 +221,12 @@ ProductionManager::ApplyCompletionOutcome_(const ProductionCompletion::EvaluateR
 
 ProductionApplyResult_t ProductionManager::ApplyProduction()
 {
-    if (!m_pCurrentItem)
+    const IConstructable* pItem = GetCurrentProduction();
+    if (!pItem)
     {
         return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
     }
-    if (m_pCurrentItem->IsStockpile())
+    if (pItem->IsStockpile())
     {
         return ConvertStockpile_();
     }
@@ -177,14 +235,15 @@ ProductionApplyResult_t ProductionManager::ApplyProduction()
 
 ProductionApplyResult_t ProductionManager::ConvertStockpile_()
 {
+    const IConstructable* pItem = GetCurrentProduction();
     const int toConvert = m_mineralStockpile;
     m_mineralStockpile = 0;
     if (toConvert > 0)
     {
-        ApplyStockpileConversionAtBase(
-            m_rBase, m_rBase.GetStockpileRegistry().Get(m_pCurrentItem->GetId()), toConvert);
+        const StockpileConfig_t& rStockpile = m_rBase.GetStockpileRegistry().Get(pItem->GetId());
+        ApplyStockpileConversionAtBase(m_rBase, rStockpile, toConvert);
     }
-    m_pTurnOriginalItem = m_pCurrentItem;
+    m_pTurnOriginalItem = pItem;
     return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
 }
 
@@ -196,26 +255,32 @@ ProductionApplyResult_t ProductionManager::TryCompleteReady(bool bNewTurn)
 
 bool ProductionManager::IsReadyToComplete() const
 {
-    return HasProduction() && !m_pCurrentItem->IsStockpile()
-        && m_mineralStockpile >= ItemMineralCost(m_rBase, *m_pCurrentItem);
+    const IConstructable* pItem = GetCurrentProduction();
+    if (!pItem || pItem->IsStockpile())
+    {
+        return false;
+    }
+    if (!CanProduceItem(m_rBase, *pItem))
+    {
+        return false;
+    }
+    return m_mineralStockpile >= ItemMineralCost(m_rBase, *pItem);
 }
 
 std::string ProductionManager::CompleteProduction_()
 {
-    if (!HasProduction())
+    const IConstructable* pItem = GetCurrentProduction();
+    if (!pItem)
     {
         return std::string();
     }
 
-    // Cost first: ResetProduction_ replaces the item.
-    const int cost = ItemMineralCost(m_rBase, *m_pCurrentItem);
+    const int cost = ItemMineralCost(m_rBase, *pItem);
     const int leftover = std::max(0, m_mineralStockpile - cost);
     m_mineralStockpile = OverflowCarried(leftover, m_rConfig);
 
-    std::string completed = m_pCurrentItem->GetId();
-    ResetProduction_();
-    // The default fallback is not a player choice, so there is no turn original until the
-    // next BankProduction with something queued.
+    std::string completed = pItem->GetId();
+    m_pCurrentItem = nullptr;
     m_pTurnOriginalItem = nullptr;
     OnProductionCompleted.Emit(completed);
     return completed;
@@ -236,7 +301,7 @@ bool ProductionManager::IsCurrentPrototype() const
     // Same test ClassifyCompletedItem uses. Resolving the design by id instead would scan
     // every design of the faction on every render-path cost query, and would mistake a
     // building for a unit if the two ever shared an id.
-    const IDesign* pDesign = dynamic_cast<const IDesign*>(m_pCurrentItem);
+    const IDesign* pDesign = dynamic_cast<const IDesign*>(GetCurrentProduction());
     return pDesign && IsPrototype(m_rBase.GetFaction(), *pDesign);
 }
 
@@ -253,10 +318,15 @@ void ProductionManager::DeferCompletion()
     m_completion.DeferCompletion();
 }
 
+const IConstructable* ProductionManager::DefaultItem_() const
+{
+    return m_defaultItemProvider ? m_defaultItemProvider() : nullptr;
+}
+
 void ProductionManager::ResetProduction_()
 {
-    const IConstructable* pDefault = m_defaultItemProvider ? m_defaultItemProvider() : nullptr;
-    if (pDefault == m_pCurrentItem)
+    const IConstructable* pDefault = DefaultItem_();
+    if (m_pCurrentItem == pDefault)
     {
         return;
     }

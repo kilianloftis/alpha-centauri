@@ -5,9 +5,13 @@
 #include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionCompletion.h"
 #include "game/production/ProductionConfigParser.h"
+#include "game/production/ProductionQueue.h"
+#include "game/production/ProductionQueueRules.h"
 #include "lib/Signal.h"
 #include <functional>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -15,7 +19,8 @@ namespace ac
 class BaseManager;
 
 // ProductionManager is the API surface for the production component.
-// A base can build one item at a time (building, unit design, or stockpile — all IConstructable).
+// Current production and the upcoming queue are separate: SetProduction changes the
+// current item (and may retool); Replace / Insert / Delete edit only the queue.
 class ProductionManager
 {
 public:
@@ -25,29 +30,39 @@ public:
     //
     // defaultItemProvider answers "what should this base build when nothing is chosen?" —
     // the first available stockpile, or nullptr when a mod ships none. It is consulted
-    // whenever the queue would otherwise become empty (construction, completion, clearing),
-    // which is what makes "a base is never idle while a stockpile is available" an invariant
-    // of this class rather than a fix-up its owner applies after the fact. Selecting the
-    // default never charges the retool penalty: the player did not choose it.
+    // whenever current production would otherwise be empty (construction, completion,
+    // clearing), which is what makes "a base is never idle while a stockpile is available"
+    // an invariant of this class rather than a fix-up its owner applies after the fact.
+    // Selecting the default never charges the retool penalty: the player did not choose it.
     ProductionManager(const ProductionConfig_t& rConfig,
                       std::function<const IConstructable*()> defaultItemProvider,
                       BaseManager& rBase);
     ~ProductionManager() = default;
 
-    // Set the item to produce; nullptr resets to the default item (see the constructor), not
-    // to an empty queue — a base only goes idle when no default exists. Setting the item
-    // already queued is a no-op and does not re-announce a change. rBaseEffects is required
-    // and scales the retool forfeit via RetoolPenaltyScale (empty → seed 1.0). Callers with
-    // a live base should pass BaseManager::GetBaseEffects() so Skunkworks and similar apply.
+    // Set the item to produce; nullptr resets to the default item (see the constructor).
+    // The upcoming queue is left as-is. Setting the item already current is a no-op. A
+    // once-only building already on the queue is pulled off it. rBaseEffects scales the
+    // retool forfeit via RetoolPenaltyScale.
     void SetProduction(const IConstructable* pItem, const BaseEffects_t& rBaseEffects);
 
-    // Replace the queued constructable pointer without retooling. Used when the logical item
-    // is unchanged but the backing object moved (base ownership transfer re-homing a unit
-    // design onto the new owner's Military), or to drop a queue that can no longer resolve
-    // (nullptr — falls back to the default item, mineral stockpile kept, turn original
-    // cleared). Compares the outgoing pointer without dereferencing it, so the caller may
-    // pass nullptr for an item that has already been destroyed.
-    void RebindProductionItem(const IConstructable* pItem);
+    void Replace(int slot, const IConstructable& rItem);
+    void Insert(int slot, const IConstructable& rItem);
+    void Delete(int slot);
+
+    // Drop queue items that ValidQueueItems rejects. An unconstructable current item is
+    // cleared and its name is returned so the stage can prompt. An empty current then takes
+    // the first remaining queue item, or the default stockpile. No retool.
+    std::optional<std::string> ValidateQueue();
+
+    // Replace current (nullptr → default) without retooling. Used on ownership transfer
+    // after the item is re-homed or dropped.
+    void RebindCurrent(const IConstructable* pItem);
+
+    // Replace the upcoming list without retooling. Used on ownership transfer after each
+    // slot is re-homed or dropped.
+    void RebindQueue(std::vector<const IConstructable*> items);
+
+    const std::vector<const IConstructable*>& GetQueue() const;
 
     // The item currently being produced, or nullptr if none.
     const IConstructable* GetCurrentProduction() const;
@@ -60,26 +75,27 @@ public:
     void SetMineralStockpile(int amount);
 
     // Add minerals to the stockpile without completing. Also stamps m_pTurnOriginalItem from
-    // the item then queued (or clears it when empty). Until that stamp exists, SetProduction
+    // the item then current (or clears it when empty). Until that stamp exists, SetProduction
     // does not retool — there is no "original" to switch away from (fresh bases, including a
-    // founding mineral bank, stay free until the first BankProduction with something queued).
+    // founding mineral bank, stay free until the first BankProduction with something current).
     void BankProduction(int minerals);
 
-    // After leftovers are banked: convert if the queue is a stockpile, otherwise leave the
-    // minerals on the current item. Completion is a separate step (TryCompleteReady).
+    // After leftovers are banked: convert if the current item is a stockpile, otherwise leave
+    // the minerals on it. Completion is a separate step (TryCompleteReady).
     ProductionApplyResult_t ApplyProduction();
 
-    // Finish the queued item if cost is already met, without banking new minerals.
+    // Finish the current item if cost is already met, without banking new minerals.
     // bNewTurn clears last turn's deferral (turn tick); mid-turn hurry / sibling re-eval pass
     // false so a deferral still blocks.
     ProductionApplyResult_t TryCompleteReady(bool bNewTurn = false);
 
-    // True when something is queued, it can complete, and the stockpile meets its effective cost.
+    // True when something is current, it is still constructable, it can complete, and the
+    // stockpile meets its effective cost.
     bool IsReadyToComplete() const;
 
     bool HasPendingConfirmation() const;
     bool IsCompletionBlocked() const;
-    // True when the queued item is a unit design the faction has not yet prototyped.
+    // True when the current item is a unit design the faction has not yet prototyped.
     bool IsCurrentPrototype() const;
     std::string CompletePending();
     void DeferCompletion();
@@ -93,31 +109,34 @@ public:
 private:
     ProductionApplyResult_t ConvertStockpile_();
     ProductionCompletionProbe_t BuildCompletionProbe_() const;
-    // Spend the queue after ReadyToFinish / AcceptPending and pack pause gates + name for the
-    // player (BaseProduction / ProductionIdleInteraction).
+    // Spend the current item after ReadyToFinish / AcceptPending and pack pause gates + name
+    // for the player (BaseProduction / ProductionIdleInteraction).
     ProductionApplyResult_t FinishReady_(const ProductionCompletion::EvaluateResult_t& ready);
     ProductionApplyResult_t ApplyCompletionOutcome_(
         const ProductionCompletion::EvaluateResult_t& outcome);
 
     // Ungated spend: only FinishReady_ after Completion returns ReadyToFinish. Game code must
     // go through TryCompleteReady / CompletePending so abandon / riot / deferral gates apply.
-    // Completing also clears the turn original: the default fallback is not a player choice.
+    // Clears the finished item and holds overflow minerals; does not touch the queue.
     std::string CompleteProduction_();
 
     // Charging the penalty: what this base was producing when the player got control this turn.
-    // Null means no turn original yet (new base / BankProduction with nothing queued) —
+    // Null means no turn original yet (new base / BankProduction with nothing current) —
     // retool does not apply until BankProduction stamps a non-null original.
     const IConstructable* m_pTurnOriginalItem = nullptr;
+    const IConstructable* m_pCurrentItem = nullptr;
     const ProductionConfig_t& m_rConfig;
     std::function<const IConstructable*()> m_defaultItemProvider;
     BaseManager& m_rBase;
     ProductionCompletion m_completion;
-    const IConstructable* m_pCurrentItem = nullptr;
+    ProductionQueue m_queue;
     int m_mineralStockpile = 0;
 
-    // Queue the default item (or leave the queue empty when there is none), announcing the
-    // change if it moved. Never charges retool: the player did not pick this.
+    const IConstructable* DefaultItem_() const;
+    // Set current to the default item (or none when there is none), announcing the change if
+    // it moved. The queue is left as-is. Never charges retool: the player did not pick this.
     void ResetProduction_();
+    void ApplyQueuePlan_(const QueueEditPlan_t& rPlan);
     void ApplyRetoolPenalty_(const IConstructable* pNewItem,
                              const BaseEffects_t& rBaseEffects);
 };

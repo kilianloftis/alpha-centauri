@@ -13,8 +13,7 @@ namespace ac
 enum class ProductionApplyKind_t
 {
     Idle,          // nothing queued and no available stockpile fallback
-    // InProgress: cost not yet met, a stockpile convert path, riot, deferred this turn,
-    // or a queued item that is no longer constructable.
+    // InProgress: cost not yet met, a stockpile convert path, riot, or deferred this turn.
     InProgress,
 
     Completed,     // item finished; completedId / completedEvents / completedName set
@@ -24,7 +23,7 @@ enum class ProductionApplyKind_t
     AwaitingConfirmation,
 };
 
-// The queued item is no longer constructable. Minerals have already been banked onto it.
+// Current production is no longer constructable. Minerals have already been banked onto it.
 struct ProductionPreempt_t
 {
     std::string droppedName;
@@ -37,6 +36,7 @@ struct ProductionApplyResult_t
     // Set when kind is Completed: every applicable pause-on-event gate (OR-matched in the UI).
     std::vector<PauseOnEventId_t> completedEvents;
     std::string completedName;
+    // Set when ValidateQueue dropped the current item. The upcoming queue is stripped silently.
     std::optional<ProductionPreempt_t> preempted;
 };
 

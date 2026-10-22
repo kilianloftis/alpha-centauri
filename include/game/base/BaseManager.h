@@ -63,8 +63,9 @@ struct BaseSnapshot_t
     Tile* pTile = nullptr;
     int populationSize = 0;
     std::vector<std::string> buildingIds;
-    // Empty when nothing is queued (no stockpile-energy fallback configured).
-    std::string productionItemId;
+    // Current production first, then the upcoming queue. Empty when nothing is current
+    // and no fallback stockpile is configured.
+    std::vector<std::string> productionItemIds;
     int mineralStockpile = 0;  // progress toward current production
     int nutrientStockpile = 0; // growth bank
     // Mood state (riot / golden age). Previously not persisted — riots reset on save/load.
@@ -191,15 +192,15 @@ public:
     const ProductionManager& GetProduction() const;
 
     // Bank this turn's leftover minerals into production and convert if the queue is a
-    // stockpile. Does not complete a build — BaseProduction checks that the item is still
-    // constructable, then calls TryCompleteReady. Under DisableProduction returns
-    // InProgress without consuming the mineral bank.
+    // stockpile. Does not complete a build — BaseProduction calls TryCompleteReady, then
+    // validates the queue. Under DisableProduction returns InProgress without consuming
+    // the mineral bank.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
     // touching this turn's mineral bank. Used when a sibling prototype finishes and this
     // queue's surcharge drops, and after hurry. Honours the same confirmation gate. An
-    // unconstructable queue is left in place and not completed.
+    // unconstructable head is not completed.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
     // True when the DisableProduction RuleFlag is in force at this base. That is riot, and only

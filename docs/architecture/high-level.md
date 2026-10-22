@@ -360,7 +360,7 @@ Every file and class is one kind. The kind says what the code may read, change a
 **Kinds.**
 
 - **State owners** hold save data and keep it valid:
-  - managers (`ProductionManager`), ledgers (`DiplomacyLedger`), entities (`Unit`, `Tile`), indexes, trackers and latches
+  - managers (`ProductionManager`), ledgers (`DiplomacyLedger`), entities (`Unit`, `Tile`, `ProductionQueue`), indexes, trackers and latches
   - change only the state they own and their own parts
   - never take or hold `GameState`
   - never draw from an RNG
@@ -431,7 +431,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `natives/`: native life designs, registry and native-life levels
 - `population/`: pops and pop types, growth, drones, composition, police, mood latches, assimilation
 - `probes/`: probe actions, targets, mind control
-- `production/`: production, costs, completion, hurry, scrap, stockpiles, the constructable interface
+- `production/`: production, the queue (`ProductionQueue` / `ProductionQueueRules`), costs, completion, hurry, scrap, stockpiles, the constructable interface
 - `research/`: techs, tech cost, research progress and selection
 - `social-engineering/`: policies, social ratings, a faction's choices
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage

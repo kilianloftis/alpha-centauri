@@ -664,7 +664,8 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     pBase->GetProduction().SetMineralStockpile(12);
 
     const BaseSnapshot_t snapshot = pBase->CaptureSnapshot();
-    CHECK(snapshot.productionItemId == "Stockpile_Energy");
+    REQUIRE(snapshot.productionItemIds.size() == 1);
+    CHECK(snapshot.productionItemIds.front() == "Stockpile_Energy");
 
     const std::optional<BaseSnapshot_t> extracted = faction.ExtractBase(pBase->GetBaseId());
     REQUIRE(extracted.has_value());

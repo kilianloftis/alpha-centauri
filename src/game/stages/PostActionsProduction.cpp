@@ -1,6 +1,7 @@
 #include "game/stages/PostActionsProduction.h"
 
 #include "game/base/BaseManager.h"
+#include "game/production/ProductionManager.h"
 #include "game/stages/TurnStageRegistrar.h"
 
 #include <utility>
@@ -17,7 +18,7 @@ PostActionsProduction::PostActionsProduction(HookContext hookContext)
 
 ProductionApplyResult_t PostActionsProduction::TickBase_(BaseManager& rBase)
 {
-    return TryCompleteIfConstructable_(rBase);
+    return TryCompleteAndValidate_(rBase, /*bNewTurn=*/false);
 }
 
 } // namespace ac

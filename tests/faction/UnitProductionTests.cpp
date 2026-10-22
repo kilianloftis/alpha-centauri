@@ -155,7 +155,9 @@ void CheckQueuedStockpileEnergy_(const BaseManager& rBase, UnitProductionGame_& 
 ProductionApplyResult_t ApplyAndComplete_(BaseManager& rBase)
 {
     rBase.ApplyProduction();
-    return rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true);
+    const ProductionApplyResult_t result = rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true);
+    rBase.GetProduction().ValidateQueue();
+    return result;
 }
 
 } // namespace
@@ -187,13 +189,12 @@ TEST_CASE("ApplyProduction banks minerals onto an already-built facility without
 
     const ProductionApplyResult_t applied = base.ApplyProduction();
     CHECK(applied.kind == ProductionApplyKind_t::InProgress);
-    CHECK_FALSE(applied.preempted);
     CHECK(base.GetProduction().GetCurrentProduction() == &rCenter);
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
 }
 
-TEST_CASE("BaseProduction enqueues a pre-empt prompt and leaves the queue on the dropped item",
-          "[production][BaseProduction][PlayerInteraction]")
+TEST_CASE("BaseProduction prompts when current production is no longer constructable",
+          "[production][BaseProduction]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(8, 8);
@@ -212,21 +213,15 @@ TEST_CASE("BaseProduction enqueues a pre-empt prompt and leaves the queue on the
     processor.Advance(game.fixtures.state);
 
     REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
-    {
-        const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
-            game.fixtures.state.GetPlayerInteractions().Front()->payload);
-        CHECK(rPreempted.baseId == base.GetBaseId());
-        CHECK(rPreempted.droppedItemName == rCenter.GetName());
-    }
-    CHECK(base.GetProduction().GetCurrentProduction() == &rCenter);
+    const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
+        game.fixtures.state.GetPlayerInteractions().Front()->payload);
+    CHECK(rPreempted.baseId == base.GetBaseId());
+    CHECK(rPreempted.droppedItemName == rCenter.GetName());
+    CHECK(base.GetProduction().GetCurrentProduction() == StockpileEnergyOf_(game));
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
-
-    game.fixtures.state.GetPlayerInteractions().CompleteFront();
-    processor.Advance(game.fixtures.state);
-    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 }
 
-TEST_CASE("BaseProduction AI pre-empts without yielding",
+TEST_CASE("BaseProduction AI strips an unconstructable head without yielding",
           "[production][BaseProduction]")
 {
     UnitProductionGame_ game;
@@ -243,8 +238,8 @@ TEST_CASE("BaseProduction AI pre-empts without yielding",
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
 }
 
-TEST_CASE("BaseProduction pre-empts a sibling still queued on a just-finished secret project",
-          "[production][BaseProduction][secret-project][PlayerInteraction]")
+TEST_CASE("BaseProduction strips a sibling still queued on a just-finished secret project",
+          "[production][BaseProduction][secret-project]")
 {
     UnitProductionGame_ game;
     BaseManager& winner = game.MakeBase(8, 4);
@@ -277,16 +272,16 @@ TEST_CASE("BaseProduction pre-empts a sibling still queued on a just-finished se
     game.fixtures.state.GetPlayerInteractions().CompleteFront();
     processor.Advance(game.fixtures.state);
 
+    const bool bWinnerHas = winner.GetBuildingManager().HasBuilding("test_secret_project");
+    const bool bLoserHas = loser.GetBuildingManager().HasBuilding("test_secret_project");
+    CHECK((bWinnerHas != bLoserHas));
+    const BaseManager& rStripped = bWinnerHas ? loser : winner;
     REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
-    {
-        const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
-            game.fixtures.state.GetPlayerInteractions().Front()->payload);
-        CHECK((rPreempted.baseId == winner.GetBaseId() || rPreempted.baseId == loser.GetBaseId()));
-        CHECK(rPreempted.droppedItemName == rProject.GetName());
-        const BaseManager* pPreemptedBase = rPreempted.baseId == winner.GetBaseId() ? &winner : &loser;
-        CHECK_FALSE(pPreemptedBase->GetBuildingManager().HasBuilding("test_secret_project"));
-        CHECK(pPreemptedBase->GetProduction().GetCurrentProduction() == &rProject);
-    }
+    const auto& rPreempted = std::get<ProductionPreemptedInteraction_t>(
+        game.fixtures.state.GetPlayerInteractions().Front()->payload);
+    CHECK(rPreempted.baseId == rStripped.GetBaseId());
+    CHECK(rPreempted.droppedItemName == rProject.GetName());
+    CHECK(rStripped.GetProduction().GetCurrentProduction() == StockpileEnergyOf_(game));
     CHECK(game.pFaction->CountBuildings("test_secret_project") == 1);
 }
 
@@ -377,6 +372,7 @@ TEST_CASE("CompletePendingProduction completes the unit and empties the base",
     REQUIRE(base.HasPendingProductionConfirmation());
 
     CHECK(base.CompletePendingProduction() == rPod.GetId());
+    base.GetProduction().ValidateQueue();
     CHECK_FALSE(base.HasPendingProductionConfirmation());
     CHECK(base.GetPopulation().GetSize() == 0);
     CHECK(base.IsRazed());
@@ -719,7 +715,8 @@ TEST_CASE("CreateBaseFromSnapshot restores a queued unit design", "[production][
     base.GetProduction().SetMineralStockpile(7);
 
     const BaseSnapshot_t snapshot = base.CaptureSnapshot();
-    CHECK(snapshot.productionItemId == rDesign.GetId());
+    REQUIRE(snapshot.productionItemIds.size() == 1);
+    CHECK(snapshot.productionItemIds.front() == rDesign.GetId());
     CHECK(snapshot.mineralStockpile == 7);
 
     REQUIRE(game.pFaction->ExtractBase(base.GetBaseId()).has_value());
@@ -1063,6 +1060,7 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
     CHECK(first.GetMineralCost() == standardCost);
     CHECK(first.GetProduction().HasProduction());
     CHECK(first.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
+    first.GetProduction().ValidateQueue();
     CheckQueuedStockpileEnergy_(first, game);
 }
 

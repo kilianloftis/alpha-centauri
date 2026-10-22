@@ -81,7 +81,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 
 - Production would empty base → `ProductionAbandonInteraction_t`
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
-- Queued item no longer constructable → `ProductionPreemptedInteraction_t` (after this turn's minerals have already been banked onto it)
+- Current production no longer constructable → `ProductionPreemptedInteraction_t` (after this turn's minerals have already been banked onto it)
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
 - A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct` and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)

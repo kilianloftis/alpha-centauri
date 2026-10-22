@@ -176,7 +176,7 @@ TEST_CASE("Prototype combat still pauses when only combat-unit-built is enabled"
     CHECK(harness.pWorldView->HasModalElement());
 }
 
-TEST_CASE("A pre-empted queue presents Continue and Zoom to base control",
+TEST_CASE("A pre-empted current item presents Continue and Zoom to base control",
           "[ui][InteractionPresenter][PlayerInteraction]")
 {
     PresenterHarness_ harness;

@@ -3,12 +3,10 @@
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/production/IConstructable.h"
-#include "game/production/ProductionRules.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
-#include "game/map/Tile.h"
 #include "game/stages/TurnStageRegistrar.h"
 
 #include <iostream>
@@ -28,33 +26,19 @@ BaseProduction::BaseProduction(HookContext hookContext)
 ProductionApplyResult_t BaseProduction::TickBase_(BaseManager& rBase)
 {
     rBase.ApplyProduction();
-    if (std::optional<ProductionPreempt_t> dropped = UnconstructableQueue_(rBase))
-    {
-        ProductionApplyResult_t result{ProductionApplyKind_t::InProgress, {}};
-        result.preempted = std::move(dropped);
-        return result;
-    }
+    return TryCompleteAndValidate_(rBase, /*bNewTurn=*/true);
+}
+
+ProductionApplyResult_t BaseProduction::TryCompleteAndValidate_(BaseManager& rBase, bool bNewTurn)
+{
     ProductionManager& rProduction = rBase.GetProduction();
-    return rProduction.TryCompleteReady(/*bNewTurn=*/true);
-}
-
-std::optional<ProductionPreempt_t> BaseProduction::UnconstructableQueue_(const BaseManager& rBase)
-{
-    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
-    if (!pItem || CanProduceItem(rBase, *pItem))
+    ProductionApplyResult_t result = rProduction.TryCompleteReady(bNewTurn);
+    std::optional<std::string> droppedCurrent = rProduction.ValidateQueue();
+    if (droppedCurrent)
     {
-        return std::nullopt;
+        result.preempted = ProductionPreempt_t{std::move(*droppedCurrent)};
     }
-    return ProductionPreempt_t{pItem->GetName()};
-}
-
-ProductionApplyResult_t BaseProduction::TryCompleteIfConstructable_(BaseManager& rBase)
-{
-    if (UnconstructableQueue_(rBase))
-    {
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
-    }
-    return rBase.TryCompleteReadyProduction();
+    return result;
 }
 
 void BaseProduction::OnResetPassState_()
@@ -73,7 +57,6 @@ StageResult_t BaseProduction::HandlePreempted_(GameState& rGameState, Faction& r
 {
     if (!rFaction.IsPlayerControlled())
     {
-        rBase.GetProduction().RebindProductionItem(nullptr);
         return StageResult_t::Continue;
     }
 
@@ -113,8 +96,6 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
         return StageResult_t::Continue;
     }
 
-    // Production finished — Stockpile Energy is already queued as the fallback. Still offer
-    // Continue / Zoom so the player can pick the next real item.
     EnqueueForPlayer(
         rGameState,
         ProductionIdleInteraction_t{
@@ -201,8 +182,9 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
                 continue;
             }
 
-            const ProductionApplyResult_t result = TryCompleteIfConstructable_(rBase);
-            if (result.kind != ProductionApplyKind_t::Completed
+            const ProductionApplyResult_t result =
+                TryCompleteAndValidate_(rBase, /*bNewTurn=*/false);
+            if (!result.preempted && result.kind != ProductionApplyKind_t::Completed
                 && result.kind != ProductionApplyKind_t::AwaitingConfirmation)
             {
                 continue;
