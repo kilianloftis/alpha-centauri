@@ -32,9 +32,7 @@ struct StepEvaluation_t
     std::vector<Unit*> blockingUnits;
 };
 
-// Pure step / pathfinding evaluation over bound world state. Does not mutate units or
-// reveal — those are UnitOrderExecutor::TryStep / TryAttack concerns. Does not consult
-// remaining move fragments; callers that gate on moves do so separately.
+// Step and path evaluation over world state. Mutates nothing and ignores remaining moves.
 class StepEvaluator
 {
 public:
@@ -43,9 +41,7 @@ public:
     // True if rTile is in hostile ZOC for rMover (Chebyshev-1 around a qualifying foreign unit).
     bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const;
 
-    // True when moving from rFrom to rTo would illegally transit through hostile ZOC
-    // (ZOC -> ZOC). Exempt when rTo holds a friendly unit or base (SMAC). Attack is not
-    // a move — see UnitOrderExecutor::TryAttack.
+    // Moving ZOC to ZOC, unless rTo holds a friendly unit or base (SMAC). Attacking is not a move.
     bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
 
@@ -57,19 +53,16 @@ public:
     // True when EvaluateStep reports Legal.
     bool CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
-    // Path-planning edge check using only information known to rMover's faction: explored
-    // terrain (shroud assumes domain-passable) and units visible to that faction. Concealed /
-    // fogged hostiles and their ZOC are ignored until revealed.
+    // Uses only what rMover's faction knows: shroud passes, and unseen hostiles and their ZOC are
+    // ignored.
     StepEvaluation_t EvaluatePlannedStep(const Unit& rMover, const Tile& rFrom,
                                          const Tile& rTo) const;
 
     // True when EvaluatePlannedStep reports Legal.
     bool CanPlanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
-    // Whether rMover may enter rTile under faction knowledge (shroud assumes domain-
-    // compatible). Includes land boarding / InteractionOverride sea-base exceptions. Used by
-    // Pathfinder to reject known domain-mismatched goals without flooding the reachable
-    // land/sea component.
+    // Whether rMover may enter rTile as far as its faction knows, so the planner can reject a
+    // domain-mismatched goal without flooding.
     bool CanPlanEnterTerrain(const Unit& rMover, const Tile& rTile) const;
 
     // Whether rTile lies in territory rMover's faction may not enter under its current

@@ -7,9 +7,7 @@ namespace ac
 
 class Tile;
 
-// Per-faction permanent fog-of-war memory: tiles this faction has ever seen.
-// Lives on Faction (not Tile). Grows monotonically as vision reveals tiles;
-// never cleared except on Reset (new game / resize).
+// Tiles this faction has ever seen; only grows, until Reset.
 class FactionExploredMap
 {
 public:

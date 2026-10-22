@@ -5,9 +5,8 @@ namespace ac
 
 class Unit;
 
-// True when rUnit can refuel here: a territory pad that TileHarbors its domain, or embarked
-// on a carrier that carries its domain. Co-located but unembarked air over a full deck does
-// not count.
+// A territory pad that harbors its domain, or a carrier it is embarked on; hovering over a
+// full deck does not count.
 bool IsRefuelSite(const Unit& rUnit);
 
 // HP a unit loses for ending a turn at 0 fuel: DamageFromOutOfFuel percent of its max HP.

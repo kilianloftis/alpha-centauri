@@ -12,9 +12,8 @@ namespace ac
 class Tile;
 struct ImprovementConfig_t;
 
-// Per-faction memory of what each tile's occupants looked like when the faction last saw it:
-// the terrain and improvement lists, copied by Record. Lives on Faction next to the explored
-// map. Fogged tiles draw from here rather than from the live tile.
+// What each tile's occupants looked like when the faction last saw it; fogged tiles draw from
+// here.
 class FactionTileMemory
 {
 public:

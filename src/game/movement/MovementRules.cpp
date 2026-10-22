@@ -49,9 +49,8 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     {
         return false;
     }
-    // The subject is the actor: it is the unit whose move is being gated, and overrides
-    // resolve from the acting unit. That is what lets a unit declare "nothing holds me"
-    // (Cloaking Device, Probe Team) as a zoc deny on itself — non-default where stock allows.
+    // Overrides resolve from the actor, so a unit can declare "nothing holds me" (Cloaking Device,
+    // Probe Team) as a zoc deny on itself.
     const GameState& rGame = CurrentGameState();
     const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
     InteractionQuery_t q;
@@ -98,18 +97,16 @@ bool CanPhysicallyEnterTile(const Unit& rMover, const Tile& rTile)
     {
         return true;
     }
-    // Port rule: a ship may berth where the tile harbors sea even though the enter grid
-    // refuses its land tile. "Coastal" needs no test of its own — movement is step by step
-    // between adjacent tiles, so a ship can only arrive from water it already occupies.
+    // A ship may berth where the tile harbors sea. Moves are single steps, so it can only arrive
+    // from adjacent water.
     if (rMover.GetDomain() == UnitDomain_t::Sea && !rTile.IsWater()
         && TileHarbors(rTile, UnitDomain_t::Sea, rMover.GetFaction().GetFactionId(),
                        rWorldMap.GetTerritory()))
     {
         return true;
     }
-    // Water is reached only by boarding. A land unit gets to its own sea base by transport
-    // too, so TileHarbors is deliberately not consulted here — it governs only whether a
-    // unit already there may stay (CanHoldTileWithoutCarrier / SurvivesCarrierLoss).
+    // Water is reached only by boarding, even for a land unit's own sea base; TileHarbors governs
+    // only whether a unit there may stay.
     return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
         && FindBoardableTransport(rMover, rTile) != nullptr;
 }

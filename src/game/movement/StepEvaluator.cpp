@@ -217,10 +217,8 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
         return result;
     }
 
-    // Deliberately not UnitPositionIndex::CanPlaceUnit: that answers "is the tile occupied",
-    // while the planner needs "which units block *this mover, given what it knows*" —
-    // UnitCountsForPlanner_ filters by visibility so a hidden occupant does not leak into path
-    // planning. GetUnitsOnTile is occupants-only; only the knowledge filter is extra.
+    // Not CanPlaceUnit: the planner needs the units that block this mover as far as it knows, so
+    // a hidden occupant does not leak into planning.
     if (m_rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
     {
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))

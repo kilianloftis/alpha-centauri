@@ -55,9 +55,8 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
     const int tileCount = static_cast<int>(m_rWorldMap.GetTiles().size());
     constexpr int k_inf = std::numeric_limits<int>::max();
 
-    // Cost is (forbidden-territory tiles entered, move fragments), compared in that order: a
-    // route through territory the mover may not enter is taken only when no route avoids it,
-    // and the step onto such a tile is what asks the player (BlockedByTerritory).
+    // (forbidden-territory tiles entered, fragments): a route into forbidden territory wins only
+    // when nothing avoids it.
     using Cost_t = std::pair<int, int>;
     const Cost_t k_unreached{k_inf, k_inf};
     std::vector<Cost_t> dist(static_cast<size_t>(tileCount), k_unreached);

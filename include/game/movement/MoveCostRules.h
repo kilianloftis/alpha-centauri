@@ -19,29 +19,16 @@ struct EntryTerms_t
     // the tightest matching move_cost MaxClamp (see MoveCostRules).
     int costFragments = 0;
 
-    // The full cost must be banked — possibly across turns — before the unit may enter
-    // (fungus). When false, any positive fragment balance admits the unit and the cost
-    // clamps to what remains (default terrain rule).
+    // The full cost must be banked, possibly over turns (fungus). Otherwise any positive balance
+    // admits the unit.
     bool bRequiresFullCost = false;
 
     // Entering zeroes the unit's remaining fragments regardless of what entry cost (fungus).
     bool bEndsTurn = false;
 };
 
-// Single home of the tile-entry movement rules. For a given unit, resolves a tile into
-// EntryTerms_t:
-//
-// Cost: the highest move_cost among the tile's terrain features and improvements. If
-// nothing defines a cost, defaultMoveCost applies. IgnoreDifficultTerrain caps non-fungus
-// feature costs at the default. That seed is passed to ResolveStatModifiers with the
-// matching move_cost MaxClamps from CollectTileEffects (Road, River, MagTube) and the
-// entering unit. The tightest clamp wins (MagTube 0 beats Road 1/3) and does not raise a
-// lower cost.
-//
-// Fungus entry (SMAC): unless a matching move_cost MaxClamp is in play, entering fungus
-// requires banking the full cost before the move and always ends the unit's turn. A
-// friendly occupant on the tile waives the banking requirement (immediate entry) but not
-// the forced end of turn.
+// The tile-entry movement rules: the highest feature move_cost, capped by the tightest
+// MaxClamp. Fungus is banked and ends the turn (docs/architecture/unit-movement-system.md).
 class MoveCostRules
 {
 public:
@@ -57,10 +44,8 @@ public:
         // consumers (UnitOrderExecutor) act on these directly.
         EntryTerms_t EntryTerms(const Tile& rTile) const;
 
-        // Edge weight for path planning, in fragments. Shrouded (unexplored) tiles use the
-        // default cost — the planner must not see rockiness / fungus / roads under shroud.
-        // End-turn entries are valued in whole turns of movement: banking takes
-        // ceil(cost / allotment) turns, immediate (friendly-occupant) entry exactly one.
+        // Planning cost in fragments. Shroud uses the default cost; end-turn entries count
+        // whole turns.
         int PlannedCostFragments(const Tile& rTile) const;
 
     private:

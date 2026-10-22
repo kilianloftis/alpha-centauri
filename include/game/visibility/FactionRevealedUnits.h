@@ -8,10 +8,8 @@
 namespace ac
 {
 
-// Per-faction contact memory: concealed enemy units this faction has bumped into
-// (occupied tile or ZOC block). Lives on Faction (not Unit), alongside
-// FactionExploredMap / FactionVisibleMap. Tracked by stable UnitId_t so entries
-// survive address reuse; Forget on destroy keeps the set bounded.
+// Concealed enemy units this faction has bumped into, by UnitId_t so entries survive address
+// reuse.
 class FactionRevealedUnits
 {
 public:

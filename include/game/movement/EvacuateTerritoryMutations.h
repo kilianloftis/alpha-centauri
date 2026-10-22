@@ -14,11 +14,8 @@ struct EvacuateTerritoryResult_t
     int unitsLeftInPlace = 0;
 };
 
-// Clear orders on every free or embarked unit of rGuest whose tile is owned by
-// hostTerritoryOwner, except covert units the host cannot identify. Relocate free units to the
-// nearest holdable own-territory tile (no move spend), sharing one destination search per
-// origin tile when stacks share a tile. Embarked cargo is towed when its carrier moves and is
-// not counted separately. Units with no legal destination stay put (orders still cleared).
+// Clears orders on rGuest's units in hostTerritoryOwner's territory (but covert ones the host
+// cannot identify) and moves free units to the nearest holdable own tile.
 EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(Faction& rGuest,
                                                      FactionId_t hostTerritoryOwner,
                                                      WorldMap& rWorldMap);
