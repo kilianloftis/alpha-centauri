@@ -23,7 +23,8 @@ unless a change touches it. A change that breaks one is not finished.
        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed);
    return static_cast<int>(std::lround(weight));
    ```
-   A chain of accessors (`rUnit.GetFaction().GetFactionId()`) reads left to right and is fine.
+   A chain of accessors (`rUnit.GetFaction().GetFactionId()`) reads left to right and is fine,
+   and so does a message built with `+`, even when its pieces are calls.
 2. **Comments say why, briefly.** Most comments are one line, some two. Put a short comment at
    the line it explains, not a block above the function. A comment that names a step is a
    function name waiting to happen. Never what the code does, and never a label a name already

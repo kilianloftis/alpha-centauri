@@ -141,7 +141,8 @@ left as it is.
   with one implementation that neither narrows its consumer's reach nor breaks a header cycle is
   flagged.
 - **Rule 7:** extract the steps of a long or deeply nested function into named functions in the
-  same file, including the steps commit A noted. A function over 100 lines, or one whose steps
+  same file, including the steps commit A noted. Extracting one step is not the end: what is
+  left of the function only calls steps, and the steps it calls each do one level of work. A function over 100 lines, or one whose steps
   share so much state that splitting it needs a new struct, is flagged.
 - **Single responsibility:** classes are not split in this pass. A class that shows the signals
   in the SRP section of `refactor-flags.md` gets an entry there.
