@@ -17,14 +17,11 @@ namespace ac
 
 struct HurryKindConfig_t
 {
-    // Lua expression returning a whole credit cost. Variable `minerals` is the billed count
-    // (remaining, with below-threshold minerals counted extra). Also bound: remaining,
-    // stockpile, mineral_threshold, below_threshold_multiplier.
+    // Lua returning a whole credit cost from `minerals` (billed, with the below-threshold extra)
+    // and remaining, stockpile, mineral_threshold, below_threshold_multiplier.
     std::string formula;
-    // A base whose stockpile has not reached this many minerals is billed extra for the ones
-    // that would take it there. Per-kind so a facility and a unit need not share a band.
-    // Deliberately independent of retoolPenaltyThreshold.
-    // TODO: the SMAC rule this stands in for is unverified — confirm the real mineral_threshold.
+    // Below this many minerals, a base pays extra for the shortfall; per kind.
+    // TODO: confirm SMAC's real mineral_threshold.
     int mineralThreshold = 10;
     // How many times each of those below-threshold minerals is billed. 1 disables the extra.
     int belowThresholdMultiplier = 2;
@@ -40,22 +37,16 @@ struct ProductionKindConfig_t
 
 struct ProductionConfig_t
 {
-    // Retooling: switching production away from what the base started the turn on forfeits a
-    // percentage of the minerals already spent, but only once more than this many have
-    // accumulated. Switching *back* to the turn's original item is free; switching to a third
-    // item pays again.
+    // Switching away from the turn's original item forfeits a percentage once more than this
+    // has accumulated. Switching back is free.
     int retoolPenaltyThreshold = 10;
     // Percent of the stockpile forfeited on a retool (SMAC is 50). Integer math: stockpile *
     // percent / 100, rounded down so the remainder favours the player.
     int retoolPenaltyPercent = 50;
-    // Extra mineral cost for a prototype unit (first fielding of any component on the
-    // design). Applied once even if several components are new. 50 means 50% more; no upper
-    // bound, so a mod can make prototypes arbitrarily expensive.
+    // Prototype surcharge, applied once however many components are new; no upper bound.
     int prototypeSurchargePercent = 50;
-    // Per constructable kind: hurry and/or default_scrap. A kind with no entry cannot be
-    // hurried or scrapped. An empty kinds object turns both mechanics off. Stockpile is
-    // rejected (those items never complete). Secret-project scrap is rejected (destruction
-    // tombstones them). Unit components and buildings may partially override default_scrap.
+    // Per kind: hurry and default_scrap; a kind without an entry cannot use them. Stockpile and
+    // secret-project scrap are rejected.
     std::unordered_map<ConstructableKind_t, ProductionKindConfig_t> kinds;
     // Continuous effects merged into every faction pool (source id "production").
     std::vector<EffectConfig_t> effects;
@@ -69,10 +60,7 @@ public:
     ProductionConfigParser() = default;
     ~ProductionConfigParser() = default;
 
-    // Load production.json. Throws if the file cannot be opened or parsed, if threshold or
-    // percent is negative, if retool percent exceeds 100, or if the kinds block is missing
-    // or a kind/hurry/default_scrap entry is malformed. Formula strings are not evaluated
-    // here: a broken one throws where it is used, as tech-cost and pop-composition formulas do.
+    // Throws on bad values or a malformed kinds block. Formulas throw where they are used.
     ProductionConfig_t ParseConfig(const std::string& configPath);
 };
 

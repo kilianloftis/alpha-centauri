@@ -5,9 +5,8 @@
 namespace ac
 {
 
-// Tunables for planetary commerce income. Loaded from config/commerce.json.
-// The pair income expression is a single Lua formula; CommerceRate scales the result in
-// C++ afterward (like ScrapRefund), then CommerceEnergyBonus is added.
+// config/commerce.json: one Lua formula per pair, scaled by CommerceRate, plus
+// CommerceEnergyBonus.
 struct CommerceConfig_t
 {
     // Exposed to formula as globals.

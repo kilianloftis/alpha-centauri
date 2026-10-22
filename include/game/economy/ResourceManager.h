@@ -21,10 +21,8 @@ class SocialRatingRegistry;
 class Tile;
 class TileEffectsContext;
 
-// ResourceManager calculates resource production for a base and accumulates per-turn
-// stockpiles. It is owned by BaseManager. The worked yield, inefficiency and the econ / labs /
-// psych split are EconomyRules' decisions; this class banks what they return.
-// Faction CollectIncome / CollectResearch take econ and labs; psych stays here for composition.
+// Resource production and per-turn banks for one base. Yield, inefficiency and the split are
+// EconomyRules'; this banks the results.
 class ResourceManager
 {
 public:
@@ -53,9 +51,8 @@ public:
     int ConsumeEcon();
     int ConsumeLabs();
 
-    // Psych available this turn. Non-destructive, unlike the Consume* drains above: pop
-    // composition reads it on every recalculation, and it is reset in ProduceResources rather
-    // than consumed. See docs/game-rules-decisions.md §6.
+    // Not drained, since composition reads it on every recalculation (docs/game-rules-decisions.md
+    // §6).
     int GetPsych() const;
 
     // Current per-turn mineral bank (filled by ProduceResources; drained by support /
@@ -64,22 +61,14 @@ public:
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);
 
-    // Credit `amount` into a per-turn resource bank (nutrients / econ / labs / psych).
-    // Used by stockpile surplus conversion; `amount` must be >= 0. Minerals and energy throw:
-    // minerals are the conversion input, and energy is not a bank — see AddAllocatedEnergy.
+    // Credits a per-turn bank for stockpile conversion; minerals and energy throw.
     void AddResource(StatId_t stat, int amount);
 
-    // Credit `energy` the way collected energy is credited: inefficiency first, then the
-    // faction's econ/labs/psych split. For stockpile conversion, which happens after
-    // ProduceResources has already allocated this turn's tile energy. `energy` must be >= 0.
-    //
-    // The split only: AllocateBaseEnergy's flat Econ/Labs/Psych modifiers were already paid this
-    // turn, and paying them again would double every facility's flat bonus.
+    // Credits energy as collected energy is, after ProduceResources: inefficiency, then the split
+    // only, since flat modifiers were already paid this turn.
     void AddAllocatedEnergy(int energy);
 
-    // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
-    // Called once per turn per base from the ResourceCollection stage. Commerce energy is
-    // resolved from the injected CommerceCache.
+    // Once per turn from ResourceCollection; commerce comes from the CommerceCache.
     void ProduceResources(const BaseEffects_t& rBaseEffects);
 
     // Partner commerce lines for this base (UI). Empty when unbound / unpaired. Borrowed

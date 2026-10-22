@@ -35,9 +35,8 @@ ProductionCompletion::TryCompleteReady(const ProductionCompletionProbe_t& probe,
     }
     if (probe.productionDisabled)
     {
-        // Riot: the base produces nothing this turn. The stockpile is untouched and completion
-        // stays blocked until the DisableProduction RuleFlag lifts. BaseManager::ApplyProduction
-        // also early-outs on riot before banking leftovers — both sites are required.
+        // Riot: nothing is produced and completion stays blocked.
+        // ApplyProduction also skips banking; both are needed.
         return EvaluateResult_t{Outcome_t::InProgress, false};
     }
 

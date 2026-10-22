@@ -16,21 +16,8 @@ struct ProductionCompletionProbe_t
     bool isPrototype = false;
 };
 
-// The completion state machine for one base's production queue.
-//
-//   Idle                 nothing queued
-//   InProgress           cost not met, production disabled by riot, or completion already
-//                        deferred this turn
-//   AwaitingConfirmation cost met, but finishing needs an answer from the player
-//   ReadyToFinish        cost met and allowed — owner must spend the queue and pack the
-//                        player-facing ProductionApplyResult (id + pause gates + name)
-//
-// This class does not know *why* an item needs confirming — the probe's wouldAbandonBase is
-// whatever BaseManager computed. Deferring is a one-turn answer about one item, not a state
-// of the base: a new-turn TryCompleteReady clears it and asks again. That makes it a different
-// thing from riot's DisableProduction, which stops the base producing at all.
-//
-// Pause-on-event classification is CollectProductionPauseGates, not this type.
+// Completion for one base's queue: Idle, InProgress, AwaitingConfirmation, ReadyToFinish. A
+// deferral lasts one turn; riot's DisableProduction is a different thing.
 class ProductionCompletion
 {
 public:
@@ -64,9 +51,7 @@ public:
     // one was already given this turn. Distinct from BaseManager::IsProductionDisabled.
     bool IsCompletionBlocked() const;
 
-    // Answer "finish it anyway". Clears pending and returns ReadyToFinish; the owner then
-    // spends the queue. Throws if nothing is pending. probe.isPrototype must still describe
-    // the funded item.
+    // "Finish it anyway": clears pending and returns ReadyToFinish. Throws if nothing is pending.
     EvaluateResult_t AcceptPending(const ProductionCompletionProbe_t& probe);
 
     // Answer "not this turn": the item stays queued and funded, and is asked about again next

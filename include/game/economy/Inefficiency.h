@@ -17,9 +17,8 @@ namespace ac
 // Fallback HQ distance for energy inefficiency when the faction has no Headquarters.
 constexpr int k_DefaultInefficiencyHqDistance = 16;
 
-// Absolute inefficiency denominator for an Efficiency SE total, read from that axis's
-// level table (stat inefficiency_denominator). Clamps like other SE levels. Denom ≤ 0
-// means 100% loss. Throws if the (clamped) level has no denominator entry.
+// The Efficiency table's inefficiency_denominator for a clamped total; ≤ 0 loses all. Throws
+// if the level has none.
 inline int InefficiencyDenominatorForRating(const SocialRatingRegistry& rRatings,
                                             int efficiencyRating)
 {
@@ -46,11 +45,7 @@ inline int InefficiencyDenominatorForRating(const SocialRatingRegistry& rRatings
         "Efficiency rating level is missing an inefficiency_denominator StatModifier");
 }
 
-// Energy lost to inefficiency before the econ/labs/psych split:
-//   Inefficiency = Energy × Distance / denominator
-// Denominator comes from the Efficiency SE table (see social_rating_effects.json).
-// Denominator ≤ 0 loses 100%. Loss never exceeds Energy.
-// Distance 0 (faction HQ) yields no loss — callers normally short-circuit HQ bases.
+// Energy × Distance / denominator, at most Energy; denominator ≤ 0 loses all.
 inline int CalculateInefficiencyLoss(int energy, int distance, int denominator)
 {
     if (energy <= 0 || distance <= 0)

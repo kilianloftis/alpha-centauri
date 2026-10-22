@@ -18,17 +18,12 @@ struct ScrapKindConfig_t
     // IsScrapRefundStat whitelist: energy_credits, minerals, nutrients, energy, econ, labs,
     // psych.
     StatId_t refundType = StatId_t::EnergyCredits;
-    // Cap after formula/override and ScrapRefund bonuses: floor(listed * percent / 100).
-    // Required in JSON (no silent 100). 0 pays nothing; values above 100 are legal for mods.
-    // Deliberately not overridable: the ceiling is the kind's policy, so an item override
-    // cannot mint a refund larger than the kind allows.
+    // Cap after the formula and ScrapRefund bonuses: floor(listed * percent / 100). Required; not
+    // overridable, so an item cannot exceed its kind's ceiling.
     int refundCeilingPercent = 0;
 };
 
-// Partial scrap override on a unit component or building. Specified keys replace
-// kinds.<kind>.default_scrap; omitted keys keep the kind default. JSON `"formula": null`
-// stores an empty string and denies scrap — Quote is then unavailable, same as a kind with
-// no default_scrap.
+// Partial scrap override: given keys replace the kind default. `"formula": null` denies scrap.
 struct ScrapOverride_t
 {
     std::optional<std::string> formula;

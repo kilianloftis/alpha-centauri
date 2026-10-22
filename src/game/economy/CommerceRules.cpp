@@ -47,10 +47,8 @@ int TechCommerceRatingContribution_(const Faction& rFaction, const TechRegistry&
             {
                 continue;
             }
-            // The denominator is planet-wide, so one gated or non-literal entry here would
-            // quietly lower commerce for every faction. Count only what resolves the same
-            // way for everyone: no runtime condition, no filter, no amount source, no
-            // per-tile selector, and not already retired by a later tech.
+            // The denominator is planet-wide, so only entries that resolve the
+            // same for everyone count.
             if (rEffect.condition.has_value() || rEffect.buildingFilter.has_value()
                 || rEffect.factionFilter.has_value()
                 || pStat->amountSource.has_value() || pStat->selector.has_value())
@@ -68,9 +66,7 @@ int TechCommerceRatingContribution_(const Faction& rFaction, const TechRegistry&
     return total;
 }
 
-// The +1 is the SMAC baseline (a planet with no economic techs still trades). Clamped
-// because it divides: a mod with negative commerce_rating Adds could otherwise sum to -1
-// and divide by zero, or below that and invert the ratio.
+// The SMAC +1 baseline, clamped since it divides: negative mod Adds could reach zero or below.
 int TechDenominator_(const GameState& rGameState)
 {
     const TechRegistry& rTechs = *rGameState.GetGameData().techRegistry;
@@ -153,9 +149,8 @@ std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeCommerce
     const CommerceCalculator& rCalculator = *rGameState.GetGameData().commerceCalculator;
 
     const AtrocityLedger& rAtrocities = rGameState.GetAtrocityLedger();
-    // Commerce step (10): sanctions against either side reduce the pair to zero. Applied before
-    // the pair is formed rather than after the formula, so a sanctioned partner drops off the
-    // base screen instead of showing a zero row.
+    // Step 10: sanctions zero the pair, applied before pairing so the partner drops off the base
+    // screen.
     if (rAtrocities.IsSanctioned(rOwner.GetFactionId(), rGameState.GetMissionYear()))
     {
         return {};

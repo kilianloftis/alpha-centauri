@@ -12,9 +12,7 @@ namespace ac
 class StockpileRegistry : public Registry<StockpileConfig_t, StockpileConfigParser>
 {
 public:
-    // The empty-queue fallback: highest fallbackPriority among the stockpiles whose
-    // required_tech is discovered, ties broken by load order. nullptr when none qualifies,
-    // which leaves the base with an empty queue and wastes its surplus minerals.
+    // Highest fallbackPriority among researched stockpiles; nullptr leaves the queue empty.
     const StockpileConfig_t* FindFallback(const std::vector<std::string>& rDiscoveredTechs) const
     {
         const StockpileConfig_t* pBest = nullptr;

@@ -19,10 +19,8 @@ struct BuildingConfig_t;
 struct ProductionConfig_t;
 struct ScrapQuote_t;
 
-// A priced scrap together with the sink that will receive it. Quoting builds this, and
-// crediting consumes it, so the number shown to the player is the number granted: a
-// base-destined refund with no base to land in is zeroed here rather than at payout time,
-// where the quote could no longer see it.
+// A priced scrap with its sink, so the number quoted is the number paid. A refund with no base
+// to land in is zeroed here.
 struct ScrapPayout_t
 {
     int amount = 0;
@@ -37,11 +35,7 @@ struct ScrapPayout_t
 ScrapPayout_t PlanScrapPayout(const ScrapQuote_t& rQuote, std::optional<BaseId_t> destBaseId);
 
 // baseCost * CostMultiplier * (1 + surchargePercent/100 * PrototypeSurchargeScale), at least 1.
-// surchargePercent is production.json's prototype mineral penalty (0 when not a prototype).
-// TODO: the surcharge multiplies CostMultiplier rather than adding to it, and the result
-// rounds half away from zero while the retool penalty next door documents floor rounding "so
-// the remainder favours the player". Both are guesses; the real stacking and rounding rules
-// are not recorded anywhere.
+// TODO: the stacking and rounding are guesses; the real rules are unrecorded.
 int ComputeProductionCost(int baseCost, const BaseEffects_t& rBaseEffects, int surchargePercent);
 
 // The minerals a retool forfeits. Returning to the item queued when the turn handed over is

@@ -9,10 +9,8 @@ namespace ac
 
 class IConstructable;
 
-// Map constructable facts (+ whether this completion is a prototype fielding) to the pause-on-
-// event gates that apply. Does not consult settings — InteractionPresenter ORs Allows() over
-// the returned set. Prototype is an additional gate on units, not a replacement for
-// combat / non-combat.
+// The pause-on-event gates a completion matches; InteractionPresenter ORs them. Prototype is an
+// extra gate on units.
 std::vector<PauseOnEventId_t> CollectProductionPauseGates(const IConstructable& rItem,
                                                           bool bPrototype);
 

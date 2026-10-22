@@ -18,40 +18,28 @@ namespace ac
 
 class BaseManager;
 
-// ProductionManager is the API surface for the production component.
-// Current production and the upcoming queue are separate: SetProduction changes the
-// current item (and may retool); Replace / Insert / Delete edit only the queue.
+// Current production and the upcoming queue: SetProduction changes the current item (and may
+// retool); Replace, Insert and Delete edit the queue.
 class ProductionManager
 {
 public:
-    // rConfig supplies the retooling rule; it outlives every base (GameDataContext owns it).
-    // rBase outlives this manager (BaseManager owns it) and is used for conversion credits and
-    // to build the completion probe (riot / abandon / effects / prototype).
-    //
-    // defaultItemProvider answers "what should this base build when nothing is chosen?" —
-    // the first available stockpile, or nullptr when a mod ships none. It is consulted
-    // whenever current production would otherwise be empty (construction, completion,
-    // clearing), which is what makes "a base is never idle while a stockpile is available"
-    // an invariant of this class rather than a fix-up its owner applies after the fact.
-    // Selecting the default never charges the retool penalty: the player did not choose it.
+    // defaultItemProvider names what to build when nothing is chosen (the first available
+    // stockpile), so a base is never idle while one exists. Choosing it never retools.
     ProductionManager(const ProductionConfig_t& rConfig,
                       std::function<const IConstructable*()> defaultItemProvider,
                       BaseManager& rBase);
     ~ProductionManager() = default;
 
-    // Set the item to produce; nullptr resets to the default item (see the constructor).
-    // The upcoming queue is left as-is. Setting the item already current is a no-op. A
-    // once-only building already on the queue is pulled off it. rBaseEffects scales the
-    // retool forfeit via RetoolPenaltyScale.
+    // nullptr resets to the default item. A once-only building on the queue is pulled off it;
+    // rBaseEffects scales the retool forfeit.
     void SetProduction(const IConstructable* pItem, const BaseEffects_t& rBaseEffects);
 
     void Replace(int slot, const IConstructable& rItem);
     void Insert(int slot, const IConstructable& rItem);
     void Delete(int slot);
 
-    // Drop queue items that ValidQueueItems rejects. An unconstructable current item is
-    // cleared and its name is returned so the stage can prompt. An empty current then takes
-    // the first remaining queue item, or the default stockpile. No retool.
+    // Drops invalid queue items; an invalid current item is cleared and its name returned. The
+    // current then takes the next queued item or the default. No retool.
     std::optional<std::string> ValidateQueue();
 
     // Replace current (nullptr → default) without retooling. Used on ownership transfer
@@ -74,19 +62,15 @@ public:
     int GetMineralStockpile() const;
     void SetMineralStockpile(int amount);
 
-    // Add minerals to the stockpile without completing. Also stamps m_pTurnOriginalItem from
-    // the item then current (or clears it when empty). Until that stamp exists, SetProduction
-    // does not retool — there is no "original" to switch away from (fresh bases, including a
-    // founding mineral bank, stay free until the first BankProduction with something current).
+    // Banks minerals without completing, and stamps the turn's original item; retooling applies
+    // only once that stamp exists.
     void BankProduction(int minerals);
 
     // After leftovers are banked: convert if the current item is a stockpile, otherwise leave
     // the minerals on it. Completion is a separate step (TryCompleteReady).
     ProductionApplyResult_t ApplyProduction();
 
-    // Finish the current item if cost is already met, without banking new minerals.
-    // bNewTurn clears last turn's deferral (turn tick); mid-turn hurry / sibling re-eval pass
-    // false so a deferral still blocks.
+    // Finishes the current item if its cost is met. bNewTurn clears last turn's deferral.
     ProductionApplyResult_t TryCompleteReady(bool bNewTurn = false);
 
     // True when something is current, it is still constructable, it can complete, and the
@@ -115,14 +99,11 @@ private:
     ProductionApplyResult_t ApplyCompletionOutcome_(
         const ProductionCompletion::EvaluateResult_t& outcome);
 
-    // Ungated spend: only FinishReady_ after Completion returns ReadyToFinish. Game code must
-    // go through TryCompleteReady / CompletePending so abandon / riot / deferral gates apply.
-    // Clears the finished item and holds overflow minerals; does not touch the queue.
+    // Ungated: only after Completion returns ReadyToFinish. Keeps overflow minerals.
     std::string CompleteProduction_();
 
-    // Charging the penalty: what this base was producing when the player got control this turn.
-    // Null means no turn original yet (new base / BankProduction with nothing current) —
-    // retool does not apply until BankProduction stamps a non-null original.
+    // What the base was producing when the player got control this turn; null until the first
+    // BankProduction, so retooling is free until then.
     const IConstructable* m_pTurnOriginalItem = nullptr;
     const IConstructable* m_pCurrentItem = nullptr;
     const ProductionConfig_t& m_rConfig;

@@ -36,15 +36,8 @@ struct HurrySpend_t
     int mineralsAdded = 0;
 };
 
-// Energy-for-minerals math. Formulas live in production.json kinds.<kind>.hurry, so this owns
-// no rules of its own beyond how a partial payment is priced.
-//
-// **Marginal pricing.** Buying k minerals costs what it takes off the finish price:
-// cost(k) = Finish(remaining, stockpile) - Finish(remaining - k, stockpile + k). Any sequence
-// of partial payments therefore telescopes to exactly the one-shot price, whatever shape the
-// configured formula has. Pricing a partial payment as a straight fraction of the finish cost
-// does not: both the below-threshold band and a formula that grows faster than its input make
-// two half-payments cheaper than one whole one.
+// Energy-for-minerals pricing from production.json. Buying k minerals costs what it takes off
+// the finish price, so partial payments always sum to the one-shot price.
 class HurryProductionCalculator
 {
 public:
@@ -60,12 +53,8 @@ public:
     // formula that fails or returns a non-positive cost for a positive remaining throws.
     HurryQuote_t Quote(const HurryInputs_t& rInputs) const;
 
-    // Largest whole number of minerals requestedCredits buys, and what that costs. Credits
-    // that do not cover another whole mineral are left unspent. Throws if requestedCredits is
-    // not positive or the kind cannot be hurried — check Quote().bAvailable first.
-    //
-    // Assumes the configured formula does not get cheaper as more minerals are needed, which
-    // is what lets this bisect instead of pricing every mineral.
+    // The most whole minerals requestedCredits buys, and their cost; throws for non-positive
+    // credits or an unhurriable kind. Bisects, assuming the formula never gets cheaper.
     HurrySpend_t ApplyCredits(const HurryInputs_t& rInputs, int requestedCredits) const;
 
 private:

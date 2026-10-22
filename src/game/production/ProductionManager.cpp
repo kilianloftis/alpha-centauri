@@ -298,9 +298,8 @@ bool ProductionManager::IsCompletionBlocked() const
 
 bool ProductionManager::IsCurrentPrototype() const
 {
-    // Same test ClassifyCompletedItem uses. Resolving the design by id instead would scan
-    // every design of the faction on every render-path cost query, and would mistake a
-    // building for a unit if the two ever shared an id.
+    // As ClassifyCompletedItem tests it: by type, not by id, which is cheaper and cannot mistake
+    // a building for a unit.
     const IDesign* pDesign = dynamic_cast<const IDesign*>(GetCurrentProduction());
     return pDesign && IsPrototype(m_rBase.GetFaction(), *pDesign);
 }

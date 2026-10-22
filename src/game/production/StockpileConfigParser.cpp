@@ -46,10 +46,8 @@ StockpileRounding_t ParseRounding_(const nlohmann::json& rJson, const StockpileI
                              + "' (expected \"down\", \"up\", or \"nearest\")");
 }
 
-// A stockpile's yield is by definition a function of the minerals it consumes. A plain Add
-// with no amount_source would pay out every turn regardless — including turns with nothing
-// left to convert — so it is rejected rather than silently becoming a per-turn stipend.
-// Percentage / multiplier ops are fine: they scale the converted amount.
+// A stockpile yields only from the minerals it converts, so a plain Add without an amount
+// source is rejected; percentage and multiplier ops scale the converted amount.
 void RejectMineralIndependentYield_(const std::vector<EffectConfig_t>& rEffects,
                                     const StockpileId_t& rId)
 {

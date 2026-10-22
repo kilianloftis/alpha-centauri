@@ -8,10 +8,7 @@
 namespace ac
 {
 
-// Reads the two scrap JSON shapes: the full kind default in production.json
-// kinds.<kind>.default_scrap, and the partial override a building or unit component may
-// carry under "scrap". Every failure throws with rPath as the prefix, so the caller does not
-// have to restate where in the file the problem is.
+// The kind default_scrap and the partial override; failures throw prefixed with rPath.
 class ScrapConfigParser
 {
 public:
@@ -19,9 +16,7 @@ public:
     static ScrapKindConfig_t ParseKindConfig(const nlohmann::json& rValue,
                                              const std::string& rPath);
 
-    // formula and refund_type are both optional, but at least one must be present — an empty
-    // override is a config mistake, not a no-op. `"formula": null` clears the kind formula
-    // and denies scrap; it cannot be paired with refund_type.
+    // formula or refund_type, at least one. `"formula": null` denies scrap and stands alone.
     static ScrapOverride_t ParseOverride(const nlohmann::json& rValue, const std::string& rPath);
 };
 

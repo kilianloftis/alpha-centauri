@@ -58,9 +58,8 @@ ResourceManager::~ResourceManager()
 int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& worked,
                                         const BaseEffects_t& rBaseEffects) const
 {
-    // Per-tile yield modifiers are already folded into `worked`; only base-level
-    // (non-selector) stat modifiers remain. Seed with the worked value so AddPercent
-    // scales it (SeedFor is 0 for Additive and would discard percents).
+    // Per-tile modifiers are in `worked` already; the worked value seeds the base modifiers so
+    // AddPercent scales it.
     const int workedVal = GetResourceValue_(worked, stat);
     return FinalizeResolvedStat(
         ResolveBaseStat(rBaseEffects, stat, static_cast<double>(workedVal), nullptr));
@@ -176,9 +175,7 @@ void ResourceManager::AddResource(StatId_t stat, int amount)
         m_psych += amount;
         return;
     default:
-        // Minerals are deliberately absent: the only caller is stockpile conversion, whose
-        // input is the mineral bank, so crediting minerals here would be a feedback loop.
-        // Energy is absent because it is not a bank; it goes through AddAllocatedEnergy.
+        // Minerals are the conversion input, and energy is not a bank (AddAllocatedEnergy).
         throw std::invalid_argument(
             "AddResource: stat is not a creditable resource bank (nutrients, econ, labs, psych)");
     }
@@ -239,9 +236,8 @@ void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseE
 
 void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
 {
-    // Psych is the one bank nothing drains: composition reads it every recalculation, and a
-    // draining read would make composition flap within a single turn. It is reset here instead,
-    // so it always means "psych available this turn".
+    // Psych is never drained, since composition reads it every recalculation; reset here so it
+    // means this turn's psych.
     m_psych = 0;
 
     const TileResources_t worked = WorkedYield(m_rBase);

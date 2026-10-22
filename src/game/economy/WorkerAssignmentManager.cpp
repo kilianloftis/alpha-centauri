@@ -90,9 +90,7 @@ bool WorkerAssignmentManager::Assign_(Pop& rPop, const Tile* pTile, bool bUserAs
         return false;
     }
 
-    // TryClaim is the atomic check-and-claim: it fails if the tile is worked by anyone,
-    // including another base or faction. If a base is later founded on the tile, the
-    // handler re-runs auto-assignment so the displaced worker moves to the best free tile.
+    // Fails if anyone works the tile. A founding there later re-runs auto-assignment.
     WorkedTileClaim claim = m_rWorkedTiles.TryClaim(*pTile, bUserAssigned,
         [this]() { AutoAssignWorkers(); });
     if (!claim.GetTile())
@@ -145,9 +143,7 @@ void WorkerAssignmentManager::ResetAllAssignments()
 
 bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
 {
-    // WorkedTileIndex is the world-wide single source of truth, so this also reports tiles
-    // worked by other bases — including other factions' — and is where a future mechanic
-    // (e.g. an enemy unit occupying the tile) would revoke assignments.
+    // Tiles worked by any base of any faction.
     return pTile && m_rWorkedTiles.IsWorked(*pTile);
 }
 
@@ -245,11 +241,8 @@ void WorkerAssignmentManager::AutoAssignWorkers()
 
 bool WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
-    // Establish that the tile can be worked at all before touching any pop. The later branches
-    // pay for the attempt — one converts a specialist back to a worker, the other pulls a
-    // worker off a tile it was productively working — and the previous code ignored
-    // UserAssignWorker's bool, so a doomed request destroyed a specialist's role or left a
-    // worker idle with nothing to show for it.
+    // Checked before touching a pop: the branches below convert a specialist or pull a worker,
+    // so a doomed request must fail first.
     if (!pTile || !MayWorkTile(*this, *pTile))
     {
         return false;

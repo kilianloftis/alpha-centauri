@@ -18,10 +18,8 @@ namespace ac
 namespace
 {
 
-// ThisBase modifiers for `statId` drawn from the stockpile's own effects: the
-// MineralsConverted ones (scaled by ctx.pStockpile) plus the percentage / multiplier ops that
-// scale them. Tile selectors and other amount sources stay out — a selector modifier belongs
-// to tile-yield resolution, and ElevationEnergySeed has no meaning without a tile.
+// The stockpile's own ThisBase modifiers for statId: MineralsConverted ones and the percent
+// and multiplier ops that scale them.
 auto FilterStockpileYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t statId,
                            const EffectContext_t& rCtx)
 {

@@ -7,9 +7,8 @@
 namespace ac
 {
 
-// Closed set of IConstructable types. JSON wire names are the snake_case spellings below.
-// production.json kinds looks these up; a kind with no hurry/default_scrap entry cannot use
-// that mechanic.
+// Every IConstructable type; wire names are snake_case. A kind without a hurry or
+// default_scrap entry cannot use that mechanic.
 enum class ConstructableKind_t
 {
     Building,

@@ -17,9 +17,8 @@ enum class ProductionApplyKind_t
     InProgress,
 
     Completed,     // item finished; completedId / completedEvents / completedName set
-    // cost met, but finishing needs a player answer: CompletePendingProduction or
-    // DeferProductionCompletion. The reason lives with the asker (BaseProduction / the UI),
-    // not here — typically ProductionWouldEmptyInteraction.
+    // Cost met, but finishing needs the player: CompletePendingProduction or
+    // DeferProductionCompletion.
     AwaitingConfirmation,
 };
 

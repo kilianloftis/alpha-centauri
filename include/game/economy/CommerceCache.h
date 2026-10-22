@@ -12,15 +12,8 @@ namespace ac
 class BaseManager;
 class Faction;
 
-// Faction-owned commerce queries. Pairing stays in CommerceRules; this façade is
-// injected into each base ResourceManager (like EconomyManager) and used by CommerceDisplay.
-//
-// It memoizes the owner's whole per-base breakdown, because the underlying pass is
-// planet-wide (it prices every base of every treaty partner) while the callers are per-base
-// and hot: ResourceManager::AllocatableEnergy_ backs econ/labs/psych, so composition's
-// EnsureCompositionCurrent key and every base-screen frame land here. The memo is validated
-// the way FactionEffectsPool validates its pool — an element-wise compare of the revisions
-// it was built from, never a hash of them.
+// The owner's per-base commerce breakdown, memoized since pairing is planet-wide and the
+// callers are hot. Validated element-wise against its revisions.
 class CommerceCache
 {
 public:
@@ -39,10 +32,8 @@ public:
     int GetCommerceEnergy(const BaseManager& rBase) const;
 
 private:
-    // Everything the pairing pass reads that can move without the others moving: worker
-    // placement and tile improvements change base energy without touching any effect pool,
-    // treaties and atrocity sanctions gate the pairs, and each faction's effects version already
-    // folds in its base list, buildings, pops, research and social engineering.
+    // Everything pairing reads that moves independently: worker placement, improvements,
+    // treaties, sanctions and each faction's effects version.
     void CollectRevisions_(std::vector<uint64_t>& rOut) const;
     void Validate_() const;
 

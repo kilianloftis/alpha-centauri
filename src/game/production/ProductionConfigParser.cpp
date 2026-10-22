@@ -60,9 +60,8 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
             ProductionConfig_t config;
             config.retoolPenaltyThreshold = read("retool_penalty_threshold", 0);
             config.retoolPenaltyPercent = read("retool_penalty_percent", 0, 100);
-            // No upper bound: unlike the retool penalty (a percentage *of* a stockpile, so
-            // >100 is meaningless), a surcharge above 100% is a coherent thing for a mod to ask
-            // for — a prototype that costs triple.
+            // No upper bound: a prototype that costs triple is a coherent mod
+            // choice, unlike a retool penalty over 100%.
             config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0);
 
             if (!rJson.contains("kinds") || !rJson.at("kinds").is_object())
@@ -113,9 +112,8 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
                 return kind;
             };
 
-            // An empty object is legal: it turns hurrying and scrap off entirely. Each remaining
-            // key is a constructable kind; stockpile is rejected because those items never
-            // complete.
+            // An empty object turns hurry and scrap off; stockpile is rejected,
+            // since it never completes.
             for (const auto& [rKind, rValue] : rJson.at("kinds").items())
             {
                 const std::string kindPath = "kinds." + rKind;
