@@ -158,6 +158,17 @@ One entry per violation, under the rule it breaks:
   commerce functions are reached through `CommerceCache` in production.
 - **Why not local:** the tests would move to the production entry points, or the UI arrives.
 
+### Diplomacy, council and atrocity queries used only by tests
+- **Where:** `AtrocityLedger::HasVictimized` (6), `HasCommittedMajorAgainst` (5), `SanctionUntilYear`
+  (4); `PenaltiesApplied` in `AtrocityMutations.h` (18); `CouncilVoteExecutor::VetoPending` (3),
+  `AllMembersVoted` (3); `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2);
+  `GetAvailableActions` in `DiplomacyActions.h` (5); `DiplomacyLedger::AddGrievance` (1),
+  `AddIntegrity` (1); `DiplomaticActionExecutor::Accept` (3), `Reject` (1), `GetPendingProposal`
+  (4); `MayRepairAt` (4); `TradeKinds` (1)
+- **Problem:** no production caller. Most are the halves of diplomacy and council flows whose UI
+  or AI is not built; `MayRepairAt` waits on per-turn healing.
+- **Why not local:** each waits on its caller, or its tests move to the production path.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`

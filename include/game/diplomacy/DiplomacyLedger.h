@@ -34,7 +34,7 @@ public:
     bool HasVendetta(FactionId_t a, FactionId_t b) const;
 
     bool AreKnown(FactionId_t a, FactionId_t b) const;
-    void SetKnown(FactionId_t a, FactionId_t b, bool known = true);
+    void SetKnown(FactionId_t a, FactionId_t b, bool known);
     // Establish mutual known-contact (commlinks) between every pair in rFactionIds.
     void SetKnown(const std::vector<FactionId_t>& rFactionIds);
 
@@ -43,7 +43,7 @@ public:
     void AddGrievance(FactionId_t holder, FactionId_t against, int delta);
 
     bool HasInfiltration(FactionId_t infiltrator, FactionId_t target) const;
-    void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated = true);
+    void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated);
 
     // Moves on every status change. Commerce pairing is treaty-gated, so CommerceCache
     // memoizes against this rather than re-deriving pairs on every query.

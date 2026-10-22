@@ -117,7 +117,7 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
     rLedger.SetStatus(a, b, to);
     if (to == DiplomaticStatus_t::Vendetta)
     {
-        rLedger.SetKnown(a, b);
+        rLedger.SetKnown(a, b, true);
     }
     if (from == to)
     {

@@ -32,36 +32,10 @@ bool IsCouncilMemberTarget_(FactionId_t candidate)
     return pCouncil->IsCouncilMember(*pCandidate);
 }
 
-bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
-                                         FactionId_t infiltrator,
-                                         FactionId_t target)
+bool FilterSelects_(const FactionFilter_t& rFilter, FactionId_t candidate,
+                    std::optional<FactionId_t> actionTarget)
 {
-    if (!std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
-    {
-        return false;
-    }
-    return FactionFilterCoversTarget(*rEffect.config, infiltrator, target);
-}
-
-} // namespace
-
-bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
-                               bool bDefaultCoversAllOthers,
-                               FactionId_t beneficiary,
-                               FactionId_t candidate,
-                               std::optional<FactionId_t> actionTarget)
-{
-    if (candidate == beneficiary)
-    {
-        return false;
-    }
-
-    if (!rFilter)
-    {
-        return bDefaultCoversAllOthers;
-    }
-
-    switch (rFilter->kind)
+    switch (rFilter.kind)
     {
         case FactionFilterKind_t::ActionTarget:
             return actionTarget.has_value() && *actionTarget == candidate;
@@ -75,10 +49,35 @@ bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
                 return false;
             }
             const bool bIsPlayer = pCandidate->IsPlayerControlled();
-            return (rFilter->playerType == PlayerType_t::Player) == bIsPlayer;
+            return (rFilter.playerType == PlayerType_t::Player) == bIsPlayer;
         }
     }
     return false;
+}
+
+bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
+                                         FactionId_t infiltrator,
+                                         FactionId_t target)
+{
+    if (!std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
+    {
+        return false;
+    }
+    return FactionFilterCoversTarget(*rEffect.config, infiltrator, target, std::nullopt);
+}
+
+} // namespace
+
+bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
+                               FactionId_t beneficiary,
+                               FactionId_t candidate,
+                               std::optional<FactionId_t> actionTarget)
+{
+    if (candidate == beneficiary)
+    {
+        return false;
+    }
+    return !rFilter || FilterSelects_(*rFilter, candidate, actionTarget);
 }
 
 bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
@@ -86,11 +85,16 @@ bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
                                FactionId_t candidate,
                                std::optional<FactionId_t> actionTarget)
 {
-    // Default for a continuous effect: WorldGlobal reaches every other faction; any other
-    // scope needs an explicit filter.
-    return FactionFilterCoversTarget(rConfig.factionFilter,
-                                     rConfig.scope == EffectScope_t::WorldGlobal, beneficiary,
-                                     candidate, actionTarget);
+    if (candidate == beneficiary)
+    {
+        return false;
+    }
+    // Without a filter, only WorldGlobal reaches every other faction.
+    if (!rConfig.factionFilter)
+    {
+        return rConfig.scope == EffectScope_t::WorldGlobal;
+    }
+    return FilterSelects_(*rConfig.factionFilter, candidate, actionTarget);
 }
 
 bool HasInfiltration(FactionId_t infiltrator, FactionId_t target)

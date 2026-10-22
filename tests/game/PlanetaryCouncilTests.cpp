@@ -81,7 +81,7 @@ struct CouncilGame_
             {
                 continue;
             }
-            rDiplomacy.SetKnown(rFaction.GetFactionId(), pOther->GetFactionId());
+            rDiplomacy.SetKnown(rFaction.GetFactionId(), pOther->GetFactionId(), true);
         }
     }
 
@@ -285,7 +285,7 @@ TEST_CASE("Proposing requires commlinks to every council member and shares them"
         rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
 
-    game.fixtures.state.GetDiplomacyLedger().SetKnown(game.pA->GetFactionId(), game.pB->GetFactionId());
+    game.fixtures.state.GetDiplomacyLedger().SetKnown(game.pA->GetFactionId(), game.pB->GetFactionId(), true);
     CHECK_THROWS_AS(
         rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
@@ -359,7 +359,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
         return std::get_if<InfiltrationEffect_t>(&rEffect.config->effect) != nullptr;
     }));
 
-    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId()));
+    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId(), std::nullopt));
     CHECK_FALSE(HasInfiltration(rA.GetFactionId(), rB.GetFactionId()));
 }
 
@@ -1169,9 +1169,9 @@ TEST_CASE("A faction has commlinks to the council once it knows every other memb
     const FactionId_t a = game.pA->GetFactionId();
     REQUIRE_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pA));
 
-    rDiplomacy.SetKnown(a, game.pB->GetFactionId());
+    rDiplomacy.SetKnown(a, game.pB->GetFactionId(), true);
     CHECK_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pA));
-    rDiplomacy.SetKnown(a, game.pC->GetFactionId());
+    rDiplomacy.SetKnown(a, game.pC->GetFactionId(), true);
     CHECK(HasCommlinksToAllMembers(rCouncil, *game.pA));
     CHECK_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pB));
 }

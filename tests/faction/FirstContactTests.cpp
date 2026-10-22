@@ -146,7 +146,7 @@ TEST_CASE("Already known is a no-op", "[diplomacy][first-contact]")
 {
     ContactGame_ game;
     game.fixtures.state.GetDiplomacyLedger().SetKnown(
-        game.pA->GetFactionId(), game.pB->GetFactionId());
+        game.pA->GetFactionId(), game.pB->GetFactionId(), true);
     game.MakeUnit(*game.pA, 8, 8);
     game.MakeUnit(*game.pB, 9, 9);
     CHECK(game.fixtures.state.GetDiplomacyLedger().AreKnown(

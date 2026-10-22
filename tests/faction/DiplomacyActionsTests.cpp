@@ -16,7 +16,7 @@ namespace
 
 void Meet_(DiplomacyLedger& rLedger)
 {
-    rLedger.SetKnown(1, 2);
+    rLedger.SetKnown(1, 2, true);
 }
 
 bool HasKind_(const std::vector<DiplomaticActionKind_t>& rActions, DiplomaticActionKind_t kind)

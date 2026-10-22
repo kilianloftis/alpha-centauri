@@ -14,7 +14,7 @@ namespace
 
 void Meet_(DiplomacyLedger& rLedger)
 {
-    rLedger.SetKnown(1, 2);
+    rLedger.SetKnown(1, 2, true);
 }
 
 } // namespace

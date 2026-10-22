@@ -57,7 +57,7 @@ TEST_CASE("Known contact is symmetric", "[diplomacy]")
 {
     DiplomacyLedger ledger;
     CHECK_FALSE(ledger.AreKnown(1, 2));
-    ledger.SetKnown(1, 2);
+    ledger.SetKnown(1, 2, true);
     CHECK(ledger.AreKnown(1, 2));
     CHECK(ledger.AreKnown(2, 1));
     ledger.SetKnown(2, 1, false);
@@ -81,7 +81,7 @@ TEST_CASE("Grievance and infiltration are directed", "[diplomacy]")
     CHECK(ledger.GetGrievance(1, 2) == 3);
     CHECK(ledger.GetGrievance(2, 1) == 0);
 
-    ledger.SetInfiltration(1, 2);
+    ledger.SetInfiltration(1, 2, true);
     CHECK(ledger.HasInfiltration(1, 2));
     CHECK_FALSE(ledger.HasInfiltration(2, 1));
 }

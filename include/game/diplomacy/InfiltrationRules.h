@@ -11,19 +11,18 @@ namespace ac
 
 class Faction;
 
-// Whether rFilter selects rCandidate, never the beneficiary itself. Without a filter,
-// bDefaultCoversAllOthers decides. actionTarget is needed only for ActionTarget filters.
+// Whether a triggered effect's rFilter selects candidate, never the beneficiary itself; without
+// a filter, every other faction. actionTarget is read only by ActionTarget filters.
 bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
-                               bool bDefaultCoversAllOthers,
                                FactionId_t beneficiary,
                                FactionId_t candidate,
-                               std::optional<FactionId_t> actionTarget = std::nullopt);
+                               std::optional<FactionId_t> actionTarget);
 
-// Continuous overload: defaults to all other factions at WorldGlobal scope only.
+// The same for a continuous effect, which without a filter reaches others only at WorldGlobal.
 bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
                                FactionId_t beneficiary,
                                FactionId_t candidate,
-                               std::optional<FactionId_t> actionTarget = std::nullopt);
+                               std::optional<FactionId_t> actionTarget);
 
 // Ledger sticky bits OR Continuous Infiltration effects active on the infiltrator
 // (buildings / faction pool / Planetary Governor lane) that cover the target.

@@ -648,7 +648,7 @@ void Engine::StartNewGame_()
                 continue;
             }
 
-            rDiplomacy.SetKnown(playerId, rFaction.GetFactionId());
+            rDiplomacy.SetKnown(playerId, rFaction.GetFactionId(), true);
             if (aiIndex == 0)
             {
                 ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),

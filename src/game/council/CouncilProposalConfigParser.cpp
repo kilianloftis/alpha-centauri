@@ -30,7 +30,8 @@ std::vector<RuleFlagId_t> ParseRuleFlagList_(const nlohmann::json& rJson, const 
     flags.reserve(rArr.size());
     for (const auto& rEntry : rArr)
     {
-        flags.push_back(ParseRuleFlagId(rEntry.get<std::string>()));
+        const std::string flag = rEntry.get<std::string>();
+        flags.push_back(ParseRuleFlagId(flag));
     }
     return flags;
 }

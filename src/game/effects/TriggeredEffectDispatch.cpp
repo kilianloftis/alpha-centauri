@@ -167,9 +167,8 @@ bool SetInfiltration_(TriggeredEffectContext_t& rCtx, const TriggeredEffectConfi
     for (const Faction& rFaction : rCtx.rGameState.Factions())
     {
         const FactionId_t candidateId = rFaction.GetFactionId();
-        // No scope to consult, so an absent filter means every other faction.
-        if (FactionFilterCoversTarget(rConfig.factionFilter, /*bDefaultCoversAllOthers=*/true,
-                                      beneficiaryId, candidateId, rCtx.actionTarget))
+        if (FactionFilterCoversTarget(rConfig.factionFilter, beneficiaryId, candidateId,
+                                      rCtx.actionTarget))
         {
             rDiplomacy.SetInfiltration(beneficiaryId, candidateId, true);
             set.targets.push_back(candidateId);

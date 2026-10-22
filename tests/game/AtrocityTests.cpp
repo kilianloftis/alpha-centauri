@@ -88,7 +88,7 @@ struct AtrocityGame_
         {
             if (pOther->GetFactionId() != rProposer.GetFactionId())
             {
-                Diplomacy().SetKnown(rProposer.GetFactionId(), pOther->GetFactionId());
+                Diplomacy().SetKnown(rProposer.GetFactionId(), pOther->GetFactionId(), true);
             }
         }
         const int wait = YearsUntilCanPropose(rCouncil, rProposer);

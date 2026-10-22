@@ -36,7 +36,8 @@ std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& r
     std::vector<DiplomaticActionKind_t> actions;
     if (CanProposeStepUp(rLedger, a, b))
     {
-        actions.push_back(ProposeKindFor_(*StepUp(rLedger.GetStatus(a, b))));
+        const std::optional<DiplomaticStatus_t> next = StepUp(rLedger.GetStatus(a, b));
+        actions.push_back(ProposeKindFor_(*next));
     }
     if (CanDeclareVendetta(rLedger, a, b))
     {

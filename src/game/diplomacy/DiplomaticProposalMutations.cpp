@@ -44,7 +44,7 @@ struct Deliver_
 
     void operator()(const TradeCommFrequency_t& rFrequency) const
     {
-        rState.GetDiplomacyLedger().SetKnown(rReceiver.GetFactionId(), rFrequency.factionId);
+        rState.GetDiplomacyLedger().SetKnown(rReceiver.GetFactionId(), rFrequency.factionId, true);
     }
 
     void operator()(const TradeWorldMap_t& /*rMap*/) const

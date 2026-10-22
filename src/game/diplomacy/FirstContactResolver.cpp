@@ -23,7 +23,7 @@ void MeetIfNeeded_(DiplomacyLedger& rLedger, const Faction& rA, const Faction& r
     {
         return;
     }
-    rLedger.SetKnown(a, b);
+    rLedger.SetKnown(a, b, true);
 }
 
 bool ObserverSeesForeignBase_(const Faction& rObserver, const Faction& rOther)
