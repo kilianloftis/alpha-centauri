@@ -3,9 +3,7 @@
 namespace ac
 {
 
-// Mission year at which a source that deployed in missionYear becomes ready again.
-// Mirrors the formula documented on OrbitalAttackEffect_t::cooldownTurns and
-// InterceptEffect_t::cooldownTurns: ready when missionYear >= deployYear + cooldown + 1.
+// Mission year a source deployed in missionYear is ready again: deployYear + cooldown + 1.
 inline int ReadyYearAfterDeploy(int missionYear, int cooldownTurns)
 {
     return missionYear + cooldownTurns + 1;

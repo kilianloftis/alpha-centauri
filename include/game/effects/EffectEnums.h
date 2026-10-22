@@ -76,11 +76,8 @@ enum class StatId_t
     BombardRange,
     CargoCapacity,
     DifficultTerrainCost,
-    // Ceiling on tile entry price. JSON amount is a move-point rational ("1/3", 1, 0);
-    // the parsed amount is move fragments. Only MaxClamp is legal. MoveCostRules
-    // seeds with the tile's highest move_cost and applies the tightest matching clamp
-    // from ThisTile feature effects and the entering unit. A clamp does not raise a
-    // lower cost. A matching clamp cancels fungus entry rules.
+    // Ceiling on a tile's entry price, in move points ("1/3", 1, 0); MaxClamp only. The tightest
+    // matching clamp wins, never raises a lower cost, and cancels fungus entry rules.
     MoveCost,
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
     // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
@@ -97,21 +94,18 @@ enum class StatId_t
     // Drones one selected police unit suppresses (Additive). police_rules baseline +1 for
     // combat units; Police SE +3 and Non-Lethal Methods Add on top.
     PoliceEffectiveness,
-    // Float weight toward away-from-home drones when the unit is off owner territory
-    // (Additive). police_rules baseline +1 for combat units; Police SE MaxClamp /
-    // MultiplyGeometric scale the per-base sum.
+    // Weight toward away-from-home drones while off owner territory (Additive). Police SE scales
+    // the per-base sum.
     AwayFromHomeDrones,
     CostMultiplier,
-    // Scales the prototype mineral surcharge term only (PureMultiplier, seed 1.0). Production
-    // cost uses baseCost * CostMultiplier * (1 + surchargePercent/100 * this). Skunkworks emits
-    // MultiplyGeometric 0 on ThisBase so the extra is cancelled without making the unit free.
+    // Scales only the prototype surcharge (PureMultiplier). Skunkworks multiplies it by 0 without
+    // making the unit free.
     PrototypeSurchargeScale,
     // Scales the retool mineral forfeit (PureMultiplier, seed 1.0). ApplyRetoolPenalty_ uses
     // stockpile * retoolPercent/100 * this. Skunkworks emits MultiplyGeometric 0 on ThisBase.
     RetoolPenaltyScale,
-    // Constructed-facility energy upkeep (RawScaled: seed is BuildingConfig_t::upkeep).
-    // Tech tiers emit Add; percent cuts (and later difficulty MaxClamp) scale the raw value.
-    // Resolved per building type with optional buildingFilter.
+    // Facility energy upkeep (RawScaled from BuildingConfig_t::upkeep), per building type with an
+    // optional buildingFilter.
     FacilityEnergyUpkeep,
     // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
     // SE Probe levels emit AddPercent; resolved from the target base's effect list.
@@ -131,13 +125,10 @@ enum class StatId_t
     // Shifts the displayed rank word (morale_veh): SE table, home Crèche, riot in combat.
     // Added to Unit::m_xp and clamped; not seeded into m_xp.
     MoraleRank,
-    // Extra morale levels after the rank word (plus-marks / combat). In-square Crèche /
-    // Brood and SE +2/+3 defend-in-base. Does not change the name. Attack vs defense rows
-    // use IsDefending.
+    // Extra morale levels after the rank word; the name does not change. Attack and defence rows
+    // split on IsDefending.
     MoraleExtra,
-    // Post-combat promotion probability (RawScaled). Resolve site seeds D/(A+D) from final
-    // combat weapon/armor strengths; morale level effects apply MinClamp / MultiplyGeometric /
-    // MaxClamp. Not resolved during combat stat passes.
+    // Post-combat promotion probability (RawScaled from D/(A+D)). Not resolved during combat.
     PromotionChance,
 
     // Population growth rate modifier (AddPercent, base = 100%)
@@ -175,56 +166,38 @@ enum class StatId_t
     // Bonus energy credited per commerce transaction at each base (Additive; Planetary Governor).
     CommerceEnergyBonus,
 
-    // Absolute denominator for energy inefficiency: loss = Energy × Distance / denom.
-    // Efficiency SE levels emit this as Add with the table value (64, 56, …, 0). Denom ≤ 0
-    // means 100% loss. Resolved from the efficiency rating table, not stacked as a live seed.
+    // Energy inefficiency denominator: loss = Energy × Distance / denom, and denom ≤ 0 loses all.
+    // Set from the efficiency rating table.
     InefficiencyDenominator,
 
-    // Player-scrap refund after the kind formula (or config override). RawScaled: seed is
-    // the formula amount. Add / AddPercent stack, then production.json refund_ceiling_percent
-    // clamps. Not a live yield.
+    // Scrap refund after the kind formula (RawScaled), capped by refund_ceiling_percent.
     ScrapRefund,
 
-    // Population removed when the last defender of a base falls (Additive). base_conquest.json
-    // supplies the baseline Add; Perimeter Defense and Citizen difficulty emit MaxClamp 0.
-    // Floored at 0 at the resolve site — population cannot go negative.
+    // Population lost when a base's last defender falls (Additive), floored at 0.
     LastDefenderPopLoss,
 
-    // Lower bound on facilities destroyed when a base is captured (Additive).
-    // base_conquest.json Adds the baseline; clamped against the eligible count at the
-    // resolve site, so no modifier can invert the range.
+    // Fewest facilities destroyed on capture (Additive), clamped to the eligible count.
     CaptureFacilitiesDestroyedMin,
 
-    // Upper bound on facilities destroyed on capture, as a percent of the eligible count
-    // (Additive — the value is a percent, so a percent-of-a-percent AddPercent would not
-    // mean what a modder expects; use Add). Clamped against the eligible count.
+    // Most facilities destroyed on capture, as a percent of the eligible count (Additive; use Add,
+    // since AddPercent of a percent misleads).
     CaptureFacilitiesDestroyedMaxPercent,
 
-    // Floor for an artillery strike, as percent points of the defender's integer hit_points
-    // (Additive — the value is already a percent, so AddPercent is rejected). Tile domain:
-    // world_rules MinClamp is the open-terrain floor; Base and Bunker MinClamp higher.
-    // The strike site ceils hit_points * this / 100. Highest MinClamp wins.
+    // Artillery strike floor as a percent of the defender's hit_points (Additive; AddPercent is
+    // rejected). The highest MinClamp wins, and the strike ceils the result.
     BombardMinHpPercent,
 
-    // Population removed when a base is captured by a same-species faction (Additive).
-    // base_conquest.json supplies the baseline Add. Independent of LastDefenderPopLoss —
-    // nothing in the shipping config modifies it. Floored at 0 at the resolve site.
+    // Population lost when a same-species faction captures a base (Additive), floored at 0.
     CapturePopLoss,
 
-    // Offset on the recently-conquered drone cap (Additive). The formula is
-    // floor(base_size/4 + this), i.e. (BaseSize + Difficulty - 2) / 4 when difficulty
-    // Adds 0.25 per level (Citizen = 1) and base_conquest.json Adds -0.5. Passed to Lua
-    // as a double so the 0.25 steps are not rounded away before the cap is taken.
+    // Offset on the recently-conquered drone cap floor(base_size/4 + this) (Additive). A double,
+    // so difficulty's 0.25 steps survive until the cap is taken.
     ConqueredDroneCap,
 
-    // The eco-damage multiplier stack (PureMultiplier, seed 1.0): difficulty, the Planet
-    // rating, native life abundance and Perihelion each emit MultiplyGeometric. The eco score
-    // formula multiplies by the resolved product once.
+    // The eco-damage multiplier (PureMultiplier); the eco score multiplies by it once.
     EcologicalDamage,
 
-    // Per-improvement weight toward a base's terraform sum (Additive, Tile). Counted on every
-    // tile in the base radius. Improvements stack: a tile's contribution is the sum over its
-    // features.
+    // An improvement's weight toward its base's terraform sum (Additive, Tile), summed per tile.
     EcoDamageContribution,
     // The extra weight counted only while the base's own pops work the tile (Additive, Tile).
     // A supply-crawled tile is not worked by the base, so it counts the unworked weight only.
@@ -247,11 +220,8 @@ enum class StatId_t
     // TODO: add more stats as they are defined
 };
 
-// How a stat's modifier stack is seeded — the seed-semantics counterpart of LaneFor's scope
-// routing (LaneFor in this header). Adding a StatId_t forces a kind decision in KindFor's exhaustive
-// switch, and SeedFor derives the context-free seed from it, so a resolve site can no longer
-// default a pure-multiplier stat to a 0.0 seed (which silently resolves to 0 — see
-// ResolveStatModifiers).
+// How a stat's modifier stack is seeded. KindFor's switch is exhaustive, so a new stat must
+// choose, and no pure-multiplier stat can default to a 0.0 seed.
 enum class StatKind_t
 {
     // Contributions add onto an empty base; the context-free seed is 0.0.
@@ -259,10 +229,7 @@ enum class StatKind_t
     // The stat IS a multiplier, resolved purely through AddPercent/MultiplyGeometric
     // contributions; the seed is the identity 1.0 (a 0.0 seed collapses the result to 0).
     PureMultiplier,
-    // Modifiers scale a raw value only the resolve site knows (GrowthRate's 100% baseline,
-    // MoistureTier's base tier, FacilityEnergyUpkeep's building upkeep,
-    // ScrapRefund's formula amount). No universal seed
-    // exists — SeedFor throws, forcing the caller to pass the raw value explicitly.
+    // Modifiers scale a raw value only the resolve site knows, so SeedFor throws.
     RawScaled,
 };
 
@@ -352,11 +319,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
     return StatKind_t::Additive; // unreachable; all enumerators handled above
 }
 
-// The ResolveStatModifiers seed for a context-free resolve of `stat`: 0.0 for Additive,
-// 1.0 for PureMultiplier. RawScaled stats throw — their resolve site passes the raw value
-// being scaled instead. A site that deliberately resolves an Additive stat against a raw
-// base (tile yield's elevation energy seed, pop tile multipliers, ResourceManager worked
-// totals) also passes its seed explicitly rather than calling this.
+// The context-free seed for `stat`: 0.0 for Additive, 1.0 for PureMultiplier; RawScaled
+// throws. Sites with their own raw base pass it explicitly.
 constexpr double SeedFor(StatId_t stat)
 {
     switch (KindFor(stat))
@@ -369,10 +333,8 @@ constexpr double SeedFor(StatId_t stat)
     return 0.0; // unreachable; all enumerators handled above
 }
 
-// Consumer-side subject for typed resolve / amount_source evaluation — distinct from
-// EffectLane_t / LaneFor (producer routing). DomainFor is which subject resolves the
-// number, not which single effect list may contribute: sources may still emit from any
-// pool; the consumer assembles applicable lists then resolves under one subject.
+// Which subject resolves a stat. Effects may come from any pool; the consumer resolves them
+// under one subject.
 enum class ResolveDomain_t
 {
     Base,
@@ -594,9 +556,7 @@ enum class RuleFlagId_t
 {
     // Unit flags
     Flight,
-    // After a successful use-action, ExpendIfSingleUse_ reports Expended and the caller
-    // DestroyUnit's (PlayerActions under deferral, or TryAttack / TryFoundBase directly).
-    // ResolveFlag ORs across every component on the design.
+    // A use-action spends the unit; true if any component carries it.
     SingleUse,
     IgnoreDifficultTerrain,
     // Any combat involving a unit with this flag uses psi strengths and damage.
@@ -628,8 +588,8 @@ enum class RuleFlagId_t
     Covert,
 
     // Unit / tile flags
-    // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
-    // a unit on this tile from disengaging when declared ThisTile (Base, Bunker, Airbase).
+    // Blocks the opponent from disengaging (ThisUnit, Comm Jammer), or a unit on this tile
+    // (ThisTile: Base, Bunker, Airbase).
     PreventsDisengage,
 
     // Tile declares it harbors a domain (ThisTile). Queried via TileHarbors with territory
@@ -638,10 +598,7 @@ enum class RuleFlagId_t
     // Tile may serve as an airdrop launch / safe-landing pad (Base, Airbase). Queried via
     // TileProvidesFlag — distinct from Harbors so carrier decks do not qualify.
     AirdropLaunch,
-    // Hostile ThisTile aura (typically with radius): blocks enemy airdrops onto covered tiles.
-    // Consumed by IsAirdropInterdicted via CollectAreaEffects + hostile ownerFaction — not by
-    // TileProvidesFlag (which requires radius 0). Stock Air Superiority projects radius 2;
-    // Aerospace Complex would use the same flag once building ThisTile has a base-tile anchor.
+    // Hostile ThisTile aura that blocks enemy airdrops onto the tiles it covers.
     AirdropInterdiction,
 
     // Faction/global flags
@@ -673,9 +630,7 @@ enum class RuleFlagId_t
     // collateral. Standing world rule; the non_combatant tag stays either way.
     NonCombatantsDestroyedWithoutCombatant,
 
-    // Base cannot bank minerals into production, complete construction, or hurry.
-    // ApplyProduction returns InProgress without consuming the leftover mineral bank;
-    // stockpile progress is preserved.
+    // The base cannot bank minerals, complete construction or hurry; stockpiles keep progress.
     DisableProduction,
 };
 
@@ -730,46 +685,30 @@ enum class EffectScope_t
     // Only the specific pop instance the effect belongs to. Resolved locally by Pop
     // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
     ThisPop,
-    // Only the specific tile the effect belongs to (terrain classification, river, fungus,
-    // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
-    // ResolveTileDefenseMultiplier (TileDefense) and must never enter the base-wide
-    // active effects pool.
+    // Only the tile the effect belongs to; resolved locally and never in the base-wide pool.
     ThisTile,
-    // Units produced at the originating base: stamped onto the unit at construction
-    // (Unit::GetProductionGrants). Distinct from home base and from FactionUnits: permanent
-    // train-at-this-base bonuses (Command Center, Aerospace).
+    // Stamped onto units built at the originating base, permanently (Command Center, Aerospace).
     ProducedAtThisBase,
-    // Only the tech definition this effect is declared on. Resolved when that tech is the
-    // current research target (e.g. TechCost modifiers); never enters the faction pool when
-    // the tech is discovered.
+    // Only the tech it is declared on, while that tech is the research target.
     ThisTech,
-    // Only the faction's dealings with one other faction (a diplomatic status's effects).
-    // Enters the faction pool once per partner, tagged with that partner, and resolves only
-    // in a context that names the same partner (EffectContext_t::pPartner).
+    // Only the faction's dealings with one partner; resolves where the context names that
+    // partner.
     FactionPair,
 };
 
-// Where an effect is resolved — its scope's "lane". This is the single source of truth for
-// scope routing: collectors and filters derive their decisions from LaneFor instead of
-// hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
-// exhaustive switch, and every collector/filter picks up the new scope's routing from there.
+// Where an effect resolves. The one source of scope routing: collectors and filters derive
+// from LaneFor, whose switch is exhaustive.
 enum class EffectLane_t
 {
-    // Resolved by the owning base: lives in the faction pool tagged with originBase,
-    // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
-    // instead, so they never enter the pool).
+    // In the faction pool tagged with originBase; FilterForBase includes it per base.
     Base,
-    // Resolved at every base of the faction. WorldGlobal additionally crosses factions via
-    // GameState::CollectWorldExtras / Faction composition, and that same session set is
-    // appended to live units (unit-domain stats and rule flags) and tiles (tile-domain
-    // stats and rule flags). Lives in the faction pool; FilterForBase includes it.
+    // At every base of the faction. WorldGlobal also crosses factions, and reaches live units
+    // and tiles.
     FactionWide,
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
     FactionUnits,
-    // Merged into units at construction when the production base matches originBase
-    // (Unit::GetProductionGrants). Lives in the faction pool tagged with originBase for
-    // stamp lookup; never applies at base level.
+    // Stamped onto units whose production base matches originBase; never at base level.
     ProducedAtBase,
     // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
     UnitLocal,
@@ -804,9 +743,7 @@ constexpr EffectLane_t LaneFor(EffectScope_t scope)
     return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
 }
 
-// True for scopes resolved faction-wide through the pool (at bases or units) rather than
-// locally by a specific base/pop/unit/tile. This is what Faction's pop/unit collectors feed
-// into CollectActiveEffects.
+// Scopes resolved faction-wide through the pool, not by one base, pop, unit or tile.
 constexpr bool IsFactionLane(EffectScope_t scope)
 {
     const EffectLane_t lane = LaneFor(scope);
@@ -830,9 +767,8 @@ enum class ModifierOp_t
     // All AddPercent contributions sum into a single arithmetic factor before the geometric step.
     AddPercent,
     MultiplyGeometric,
-    // Clamps bound the value *after* the Add / AddPercent / MultiplyGeometric math. The
-    // tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins.
-    // Clamp the resolved stat value to be <= amount.
+    // Clamps apply after the arithmetic; the tightest of each kind wins, and MinClamp beats a
+    // crossing MaxClamp. Clamps the value to <= amount.
     MaxClamp,
     // Clamp the resolved stat value to be >= amount.
     MinClamp,
@@ -870,9 +806,7 @@ inline WorldParameterId_t ParseWorldParameterId(const std::string& rParameter)
     throw std::runtime_error("Unknown world parameter: '" + rParameter + "'");
 }
 
-// Restricts which *other* factions a cross-faction effect (Infiltration, future
-// DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution
-// lane (FactionGlobal / WorldGlobal); factionFilter narrows the diplomatic target set.
+// Narrows which other factions a cross-faction effect targets; scope stays the lane.
 enum class FactionFilterKind_t
 {
     // Only the faction supplied as actionTarget at apply/query time (probe mission target).
@@ -891,10 +825,8 @@ enum class PlayerType_t
     AI,
 };
 
-// Which kind of config declared an effects array. Used for the minimal load-time scope
-// validation: scopes that can only ever be resolved against one source kind (a specific pop,
-// a specific unit, or an origin base) are rejected on any other source instead of silently
-// doing nothing.
+// The kind of config that declared an effect, so a scope only one kind can resolve fails on
+// any other at load.
 enum class EffectSourceKind_t
 {
     Building,

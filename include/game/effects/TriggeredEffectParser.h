@@ -9,11 +9,8 @@
 namespace ac
 {
 
-// JSON parsing for the one-shot effects in a container's trigger-named lists
-// (`on_complete_effects`, `on_enter_effects`, `on_visit_effects`, …). Separate from
-// EffectConfigParser because the two families are separate types: an entry in the wrong list
-// is a parse error naming both lists, where the old `persistence` flag let it parse and then
-// silently never fire.
+// Parsing for the one-shot effects in trigger-named lists. An entry in the wrong family's list
+// is a parse error naming both lists.
 namespace TriggeredEffectParser
 {
 

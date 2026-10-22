@@ -8,11 +8,7 @@
 namespace ac
 {
 
-// Shared JSON parsing for the effect system. Used by every config parser that
-// defines EffectConfig_t entries (buildings, unit components, and future sources such
-// as social engineering) so the string<->enum mappings live in exactly one place.
-// Snake_case id parsing (ParseStatId / ParseRuleFlagId / ParseSocialRatingId) lives next
-// to its enums in EffectEnums.h, at ac scope.
+// JSON parsing for continuous effects, shared by every config that declares them.
 namespace EffectConfigParser
 {
 
@@ -26,41 +22,27 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
 // Like ParseNumber, but throws if the key is absent (no silent default).
 double RequireNumber(const nlohmann::json& parameters, const std::string& key);
 
-// Parses a Condition_t from a condition JSON object ({ "kind": ..., "value": ... }).
-// Called by ParseEffectConfig when an effect entry carries a "condition" field.
-// AllOf `"values"` are desugared to nested TargetTileHas alternatives.
+// Parses a { "kind", "value" } condition. AllOf `"values"` desugar to TargetTileHas.
 Condition_t ParseCondition(const nlohmann::json& conditionJson);
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 
 UnitDomain_t ParseUnitDomain(const std::string& rDomain);
 
-// Parses a BuildingFilter_t from a buildingFilter JSON object
-// ({ "kind": "All" }, { "kind": "BuildingId", "building": "..." },
-//  { "kind": "Category", "category": "grow" }).
+// Parses { "kind": "All" | "BuildingId" | "Category" }.
 BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson);
 
-// Parses a FactionFilter_t from a factionFilter JSON object
-// ({ "kind": "ActionTarget" }, { "kind": "CouncilMembers" }, or
-//  { "kind": "PlayerType", "type": "Player" | "AI" }).
+// Parses { "kind": "ActionTarget" | "CouncilMembers" | "PlayerType" }.
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 
-// True when typeName is a continuous effect type. Answers from the same dispatch table
-// ParseEffectConfig uses, so the two can never disagree about what `effects` accepts —
-// TriggeredEffectParser consults this to tell an author which list an entry belongs in.
+// From ParseEffectConfig's own dispatch table, so the two cannot disagree.
 bool IsEffectType(const std::string& rTypeName);
 
-// Parses a single entry of a continuous "effects" JSON array
-// (type/scope/condition/factionFilter/radius/parameters). A one-shot effect type
-// found here throws, naming the trigger-named list it belongs in instead.
+// One entry of an "effects" array. A one-shot type throws, naming the list it belongs in.
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
-// Throws if the effect can never be resolved for the given source kind: a scope with no
-// resolvable anchor (ThisPop off a pop type, ThisUnit off a unit component,
-// ThisBase/ProducedAtThisBase off a source that cannot supply an origin base), or an
-// amount_source only one kind of config can feed (MineralsConverted off a stockpile).
-// Deliberately leaves intentional legal-but-inert combos alone (e.g. faction-lane effects on
-// improvements, pending territory).
+// Throws for an effect sourceKind can never resolve: a scope with no anchor, or an
+// amount_source another kind feeds. Legal but inert combinations pass.
 void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
                              const std::string& rSourceId);
 

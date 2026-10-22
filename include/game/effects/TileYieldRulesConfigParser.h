@@ -6,10 +6,7 @@
 namespace ac
 {
 
-// Loads config/tile_yield_rules.json — FactionGlobal MaxClamp resource caps (and related)
-// effects merged into every faction's effect pool, plus the world-level yield scalars. Parsed
-// with EffectSourceKind_t::TileYieldRules so ValidateScopeForSource rejects scopes that can
-// never apply (e.g. ThisPop).
+// Loads config/tile_yield_rules.json as EffectSourceKind_t::TileYieldRules.
 class TileYieldRulesConfigParser
 {
 public:

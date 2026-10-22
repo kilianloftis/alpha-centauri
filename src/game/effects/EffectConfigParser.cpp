@@ -39,9 +39,8 @@ void RequireScope_(EffectScope_t scope,
     throw std::runtime_error(rErrorMessage);
 }
 
-// Option A: amount_source legality is independent of DomainFor(stat). Subject domain is
-// what AmountSourceValue needs; allowed stats/scopes are per-source (Energy stays Base
-// while ElevationEnergySeed still requires a Tile subject at eval time).
+// Legality per amount source, independent of DomainFor(stat): the subject AmountSourceValue
+// needs, and the stats and scopes it allows.
 void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                                    const EffectConfig_t& rEffect,
                                    const std::string& rStatWire)
@@ -52,9 +51,8 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
     switch (rMod.amountSource->kind)
     {
         case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
-            // Required subject: Tile (+ the world's tile_yield_rules). Allowed: energy +
-            // ThisTile. A radius makes no sense here — targetTile is the receiving tile, so an
-            // aura would read the elevation of whatever it lands on, not its own host.
+            // Energy, ThisTile, no radius: the source reads the receiving
+            // tile, so an aura would scale off whatever tile it lands on.
             if (stat != StatId_t::Energy)
             {
                 throw std::runtime_error(
@@ -354,11 +352,8 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     }
     else if (parameters.contains("amount_source"))
     {
-        // Any op. An amount source computes the modifier's *amount*; ResolveStatModifiers calls
-        // AmountSourceValue for every contribution and hands (amount, op) to ApplyModifierStack,
-        // which is op-agnostic. So "MaxClamp at base size" resolves exactly like "Add 0.25 per
-        // pop" — the per-source legality rules below (stat domain, scope, finiteness) are what
-        // actually constrain this, not the op.
+        // Any op: the source computes the amount and ApplyModifierStack is op-agnostic.
+        // The legality checks below are what constrain it.
         statModifier.amountSource = ParseAmountSource(parameters.at("amount_source"));
         if (statModifier.amountSource->amounts)
         {
@@ -379,10 +374,7 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     {
         statModifier.amount = ParseNumber(parameters, "amount", 0.0);
     }
-    // Optional per-tile selector: when present, this modifier applies to each worked
-    // tile satisfying the selector instead of once at the base level. Selectors are
-    // resolved only during tile-yield resolution, so they are rejected on any stat
-    // that isn't a tile resource — such a modifier would silently never apply.
+    // Selectors resolve only during tile yield, so a selector on any other stat would never apply.
     if (parameters.contains("selector"))
     {
         if (!IsTileResourceStat_(statModifier.stat))
@@ -391,10 +383,8 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
                 "StatModifier 'selector' is only valid on tile resource "
                 "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
         }
-        // A selector routes the modifier through tile-yield resolution, which supplies only a
-        // tile subject and never the base / faction / stockpile ones. Rather than enumerate
-        // which pairings are impossible (and silently miss the next amount_source added), the
-        // combination is rejected outright.
+        // Tile-yield resolution supplies only a tile subject, so a selector never combines with an
+        // amount_source.
         if (statModifier.amountSource)
         {
             throw std::runtime_error(
@@ -578,9 +568,8 @@ void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t&
     overrideFx.footing = parseFootingOpt();
     overrideFx.targetDomain = parseDomainOpt("target_domain");
 
-    // actor_domain is the row on every grid, so only the column needs checking: reject the
-    // two columns that do not belong to the selected grid, and typos fail at load rather
-    // than silently never matching.
+    // actor_domain is the row on every grid; only a column that belongs to another grid needs
+    // rejecting.
     const bool bSurface = overrideFx.surface.has_value();
     const bool bFooting = overrideFx.footing.has_value();
     const bool bTarget = overrideFx.targetDomain.has_value();
@@ -1480,9 +1469,8 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
             break;
         case EffectSourceKind_t::UnitComponent:
         case EffectSourceKind_t::ProbeAction:
-            // A continuous ThisBase effect here has no pool origin to be stamped with: the
-            // producing / mission-target base only exists at the moment the trigger fires, so
-            // that behaviour belongs in a triggered list instead.
+            // No origin base to stamp a continuous ThisBase effect
+            // with; it belongs in a triggered list.
             bCanSupplyOriginBase = false;
             break;
         case EffectSourceKind_t::PopCompositionBaseLocal:

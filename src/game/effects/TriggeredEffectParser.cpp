@@ -439,9 +439,8 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
 OncePer_t ParseOncePer_(const nlohmann::json& onceJson)
 {
     OncePer_t oncePer;
-    // Required, not defaulted: which subject remembers the key decides whether the entry can
-    // fire at all from a given trigger, and a default of "unit" would turn a missing key into
-    // an entry that silently never fires from a trigger that has no unit.
+    // Required: which subject keeps the key decides whether the entry can fire from a trigger at
+    // all.
     if (!onceJson.contains("scope") || !onceJson.at("scope").is_string())
     {
         throw std::runtime_error("once_per requires a 'scope' of unit, base, faction, or world");
@@ -473,9 +472,8 @@ bool IsTriggeredEffectType(const std::string& rTypeName)
 
 bool IsContinuousEffectType(const std::string& rTypeName)
 {
-    // Asks the continuous parser's own table rather than keeping a second list beside it:
-    // a new continuous type would otherwise be reported here as an unknown triggered type
-    // instead of "belongs in effects".
+    // The continuous parser's own table, so a new continuous type is reported as belonging in
+    // `effects`.
     return EffectConfigParser::IsEffectType(rTypeName);
 }
 
@@ -501,10 +499,7 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
 
     if (effectJson.contains("factionFilter"))
     {
-        // Only SetInfiltration picks its own targets; every other type acts on the subjects
-        // the context supplies. Accepting a filter elsewhere would read as narrowing the
-        // targets while changing nothing — a council GrantEnergy with CouncilMembers still
-        // credits whoever the applier listed.
+        // Only SetInfiltration picks its targets; on any other type a filter would change nothing.
         if (typeStr != "SetInfiltration")
         {
             throw std::runtime_error(
@@ -523,9 +518,8 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
     {
         effect.condition = EffectConfigParser::ParseCondition(effectJson.at("condition"));
     }
-    // Trigger timing comes from the list this entry sits in, and a triggered effect resolves
-    // against an explicit context rather than a scope lane — so the continuous-only keys are
-    // rejected rather than silently ignored.
+    // Timing comes from the list and resolution from an explicit context, so the continuous-only
+    // keys are rejected.
     for (const char* pKey : {"scope", "persistence", "radius", "min_radius",
                              "buildingFilter", "removed_by_tech"})
     {

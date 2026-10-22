@@ -8,12 +8,8 @@
 namespace ac
 {
 
-// Named interaction matrices loaded from config/interaction_grids.json.
-//
-// Every grid has the same shape: the acting unit's domain (the row) against one other
-// thing (the column). "Actor" is always the unit whose own InteractionOverrides are
-// consulted first — the mover, the attacker, the ZOC projector. Only the column vocabulary
-// differs between grids, so each grid names its column for what that column actually is.
+// Interaction matrices from config/interaction_grids.json: the acting unit's domain (row)
+// against one other thing (column). The actor's own overrides are consulted first.
 enum class InteractionGridId_t
 {
     Enter,      // actor_domain x surface
@@ -35,10 +31,7 @@ enum class InteractionSurface_t
     Water,
 };
 
-// AttackTile-grid column: what the attacker is standing on. Like every other axis this is read
-// straight off the entity rather than derived from a rule — Embarked is simply "aboard a
-// carrier", which is distinct from Water because a land unit garrisoning a sea base is on
-// water without being aboard anything.
+// AttackTile column: what the attacker stands on. Embarked is "aboard a carrier", not Water.
 enum class InteractionFooting_t
 {
     Land,
@@ -65,9 +58,7 @@ inline std::size_t FootingIndex(InteractionFooting_t footing)
     return static_cast<std::size_t>(footing);
 }
 
-// Bitmask over InteractionGridId_t. Cached on effect sources (designs, faction pools) so a
-// resolve can skip effect collection entirely when the source carries no InteractionOverride
-// for the grid being queried — which is the common case.
+// Grids a source carries overrides for, so the common case skips effect collection.
 using InteractionGridMask_t = unsigned char;
 
 inline constexpr InteractionGridMask_t GridBit(InteractionGridId_t grid)

@@ -16,11 +16,8 @@
 namespace ac
 {
 
-// Terminal `else` marker for exhaustive std::visit over the sum types below. The `-Wswitch`
-// /`-Werror=switch` pair that guards this project's enum switches has no variant equivalent,
-// so every visitor ends in `else { static_assert(k_AlwaysFalse<T>); }` — adding an
-// alternative then breaks the build at each site that must decide about it, instead of
-// falling off a non-void lambda (or silently doing nothing in a void one).
+// Terminal `else` for exhaustive std::visit, which has no -Wswitch: a new alternative breaks
+// the build at every site that must decide about it.
 template <typename T>
 inline constexpr bool k_AlwaysFalse = false;
 
@@ -31,12 +28,8 @@ struct GrantBuildingEffect_t
     std::string buildingId;
 };
 
-// Directed datalink infiltration as a standing law: the beneficiary (effect owner) sees into
-// other factions for as long as this effect remains active, honored at query time by
-// HasInfiltration. Target set is scope + optional factionFilter:
-//   WorldGlobal, no filter                        → every other faction
-//   FactionGlobal + CouncilMembers / PlayerType   → filter selects targets
-// For a one-shot write that outlives its source, use the triggered SetInfiltrationEffect_t.
+// Standing datalink infiltration for as long as the effect is active: WorldGlobal reaches
+// every other faction, or a factionFilter picks. SetInfiltrationEffect_t writes it once.
 struct InfiltrationEffect_t
 {
 };
@@ -66,39 +59,26 @@ struct StatModifierEffect_t
     StatId_t stat = StatId_t::Nutrients;
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
-    // When set, `amount` scales a runtime value instead of being a literal add.
-    // ElevationEnergy: contribution = ceil(tile elevation / elevation_energy_step_meters)
-    //   * amount, clamped at 0. This is the whole of a solar collector's yield — a bare tile
-    //   produces no energy of its own. Requires EffectContext_t::targetTile and
-    //   pTileYieldRules; energy + ThisTile only. Not in FilterBaseLevel.
-    // MineralsConverted: contribution = mineralsConverted * amount (output per mineral).
-    //   Requires EffectContext_t::mineralsConverted; stockpile-output stats + ThisBase only.
-    //   Resolved only during stockpile conversion, not FilterBaseLevelByStatId.
-    // BaseSize: contribution = base population size * amount (e.g. University drones 0.25).
-    //   Requires EffectContext_t::pBase; included in FilterBaseLevelByStatId when pBase is set.
-    // BasesOwned: contribution = faction base count * amount (e.g. +1 Attack per owned base).
-    //   Requires EffectContext_t::pFaction (stamped from the live unit on Unit resolve);
-    //   Unit-domain stats + ThisUnit only. IDesign-only resolve drops it (no faction subject).
-    // IntrinsicXp: contribution = unit intrinsic XP * amount (e.g. Isle cargo 1×XP).
-    //   Requires EffectContext_t::pUnit; Unit-domain stats + ThisUnit only. IDesign-only
-    //   resolve drops it (no unit subject). Uses GetXp(), not SE-shifted effective morale.
-    // BuildingUpkeep: contribution = base facility upkeep * amount (e.g. MaxClamp econ at
-    //   upkeep). Requires EffectContext_t::pBase; Continuous MaxClamp on econ only.
+    // Scales `amount` by a runtime value instead of adding it. Each source needs its subject on
+    // EffectContext_t (docs/architecture/effects-system.md).
     enum class AmountSource_t
     {
+        // ceil(tile elevation / elevation_energy_step_meters), at least 0: all of a solar
+        // collector's energy. Energy, ThisTile only.
         ElevationEnergy,
+        // Minerals a stockpile converts; stockpile output stats, ThisBase only.
         MineralsConverted,
+        // Base population (University drones 0.25).
         BaseSize,
+        // Bases the faction owns; unit stats, ThisUnit only.
         BasesOwned,
+        // The unit's own XP, not SE-shifted morale; unit stats, ThisUnit only.
         IntrinsicXp,
+        // The base's facility upkeep; continuous econ MaxClamp only.
         BuildingUpkeep,
-        // AddPercent scale: amount * whole elevation levels this unit's tile is above the
-        // opposing combatant. Levels are meters / reference_level_meters. A gap under one
-        // level, or being lower, contributes 0. Needs both combatants on EffectContext_t.
+        // AddPercent per whole elevation level this unit stands above its opponent; 0 if lower.
         LevelsAboveOpponent,
-        // Lookup (or, later, scale) a faction social rating. Needs pUnit and `rating`.
-        // `amounts` selects amounts[rating]; a missing key contributes 0. Requires amounts
-        // today — there is no linear SocialRating caller.
+        // A faction social rating, looked up through `amounts`; a missing key contributes 0.
         SocialRating,
     };
     struct AmountSourceSpec_t
@@ -114,24 +94,15 @@ struct StatModifierEffect_t
     {
         return amountSource.has_value() && amountSource->kind == kind;
     }
-    // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
-    // whose features satisfy the selector (e.g. "+1 mineral to every worked Mine"), rather
-    // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
-    // a flat base modifier (ThisBase scope), depending on the effect's scope.
+    // Applies to each worked tile whose features match, instead of once per base.
     std::optional<TileSelector_t> selector;
     // When true, this contribution is added after per-tile MaxClamp / MinClamp (classic SMAC
     // resource-bonus specials). Only valid on nutrients/minerals/energy with op Add.
     bool bypassClamp = false;
 };
 
-// Stats a MineralsConverted modifier may target.
-//
-// Minerals are excluded because they are the input — converting minerals into minerals is a
-// feedback loop, not a recipe. Everything else here is a per-turn base bank a stockpile can
-// credit directly, except Energy: "energy" at a base is not a bank, so converted energy is
-// run through inefficiency and the econ/labs/psych slider split exactly like collected
-// energy (ResourceManager::AddAllocatedEnergy). Crediting `econ` instead skips the sliders
-// and reaches the treasury whole — IncomeCollection runs after BaseProduction.
+// Stats a MineralsConverted modifier may target: not minerals, the input. Energy runs through
+// inefficiency and the sliders like collected energy; econ reaches the treasury whole.
 inline constexpr StatId_t k_StockpileOutputStats[] = {
     StatId_t::Nutrients,
     StatId_t::Energy,
@@ -159,9 +130,7 @@ struct SocialEngineeringOverrideEffect_t
     std::string choice;
 };
 
-// Modifies one of the ten social engineering rating axes by an integer amount.
-// The total accumulated rating for each axis is then looked up in social_rating_effects.json
-// to produce the final gameplay effects (non-linear mapping).
+// Adds to one social engineering axis; social_rating_effects.json maps totals to effects.
 struct SocialRatingModifierEffect_t
 {
     SocialRatingId_t rating;
@@ -175,17 +144,15 @@ struct DiplomaticModifierEffect_t
     int value;
 };
 
-// Hides a unit on an arbitrary detection channel (e.g. "cloak", "terrain"). Channel ids
-// are free-form strings defined in JSON — not enumerated in code. ThisUnit: the unit itself
-// is concealed. ThisTile: every unit standing on (or within radius of) the tile is concealed.
+// Hides a unit on a JSON-defined detection channel: itself (ThisUnit) or everything on and
+// around a tile (ThisTile).
 struct ConcealEffect_t
 {
     std::string channel;
 };
 
-// Pierces concealment on a matching channel. Typically ThisTile with a radius (e.g. Sensor
-// Detect "terrain" at radius 2). Collectors must stamp ActiveEffect_t::ownerFaction
-// (territory owner or projecting unit); Detect without attribution never pierces.
+// Pierces concealment on a channel, typically ThisTile with a radius. Needs ownerFaction set,
+// or it never pierces.
 struct DetectEffect_t
 {
     std::string channel;
@@ -197,19 +164,15 @@ struct OrbitalAttackEffect_t
 {
     // Success percent points (50 = 50%). Required in JSON; set explicitly when hand-building.
     int chance;
-    // Intervening mission years the source stays deployed after an attempt.
-    // Ready when missionYear >= deployYear + cooldownTurns + 1 (e.g. 1 → ready at Y+2).
-    // Required in JSON; set explicitly when hand-building.
+    // Ready when missionYear >= deployYear + cooldownTurns + 1. Required in JSON.
     int cooldownTurns;
     // Percent chance the attacking satellite is destroyed when the attempt fails (miss).
     // Optional in JSON (default 0).
     int chanceOfDestructionOnFail = 0;
 };
 
-// Generic pre-combat intercept: before Resolve, roll to destroy the attacker.
-// condition (typically AttackerDomain) selects eligible attackers and gates the situation.
-// Optional cooldownTurns: when >= 0, attempting deploys the source (shared with OrbitalAttack
-// when both live on the same building id).
+// Before combat, rolls to destroy an attacker the condition selects. cooldownTurns >= 0
+// deploys the source, shared with OrbitalAttack on the same building.
 struct InterceptEffect_t
 {
     // Success percent points. Required in JSON; set explicitly when hand-building.
@@ -222,33 +185,24 @@ struct InterceptEffect_t
     int chanceOfDestructionOnFail = 0;
 };
 
-// This unit may scramble to become the combat defender against an attacker that satisfies
-// condition (required; typically AttackerDomain). `range` is Chebyshev tiles from the
-// candidate to the original defender's tile; eligibility and move-onto-tile live in
-// ScrambleRules.
+// This unit may scramble to defend against attackers the condition selects, from up to
+// `range` tiles away (ScrambleRules).
 struct ScrambleEffect_t
 {
     // Required in JSON; set explicitly when hand-building. Must be > 0.
     int range;
 };
 
-// Declares which passenger domains this unit may carry (`carries`), and whether loading
-// requires a matching harbor tile (`requires_harbor`). Embarked cargo of a carried domain
-// refuels on the carrier — that follows from carries, not a separate flag. Capacity remains
-// cargo_capacity. Contributions union across matching ThisUnit effects (see condition for
-// carrier SubjectDomain).
+// Passenger domains this unit carries, and whether loading needs a harbor. Carried cargo
+// refuels aboard. Unions across matching ThisUnit effects.
 struct TransportParamsEffect_t
 {
     std::vector<UnitDomain_t> carries;
     bool requiresHarbor = false;
 };
 
-// Flips one stock coexistence answer for the acting former. Stock is deny when either
-// occupant excludes the other. The pair is unordered — matching tries both assignments —
-// and naming a single occupant wild-cards the other side. Scope is ThisUnit (a component)
-// or FactionUnits (a tech). Applied only when `cell` differs from stock. An improvement
-// built under an Allow records the waived pair on the tile (Tile::AddCoexistenceWaiver),
-// so it survives losing the component that earned it.
+// Flips one coexistence answer for the acting former; the pair is unordered and one named
+// occupant wild-cards the other. The tile keeps a waiver for what it built.
 struct CoexistenceOverrideEffect_t
 {
     InteractionCell_t cell = InteractionCell_t::Allow;
@@ -256,14 +210,8 @@ struct CoexistenceOverrideEffect_t
     std::string secondId;
 };
 
-// Overrides one cell (or a wild-card slice) of an interaction grid to a non-default value.
-// `cell` is required and may be allow or deny; at resolve, an override that restates the
-// stock cell is skipped, so for any concrete query only one polarity can fire and first-match
-// order among overrides never matters. Omit an axis to match any value on that axis.
-// Optional EffectConfig_t::condition still applies (e.g. Water+Base). actorDomain is the row
-// on every grid; the parser rejects a column axis that does not belong to the selected grid,
-// and rejects any scope other than ThisUnit / FactionUnits, so typos fail at load rather
-// than silently never matching.
+// Overrides an interaction grid cell (allow or deny); one restating the stock cell is
+// skipped, so order never matters. Omit an axis to match any value.
 struct InteractionOverrideEffect_t
 {
     InteractionGridId_t grid = InteractionGridId_t::Enter;
@@ -292,27 +240,20 @@ using EffectVariant_t = std::variant<
     CoexistenceOverrideEffect_t
 >;
 
-// Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are
-// unrepresentable. Inherits std::variant so AllOf_t can recurse (vector<Condition_t>).
-// Visit/get via AsVariant() — std::visit requires the std::variant specialization.
+// Runtime predicates on EffectConfig_t, as a variant so AllOf_t can recurse. Visit through
+// AsVariant().
 struct Condition_t;
 
-// The tile targeted by this effect has the named feature id. Evaluated via Tile::HasFeature,
-// so one alternative covers terrain classification (e.g. "Rocky"), river/fungus, and any
-// improvement id — including "Base". In combat the target is the defender's tile.
-// bPresent false inverts the test ("this tile does not have Fungus"), the same way
-// IsNativeLife_t::bMatches does — a whole Not_t alternative would have to hold a nested
-// Condition_t, and every negation the rules need is of a tile-feature test.
+// The targeted tile (the defender's in combat) has a feature: terrain, river, fungus or any
+// improvement. bPresent false inverts it, which covers every negation the rules need.
 struct TargetTileHas_t
 {
     std::string featureId;
     bool bPresent = true;
 };
 
-// Every nested condition is satisfied (AND). Parser desugars AllOf JSON `"values": ["A","B"]`
-// into TargetTileHas alternatives; after parse only nested Condition_t nodes remain. An empty
-// conditions list is the one invalid state the variant cannot rule out: the parser rejects it,
-// and ConditionBodySatisfied_ evaluates it as false for hand-built structs.
+// Every nested condition holds. JSON `"values"` desugars to TargetTileHas; an empty list is
+// rejected at parse and false when hand-built.
 struct AllOf_t
 {
     std::vector<Condition_t> conditions;
@@ -398,9 +339,8 @@ struct IsHeadquarters_t
 {
 };
 
-// Identity predicates on EffectContext_t::pUnit — the *effect subject* (the unit carrying
-// or receiving the effect: CollectLiveUnitEffects carrier, GrantXp produced unit, stamps).
-// Fail closed if pUnit is absent. Distinct from AttackerDomain / DefenderDomain (combat roles).
+// Identity predicates on the effect subject, pUnit, failing closed without one. Not the
+// combat roles.
 struct SubjectDomain_t
 {
     UnitDomain_t domain = UnitDomain_t::Land;
@@ -435,9 +375,7 @@ struct IsCombatUnit_t
 {
 };
 
-// True when the design's native_life RuleFlag matches bMatches. Omit value in JSON to
-// require the flag; "value": false matches units that do not carry it. Fail closed if
-// pUnit is absent.
+// The design's native_life flag matches bMatches; omit the JSON value to require it.
 struct IsNativeLife_t
 {
     bool bMatches = true;
@@ -502,11 +440,8 @@ struct EffectConfig_t
 {
     EffectVariant_t effect;
     EffectScope_t scope;
-    // Absent = the effect always applies. When present, the effect only applies in a runtime
-    // context that satisfies the condition (see ConditionSatisfied / EffectContext_t).
-    // Situational arms (TargetTileHas, IsDefending, …) are excluded from context-free
-    // resolution; identity arms (Domain, IsPrototype, …) are applied in CollectLiveUnitEffects
-    // / in-context resolve when pUnit is set.
+    // Absent: always applies. Situational arms stay out of context-free resolution; identity
+    // arms apply wherever pUnit is set.
     std::optional<Condition_t> condition;
     // Absent = applies to every building when resolving FacilityEnergyUpkeep. When present,
     // only matching building types receive the modifier (All / BuildingId / Category).
@@ -514,17 +449,13 @@ struct EffectConfig_t
     // Absent = default target set from scope (WorldGlobal → all other factions). When present,
     // further restricts which factions a directed cross-faction effect applies to.
     std::optional<FactionFilter_t> factionFilter;
-    // When set, FactionEffectsPool omits this effect once the faction has discovered the tech.
-    // Empty / absent = never removed by research. Parsed from the effect entry's
-    // "removed_by_tech" field (alongside condition / buildingFilter).
+    // The faction pool drops this effect once the faction discovers the tech.
     std::string removedByTech;
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;
-    // Nearest Chebyshev distance the effect reaches, so an aura can skip its own host tile.
-    // 0 (default) = includes the host. 1 with radius 1 is a ring: the Echelon Mirror boosts
-    // neighbouring solar collectors but not the one it counts as itself. Parsed from
-    // "min_radius"; must be <= radius.
+    // Nearest distance the effect reaches; 1 with radius 1 is a ring that skips its own tile.
+    // At most radius.
     int minRadius = 0;
 };
 

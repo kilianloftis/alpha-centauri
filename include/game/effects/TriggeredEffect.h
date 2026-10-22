@@ -13,16 +13,8 @@
 namespace ac
 {
 
-// One-shot changes fired by a named trigger, as opposed to the continuous modifiers in
-// EffectConfig_t. The two are separate types because they are separate machines: a continuous
-// effect is *queried* (pooled, filtered by context, idempotent), a triggered effect is
-// *executed* (RNG, ledger writes, ownership transfers, exactly once). Keeping them apart is
-// what makes "a StatModifier that fires once" and "a Rebel that applies continuously"
-// unrepresentable instead of silently doing nothing.
-//
-// Containers declare these in trigger-named lists (`on_complete_effects`, `on_enter_effects`,
-// `on_visit_effects`, `on_hold_effects`, …); the slot says when they fire, so there is no
-// persistence field.
+// One-shot changes fired by a named trigger. Separate from EffectConfig_t, which is queried
+// rather than executed, so neither can be used as the other.
 
 // Constructs the facility for real: the base gains a copy and pays its upkeep. Distinct from
 // the continuous GrantBuildingEffect_t, which only expands the target's effects.
@@ -38,9 +30,8 @@ struct GrantTechEffect_t
     std::optional<std::string> techId;
 };
 
-// A unit assembled from component ids, the same shape as EscapeColonyPodConfig_t — there is no
-// registry of named designs to look a single id up in, because designs are per-faction and
-// player-authored with ids derived from their components (UnitDesign::GetId).
+// A unit assembled from component ids: designs are per faction, with ids derived from their
+// components, so there are no named ones to look up.
 struct GrantUnitEffect_t
 {
     std::vector<std::string> componentIds;
@@ -61,17 +52,14 @@ struct WorldParameterEffect_t
     int amount = 0;
 };
 
-// Writes directed datalink infiltration into the DiplomacyLedger for good. The target set is
-// factionFilter (ActionTarget for a probe mission, CouncilMembers, PlayerType); absent means
-// every other faction. Distinct from the continuous InfiltrationEffect_t, which is a standing
-// law honored at query time by HasInfiltration and lapses with the effect.
+// Writes datalink infiltration into the DiplomacyLedger for good, to factionFilter or every
+// other faction.
 struct SetInfiltrationEffect_t
 {
 };
 
-// Base-size change (colony-pod production cost, genetic plague, …).
-// Add: `amount` is a signed absolute delta. AddPercent: delta = size * amount / 100
-// (integer division toward zero; −50 on size 5 → −2). Never shrinks below minSize.
+// Base-size change: Add is a signed delta, AddPercent truncates size * amount / 100 toward
+// zero. Never below minSize.
 struct ModifyPopulationEffect_t
 {
     int amount = 0;
@@ -79,10 +67,8 @@ struct ModifyPopulationEffect_t
     int minSize = 0;
 };
 
-// Instant XP credit on a unit subject (train bonuses, prototype first-fielding, monolith).
-// Stacks via ApplyModifierStack onto the unit's current XP; SetXp clamps to morale max.
-// Optional removeHostChance: after XP actually increases, roll to remove the visit host
-// improvement named on TriggeredEffectContext_t::hostImprovementId (Monolith 1/32).
+// XP credit on a unit, clamped to the morale maximum. removeHostChance may then remove the
+// visited improvement (Monolith 1/32).
 struct GrantXpEffect_t
 {
     int amount = 0;
@@ -108,10 +94,8 @@ struct RestoreHitPointsEffect_t
     RestoreHitPointsOp_t op = RestoreHitPointsOp_t::Add;
 };
 
-// Random facility destruction at the context base (riot escalation, probe sabotage).
-// Every field is required in JSON: which facilities are off-limits is a game rule per caller,
-// and a C++ default here is how the shipping config and the test fixture came to disagree
-// about whether sabotage can destroy a secret project.
+// Random facility destruction at the context base. Every field is required: what is
+// off-limits is each caller's rule.
 struct DestroyFacilityEffect_t
 {
     int count = 0;
@@ -131,40 +115,32 @@ struct DestroyUnitEffect_t
 {
 };
 
-// Raises the context tile through ApplyEarthquake: levelCount rolls from map_rules.json, then
-// the neighbor slope relaxation. Exactly one of the two magnitude sources is authored —
-// `levels` is a literal (a scripted quake), `levelsStat` reads that stat off the subject unit
-// (a tectonic payload takes its size from the reactor's EarthquakeLevels).
+// Raises the context tile through ApplyEarthquake. Exactly one of `levels` and `levelsStat`
+// (read off the subject unit's reactor).
 struct EarthquakeEffect_t
 {
     int levels = 0;
     std::optional<StatId_t> levelsStat;
 };
 
-// Turns the context tile, and a random sample of its Chebyshev-1 neighbors, into fungus.
-// Exactly one magnitude source is authored — `tiles` is a literal, `tilesStat` reads that
-// stat off the subject unit (a fungal payload takes its size from the reactor).
+// Turns the context tile and a random sample of its neighbours to fungus. Exactly one of
+// `tiles` and `tilesStat`.
 struct FungalBloomEffect_t
 {
     int tiles = 0;
     std::optional<StatId_t> tilesStat;
 };
 
-// Destroys units other than the subject, razes bases, and removes built improvements in a
-// Chebyshev disk, then lowers every tile in that disk by one level. Exactly one magnitude
-// source is authored — `radius` is a literal, `radiusStat` reads that stat off the subject
-// unit (a planet buster takes its size from the reactor's ExplosionRadius). Radius 1 is
-// the 3×3 of 9 tiles. The subject unit is spared so a following DestroyUnit can spend it.
+// Destroys other units, razes bases and removes improvements in a disk, then lowers it a
+// level. Exactly one of `radius` and `radiusStat`; the subject survives to be spent.
 struct ExplosionEffect_t
 {
     int radius = 0;
     std::optional<StatId_t> radiusStat;
 };
 
-// Adds or clears one terrain occupant on the context tile. The id decides which tile field
-// it routes to: aquifer and river are bools, everything else is optional terrain. Terrain
-// that is derived from other state (rockiness, moisture, the depth bands) is rejected at
-// load, because writing it here would be overwritten by the state it is derived from.
+// Adds or clears one terrain occupant on the context tile. Derived terrain (rockiness,
+// moisture, depth bands) is rejected at load.
 struct SetTerrainFeatureEffect_t
 {
     std::string featureId;
@@ -178,38 +154,29 @@ struct StepRockinessEffect_t
     int steps = -1;
 };
 
-// One level roll applied to the context tile as a Former edit, signed by bRaise. Distinct
-// from EarthquakeEffect_t, which sums several rolls and has no floor of its own: a Former's
-// floor depends on the subject unit's domain, so a land Former cannot dig its tile below
-// ocean level while a sea Former can go to Planet's floor.
+// One Former level roll on the context tile. Its floor depends on the subject's domain, which
+// is what sets it apart from EarthquakeEffect_t.
 struct ElevationChangeEffect_t
 {
     bool bRaise = true;
 };
 
-// Records an atrocity by the subject faction and applies the severity's consequences: commerce
-// sanctions, universal Vendetta, Planetary Council expulsion. The victim is
-// TriggeredEffectContext_t::derivedVictim when an earlier arm worked one out (Explosion), else
-// the trigger site's actionTarget. Numbers and gates live in config/atrocities.json, so the
-// severity is what an author picks. The subject is the perpetrator, which is why this is a
-// per-faction-subject entry like SetInfiltration.
+// Records an atrocity by the subject faction and applies its consequences from
+// config/atrocities.json. The victim is derivedVictim if an earlier arm set one.
 struct CommitAtrocityEffect_t
 {
     // One of AtrocitySeverityId_t. The parser rejects any other name.
     AtrocitySeverityId_t severity = AtrocitySeverityId_t::Simple;
 };
 
-// Records mind control by the subject faction in the MindControlLedger. Per-faction subject, like
-// CommitAtrocity: in a probe mission that is the actor, never the probed base's owner. The
-// positive weight is what the act adds to the actor's total.
+// Records mind control by the subject faction (the actor) in the MindControlLedger.
 struct RecordMindControlEffect_t
 {
     int weight = 0;
 };
 
-// Raises the subject faction's clean-minerals cap permanently in the EcologyLedger. Authored in
-// on_complete_effects, so only a facility that is built (not captured or granted) credits it.
-// bRequiresFirstBloom withholds the grant until the faction has had a fungal bloom.
+// Raises the subject faction's clean-minerals cap for good. In on_complete_effects, so only a
+// built facility credits it.
 struct GrantCleanMineralsEffect_t
 {
     int amount = 0;
@@ -257,9 +224,8 @@ enum class OnceScope_t
     World,
 };
 
-// Absent = fires every time its trigger does. Present = fires at most once per subject.
-// The key is authored in config rather than derived from the entry, because the rule usually
-// spans instances: every Monolith shares "monolith_xp", so visiting a second one grants nothing.
+// Present: fires at most once per subject, under an authored key that spans instances, as
+// every Monolith shares "monolith_xp".
 struct OncePer_t
 {
     OnceScope_t scope = OnceScope_t::Unit;
