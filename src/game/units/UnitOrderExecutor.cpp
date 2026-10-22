@@ -331,8 +331,7 @@ StepResult_t UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder
 std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
                                                            const Tile& rTargetTile)
 {
-    Unit* pDefender =
-        FindAttackableHostileOnTile(rAttacker, rTargetTile);
+    Unit* pDefender = FindAttackableHostileOnTile(rAttacker, rTargetTile);
     if (!pDefender)
     {
         return std::nullopt;
@@ -341,18 +340,24 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
     // move either side before the blow lands.
     const HostileAct_t act = HostileActAgainst(rAttacker, *pDefender);
-    if (std::optional<CombatResult_t> intercepted = TryIntercept_(rAttacker, *pDefender, act))
+    std::optional<CombatResult_t> result = TryIntercept_(rAttacker, *pDefender);
+    if (!result)
     {
-        return intercepted;
+        result = FightDefender_(rAttacker, *pDefender);
     }
+    ReportHostileAct_(act);
+    return result;
+}
 
+CombatResult_t UnitOrderExecutor::FightDefender_(Unit& rAttacker, Unit& rDefender)
+{
     // Snapshot before Resolve may DestroyUnit the defender (and free its tile reference).
-    const Tile& rDefenderTile = pDefender->GetTile();
+    const Tile& rDefenderTile = rDefender.GetTile();
     const bool bDefenderOnBase =
         m_pWorld && m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
 
     std::vector<const Tile*> scrambleHops;
-    Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, *pDefender, scrambleHops);
+    Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, rDefender, scrambleHops);
 
     CombatResult_t result = m_combat.Resolve(rAttacker, rCombatDefender);
     result.scramblePath = std::move(scrambleHops);
@@ -370,15 +375,18 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     {
         result.bAttackerDestroyed = true;
     }
-    if (m_pWorld)
-    {
-        m_pWorld->OnHostileAct(act);
-    }
     return result;
 }
 
-std::optional<CombatResult_t> UnitOrderExecutor::TryIntercept_(Unit& rAttacker, Unit& rDefender,
-                                                              const HostileAct_t& rAct)
+void UnitOrderExecutor::ReportHostileAct_(const HostileAct_t& rAct)
+{
+    if (m_pWorld)
+    {
+        m_pWorld->OnHostileAct(rAct);
+    }
+}
+
+std::optional<CombatResult_t> UnitOrderExecutor::TryIntercept_(Unit& rAttacker, Unit& rDefender)
 {
     if (!m_pWorld)
     {
@@ -396,7 +404,6 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryIntercept_(Unit& rAttacker, 
     {
         intercepted->bAttackerDestroyed = true;
     }
-    m_pWorld->OnHostileAct(rAct);
     return intercepted;
 }
 
@@ -408,29 +415,14 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
         return std::nullopt;
     }
 
-    BombardResult_t result;
     Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTargetTile);
     const std::vector<Unit*> strikeTargets = BombardStrikeTargets(rAttacker, rTargetTile);
     const std::vector<std::string> improvementTargets = BombardImprovementTargets(rTargetTile);
     const std::vector<HostileAct_t> acts = BombardHostileActs(rAttacker, rTargetTile);
 
-    if (pDuelTarget)
-    {
-        result.combats.push_back(ResolveBombardExchange_(
-            rAttacker, *pDuelTarget, CombatEngagement_t::ArtilleryDuel));
-        result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
-    }
-    for (Unit* pTarget : strikeTargets)
-    {
-        if (result.bAttackerDestroyed)
-        {
-            break;
-        }
-        result.combats.push_back(ResolveBombardExchange_(
-            rAttacker, *pTarget, CombatEngagement_t::ArtilleryStrike));
-        result.bAttackerDestroyed = result.combats.back().bAttackerDestroyed;
-    }
-
+    BombardResult_t result;
+    result.combats = FireBombard_(rAttacker, pDuelTarget, strikeTargets);
+    result.bAttackerDestroyed = !result.combats.empty() && result.combats.back().bAttackerDestroyed;
     if (!improvementTargets.empty())
     {
         result.destroyedImprovementId = DestroyRandomImprovement_(rTargetTile, improvementTargets);
@@ -449,14 +441,32 @@ std::optional<UnitOrderExecutor::BombardResult_t> UnitOrderExecutor::TryBombard(
         result.bAttackerDestroyed = true;
         result.combats.back().bAttackerDestroyed = true;
     }
-    if (m_pWorld)
+    for (const HostileAct_t& rAct : acts)
     {
-        for (const HostileAct_t& rAct : acts)
-        {
-            m_pWorld->OnHostileAct(rAct);
-        }
+        ReportHostileAct_(rAct);
     }
     return result;
+}
+
+std::vector<CombatResult_t> UnitOrderExecutor::FireBombard_(
+    Unit& rAttacker, Unit* pDuelTarget, const std::vector<Unit*>& rStrikeTargets)
+{
+    std::vector<CombatResult_t> combats;
+    if (pDuelTarget)
+    {
+        combats.push_back(ResolveBombardExchange_(
+            rAttacker, *pDuelTarget, CombatEngagement_t::ArtilleryDuel));
+    }
+    for (Unit* pTarget : rStrikeTargets)
+    {
+        if (!combats.empty() && combats.back().bAttackerDestroyed)
+        {
+            break;
+        }
+        combats.push_back(ResolveBombardExchange_(
+            rAttacker, *pTarget, CombatEngagement_t::ArtilleryStrike));
+    }
+    return combats;
 }
 
 std::string UnitOrderExecutor::DestroyRandomImprovement_(

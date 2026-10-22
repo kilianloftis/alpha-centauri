@@ -56,10 +56,9 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
 {
     if (!CanPlaceUnitOnTile(rTile, rPositions))
     {
-        const std::string where =
-            "(" + std::to_string(rTile.GetX()) + ", " + std::to_string(rTile.GetY()) + ")";
-        throw std::runtime_error("UnitManager: tile " + where
-                                 + " already holds a unit (single-unit-per-tile rule)");
+        throw std::runtime_error("UnitManager: tile (" + std::to_string(rTile.GetX())
+                                 + ", " + std::to_string(rTile.GetY())
+                                 + ") already holds a unit (single-unit-per-tile rule)");
     }
 
     auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction,

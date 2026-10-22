@@ -121,8 +121,14 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 
     // A ready intercept fights the attack in the defender's place; nullopt when none does.
-    std::optional<CombatResult_t> TryIntercept_(Unit& rAttacker, Unit& rDefender,
-                                                const HostileAct_t& rAct);
+    std::optional<CombatResult_t> TryIntercept_(Unit& rAttacker, Unit& rDefender);
+    // Combat with rDefender or a scrambler in its place, then the attack's cost and any
+    // last-defender casualties.
+    CombatResult_t FightDefender_(Unit& rAttacker, Unit& rDefender);
+    // The duel first, then a strike on each target, until the attacker falls.
+    std::vector<CombatResult_t> FireBombard_(Unit& rAttacker, Unit* pDuelTarget,
+                                             const std::vector<Unit*>& rStrikeTargets);
+    void ReportHostileAct_(const HostileAct_t& rAct);
     // Returns the destroyed improvement's id.
     std::string DestroyRandomImprovement_(const Tile& rTile,
                                           const std::vector<std::string>& rCandidates);
