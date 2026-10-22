@@ -189,7 +189,7 @@ public:
             std::cerr << "[Graphics] Failed to load texture '" << path << "'.\n";
             return false;
         }
-        // Assign, so reloading an id replaces the GPU data rather than keeping the first copy.
+        // Assign, so reloading an id swaps in the new GPU data.
         m_textures.insert_or_assign(id, std::move(texture));
         return true;
     }

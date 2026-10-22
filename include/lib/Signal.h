@@ -23,11 +23,8 @@ public:
     Signal(Signal&&) = delete;
     Signal& operator=(Signal&&) = delete;
 
-    // RAII guard: disconnects on destruction / move-assignment. The Signal does NOT have to
-    // outlive it — the guard holds a weak token that expires with the Signal, so a connection
-    // that outlives its Signal simply goes inert instead of unregistering through a dangling
-    // pointer. This is what lets an observer (e.g. a UI view watching BaseManager::OnDestroyed)
-    // be notified of its subject's death and still be destroyed afterwards.
+    // Disconnects on destruction. The Signal may die first: the guard holds a weak token, and then
+    // goes inert.
     class ScopedConnection
     {
     public:

@@ -2,11 +2,8 @@
 #include <iostream>
 #include "game/Engine.h"
 
-// Top-level error boundary. Config loading, world generation and faction construction all throw
-// with a diagnostic naming the file/id/key at fault (that is the project's error policy), so the
-// message is the useful artifact — letting it escape main would print an unhandled-exception
-// abort and lose it. Nothing here attempts recovery: startup failures are not recoverable, they
-// are reportable.
+// Startup failures are reported, not recovered: every loader throws a message naming the file
+// and key at fault, and an exception escaping main would lose it.
 int main()
 {
     try

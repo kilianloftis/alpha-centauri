@@ -5,10 +5,8 @@
 namespace ac
 {
 
-// Monotonic change counter for pull-based cache invalidation.
-// A class that owns derived-state inputs bumps its own Revision in every mutator;
-// consumers memoize derived state together with the revision values it was built
-// from (see Faction::CollectPoolRevisions_) and rebuild when any of them changed.
+// Change counter for pull-based caches: owners bump it in every mutator, and consumers rebuild
+// when a revision they recorded has moved.
 class Revision
 {
 public:

@@ -9,25 +9,17 @@
 namespace ac
 {
 
-// Generic config registry: loads TConfig entries via TParser::ParseConfig(),
-// stores them keyed by TConfig::id, and exposes Find() / Get() / GetAll() / Create().
-// Find() is the optional probe (nullptr on miss); Get()/Create() throw on unknown ids.
-// TParser must provide: std::vector<TConfig> ParseConfig(const std::string&)
-// TConfig must have: std::string id
-// TInstance defaults to TConfig. When overridden, Create() constructs a
-// TInstance from a TConfig via TInstance(const TConfig&).
+// Loads TConfig entries through TParser::ParseConfig and keys them by id. Find returns nullptr
+// on a miss; Get and Create throw.
 template<typename TConfig, typename TParser, typename TInstance = TConfig>
 class Registry
 {
 public:
     Registry() = default;
-    // Virtual: subclasses override the protected virtual Validate_ (e.g. TechRegistry,
-    // PopTypeRegistry), so the base is an inheritance point and must be safe to delete
-    // through a base pointer.
+    // Virtual: subclasses override Validate_.
     virtual ~Registry() = default;
 
-    // All-or-nothing: a file that fails to parse or validate leaves the registry holding
-    // whatever it held before, rather than the payload that was just rejected.
+    // All or nothing: a file that fails to parse or validate leaves the registry as it was.
     void Load(const std::string& rConfigPath)
     {
         TParser parser;
@@ -61,9 +53,8 @@ public:
         return m_configs;
     }
 
-    // Install an already-parsed list, with the same all-or-nothing guarantee as Load.
-    // Used when entries come from more than one file and must be resolved against each
-    // other before any of them is published.
+    // Installs parsed entries, all or nothing as Load does, for entries from several files that
+    // must be resolved together.
     void Assign(std::vector<TConfig> configs)
     {
         std::vector<TConfig> previousConfigs = std::move(m_configs);

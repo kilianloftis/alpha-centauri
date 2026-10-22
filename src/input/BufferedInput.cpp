@@ -9,9 +9,7 @@ namespace ac
 namespace
 {
 
-// Reads whatever the windowing backend buffered. It names no windowing library, so one
-// implementation serves every backend: what differs between SFML and headless is who fills the
-// queue, not how it is read.
+// Reads whatever the windowing backend queued, so one implementation serves every backend.
 class BufferedInput : public Input
 {
 public:

@@ -67,9 +67,8 @@ double LuaRuntime::EvalNumber_(const std::string& formula,
     // Before the globals are set: a formula that does not compile cannot leave any behind.
     sol::protected_function& rChunk = LoadChunk_(formula);
 
-    // Globals, not a per-call environment: config scripts define helper functions whose _ENV is
-    // the globals table, so a formula calling one must see these there. Cleared on the way out
-    // so an input a later formula forgets to set cannot read this call's value.
+    // Globals, so helper functions defined by config scripts can see them. Cleared afterwards so a
+    // later formula cannot read an input it forgot to set.
     for (const auto& [name, value] : vars)
     {
         m_lua[name] = value;

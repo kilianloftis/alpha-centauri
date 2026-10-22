@@ -104,12 +104,8 @@ public:
     // texture unchanged.
     virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
                             float destHeight, const Color_t& tint) = 0;
-    // Draws palette-index art (grey is the palette index, alpha is coverage) as SMAC does: maps
-    // the texture's inscribed diamond (corners at the midpoints of its edges) onto the shape's
-    // four triangles, interpolates each vertex's shade, and colours each pixel with the entry
-    // of the palette texture (256 × 1) at its index plus the shade rounded to a whole step,
-    // within the art range 0–235. Shapes that share vertices meet edge to edge, and edge
-    // pixels sample just inside the texture's diamond.
+    // Draws palette-index art as SMAC does (grey is the index, alpha the coverage): the texture's
+    // inscribed diamond maps onto the shape, and each pixel takes palette entry index + shade.
     virtual bool DrawTileSprite(const std::string& textureId, const std::string& paletteId,
                                 const TileShape_t& rShape) = 0;
     // Fills the shape's four triangles with one colour.
@@ -126,10 +122,8 @@ public:
     virtual unsigned int GetWindowWidth() const = 0;
     virtual unsigned int GetWindowHeight() const = 0;
 
-    // Custom mouse cursor from an image file (RGBA via the backend's image loader). Empty
-    // path is a no-op and returns false without changing the cursor. Failed load likewise
-    // leaves the current cursor and returns false. hotspot is pixels from the image top-left.
-    // The backend keeps the cursor alive until the next SetMouseCursor / ResetMouseCursor.
+    // Custom cursor from an image, hotspot in pixels from its top-left. False, with the cursor
+    // unchanged, for an empty path or a failed load.
     virtual bool SetMouseCursor(const std::string& path, unsigned int hotspotX,
                                 unsigned int hotspotY) = 0;
     // Restore the system default arrow cursor.

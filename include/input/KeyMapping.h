@@ -10,9 +10,7 @@
 namespace ac
 {
 
-// SFML -> engine translation, used only by the SFML windowing backend's event pump.
-// nullopt means "this input has no engine equivalent"; the caller drops the event rather than
-// forwarding an Unknown one.
+// For the SFML event pump. nullopt means the key has no engine equivalent, and it is dropped.
 std::optional<Key_t> KeyFromSfKey(sf::Keyboard::Key key);
 std::optional<MouseButton_t> MouseButtonFromSfButton(sf::Mouse::Button button);
 ModifierState_t GetModifierState();

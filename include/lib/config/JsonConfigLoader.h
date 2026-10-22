@@ -12,11 +12,7 @@
 namespace ac
 {
 
-// Shared file-loading boilerplate for the JSON config parsers. Every config type
-// (buildings, improvements, techs, ...) stores an array of entries in one or more JSON
-// files and parses them the same way: open, validate that the top level is an array, then
-// map each element through a per-entry parse function. These templates capture that shape
-// so each parser only has to supply the element type and its own ParseX function.
+// Loads config files holding an array of entries, parsing each with the caller's function.
 namespace JsonConfigLoader
 {
 
@@ -77,9 +73,7 @@ T LoadObjectFile(const std::string& filePath, const char* noun, ParseFn parseObj
     return parseObject(configJson);
 }
 
-// Like LoadFile, but if `path` is a directory it loads every *.json file inside it (sorted
-// by name for deterministic ordering) and concatenates the results. Otherwise `path` is
-// treated as a single file.
+// LoadFile, or for a directory every *.json in it, sorted by name and concatenated.
 template <typename T, typename ParseFn>
 std::vector<T> LoadPath(const std::string& path, const char* noun, ParseFn parseEntry)
 {

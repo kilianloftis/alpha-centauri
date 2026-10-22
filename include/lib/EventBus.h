@@ -28,9 +28,8 @@ public:
 
     void Unsubscribe(SubscriptionId id);
 
-    // Synchronous dispatch. Safe to Subscribe/Unsubscribe from inside a handler: the handler
-    // list is snapshotted, one removed mid-dispatch is not called, and one added mid-dispatch
-    // does not see the in-flight event.
+    // Synchronous. A handler may Subscribe or Unsubscribe: one removed mid-dispatch is not called,
+    // and one added does not see the event in flight.
     void Publish(GameEvent event);
 
 private:

@@ -27,9 +27,7 @@ struct EvBaseBuilt
     BaseId_t baseId;
 };
 
-// No EvFactionElim: factions are never removed from the game — a defeated faction's leader can
-// be freed to re-establish it — so there is no elimination to observe. See
-// docs/game-rules-decisions.md.
+// No EvFactionElim: a defeated faction is never removed (docs/game-rules-decisions.md).
 
 struct EvDroneRiot
 {

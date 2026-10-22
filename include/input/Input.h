@@ -30,8 +30,7 @@ struct ModifierState_t
 struct KeyEvent_t
 {
     Key_t key;
-    // Captured with the keystroke by the backend, as MouseEvent_t does. Consumers must read
-    // it from the event rather than polling the keyboard, which is SFML-only.
+    // Captured with the keystroke; polling the keyboard works only under SFML.
     ModifierState_t modifier;
 };
 
@@ -58,9 +57,7 @@ struct MousePosition_t
     int y = 0;
 };
 
-// Poll-only, and never blocking: one buffered event per call, or nullopt when the queue is
-// empty. Callers drain in a loop. Both are whole events — a key without its modifiers cannot
-// express a chord, and KeyEvent_t's contract is that consumers read modifiers from the event.
+// Poll-only and non-blocking: one whole event per call, nullopt when the queue is empty.
 class Input
 {
 public:

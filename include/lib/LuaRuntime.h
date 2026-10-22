@@ -7,9 +7,8 @@
 namespace ac
 {
 
-// Owns the shared Lua state used across the engine.
-// Provides a sandboxed environment: math library available, io/os/debug removed.
-// Modding scripts and config formula strings are evaluated through this runtime.
+// The sandboxed Lua state (math only; no io, os or debug) that runs mod scripts and config
+// formulas.
 class LuaRuntime
 {
 public:
@@ -20,23 +19,8 @@ public:
     sol::state& GetState();
     const sol::state& GetState() const;
 
-    // Evaluate a formula string as a Lua expression with named numeric variables.
-    // The expression is wrapped as "return <formula>" and executed.
-    //
-    // Each distinct formula is compiled once and the chunk kept: callers evaluate the same
-    // handful of config strings over and over (hurry pricing bisects over one), and compiling
-    // per call cost an order of magnitude more than running the result. A formula that fails
-    // to compile is not kept, so a later call reports the same error rather than a stale hit.
-    //
-    // Returns a whole number (int). Inputs may be fractional — PureMultiplier stats and map
-    // roots need doubles — but the formula result must be integral or EvalInt throws.
-    //
-    // Throws if the formula is empty, fails to evaluate (the Lua message is included), returns
-    // a non-number, returns a fractional value, or returns something outside int range. A
-    // formula is game data: a broken one is a config error, not a zero.
-    //
-    // vars are visible to the formula as globals and are cleared afterwards, so a formula that
-    // omits an input cannot read a previous call's value.
+    // Evaluates `return <formula>` with vars as globals, cleared afterwards. Throws unless the
+    // result is a whole number in int range: a broken formula is a config error.
     int EvalInt(const std::string& formula,
                 const std::unordered_map<std::string, double>& vars);
 
@@ -54,8 +38,8 @@ private:
     sol::protected_function& LoadChunk_(const std::string& formula);
 
     sol::state m_lua;
-    // Declared after m_lua so the chunks — which hold references into that state — are
-    // destroyed before it.
+    // One compiled chunk per formula, since hot formulas run many times a turn. After m_lua, so
+    // the chunks die before the state they reference.
     std::unordered_map<std::string, sol::protected_function> m_chunks;
 };
 

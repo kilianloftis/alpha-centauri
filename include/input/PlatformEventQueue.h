@@ -8,11 +8,8 @@
 namespace ac
 {
 
-// The seam between whatever pumps a window and whatever implements Input. The composition root
-// owns one and hands it to both backends, so a windowing backend never has to know which Input
-// implementation is in play, and neither has to be the SFML one.
-//
-// Not thread-safe: pumped and drained from the same frame loop.
+// Between the window pump and Input. The composition root hands one to both, so neither knows
+// the other's backend. Pumped and drained on one thread.
 class PlatformEventQueue
 {
 public:
@@ -20,8 +17,7 @@ public:
     void PushKey(const KeyEvent_t& rEvent);
     void PushMouse(const MouseEvent_t& rEvent);
 
-    // A window-close request. Recorded rather than acted on: what closing means is the
-    // engine's decision, not the graphics backend's.
+    // A window-close request, recorded only: what closing means is the engine's decision.
     void RequestClose();
 
     // Consumer side — called by Input and by the frame loop.

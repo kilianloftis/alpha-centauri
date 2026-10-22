@@ -7,9 +7,7 @@
 namespace ac
 {
 
-// Shared parsing for the fields that nearly every config entry carries (id, display name,
-// tech prerequisite, string lists). Keeps the string<->key conventions in one place so the
-// individual ConfigParsers don't each re-implement the same nlohmann accessors.
+// Parsing for the fields most config entries carry: id, name, required tech, string lists.
 namespace ConfigFields
 {
 
