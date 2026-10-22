@@ -10,9 +10,7 @@ namespace ac
 class Faction;
 class GameState;
 
-// What a hook is handed when it fires. Without this a hook could only act through state it
-// captured at construction, which no config-declared hook has — the seam existed but could not
-// host a consumer.
+// What a firing hook is handed, so a config-declared hook can act.
 struct HookArgs_t
 {
     // The stage this hook is attached to, so one handler can serve several stages.

@@ -10,9 +10,8 @@
 namespace ac
 {
 
-// A file-scope instance of TurnStageRegistrar<T>(id) registers T with TurnStageFactory
-// at static-init time, so adding a new built-in stage never requires editing the factory.
-// Kind (global vs per-faction) is fixed at compile time from T's base.
+// A file-scope instance registers T with TurnStageFactory at static init, so new stages need
+// no factory edit.
 template <typename T>
 struct TurnStageRegistrar
 {

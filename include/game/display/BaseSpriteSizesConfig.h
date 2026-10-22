@@ -11,9 +11,8 @@ namespace ac
 struct BaseSpriteSizeStage_t
 {
     int minPopulation = 1;
-    // Added to FootprintOrigin.y as a fraction of tile width (negative lifts the cell).
-    // SMAC sheets leave small stages low in the 100×75 box; this recenters without
-    // content-bounding at draw time.
+    // Added to FootprintOrigin.y as a fraction of tile width, negative lifts; recenters SMAC's
+    // low-sitting small stages.
     float originYRatio = 0.0f;
 };
 

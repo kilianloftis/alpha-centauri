@@ -71,9 +71,8 @@ StageResult_t BaseProduction::HandleAwaitingConfirmation_(GameState& rGameState,
 {
     if (!rFaction.IsPlayerControlled())
     {
-        // The AI answers "not this turn", the same answer a player can give. The item stays
-        // queued and funded and is re-asked next turn, so a base that grows completes it on its
-        // own without the AI needing a rule for abandoning itself.
+        // The AI answers "not this turn", as a player can; the item stays funded
+        // and is asked again, so a growing base completes it.
         rBase.DeferProductionCompletion();
         std::cout << "  Base '" << rBase.GetName()
                   << "' deferred production that would abandon the base (AI)\n";
@@ -231,9 +230,8 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
 
     std::cout << "Executing BaseProduction stage for faction\n";
 
-    // Any queue item — this stage's prompt, AI news, an earlier stage's notice — holds the
-    // pass here. Resume is prompt-agnostic: once the queue drains, the base that was waiting
-    // is done for this pass (razed bases simply never match an id again).
+    // Any queued interaction holds the pass here; once the queue drains, the waiting base is done
+    // for this pass.
     if (PlayerHasPending_(rGameState))
     {
         return StageResult_t::Yield;
@@ -252,9 +250,8 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
             continue;
         }
 
-        // Marked before the call, not after: ProcessBase_ can yield from any of several
-        // nested paths, and a base that has already been ticked this pass must not be
-        // revisited when the pass resumes.
+        // Before the call: ProcessBase_ can yield from several paths, and a ticked base must not be
+        // revisited on resume.
         m_processedBaseIds.insert(baseId);
         if (ProcessBase_(rGameState, rFaction, rBase) == StageResult_t::Yield)
         {

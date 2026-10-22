@@ -58,9 +58,8 @@ WorldEvents::WorldEvents(HookContext hookContext)
 
 StageResult_t WorldEvents::ExecuteImpl(GameState& rGameState)
 {
-    // Cyclic events are not random events, so randomEventsAfterTurn does not gate them.
-    // TODO(difficulty): gate random events on the session level's
-    // rules.randomEventsAfterTurn vs years/turns.
+    // Cyclic events are not random, so randomEventsAfterTurn does not gate them.
+    // TODO(difficulty): gate random events on the session level's randomEventsAfterTurn.
     AdvanceWorldEvents_(rGameState);
     SpreadTerraformImprovements(rGameState.GetWorldMap(), rGameState.GetTileEffects(),
                                 rGameState.GetYearsSinceFirstPlayableYear(), rGameState.GetRng());

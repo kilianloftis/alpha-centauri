@@ -11,9 +11,7 @@
 namespace ac
 {
 
-// The layer an occupant's art draws in. Enumerators run in draw order; Object art draws after
-// the terrain layers (see TileRenderer). Matches the JSON names aside from case; parse with
-// magic_enum.
+// The layer an occupant draws in, in draw order. Names match JSON aside from case.
 enum class ArtLayer_t
 {
     Landform,
@@ -49,12 +47,8 @@ enum class SpriteTileLayout_t
     Links,
 };
 
-// Art drawn one sprite per neighbor mask: JSON "tiles": {"layout": "edges" | "blob" | "links",
-// "land": "...{mask}...", "sea": "..."}. The pattern is expanded at parse, so paths[mask] is the
-// sprite for that mask and an empty list means no art on that surface. A links set also names
-// "link_occupants" (a tile carrying any of them joins the network; Base carries every network)
-// and may name "replaces_links_of": the network whose link it draws over where both tiles carry
-// this one (a mag tube over a road).
+// One sprite per neighbour mask (JSON "tiles", expanded at parse). A links set names its
+// "link_occupants" and may draw over another network ("replaces_links_of").
 struct OccupantTileSet_t
 {
     SpriteTileLayout_t layout = SpriteTileLayout_t::Edges;
@@ -71,9 +65,8 @@ enum class YieldStat_t
     Energy,
 };
 
-// Object sprites picked by the tile's yield: JSON "yield_rows": {"stat": "nutrients",
-// "land": [...], "sea": [...]}; row = clamp(yield - 1, 0, rows - 1), as SMAC picks its farm
-// structures.
+// Object sprites by tile yield (JSON "yield_rows"): row = clamp(yield - 1, 0, rows - 1), as
+// SMAC picks farm structures.
 struct OccupantYieldRows_t
 {
     YieldStat_t stat = YieldStat_t::Nutrients;

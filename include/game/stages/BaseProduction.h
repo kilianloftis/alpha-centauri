@@ -12,10 +12,8 @@ namespace ac
 
 class Faction;
 
-// Per-faction production. Owns only turn-pass resume state (which bases already ticked).
-// TickBase_ banks leftover minerals, completes if ready, then validates the queue.
-// PostActionsProduction overrides TickBase_ for completion-only without clearing a
-// same-turn abandon deferral.
+// Per-faction production: bank leftovers, complete if ready, validate the queue. Keeps only
+// which bases this pass has ticked.
 class BaseProduction : public YieldingPerFactionTurnStage
 {
 public:

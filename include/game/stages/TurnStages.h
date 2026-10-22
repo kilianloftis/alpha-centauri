@@ -21,9 +21,8 @@ enum class StageResult_t
     Yield     // pause turn; re-enter this stage on next Advance()
 };
 
-// Shared hook lifecycle for every turn stage. Carries no Execute contract of its own:
-// concrete stages implement exactly one of GlobalTurnStage or PerFactionTurnStage below,
-// so a stage never receives a parameter it cannot use.
+// The hook lifecycle every stage shares. Stages implement exactly one of GlobalTurnStage and
+// PerFactionTurnStage.
 class TurnStageBase
 {
 public:

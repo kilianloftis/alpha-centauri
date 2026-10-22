@@ -12,9 +12,8 @@ class Faction;
 class GameState;
 class Tile;
 
-// After WorldEvents: each base rolls its eco-damage score as a fungal-pop percentage. A hit
-// records the bloom, announces it, and applies eco_damage.json's on_pop_effects on a tile in
-// the base radius.
+// After WorldEvents: each base rolls its eco-damage score; a hit records and announces a bloom
+// and applies on_pop_effects in the base radius.
 class EcoDamage : public PerFactionTurnStage
 {
 public:

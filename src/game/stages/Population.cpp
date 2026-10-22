@@ -18,9 +18,7 @@ Population::Population(HookContext hookContext)
 StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     (void)rGameState;
-    // Growth and starvation are the BaseGrowth stage (after BaseProduction). What is left here
-    // is the composition and mood pass, which stays after production because a completed
-    // facility can change either.
+    // Composition and mood, after production, since a completed facility can change either.
     for (BaseManager& rBase : rFaction.Bases())
     {
         ProcessBase_(rBase);

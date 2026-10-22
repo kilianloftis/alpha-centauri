@@ -23,11 +23,8 @@ StageResult_t BaseGrowth::ExecuteImpl(GameState& /*rGameState*/, Faction& rFacti
 
     rFaction.ApplyBaseGrowth();
 
-    // PopulationManager::AddPop deliberately does not reconcile the drone/talent split — the
-    // caller names the type it wants, and reconciling inside the add would overwrite it. So a
-    // base that grew is left describing the size it no longer has until something asks. Do it
-    // here, because later stages read pop-generated effects and must not see a split for the
-    // previous size. (RemovePop already reconciles itself, so a base that starved needs nothing.)
+    // AddPop leaves the drone/talent split alone, so a base that grew is reconciled here, before
+    // later stages read pop effects. RemovePop reconciles itself.
     for (BaseManager& rBase : rFaction.Bases())
     {
         rBase.GetPopulation().EnsureCompositionCurrent();

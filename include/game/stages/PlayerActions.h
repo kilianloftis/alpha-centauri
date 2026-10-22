@@ -19,10 +19,8 @@ protected:
     void OnResetPassState_() override;
 
 private:
-    // Player-faction re-entrancy: first call always Yields for interaction. Enter / End Turn
-    // resumes and resolves pending orders; if a unit finishes still needing orders, Yield
-    // again. Once the pass completes, Continue — ending the phase even if other units were
-    // left unordered.
+    // The player's first call yields; End Turn resumes and resolves orders, yielding again while a
+    // unit needs orders. A completed pass continues, unordered units or not.
     enum class Phase_t
     {
         AwaitingInteraction,

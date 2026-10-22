@@ -19,10 +19,8 @@ public:
                   PerFactionTurnStageRegistry_t perFactionRegistry,
                   std::vector<std::string> stageOrder);
 
-    // Runs stages until one yields, wrapping from the end of the stage order back to the
-    // start (next turn cycle) as needed. Call again after the yield reason is resolved
-    // (player Enter, popup closed, …) to resume the same stage/faction.
-    // Throws if a full stage-order cycle completes with no yield (misconfigured order).
+    // Runs stages until one yields, wrapping into the next turn; call again once the yield is
+    // resolved. Throws if a whole cycle passes without one.
     void Advance(GameState& rGameState);
 
     // Returns the processor to stage index 0 with no entered stage / resume cursor.
@@ -42,9 +40,8 @@ private:
     std::vector<std::string> m_stageOrder;
 
     size_t m_stageIndex = 0;
-    // Faction ids that have already finished (Continue) for the current per-faction stage.
-    // Resume re-enters the yielded faction; completed ids are skipped. Erasing a faction
-    // mid-stage loop is unsupported until the lifetime protocol defines it.
+    // Factions done with the current per-faction stage, skipped on resume.
+    // TODO: removing a faction mid-stage is undefined until the lifetime protocol covers it.
     std::unordered_set<FactionId_t> m_completedFactionIds;
     FactionId_t m_resumeFactionId = 0;
     bool m_bHasResumeFaction = false;

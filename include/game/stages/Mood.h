@@ -32,10 +32,8 @@ private:
     // Dispatch the active riot tier's on_enter_effects while committed rioting.
     static void DispatchRiotTierOnEnter_(GameState& rGameState, BaseManager& rBase);
 
-    // Bases already committed during this stage pass. A rebelling base changes hands mid-pass,
-    // so without this it would be committed again by its new owner's turn through the faction
-    // loop — advancing the tier ladder twice in one turn and potentially re-firing Rebel.
-    // Cleared on stage enter and exit, the same stage-local pass state PlayerActions keeps.
+    // Bases committed this pass: a rebelling base changes hands mid-pass and must not be committed
+    // again by its new owner. Cleared on enter and exit.
     std::unordered_set<BaseId_t> m_committedBaseIds;
 };
 
