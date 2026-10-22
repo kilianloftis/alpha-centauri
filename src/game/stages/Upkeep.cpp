@@ -17,8 +17,8 @@ Upkeep::Upkeep(HookContext hookContext)
 StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     std::cout << "Executing Upkeep stage\n";
-    // Retire ASAT / interceptor deploy records that have come off cooldown. Done here rather
-    // than inside CountReadyBuildings so that query stays pure (see Faction::CountReadyBuildings).
+    // Retire ASAT / interceptor deploy records that have come off cooldown; here, so
+    // Faction::CountReadyBuildings stays a pure query.
     rFaction.PruneExpiredDeploys(rGameState.GetMissionYear());
     // Facility energy upkeep runs after IncomeCollection has banked this turn's econ.
     rFaction.ApplyBuildingUpkeep();

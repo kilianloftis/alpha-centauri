@@ -11,28 +11,39 @@ suspended: every file in `src/` and `include/` is in scope.
   source change requires it: a caller of a removed function, or a key that becomes required.
 - No behavior changes except where rule 3 turns a silent skip into a throw.
 
-## Baseline
+## Counts
 
-Candidate counts from `tools/slop_scan.py src include --functions` at the start of the
-cleanup. Each is a candidate, not a confirmed violation.
+Candidate counts from `tools/slop_scan.py src include --functions`, at the start of the cleanup
+and after slice 20. Each is a candidate, not a confirmed violation.
 
-| Rule | Candidate | Count |
-|---|---|---|
-| 1 | call nested two deep in arguments | 274 |
-| 2 | comment blocks over two lines | 819 |
-| 2 | alternative not taken ("rather than", "instead of") | 189 |
-| 2 | history words | 67 |
-| 2 | label comments / caps emphasis / plan or review references | 18 / 24 / 11 |
-| 3 | silent null skip | 154 |
-| 3 | config key with a fallback | 158 |
-| 3 | `catch` without `throw` | 8 |
-| 4 | forwarding function | 321 |
-| 5 | `bool` parameter / literal `true` or `false` argument / default argument | 116 / 115 / 85 |
-| 6 | no caller / used only by tests / interface with one implementation | 21 / 61 / 4 |
-| 7 | functions over 40 lines, nested three deep, complexity over 10 or over 5 parameters | 301 |
+| Rule | Candidate | Start | End |
+|---|---|---|---|
+| 1 | call nested two deep in arguments | 274 | 82 |
+| 2 | comment blocks over two lines | 819 | 7 |
+| 2 | alternative not taken ("rather than", "instead of") | 189 | 57 |
+| 2 | history words | 67 | 20 |
+| 2 | label comments / caps emphasis / plan or review references | 18 / 24 / 11 | 3 / 14 / 4 |
+| 3 | silent null skip | 154 | 141 |
+| 3 | config key with a fallback | 158 | 150 |
+| 3 | `catch` without `throw` | 8 | 8 |
+| 4 | forwarding function | 321 | 129 |
+| 5 | `bool` parameter / literal `true` or `false` argument / default argument | 116 / 115 / 85 | 98 / 80 / 15 |
+| 6 | no caller / used only by tests / interface with one implementation | 21 / 61 / 4 | 4 / 59 / 4 |
+| 7 | functions over 40 lines, nested past the limit, complexity over 10 or over 5 parameters | 301 | 209 |
 
-Across all 3,209 functions, length has a median of 9 lines and a 90th percentile of 30;
-complexity has a median of 2 and a 90th percentile of 6.
+The scanner changed during the cleanup, so rules 1, 4 and 7 are not like for like: it stopped
+reading lambda parameters as calls, stopped counting forwards through members and bodies with
+logic, and the nesting limit moved from three deep to more than three.
+
+The remaining hits were each checked. Most are domain wording ("can no longer be built",
+acronyms such as ASAT), element construction (`push_back(make_unique<X>(ResolveLayout(…)))`),
+optional keys the docs name, guards a test or a closing view can reach, or entries in
+[refactor-flags.md](refactor-flags.md).
+
+Function size barely moved overall, since most functions were already short. Across 3,209
+functions at the start and 3,262 at the end, the median stays at 9 lines and the 90th
+percentile goes from 30 to 29. Functions over 40 lines go from 149 to 132, and over 100 lines
+from 25 to 24. Complexity has a median of 2 and a 90th percentile of 6 at both ends.
 
 ## Step 1: `tools/slop_scan.py`
 
@@ -166,5 +177,5 @@ Each slice ends with a short note to the user listing:
 
 - `slop_scan.py --summary src include` reports no banned phrases. Every remaining comment block
   over two lines, and every remaining heuristic hit for rules 1, 3, 4, 5 and 7, has been checked.
-- The baseline table above is replaced with the final counts.
+- The counts table above has the final counts.
 - `refactor-flags.md` is grouped into themes, and each theme gets its own plan.

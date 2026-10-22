@@ -3,20 +3,19 @@
 Rule violations found during the [readable-code cleanup](readable-code-cleanup.md) that need
 more than a local fix. Each one gets a dedicated plan later. Until then the code stays as it is.
 
-One entry per violation, under the rule it breaks:
+Entries are grouped by theme, and each theme gets its own plan. Each entry looks like this:
 
 ```markdown
-### `Faction::CreateBase` — `bMayOccupyWater`
-- **Where:** `include/game/faction/Faction.h:136`; callers in `UnitOrderExecutor.cpp`,
-  `Engine.cpp` and tests
-- **Problem:** a defaulted flag chooses whether the new base may sit on water.
-- **Why not local:** `UnitOrderExecutor` computes it with `FoundedBaseMayOccupyWater(rUnit)`;
-  deriving it inside `CreateBase` needs the founding unit, which the other callers do not have.
+### `Name` — what is wrong
+- **Where:** file and line; callers
+- **Problem:** what the code does that breaks the rule.
+- **Why not local:** what a fix touches beyond the function and its callers.
 ```
 
-## Rule 1: one call deep
+## Always-present dependencies passed as nullable
 
-## Rule 3: impossible-case guards
+Rule 3. These take a pointer, or look one up and check it, for an object every running game has. The
+plan: pass references, and give the tests that build partial sessions a full fixture session.
 
 ### Effect reference validators — null registries for partial test contexts
 - **Where:** `include/game/EffectReferenceValidator.h:21-36` (three `= nullptr` defaults on each
@@ -34,9 +33,33 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** it threads through five private handlers, which would all take
   `GameState&`.
 
-## Rule 4: pass-through functions
+### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
+- **Where:** `include/game/units/UnitOrderExecutor.h:52` (`pWorld = nullptr`), the `m_pWorld`
+  checks in `src/game/units/UnitOrderExecutor.cpp`, `SetImprovementVisitHandler`
+- **Problem:** `GameState` always passes itself and sets the handler. Only
+  `MoraleCalculatorTests` builds an executor without a world, and only `TriggeredEffectTests`
+  clears the handler; the null branches exist for them.
+- **Why not local:** those tests need a session, after which the executor can take
+  `IUnitOrderWorld&`.
 
-## Rule 5: flag parameters
+### Requiring the council and the player, in three views
+- **Where:** `RequireCouncil_` and `RequirePlayer_` in `CouncilVoteView.cpp` and
+  `CommlinksView.cpp`; the inline throw in `SatelliteView::OpenAttackerPopup_`
+- **Problem:** each view checks for a council and a player that a running game always has.
+- **Why not local:** `GameState` could hand out references once every session has both, which
+  changes tests that build a session without a council.
+
+## Flag and default parameters
+
+Rule 5. Each needs a type, named constructors or a split that every caller picks from. The plan: one
+change per entry, smallest caller count first.
+
+### `Faction::CreateBase` — `bMayOccupyWater`
+- **Where:** `include/game/faction/Faction.h:102`; callers in `UnitOrderExecutor.cpp`,
+  `Engine.cpp` and tests
+- **Problem:** a flag chooses whether the new base may sit on water.
+- **Why not local:** `UnitOrderExecutor` computes it with `FoundedBaseMayOccupyWater(rUnit)`;
+  deriving it inside `CreateBase` needs the founding unit, which the other callers do not have.
 
 ### `Unit::Unit` and `UnitManager::CreateUnit` — three-valued `pProducedAt`
 - **Where:** `include/game/units/Unit.h:49`, `include/game/units/UnitManager.h:48-49`; 12
@@ -82,16 +105,10 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** it belongs with splitting `SocialEngineeringDisplay::Render` (below), which
   builds every cell inline.
 
-## Rule 6: speculative code
+## Entry points only tests reach
 
-### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
-- **Where:** `include/game/units/UnitOrderExecutor.h:52` (`pWorld = nullptr`), the `m_pWorld`
-  checks in `src/game/units/UnitOrderExecutor.cpp`, `SetImprovementVisitHandler`
-- **Problem:** `GameState` always passes itself and sets the handler. Only
-  `MoraleCalculatorTests` builds an executor without a world, and only `TriggeredEffectTests`
-  clears the handler; the null branches exist for them.
-- **Why not local:** those tests need a session, after which the executor can take
-  `IUnitOrderWorld&`.
+Rule 6. Production reaches the same rules another way. The plan: move each test to the production
+entry point or to a fixture file, then delete the seam.
 
 ### `UnitManager::IsPendingDestruction` — used only by a test
 - **Where:** `include/game/units/UnitManager.h:61`; `tests/game/UnitPositionTests.cpp:128`
@@ -103,13 +120,6 @@ One entry per violation, under the rule it breaks:
   three test files (`ScrapUnitTests`, `CombatRatingTests`, `UnitNamingTests`)
 - **Problem:** public only so tests can parse one entry from inline JSON.
 - **Why not local:** those tests have to go through `ParseConfig` with a temp file.
-
-### `EventBus::Unsubscribe` and `ScopedConnection::IsConnected` — used only by tests
-- **Where:** `include/lib/EventBus.h:29`, `include/lib/Signal.h:73`; `tests/lib/EventBusTests.cpp`,
-  `tests/lib/SignalTests.cpp`
-- **Problem:** no production caller; the tests check unsubscribe semantics for mod handlers that
-  do not exist yet.
-- **Why not local:** removing them drops those tests' subject; decide with the mod seams.
 
 ### Session accessors used only by tests
 - **Where:** `GameState::SetMissionYear` (12 test callers), `GameState::GetDiplomaticActionExecutor`
@@ -147,21 +157,6 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the tests assert attack legality through it and would move to the
   production entry point.
 
-### `AIProfile` — tendencies nothing reads
-- **Where:** `include/game/faction/AIProfile.h`; `InterestedInWealth`, `InterestedInPower`,
-  `InterestedInGrowth` and `InterestedInTech` have no caller
-- **Problem:** the class only holds the parsed `ai.json` tendencies for an AI that does not exist.
-- **Why not local:** removing it touches `Faction`, the faction config and the parser; it may be
-  wanted once AI lands.
-
-### Faction save/load and flavour paths used only by tests
-- **Where:** `Faction::ExtractBase` (7 test callers), `Faction::CreateBaseFromSnapshot` (2),
-  `FactionFlavor::PickPhrase` (2), `ResearchSelector::SetCategoryEnabled` (20)
-- **Problem:** `CreateBaseFromSnapshot` and `ExtractBase` exist for a save/load that is not
-  built; the others are reached only from tests.
-- **Why not local:** each needs its tests rewritten, and the snapshot pair is a save/load design
-  question.
-
 ### Base and building queries used only by tests
 - **Where:** `BaseManager::GetMineralSupportCost` (2), `GetDroneModifier` (3),
   `GetTalentModifier` (3); `BuildingConfig_t::GetUpkeep` (1); `BuildingUpkeepLine_t::UpkeepPerCopy`
@@ -176,25 +171,6 @@ One entry per violation, under the rule it breaks:
 - **Problem:** no production caller; the growth helpers and defaults exist so tests can build a
   growth config by hand, which `calculator-config.mdc` says should come from a fixture.
 - **Why not local:** the tests that build `GrowthConfig_t` in code need a fixture file.
-
-### Production and economy entry points used only by tests
-- **Where:** `ComputeCommerceForFaction` and `ComputeCommerceForBase` in `CommerceRules.h` (17
-  test callers each), `EconomyManager::SetEnergyAllocation` (7), `ResourceManager::GetPsych` (5),
-  `WorkerAssignmentManager::SetTileScorer` (1), `ProductionManager::Replace` and `Delete` (2)
-- **Problem:** no production caller. Queue editing and the energy sliders have no UI yet; the
-  commerce functions are reached through `CommerceCache` in production.
-- **Why not local:** the tests would move to the production entry points, or the UI arrives.
-
-### Diplomacy, council and atrocity queries used only by tests
-- **Where:** `AtrocityLedger::HasVictimized` (6), `HasCommittedMajorAgainst` (5), `SanctionUntilYear`
-  (4); `PenaltiesApplied` in `AtrocityMutations.h` (18); `CouncilVoteExecutor::VetoPending` (3),
-  `AllMembersVoted` (3); `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2);
-  `GetAvailableActions` in `DiplomacyActions.h` (5); `DiplomacyLedger::AddGrievance` (1),
-  `AddIntegrity` (1); `DiplomaticActionExecutor::Accept` (3), `Reject` (1), `GetPendingProposal`
-  (4); `MayRepairAt` (4); `TradeKinds` (1)
-- **Problem:** no production caller. Most are the halves of diplomacy and council flows whose UI
-  or AI is not built; `MayRepairAt` waits on per-turn healing.
-- **Why not local:** each waits on its caller, or its tests move to the production path.
 
 ### `UIManager::PopView` — used only by tests
 - **Where:** `include/ui/UIManager.h:36`; 2 test callers
@@ -218,7 +194,57 @@ One entry per violation, under the rule it breaks:
 - **Problem:** it exists so tests can see the cache saved work.
 - **Why not local:** the tests need another way to observe the skipped resolves.
 
-## Rule 7: long functions
+## Code waiting on a feature
+
+Rule 6. These have no production caller because the feature that would call them is not built. The
+plan: decide per feature whether to delete now or keep for it, and record the decision in the
+feature's doc.
+
+### `AIProfile` — tendencies nothing reads
+- **Where:** `include/game/faction/AIProfile.h`; `InterestedInWealth`, `InterestedInPower`,
+  `InterestedInGrowth` and `InterestedInTech` have no caller
+- **Problem:** the class only holds the parsed `ai.json` tendencies for an AI that does not exist.
+- **Why not local:** removing it touches `Faction`, the faction config and the parser; it may be
+  wanted once AI lands.
+
+### `EventBus::Unsubscribe` and `ScopedConnection::IsConnected` — used only by tests
+- **Where:** `include/lib/EventBus.h:29`, `include/lib/Signal.h:73`; `tests/lib/EventBusTests.cpp`,
+  `tests/lib/SignalTests.cpp`
+- **Problem:** no production caller; the tests check unsubscribe semantics for mod handlers that
+  do not exist yet.
+- **Why not local:** removing them drops those tests' subject; decide with the mod seams.
+
+### Faction save/load and flavour paths used only by tests
+- **Where:** `Faction::ExtractBase` (7 test callers), `Faction::CreateBaseFromSnapshot` (2),
+  `FactionFlavor::PickPhrase` (2), `ResearchSelector::SetCategoryEnabled` (20)
+- **Problem:** `CreateBaseFromSnapshot` and `ExtractBase` exist for a save/load that is not
+  built; the others are reached only from tests.
+- **Why not local:** each needs its tests rewritten, and the snapshot pair is a save/load design
+  question.
+
+### Production and economy entry points used only by tests
+- **Where:** `ComputeCommerceForFaction` and `ComputeCommerceForBase` in `CommerceRules.h` (17
+  test callers each), `EconomyManager::SetEnergyAllocation` (7), `ResourceManager::GetPsych` (5),
+  `WorkerAssignmentManager::SetTileScorer` (1), `ProductionManager::Replace` and `Delete` (2)
+- **Problem:** no production caller. Queue editing and the energy sliders have no UI yet; the
+  commerce functions are reached through `CommerceCache` in production.
+- **Why not local:** the tests would move to the production entry points, or the UI arrives.
+
+### Diplomacy, council and atrocity queries used only by tests
+- **Where:** `AtrocityLedger::HasVictimized` (6), `HasCommittedMajorAgainst` (5),
+  `SanctionUntilYear` (4); `PenaltiesApplied` in `AtrocityMutations.h` (18); `CouncilVoteExecutor::VetoPending` (3),
+  `AllMembersVoted` (3); `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2);
+  `GetAvailableActions` in `DiplomacyActions.h` (5); `DiplomacyLedger::AddGrievance` (1),
+  `AddIntegrity` (1); `DiplomaticActionExecutor::Accept` (3), `Reject` (1), `GetPendingProposal`
+  (4); `MayRepairAt` (4); `TradeKinds` (1)
+- **Problem:** no production caller. Most are the halves of diplomacy and council flows whose UI
+  or AI is not built; `MayRepairAt` waits on per-turn healing.
+- **Why not local:** each waits on its caller, or its tests move to the production path.
+
+## Config parsers and loaders
+
+Rule 7. Each parses a whole file or every kind in one function. The plan: one parser per section or
+kind, registered the way the effect types are.
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
 - **Where:** `src/game/GameDataContext.cpp` (`LoadGameData`, 203 lines), `src/game/Engine.cpp`
@@ -236,31 +262,10 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
-### `ConditionSatisfied` and `ApplyOne_` — one std::visit lambda over every alternative
-- **Where:** `src/game/effects/ActiveEffect.cpp` (`ConditionSatisfied(const Condition_t&, …)`,
-  173 lines, nesting 24), `src/game/effects/TriggeredEffectDispatch.cpp` (`ApplyOne_`, 189
-  lines, nesting 23); `AmountSourceValue` (93) has the same shape
-- **Problem:** an `if constexpr` chain inside one lambda handles every alternative.
-- **Why not local:** over 100 lines. The fix is an exhaustive visitor struct per variant, as
-  `EffectReferenceValidator` now uses, with each arm its own member.
-
 ### `ExpandFeatureTagReferences`
 - **Where:** `src/game/map/ImprovementConfigParser.cpp`, 116 lines
 - **Problem:** expands tags in four different lists inline.
 - **Why not local:** over 100 lines; the per-list expansion shares the tag index being built.
-
-### `moisture_gen::GenerateRainfall`
-- **Where:** `src/game/worldgen/MoistureGeneration.cpp`, 281 lines, nesting 9
-- **Problem:** the whole Thinker world_rainfall port is one function.
-- **Why not local:** over 100 lines; its passes (cloudmass, ocean moisture, rain belts,
-  smoothing) share several grids, so splitting it needs a state struct. Confirm each pass
-  against the disassembly while splitting.
-
-### `BaseManager::BaseManager`
-- **Where:** `src/game/base/BaseManager.cpp`, 103 lines, eight parameters
-- **Problem:** the member initializer list builds every subsystem with nested calls.
-- **Why not local:** over 100 lines; naming the intermediate values needs factory helpers for
-  the subsystems, since an initializer list has no statements.
 
 ### `PopCompositionConfigParser::ParseConfig`
 - **Where:** `src/game/population/PopCompositionConfigParser.cpp`, 160 lines
@@ -287,6 +292,23 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the link drawing shares the neighbour masks across passes, and its art rules
   are SMAC's, so splitting it should be checked against screenshots.
 
+## Variant dispatch
+
+Rule 7. The plan: an exhaustive visitor struct per variant, as `EffectReferenceValidator` uses.
+
+### `ConditionSatisfied` and `ApplyOne_` — one std::visit lambda over every alternative
+- **Where:** `src/game/effects/ActiveEffect.cpp` (`ConditionSatisfied(const Condition_t&, …)`,
+  173 lines, nesting 24), `src/game/effects/TriggeredEffectDispatch.cpp` (`ApplyOne_`, 189
+  lines, nesting 23); `AmountSourceValue` (93) has the same shape
+- **Problem:** an `if constexpr` chain inside one lambda handles every alternative.
+- **Why not local:** over 100 lines. The fix is an exhaustive visitor struct per variant, as
+  `EffectReferenceValidator` now uses, with each arm its own member.
+
+## Long UI and simulation functions
+
+Rule 7. The plan: split each into named steps, checking SMAC ports against the disassembly or
+screenshots.
+
 ### `WorldView` input and construction
 - **Where:** `src/ui/world/WorldView.cpp`: `HandleKey` (146 lines, nesting 11), `HandleMouse`
   (111), the constructor (89, eleven parameters), `UpdatePresentation` (69);
@@ -301,7 +323,22 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** over 100 lines; the grid and the scores list share layout values that the
   split must pass between them.
 
+### `moisture_gen::GenerateRainfall`
+- **Where:** `src/game/worldgen/MoistureGeneration.cpp`, 281 lines, nesting 9
+- **Problem:** the whole Thinker world_rainfall port is one function.
+- **Why not local:** over 100 lines; its passes (cloudmass, ocean moisture, rain belts,
+  smoothing) share several grids, so splitting it needs a state struct. Confirm each pass
+  against the disassembly while splitting.
+
+### `BaseManager::BaseManager`
+- **Where:** `src/game/base/BaseManager.cpp`, 103 lines, eight parameters
+- **Problem:** the member initializer list builds every subsystem with nested calls.
+- **Why not local:** over 100 lines; naming the intermediate values needs factory helpers for
+  the subsystems, since an initializer list has no statements.
+
 ## Duplicated logic
+
+The plan: one shared function each.
 
 ### Required-tech availability, in six places
 - **Where:** `UnitComponentConfig_t::IsAvailable`, `UnitSlotConfig_t::IsAvailable`,
@@ -309,13 +346,6 @@ One entry per violation, under the rule it breaks:
   `CouncilProposalConfig_t`, `PopTypeAvailabilityCalculator.cpp:18`
 - **Problem:** each repeats "an empty `requiredTech`, or one that is discovered".
 - **Why not local:** one shared function serves five domains.
-
-### Requiring the council and the player, in three views
-- **Where:** `RequireCouncil_` and `RequirePlayer_` in `CouncilVoteView.cpp` and
-  `CommlinksView.cpp`; the inline throw in `SatelliteView::OpenAttackerPopup_`
-- **Problem:** each view checks for a council and a player that a running game always has.
-- **Why not local:** `GameState` could hand out references once every session has both, which
-  changes tests that build a session without a council.
 
 ## Single responsibility
 
