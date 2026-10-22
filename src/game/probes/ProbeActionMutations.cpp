@@ -35,10 +35,8 @@ namespace ac
 namespace
 {
 
-// Every base mission resolves its config effects the same way: the acting faction is the
-// subject (it gains the infiltration), the target's base is what the effects act on, and the
-// target faction is named so a SetInfiltration's ActionTarget filter can find it. The mission's
-// own generator drives any roll, so a seeded caller stays reproducible.
+// The actor is the subject, the target's base is acted on, and its faction is named for
+// ActionTarget filters. The mission's own RNG keeps seeded callers reproducible.
 TriggeredEffectContext_t MissionContext_(Faction& rActor, BaseManager& rBase,
                                          GameState& rGameState, std::mt19937& rRng)
 {
@@ -118,9 +116,7 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
                     const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                     std::mt19937& rRng)
 {
-    // Targeted sabotage is a distinct action from random sabotage, so an empty or unknown
-    // facility id is a failed action — not a silent fall-through to the random branch, and not
-    // a ProbeDestroyedFacility_t report after DestroyBuilding's documented no-op.
+    // Targeted sabotage with an empty or unknown facility id fails; it is not random sabotage.
     if (rAction.id == ProbeActionId_t::SabotageFacility)
     {
         const BuildingConfig_t* pTarget =
@@ -135,9 +131,8 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
         return true;
     }
 
-    // Random: the action's DestroyFacility entry carries the target policy (which facilities
-    // are off-limits), and the dispatcher reports back what it actually destroyed. When
-    // nothing was eligible, wipe current production instead.
+    // The DestroyFacility entry carries which facilities are off-limits. With nothing eligible,
+    // current production is wiped instead.
     TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
     for (const TriggeredEffectResult_t& rResultEntry :
          ApplyTriggeredEffects(rAction.onSuccessEffects, context))

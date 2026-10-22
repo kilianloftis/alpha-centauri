@@ -20,12 +20,8 @@ namespace ac
 class GameState;
 class Tile;
 
-// Orchestrates probe missions: order-domain gates (moves, adjacency), energy payment,
-// chance/roll setup, effect application, promote, and probe destruction.
-// Pure eligibility/math live in ProbeRules; world mutations live in ProbeActionMutations.
-//
-// Targets are addressed by tile and resolved per call (see ProbeTarget.h), so callers
-// never hold a base or unit pointer across turns or UI interactions.
+// Runs probe missions: gates, payment, rolls, effects, promotion and probe loss. Targets are
+// resolved per call from their tile, so no caller holds one across turns.
 class ProbeActionExecutor
 {
 public:
@@ -44,12 +40,8 @@ public:
     std::vector<std::pair<ProbeActionId_t, std::string>> ListAvailableProbeActions(
         const Unit& rProbe, const Tile& rTile, GameState& rGameState) const;
 
-    // Pay energy when required, roll mission/escape, apply the action effect, promote XP on
-    // full success, and DestroyUnit the probe on mission failure or failed escape.
-    // Whether this is a *repeat* attempt (and so uses the action's risk_repeat) is decided
-    // here, not passed in: it is session history, which the executor owns. It used to be a
-    // caller-supplied flag defaulting to false that no caller ever set, so risk_repeat was
-    // dead config.
+    // Pays, rolls mission and escape, applies the effect, promotes on full success and destroys a
+    // failed probe. Whether it is a repeat attempt is session history, decided here.
     ProbeActionResult_t TryProbeAction(Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile,
                                        GameState& rGameState, const BuildingId_t& facilityId = {});
 
@@ -67,13 +59,8 @@ private:
                                           const BuildingId_t& facilityId,
                                           ProbeActionResult_t result,
                                           const ProbeRollResult_t& roll);
-    // Has rActorFactionId already run a probe action against this base? Records the attempt as
-    // a side effect, so the first call for a pair is false and every later one is true.
-    // TODO: the scope of "repeat" is not specified by any rule we have. This treats it as
-    // permanent, per (faction, base), and shared across actions — so a prior drain_energy
-    // marks a first-ever steal_tech as a repeat, even though risk_repeat is declared
-    // per-action in config. Whether it should decay over turns, reset when the base changes
-    // hands, or be tracked per action all need the SMAC rule.
+    // Records the attempt, so only the first call for a (faction, base) pair is false.
+    // TODO: the scope of a repeat (decay, base changing hands, per action) needs the SMAC rule.
     bool NoteAndCheckRepeatAtBase_(FactionId_t actorFactionId, BaseId_t targetBaseId);
 
     ProbeActionResult_t FailMission_(Unit& rUnit, ProbeActionResult_t result) const;

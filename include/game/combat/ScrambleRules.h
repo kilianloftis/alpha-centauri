@@ -5,9 +5,8 @@ namespace ac
 
 class Unit;
 
-// Best same-faction Scramble candidate that can path to the original defender's
-// tile within the effect's range and remaining move fragments, or null. Does not mutate.
-// Callers assign a MoveOrder and Execute to walk the path (UnitOrderExecutor::TryAttack).
+// The best same-faction scrambler that can reach the defender's tile within range and moves,
+// or null. TryAttack walks it there.
 Unit* FindScrambler(const Unit& rAttacker, Unit& rOriginalDefender);
 
 } // namespace ac

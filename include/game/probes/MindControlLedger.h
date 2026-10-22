@@ -7,10 +7,8 @@
 namespace ac
 {
 
-// World-scoped register of mind control each faction has done: SMAC's mind_control_total.
-// Sibling of AtrocityLedger: GameState owns one, and the triggered RecordMindControl writes it.
-// TODO: a stub. Keep per-act records (victim, kind, year) once the mind-control cost calculator
-// and SMAC's per-target diplo_mind_control need them.
+// Each faction's mind-control total (SMAC mind_control_total). GameState owns one.
+// TODO: keep per-act records once the cost calculator and diplo_mind_control need them.
 class MindControlLedger
 {
 public:

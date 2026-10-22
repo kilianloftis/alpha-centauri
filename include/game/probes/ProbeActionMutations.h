@@ -14,18 +14,14 @@ class GameState;
 class MoraleCalculator;
 class Unit;
 
-// Apply the world mutations for a successful probe mission (tech theft, mind control,
-// sabotage, etc.). Does not roll success/escape, pay energy, promote, or destroy the probe.
-// Returns false when the action id is unknown for rTarget's kind.
-// rRng is used for random selection among eligible stealable techs / facilities.
+// World mutations for a successful mission, without rolls, payment, promotion or probe loss.
+// False for an action id unknown to rTarget's kind.
 bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
                             const ProbeTarget_t& rTarget, GameState& rGameState,
                             const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                             std::mt19937& rRng);
 
-// Apply rAction's on_paid_effects once its cost is paid, before the success roll, so a failed
-// attempt still fires them. The actor is the subject faction and rTarget's owner the action
-// target.
+// rAction's on_paid_effects, fired once the cost is paid so a failed attempt still fires them.
 void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
                            const ProbeTarget_t& rTarget, GameState& rGameState,
                            std::mt19937& rRng);

@@ -31,9 +31,7 @@ struct CombatRound_t
     int defenderHpAfter = 0;
 };
 
-// Full fight outcome. rounds is ordered chronologically so the UI can present each exchange
-// at a digestible rate without re-rolling. HP changes, retreat moves, and DestroyUnit run
-// during Resolve; the recorded rounds remain valid for playback after either unit is gone.
+// The whole fight, rounds in order for playback; they stay valid after either unit is gone.
 struct CombatResult_t
 {
     UnitId_t attackerId = 0;

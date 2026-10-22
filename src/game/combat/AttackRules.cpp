@@ -96,9 +96,8 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile)
         return false;
     }
 
-    // ...but entry is not sufficient: whether the attacker may strike at all from the ground
-    // it is standing on is its own question, so an amphibious override opens the assault
-    // without also opening ocean movement.
+    // Entry is not enough: striking from this footing is its own question, so an amphibious
+    // override opens the assault without opening ocean movement.
     InteractionQuery_t q;
     q.grid = InteractionGridId_t::AttackTile;
     q.actorDomain = rAttacker.GetDomain();

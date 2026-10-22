@@ -68,9 +68,7 @@ std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& 
         {
             return std::nullopt;
         }
-        // Explored, not currently visible: bases are static and stay drawn from explored
-        // memory (WorldDisplay: "fog still shows last-known bases"), so knowing the tile
-        // is the same standard the player is held to on screen.
+        // Explored is enough: bases stay drawn from explored memory, the standard the player sees.
         if (!rProbeFaction.GetExploredMap().IsExplored(rTile))
         {
             return std::nullopt;
@@ -78,9 +76,8 @@ std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& 
         return ProbeTarget_t{ProbeBaseTarget_t{*pBase}, pBase->GetFaction(), rTile};
     }
 
-    // Units must be visible, matching the gate TryAttack applies via
-    // FindVisibleHostileOnTile_. A concealed occupant resolves to no target at all, so the
-    // order stays a move; bumping into it reveals it through the blocked-step path.
+    // Units must be visible, as for TryAttack; a concealed occupant is no target, so the order
+    // stays a move.
     for (Unit* pUnit : rGameState.GetWorldMap().GetAllUnitsOnTile(rTile))
     {
         if (pUnit && &pUnit->GetFaction() != &rProbeFaction

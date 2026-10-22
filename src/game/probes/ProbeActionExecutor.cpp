@@ -111,9 +111,7 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     }
     ApplyProbePaidEffects(rUnit, *pAction, *target, rGameState, m_rRng);
 
-    // Decided here from session history rather than trusted from the caller. Recorded before
-    // the roll so an attempt counts whether or not it succeeds — a failed probe still tips the
-    // base off.
+    // From session history, recorded before the roll so a failed attempt still tips the base off.
     bool bRepeatAtBase = false;
     if (const BaseManager* pTargetBase = AsBase(*target))
     {

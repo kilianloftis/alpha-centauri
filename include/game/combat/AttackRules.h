@@ -9,10 +9,8 @@ namespace ac
 class Unit;
 class Tile;
 
-// Whether the attacker could fight on rTargetTile: CanEnterTile (attack ⇒ enter) *and*
-// Resolve(attack_tile) for the attacker's domain × footing. The second half is what keeps
-// "may assault from a boat" separate from "may move across water" — Amphibious Pods opens
-// the attack_tile grid without opening enter.
+// Whether the attacker could fight on rTargetTile: CanEnterTile, and the attack_tile grid for its
+// footing, so Amphibious Pods opens the assault without opening movement.
 bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile);
 
 // The candidate with the best DefenderWinChance against rAttacker; ties keep candidate order.
@@ -23,9 +21,8 @@ Unit* SelectDefender(const Unit& rAttacker, const std::vector<Unit*>& rCandidate
 // Concealed occupants read as absent. Embarked cargo is eligible only on a Base tile.
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile);
 
-// Full declare-attack gate used by TryAttack and UI: moves remaining, Chebyshev adjacency,
-// a visible hostile, CanAttackTile, and Resolve(attack_unit) (unit + defender-tile overrides).
-// Returns that hostile, or nullptr if the attack must not be offered / resolved.
+// The full declare-attack gate: moves, adjacency, a visible hostile, CanAttackTile and the
+// attack_unit grid. The hostile, or nullptr.
 Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile);
 
 inline bool CanDeclareAttack(const Unit& rAttacker, const Tile& rTargetTile)

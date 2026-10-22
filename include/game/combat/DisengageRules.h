@@ -11,21 +11,8 @@ class Tile;
 class Unit;
 class WorldMap;
 
-// Pure query for mid-combat withdrawal eligibility and retreat destinations. Does not
-// mutate units or roll dice — CombatResolver owns the HP threshold, tile pick, and move.
-//
-// CanDisengage is true when ALL of:
-//   - rCandidate is a combat unit (UnitDesign::IsCombatUnit: Attack > 0 or ForcesPsiCombat),
-//   - rCandidate is strictly faster than rOpponent (Movement points),
-//   - rCandidate is not stacked with other units on its tile,
-//   - rCandidate did not attack on its current or previous turn,
-//   - neither combatant is an air unit,
-//   - rOpponent does not carry the PreventsDisengage flag (e.g. Comm Jammer),
-//   - rCandidate holds no Hold-family order,
-//   - rCandidate's tile has no feature carrying the PreventsDisengage flag (Base, Bunker, ...).
-//
-// CollectRetreatTiles returns adjacent tiles that are a legal step (terrain, occupants, no
-// ZOC violation) and are not a full-cost fungus entry (roads / treat-fungus-as-road admit it).
+// Withdrawal needs a faster combat unit alone on its tile, that did not attack this turn or
+// last and holds no Hold order, with no air side and no PreventsDisengage on opponent or tile.
 class DisengageRules
 {
 public:

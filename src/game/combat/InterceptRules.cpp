@@ -111,10 +111,8 @@ std::vector<InterceptSource_t> CollectInterceptSources(const Unit& rAttacker,
                                   std::nullopt, defenderId);
     }
 
-    // TODO: a ThisTile source has no deploy ledger, so it ignores cooldownTurns; honouring it
-    // needs a per-tile deploy record, and that rule is not defined yet.
-    // TODO: tile sources ignore ActiveEffect_t::ownerFaction, so a hostile aura intercepts for
-    // the defender. Whether a neutral or allied tile source may intercept is not settled.
+    // TODO: tile sources ignore cooldownTurns; that needs a per-tile deploy record.
+    // TODO: tile sources ignore ownerFaction; whether a neutral or allied aura intercepts is open.
     AppendMatchingIntercepts_(sources, rTileEffects.CollectAreaEffects(rTile), ctx,
                               {EffectScope_t::ThisTile}, InterceptSourceKind_t::None,
                               std::nullopt, defenderId);

@@ -76,11 +76,8 @@ struct ProbeSuccessFormula_t
     int defenseClampMax = 0;
 };
 
-// Tunables for paid probe actions. Formula is selected by ProbeActionConfig_t::target:
-//   Base → (garrison + actorMindControlTotal / mindControlDivisor + pop)
-//          * (energy + energyBias) / (dist + distBias)
-//   Unit → mineralCost * (energy + energyBias) / (dist + distBias)
-// Absent cost (nullopt) means the action is free.
+// Paid action tunables. Base cost: (garrison + mindControl / divisor + pop) * (energy + bias)
+// / (dist + distBias); unit cost: mineralCost * (energy + bias) / (dist + distBias).
 struct ProbeCostConfig_t
 {
     int energyBias = 0;
@@ -100,19 +97,14 @@ struct ProbeActionConfig_t
     std::string requiredTech;
     bool bHqOnly = false;
     bool bNotHq = false;
-    // Incite Drone Riots only, and required there: end-of-turn passes the forced riot survives.
-    // The action does not change pop composition, so nothing else keeps the riot alive.
-    // TODO: SMAC's actual duration is unknown; config/probe_actions.json states 1, which is the
-    // least that makes the action do anything.
+    // Incite Drone Riots only: end-of-turn passes the forced riot survives.
+    // TODO: SMAC's duration is unknown; config/probe_actions.json uses 1.
     int riotTurns = 0;
     std::optional<ProbeCostConfig_t> cost;
     // Continuous effects the action declares. Probe actions have no pool origin, so this is
     // effectively unused today; the mission's real work is in onSuccessEffects.
     std::vector<EffectConfig_t> effects;
-    // One-shot effects applied when the mission succeeds (SetInfiltration + ActionTarget, the
-    // sabotage DestroyFacility policy, the genetic-plague ModifyPopulation, the subversion
-    // RecordMindControl). Only the handlers that run them accept the list; the parser rejects it
-    // elsewhere.
+    // One-shot effects on success; only actions whose handlers run them accept the list.
     std::vector<TriggeredEffectConfig_t> onSuccessEffects;
     // One-shot effects applied once the cost is paid, before the success roll, so a failed
     // attempt still fires them (mind control's RecordMindControl). Paid actions only.

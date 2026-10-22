@@ -34,21 +34,15 @@ struct ProbeRollResult_t
     ProbeChance_t chances;
 };
 
-// Pure probe mechanics: eligibility, cost quotes, chance/roll math, and effect-stat
-// resolves against an already-resolved ProbeTarget_t. Order gates (moves, adjacency),
-// payment, mission orchestration, and world mutations belong to ProbeActionExecutor /
-// ProbeActionMutations.
+// Probe mechanics: eligibility, cost quotes, chances and effect stats for a resolved target.
+// Gates, payment and mutations belong to ProbeActionExecutor.
 
-// Does the target carry flag, via its own effects, its faction pool, or any of that
-// faction's bases? Pool-sourced FactionWide flags (e.g. HSA BlocksProbeTeams) are visible
-// via ResolveFlag(Faction), but SE-expanded FactionGlobal flags (e.g.
-// ProbeSubversionImmune) only appear on base effect lists, so bases are walked too.
+// Whether the target, its faction pool or any of its bases carries the flag; SE-expanded flags
+// appear only on base effect lists.
 bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag);
 
-// Wiki "target base PROBE effect": probe_defense (SE negative Probe rating + Covert Ops,
-// etc.) from the target's EffectSourceBase, clamped to [defenseClampMin, defenseClampMax]
-// (default [-2, 0]). Positive Probe does not emit probe_defense — it raises own-probe
-// morale instead.
+// Wiki "target base PROBE effect": the target's probe_defense, clamped to the defence range.
+// Positive Probe raises own-probe morale instead.
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
                              const ProbeSuccessFormula_t& rFormula);
 
@@ -56,9 +50,7 @@ int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
 // success for enhanced probes.
 double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget);
 
-// failureScale / successScale are PureMultiplier resolves (1.0 = unchanged). Thinker:
-// failure scale applies only when the target does not BlocksProbeTeams; success scale
-// always applies.
+// PureMultiplier scales. Thinker applies failure scale only without BlocksProbeTeams.
 ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   int targetProbeEffect,
                                   const ProbeSuccessFormula_t& rFormula,
@@ -93,16 +85,12 @@ HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAct
 
 bool IsHeadquarters(const BaseManager& rBase);
 
-// Probe-mechanics eligibility only: ProbeTeam, required tech, target-kind match, HQ
-// constraints, BlocksProbeTeams / ProbeSubversionImmune, and — for paid actions — that a cost
-// can actually be quoted, so an action that payment would refuse is never offered. Does not
-// check moves or adjacency (those belong to ProbeActionExecutor).
+// Probe eligibility, including that a paid action's cost can be quoted. Moves and adjacency
+// are ProbeActionExecutor's.
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                     const ProbeTarget_t& rTarget);
 
-// Energy cost rActor is quoted for a paid action (0 when free). The base formula reads the
-// actor's mind-control total. Empty when the formula cannot produce a cost (e.g. zero distance
-// to HQ). Affordability / payment live in ProbeActionExecutor.
+// The energy cost quoted to rActor, 0 when free; empty when the formula has no answer.
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
                                         const Faction& rActor, const ProbeTarget_t& rTarget);
 

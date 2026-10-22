@@ -21,10 +21,8 @@ struct CombatStrength_t
     bool bPsiCombat = false;
 };
 
-// Attack and defense roll pools. Conventional ratings are the combat Attack/Defense stats;
-// psi ratings start at 1 and ignore additive weapon and armour. The defender is rated with
-// Defense, or Attack in an artillery duel, times the defender tile's defense multiplier. When the attacker has fewer than one movement point
-// remaining, attack strength is multiplied by that leftover fraction of a point.
+// Attack and defence pools; psi ratings start at 1. The defender uses Defense (Attack in a duel)
+// times its tile's multiplier; under one movement point, attack scales by the fraction left.
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const TileEffectsContext& rTileEffects,
                                        const MoraleCalculator& rMorale,

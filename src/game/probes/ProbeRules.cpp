@@ -105,11 +105,8 @@ std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int
 std::optional<int> QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost,
                                          int energy, int distToHq, double costMultiplier)
 {
-    // Distance 0 means the target sits on the HQ tile — a real distance, not "no HQ";
-    // DistanceToHeadquarters_ already substitutes k_defaultHqDistance for the no-HQ case.
-    // Treating 0 as "no HQ" priced an HQ-garrison subversion at denominator 12 + distBias
-    // instead of refusing it, making the best-defended tile on the map the cheapest to subvert.
-    // Refused, matching QuoteMindControlBaseCost_ on the same input.
+    // 0 is the HQ tile itself, refused as QuoteMindControlBaseCost_ refuses it; the no-HQ case
+    // already became k_defaultHqDistance.
     if (distToHq <= 0)
     {
         return std::nullopt;
@@ -308,21 +305,15 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
         return false;
     }
 
-    // TODO: sabotage_facility needs a facility to target, and nothing can supply one — there is
-    // no facility picker in the UI, so every caller passes an empty id. Offering it would risk
-    // the probe on a mission that can only fail. Previously an empty id silently fell through
-    // to the random-sabotage branch, making this action a duplicate of sabotage_random rather
-    // than the targeted one it is configured to be. Re-enable when the picker exists.
+    // TODO: no facility picker exists, so sabotage_facility could only fail; offer it once one
+    // does.
     if (rAction.id == ProbeActionId_t::SabotageFacility)
     {
         return false;
     }
 
-    // A paid action whose cost cannot be quoted is not offerable: TryPayProbeCost_ would
-    // refuse it and the attempt would silently do nothing. This is what keeps "Subvert Unit"
-    // off the menu for a garrison standing on the HQ tile, where the quote is nullopt —
-    // previously such a unit was priced as if the HQ were 12 tiles away, making the
-    // best-defended tile on the map the cheapest to subvert.
+    // A paid action whose cost cannot be quoted is not offered, such as subverting a unit on the
+    // HQ tile.
     if (rAction.cost.has_value()
         && !QuoteProbeActionCost(rAction, rProbe.GetFaction(), rTarget).has_value())
     {
