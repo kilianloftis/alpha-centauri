@@ -22,9 +22,8 @@ class Unit;
 struct CoexistenceOverrideEffect_t;
 struct TriggeredEffectConfig_t;
 
-// A Former project resolved from either a buildable improvement or a terrain operation.
-// Exactly one of the two halves is filled: pPlaces is the improvement a buildable improvement
-// adds, and onCompleteEffects are the effects an operation runs against the Former's tile.
+// A Former project from an improvement (pPlaces) or a terrain operation (onCompleteEffects);
+// exactly one is filled.
 struct TerraformProject_t
 {
     std::string id;
@@ -55,10 +54,8 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
                         std::span<const CoexistenceOverrideEffect_t> overrides);
 
-// Whether a Former of this domain can still move rTile in this direction. Raising stops at
-// Planet's ceiling, and a sea Former may only raise ground still at least a reference level
-// deep; lowering stops a level short of Planet's floor, and a land Former stops at the
-// reference level so it cannot dig its own tile out from under itself.
+// Whether a Former of this domain can still move rTile this way. A sea Former raises only deep
+// ground; a land Former never lowers below the reference level.
 bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
                                   const ElevationRulesConfig_t& rRules);
 
@@ -66,9 +63,8 @@ bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, 
 // waterline), Planet's floor at sea.
 int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules);
 
-// SMAC alien_fauna forest/kelp growth: MapAreaTiles / (turn/4 + 32) random tile
-// samples per turn. turnIndex is years since GameState::k_FirstPlayableMissionYear
-// (0 on the first playable year).
+// SMAC alien_fauna growth: MapAreaTiles / (turn/4 + 32) samples per turn, turnIndex counted
+// from the first playable year.
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
 struct SurfaceFlipConsequences_t

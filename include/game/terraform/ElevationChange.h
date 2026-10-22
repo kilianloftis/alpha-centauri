@@ -23,13 +23,8 @@ struct SurfaceFlip_t
 // One uniform draw in [level_min_meters, level_max_meters].
 int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules);
 
-// Add deltaMeters to rOrigin, clamp to [floorMeters, ceilingMeters] and to Planet's
-// elevation range, then pull Chebyshev neighbors of every tile this call changed until
-// each such pair differs by at most max_adjacent_difference_meters. Neighbors clamp only
-// to Planet's range. Returns false when the origin elevation does not change.
-// Recomputes rivers when any tile changed.
-// When pTileEffects is set, tiles that crossed ocean level lose improvements whose domain
-// no longer matches, and a base that cannot occupy water is razed.
+// Adds deltaMeters to rOrigin within the floor, ceiling and Planet's range, then relaxes the
+// slope around every changed tile. False when the origin does not change.
 bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
                          const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
                          TileEffectsContext* pTileEffects = nullptr,
@@ -42,10 +37,8 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
                      TileEffectsContext* pTileEffects = nullptr,
                      IUnitOrderWorld* pWorld = nullptr);
 
-// Each tile drops by one RollLevelMeters, clamped to Planet's range. Every drop is applied
-// before one slope relaxation seeded with the tiles that moved, so a neighbor is not pulled
-// before its own roll. Returns false when no elevation changes. Null entries are skipped.
-// Occupancy and rivers match ApplyElevationDelta.
+// Drops each tile one rolled level, then relaxes the slope once, so no neighbour is pulled
+// before its own roll. False when nothing changes.
 bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt19937& rRng,
                         const ElevationRulesConfig_t& rRules,
                         TileEffectsContext* pTileEffects = nullptr,

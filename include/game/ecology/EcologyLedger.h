@@ -9,10 +9,8 @@
 namespace ac
 {
 
-// World-scoped register of the ecological history each faction carries: SMAC's fungal-bloom
-// count, the clean-mineral grants earned since the first bloom, and virtual minerals from
-// one-shot events. Sibling of AtrocityLedger and MindControlLedger: GameState owns one. The
-// EcoDamage stage records blooms; GrantCleanMinerals and AddVirtualMinerals write the rest.
+// Each faction's ecological history: fungal blooms, clean-mineral grants since the first bloom,
+// and virtual minerals. GameState owns one.
 class EcologyLedger
 {
 public:

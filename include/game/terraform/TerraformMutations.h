@@ -12,10 +12,8 @@ class Tile;
 class TileEffectsContext;
 class Unit;
 
-// Place the project's improvement and fire its on_complete_effects against the Former's tile.
-// An improvement refuses before it removes anything when terrain would still conflict, and
-// records on the tile any pair the Former's coexistence override waived. Returns whether
-// anything actually changed.
+// Places the project's improvement and fires its on_complete_effects, recording any waived
+// pair. Refuses before removing anything if terrain would still conflict.
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
                           TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
                           IUnitOrderWorld* pWorld);

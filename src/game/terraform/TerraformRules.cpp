@@ -85,9 +85,8 @@ bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& r
                                         rRules);
 }
 
-// A project is refused before it is paid for when nothing it declares would happen. Each
-// effect's own `condition` answers that for terrain writes; an elevation change also has a
-// bound that depends on the Former's domain, so it is asked directly.
+// Refused before payment when nothing would happen. Effect conditions answer for terrain
+// writes; an elevation change's bound depends on the Former's domain.
 bool AnyEffectWouldFire_(const Unit& rUnit, const TerraformProject_t& rProject,
                          const Tile& rTile, const ElevationRulesConfig_t& rRules)
 {
