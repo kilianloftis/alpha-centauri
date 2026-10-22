@@ -13,27 +13,26 @@ suspended: every file in `src/` and `include/` is in scope.
 
 ## Baseline
 
-Rough counts from grep, to size the work and track progress. The scanner below replaces them.
-The function measures come from lizard over 3,209 functions.
+Candidate counts from `tools/slop_scan.py src include --functions` at the start of the
+cleanup. Each is a candidate, not a confirmed violation.
 
-| Rule | Pattern | Count |
+| Rule | Candidate | Count |
 |---|---|---|
-| 2 | `//` blocks longer than two lines | 819 |
-| 2 | "rather than" / "instead of" in comments | 190 |
-| 2 | history words ("used to", "previously", "no longer"…) | ~50 |
-| 2 | plan / review / finding references | ~10 |
-| 1 | nested casts on one line | 41 |
-| 3 | `if (!pX)` followed by `return` / `continue` | 123 |
-| 3 | `.value("key", fallback)` | 158 |
-| 4 | single-statement forwarding bodies (includes legitimate getters) | ~190 |
-| 5 | `bool b…` parameters in headers | 50 |
-| 5 | literal `true` / `false` call arguments | 80 |
-| 5 | default arguments in declarations | ~30 |
-| 7 | functions over 50 / over 100 lines | 93 / 19 |
-| 7 | functions with cyclomatic complexity over 10 / over 20 | 100 / 31 |
-| 7 | functions with more than 5 parameters | 59 |
+| 1 | call nested two deep in arguments | 274 |
+| 2 | comment blocks over two lines | 819 |
+| 2 | alternative not taken ("rather than", "instead of") | 189 |
+| 2 | history words | 67 |
+| 2 | label comments / caps emphasis / plan or review references | 18 / 24 / 11 |
+| 3 | silent null skip | 154 |
+| 3 | config key with a fallback | 158 |
+| 3 | `catch` without `throw` | 8 |
+| 4 | forwarding function | 321 |
+| 5 | `bool` parameter / literal `true` or `false` argument / default argument | 116 / 115 / 85 |
+| 6 | no caller / used only by tests / interface with one implementation | 21 / 61 / 4 |
+| 7 | functions over 40 lines, nested three deep, complexity over 10 or over 5 parameters | 301 |
 
-Function length: median 9 lines, 90th percentile 30. Complexity: median 2, 90th percentile 6.
+Across all 3,209 functions, length has a median of 9 lines and a 90th percentile of 30;
+complexity has a median of 2 and a 90th percentile of 6.
 
 ## Step 1: `tools/slop_scan.py`
 
@@ -42,8 +41,7 @@ or agent decides each one.
 
 - `slop_scan.py <paths…>` prints candidates. `--summary` prints counts per rule and directory.
 - **Rule 1:** a call or cast nested two deep inside another call's arguments.
-- **Rule 2:** comment blocks over two lines, and blocks above a function longer than one line;
-  the banned phrases from rule 2; label comments that repeat the next declaration's name;
+- **Rule 2:** comment blocks over two lines; the banned phrases from rule 2; label comments;
   `ALL-CAPS` emphasis.
 - **Rule 3:** `if (!pX)` / `pX == nullptr` followed by `return` or `continue`; `.value("…", …)`;
   `catch` blocks that neither rethrow nor convert.
