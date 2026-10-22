@@ -237,7 +237,7 @@ TEST_CASE("A Perihelion starting this turn is in the stack when EcoDamage rolls"
     session.fixtures.state.CreateWorldEvents();
     BaseManager& rBase = session.MakeBase(*session.pPlayer, 8, 8);
     const double baseline = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
-                                            SeedFor(StatId_t::EcologicalDamage));
+                                            SeedFor(StatId_t::EcologicalDamage), nullptr);
     session.Eco().damageFormula = "(eco_scale > " + std::to_string(baseline) + ") and 100 or 0";
 
     session.RunEcoDamage(*session.pPlayer);

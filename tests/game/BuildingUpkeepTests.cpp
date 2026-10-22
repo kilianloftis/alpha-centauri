@@ -231,9 +231,9 @@ TEST_CASE("FacilityEnergyUpkeep modifiers apply via buildingFilter", "[building]
         EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
         BuildingFilterCategory_t{GameCategory_t::Discover});
 
-    ActiveEffect_t allFx{rAll, "test"};
-    ActiveEffect_t idFx{rId, "test"};
-    ActiveEffect_t catFx{rCat, "test"};
+    ActiveEffect_t allFx{rAll, "test", nullptr};
+    ActiveEffect_t idFx{rId, "test", nullptr};
+    ActiveEffect_t catFx{rCat, "test", nullptr};
 
     CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, {}) == 2);
     CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{allFx}) == 1);

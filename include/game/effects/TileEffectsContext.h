@@ -58,8 +58,6 @@ public:
 
     const ImprovementRegistry& GetImprovements() const;
 
-    const InteractionGridsConfig_t& GetInteractionGrids() const { return m_rInteractionGrids; }
-
     // Recomputed from base moisture plus Condensers in range, so overlap and order never drift.
     void RecomputeMoisture(Tile& rTile);
 
@@ -73,9 +71,9 @@ public:
     void RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
 private:
-    // One resource lane from partitioned pointers; without clamps for UI potential yield.
+    // One resource lane from partitioned pointers.
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
-                         StatId_t stat, bool bIncludeClamps) const;
+                         StatId_t stat) const;
 
     // Pointer-partition + resolve into effective (clamped) / potential (unclamped) totals.
     // Both include bypass_clamp Adds.

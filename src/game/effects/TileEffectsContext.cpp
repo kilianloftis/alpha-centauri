@@ -36,6 +36,20 @@ bool IsClampOp_(ModifierOp_t op)
     return op == ModifierOp_t::MaxClamp || op == ModifierOp_t::MinClamp;
 }
 
+std::vector<const ActiveEffect_t*> WithoutClamps_(const std::vector<const ActiveEffect_t*>& rEffects)
+{
+    std::vector<const ActiveEffect_t*> kept;
+    for (const ActiveEffect_t* pEffect : rEffects)
+    {
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&pEffect->config->effect);
+        if (!pMod || !IsClampOp_(pMod->op))
+        {
+            kept.push_back(pEffect);
+        }
+    }
+    return kept;
+}
+
 // How far an improvement's effects can reach: the max per-effect radius.
 int MaxEffectReach_(const ImprovementConfig_t& rConfig)
 {
@@ -335,7 +349,7 @@ TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIs
 
 int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
-                                         StatId_t stat, bool bIncludeClamps) const
+                                         StatId_t stat) const
 {
     // The receiving tile: only radius-0 effects use ElevationEnergy, and min_radius keeps the
     // Mirror's ring flat.
@@ -345,20 +359,10 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
               return *pEffect;
           })
         | std::views::filter([&](const ActiveEffect_t& effect) {
-              if (!StatModifierMatchesInContext(effect, stat, ctx))
-              {
-                  return false;
-              }
-              if (bIncludeClamps)
-              {
-                  return true;
-              }
-              const auto* pMod =
-                  effect.config ? std::get_if<StatModifierEffect_t>(&effect.config->effect)
-                                : nullptr;
-              return !pMod || !IsClampOp_(pMod->op);
+              return StatModifierMatchesInContext(effect, stat, ctx);
           });
-    return FinalizeResolvedStat(ResolveStatModifiersTotal(matching, SeedFor(stat), &ctx));
+    const double total = ResolveStatModifiersTotal(matching, SeedFor(stat), &ctx);
+    return FinalizeResolvedStat(total);
 }
 
 TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
@@ -370,19 +374,21 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
 
     // Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
     const TileResources_t preClamped{
-        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients, /*bIncludeClamps*/ true),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Energy, /*bIncludeClamps*/ true),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Energy),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals),
     };
+    // UI potential yield: the same effects with the clamps left out.
+    std::vector<const ActiveEffect_t*> unclamped = WithoutClamps_(beforeClamp);
     const TileResources_t preUnclamped{
-        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients, /*bIncludeClamps*/ false),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Energy, /*bIncludeClamps*/ false),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals, /*bIncludeClamps*/ false),
+        ResolveResource_(rTile, unclamped, StatId_t::Nutrients),
+        ResolveResource_(rTile, unclamped, StatId_t::Energy),
+        ResolveResource_(rTile, unclamped, StatId_t::Minerals),
     };
     const TileResources_t bypass{
-        ResolveResource_(rTile, bypassClamp, StatId_t::Nutrients, /*bIncludeClamps*/ true),
-        ResolveResource_(rTile, bypassClamp, StatId_t::Energy, /*bIncludeClamps*/ true),
-        ResolveResource_(rTile, bypassClamp, StatId_t::Minerals, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, bypassClamp, StatId_t::Nutrients),
+        ResolveResource_(rTile, bypassClamp, StatId_t::Energy),
+        ResolveResource_(rTile, bypassClamp, StatId_t::Minerals),
     };
     return YieldLanes_t{
         TileResources_t{
@@ -418,19 +424,20 @@ double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, Facti
         }
     }
     return ResolveStatModifiers(FilterByStatId(applicable, StatId_t::TileDefense),
-                                SeedFor(StatId_t::TileDefense))
+                                SeedFor(StatId_t::TileDefense), nullptr)
         .total;
 }
 
 void TileEffectsContext::RecomputeMoisture(Tile& rTile)
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
+    const double baseTier = static_cast<double>(rTile.GetBaseMoisture());
     const double tier = ResolveStatModifiers(
-        FilterByStatId(effects, StatId_t::MoistureTier),
-        static_cast<double>(rTile.GetBaseMoisture())).total;
+        FilterByStatId(effects, StatId_t::MoistureTier), baseTier, nullptr).total;
 
-    const int clamped = std::clamp(static_cast<int>(std::lround(tier)),
-                                    static_cast<int>(Moisture_t::Arid), static_cast<int>(Moisture_t::Wet));
+    const int rounded = static_cast<int>(std::lround(tier));
+    const int clamped = std::clamp(rounded, static_cast<int>(Moisture_t::Arid),
+                                   static_cast<int>(Moisture_t::Wet));
     rTile.SetMoisture(static_cast<Moisture_t>(clamped));
 }
 

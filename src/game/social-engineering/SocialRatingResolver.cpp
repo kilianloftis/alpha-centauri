@@ -68,7 +68,7 @@ void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
             {
                 continue;
             }
-            rOut.emplace_back(rEffect, sourceId);
+            rOut.emplace_back(rEffect, sourceId, nullptr);
         }
     }
 }

@@ -97,7 +97,7 @@ bool AnyEffectWouldFire_(const Unit& rUnit, const TerraformProject_t& rProject,
     context.pFaction = &rUnit.GetFaction();
     for (const TriggeredEffectConfig_t& rEffect : rProject.onCompleteEffects)
     {
-        if (rEffect.condition && !ConditionSatisfied(*rEffect.condition, context))
+        if (rEffect.condition && !ConditionSatisfied(*rEffect.condition, context, nullptr))
         {
             continue;
         }

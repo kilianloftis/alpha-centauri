@@ -125,13 +125,13 @@ TEST_CASE("SubjectDesign matches the unit's design id and fails closed without a
 
     EffectContext_t artifactCtx;
     artifactCtx.pUnit = &artifact;
-    CHECK(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, artifactCtx));
-    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Mind_Worm"}, artifactCtx));
+    CHECK(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, artifactCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Mind_Worm"}, artifactCtx, nullptr));
 
     EffectContext_t scoutCtx;
     scoutCtx.pUnit = &scout;
-    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, scoutCtx));
-    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, EffectContext_t{}));
+    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, scoutCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectDesign_t{"Alien_Artifact"}, EffectContext_t{}, nullptr));
 }
 
 TEST_CASE("BaseHasBuilding matches a facility on the context base",
@@ -141,11 +141,11 @@ TEST_CASE("BaseHasBuilding matches a facility on the context base",
     BaseManager& base = game.MakeBase(*game.pFaction, 8, 8);
     EffectContext_t ctx;
     ctx.pBase = &base;
-    CHECK_FALSE(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, ctx));
-    CHECK_FALSE(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, EffectContext_t{}));
+    CHECK_FALSE(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, ctx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, EffectContext_t{}, nullptr));
 
     base.GetBuildingManager().AddBuilding("Network_Node");
-    CHECK(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, ctx));
+    CHECK(ConditionSatisfied(BaseHasBuilding_t{"Network_Node"}, ctx, nullptr));
 }
 
 TEST_CASE("Holding an Alien Artifact at a Network Node prompts; Link grants a tech and removes it",

@@ -54,7 +54,7 @@ bool HoldEffectMatches_(const TriggeredEffectConfig_t& rEffect, const Unit& rUni
     ctx.pBase = &rBase;
     ctx.pFaction = &rUnit.GetFaction();
     ctx.targetTile = &rUnit.GetTile();
-    return ConditionSatisfied(*rEffect.condition, ctx);
+    return ConditionSatisfied(*rEffect.condition, ctx, nullptr);
 }
 
 void CollectBaseHasBuilding_(const Condition_t& rCondition, std::vector<std::string>& rIds)

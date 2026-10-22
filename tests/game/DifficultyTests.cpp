@@ -55,7 +55,7 @@ void SelectDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
 double ResolveBaseStat_(const BaseManager& rBase, StatId_t stat, double seed)
 {
     return ResolveStatModifiers(
-               FilterBaseLevelByStatId(rBase.GetBaseEffects(), stat), seed)
+               FilterBaseLevelByStatId(rBase.GetBaseEffects(), stat, nullptr), seed, nullptr)
         .total;
 }
 

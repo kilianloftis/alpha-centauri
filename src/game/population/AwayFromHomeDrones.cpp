@@ -20,7 +20,7 @@ namespace
 double UnitAwayWeight_(const Unit& rUnit)
 {
     return ResolveUnitStat(CollectLiveUnitEffects(rUnit), StatId_t::AwayFromHomeDrones,
-                           SeedFor(StatId_t::AwayFromHomeDrones));
+                           SeedFor(StatId_t::AwayFromHomeDrones), nullptr);
 }
 
 } // namespace

@@ -81,7 +81,7 @@ int ResolveFoundingPopulation_(Faction& rFaction, std::optional<int> initialPopu
     const int size = FinalizeResolvedStat(
         ResolveStatModifiersTotal(
             FilterByStatId(rFaction.GetActiveEffects().effects, StatId_t::StartingSize),
-            SeedFor(StatId_t::StartingSize)));
+            SeedFor(StatId_t::StartingSize), nullptr));
     if (size <= 0)
     {
         throw std::runtime_error(
@@ -387,12 +387,12 @@ int BaseManager::GetPsychProduction() const
 int BaseManager::GetDroneModifier() const
 {
     return FinalizeResolvedStat(
-        ResolveBaseStat(m_effects.Get(), StatId_t::Drones, SeedFor(StatId_t::Drones)));
+        ResolveBaseStat(m_effects.Get(), StatId_t::Drones, SeedFor(StatId_t::Drones), nullptr));
 }
 
 int BaseManager::GetTalentModifier() const
 {
-    return FinalizeResolvedStat(ResolveBaseStat(m_effects.Get(), StatId_t::Talents, 0.0));
+    return FinalizeResolvedStat(ResolveBaseStat(m_effects.Get(), StatId_t::Talents, 0.0, nullptr));
 }
 
 BuildingManager& BaseManager::GetBuildingManager()

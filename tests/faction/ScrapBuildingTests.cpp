@@ -98,7 +98,7 @@ TEST_CASE("Scrap refund applies config override, bonuses, then the ceiling", "[b
     bonusMod.amount = 100;
     bonusMod.op = ModifierOp_t::AddPercent;
     bonusConfig.effect = bonusMod;
-    const ActiveEffect_t bonus(bonusConfig, "scrap_bonus");
+    const ActiveEffect_t bonus(bonusConfig, "scrap_bonus", nullptr);
     const std::vector<ActiveEffect_t> bonuses = {bonus};
     CHECK(calculator.Quote(20, ConstructableKind_t::Building, {}, bonuses).amount == 20);
 

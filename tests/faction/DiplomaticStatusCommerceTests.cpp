@@ -32,7 +32,7 @@ TEST_CASE("A faction's commerce rate follows its status with each partner",
     CHECK(rateToward(game.pC) == 1.0);
     // Pair effects never reach a resolve that names no partner.
     CHECK(rateToward(nullptr) == 1.0);
-    CHECK(ResolveFactionStat(game.pA->GetActiveEffects(), StatId_t::CommerceRate, 1.0) == 1.0);
+    CHECK(ResolveFactionStat(game.pA->GetActiveEffects(), StatId_t::CommerceRate, 1.0, nullptr) == 1.0);
 
     game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
     CHECK(rateToward(game.pB) == 0.0);

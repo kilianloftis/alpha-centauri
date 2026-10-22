@@ -125,7 +125,7 @@ int CommercePairValue_(const Faction& rBeneficiary,
 {
     const double commerceRating = ResolveBaseStat(
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceRating,
-        SeedFor(StatId_t::CommerceRating));
+        SeedFor(StatId_t::CommerceRating), nullptr);
 
     CommercePairInputs_t inputs;
     inputs.energyOurs = beneficiaryEnergy;
@@ -140,7 +140,7 @@ int CommercePairValue_(const Faction& rBeneficiary,
         CommerceRateToward_(rBeneficiary, rPartner, static_cast<double>(formulaValue));
     const double bonus = ResolveBaseStat(
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceEnergyBonus,
-        SeedFor(StatId_t::CommerceEnergyBonus));
+        SeedFor(StatId_t::CommerceEnergyBonus), nullptr);
     return FinalizeResolvedStat(rated) + FinalizeResolvedStat(bonus);
 }
 

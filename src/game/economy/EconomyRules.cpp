@@ -33,7 +33,8 @@ namespace
 int ResolveFreeUnitSupport_(const BaseManager& rBase)
 {
     const int raw = FinalizeResolvedStat(ResolveBaseStat(
-        rBase.GetBaseEffects(), StatId_t::FreeUnitSupport, SeedFor(StatId_t::FreeUnitSupport)));
+        rBase.GetBaseEffects(), StatId_t::FreeUnitSupport, SeedFor(StatId_t::FreeUnitSupport),
+        nullptr));
     return std::max(0, raw);
 }
 
@@ -80,7 +81,7 @@ int ModifiedShare_(const BaseEffects_t& rEffects, StatId_t stat, int share)
 {
     // ResolveBaseStat (FilterBaseLevelByStatId): base-level resolution must never pick up
     // selector-carrying (per-tile) modifiers.
-    const double resolved = ResolveBaseStat(rEffects, stat, static_cast<double>(share));
+    const double resolved = ResolveBaseStat(rEffects, stat, static_cast<double>(share), nullptr);
     return FinalizeResolvedStat(resolved);
 }
 

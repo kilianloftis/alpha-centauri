@@ -78,7 +78,7 @@ TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and conditio
                             std::nullopt, actest::TargetTileHas("River")), "conditional"),
     }};
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Nutrients));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Nutrients, nullptr));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
 }
@@ -100,7 +100,7 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
     }};
 
     // Without context: HQ-gated modifier stays out of base-level resolution.
-    CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy)) == 1);
+    CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy, nullptr)) == 1);
 
     const EffectContext_t hqCtx{.pBase = &hq};
     const auto hqMatching = actest::Materialize(
@@ -140,7 +140,7 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
     }};
 
     const std::vector<ActiveEffect_t> baseLevel =
-        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy));
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy, nullptr));
     REQUIRE(baseLevel.size() == 1);
     CHECK(baseLevel[0].sourceId == "flat");
 }
@@ -171,7 +171,7 @@ TEST_CASE("FilterBaseLevelByStatId includes BaseSize only when the context carri
     // admitting on the bundle would hand the resolve a modifier it cannot evaluate.
     // ResolveBaseStat stamps the bundle's subject into the context and gets both.
     const std::vector<ActiveEffect_t> contextFree =
-        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones));
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones, nullptr));
     REQUIRE(contextFree.size() == 1);
     CHECK(contextFree[0].sourceId == "commons");
 
@@ -210,7 +210,7 @@ TEST_CASE("ResolveBaseStat: University BaseSize floors per source then stacks wi
 
     // floor(13×0.25)=3, plus Commons −2 → 1 (vanilla per-source floor).
     CHECK(FinalizeResolvedStat(
-              ResolveBaseStat(baseEffects, StatId_t::Drones, SeedFor(StatId_t::Drones)))
+              ResolveBaseStat(baseEffects, StatId_t::Drones, SeedFor(StatId_t::Drones), nullptr))
           == 1);
 }
 
@@ -235,7 +235,7 @@ TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired cal
     }};
 
     const int size = base.GetPopulation().GetSize();
-    CHECK(ResolveBaseStat(baseEffects, StatId_t::GrowthRate, 100.0)
+    CHECK(ResolveBaseStat(baseEffects, StatId_t::GrowthRate, 100.0, nullptr)
           == Approx(100.0 + static_cast<double>(size) * 10.0));
 }
 
@@ -266,9 +266,9 @@ TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bun
 
     // No context: BaseSize is dropped, and resolving the same range must not throw.
     const std::vector<ActiveEffect_t> contextFree =
-        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::StartingMinerals));
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::StartingMinerals, nullptr));
     REQUIRE(contextFree.size() == 1);
-    CHECK(ResolveStatModifiers(contextFree, SeedFor(StatId_t::StartingMinerals)).total
+    CHECK(ResolveStatModifiers(contextFree, SeedFor(StatId_t::StartingMinerals), nullptr).total
           == Approx(10.0));
 
     // With a context carrying the subject: admitted and scaled by population size.
@@ -397,9 +397,9 @@ TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][conditio
     actest::EffectPool pool;
     const EffectConfig_t& config = pool.StatMod(StatId_t::Attack, 1.0);
 
-    CHECK(ConditionSatisfied(config, EffectContext_t{}));
+    CHECK(ConditionSatisfied(config, EffectContext_t{}, nullptr));
     Tile tile(3, 3);
-    CHECK(ConditionSatisfied(config, EffectContext_t{&tile}));
+    CHECK(ConditionSatisfied(config, EffectContext_t{&tile}, nullptr));
 }
 
 TEST_CASE("ConditionSatisfied: TargetTileHas matches terrain features via string id", "[effects][condition]")
@@ -411,10 +411,10 @@ TEST_CASE("ConditionSatisfied: TargetTileHas matches terrain features via string
 
     Tile tile(0, 0);
     tile.SetRockiness(Rockiness_t::Flat);
-    CHECK_FALSE(ConditionSatisfied(vsRocky, EffectContext_t{&tile}));
+    CHECK_FALSE(ConditionSatisfied(vsRocky, EffectContext_t{&tile}, nullptr));
 
     tile.SetRockiness(Rockiness_t::Rocky);
-    CHECK(ConditionSatisfied(vsRocky, EffectContext_t{&tile}));
+    CHECK(ConditionSatisfied(vsRocky, EffectContext_t{&tile}, nullptr));
 }
 
 TEST_CASE("ConditionSatisfied: TargetTileHas matches improvements, including Base", "[effects][condition]")
@@ -428,13 +428,13 @@ TEST_CASE("ConditionSatisfied: TargetTileHas matches improvements, including Bas
     baseImprovement.id = "Base";
 
     Tile tile(0, 0);
-    CHECK_FALSE(ConditionSatisfied(vsBase, EffectContext_t{&tile}));
+    CHECK_FALSE(ConditionSatisfied(vsBase, EffectContext_t{&tile}, nullptr));
 
     tile.AddImprovement(baseImprovement);
-    CHECK(ConditionSatisfied(vsBase, EffectContext_t{&tile}));
+    CHECK(ConditionSatisfied(vsBase, EffectContext_t{&tile}, nullptr));
 
     tile.RemoveImprovement("Base");
-    CHECK_FALSE(ConditionSatisfied(vsBase, EffectContext_t{&tile}));
+    CHECK_FALSE(ConditionSatisfied(vsBase, EffectContext_t{&tile}, nullptr));
 }
 
 TEST_CASE("ConditionSatisfied: a conditional effect with no target tile in context is not satisfied",
@@ -444,7 +444,7 @@ TEST_CASE("ConditionSatisfied: a conditional effect with no target tile in conte
     const EffectConfig_t& conditional = pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent,
                                                      EffectScope_t::ThisUnit, std::nullopt,
                                                      actest::TargetTileHas("Forest"));
-    CHECK_FALSE(ConditionSatisfied(conditional, EffectContext_t{}));
+    CHECK_FALSE(ConditionSatisfied(conditional, EffectContext_t{}, nullptr));
 }
 
 TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditionals", "[effects][filter][condition]")
@@ -470,7 +470,7 @@ TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditi
     CHECK(matching[1].sourceId == "vs_rocky");
 
     // Combat math sanity: 4 attack, +25% vs rocky -> 5.
-    CHECK(ResolveStatModifiers(matching, 0.0).total == 5.0);
+    CHECK(ResolveStatModifiers(matching, 0.0, nullptr).total == 5.0);
 }
 
 TEST_CASE("FilterByStatIdInContext: with an empty context only unconditional effects survive",
@@ -525,7 +525,7 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
     config.condition = AttackerIsEmbarked_t{};
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
-    CHECK_FALSE(ConditionSatisfied(rConfig, EffectContext_t{}));
+    CHECK_FALSE(ConditionSatisfied(rConfig, EffectContext_t{}, nullptr));
 }
 
 TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]")

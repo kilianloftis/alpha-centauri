@@ -49,7 +49,7 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
 
     const int bonusAmount = FinalizeResolvedStat(
         ResolveStatModifiers(FilterByStatId(rBonusEffects, StatId_t::ScrapRefund),
-                             static_cast<double>(formulaAmount))
+                             static_cast<double>(formulaAmount), nullptr)
             .total);
     if (bonusAmount < 0)
     {

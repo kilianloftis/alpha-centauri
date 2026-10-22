@@ -111,7 +111,7 @@ TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the
         {"empty", nullptr},
     };
     const UnitDesign design(slots, components);
-    const UnitEffects_t unitEffects = CollectUnitEffects(design);
+    const UnitEffects_t unitEffects(design, design.CollectEffects());
     const std::vector<ActiveEffect_t>& effects = unitEffects.effects;
 
     // Null components are skipped; on_complete_effects are not part of a unit's stats.
@@ -164,8 +164,8 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     }
 
     // Stacking: two Doctors contribute +4 psych in total.
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Psych), 0.0).total == 4.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Econ), 0.0).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Psych), 0.0, nullptr).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Econ), 0.0, nullptr).total == 4.0);
     CHECK(CountBySource(effects, "Doctor") == 2);
 }
 
@@ -187,7 +187,7 @@ TEST_CASE("CollectTileEffects: terrain features contribute from cached configs",
         const auto effects = CollectTileEffects(tile);
         REQUIRE(effects.size() == 2);
         CHECK(effects[0].sourceId == "Rocky");
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0, nullptr).total == 2.0);
     }
 
     SECTION("river and moisture stack with rockiness")
@@ -196,9 +196,9 @@ TEST_CASE("CollectTileEffects: terrain features contribute from cached configs",
         tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
         tile.SetHasRiver(true);                // +1 energy
         const auto effects = CollectTileEffects(tile);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 1.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Energy), 0.0).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0, nullptr).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0, nullptr).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Energy), 0.0, nullptr).total == 1.0);
     }
 }
 
@@ -217,8 +217,8 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
     tile.AddImprovement(*pMine);
 
     const auto effects = CollectTileEffects(tile);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 1.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0, nullptr).total == 1.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0, nullptr).total == 2.0);
     CHECK(CountBySource(effects, "Farm") == static_cast<int>(pFarm->effects.size()));
     CHECK(CountBySource(effects, "Mine") == static_cast<int>(pMine->effects.size()));
 }
@@ -237,7 +237,7 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     {
         CHECK(effect.config->scope == EffectScope_t::ThisTile);
     }
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0, nullptr).total == 0.0);
 }
 
 TEST_CASE("CollectTileEffects: only a tile's own ThisTile effects enter the pool",
@@ -249,5 +249,5 @@ TEST_CASE("CollectTileEffects: only a tile's own ThisTile effects enter the pool
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0, nullptr).total == 0.0);
 }

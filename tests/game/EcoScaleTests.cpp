@@ -23,7 +23,7 @@ namespace
 double EcoScale_(const BaseManager& rBase)
 {
     return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::EcologicalDamage,
-                           SeedFor(StatId_t::EcologicalDamage));
+                           SeedFor(StatId_t::EcologicalDamage), nullptr);
 }
 
 void SelectNativeLife_(FactionFixture& rFixtures, const char* pLevelId)

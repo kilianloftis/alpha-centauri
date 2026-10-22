@@ -91,7 +91,7 @@ TEST_CASE("Drone and talent StatModifiers resolve on bases", "[effects][psych][p
     const auto resolveDrones = [&]() {
         return FinalizeResolvedStat(
             ResolveStatModifiers(
-                FilterBaseLevelByStatId(base.GetBaseEffects(), StatId_t::Drones), 0.0)
+                FilterBaseLevelByStatId(base.GetBaseEffects(), StatId_t::Drones, nullptr), 0.0, nullptr)
                 .total);
     };
 

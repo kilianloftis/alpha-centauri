@@ -37,20 +37,20 @@ constexpr int k_defaultHqDistance = 12;
 int ResolveProbeDefenseBonus_(const BaseManager& rBase)
 {
     const double value = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeDefense,
-                                         SeedFor(StatId_t::ProbeDefense));
+                                         SeedFor(StatId_t::ProbeDefense), nullptr);
     return static_cast<int>(std::lround(value));
 }
 
 double ResolveProbeSuccessScale_(const BaseManager& rBase)
 {
     return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeSuccessScale,
-                           SeedFor(StatId_t::ProbeSuccessScale));
+                           SeedFor(StatId_t::ProbeSuccessScale), nullptr);
 }
 
 double ResolveProbeActionCostMultiplier_(const BaseManager& rBase)
 {
     return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeActionCost,
-                           SeedFor(StatId_t::ProbeActionCost));
+                           SeedFor(StatId_t::ProbeActionCost), nullptr);
 }
 
 int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t ownerId)
@@ -398,7 +398,8 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
     double failureScale = 1.0;
     if (!TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
     {
-        failureScale = ResolveMultiplicativeStat(rProbe, StatId_t::ProbeFailureScale, 1.0);
+        failureScale = ResolveMultiplicativeStat(rProbe, StatId_t::ProbeFailureScale, 1.0,
+        EffectContext_t{});
     }
     const double successScale = ResolveTargetSuccessScale(rTarget);
     return ComputeProbeChances(morale, risk, targetProbeEffect, rFormula, failureScale,

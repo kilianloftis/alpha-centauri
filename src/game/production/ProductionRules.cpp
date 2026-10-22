@@ -86,14 +86,14 @@ int ComputeProductionCost(int baseCost, const BaseEffects_t& rBaseEffects, int s
     // CostMultiplier is PureMultiplier (seed 1.0). Industry rating levels emit AddPercent
     // contributions here via ResolveSocialRatingLevelEffects — same seam as GrowthRate.
     double multiplier = ResolveBaseStat(rBaseEffects, StatId_t::CostMultiplier,
-                                        SeedFor(StatId_t::CostMultiplier));
+                                        SeedFor(StatId_t::CostMultiplier), nullptr);
 
     if (surchargePercent > 0)
     {
         // Scale only the extra surcharge term so MultiplyGeometric 0 (Skunkworks) returns
         // ordinary cost rather than zeroing the whole production bill.
         const double scale = ResolveBaseStat(rBaseEffects, StatId_t::PrototypeSurchargeScale,
-                                             SeedFor(StatId_t::PrototypeSurchargeScale));
+                                             SeedFor(StatId_t::PrototypeSurchargeScale), nullptr);
         multiplier *= (1.0 + static_cast<double>(surchargePercent) / 100.0 * scale);
     }
 
@@ -117,7 +117,7 @@ int RetoolForfeit(int mineralStockpile, bool bHasTurnOriginal, bool bReturningTo
     // afterward so RetoolPenaltyScale 0 (Skunkworks) cancels the forfeit.
     const int baseForfeit = mineralStockpile * rConfig.retoolPenaltyPercent / 100;
     const double scale = ResolveBaseStat(rBaseEffects, StatId_t::RetoolPenaltyScale,
-                                         SeedFor(StatId_t::RetoolPenaltyScale));
+                                         SeedFor(StatId_t::RetoolPenaltyScale), nullptr);
     const long forfeited = std::lround(baseForfeit * scale);
     return std::max(0, static_cast<int>(forfeited));
 }

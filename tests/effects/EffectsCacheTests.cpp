@@ -52,7 +52,7 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
     base.GetPopulation().AddPop("Networker");
     const uint64_t v3 = faction.GetEffectsVersion();
     CHECK(v3 != v2);
-    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Labs), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Labs), 0.0, nullptr).total
           == Approx(1.0));
 
     // Social policies invalidate.
@@ -236,7 +236,7 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
     CHECK(priceyCost == plainCost + plainCost / 2);
 
     const int factionTechCostBefore = FinalizeResolvedStat(
-        ResolveFactionStat(provider.pool, StatId_t::TechCost, SeedFor(StatId_t::TechCost)));
+        ResolveFactionStat(provider.pool, StatId_t::TechCost, SeedFor(StatId_t::TechCost), nullptr));
     research.AddDiscoveredTech("pricey");
     // Rebuild would normally pull discovered tech effects; ThisTech must not leak TechCost.
     std::vector<ActiveEffect_t> discovered;
@@ -245,6 +245,6 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
     AppendFactionLaneEffects(pPricey->effects, nullptr, pPricey->id, discovered);
     CHECK(discovered.empty());
     CHECK(FinalizeResolvedStat(ResolveFactionStat(provider.pool, StatId_t::TechCost,
-                                                   SeedFor(StatId_t::TechCost)))
+                                                   SeedFor(StatId_t::TechCost), nullptr))
           == factionTechCostBefore);
 }

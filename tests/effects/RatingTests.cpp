@@ -57,7 +57,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
 
         // Fixture: growth level 2 -> +1 nutrients (AllOwnerBases).
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total == Approx(1.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0, nullptr).total == Approx(1.0));
         bool foundRatingSource = false;
         for (const ActiveEffect_t& rEffect : levelEffects)
         {
@@ -77,7 +77,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
         }};
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total == Approx(3.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0, nullptr).total == Approx(3.0));
 
         bool foundClampedSource = false;
         for (const ActiveEffect_t& rEffect : levelEffects)
@@ -98,7 +98,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
         }};
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::CostMultiplier), 100.0).total
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::CostMultiplier), 100.0, nullptr).total
               == Approx(110.0));
     }
 
@@ -126,10 +126,10 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
         // Growth has no level 0 — cancelled Growth contributes nothing.
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0, nullptr).total
               == Approx(0.0));
         // Support level 0 still expands (absolute free_unit_support = 2).
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0)
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0, nullptr)
                   .total
               == Approx(2.0));
     }
@@ -139,7 +139,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
         const BaseEffects_t ratingSource{base};
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0)
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0, nullptr)
                   .total
               == Approx(2.0));
         bool foundSupportZero = false;
@@ -326,7 +326,7 @@ TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce r
           == energyBefore + workedTiles + 2);
 
     const int commerceRating = FinalizeResolvedStat(ResolveBaseStat(
-        base.GetBaseEffects(), StatId_t::CommerceRating, SeedFor(StatId_t::CommerceRating)));
+        base.GetBaseEffects(), StatId_t::CommerceRating, SeedFor(StatId_t::CommerceRating), nullptr));
     CHECK(commerceRating == 2);
 }
 
@@ -502,12 +502,12 @@ TEST_CASE("removed_by_tech gates GrantBuilding before expansion",
     // FilterBaseLevelByStatId excludes AnyTile MaxClamp from tile_yield_rules — same cut
     // production uses. FilterByStatId would include those clamps and mute the grant Adds.
     const BaseEffects_t local{base, faction.GetLocalActiveEffects().effects};
-    REQUIRE(ResolveStatModifiers(FilterBaseLevelByStatId(local, StatId_t::Minerals), 0.0).total
+    REQUIRE(ResolveStatModifiers(FilterBaseLevelByStatId(local, StatId_t::Minerals, nullptr), 0.0, nullptr).total
             == Approx(3.0));
 
     faction.GetResearch().AddDiscoveredTech("gene_splicing");
     const BaseEffects_t afterLift{base, faction.GetLocalActiveEffects().effects};
-    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(afterLift, StatId_t::Minerals), 0.0).total
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(afterLift, StatId_t::Minerals, nullptr), 0.0, nullptr).total
           == Approx(0.0));
 }
 
@@ -598,8 +598,8 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
     // Base-level filter so tile_yield_rules AnyTile MaxClamp is not part of this assert.
     const BaseEffects_t localA{baseA, pFactionA->GetLocalActiveEffects().effects};
     const BaseEffects_t localB{baseB, pFactionB->GetLocalActiveEffects().effects};
-    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localA, StatId_t::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localA, StatId_t::Energy, nullptr), 0.0, nullptr).total
           == Approx(5.0));
-    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localB, StatId_t::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localB, StatId_t::Energy, nullptr), 0.0, nullptr).total
           == Approx(11.0));
 }

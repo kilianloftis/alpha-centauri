@@ -16,7 +16,7 @@ int ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize,
     // GrowthRate is RawScaled (see KindFor): modifiers scale the 100% baseline seed.
     // TODO: consume RuleFlagId_t::NearZeroGrowth / PopulationBoom (emitted by the growth
     // rating's extreme levels in config) once their gameplay rules are defined.
-    const double growthRate = ResolveBaseStat(rBaseEffects, StatId_t::GrowthRate, 100.0);
+    const double growthRate = ResolveBaseStat(rBaseEffects, StatId_t::GrowthRate, 100.0, nullptr);
 
     // GrowthRate ≤ 0 is not a defined nutrient-threshold rule (SMAC uses the
     // NearZeroGrowth flag at the extreme instead of a zero/negative multiplier).

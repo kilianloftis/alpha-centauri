@@ -37,7 +37,7 @@ double ResolveTileContribution_(const Tile& rTile, bool bWorked)
     const auto resolve = [&effects, &ctx](StatId_t stat)
     {
         return ResolveStatModifiersTotal(FilterByStatIdInContext(effects, stat, ctx),
-                                         SeedFor(stat));
+                                         SeedFor(stat), nullptr);
     };
     double total = resolve(StatId_t::EcoDamageContribution);
     if (bWorked)
@@ -75,23 +75,23 @@ EcoDamageInputs_t EcoDamageInputs(const BaseManager& rBase)
     EcoDamageInputs_t inputs;
     inputs.terraformRaw = TerraformRaw_(rBase);
     inputs.terraformScale = ResolveBaseStat(rEffects, StatId_t::EcoTerraformScale,
-                                            SeedFor(StatId_t::EcoTerraformScale));
+                                            SeedFor(StatId_t::EcoTerraformScale), nullptr);
     inputs.minerals = rBase.GetMineralProduction();
     inputs.mineralOffset = FinalizeResolvedStat(ResolveBaseStat(
-        rEffects, StatId_t::EcoMineralOffset, SeedFor(StatId_t::EcoMineralOffset)));
+        rEffects, StatId_t::EcoMineralOffset, SeedFor(StatId_t::EcoMineralOffset), nullptr));
     inputs.cleanMinerals = FinalizeResolvedStat(ResolveFactionStat(
         rFaction.GetActiveEffects(), StatId_t::EcoCleanMinerals,
-        SeedFor(StatId_t::EcoCleanMinerals)));
+        SeedFor(StatId_t::EcoCleanMinerals), nullptr));
     inputs.fungalBlooms = rEcology.FungalBlooms(factionId);
     inputs.cleanMineralGrants = rEcology.CleanMineralGrants(factionId);
     const int atrocityMinerals =
         AtrocityEcoMinerals(rGameState.GetAtrocityLedger(), factionId);
     inputs.virtualMinerals = atrocityMinerals + rEcology.VirtualMinerals(factionId);
     inputs.damageReduction = FinalizeResolvedStat(ResolveBaseStat(
-        rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction)));
+        rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction), nullptr));
     inputs.techs = static_cast<int>(rFaction.GetResearch().GetDiscoveredTechs().size());
     inputs.ecoScale = ResolveBaseStat(rEffects, StatId_t::EcologicalDamage,
-                                      SeedFor(StatId_t::EcologicalDamage));
+                                      SeedFor(StatId_t::EcologicalDamage), nullptr);
     return inputs;
 }
 

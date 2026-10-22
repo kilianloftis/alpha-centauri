@@ -29,12 +29,13 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
     bureaucracy.mapWidth = rMap.GetWidth();
     bureaucracy.mapHeight = rMap.GetHeight();
     bureaucracy.bureaucracy =
-        ResolveBaseStat(rBaseEffects, StatId_t::Bureaucracy, SeedFor(StatId_t::Bureaucracy));
+        ResolveBaseStat(rBaseEffects, StatId_t::Bureaucracy, SeedFor(StatId_t::Bureaucracy),
+        nullptr);
 
     SizeDroneInputs_t size;
     size.baseSize = baseSize;
     size.sizeFreeDrones = FinalizeResolvedStat(ResolveBaseStat(
-        rBaseEffects, StatId_t::SizeFreeDrones, SeedFor(StatId_t::SizeFreeDrones)));
+        rBaseEffects, StatId_t::SizeFreeDrones, SeedFor(StatId_t::SizeFreeDrones), nullptr));
 
     OccupationDroneInputs_t occupation;
     occupation.baseSize = baseSize;
@@ -43,7 +44,7 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
     occupation.assimilationDuration = rWindow.durationTurns;
     occupation.assimilationPeak = rWindow.peakDrones;
     occupation.conqueredDroneCap = ResolveBaseStat(
-        rBaseEffects, StatId_t::ConqueredDroneCap, SeedFor(StatId_t::ConqueredDroneCap));
+        rBaseEffects, StatId_t::ConqueredDroneCap, SeedFor(StatId_t::ConqueredDroneCap), nullptr);
 
     // The runtime terms seed the stat; facilities and SE Add on top, and pop_composition.json's
     // MinClamp 0 / MaxClamp BaseSize bound the result, through the ordinary effect pipeline.
@@ -55,9 +56,9 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase,
 
     CompositionEffectInputs_t inputs;
     inputs.dronePressure =
-        FinalizeResolvedStat(ResolveBaseStat(rBaseEffects, StatId_t::Drones, seed));
+        FinalizeResolvedStat(ResolveBaseStat(rBaseEffects, StatId_t::Drones, seed, nullptr));
     inputs.resolvedTalents = FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, StatId_t::Talents, SeedFor(StatId_t::Talents)));
+        ResolveBaseStat(rBaseEffects, StatId_t::Talents, SeedFor(StatId_t::Talents), nullptr));
     inputs.psychAvailable = rBase.GetPsychProduction();
     return inputs;
 }

@@ -20,9 +20,9 @@ TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
     {
         const FactionEffects_t& rFactionEffects = pEffectsProvider->GetActiveEffects();
         const double techCost = ResolveFactionStat(rFactionEffects, StatId_t::TechCost,
-                                                   SeedFor(StatId_t::TechCost));
+                                                   SeedFor(StatId_t::TechCost), nullptr);
         const double techCostDiff = ResolveFactionStat(rFactionEffects, StatId_t::TechCostDiff,
-                                                       SeedFor(StatId_t::TechCostDiff));
+                                                       SeedFor(StatId_t::TechCostDiff), nullptr);
         inputs.factionTechCostModifier = FinalizeResolvedStat(techCost);
         inputs.diff = FinalizeResolvedStat(techCostDiff);
     }
@@ -32,12 +32,12 @@ TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
     {
         if (rEffect.scope == EffectScope_t::ThisTech)
         {
-            thisTechEffects.emplace_back(rEffect, rTech.id);
+            thisTechEffects.emplace_back(rEffect, rTech.id, nullptr);
         }
     }
     auto techCostEffects = FilterByStatId(thisTechEffects, StatId_t::TechCost);
     const double techModifier =
-        ResolveStatModifiersTotal(techCostEffects, SeedFor(StatId_t::TechCost));
+        ResolveStatModifiersTotal(techCostEffects, SeedFor(StatId_t::TechCost), nullptr);
     inputs.techTechCostModifier = FinalizeResolvedStat(techModifier);
     // Remaining fields are placeholder defaults (turns=0, bIsAI=false, etc.)
     return inputs;

@@ -13,7 +13,7 @@ namespace ac
 int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                          const MoraleCalculator& rMorale)
 {
-    const int liveBonus = ResolveCombatUnitStat(rUnit, StatId_t::MoraleRank, rCtx);
+    const int liveBonus = ResolveCombatUnitStat(rUnit, StatId_t::MoraleRank, rCtx, {});
     return rMorale.MoraleLevel(rUnit.GetXp(), liveBonus);
 }
 
@@ -21,7 +21,7 @@ int CombatMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                       const MoraleCalculator& rMorale)
 {
     const int stated = EffectiveMoraleLevel(rUnit, rCtx, rMorale);
-    const int extras = ResolveCombatUnitStat(rUnit, StatId_t::MoraleExtra, rCtx);
+    const int extras = ResolveCombatUnitStat(rUnit, StatId_t::MoraleExtra, rCtx, {});
     const int combined = stated + extras;
     if (rCtx.combatRole != CombatRole_t::Defender)
     {

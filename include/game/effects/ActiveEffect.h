@@ -36,7 +36,7 @@ struct ActiveEffect_t
 {
     // config is always non-null after construction (points into static or stable store data).
     ActiveEffect_t(const EffectConfig_t& rConfig, std::string sourceId,
-                   const BaseManager* pOriginBase = nullptr)
+                   const BaseManager* pOriginBase)
         : config(&rConfig)
         , sourceId(std::move(sourceId))
         , originBase(pOriginBase)
@@ -169,9 +169,9 @@ EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCt
 // True if config has no condition or ctx satisfies it. Origin-base conditions need
 // pOriginBase.
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
-                        const BaseManager* pOriginBase = nullptr);
+                        const BaseManager* pOriginBase);
 bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
-                        const BaseManager* pOriginBase = nullptr);
+                        const BaseManager* pOriginBase);
 
 // True when the condition needs subjects beyond pUnit, keeping it out of context-free
 // resolution.
@@ -238,8 +238,6 @@ struct StatBreakdown_t
     std::vector<Contribution_t> contributions;
 };
 
-const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider);
-
 // result = (base + adds) * (1 + percents/100) * geometric; order within a kind does not
 // matter.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
@@ -254,7 +252,7 @@ inline int FinalizeResolvedStat(double value)
 // Pass the pCtx the range was filtered with, or nullptr for context-free resolves.
 template <std::ranges::input_range Range>
 StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
-                                     const EffectContext_t* pCtx = nullptr)
+                                     const EffectContext_t* pCtx)
 {
     StatBreakdown_t breakdown;
     breakdown.total = 0.0;
@@ -294,7 +292,7 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
 // Contribution list — for hot paths that only need .total (e.g. per-tile yield).
 template <std::ranges::input_range Range>
 double ResolveStatModifiersTotal(Range&& matching, double baseValue,
-                                 const EffectContext_t* pCtx = nullptr)
+                                 const EffectContext_t* pCtx)
 {
     std::vector<std::pair<double, ModifierOp_t>> stack;
     for (const ActiveEffect_t& active : matching)
@@ -413,7 +411,7 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
 // Base-level resolution only, with no per-tile selectors; takes BaseEffects_t so no other
 // stage can run it. Amount sources pass on pCtx's subject, which resolve then evaluates.
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
-                                    const EffectContext_t* pCtx = nullptr)
+                                    const EffectContext_t* pCtx)
 {
     return rBaseEffects.effects
            | std::views::filter([statId, pCtx](const ActiveEffect_t& effect)
@@ -445,20 +443,20 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
     });
 }
 inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId,
-                                    const EffectContext_t* pCtx = nullptr) = delete;
+                                    const EffectContext_t* pCtx) = delete;
 
 // Domain-scoped resolve: asserts DomainFor(stat), filters, and evaluates amount sources
 // against the bundle subject. Callers cannot omit the subject or mismatch filter to domain.
 double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, double seed,
-                       const EffectContext_t* pCtx = nullptr);
+                       const EffectContext_t* pCtx);
 double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t statId, double seed,
-                          const EffectContext_t* pCtx = nullptr);
+                          const EffectContext_t* pCtx);
 double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, double seed,
-                       const EffectContext_t* pCtx = nullptr);
+                       const EffectContext_t* pCtx);
 
 // Live-unit Attack or Defense for combat. moraleAddPercent joins the AddPercent bucket.
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          std::span<const EffectConfig_t> extraEffects = {});
+                          std::span<const EffectConfig_t> extraEffects);
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
                           double moraleAddPercent);
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
@@ -481,8 +479,6 @@ inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScop
 }
 inline auto FilterByScope(std::vector<ActiveEffect_t>&& effects, EffectScope_t scope) = delete;
 
-// IDesign-only UnitEffects_t (pUnit null) from IDesign::CollectEffects.
-UnitEffects_t CollectUnitEffects(const IDesign& rDesign);
 
 // Resolve a design's intrinsic stats / flags — no faction pool.
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
@@ -507,7 +503,7 @@ int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
 // Only AddPercent and MultiplyGeometric, from baseValue: psi combat strengths start at 1.
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                 const EffectContext_t& rCtx = {});
+                                 const EffectContext_t& rCtx);
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 

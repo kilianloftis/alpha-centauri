@@ -168,7 +168,7 @@ int VoteWeight(const PlanetaryCouncil& rCouncil, const Faction& rFaction,
     effects.insert(effects.end(), rWorld.begin(), rWorld.end());
 
     const StatBreakdown_t breakdown =
-        ResolveStatModifiers(FilterByStatId(effects, StatId_t::CouncilVotes), seed);
+        ResolveStatModifiers(FilterByStatId(effects, StatId_t::CouncilVotes), seed, nullptr);
     return std::max(0, FinalizeResolvedStat(breakdown.total));
 }
 

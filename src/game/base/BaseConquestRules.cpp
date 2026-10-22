@@ -65,7 +65,7 @@ bool IsNativeRaider_(const Unit& rUnit)
 // and difficulty stack on top.
 int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
 {
-    const double resolved = ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat));
+    const double resolved = ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat), nullptr);
     return std::max(0, FinalizeResolvedStat(resolved));
 }
 

@@ -72,7 +72,7 @@ int RebelJoinWeight_(const Faction& rFaction, const RebelSelectionConfig_t& rCon
 {
     const double seed = static_cast<double>(rConfig.baseJoinWeight);
     const double weight =
-        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed);
+        ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::RebelJoinWeight, seed, nullptr);
     return static_cast<int>(std::lround(weight));
 }
 

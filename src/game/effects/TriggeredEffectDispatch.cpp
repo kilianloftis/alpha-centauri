@@ -336,9 +336,10 @@ bool StepRockiness_(TriggeredEffectContext_t& rCtx, const StepRockinessEffect_t&
     }
     // Ordered axis: the clamp rides magic_enum's index range rather than assumed values.
     const auto& rValues = magic_enum::enum_values<Rockiness_t>();
-    const int current = static_cast<int>(*magic_enum::enum_index(rCtx.pTile->GetRockiness()));
-    const int stepped =
-        std::clamp(current + rConfig.steps, 0, static_cast<int>(rValues.size()) - 1);
+    const auto index = magic_enum::enum_index(rCtx.pTile->GetRockiness());
+    const int current = static_cast<int>(*index);
+    const int last = static_cast<int>(rValues.size()) - 1;
+    const int stepped = std::clamp(current + rConfig.steps, 0, last);
     if (stepped == current)
     {
         return false;
@@ -595,7 +596,8 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 const double next = ApplyModifierStack(
                     static_cast<double>(before),
                     {{static_cast<double>(rConcrete.amount), rConcrete.op}});
-                rCtx.pUnit->SetXp(static_cast<int>(std::lround(next)));
+                const int nextXp = static_cast<int>(std::lround(next));
+                rCtx.pUnit->SetXp(nextXp);
                 const int granted = rCtx.pUnit->GetXp() - before;
                 rOut.push_back(XpGranted_t{granted});
                 if (granted > 0 && rConcrete.removeHostChance && rCtx.hostImprovementId
@@ -721,7 +723,7 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
             // Stamp before condition so a future faction-identity arm sees the apply subject.
             rContext.pFaction = pFaction;
             if (rConfig.condition
-                && !ConditionSatisfied(*rConfig.condition, rContext.Subjects()))
+                && !ConditionSatisfied(*rConfig.condition, rContext.Subjects(), nullptr))
             {
                 return;
             }

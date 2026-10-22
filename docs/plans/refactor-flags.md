@@ -102,6 +102,14 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
+### `ConditionSatisfied` and `ApplyOne_` — one std::visit lambda over every alternative
+- **Where:** `src/game/effects/ActiveEffect.cpp` (`ConditionSatisfied(const Condition_t&, …)`,
+  173 lines, nesting 24), `src/game/effects/TriggeredEffectDispatch.cpp` (`ApplyOne_`, 189
+  lines, nesting 23); `AmountSourceValue` (93) has the same shape
+- **Problem:** an `if constexpr` chain inside one lambda handles every alternative.
+- **Why not local:** over 100 lines. The fix is an exhaustive visitor struct per variant, as
+  `EffectReferenceValidator` now uses, with each arm its own member.
+
 ## Duplicated logic
 
 ### Required-tech availability, in six places

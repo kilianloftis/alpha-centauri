@@ -368,10 +368,10 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
     pops.AddPop("Worker");
 
     const auto resolveEcon = [&](double seed) {
-        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::Econ, seed);
+        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::Econ, seed, nullptr);
     };
     const auto resolveGrowthRate = [&]() {
-        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::GrowthRate, 100.0);
+        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::GrowthRate, 100.0, nullptr);
     };
 
     CHECK(resolveEcon(4.0) == Approx(4.0));

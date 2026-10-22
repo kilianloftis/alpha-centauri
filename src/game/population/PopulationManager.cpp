@@ -192,7 +192,7 @@ int PopulationManager::GetMaxSize() const
 {
     return FinalizeResolvedStat(
         ResolveBaseStat(m_rBase.GetBaseEffects(), StatId_t::MaxBaseSize,
-                        SeedFor(StatId_t::MaxBaseSize)));
+                        SeedFor(StatId_t::MaxBaseSize), nullptr));
 }
 
 int PopulationManager::GetNutrientStockpile() const

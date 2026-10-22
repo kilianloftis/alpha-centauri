@@ -144,9 +144,9 @@ TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[
 
 TEST_CASE("ResolveStatModifiers: empty input resolves to the base value", "[effects][math]")
 {
-    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0).total == Approx(0.0));
-    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 7.0).total == Approx(7.0));
-    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0).contributions.empty());
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0, nullptr).total == Approx(0.0));
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 7.0, nullptr).total == Approx(7.0));
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0, nullptr).contributions.empty());
 }
 
 TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[effects][math]")
@@ -157,7 +157,7 @@ TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[
         Active(pool.StatMod(StatId_t::Nutrients, 3.0), "building_b"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0, nullptr);
     CHECK(breakdown.total == Approx(5.0));
     REQUIRE(breakdown.contributions.size() == 2);
 }
@@ -173,8 +173,8 @@ TEST_CASE("ResolveStatModifiers: pure-multiplier stats require an explicit non-z
         Active(pool.StatMod(StatId_t::CostMultiplier, 1.25, ModifierOp_t::MultiplyGeometric), "component"),
     };
 
-    CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(0.0));
-    CHECK(ResolveStatModifiers(effects, 1.0).total == Approx(1.25));
+    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
+    CHECK(ResolveStatModifiers(effects, 1.0, nullptr).total == Approx(1.25));
 }
 
 TEST_CASE("ResolveStatModifiers: seeded base value participates in percent scaling", "[effects][math]")
@@ -184,7 +184,7 @@ TEST_CASE("ResolveStatModifiers: seeded base value participates in percent scali
     const std::vector<ActiveEffect_t> effects = {
         Active(pool.StatMod(StatId_t::GrowthRate, 10.0, ModifierOp_t::AddPercent), "policy"),
     };
-    CHECK(ResolveStatModifiers(effects, 100.0).total == Approx(110.0));
+    CHECK(ResolveStatModifiers(effects, 100.0, nullptr).total == Approx(110.0));
 }
 
 TEST_CASE("ResolveStatModifiers: contributions are sorted by sourceId for deterministic breakdowns",
@@ -197,7 +197,7 @@ TEST_CASE("ResolveStatModifiers: contributions are sorted by sourceId for determ
         Active(pool.StatMod(StatId_t::Energy, 3.0), "midway"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0, nullptr);
     REQUIRE(breakdown.contributions.size() == 3);
     CHECK(breakdown.contributions[0].sourceId == "alpha");
     CHECK(breakdown.contributions[1].sourceId == "midway");
@@ -211,7 +211,7 @@ TEST_CASE("ResolveStatModifiers: breakdown records amount and op per contributio
         Active(pool.StatMod(StatId_t::Minerals, 25.0, ModifierOp_t::AddPercent), "bonus"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0, nullptr);
     REQUIRE(breakdown.contributions.size() == 1);
     CHECK(breakdown.contributions[0].amount == Approx(25.0));
     CHECK(breakdown.contributions[0].op == ModifierOp_t::AddPercent);
@@ -226,7 +226,7 @@ TEST_CASE("ResolveStatModifiers: non-StatModifier effects are ignored", "[effect
         Active(pool.StatMod(StatId_t::Energy, 4.0), "real"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0, nullptr);
     CHECK(breakdown.total == Approx(4.0));
     CHECK(breakdown.contributions.size() == 1);
     CHECK(effects[1].config != nullptr); // ActiveEffect_t always carries a config
@@ -242,7 +242,7 @@ TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must
         Active(pool.StatMod(StatId_t::Nutrients, 2.0), "a"),
         Active(pool.StatMod(StatId_t::Minerals, 3.0), "b"),
     };
-    CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(5.0));
+    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(5.0));
 }
 
 TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergy scales bands by amount",

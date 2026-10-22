@@ -104,12 +104,12 @@ TEST_CASE("ThisPop effects must never be resolved together with flat Add effects
     const double rawTileYield = 4.0;
 
     // Correct: multiplier scales the raw tile yield, flat bonus added separately.
-    const double correct = ResolveStatModifiers(std::vector<ActiveEffect_t>{multiplier}, rawTileYield).total
-                         + ResolveStatModifiers(std::vector<ActiveEffect_t>{flatBonus}, 0.0).total; // 6 + 2 = 8
+    const double correct = ResolveStatModifiers(std::vector<ActiveEffect_t>{multiplier}, rawTileYield, nullptr).total
+                         + ResolveStatModifiers(std::vector<ActiveEffect_t>{flatBonus}, 0.0, nullptr).total; // 6 + 2 = 8
 
     // Wrong: one combined resolve scales the flat bonus too: (4 + 2) * 1.5 = 9.
     const double combined =
-        ResolveStatModifiers(std::vector<ActiveEffect_t>{multiplier, flatBonus}, rawTileYield).total;
+        ResolveStatModifiers(std::vector<ActiveEffect_t>{multiplier, flatBonus}, rawTileYield, nullptr).total;
 
     CHECK(correct == 8.0);
     CHECK(combined == 9.0);

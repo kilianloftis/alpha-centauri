@@ -85,7 +85,7 @@ int ResolvedFloorPercent_(const FactionFixture& fixture, const Tile& rTile)
 {
     const std::vector<ActiveEffect_t> effects = fixture.ctx.CollectAreaEffects(rTile);
     return FinalizeResolvedStat(ResolveStatModifiers(
-        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0).total);
+        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0, nullptr).total);
 }
 
 CombatResolveOptions_t StrikeOptions_()

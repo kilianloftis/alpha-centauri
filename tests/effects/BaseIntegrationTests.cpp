@@ -108,10 +108,10 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
     // For base A: its own ThisBase effect plus the three base-applicable global scopes.
     // The distinct powers of two make any wrong inclusion identifiable from the total.
     const BaseEffects_t forA = FilterForBase(factionEffects, baseA);
-    CHECK(ResolveStatModifiers(FilterByStatId(forA.effects, StatId_t::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forA.effects, StatId_t::Nutrients), 0.0, nullptr).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
 
     const BaseEffects_t forB = FilterForBase(factionEffects, baseB);
-    CHECK(ResolveStatModifiers(FilterByStatId(forB.effects, StatId_t::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forB.effects, StatId_t::Nutrients), 0.0, nullptr).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
 }
 
 TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no base", "[effects][base][filter]")
@@ -157,7 +157,7 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
 
     // The granted building is a real constructed building: its continuous effects collect.
     const auto effects = base.CollectBuildingEffects();
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0, nullptr).total == 2.0);
 }
 
 // End-to-end for the whole dispatch path: with the session's scope installed, completing

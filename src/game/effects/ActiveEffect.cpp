@@ -49,8 +49,8 @@ namespace
 [[noreturn]] void ThrowNoEvaluation_(StatModifierEffect_t::AmountSource_t source,
                                      std::string_view subject)
 {
-    throw std::runtime_error("AmountSourceValue: amount_source "
-                             + std::string(magic_enum::enum_name(source))
+    const std::string sourceName(magic_enum::enum_name(source));
+    throw std::runtime_error("AmountSourceValue: amount_source " + sourceName
                              + " has no evaluation for a " + std::string(subject) + " subject");
 }
 
@@ -88,9 +88,12 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     switch (source)
     {
         case StatModifierEffect_t::AmountSource_t::BaseSize:
+        {
             // Vanilla per-source floor: University floor(size×0.25) does not share fractional
             // residue with another fractional BaseSize source (e.g. Commons).
-            return std::floor(static_cast<double>(rBase.GetPopulation().GetSize()) * scale);
+            const double size = static_cast<double>(rBase.GetPopulation().GetSize());
+            return std::floor(size * scale);
+        }
         case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
             return static_cast<double>(rBase.GetBuildingUpkeep()) * scale;
         default:
@@ -112,8 +115,9 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
             }
             // Rounded up, so any land above sea level is worth a point; ocean
             // yields nothing.
-            const double bands = std::ceil(static_cast<double>(rTile.GetElevation())
-                                           / static_cast<double>(rYieldRules.elevationEnergyStepMeters));
+            const double elevation = static_cast<double>(rTile.GetElevation());
+            const double step = static_cast<double>(rYieldRules.elevationEnergyStepMeters);
+            const double bands = std::ceil(elevation / step);
             return std::max(0.0, bands) * scale;
         }
         default:
@@ -157,11 +161,6 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     }
 }
 
-int SocialRatingValue_(const Unit& rUnit, SocialRatingId_t rating)
-{
-    return rUnit.GetFaction().GetSocialEngineering().GetSocialRating(rating);
-}
-
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
 {
     if (!rMod.amountSource.has_value())
@@ -177,7 +176,8 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
                 throw std::runtime_error(
                     "AmountSourceValue: SocialRating requires pUnit");
             }
-            const int rating = SocialRatingValue_(*pCtx->pUnit, rMod.amountSource->rating);
+            const auto& rSocial = pCtx->pUnit->GetFaction().GetSocialEngineering();
+            const int rating = rSocial.GetSocialRating(rMod.amountSource->rating);
             if (!rMod.amountSource->amounts.has_value())
             {
                 throw std::runtime_error(
@@ -542,16 +542,8 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return std::max(std::min(result, maxClamp), minClamp);
 }
 
-const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider)
-{
-    return rProvider.GetActiveEffects();
-}
-
-namespace
-{
-
-bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t& ctx,
-                             const BaseManager* pOriginBase)
+bool ConditionSatisfied(const Condition_t& condition, const EffectContext_t& ctx,
+                        const BaseManager* pOriginBase)
 {
     return std::visit(
         [&](const auto& rAlt) -> bool
@@ -595,7 +587,8 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 {
                     return false;
                 }
-                const int rating = SocialRatingValue_(*ctx.pUnit, rAlt.rating);
+                const auto& rSocial = ctx.pUnit->GetFaction().GetSocialEngineering();
+                const int rating = rSocial.GetSocialRating(rAlt.rating);
                 return CompareSatisfied(rating, rAlt.op, rAlt.value);
             }
             else if constexpr (std::is_same_v<T, OriginBaseHasBuilding_t>)
@@ -700,7 +693,7 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 for (const Condition_t& rNested : rAlt.conditions)
                 {
-                    if (!ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                    if (!ConditionSatisfied(rNested, ctx, pOriginBase))
                     {
                         return false;
                     }
@@ -711,7 +704,7 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 for (const Condition_t& rNested : rAlt.conditions)
                 {
-                    if (ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                    if (ConditionSatisfied(rNested, ctx, pOriginBase))
                     {
                         return true;
                     }
@@ -726,8 +719,6 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
         condition.AsVariant());
 }
 
-} // namespace
-
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase)
 {
@@ -736,12 +727,6 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
         return true;
     }
     return ConditionSatisfied(*config.condition, ctx, pOriginBase);
-}
-
-bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
-                        const BaseManager* pOriginBase)
-{
-    return ConditionBodySatisfied_(rCondition, ctx, pOriginBase);
 }
 
 bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
@@ -950,11 +935,6 @@ UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
     return UnitEffects_t(rUnit, std::move(effects));
 }
 
-UnitEffects_t CollectUnitEffects(const IDesign& rDesign)
-{
-    return UnitEffects_t(rDesign, rDesign.CollectEffects());
-}
-
 double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, double seed,
                        const EffectContext_t* pCtx)
 {
@@ -1055,9 +1035,9 @@ UnitEffects_t LiveUnitEffectsWithMorale_(const Unit& rUnit,
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
                           std::span<const EffectConfig_t> extraEffects)
 {
-    return FinalizeResolvedStat(
-        ResolveUnitStat(LiveUnitEffectsWithMorale_(rUnit, extraEffects), statId,
-                        SeedFor(statId), &rCtx));
+    const UnitEffects_t effects = LiveUnitEffectsWithMorale_(rUnit, extraEffects);
+    const double total = ResolveUnitStat(effects, statId, SeedFor(statId), &rCtx);
+    return FinalizeResolvedStat(total);
 }
 
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
@@ -1114,16 +1094,17 @@ int ResolveStat(const IDesign& rDesign, StatId_t statId)
 {
     // Materialize first: FilterByStatId rejects rvalues (borrowing view).
     const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
-    return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
+    const double total =
+        ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId), nullptr).total;
+    return FinalizeResolvedStat(total);
 }
 
 int ResolveStat(const IDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
 {
     const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
-    return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx),
-                             SeedFor(statId), &rCtx).total);
+    const double total = ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx),
+                                              SeedFor(statId), &rCtx).total;
+    return FinalizeResolvedStat(total);
 }
 
 int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId)
@@ -1150,14 +1131,16 @@ bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId)
 
 int ResolveStat(const Unit& rUnit, StatId_t statId)
 {
-    return FinalizeResolvedStat(
-        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId)));
+    const double total =
+        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId), nullptr);
+    return FinalizeResolvedStat(total);
 }
 
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 {
-    return FinalizeResolvedStat(
-        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId), &rCtx));
+    const double total =
+        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId), &rCtx);
+    return FinalizeResolvedStat(total);
 }
 
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
@@ -1186,7 +1169,7 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 {
-    return ResolveFlagFromEffects_(CollectActiveEffects(rFaction).effects, flagId);
+    return ResolveFlagFromEffects_(rFaction.GetActiveEffects().effects, flagId);
 }
 
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)

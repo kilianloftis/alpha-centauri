@@ -41,13 +41,13 @@ TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-
     // A Networker pop carries "+1 labs, FactionGlobal".
     base.GetPopulation().AddPop("Networker");
 
-    const auto pool = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId_t::Labs), 0.0).total == Approx(1.0));
+    const auto pool = faction.GetActiveEffects();
+    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId_t::Labs), 0.0, nullptr).total == Approx(1.0));
 
     // Two Networkers stack.
     base.GetPopulation().AddPop("Networker");
-    const auto pool2 = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool2.effects, StatId_t::Labs), 0.0).total == Approx(2.0));
+    const auto pool2 = faction.GetActiveEffects();
+    CHECK(ResolveStatModifiers(FilterByStatId(pool2.effects, StatId_t::Labs), 0.0, nullptr).total == Approx(2.0));
 }
 
 TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while the unit lives",
@@ -56,17 +56,17 @@ TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while t
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId_t::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Energy), 0.0, nullptr).total
           == Approx(0.0));
 
     // energy_siphon: "+1 energy, FactionGlobal" on a component.
     Unit& unit = fixture.MakeUnit(faction, 8, 0, {"energy_siphon"});
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId_t::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Energy), 0.0, nullptr).total
           == Approx(1.0));
 
     // The effect disappears with the unit.
     faction.GetUnitManager().DestroyUnit(unit);
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId_t::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Energy), 0.0, nullptr).total
           == Approx(0.0));
 }
 
@@ -226,7 +226,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     SECTION("CollectWorldExtras gathers the other faction's WorldGlobal effects only")
     {
         const auto forB = fixture.state.CollectWorldExtras(factionB);
-        CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId_t::Energy), 0.0).total == Approx(10.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId_t::Energy), 0.0, nullptr).total == Approx(10.0));
 
         // Faction A's own pool already carries its WorldGlobal effects; the world pass
         // excludes them so they are not double-counted.
@@ -340,8 +340,8 @@ TEST_CASE("Social policy stat effects flow through the standard pool (no special
 
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("wealth_policy"));
 
-    const auto pool = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId_t::Energy), 0.0).total == Approx(1.0));
+    const auto pool = faction.GetActiveEffects();
+    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId_t::Energy), 0.0, nullptr).total == Approx(1.0));
 }
 
 TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus within its radius",

@@ -63,7 +63,7 @@ int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& wo
     // scales it (SeedFor is 0 for Additive and would discard percents).
     const int workedVal = GetResourceValue_(worked, stat);
     return FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, stat, static_cast<double>(workedVal)));
+        ResolveBaseStat(rBaseEffects, stat, static_cast<double>(workedVal), nullptr));
 }
 
 int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const
