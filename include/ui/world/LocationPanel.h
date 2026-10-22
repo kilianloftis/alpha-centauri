@@ -22,7 +22,6 @@ public:
     void Render(Graphics& rGraphics) override;
 
     void SetSelectedTile(const Tile* pTile) { m_pSelectedTile = pTile; }
-    const Tile* GetSelectedTile() const { return m_pSelectedTile; }
 
 private:
     void DrawBackground_(Graphics& rGraphics) const;

@@ -133,8 +133,8 @@ int BaseSpriteSizeStage(int population, int bumpCount, const BaseSpriteSizesConf
             stageIndex = static_cast<int>(i);
         }
     }
-    stageIndex = std::min(stageIndex + std::max(0, bumpCount),
-                          static_cast<int>(rConfig.sizeStages.size()) - 1);
+    const int lastStage = static_cast<int>(rConfig.sizeStages.size()) - 1;
+    stageIndex = std::min(stageIndex + std::max(0, bumpCount), lastStage);
     return stageIndex + 1;
 }
 

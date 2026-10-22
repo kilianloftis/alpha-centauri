@@ -18,9 +18,7 @@ class WorldDisplay;
 class CombatPresentation
 {
 public:
-    explicit CombatPresentation(
-        int damageFlashMs = Style().combatPresentation.defaultDamageFlashMs,
-        int interRoundDelayMs = Style().combatPresentation.defaultInterRoundDelayMs);
+    CombatPresentation(int damageFlashMs, int interRoundDelayMs);
 
     // Copies rResult and the combatants' tiles. Empty rounds clear it unless bBombardPlayback,
     // which still flashes the defender's tile.

@@ -97,7 +97,6 @@ private:
     void TryAutoReturnLowFuel_(Unit& rUnit);
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
-    static bool UnitRequiresOrders_(const Unit& rUnit);
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
     // False when the shot is illegal. True after playback has been opened.
     bool TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);

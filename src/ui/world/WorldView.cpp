@@ -316,11 +316,6 @@ WindowLayout_t WorldView::GetPopupLayout() const
     return ResolveLayout(m_layout, Style().layouts.popupSmall);
 }
 
-bool WorldView::UnitRequiresOrders_(const Unit& rUnit)
-{
-    return rUnit.RequiresOrders();
-}
-
 void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
 {
     const bool bSelectionChanged = m_pSelectedUnit != pUnit;
@@ -379,7 +374,7 @@ void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
 void WorldView::SelectNextAvailableUnit_()
 {
     // A short move leaves moves, so stay on this unit rather than jump to the next one.
-    if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
+    if (m_pSelectedUnit && m_pSelectedUnit->RequiresOrders())
     {
         SetSelectedUnit_(m_pSelectedUnit, m_bManualSelection);
         return;
@@ -404,12 +399,12 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
 
     // Manual map browse: empty tile (no unit) or a unit that does not need orders
     // (already moved / has an order). Leave selection alone so the player can inspect.
-    if (m_bManualSelection && (!m_pSelectedUnit || !UnitRequiresOrders_(*m_pSelectedUnit)))
+    if (m_bManualSelection && (!m_pSelectedUnit || !m_pSelectedUnit->RequiresOrders()))
     {
         return;
     }
 
-    if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
+    if (m_pSelectedUnit && m_pSelectedUnit->RequiresOrders())
     {
         return;
     }
@@ -534,10 +529,11 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             }
 
             DismissOpenModals_();
-            m_elements.push_back(std::make_unique<ListSelectorPopup>(
+            auto pPopup = std::make_unique<ListSelectorPopup>(
                 "Supply Crawl", "No resources available", std::move(choices),
-                ResolveLayout(m_layout, Style().layouts.popupSmall),
-                Style().listSelectorPopup, &m_rSprites));
+                GetPopupLayout(),
+                Style().listSelectorPopup, &m_rSprites);
+            m_elements.push_back(std::move(pPopup));
             return true;
         }
         else if (m_pUnitOrderInputController->WasDisbandRequested() && pControllable)
@@ -1000,9 +996,10 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     }
 
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+    auto pPopup = std::make_unique<ListSelectorPopup>(
         "Probe Actions", "No actions available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
+        GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
@@ -1085,9 +1082,10 @@ void WorldView::OpenDisbandMenu_(Unit& rUnit)
     choices.push_back({"Cancel", [] {}});
 
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+    auto pPopup = std::make_unique<ListSelectorPopup>(
         "Disband Units", "", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup, &m_rSprites));
+        GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void WorldView::HandleDisbandChoice_(Unit& rUnit)
@@ -1097,20 +1095,21 @@ void WorldView::HandleDisbandChoice_(Unit& rUnit)
     if (!payout)
     {
         DismissOpenModals_();
-        m_elements.push_back(std::make_unique<NoticePopup>(
-            ResolveLayout(m_layout, Style().layouts.popupSmall),
+        auto pPopup = std::make_unique<NoticePopup>(
+            GetPopupLayout(),
             "Disband",
             "This unit cannot be disbanded.",
             nullptr,
-            &m_rSprites));
+            &m_rSprites);
+        m_elements.push_back(std::move(pPopup));
         return;
     }
 
     Unit* pUnit = &rUnit;
     DismissOpenModals_();
-    m_elements.push_back(MakeConfirmPopup(
+    auto pConfirm = MakeConfirmPopup(
         FormatScrapConfirm(*payout, rFaction),
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        GetPopupLayout(),
         [this, pUnit]
         {
             if (m_pSelectedUnit != pUnit)
@@ -1119,7 +1118,8 @@ void WorldView::HandleDisbandChoice_(Unit& rUnit)
             }
             HandleDisbandConfirmed_(*pUnit);
         },
-        Style().listSelectorPopup));
+        Style().listSelectorPopup);
+    m_elements.push_back(std::move(pConfirm));
 }
 
 void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
@@ -1128,12 +1128,13 @@ void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
     if (!rFaction.QuoteScrapUnit(rUnit))
     {
         DismissOpenModals_();
-        m_elements.push_back(std::make_unique<NoticePopup>(
-            ResolveLayout(m_layout, Style().layouts.popupSmall),
+        auto pPopup = std::make_unique<NoticePopup>(
+            GetPopupLayout(),
             "Disband",
             "This unit cannot be disbanded.",
             nullptr,
-            &m_rSprites));
+            &m_rSprites);
+        m_elements.push_back(std::move(pPopup));
         return;
     }
 
@@ -1144,12 +1145,13 @@ void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
 void WorldView::ShowSelfDestructStub_()
 {
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<NoticePopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
+    auto pPopup = std::make_unique<NoticePopup>(
+        GetPopupLayout(),
         "Self Destruct",
         "Self Destruct is not implemented.",
         nullptr,
-        &m_rSprites));
+        &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void WorldView::ClearAirdropTargeting_()
@@ -1229,12 +1231,13 @@ void WorldView::SyncTargetingCursor_(Graphics& rGraphics)
 void WorldView::ShowAirdropNotice_(std::string message)
 {
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<NoticePopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
+    auto pPopup = std::make_unique<NoticePopup>(
+        GetPopupLayout(),
         "Airdrop",
         std::move(message),
         nullptr,
-        &m_rSprites));
+        &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)

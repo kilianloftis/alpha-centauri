@@ -22,7 +22,7 @@ public:
     // pGameState is used so probe validity can be deferred to ProbeActionExecutor.
     // Attack still uses local enemy-unit checks.
     bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile,
-                     const Pathfinder* pPathfinder, GameState* pGameState = nullptr);
+                     const Pathfinder* pPathfinder, GameState* pGameState);
 
     // True after the most recent HandleKey/HandleMouse call assigned an order.
     bool WasOrderAssigned() const { return m_bOrderAssigned; }

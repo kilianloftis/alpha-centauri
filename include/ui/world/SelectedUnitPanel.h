@@ -23,7 +23,6 @@ public:
     void Render(Graphics& rGraphics) override;
 
     void SetSelectedUnit(const Unit* pUnit) { m_pSelectedUnit = pUnit; }
-    const Unit* GetSelectedUnit() const { return m_pSelectedUnit; }
 
 private:
     void DrawBackground_(Graphics& rGraphics) const;

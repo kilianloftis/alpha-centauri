@@ -25,7 +25,6 @@ public:
     void Render(Graphics& rGraphics) override;
 
     void SetInfoLines(const std::vector<InfoLine>& lines) { m_infoLines = lines; }
-    const std::vector<InfoLine>& GetInfoLines() const { return m_infoLines; }
 
 private:
     SpriteLibrary& m_rSprites;

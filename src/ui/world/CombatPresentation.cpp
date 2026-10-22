@@ -141,10 +141,10 @@ void CombatPresentation::Render(Graphics& rGraphics,
         return;
     }
 
-    UnitMarkerRenderer::DrawHitOverlay(
-        rGraphics,
-        UnitMarkerRenderer::MarkerRectOnTile(origin->first, origin->second,
-                                             rDisplay.GetEffectiveTileSize(), 0));
+    const float tileSize = rDisplay.GetEffectiveTileSize();
+    const auto rect =
+        UnitMarkerRenderer::MarkerRectOnTile(origin->first, origin->second, tileSize, 0);
+    UnitMarkerRenderer::DrawHitOverlay(rGraphics, rect);
 }
 
 void CombatPresentation::DrawBombardOverlay_(Graphics& rGraphics,

@@ -107,11 +107,6 @@ bool MapViewport::SetTileSize(float tileSize)
     return true;
 }
 
-bool MapViewport::ScrollBy(int deltaX, int deltaY)
-{
-    return SetCamera(m_cameraX + deltaX, m_cameraY + deltaY);
-}
-
 int MapViewport::RowStart() const
 {
     return std::max(0, m_cameraY);
@@ -202,8 +197,8 @@ void MapViewport::EnsureReliefCache_() const
             ResolveTileLifts(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
         m_reliefShades[static_cast<std::size_t>(index)] =
             ResolveTileShades(*pTile, m_rWorldMap, m_relief, m_reliefStyle);
-        maxLiftRatio =
-            std::max(maxLiftRatio, MaxDiamondLift_(m_reliefLifts[static_cast<std::size_t>(index)]));
+        const float lift = MaxDiamondLift_(m_reliefLifts[static_cast<std::size_t>(index)]);
+        maxLiftRatio = std::max(maxLiftRatio, lift);
     }
     m_cachedMaxLiftRatio = maxLiftRatio;
     m_reliefCacheAppearanceRevision = appearanceRevision;

@@ -29,7 +29,6 @@ public:
 
     // Returns true when the camera position actually changed.
     bool SetCamera(int tileX, int tileY);
-    bool ScrollBy(int deltaX, int deltaY);
 
     // Diamond width in pixels; height stays width / 2. Recalculates VisibleCols / VisibleRows.
     // Returns true when the size actually changed.
@@ -43,7 +42,6 @@ public:
     float TileSize() const { return m_tileWidth; }
     float TileWidth() const { return m_tileWidth; }
     float TileHeight() const { return m_tileHeight; }
-    const WindowLayout_t& Layout() const { return m_layout; }
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
 
     // Approximate visible Y range for the minimap camera rectangle (Y does not wrap).

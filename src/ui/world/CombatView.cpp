@@ -47,6 +47,8 @@ CombatView::CombatView(WindowLayout_t layout,
     , m_onFinished(std::move(onFinished))
     , m_attackerName(std::move(attackerName))
     , m_defenderName(std::move(defenderName))
+    , m_presentation(Style().combatPresentation.defaultDamageFlashMs,
+                     Style().combatPresentation.defaultInterRoundDelayMs)
 {
     const auto& console = Style().worldView;
     const WindowLayout_t& rConsole = m_consolePlacement.layout;

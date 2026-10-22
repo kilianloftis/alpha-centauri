@@ -84,7 +84,8 @@ void UnitStackPanel::ScrollSelectedIntoView_()
         return;
     }
 
-    const size_t selectedIndex = static_cast<size_t>(std::distance(m_units.begin(), it));
+    const auto offset = std::distance(m_units.begin(), it);
+    const size_t selectedIndex = static_cast<size_t>(offset);
     const size_t visible = m_slots.size();
     if (selectedIndex < m_scrollOffset + visible)
     {

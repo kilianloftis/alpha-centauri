@@ -27,6 +27,13 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the list overloads should take the context (or references), and the tests
   that pass partial registries need a fixture context.
 
+### `UnitOrderInputController` — a null game state nobody passes
+- **Where:** `include/ui/world/UnitOrderInputController.h:25` and the `pGameState ?` branches in
+  `src/ui/world/UnitOrderInputController.cpp`
+- **Problem:** the only caller always passes the session, so every null branch is dead.
+- **Why not local:** it threads through five private handlers, which would all take
+  `GameState&`.
+
 ## Rule 4: pass-through functions
 
 ## Rule 5: flag parameters
@@ -54,6 +61,13 @@ One entry per violation, under the rule it breaks:
 - **Problem:** `bExcludeHq` and `bExcludeSecretProjects` choose which facilities qualify.
 - **Why not local:** an exclusion policy type would be shared with `DestroyFacilityEffect_t`,
   which already carries the same two fields.
+
+### `WorldView::SetSelectedUnit_` — manual or automatic selection
+- **Where:** `include/ui/world/WorldView.h:87`; 13 calls, most with a literal
+- **Problem:** the flag decides whether picking cancels skip-turn and whether the camera
+  follows; one caller passes the stored mode back in.
+- **Why not local:** splitting it into manual and automatic selection needs that caller to
+  branch on the stored mode, and the mode is itself view state worth a look.
 
 ## Rule 6: speculative code
 
@@ -174,6 +188,12 @@ One entry per violation, under the rule it breaks:
 - **Problem:** views close themselves; nothing in production pops one.
 - **Why not local:** the tests would close views the way production does.
 
+### World view accessors used only by tests
+- **Where:** `MapViewport::TileWidth` and `TileHeight` (3 test callers each),
+  `ResolveMapOverlayPathTemplate` in `FactionBaseArt.h` (1)
+- **Problem:** no production caller.
+- **Why not local:** the tests would assert through rendering instead.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -242,6 +262,14 @@ One entry per violation, under the rule it breaks:
   replacement and hub drawing.
 - **Why not local:** the link drawing shares the neighbour masks across passes, and its art rules
   are SMAC's, so splitting it should be checked against screenshots.
+
+### `WorldView` input and construction
+- **Where:** `src/ui/world/WorldView.cpp`: `HandleKey` (146 lines, nesting 11), `HandleMouse`
+  (111), the constructor (89, eleven parameters), `UpdatePresentation` (69);
+  `UnitOrderInputController::HandleKey` (91)
+- **Problem:** every key and click case is handled inline.
+- **Why not local:** over 100 lines; a per-action dispatch (the hotkey config already names the
+  actions) would replace the chains.
 
 ## Duplicated logic
 
