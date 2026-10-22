@@ -448,7 +448,7 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
 
 ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
 {
-    return m_pProduction->TryCompleteReady(/*bNewTurn=*/false);
+    return m_pProduction->TryCompleteReady();
 }
 
 bool BaseManager::IsProductionDisabled() const

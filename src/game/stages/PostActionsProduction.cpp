@@ -18,7 +18,7 @@ PostActionsProduction::PostActionsProduction(HookContext hookContext)
 
 ProductionApplyResult_t PostActionsProduction::TickBase_(BaseManager& rBase)
 {
-    return TryCompleteAndValidate_(rBase, /*bNewTurn=*/false);
+    return ValidateQueueAfter_(rBase, rBase.GetProduction().TryCompleteReady());
 }
 
 } // namespace ac

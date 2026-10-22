@@ -247,10 +247,17 @@ ProductionApplyResult_t ProductionManager::ConvertStockpile_()
     return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
 }
 
-ProductionApplyResult_t ProductionManager::TryCompleteReady(bool bNewTurn)
+ProductionApplyResult_t ProductionManager::TryCompleteReady()
 {
-    return ApplyCompletionOutcome_(
-        m_completion.TryCompleteReady(BuildCompletionProbe_(), bNewTurn));
+    const ProductionCompletion::EvaluateResult_t outcome =
+        m_completion.TryCompleteReady(BuildCompletionProbe_());
+    return ApplyCompletionOutcome_(outcome);
+}
+
+ProductionApplyResult_t ProductionManager::TryCompleteReadyAtTurnStart()
+{
+    m_completion.StartTurn();
+    return TryCompleteReady();
 }
 
 bool ProductionManager::IsReadyToComplete() const

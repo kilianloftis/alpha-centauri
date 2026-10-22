@@ -47,10 +47,11 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
                                  + "; refund must not be negative");
     }
 
-    const int bonusAmount = FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatId(rBonusEffects, StatId_t::ScrapRefund),
-                             static_cast<double>(formulaAmount), nullptr)
-            .total);
+    const double seed = static_cast<double>(formulaAmount);
+    const double bonusTotal =
+        ResolveStatModifiers(FilterByStatId(rBonusEffects, StatId_t::ScrapRefund), seed, nullptr)
+            .total;
+    const int bonusAmount = FinalizeResolvedStat(bonusTotal);
     if (bonusAmount < 0)
     {
         throw std::runtime_error("ScrapRefund modifiers produced "

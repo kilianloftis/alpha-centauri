@@ -870,7 +870,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
 
     pBase->ApplyProduction();
     const ac::ProductionApplyResult_t applied =
-        pBase->GetProduction().TryCompleteReady(/*bNewTurn=*/true);
+        pBase->GetProduction().TryCompleteReadyAtTurnStart();
     REQUIRE(applied.kind == ac::ProductionApplyKind_t::Completed);
     REQUIRE(pBase->GetBuildingManager().HasBuilding("Recreation_Commons"));
 

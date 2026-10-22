@@ -270,7 +270,7 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     rBase.GetProduction().SetProduction(&rPod, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(rBase.GetMineralCost());
     rBase.ApplyProduction();
-    REQUIRE(rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true).kind
+    REQUIRE(rBase.GetProduction().TryCompleteReadyAtTurnStart().kind
             == ProductionApplyKind_t::AwaitingConfirmation);
     REQUIRE(rBase.HasPendingProductionConfirmation());
 

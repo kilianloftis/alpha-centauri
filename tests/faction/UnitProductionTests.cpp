@@ -155,7 +155,7 @@ void CheckQueuedStockpileEnergy_(const BaseManager& rBase, UnitProductionGame_& 
 ProductionApplyResult_t ApplyAndComplete_(BaseManager& rBase)
 {
     rBase.ApplyProduction();
-    const ProductionApplyResult_t result = rBase.GetProduction().TryCompleteReady(/*bNewTurn=*/true);
+    const ProductionApplyResult_t result = rBase.GetProduction().TryCompleteReadyAtTurnStart();
     rBase.GetProduction().ValidateQueue();
     return result;
 }

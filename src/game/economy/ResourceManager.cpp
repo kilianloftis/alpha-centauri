@@ -61,8 +61,9 @@ int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& wo
     // Per-tile modifiers are in `worked` already; the worked value seeds the base modifiers so
     // AddPercent scales it.
     const int workedVal = GetResourceValue_(worked, stat);
-    return FinalizeResolvedStat(
-        ResolveBaseStat(rBaseEffects, stat, static_cast<double>(workedVal), nullptr));
+    const double seed = static_cast<double>(workedVal);
+    const double total = ResolveBaseStat(rBaseEffects, stat, seed, nullptr);
+    return FinalizeResolvedStat(total);
 }
 
 int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const

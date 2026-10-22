@@ -70,8 +70,10 @@ public:
     // the minerals on it. Completion is a separate step (TryCompleteReady).
     ProductionApplyResult_t ApplyProduction();
 
-    // Finishes the current item if its cost is met. bNewTurn clears last turn's deferral.
-    ProductionApplyResult_t TryCompleteReady(bool bNewTurn = false);
+    // Finishes the current item if its cost is met.
+    ProductionApplyResult_t TryCompleteReady();
+    // The same at the turn tick, after clearing last turn's deferral.
+    ProductionApplyResult_t TryCompleteReadyAtTurnStart();
 
     // True when something is current, it is still constructable, it can complete, and the
     // stockpile meets its effective cost.

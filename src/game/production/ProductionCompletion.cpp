@@ -15,15 +15,14 @@ ProductionCompletion::MakeReadyToFinish_(const ProductionCompletionProbe_t& prob
     return EvaluateResult_t{Outcome_t::ReadyToFinish, probe.isPrototype};
 }
 
-ProductionCompletion::EvaluateResult_t
-ProductionCompletion::TryCompleteReady(const ProductionCompletionProbe_t& probe, bool bNewTurn)
+void ProductionCompletion::StartTurn()
 {
-    if (bNewTurn)
-    {
-        // Last turn's "not this turn" does not answer for this turn.
-        m_bDeferredThisTurn = false;
-    }
+    m_bDeferredThisTurn = false;
+}
 
+ProductionCompletion::EvaluateResult_t
+ProductionCompletion::TryCompleteReady(const ProductionCompletionProbe_t& probe)
+{
     if (m_bPendingConfirmation)
     {
         return EvaluateResult_t{Outcome_t::AwaitingConfirmation, false};

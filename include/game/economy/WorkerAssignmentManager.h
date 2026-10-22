@@ -36,9 +36,6 @@ public:
     // Use when the player explicitly removes a worker from a tile and no auto-assign follows.
     void UserUnassignTile(const Tile* pTile);
 
-    // Keeps the pop a worker with no tile; AutoAssignWorkers fills it later.
-    void ReleaseUserAssignment(Pop& rPop);
-
 
     // Remove the tile assignment for the given pop. No-op if not assigned.
     // Does not convert to fallback; use when the pop will be immediately repositioned or converted.

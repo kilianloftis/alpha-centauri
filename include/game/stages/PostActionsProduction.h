@@ -5,8 +5,8 @@
 namespace ac
 {
 
-// After PlayerActions: complete funded queues without banking leftovers or clearing
-// same-turn abandon deferrals (TryCompleteReady with bNewTurn=false), then validate.
+// After PlayerActions: complete funded queues without banking leftovers or clearing this
+// turn's abandon deferrals, then validate.
 class PostActionsProduction : public BaseProduction
 {
 public:

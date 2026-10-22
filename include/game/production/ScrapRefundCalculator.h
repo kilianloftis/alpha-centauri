@@ -32,8 +32,8 @@ public:
     // amount.
     ScrapQuote_t Quote(int mineralCost,
                        ConstructableKind_t kind,
-                       const ScrapOverride_t& rOverride = {},
-                       const std::vector<ActiveEffect_t>& rBonusEffects = {}) const;
+                       const ScrapOverride_t& rOverride,
+                       const std::vector<ActiveEffect_t>& rBonusEffects) const;
 
 private:
     const ScrapKindConfig_t* FindKind_(ConstructableKind_t kind) const;

@@ -255,7 +255,7 @@ TEST_CASE("Completion leftover minerals sit on the first item that survives vali
     rProduction.Insert(0, rB);
     rProduction.SetMineralStockpile(base.GetMineralCost() + 8);
 
-    REQUIRE(rProduction.TryCompleteReady(/*bNewTurn=*/true).kind == ProductionApplyKind_t::Completed);
+    REQUIRE(rProduction.TryCompleteReadyAtTurnStart().kind == ProductionApplyKind_t::Completed);
     CHECK_FALSE(rProduction.HasProduction());
     REQUIRE(rProduction.GetQueue().size() == 1);
     CHECK(rProduction.GetQueue()[0] == &rB);
@@ -280,7 +280,7 @@ TEST_CASE("ValidateQueue drops a completed once-only building still listed",
     rProduction.SetMineralStockpile(base.GetMineralCost());
 
     base.ApplyProduction();
-    REQUIRE(rProduction.TryCompleteReady(/*bNewTurn=*/true).kind == ProductionApplyKind_t::Completed);
+    REQUIRE(rProduction.TryCompleteReadyAtTurnStart().kind == ProductionApplyKind_t::Completed);
     CHECK(base.GetBuildingManager().HasBuilding(rB.id));
     rProduction.ValidateQueue();
     CHECK(rProduction.GetCurrentProduction() == &rA);

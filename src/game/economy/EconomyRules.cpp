@@ -32,9 +32,9 @@ namespace
 
 int ResolveFreeUnitSupport_(const BaseManager& rBase)
 {
-    const int raw = FinalizeResolvedStat(ResolveBaseStat(
-        rBase.GetBaseEffects(), StatId_t::FreeUnitSupport, SeedFor(StatId_t::FreeUnitSupport),
-        nullptr));
+    const double total = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::FreeUnitSupport,
+                                         SeedFor(StatId_t::FreeUnitSupport), nullptr);
+    const int raw = FinalizeResolvedStat(total);
     return std::max(0, raw);
 }
 

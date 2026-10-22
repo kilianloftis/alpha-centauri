@@ -145,7 +145,7 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
 
     production.BankProduction(5);
     REQUIRE(production.IsReadyToComplete());
-    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
     REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == rItem.GetId());
     CHECK_FALSE(production.HasProduction());
@@ -352,7 +352,7 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     SECTION("exact cost leaves nothing")
     {
         production.SetMineralStockpile(cost);
-        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
         REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
         CHECK(applied.completedId == rItem.GetId());
         CHECK_FALSE(production.HasProduction());
@@ -364,7 +364,7 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     SECTION("leftover below the threshold is kept in full")
     {
         production.SetMineralStockpile(cost + 7);
-        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
         REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
         CHECK(applied.completedId == rItem.GetId());
         CHECK_FALSE(production.HasProduction());
@@ -376,7 +376,7 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     SECTION("leftover above the threshold is capped")
     {
         production.SetMineralStockpile(cost + 30);
-        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
         REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
         CHECK(applied.completedId == rItem.GetId());
         CHECK_FALSE(production.HasProduction());
@@ -402,7 +402,7 @@ TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent
     REQUIRE(cost < rItem.GetBaseCost());
     production.SetMineralStockpile(cost + 4);
 
-    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
     REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == rItem.GetId());
     CHECK(production.GetMineralStockpile() == 4);
@@ -422,7 +422,7 @@ TEST_CASE("Completion leftover on the next item is a free retool", "[production]
     production.BankProduction(0);
     production.SetMineralStockpile(cost + 30);
 
-    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    const ProductionApplyResult_t applied = production.TryCompleteReadyAtTurnStart();
     REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
     REQUIRE(applied.completedId == rItem.GetId());
     CHECK_FALSE(production.HasProduction());

@@ -26,14 +26,14 @@ BaseProduction::BaseProduction(HookContext hookContext)
 ProductionApplyResult_t BaseProduction::TickBase_(BaseManager& rBase)
 {
     rBase.ApplyProduction();
-    return TryCompleteAndValidate_(rBase, /*bNewTurn=*/true);
+    ProductionApplyResult_t result = rBase.GetProduction().TryCompleteReadyAtTurnStart();
+    return ValidateQueueAfter_(rBase, std::move(result));
 }
 
-ProductionApplyResult_t BaseProduction::TryCompleteAndValidate_(BaseManager& rBase, bool bNewTurn)
+ProductionApplyResult_t BaseProduction::ValidateQueueAfter_(BaseManager& rBase,
+                                                            ProductionApplyResult_t result)
 {
-    ProductionManager& rProduction = rBase.GetProduction();
-    ProductionApplyResult_t result = rProduction.TryCompleteReady(bNewTurn);
-    std::optional<std::string> droppedCurrent = rProduction.ValidateQueue();
+    std::optional<std::string> droppedCurrent = rBase.GetProduction().ValidateQueue();
     if (droppedCurrent)
     {
         result.preempted = ProductionPreempt_t{std::move(*droppedCurrent)};
@@ -183,7 +183,7 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
             }
 
             const ProductionApplyResult_t result =
-                TryCompleteAndValidate_(rBase, /*bNewTurn=*/false);
+                ValidateQueueAfter_(rBase, rBase.GetProduction().TryCompleteReady());
             if (!result.preempted && result.kind != ProductionApplyKind_t::Completed
                 && result.kind != ProductionApplyKind_t::AwaitingConfirmation)
             {

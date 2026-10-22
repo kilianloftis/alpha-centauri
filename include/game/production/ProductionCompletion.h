@@ -40,9 +40,10 @@ public:
     ProductionCompletion() = default;
     ~ProductionCompletion() = default;
 
-    // Finish the queued item if its cost is already met. bNewTurn clears last turn's deferral
-    // before checking (turn tick); mid-turn callers pass false.
-    EvaluateResult_t TryCompleteReady(const ProductionCompletionProbe_t& probe, bool bNewTurn);
+    // Last turn's "not this turn" does not answer for this one.
+    void StartTurn();
+    // Finish the queued item if its cost is already met.
+    EvaluateResult_t TryCompleteReady(const ProductionCompletionProbe_t& probe);
 
     // True while the player owes an answer.
     bool HasPendingConfirmation() const;
@@ -67,7 +68,7 @@ private:
     // An answer is outstanding. Cleared by AcceptPending / DeferCompletion, or when
     // production changes.
     bool m_bPendingConfirmation = false;
-    // The answer was "not this turn". Cleared by TryCompleteReady(bNewTurn=true).
+    // The answer was "not this turn". Cleared by StartTurn.
     bool m_bDeferredThisTurn = false;
 };
 

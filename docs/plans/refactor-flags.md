@@ -150,6 +150,14 @@ One entry per violation, under the rule it breaks:
   growth config by hand, which `calculator-config.mdc` says should come from a fixture.
 - **Why not local:** the tests that build `GrowthConfig_t` in code need a fixture file.
 
+### Production and economy entry points used only by tests
+- **Where:** `ComputeCommerceForFaction` and `ComputeCommerceForBase` in `CommerceRules.h` (17
+  test callers each), `EconomyManager::SetEnergyAllocation` (7), `ResourceManager::GetPsych` (5),
+  `WorkerAssignmentManager::SetTileScorer` (1), `ProductionManager::Replace` and `Delete` (2)
+- **Problem:** no production caller. Queue editing and the energy sliders have no UI yet; the
+  commerce functions are reached through `CommerceCache` in production.
+- **Why not local:** the tests would move to the production entry points, or the UI arrives.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -198,6 +206,11 @@ One entry per violation, under the rule it breaks:
 - **Where:** `src/game/population/PopCompositionConfigParser.cpp`, 160 lines
 - **Problem:** parses every section of pop_composition.json inline.
 - **Why not local:** over 100 lines; each section's parser would take the config being filled.
+
+### `ProductionConfigParser::ParseConfig`
+- **Where:** `src/game/production/ProductionConfigParser.cpp`, 158 lines
+- **Problem:** parses every block of production.json inline.
+- **Why not local:** over 100 lines; each block's parser fills the same config struct.
 
 ## Duplicated logic
 

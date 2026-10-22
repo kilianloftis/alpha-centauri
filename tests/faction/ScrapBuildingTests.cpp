@@ -58,17 +58,17 @@ TEST_CASE("Scrap refund evaluates the kind's formula over listed mineral cost", 
     LuaRuntime lua;
     const ProductionConfig_t halfConfig = ScrapConfig("floor(minerals / 2)");
     const ScrapRefundCalculator half(halfConfig, lua);
-    CHECK(half.Quote(0, ConstructableKind_t::Building).amount == 0);
-    CHECK(half.Quote(1, ConstructableKind_t::Building).amount == 0);
-    CHECK(half.Quote(5, ConstructableKind_t::Building).amount == 2);
-    const ScrapQuote_t halfQuote = half.Quote(20, ConstructableKind_t::Building);
+    CHECK(half.Quote(0, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).amount == 0);
+    CHECK(half.Quote(1, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).amount == 0);
+    CHECK(half.Quote(5, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).amount == 2);
+    const ScrapQuote_t halfQuote = half.Quote(20, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{});
     CHECK(halfQuote.amount == 10);
     CHECK(halfQuote.refundType == StatId_t::EnergyCredits);
 
     const ProductionConfig_t fullConfig = ScrapConfig("minerals");
     const ScrapRefundCalculator full(fullConfig, lua);
-    CHECK(full.Quote(20, ConstructableKind_t::Building).amount == 20);
-    CHECK(full.Quote(21, ConstructableKind_t::Building).amount == 21);
+    CHECK(full.Quote(20, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).amount == 20);
+    CHECK(full.Quote(21, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).amount == 21);
 }
 
 TEST_CASE("Scrap refund applies config override, bonuses, then the ceiling", "[building][scrap]")
@@ -81,15 +81,15 @@ TEST_CASE("Scrap refund applies config override, bonuses, then the ceiling", "[b
 
     ScrapOverride_t fullCost;
     fullCost.formula = "minerals";
-    const ScrapQuote_t overridden = calculator.Quote(21, ConstructableKind_t::Building, fullCost);
+    const ScrapQuote_t overridden = calculator.Quote(21, ConstructableKind_t::Building, fullCost, std::vector<ActiveEffect_t>{});
     CHECK(overridden.amount == 21);
     CHECK(overridden.refundType == StatId_t::EnergyCredits);
 
     ScrapOverride_t mineralsOnly;
     mineralsOnly.refundType = StatId_t::Minerals;
-    CHECK(calculator.Quote(20, ConstructableKind_t::Building, mineralsOnly).refundType
+    CHECK(calculator.Quote(20, ConstructableKind_t::Building, mineralsOnly, std::vector<ActiveEffect_t>{}).refundType
           == StatId_t::Minerals);
-    CHECK(calculator.Quote(20, ConstructableKind_t::Building, mineralsOnly).amount == 10);
+    CHECK(calculator.Quote(20, ConstructableKind_t::Building, mineralsOnly, std::vector<ActiveEffect_t>{}).amount == 10);
 
     EffectConfig_t bonusConfig;
     bonusConfig.scope = EffectScope_t::ThisBase;
@@ -112,7 +112,7 @@ TEST_CASE("A constructable kind with no scrap entry cannot be scrapped", "[build
     LuaRuntime lua;
     const ProductionConfig_t config;
     const ScrapRefundCalculator calculator(config, lua);
-    CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building).bAvailable);
+    CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).bAvailable);
 }
 
 TEST_CASE("A null formula override denies scrap even when the kind has a default",
@@ -121,12 +121,12 @@ TEST_CASE("A null formula override denies scrap even when the kind has a default
     LuaRuntime lua;
     const ProductionConfig_t config = ScrapConfig("floor(minerals / 2)");
     const ScrapRefundCalculator calculator(config, lua);
-    REQUIRE(calculator.Quote(20, ConstructableKind_t::Building).bAvailable);
+    REQUIRE(calculator.Quote(20, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).bAvailable);
 
     ScrapOverride_t deny;
     deny.formula = "";
     CHECK(ScrapOverrideDenies(deny));
-    CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building, deny).bAvailable);
+    CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building, deny, std::vector<ActiveEffect_t>{}).bAvailable);
 }
 
 TEST_CASE("Scrapping a building grants half its mineral cost as energy and removes it",

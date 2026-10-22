@@ -29,8 +29,8 @@ protected:
 
     // Per-base production tick for this pass. Override for completion-only late passes.
     virtual ProductionApplyResult_t TickBase_(BaseManager& rBase);
-    // TryCompleteReady then ValidateQueue. A dropped current item is attached as preempted.
-    ProductionApplyResult_t TryCompleteAndValidate_(BaseManager& rBase, bool bNewTurn);
+    // ValidateQueue after a completion attempt; a dropped current item is attached as preempted.
+    ProductionApplyResult_t ValidateQueueAfter_(BaseManager& rBase, ProductionApplyResult_t result);
 
 private:
     StageResult_t ProcessBase_(GameState& rGameState, Faction& rFaction, BaseManager& rBase);

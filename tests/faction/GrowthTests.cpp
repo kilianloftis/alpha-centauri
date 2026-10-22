@@ -453,7 +453,7 @@ TEST_CASE("A base at its size cap grows the same turn its Hab Complex completes"
     base.GetProduction().SetProduction(&rHab, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     base.ApplyProduction();
-    REQUIRE(base.GetProduction().TryCompleteReady(/*bNewTurn=*/true).kind
+    REQUIRE(base.GetProduction().TryCompleteReadyAtTurnStart().kind
             == ProductionApplyKind_t::Completed);
     CHECK(rPopulation.GetSize() == 3);
 

@@ -68,11 +68,6 @@ void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
     }
 }
 
-void WorkerAssignmentManager::ReleaseUserAssignment(Pop& rPop)
-{
-    rPop.SetTileClaim(WorkedTileClaim{});
-}
-
 bool WorkerAssignmentManager::AssignWorker(Pop& rPop, const Tile* pTile)
 {
     return Assign_(rPop, pTile, /*bUserAssigned*/false);
