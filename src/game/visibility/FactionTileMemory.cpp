@@ -25,7 +25,8 @@ size_t FactionTileMemory::Index_(const Tile& rTile) const
     {
         throw std::logic_error("FactionTileMemory used before Reset");
     }
-    return static_cast<size_t>(TileIndex(rTile.GetX(), rTile.GetY(), m_width));
+    const int index = TileIndex(rTile.GetX(), rTile.GetY(), m_width);
+    return static_cast<size_t>(index);
 }
 
 void FactionTileMemory::Record(const Tile& rTile)

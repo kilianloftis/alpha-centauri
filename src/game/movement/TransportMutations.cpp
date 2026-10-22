@@ -33,11 +33,6 @@ bool TryAutoAttachOnEntry(Unit& rPassenger)
     return TryAttachToTransport(rPassenger);
 }
 
-bool TryAutoAttachWhenMustLand(Unit& rPassenger)
-{
-    return TryAttachToTransport(rPassenger);
-}
-
 bool TryUnloadTransportInPlace(Unit& rCarrier)
 {
     if (!CanUnloadTransportInPlace(rCarrier))

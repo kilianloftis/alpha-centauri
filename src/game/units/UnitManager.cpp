@@ -54,7 +54,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                               BaseManager* pHomeBase,
                               std::optional<BaseManager*> pProducedAt)
 {
-    if (!CanPlaceUnitOnTile(rTile, rPositions))
+    if (!rPositions.CanPlaceUnit(rTile))
     {
         throw std::runtime_error("UnitManager: tile (" + std::to_string(rTile.GetX())
                                  + ", " + std::to_string(rTile.GetY())

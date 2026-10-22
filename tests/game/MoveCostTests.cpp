@@ -103,7 +103,7 @@ TEST_CASE("MoveCostRules takes max cost or min override", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
@@ -175,7 +175,7 @@ TEST_CASE("MoveCostRules honours UnitMoveProfile flags", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
 
@@ -214,7 +214,7 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
         pTile->SetElevation(100);
     }
 
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
@@ -266,7 +266,7 @@ TEST_CASE("PlannedCostFragments values end-turn entries in whole turns", "[move-
         pTile->SetElevation(100);
     }
 
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     for (const auto& pTile : fixture.map.GetTiles())
@@ -308,7 +308,7 @@ TEST_CASE("PlannedCostFragments hides tile detail under shroud", "[move-cost]")
         pTile->SetElevation(100);
     }
 
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});

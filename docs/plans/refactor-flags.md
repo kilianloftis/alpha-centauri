@@ -97,6 +97,14 @@ One entry per violation, under the rule it breaks:
 - **Problem:** a setter so a test can change the bloom lifeform list after load.
 - **Why not local:** the test needs a fixture native_units config with that list.
 
+### Movement and visibility queries used only by tests
+- **Where:** `StepEvaluator::IsTileInHostileZoc` (18 test callers), `StepEvaluator::IsZocViolation`
+  (3), `ApplyRemoveFog` in `VisibilityMutations.h` (1)
+- **Problem:** no production caller; production reaches these rules through `EvaluateStep` and
+  `ApplyVisibilityRules`.
+- **Why not local:** the tests assert the ZOC and fog rules through these entry points and
+  would move to the production ones.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`

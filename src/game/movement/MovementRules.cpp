@@ -146,10 +146,6 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
     return owner != k_NoFactionOwner && MayShareTiles(rMover.GetFaction(), owner);
 }
 
-bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)
-{
-    return rPositions.CanPlaceUnit(rTile);
-}
 
 EntryPayment_t ResolveEntryPayment(const EntryTerms_t& rTerms, int available, int paidSoFar)
 {

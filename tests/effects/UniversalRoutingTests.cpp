@@ -319,7 +319,7 @@ TEST_CASE("WorldGlobal lane: a move_cost clamp applies when entering a tile",
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
-    MoveCostRules calc(fixture.improvements);
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     const auto costs = calc.ForUnit(unit, fixture.map);
 
     Tile& rocky = fixture.At(9, 9);

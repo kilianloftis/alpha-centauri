@@ -57,7 +57,7 @@ struct TransportHarness_
     UnitOrderExecutor orders;
 
     explicit TransportHarness_(WorldFixture& fixture)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
@@ -291,7 +291,7 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
         faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
     Unit& air = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     air.SetCurrentFuel(0);
-    REQUIRE(TryAutoAttachWhenMustLand(air));
+    REQUIRE(TryAttachToTransport(air));
     CHECK(air.IsEmbarked());
     CHECK(air.GetCarrier() == &carrier);
     // Refuel is TurnEnd / IsRefuelSite, not attach.

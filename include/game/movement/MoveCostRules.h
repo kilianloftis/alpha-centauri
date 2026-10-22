@@ -33,7 +33,7 @@ class MoveCostRules
 {
 public:
     explicit MoveCostRules(const ImprovementRegistry& rImprovements,
-                                MovementConstants_t constants = {});
+                                MovementConstants_t constants);
 
     // Pre-cached cost context for a specific unit. Avoids repeated flag resolution
     // when evaluating many tiles for the same unit (e.g. pathfinding).

@@ -41,7 +41,7 @@ struct CombatHarness_
     CombatResolver combat;
 
     CombatHarness_(FactionFixture& fixture, uint32_t seed)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , rng(seed)
         , combat(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng)
@@ -58,7 +58,7 @@ struct OrderHarness_
     UnitOrderExecutor orders;
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)

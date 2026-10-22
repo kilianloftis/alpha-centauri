@@ -52,7 +52,7 @@ bool IsValidEvacuateDestination_(const Unit& rUnit, const Tile& rTile,
     {
         return false;
     }
-    return CanPlaceUnitOnTile(rTile, rWorldMap.GetUnitPositions());
+    return rWorldMap.GetUnitPositions().CanPlaceUnit(rTile);
 }
 
 bool IsBetterEvacuateTieBreak_(const Tile& rCandidate, int bestY, int bestX)

@@ -96,7 +96,7 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     ForEachNeighborInChebyshevRadius(rOrigin, rMap, 1,
         [&](Tile* pTile, int /*distance*/)
         {
-            if (pTile && CanPlaceUnitOnTile(*pTile, rPositions))
+            if (pTile && rPositions.CanPlaceUnit(*pTile))
             {
                 candidates.push_back(pTile);
             }

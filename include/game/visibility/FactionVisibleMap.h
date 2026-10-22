@@ -31,7 +31,6 @@ public:
 
     // When RemoveFog is active, every tile is treated as currently visible.
     void SetRemoveFog(bool bRemoveFog) { m_bRemoveFog = bRemoveFog; }
-    bool IsRemoveFog() const { return m_bRemoveFog; }
 
     bool IsVisible(int x, int y) const { return m_bRemoveFog || m_flags.Test(x, y); }
     bool IsVisible(const Tile& rTile) const { return m_bRemoveFog || m_flags.Test(rTile); }

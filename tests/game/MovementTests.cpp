@@ -41,7 +41,7 @@ struct MovementHarness_
     UnitOrderExecutor orders;
 
     explicit MovementHarness_(WorldFixture& fixture)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),

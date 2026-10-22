@@ -13,9 +13,6 @@ bool TryAttachToTransport(Unit& rPassenger);
 // player's back.
 bool TryAutoAttachOnEntry(Unit& rPassenger);
 
-// Landing / stranded air: attach when a boardable carrier is present.
-bool TryAutoAttachWhenMustLand(Unit& rPassenger);
-
 bool TryUnloadTransportInPlace(Unit& rCarrier);
 
 } // namespace ac

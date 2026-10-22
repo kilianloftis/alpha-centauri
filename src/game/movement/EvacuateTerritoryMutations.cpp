@@ -42,7 +42,7 @@ bool TryMoveUnitTo_(Unit& rUnit, const Tile& rDest, WorldMap& rWorldMap)
         return false;
     }
     UnitPositionIndex& rPositions = rWorldMap.GetUnitPositions();
-    if (!CanPlaceUnitOnTile(rDest, rPositions))
+    if (!rPositions.CanPlaceUnit(rDest))
     {
         return false;
     }

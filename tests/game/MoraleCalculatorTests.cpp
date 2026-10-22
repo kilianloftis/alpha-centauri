@@ -471,7 +471,7 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     // Glass cannon defender: 0 armor so attacker wins quickly.
     attacker.SetCurrentHp(ResolveStat(attacker, StatId_t::HitPoints));
 
-    MoveCostRules moveCosts(fixture.improvements);
+    MoveCostRules moveCosts(fixture.improvements, MovementConstants_t{});
     StepEvaluator steps(fixture.map, fixture.ctx);
     Pathfinder pathfinder(moveCosts, steps, fixture.map);
     std::mt19937 rng(/*seed*/ 42);

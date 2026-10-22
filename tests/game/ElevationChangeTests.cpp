@@ -88,7 +88,7 @@ struct OrderHarness_
     UnitOrderExecutor orders;
 
     explicit OrderHarness_(FactionFixture& rFixture)
-        : moveCosts(rFixture.improvements)
+        : moveCosts(rFixture.improvements, MovementConstants_t{})
         , steps(rFixture.map, rFixture.ctx)
         , pathfinder(moveCosts, steps, rFixture.map)
         , rng(k_TestRngSeed)

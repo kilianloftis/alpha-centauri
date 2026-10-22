@@ -35,9 +35,6 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile);
 // Used by ZOC callers (StepEvaluator); enter/hold use TileHarbors instead.
 bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
 
-// Whether a unit may occupy rTile under the world's stacking rule.
-bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions);
-
 struct EntryPayment_t
 {
     bool bEnters = false;

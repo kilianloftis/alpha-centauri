@@ -77,7 +77,7 @@ std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& r
     std::vector<const Tile*> found;
     const auto consider = [&](const Tile* pTile)
     {
-        if (!CanPlaceUnitOnTile(*pTile, rPositions)
+        if (!rPositions.CanPlaceUnit(*pTile)
             || !DesignCanHoldTile_(rDesign, *pTile, factionId, rWorldMap))
         {
             return;

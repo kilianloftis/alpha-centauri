@@ -156,7 +156,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
         rGameData.tileYieldRules, rGameData.interactionGrids);
     m_pTileEffects->BindWorldEffects(*this);
-    m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry);
+    m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry,
+                                                   MovementConstants_t{});
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pFirstContact = std::make_unique<FirstContactResolver>(

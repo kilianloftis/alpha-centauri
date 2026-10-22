@@ -44,7 +44,7 @@ struct MovementHarness_
     UnitOrderExecutor orders;
 
     explicit MovementHarness_(WorldFixture& fixture)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
@@ -213,7 +213,7 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
 
     Unit& blocker = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     CHECK_THROWS_AS(fixture.MakeUnit(faction, 8, 8, {"test_chassis"}), std::runtime_error);
-    CHECK_FALSE(CanPlaceUnitOnTile(fixture.At(8, 8), fixture.map.GetUnitPositions()));
+    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
 
     Unit& mover = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(8, 8)));
@@ -233,7 +233,7 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
 
     // Destroying the blocker frees the tile.
     faction.GetUnitManager().DestroyUnit(blocker);
-    CHECK(CanPlaceUnitOnTile(fixture.At(8, 8), fixture.map.GetUnitPositions()));
+    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
     MoveOrder_t stepOrder{&fixture.At(8, 8)};
     REQUIRE(move.orders.TryStep(mover, fixture.At(8, 8), stepOrder).bEntered);
     CHECK(&mover.GetTile() == &fixture.At(8, 8));

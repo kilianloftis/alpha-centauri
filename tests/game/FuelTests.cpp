@@ -54,7 +54,7 @@ struct FuelHarness_
     UnitOrderExecutor orders;
 
     explicit FuelHarness_(WorldFixture& fixture)
-        : moveCosts(fixture.improvements)
+        : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),

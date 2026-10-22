@@ -104,7 +104,7 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
     Unit& rSpore = rFaction.GetUnitManager().CreateUnit(
         fixture.state.AllocateUnitId(), rSporeDesign, fixture.map.GetUnitPositions(), fixture.At(7, 9));
 
-    const MoveCostRules calc(fixture.improvements);
+    const MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     for (const Unit* pUnit : {&rWorm, &rSpore})
     {
         const auto costs = calc.ForUnit(*pUnit, fixture.map);
@@ -145,7 +145,7 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
         fixture.state.AllocateUnitId(), rLurkDesign, fixture.map.GetUnitPositions(), fixture.At(8, 10));
     Unit& rShip = fixture.MakeUnit(rFaction, 7, 11, {"test_sea_chassis"});
 
-    const MoveCostRules calc(fixture.improvements);
+    const MoveCostRules calc(fixture.improvements, MovementConstants_t{});
     const EntryTerms_t shipOpen = calc.ForUnit(rShip, fixture.map).EntryTerms(rOpenSea);
     const EntryTerms_t shipFungus = calc.ForUnit(rShip, fixture.map).EntryTerms(rSeaFungus);
     CHECK(shipFungus.costFragments > shipOpen.costFragments);
