@@ -520,6 +520,8 @@
     ]
   },
   "growth_display": {
+    "icon_size_ratio": 0.0,
+    "icon_gap_ratio": 0.0,
     "background_color": [
       20, 20, 20, 255
     ],
@@ -536,6 +538,8 @@
     "turns_line_index": 4.0
   },
   "commerce_display": {
+    "icon_size_ratio": 0.0,
+    "icon_gap_ratio": 0.0,
     "background_color": [
       20, 20, 20, 255
     ],
@@ -809,6 +813,8 @@
     ]
   },
   "component_selector_popup": {
+    "icon_size_ratio": 0.85,
+    "icon_gap_ratio": 0.01,
     "background_color": [
       20, 20, 40, 255
     ],

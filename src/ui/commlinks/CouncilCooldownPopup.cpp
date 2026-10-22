@@ -4,6 +4,7 @@
 #include "ui/style/UiStyle.h"
 
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -46,10 +47,7 @@ void CouncilCooldownPopup::CacheOkButtonRect_()
 void CouncilCooldownPopup::Close_()
 {
     m_bShouldClose = true;
-    if (m_onOk)
-    {
-        m_onOk();
-    }
+    m_onOk();
 }
 
 void CouncilCooldownPopup::Render(Graphics& rGraphics)
@@ -60,86 +58,55 @@ void CouncilCooldownPopup::Render(Graphics& rGraphics)
     }
 
     const auto& style = Style().listSelectorPopup;
-    const auto& buttonStyle = Style().commlinksButton;
     const float padding = style.paddingRatio * m_layout.width;
     const unsigned int headerFontSize =
         static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
     const unsigned int entryFontSize =
         static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
     const float lineHeight = m_layout.height * style.lineHeightRatio;
+    const float textX = m_layout.x + padding;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
                              style.backgroundColor);
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawText(
+        "Planetary Council", textX, m_layout.y + padding, headerFontSize, style.headerColor);
 
-    float textY = m_layout.y + padding;
-    rGraphics.DrawText(
-        "Planetary Council",
-        m_layout.x + padding,
-        textY,
-        headerFontSize,
-        style.headerColor);
+    float textY = m_layout.y + lineHeight * style.headerLineOffset;
+    rGraphics.DrawText("You may not call another council meeting yet.", textX, textY,
+                       entryFontSize, style.hintColor);
+    for (const std::string& rLine : DetailLines_())
+    {
+        textY += lineHeight;
+        rGraphics.DrawText(rLine, textX, textY, entryFontSize, style.entryColor);
+    }
 
-    textY = m_layout.y + lineHeight * style.headerLineOffset;
-    rGraphics.DrawText(
-        "You may not call another council meeting yet.",
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.hintColor);
-    textY += lineHeight;
-    rGraphics.DrawText(
+    DrawOkButton_(rGraphics);
+}
+
+std::vector<std::string> CouncilCooldownPopup::DetailLines_() const
+{
+    const std::string lastProposal = m_lastProposedYear
+        ? "Mission Year " + std::to_string(*m_lastProposedYear)
+        : "none";
+    return {
         "Member cooldown: " + std::to_string(m_memberCooldownYears) + " years",
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.entryColor);
-    textY += lineHeight;
-    rGraphics.DrawText(
         "Governor cooldown: " + std::to_string(m_governorCooldownYears) + " years",
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.entryColor);
-    textY += lineHeight;
-    // Which of the two intervals above applies to this player.
-    rGraphics.DrawText(
+        // Which of the two intervals above applies to this player.
         "Your cooldown: " + std::to_string(m_playerCooldownYears) + " years",
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.entryColor);
-    textY += lineHeight;
-
-    const std::string lastProposalText = m_lastProposedYear
-        ? ("Last proposal: Mission Year " + std::to_string(*m_lastProposedYear))
-        : "Last proposal: none";
-    rGraphics.DrawText(
-        lastProposalText,
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.entryColor);
-    textY += lineHeight;
-    rGraphics.DrawText(
+        "Last proposal: " + lastProposal,
         "Years remaining: " + std::to_string(m_yearsRemaining),
-        m_layout.x + padding,
-        textY,
-        entryFontSize,
-        style.entryColor);
+    };
+}
 
-    rGraphics.DrawFilledRect(
-        m_okButtonRect.x, m_okButtonRect.y, m_okButtonRect.width, m_okButtonRect.height,
-        buttonStyle.fillColor);
-    rGraphics.DrawRect(
-        m_okButtonRect.x, m_okButtonRect.y, m_okButtonRect.width, m_okButtonRect.height,
-        buttonStyle.borderColor);
-    rGraphics.DrawText(
-        "OK",
-        m_okButtonRect.x + buttonStyle.textPadX,
-        m_okButtonRect.y + buttonStyle.textPadY,
-        buttonStyle.fontSize,
-        buttonStyle.labelColor);
+void CouncilCooldownPopup::DrawOkButton_(Graphics& rGraphics) const
+{
+    const auto& buttonStyle = Style().commlinksButton;
+    const Rectangle_t& rRect = m_okButtonRect;
+    rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, buttonStyle.fillColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, buttonStyle.borderColor);
+    rGraphics.DrawText("OK", rRect.x + buttonStyle.textPadX, rRect.y + buttonStyle.textPadY,
+                       buttonStyle.fontSize, buttonStyle.labelColor);
 }
 
 bool CouncilCooldownPopup::HandleKey(const KeyEvent_t& rEvent)

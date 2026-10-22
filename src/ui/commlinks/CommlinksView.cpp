@@ -13,10 +13,37 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "ui/style/UiStyle.h"
 
+#include <stdexcept>
 #include <vector>
 
 namespace ac
 {
+
+namespace
+{
+
+// Commlinks opens only in a running game, which always has a council and a player.
+const PlanetaryCouncil& RequireCouncil_(const GameState& rGameState)
+{
+    const PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil();
+    if (!pCouncil)
+    {
+        throw std::runtime_error("CommlinksView: no planetary council in this session");
+    }
+    return *pCouncil;
+}
+
+Faction& RequirePlayer_(GameState& rGameState)
+{
+    Faction* pPlayer = rGameState.GetPlayerFaction();
+    if (!pPlayer)
+    {
+        throw std::runtime_error("CommlinksView: no player faction");
+    }
+    return *pPlayer;
+}
+
+} // namespace
 
 CommlinksView::CommlinksView(
     GameState& rGameState,
@@ -27,11 +54,12 @@ CommlinksView::CommlinksView(
     , m_rGameState(rGameState)
     , m_onOpenCouncilVote(std::move(onOpenCouncilVote))
 {
-    const WindowLayout_t panelLayout = ResolveLayout(m_layout, Style().layouts.popupSmall);
+    const WindowLayout_t panelLayout = GetPopupLayout();
     m_elements.push_back(std::make_unique<CommlinksPanel>(m_rGameState, panelLayout));
+    const WindowLayout_t buttonLayout =
+        ResolveLayout(panelLayout, Style().commlinksPanel.councilButtonLayout);
     m_elements.push_back(std::make_unique<CouncilButton>(
-        ResolveLayout(panelLayout, Style().commlinksPanel.councilButtonLayout),
-        [this]() { OpenCouncilProposals_(); }));
+        buttonLayout, [this]() { OpenCouncilProposals_(); }));
 }
 
 bool CommlinksView::HandleKey(const KeyEvent_t& rEvent)
@@ -50,104 +78,85 @@ bool CommlinksView::HandleKey(const KeyEvent_t& rEvent)
 
 void CommlinksView::OpenCouncilCooldownPopup_()
 {
-    const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pCouncil || !pPlayer)
-    {
-        return;
-    }
+    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
+    const Faction& rPlayer = RequirePlayer_(m_rGameState);
 
-    const CouncilRulesConfig_t& rRules = pCouncil->GetRules();
+    const CouncilRulesConfig_t& rRules = rCouncil.GetRules();
     // OK dismisses this council cooldown UI (and the parent Commlinks overlay).
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<CouncilCooldownPopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
+    auto pPopup = std::make_unique<CouncilCooldownPopup>(
+        GetPopupLayout(),
         rRules.memberProposeIntervalYears,
         rRules.governorProposeIntervalYears,
-        ProposeCooldownYears(*pCouncil, *pPlayer),
-        pCouncil->LastProposedYear(*pPlayer),
-        YearsUntilCanPropose(*pCouncil, *pPlayer),
-        [this]() { m_bShouldClose = true; }));
+        ProposeCooldownYears(rCouncil, rPlayer),
+        rCouncil.LastProposedYear(rPlayer),
+        YearsUntilCanPropose(rCouncil, rPlayer),
+        [this]() { m_bShouldClose = true; });
+    m_elements.push_back(std::move(pPopup));
 }
 
 void CommlinksView::OpenCouncilProposals_()
 {
-    std::vector<const CouncilProposalConfig_t*> available;
-    if (const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil())
+    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
+    const Faction& rPlayer = RequirePlayer_(m_rGameState);
+
+    std::vector<PopupChoice_t> choices;
+    for (const CouncilProposalConfig_t& rProposal : rCouncil.GetRegistry().GetAll())
     {
-        if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
+        if (CanPropose(rCouncil, rPlayer, rProposal.id))
         {
-            for (const CouncilProposalConfig_t& rProposal : pCouncil->GetRegistry().GetAll())
-            {
-                if (CanPropose(*pCouncil, *pPlayer, rProposal.id))
-                {
-                    available.push_back(&rProposal);
-                }
-            }
+            const CouncilProposalConfig_t* pProposal = &rProposal;
+            choices.push_back({pProposal->name,
+                               [this, pProposal] { OnProposalSelected_(*pProposal); }});
         }
     }
 
-    std::vector<PopupChoice_t> choices;
-    choices.reserve(available.size());
-    for (const CouncilProposalConfig_t* pProposal : available)
-    {
-        choices.push_back({pProposal->name,
-                           [this, pProposal] { OnProposalSelected_(*pProposal); }});
-    }
-
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+    auto pPopup = std::make_unique<ListSelectorPopup>(
         "Council Proposals", "No proposals available", std::move(choices),
-        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup, nullptr));
+        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup, nullptr);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void CommlinksView::ShowNotice_(std::string message)
 {
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<NoticePopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
-        "Planetary Council",
-        std::move(message), std::function<void()>{}, nullptr));
+    auto pPopup = std::make_unique<NoticePopup>(
+        GetPopupLayout(), "Planetary Council", std::move(message), nullptr, nullptr);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)
 {
-    const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
-    CouncilVoteExecutor* pVotes = m_rGameState.GetCouncilVotes();
-    Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pCouncil || !pPlayer)
-    {
-        return;
-    }
+    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
+    CouncilVoteExecutor& rVotes = *m_rGameState.GetCouncilVotes();
+    Faction& rPlayer = RequirePlayer_(m_rGameState);
 
     // The proposals popup closes itself on selection, so each gate below explains itself.
-    if (pVotes->GetPending())
+    if (rVotes.GetPending())
     {
         ShowNotice_("The council is already considering a proposal.");
         return;
     }
-    if (YearsUntilCanPropose(*pCouncil, *pPlayer) > 0)
+    if (YearsUntilCanPropose(rCouncil, rPlayer) > 0)
     {
         OpenCouncilCooldownPopup_();
         return;
     }
-    if (!HasCommlinksToAllMembers(*pCouncil, *pPlayer))
+    if (!HasCommlinksToAllMembers(rCouncil, rPlayer))
     {
         ShowNotice_("You must have commlinks with every council member to propose.");
         return;
     }
-    if (!CanPropose(*pCouncil, *pPlayer, rProposal.id))
+    if (!CanPropose(rCouncil, rPlayer, rProposal.id))
     {
         ShowNotice_("You cannot propose " + rProposal.name + " right now.");
         return;
     }
 
-    pVotes->Propose(m_rGameState, *pPlayer, rProposal.id);
+    rVotes.Propose(m_rGameState, rPlayer, rProposal.id);
     m_bShouldClose = true;
-    if (m_onOpenCouncilVote)
-    {
-        m_onOpenCouncilVote();
-    }
+    m_onOpenCouncilVote();
 }
 
 } // namespace ac

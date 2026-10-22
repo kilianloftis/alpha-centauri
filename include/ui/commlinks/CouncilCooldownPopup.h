@@ -4,6 +4,8 @@
 #include "input/Input.h"
 #include <functional>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace ac
 {
@@ -32,6 +34,8 @@ public:
 
 private:
     void CacheOkButtonRect_();
+    std::vector<std::string> DetailLines_() const;
+    void DrawOkButton_(Graphics& rGraphics) const;
     void Close_();
 
     int m_memberCooldownYears = 0;

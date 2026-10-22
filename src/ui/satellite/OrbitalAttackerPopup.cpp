@@ -12,22 +12,16 @@ namespace ac
 
 OrbitalAttackerPopup::OrbitalAttackerPopup(WindowLayout_t layout,
                                            std::vector<OrbitalAttackerOption_t> attackers,
-                                           std::function<void(BuildingId_t)> onConfirm,
-                                           std::function<void()> onCancel)
+                                           std::function<void(BuildingId_t)> onConfirm)
     : UIElement(layout)
     , m_attackers(std::move(attackers))
     , m_onConfirm(std::move(onConfirm))
-    , m_onCancel(std::move(onCancel))
 {
     RebuildButtons_();
 }
 
 void OrbitalAttackerPopup::SelectAttacker_(size_t index)
 {
-    if (index >= m_attackers.size())
-    {
-        return;
-    }
     if (m_selectedIndex && *m_selectedIndex == index)
     {
         return;
@@ -38,7 +32,7 @@ void OrbitalAttackerPopup::SelectAttacker_(size_t index)
 
 void OrbitalAttackerPopup::Confirm_()
 {
-    if (!m_selectedIndex || !m_onConfirm)
+    if (!m_selectedIndex)
     {
         return;
     }
@@ -50,10 +44,6 @@ void OrbitalAttackerPopup::Confirm_()
 void OrbitalAttackerPopup::Cancel_()
 {
     m_bShouldClose = true;
-    if (m_onCancel)
-    {
-        m_onCancel();
-    }
 }
 
 void OrbitalAttackerPopup::RebuildButtons_()
@@ -73,25 +63,23 @@ void OrbitalAttackerPopup::RebuildButtons_()
         const std::string name = rOpt.pConfig ? rOpt.pConfig->name : rOpt.buildingId;
         const std::string label = name + " (ready: " + std::to_string(rOpt.readyCount)
             + ", " + std::to_string(rOpt.chance) + "%)";
-        const bool bSelected = m_selectedIndex && *m_selectedIndex == i;
-        m_attackerButtons.push_back(std::make_unique<SatelliteLabeledButton>(
+        auto pButton = std::make_unique<SatelliteLabeledButton>(
             WindowLayout_t{list.x, y, list.width, buttonH},
             label,
-            [this, i]() { SelectAttacker_(i); },
-            bSelected));
+            [this, i]() { SelectAttacker_(i); });
+        pButton->SetSelected(m_selectedIndex && *m_selectedIndex == i);
+        m_attackerButtons.push_back(std::move(pButton));
         y += buttonH + gap;
     }
 
     m_pAttackButton = std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(m_layout, style.attackerConfirmLayout),
         "Attack",
-        [this]() { Confirm_(); },
-        /*bSelected*/ false);
+        [this]() { Confirm_(); });
     m_pCancelButton = std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(m_layout, style.attackerCancelLayout),
         "Cancel",
-        [this]() { Cancel_(); },
-        /*bSelected*/ false);
+        [this]() { Cancel_(); });
 }
 
 void OrbitalAttackerPopup::Render(Graphics& rGraphics)

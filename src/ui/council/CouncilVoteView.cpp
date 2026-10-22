@@ -113,7 +113,7 @@ void CouncilVoteView::OpenBallotSelector_()
 
     const PendingProposal_t& rPending = *rVotes.GetPending();
     const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(rPending.proposalId);
-    const WindowLayout_t popupLayout = ResolveLayout(m_layout, Style().layouts.popupSmall);
+    const WindowLayout_t popupLayout = GetPopupLayout();
 
     DismissOpenModals_();
     if (rConfig.kind == CouncilProposalKind_t::Election)
@@ -129,9 +129,10 @@ void CouncilVoteView::OpenBallotSelector_()
         }
         choices.push_back({"Abstain", [this] { CastElectionVote_(nullptr); }});
 
-        m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        auto pPopup = std::make_unique<ListSelectorPopup>(
             "Cast Ballot", "No candidates", std::move(choices), popupLayout,
-            Style().listSelectorPopup, nullptr));
+            Style().listSelectorPopup, nullptr);
+        m_elements.push_back(std::move(pPopup));
         return;
     }
 
@@ -140,9 +141,10 @@ void CouncilVoteView::OpenBallotSelector_()
     choices.push_back({"Nay", [this] { CastBallot_(CouncilBallot_t::Nay); }});
     choices.push_back({"Abstain", [this] { CastBallot_(CouncilBallot_t::Abstain); }});
 
-    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+    auto pPopup = std::make_unique<ListSelectorPopup>(
         "Cast Ballot", "No ballot options", std::move(choices), popupLayout,
-        Style().listSelectorPopup, nullptr));
+        Style().listSelectorPopup, nullptr);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void CouncilVoteView::CastElectionVote_(Faction* pCandidate)

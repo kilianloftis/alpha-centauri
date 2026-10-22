@@ -76,6 +76,12 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the view would derive it from the base's owner and the player faction, which
   it does not hold; or `ViewFactory` would build two named kinds of view.
 
+### `RenderPolicyCell` — `bIsActive`
+- **Where:** `src/ui/social-engineering/SocialEngineeringDisplay.cpp:206`; eight parameters
+- **Problem:** the flag picks the text colour and whether the active border is drawn.
+- **Why not local:** it belongs with splitting `SocialEngineeringDisplay::Render` (below), which
+  builds every cell inline.
+
 ## Rule 6: speculative code
 
 ### `UnitOrderExecutor` — null `pWorld` and an unset visit handler
@@ -207,6 +213,11 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** the tests need another way to observe the avoided rebuild, such as a
   counting snapshot builder.
 
+### `CouncilVoteWeightCache::GetComputeCount` — used only by tests
+- **Where:** `include/ui/council/CouncilVoteWeightCache.h:28`; 3 test callers
+- **Problem:** it exists so tests can see the cache saved work.
+- **Why not local:** the tests need another way to observe the skipped resolves.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -284,6 +295,12 @@ One entry per violation, under the rule it breaks:
 - **Why not local:** over 100 lines; a per-action dispatch (the hotkey config already names the
   actions) would replace the chains.
 
+### `SocialEngineeringDisplay::Render`
+- **Where:** `src/ui/social-engineering/SocialEngineeringDisplay.cpp:327` (164 lines)
+- **Problem:** the policy grid, each policy cell and the scores list are laid out inline.
+- **Why not local:** over 100 lines; the grid and the scores list share layout values that the
+  split must pass between them.
+
 ## Duplicated logic
 
 ### Required-tech availability, in six places
@@ -292,6 +309,13 @@ One entry per violation, under the rule it breaks:
   `CouncilProposalConfig_t`, `PopTypeAvailabilityCalculator.cpp:18`
 - **Problem:** each repeats "an empty `requiredTech`, or one that is discovered".
 - **Why not local:** one shared function serves five domains.
+
+### Requiring the council and the player, in three views
+- **Where:** `RequireCouncil_` and `RequirePlayer_` in `CouncilVoteView.cpp` and
+  `CommlinksView.cpp`; the inline throw in `SatelliteView::OpenAttackerPopup_`
+- **Problem:** each view checks for a council and a player that a running game always has.
+- **Why not local:** `GameState` could hand out references once every session has both, which
+  changes tests that build a session without a council.
 
 ## Single responsibility
 

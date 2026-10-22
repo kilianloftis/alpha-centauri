@@ -20,8 +20,7 @@ class OrbitalAttackerPopup : public UIElement
 public:
     OrbitalAttackerPopup(WindowLayout_t layout,
                          std::vector<OrbitalAttackerOption_t> attackers,
-                         std::function<void(BuildingId_t)> onConfirm,
-                         std::function<void()> onCancel = {});
+                         std::function<void(BuildingId_t)> onConfirm);
 
     void Render(Graphics& rGraphics) override;
     bool IsModal() const override { return true; }
@@ -37,7 +36,6 @@ private:
     std::vector<OrbitalAttackerOption_t> m_attackers;
     std::optional<size_t> m_selectedIndex;
     std::function<void(BuildingId_t)> m_onConfirm;
-    std::function<void()> m_onCancel;
 
     std::vector<std::unique_ptr<SatelliteLabeledButton>> m_attackerButtons;
     std::unique_ptr<SatelliteLabeledButton> m_pAttackButton;

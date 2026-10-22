@@ -7,12 +7,10 @@ namespace ac
 
 SatelliteLabeledButton::SatelliteLabeledButton(WindowLayout_t layout,
                                                std::string label,
-                                               std::function<void()> onClick,
-                                               bool bSelected)
+                                               std::function<void()> onClick)
     : UIElement(layout)
     , m_label(std::move(label))
     , m_onClick(std::move(onClick))
-    , m_bSelected(bSelected)
 {
 }
 

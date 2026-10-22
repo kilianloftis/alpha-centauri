@@ -12,7 +12,7 @@ SettingsView::SettingsView(GameSettings& rSettings, WindowLayout_t layout)
 {
     m_elements.push_back(std::make_unique<SettingsPanel>(
         m_rSettings,
-        ResolveLayout(m_layout, Style().layouts.popupSmall)));
+        GetPopupLayout()));
 }
 
 bool SettingsView::HandleKey(const KeyEvent_t& rEvent)

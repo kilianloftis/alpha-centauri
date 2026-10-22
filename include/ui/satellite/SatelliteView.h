@@ -34,6 +34,7 @@ private:
     };
 
     void Rebuild_();
+    void BuildAttackMode_(const WindowLayout_t& topPanel);
     // Target list contents follow the selected faction; the faction list itself does not move.
     void RefreshTargetList_();
     std::vector<std::string> CollectMissingAttackPrerequisites_() const;

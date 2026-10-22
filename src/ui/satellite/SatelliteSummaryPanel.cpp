@@ -72,41 +72,43 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
     const int rows = static_cast<int>(m_factions.size()) + 1;
     const float cellW = m_layout.width / static_cast<float>(cols);
     const float cellH = m_layout.height / static_cast<float>(rows);
-    const float padX = style.paddingRatio * cellW;
-    const float padY = style.paddingRatio * cellH;
+    const Grid_t grid{cols, rows, cellW, cellH, style.paddingRatio * cellW,
+                      style.paddingRatio * cellH};
+    DrawBuildingColumns_(rGraphics, grid);
+    DrawFactionRows_(rGraphics, grid);
+}
 
-    for (int col = 0; col < cols; ++col)
+void SatelliteSummaryPanel::DrawBuildingColumns_(Graphics& rGraphics, const Grid_t& rGrid) const
+{
+    const auto& style = Style().satelliteView;
+    for (int col = 0; col < rGrid.cols; ++col)
     {
-        const float x = m_layout.x + static_cast<float>(col) * cellW;
-        rGraphics.DrawRect(x, m_layout.y, cellW, m_layout.height, style.borderColor);
+        const float x = m_layout.x + static_cast<float>(col) * rGrid.cellW;
+        rGraphics.DrawRect(x, m_layout.y, rGrid.cellW, m_layout.height, style.borderColor);
         if (col == 0)
         {
             continue;
         }
         const BuildingConfig_t* pBuilding = m_orbitalTypes[static_cast<size_t>(col - 1)];
-        rGraphics.DrawText(
-            pBuilding->name,
-            x + padX,
-            m_layout.y + padY,
-            style.headerFontSize,
-            style.headerColor);
+        rGraphics.DrawText(pBuilding->name, x + rGrid.padX, m_layout.y + rGrid.padY,
+                           style.headerFontSize, style.headerColor);
     }
+}
 
-    for (int row = 0; row < rows; ++row)
+void SatelliteSummaryPanel::DrawFactionRows_(Graphics& rGraphics, const Grid_t& rGrid) const
+{
+    const auto& style = Style().satelliteView;
+    for (int row = 0; row < rGrid.rows; ++row)
     {
-        const float y = m_layout.y + static_cast<float>(row) * cellH;
-        rGraphics.DrawRect(m_layout.x, y, m_layout.width, cellH, style.borderColor);
+        const float y = m_layout.y + static_cast<float>(row) * rGrid.cellH;
+        rGraphics.DrawRect(m_layout.x, y, m_layout.width, rGrid.cellH, style.borderColor);
         if (row == 0)
         {
             continue;
         }
         const Faction* pFaction = m_factions[static_cast<size_t>(row - 1)];
-        rGraphics.DrawText(
-            pFaction->GetDefinition().identity.name,
-            m_layout.x + padX,
-            y + padY,
-            style.factionFontSize,
-            style.factionNameColor);
+        rGraphics.DrawText(pFaction->GetDefinition().identity.name, m_layout.x + rGrid.padX,
+                           y + rGrid.padY, style.factionFontSize, style.factionNameColor);
 
         for (size_t col = 0; col < m_orbitalTypes.size(); ++col)
         {
@@ -115,13 +117,9 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
                 std::to_string(pFaction->GetFactionId()) + ":" + buildingId;
             const auto it = m_counts.find(key);
             const int count = it != m_counts.end() ? it->second : 0;
-            const float cellX = m_layout.x + static_cast<float>(col + 1) * cellW;
-            rGraphics.DrawText(
-                std::to_string(count),
-                cellX + padX,
-                y + padY,
-                style.cellFontSize,
-                style.cellColor);
+            const float cellX = m_layout.x + static_cast<float>(col + 1) * rGrid.cellW;
+            rGraphics.DrawText(std::to_string(count), cellX + rGrid.padX, y + rGrid.padY,
+                               style.cellFontSize, style.cellColor);
         }
     }
 }

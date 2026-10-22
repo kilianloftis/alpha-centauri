@@ -29,6 +29,19 @@ public:
     void Refresh();
 
 private:
+    struct Grid_t
+    {
+        int cols;
+        int rows;
+        float cellW;
+        float cellH;
+        float padX;
+        float padY;
+    };
+
+    void DrawBuildingColumns_(Graphics& rGraphics, const Grid_t& rGrid) const;
+    void DrawFactionRows_(Graphics& rGraphics, const Grid_t& rGrid) const;
+
     GameState& m_rGameState;
     const BuildingRegistry& m_rBuildings;
     // Grid contents, not paint state: BuildOrbitalCensus walks every faction's bases.

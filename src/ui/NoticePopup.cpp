@@ -24,8 +24,7 @@ NoticePopup::NoticePopup(WindowLayout_t layout,
     m_pOkButton = std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(m_layout, rStyle.okButtonLayout),
         "OK",
-        [this]() { Close_(); },
-        /*bSelected*/ false);
+        [this]() { Close_(); });
 }
 
 NoticePopup::~NoticePopup() = default;
@@ -55,7 +54,7 @@ void NoticePopup::Render(Graphics& rGraphics)
         static_cast<unsigned int>(m_layout.height * rPopupStyle.entryFontSizeRatio);
 
     DrawPanelChrome(rGraphics, m_pSprites, m_layout, rStyle.backgroundColor,
-                    rStyle.backgroundSprite, rStyle.borderColor);
+                    rStyle.backgroundSprite, rStyle.borderColor, 1.0f);
 
     rGraphics.DrawText(
         m_title,

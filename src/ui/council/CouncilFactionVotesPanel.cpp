@@ -107,10 +107,6 @@ void CouncilFactionVotesPanel::Render(Graphics& rGraphics)
     for (size_t i = 0; i < rMembers.size(); ++i)
     {
         Faction* pMember = rMembers[i];
-        if (!pMember)
-        {
-            continue;
-        }
 
         const float sliceX = m_layout.x + static_cast<float>(i) * sliceWidth;
         rGraphics.DrawRect(sliceX, m_layout.y, sliceWidth, m_layout.height, style.borderColor);

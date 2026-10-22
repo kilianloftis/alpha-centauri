@@ -189,10 +189,9 @@ void SatelliteView::OnAttackClicked_()
 void SatelliteView::ShowOutcome_(std::string message)
 {
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<NoticePopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
-        "Orbital Attack",
-        std::move(message), std::function<void()>{}, nullptr));
+    auto pPopup = std::make_unique<NoticePopup>(
+        GetPopupLayout(), "Orbital Attack", std::move(message), nullptr, nullptr);
+    m_elements.push_back(std::move(pPopup));
 }
 
 void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
@@ -213,12 +212,13 @@ void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
     }
 
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<OrbitalAttackerPopup>(
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
+    auto pPopup = std::make_unique<OrbitalAttackerPopup>(
+        GetPopupLayout(),
         std::move(attackers),
         [this, targetFactionId, targetBuildingId](BuildingId_t attackerId) {
             CommenceAttack_(std::move(attackerId), targetFactionId, targetBuildingId);
-        }));
+        });
+    m_elements.push_back(std::move(pPopup));
 }
 
 void SatelliteView::CommenceAttack_(BuildingId_t attackerBuildingId,
@@ -249,17 +249,19 @@ void SatelliteView::Rebuild_()
     const auto& style = Style().satelliteView;
     const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
 
-    m_elements.push_back(std::make_unique<SatelliteLabeledButton>(
+    auto pSummaryTab = std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(topPanel, style.summaryTabLayout),
         "Satellite Summary",
-        [this]() { SetMode_(Mode_t::Summary); },
-        m_mode == Mode_t::Summary));
+        [this]() { SetMode_(Mode_t::Summary); });
+    pSummaryTab->SetSelected(m_mode == Mode_t::Summary);
+    m_elements.push_back(std::move(pSummaryTab));
 
-    m_elements.push_back(std::make_unique<SatelliteLabeledButton>(
+    auto pAttackTab = std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(topPanel, style.attackTabLayout),
         "Orbital Attack View",
-        [this]() { SetMode_(Mode_t::OrbitalAttack); },
-        m_mode == Mode_t::OrbitalAttack));
+        [this]() { SetMode_(Mode_t::OrbitalAttack); });
+    pAttackTab->SetSelected(m_mode == Mode_t::OrbitalAttack);
+    m_elements.push_back(std::move(pAttackTab));
 
     if (m_mode == Mode_t::Summary)
     {
@@ -270,13 +272,17 @@ void SatelliteView::Rebuild_()
             ResolveLayout(topPanel, style.contentLayout)));
         return;
     }
+    BuildAttackMode_(topPanel);
+}
 
-    // Attack mode: topPanel holds only the view tabs and Attack; lists use dashboard panels.
+void SatelliteView::BuildAttackMode_(const WindowLayout_t& topPanel)
+{
+    // topPanel holds only the view tabs and Attack; the lists use dashboard panels.
+    const auto& style = Style().satelliteView;
     m_elements.push_back(std::make_unique<SatelliteLabeledButton>(
         ResolveLayout(topPanel, style.attackButtonLayout),
         "Attack",
-        [this]() { OnAttackClicked_(); },
-        /*bSelected*/ false));
+        [this]() { OnAttackClicked_(); }));
 
     std::vector<SatelliteButtonListPanel::Item_t> factionItems;
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();

@@ -26,7 +26,7 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
     const auto& style = Style().currentResearchPanel;
 
     DrawPanelChrome(rGraphics, &m_rSprites, m_layout, style.backgroundColor,
-                    style.backgroundSprite, style.borderColor);
+                    style.backgroundSprite, style.borderColor, 1.0f);
 
     const WindowLayout_t labelArea    = ResolveLayout(m_layout, style.labelLayout);
     const WindowLayout_t targetArea   = ResolveLayout(m_layout, style.targetLayout);

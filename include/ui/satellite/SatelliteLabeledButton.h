@@ -13,8 +13,7 @@ class SatelliteLabeledButton : public UIElement
 public:
     SatelliteLabeledButton(WindowLayout_t layout,
                            std::string label,
-                           std::function<void()> onClick,
-                           bool bSelected = false);
+                           std::function<void()> onClick);
 
     void SetSelected(bool bSelected);
     void Render(Graphics& rGraphics) override;

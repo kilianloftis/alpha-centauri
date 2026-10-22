@@ -37,18 +37,13 @@ void SatelliteButtonListPanel::RebuildButtons_()
     float y = m_layout.y + padY + headerH + gap;
     for (const Item_t& rItem : m_items)
     {
-        const bool bSelected = m_selectedId && *m_selectedId == rItem.id;
         const std::string id = rItem.id;
-        m_buttons.push_back(std::make_unique<SatelliteLabeledButton>(
+        auto pButton = std::make_unique<SatelliteLabeledButton>(
             WindowLayout_t{m_layout.x + padX, y, buttonW, buttonH},
             rItem.label,
-            [this, id]() {
-                if (m_onSelect)
-                {
-                    m_onSelect(id);
-                }
-            },
-            bSelected));
+            [this, id]() { m_onSelect(id); });
+        pButton->SetSelected(m_selectedId && *m_selectedId == rItem.id);
+        m_buttons.push_back(std::move(pButton));
         y += buttonH + gap;
     }
 }

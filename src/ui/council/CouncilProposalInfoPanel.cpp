@@ -58,91 +58,79 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
         style.nameFontSize,
         style.nameColor);
 
-    std::string tallyLine;
-    if (rConfig.kind == CouncilProposalKind_t::Election)
-    {
-        std::map<FactionId_t, int> tallies;
-        int abstain = 0;
-        for (Faction* pMember : pCouncil->Members())
-        {
-            if (!pMember)
-            {
-                continue;
-            }
-            const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
-            const auto it = pPending->electionVotes.find(pMember->GetFactionId());
-            if (it == pPending->electionVotes.end())
-            {
-                continue;
-            }
-            if (!it->second)
-            {
-                abstain += weight;
-                continue;
-            }
-            tallies[*it->second] += weight;
-        }
-
-        for (Faction* pMember : pCouncil->Members())
-        {
-            if (!pMember)
-            {
-                continue;
-            }
-            const auto it = tallies.find(pMember->GetFactionId());
-            const int votes = it == tallies.end() ? 0 : it->second;
-            if (!tallyLine.empty())
-            {
-                tallyLine += "  ";
-            }
-            tallyLine += pMember->GetDefinition().identity.name + ": " + std::to_string(votes);
-        }
-        if (!tallyLine.empty())
-        {
-            tallyLine += "  ";
-        }
-        tallyLine += "Abstain: " + std::to_string(abstain);
-    }
-    else
-    {
-        int yea = 0;
-        int nay = 0;
-        int abstain = 0;
-        for (Faction* pMember : pCouncil->Members())
-        {
-            if (!pMember)
-            {
-                continue;
-            }
-            const auto it = pPending->ballots.find(pMember->GetFactionId());
-            if (it == pPending->ballots.end())
-            {
-                continue;
-            }
-            const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
-            switch (it->second)
-            {
-            case CouncilBallot_t::Yea:
-                yea += weight;
-                break;
-            case CouncilBallot_t::Nay:
-                nay += weight;
-                break;
-            case CouncilBallot_t::Abstain:
-                abstain += weight;
-                break;
-            }
-        }
-        tallyLine = "Yea: " + std::to_string(yea) + "  Nay: " + std::to_string(nay)
-                    + "  Abstain: " + std::to_string(abstain);
-    }
-
+    const std::string tallyLine = rConfig.kind == CouncilProposalKind_t::Election
+                                      ? ElectionTally_(*pCouncil, *pPending, rConfig)
+                                      : BallotTally_(*pCouncil, *pPending, rConfig);
     rGraphics.DrawText(
         tallyLine,
         m_layout.x + padX,
         m_layout.y + padY + 2.0f * lineHeight,
         style.tallyFontSize,
         style.tallyColor);
+}
+
+std::string CouncilProposalInfoPanel::ElectionTally_(const PlanetaryCouncil& rCouncil,
+                                                     const PendingProposal_t& rPending,
+                                                     const CouncilProposalConfig_t& rConfig)
+{
+    std::map<FactionId_t, int> tallies;
+    int abstain = 0;
+    for (Faction* pMember : rCouncil.Members())
+    {
+        const int weight = m_weights.Get(rCouncil, *pMember, rConfig.voteWeight);
+        const auto it = rPending.electionVotes.find(pMember->GetFactionId());
+        if (it == rPending.electionVotes.end())
+        {
+            continue;
+        }
+        if (!it->second)
+        {
+            abstain += weight;
+            continue;
+        }
+        tallies[*it->second] += weight;
+    }
+
+    std::string tallyLine;
+    for (Faction* pMember : rCouncil.Members())
+    {
+        const auto it = tallies.find(pMember->GetFactionId());
+        const int votes = it == tallies.end() ? 0 : it->second;
+        tallyLine += pMember->GetDefinition().identity.name + ": " + std::to_string(votes) + "  ";
+    }
+    return tallyLine + "Abstain: " + std::to_string(abstain);
+}
+
+std::string CouncilProposalInfoPanel::BallotTally_(const PlanetaryCouncil& rCouncil,
+                                                   const PendingProposal_t& rPending,
+                                                   const CouncilProposalConfig_t& rConfig)
+{
+    int yea = 0;
+    int nay = 0;
+    int abstain = 0;
+    for (Faction* pMember : rCouncil.Members())
+    {
+        const auto it = rPending.ballots.find(pMember->GetFactionId());
+        if (it == rPending.ballots.end())
+        {
+            continue;
+        }
+        const int weight = m_weights.Get(rCouncil, *pMember, rConfig.voteWeight);
+        switch (it->second)
+        {
+        case CouncilBallot_t::Yea:
+            yea += weight;
+            break;
+        case CouncilBallot_t::Nay:
+            nay += weight;
+            break;
+        case CouncilBallot_t::Abstain:
+            abstain += weight;
+            break;
+        }
+    }
+    return "Yea: " + std::to_string(yea) + "  Nay: " + std::to_string(nay)
+           + "  Abstain: " + std::to_string(abstain);
 }
 
 } // namespace ac

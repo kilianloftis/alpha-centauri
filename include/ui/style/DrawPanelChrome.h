@@ -18,6 +18,6 @@ void DrawPanelChrome(Graphics& rGraphics,
                      const Color_t& rBackgroundColor,
                      const std::string& rBackgroundSprite,
                      const Color_t& rBorderColor,
-                     float borderWidth = 1.0f);
+                     float borderWidth);
 
 } // namespace ac
