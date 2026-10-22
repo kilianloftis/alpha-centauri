@@ -35,9 +35,8 @@ std::vector<RuleFlagId_t> ParseRuleFlagList_(const nlohmann::json& rJson, const 
     return flags;
 }
 
-// A standing law is the only continuous shape the council runtime reads (CouncilEffects world
-// store), so anything else would pass a vote and do nothing. One-shot outcomes live in
-// on_passed_effects and are checked by ValidatePassedEffectHonored_ instead.
+// Standing laws are the only continuous shape the council reads; one-shot outcomes belong in
+// on_passed_effects.
 void ValidateProposalEffectHonored_(const EffectConfig_t& rEffect, const std::string& rProposalId)
 {
     if (rEffect.scope == EffectScope_t::WorldGlobal)

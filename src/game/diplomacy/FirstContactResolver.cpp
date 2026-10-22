@@ -39,9 +39,8 @@ bool ObserverSeesForeignBase_(const Faction& rObserver, const Faction& rOther)
     return false;
 }
 
-// Fog of war only: Conceal hides the unit sprite/combat target, but a foreign unit on a
-// currently visible tile still establishes diplomatic Known. A covert unit does not, since the
-// observer cannot tell whose it is.
+// Fog of war only: a concealed foreign unit on a visible tile still makes the factions known,
+// but a covert one does not, since its owner cannot be told.
 bool ObserverSeesForeignUnit_(const Faction& rObserver, const Faction& rOther)
 {
     const FactionVisibleMap& rVisible = rObserver.GetVisibleMap();

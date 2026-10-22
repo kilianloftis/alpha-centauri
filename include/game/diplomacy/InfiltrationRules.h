@@ -11,11 +11,8 @@ namespace ac
 
 class Faction;
 
-// True when rFilter selects rCandidate as a diplomatic target of rBeneficiary. Never true for
-// rCandidate == rBeneficiary. An absent filter falls back to bDefaultCoversAllOthers, which is
-// how the two families differ: a continuous effect defaults to "all others" only at WorldGlobal
-// scope, while a triggered SetInfiltration has no scope and always defaults to all others.
-// actionTarget is required only when the filter is ActionTarget (probe mission subject, etc.).
+// Whether rFilter selects rCandidate, never the beneficiary itself. Without a filter,
+// bDefaultCoversAllOthers decides. actionTarget is needed only for ActionTarget filters.
 bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
                                bool bDefaultCoversAllOthers,
                                FactionId_t beneficiary,

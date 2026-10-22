@@ -47,13 +47,8 @@ struct CouncilProposalConfig_t
     // When false, the proposal can never be put on the agenda (seed / background entries).
     bool proposable = true;
     std::string requiredTech; // empty if none; checked on the proposing faction
-    // Proposal ids that must have been *enacted* (passed at least once) to propose this.
-    // Deliberately not "still in force": increase_solar_shade requires launch_solar_shade,
-    // whose only effect is a one-shot outcome and so is history rather than standing law.
-    // TODO: there is currently no way to express "must still be in force" in config — the one
-    // proposal that needs it (repeal_trade_pact) gets it from the repeal gate in CanPropose,
-    // which keys off `repeals`. If a non-repeal ever needs that meaning, split this into two
-    // fields rather than widening the repeal rule.
+    // Proposals that must have passed once (not still be in force) before this can be proposed.
+    // repeal_trade_pact's "still in force" comes from the repeal gate instead.
     std::vector<std::string> requiredProposals;
     // When this proposal passes, these proposal ids are removed from the active set.
     std::vector<std::string> repeals;

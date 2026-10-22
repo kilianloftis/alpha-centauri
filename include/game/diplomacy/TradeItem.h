@@ -64,9 +64,7 @@ enum class TradeKind_t
     DeclareVendetta
 };
 
-// One trait per alternative, next to the alternatives. A new TradeItem_t member without a
-// specialisation fails to compile in TradeKinds rather than silently dropping out of the
-// category list.
+// One trait per alternative, so a new TradeItem_t member fails to compile until it has one.
 template <typename T>
 struct TradeKindOf;
 

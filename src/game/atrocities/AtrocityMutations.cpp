@@ -17,10 +17,9 @@ namespace ac
 namespace
 {
 
-// One line the player can act on: who did what, and what it costs.
-// TODO(atrocity): this announces every commission to the human, including one between two AI
-// factions they have never met. Whether atrocities are common knowledge (the Datalinks report
-// them) or gated on contact is an unrecorded rules question.
+// Who did what, and what it costs.
+// TODO(atrocity): announced to the player even between unmet AI factions; whether that needs
+// contact is unrecorded.
 void AnnounceToPlayer_(GameState& rGameState, const Faction& rPerpetrator, const Faction* pVictim,
                        const AtrocityCommitted_t& rCommitted)
 {

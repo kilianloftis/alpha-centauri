@@ -24,9 +24,7 @@ inline constexpr std::size_t k_AtrocitySeverityCount =
 // name. Throws when id is not one of the closed set.
 std::string_view AtrocitySeverityLabel(AtrocitySeverityId_t id);
 
-// What one severity costs its perpetrator. Every field is required in config/atrocities.json:
-// these are game rules per tier, and a C++ default here would silently stand in for a key a
-// modder meant to set.
+// What one severity costs; every field is required.
 struct AtrocitySeverityConfig_t
 {
     // Added to the eco-damage mineral term once per counted record.
@@ -39,9 +37,8 @@ struct AtrocitiesConfig_t
 {
     std::array<AtrocitySeverityConfig_t, k_AtrocitySeverityCount> severities{};
 
-    // A counted Simple act adds this many years times the simple-atrocity count after that
-    // act, onto whatever sanction time is left. Major acts, including an escalated Simple
-    // act, add none.
+    // A counted Simple act adds this times the Simple count after it to the sanction left; Major
+    // acts add none.
     int sanctionYearsPerAtrocity = 0;
 
     // Throws when id is not one of the closed set. Callers reach this only with a value the

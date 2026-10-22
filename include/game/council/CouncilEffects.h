@@ -12,40 +12,24 @@ namespace ac
 
 class CouncilProposalRegistry;
 
-// True when an effect is a continuous, world-global council effect — the effects a passed
-// proposal projects onto the whole map (Trade Pact, U.N. Charter, etc.). Shared by the
-// effect store (which gathers them) and proposal eligibility (which tests for their
-// presence).
+// A continuous world-global effect, as a passed proposal projects over the map.
 bool IsContinuousWorldEffect(const EffectConfig_t& rEffect);
 
-// The continuous ActiveEffects the Planetary Council projects: world-global effects from
-// the proposals currently in force, and faction-global effects granted to the Planetary
-// Governor. Holds no config storage of its own — wrappers point straight at the proposal
-// registry / council rules that own the EffectConfig_t entries, exactly as building and
-// pop-type effects point at their registries. Those sources are loaded once and outlive the
-// council, so ActiveEffect_t::config addresses are stable for the whole session: a retained
-// wrapper stays readable across any number of rebuilds, and an unchanged proposal keeps the
-// same config address. The effect *vectors* are rebuilt in place, so WorldEffects() /
-// GovernorEffects() references (and iterators) are invalidated by the matching setter —
-// copy out, or re-read after a rebuild.
+// The council's continuous effects: laws in force and the Governor's grants. Points at the
+// registry's configs, which are stable; the vectors rebuild in place, so re-read after one.
 class CouncilEffects
 {
 public:
-    // Rebuild the world lane from the continuous WorldGlobal effects of the given active
-    // proposals (ids resolved through the registry; unknown ids are skipped).
-    // rRegistry must outlive this CouncilEffects — the wrappers borrow its configs.
+    // Rebuilds the world lane from active proposals; unknown ids are skipped. rRegistry must
+    // outlive this.
     void RebuildWorld(const std::vector<std::string>& rActiveProposalIds,
                       const CouncilProposalRegistry& rRegistry);
 
-    // Set the governor lane from the continuous FactionGlobal effects in the council rules.
-    // rGovernorEffects must outlive this CouncilEffects (it is the rules config's own
-    // vector) — the wrappers borrow its entries, so temporaries are rejected.
+    // The Governor lane from the rules' FactionGlobal effects, borrowed, so not a temporary.
     void SetGovernorEffects(const std::vector<EffectConfig_t>& rGovernorEffects);
     void SetGovernorEffects(std::vector<EffectConfig_t>&& rGovernorEffects) = delete;
 
-    // Drop the governor lane when the office falls vacant (a governor expelled for a major
-    // atrocity). Separate from SetGovernorEffects because that borrows from a caller-owned
-    // vector and so cannot be handed an empty temporary.
+    // When the office falls vacant (a governor expelled for a major atrocity).
     void ClearGovernorEffects();
 
     const std::vector<ActiveEffect_t>& WorldEffects() const { return m_worldEffects; }

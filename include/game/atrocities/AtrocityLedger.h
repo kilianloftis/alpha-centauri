@@ -41,9 +41,7 @@ public:
     void Record(AtrocityRecord_t record);
     const std::vector<AtrocityRecord_t>& Records() const { return m_records; }
 
-    // How many counted Simple acts this perpetrator has. Escalation compares this against the
-    // session level's atrocity threshold; the sanction curve multiplies by it after the act is
-    // recorded. Major acts are not included.
+    // Counted Simple acts only, for escalation and the sanction curve.
     int SimpleCount(FactionId_t perpetrator) const;
 
     // "Has this perpetrator ever committed an atrocity against this victim", counted or not.
@@ -52,9 +50,7 @@ public:
     bool HasCommittedMajorAgainst(FactionId_t perpetrator, FactionId_t victim) const;
 
 
-    // Whether the sanction is standing in missionYear. Answered from the stored expiry rather
-    // than from the entry existing, so a reader is right whether or not ExpireSanctions has
-    // swept yet this turn.
+    // From the stored expiry, so it is right before or after ExpireSanctions runs.
     bool IsSanctioned(FactionId_t faction, int missionYear) const;
     // Mission year the sanction lifts, or nullopt when the faction has no sanction entry.
     std::optional<int> SanctionUntilYear(FactionId_t faction) const;

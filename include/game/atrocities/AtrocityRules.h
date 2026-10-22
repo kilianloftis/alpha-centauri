@@ -48,17 +48,13 @@ AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pV
 std::vector<FactionId_t> UniversalVendettaJoiners(FactionId_t perpetrator,
                                                   std::optional<FactionId_t> victim);
 
-// The severity actually answered for, given the perpetrator's counted Simple acts so far.
-// The counter is treated as already including this act: while that total is still at or under
-// simpleThreshold the act stays as authored. Past the threshold it is answered for as Major.
-// An act already authored as Major is returned unchanged. A non-positive threshold disables
-// escalation. The caller passes only counted Simple records.
+// Simple acts past simpleThreshold, counting this one, are answered as Major; a non-positive
+// threshold disables escalation.
 AtrocitySeverityId_t EffectiveSeverityId(AtrocitySeverityId_t authored, int priorSimpleCount,
                                          int simpleThreshold);
 
-// Whether the world answers for this commission: Vendetta, expulsion, the simple counter, and
-// a Simple act's commerce sanction. The Charter gates every tier. A Progenitor party excuses
-// the act. The record is still written when this returns false.
+// Whether the world answers for the act: the Charter gates every tier, and a Progenitor party
+// excuses it.
 bool PenaltiesApply(bool bCharterInForce, bool bSpeciesExempt);
 
 // True when either party is a Progenitor. An absent victim is not a Progenitor. Native life is
@@ -66,14 +62,11 @@ bool PenaltiesApply(bool bCharterInForce, bool bSpeciesExempt);
 bool SpeciesExemptionApplies(FactionSpecies_t perpetrator,
                              std::optional<FactionSpecies_t> victimSpecies);
 
-// Years a counted Simple act adds to a standing sanction. simpleCountAfter is the simple
-// counter once this act is included, so the first adds the coefficient, the second twice
-// that, and so on. Major acts add none; this function is not called for them.
+// Years a counted Simple act adds: the coefficient times the Simple count including it.
 int SanctionYearsAdded(const AtrocitiesConfig_t& rConfig, int simpleCountAfter);
 
-// Who a blast is answered to. Destroying a base outranks destroying units, and within each the
-// first owner the blast reached wins. The detonator is never their own victim, so razing only
-// your own ground is victimless. Both lists are in the order the blast reached them.
+// A destroyed base outranks destroyed units, the first reached wins, and the detonator is never
+// its own victim.
 std::optional<FactionId_t> BlastVictim(const std::vector<FactionId_t>& rBaseOwnersDestroyed,
                                        const std::vector<FactionId_t>& rUnitOwnersDestroyed,
                                        FactionId_t detonator);

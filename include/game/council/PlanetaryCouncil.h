@@ -42,8 +42,7 @@ public:
     std::optional<int> LastProposedYear(const Faction& rFaction) const;
 
     // --- Laws ---
-    // In force: this proposal contributes continuous world effects right now. Distinct from
-    // HasPassed: a one-shot or a pure repeal is never in force.
+    // In force now; a one-shot or a pure repeal never is, though it HasPassed.
     bool IsActive(const std::string& rProposalId) const;
     // Enacted at least once, whether or not it is still in force.
     bool HasPassed(const std::string& rProposalId) const;
@@ -63,10 +62,8 @@ public:
     void InstallGovernor(Faction& rGovernor);
     void SetSupremeLeaderVictory(Faction& rWinner);
 
-    // Continuous WorldGlobal effects from active proposals (Trade Pact, U.N. Charter, etc.).
-    // Wrappers' `config` pointers reference the proposal registry, so a retained wrapper
-    // stays valid across any rebuild; the vector itself is rebuilt in place, so copy the
-    // wrappers out rather than holding this reference across a vote.
+    // Laws' WorldGlobal effects. The configs are stable, but the vector rebuilds in place, so copy
+    // it rather than hold it across a vote.
     const std::vector<ActiveEffect_t>& CollectWorldEffects() const;
     // Continuous FactionGlobal effects for the governor (commerce energy bonus).
     // Empty when rFaction is not the governor.

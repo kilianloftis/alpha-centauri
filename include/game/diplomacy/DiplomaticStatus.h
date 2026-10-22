@@ -21,9 +21,8 @@ enum class DiplomaticStatus_t
 
 inline constexpr std::size_t k_DiplomaticStatusCount = magic_enum::enum_count<DiplomaticStatus_t>();
 
-// How a Vendetta began. A Declaration withdraws each side's units from the other's territory;
-// a SneakAttack (a hostile act without one) does not. Defensive obligations inherit the kind
-// of the Vendetta that raised them.
+// How a Vendetta began. A Declaration withdraws units from the other's territory; a
+// SneakAttack does not. Obligations inherit the kind.
 enum class VendettaKind_t
 {
     Declaration,

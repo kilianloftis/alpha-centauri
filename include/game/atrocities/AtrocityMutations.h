@@ -26,11 +26,8 @@ struct AtrocityCommitted_t
     bool PenaltiesApplied() const { return excuse == AtrocityExcuse_t::None; }
 };
 
-// Record the atrocity against pVictim (null for a victimless act) and, when the authored act
-// passes every gate, charge for it: commerce sanctions, universal Vendetta, and Planetary
-// Council expulsion. The record is written either way, because the victim's memory is that
-// record. A perpetrator named as its own victim is recorded victimless. Only a counted act
-// moves a counter, and only a counted Simple act lengthens the commerce sanction.
+// Records the act and, when it counts, charges sanctions, universal Vendetta and expulsion.
+// The record is written either way; self-victims are recorded victimless.
 AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
                                    Faction* pVictim, AtrocitySeverityId_t severity);
 
