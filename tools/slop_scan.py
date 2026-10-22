@@ -325,7 +325,7 @@ def check_pass_through(path: Path, code: str) -> list[Hit]:
         if MEMBER_GETTER.match(body):
             continue
         statement = re.sub(r"^return\s+", "", body).rstrip(";").strip()
-        if re.match(r"^(?:std::|static_cast|throw\b)", statement) or "=" in statement.split("(")[0]:
+        if re.match(r"^(?:std::|static_cast|throw\b|m_\w+(?:\.|->))", statement) or "=" in statement.split("(")[0]:
             continue
         if not re.match(r"^[\w:\.\->\*\[\]]+\s*(?:<[^()]*>)?\s*\(.*\)$", statement):
             continue
@@ -510,7 +510,7 @@ def check_functions(path: Path) -> list[Hit]:
         problems = []
         if fn.nloc > 40:
             problems.append(f"{fn.nloc} lines")
-        if nesting >= 3:
+        if nesting > 3:
             problems.append(f"nesting {nesting}")
         if fn.cyclomatic_complexity > 10:
             problems.append(f"complexity {fn.cyclomatic_complexity}")

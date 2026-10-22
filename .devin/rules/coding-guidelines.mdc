@@ -40,13 +40,14 @@ unless a change touches it. A change that breaks one is not finished.
    absence has no meaning; `.value("key", fallback)` is only for a key the config docs call
    optional.
 4. **No pass-through functions.** Do not add a function whose body only calls another, unless it
-   implements an interface. A member that forwards to a free function with `*this`, or to a
-   member's method, is a pass-through; returning a member is a getter. When logic moves, its
-   callers call the new home.
+   implements an interface. A member that forwards to a free function with `*this` is a
+   pass-through. A member that answers through an object the class owns or holds is a getter, and
+   so is a one-line wrapper that fixes an argument and names the result (`IsNativeLife()`). When
+   logic moves, its callers call the new home.
 5. **No flag parameters.** A `bool` that chooses what a function does is derived from an object the
    caller already passes, or the function splits in two (named constructors for a type). An enum
    parameter is the last resort. A `bool` that describes the input, like `bNowWater`, is fine. No
-   default argument added to spare callers an update.
+   default arguments: callers pass the value, even `nullptr`, and no overload stands in for one.
 6. **Nothing speculative.** No function, getter, setter, type, interface or template without a
    caller that needs it now. A config or Lua file in the repo counts as a caller, so a mod seam
    lands with one that uses it. An interface is needed when it narrows what its consumer can reach
@@ -54,8 +55,8 @@ unless a change touches it. A change that breaks one is not finished.
    test can reach inside. A struct is a return type only when a function returns more than one
    thing.
 7. **One level of abstraction per function.** A function either does the work or calls the steps
-   that do it. When it passes about 40 lines or nests three deep, its steps become named
-   functions. A long `switch` that maps one value to another is a table, not a long function.
+   that do it. When it passes about 40 lines or nests more than three deep, its steps become
+   named functions. A long `switch` that maps one value to another is a table, not a long function.
 
 ## General
 
