@@ -19,9 +19,8 @@ class DesignListPanel;
 class UnitDesignerView : public IGameView
 {
 public:
-    // availableSlots / availableComponents are already tech-gated (see GetAvailableUnitSlots /
-    // GetAvailableUnitComponents). Offering a locked option here lets a player assemble and
-    // save a design that should not exist.
+    // availableSlots and availableComponents are already tech-gated, so no locked option is
+    // offered.
     UnitDesignerView(
         Military& rMilitary,
         std::vector<UnitSlotConfig_t> availableSlots,
@@ -51,10 +50,8 @@ private:
     void HandleSaveDesign_();
 
     Military& m_rMilitary;
-    // The slots this faction has unlocked. Every consumer — the columns, the save gate, the
-    // saved design — must agree on this list: a required slot the player cannot see and cannot
-    // fill would otherwise make Save permanently dead, and UnitDesign's constructor throws on
-    // a required slot with no component.
+    // The unlocked slots, which the columns, the save gate and the saved design all share; a
+    // hidden required slot would make Save dead.
     std::vector<UnitSlotConfig_t> m_availableSlots;
     // Unlocked components across all types; ShowComponentSelector_ filters by slot type.
     std::vector<const UnitComponentConfig_t*> m_availableComponents;

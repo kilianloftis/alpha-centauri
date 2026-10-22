@@ -62,18 +62,13 @@ private:
     // be declared before m_elements (IGameView) is populated and must never be reallocated.
     BaseDisplaySnapshot_t m_snapshot;
     uint64_t m_snapshotBuildCount = 1;
-    // The base's owner at the moment this view was opened. Render() closes the view (rather
-    // than keep rendering a base that changed hands out from under it) when
-    // &m_rBase.GetFaction() no longer matches — see docs/architecture/high-level.md, "Object
-    // lifetime".
+    // The owner when opened; Render closes the view once the base has changed hands.
     Faction* m_pOwnerAtOpen;
     bool m_bEditable;
     SpriteLibrary& m_rSprites;
     UnitStackPanel* m_pUnitStackPanel = nullptr;
     Unit* m_pSelectedUnit = nullptr;
-    // Pops this view when the base is destroyed (razed on capture) while it is still open —
-    // the object dies but this reference must not dangle. Safe to outlive the base: the
-    // connection goes inert once BaseManager's signal is gone (see Signal::ScopedConnection).
+    // Closes the view when the base is destroyed; goes inert if the base's signal dies first.
     Signal<>::ScopedConnection m_destroyedConnection;
 };
 

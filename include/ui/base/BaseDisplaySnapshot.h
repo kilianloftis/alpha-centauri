@@ -40,14 +40,8 @@ struct BaseDisplayKey_t
     bool operator==(const BaseDisplayKey_t&) const = default;
 };
 
-// The derived base values the panels display. Each one costs a full ResourceManager worked-tile
-// pass or a per-tile yield resolution, so they are computed once per key change rather than per
-// panel per frame. Cheap reads (stockpiles, base name, population size) stay live.
-//
-// Tile state (terrain, improvements, resources) is absent from the key because it cannot change
-// while this view is open: terraforming resolves on turn advance, and UIManager refuses to
-// advance the turn while an overlay covers the map — pinned by "The turn gate closes for an
-// overlay and for an in-view modal" in tests/ui/UIManagerTests.cpp.
+// Derived values the panels show, computed once per key change since each is costly. Tile
+// state is not in the key: the turn cannot advance while this overlay is open.
 struct BaseDisplaySnapshot_t
 {
     BaseDisplayKey_t key;

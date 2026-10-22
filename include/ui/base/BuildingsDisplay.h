@@ -16,10 +16,8 @@ class SpriteLibrary;
 
 using BuildingClickCallback_t = std::function<void(const BuildingConfig_t&)>;
 
-// Vertical list of this base's constructed buildings, plus buildings granted here by a
-// continuous GrantBuilding effect. Granted rows use a darker colour; a constructed copy
-// that is also granted is prefixed with "*". Every listed row is clickable when a callback
-// is supplied; a granted-only copy is not constructed, so scrap quoting denies it.
+// The base's built and granted buildings. Granted rows are darker, a built copy that is also
+// granted gets "*", and granted-only copies cannot be scrapped.
 class BuildingsDisplay : public UIElement
 {
 public:

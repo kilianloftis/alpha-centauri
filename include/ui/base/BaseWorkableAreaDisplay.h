@@ -14,10 +14,8 @@
 namespace ac
 {
 
-// Displays the workable area of a base as a brick of 2:1 diamonds matching the world map:
-// lattice neighbors land at map (p − q, p + q). The center diamond is the base tile.
-// MapRenderer paints the tiles as the base's faction knows them (no fog) with every base on
-// them, the same path as WorldDisplay; surrounding tiles then overlay yield text.
+// The base's workable area as the map's brick of diamonds, painted by MapRenderer as the
+// faction knows it, with yield text over the surrounding tiles.
 class BaseManager;
 class MapRenderer;
 

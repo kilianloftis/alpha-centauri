@@ -110,9 +110,7 @@ void UnitDesignerView::BuildDesignListPanel_()
 
 void UnitDesignerView::ClearDesignSelection_()
 {
-    // Selecting a design copies it into the draft. Once a slot changes, the draft is no longer
-    // that design — but UnitStatusPanel kept showing its name and active count while the slots
-    // and the stats panel showed the edit, and the list kept the box highlighted.
+    // Once a slot changes, the draft is no longer the selected design.
     m_pSelectedDesign = nullptr;
     if (m_pDesignList)
     {

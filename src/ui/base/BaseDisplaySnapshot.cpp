@@ -51,10 +51,8 @@ BaseDisplaySnapshot_t BuildBaseDisplaySnapshot(const BaseManager& rBase)
         }
 
         TileDisplay_t entry;
-        // Both predicates: "worked by this base" decides which yield to show (GetWorkedTileYield
-        // only resolves against this base's pops, so asking the world-wide question painted a
-        // neighbour's tile as worked and then displayed 0 0 0), and "worked by anyone" separates
-        // a free tile from one this base cannot take.
+        // Both questions: whether this base works the tile picks the yield shown,
+        // and whether anyone does separates a free tile from one this base cannot take.
         if (rAssignments.IsTileWorkedByThisBase(pTile))
         {
             entry.workState = TileWorkState_t::WorkedByThisBase;

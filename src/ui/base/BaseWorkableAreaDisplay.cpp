@@ -124,10 +124,8 @@ void BaseWorkableAreaDisplay::RenderYieldLabel_(Graphics& rGraphics,
     oss << rTile.yield.effective.nutrients << " " << rTile.yield.effective.minerals << " "
         << rTile.yield.effective.energy;
 
-    // Three states, not two. A tile held by a neighbouring base, another faction, or a supply
-    // crawler is workable-in-principle but not available to this base: showing it in the
-    // unworked colour with a full preview yield makes it look free, and clicking it is then
-    // silently refused. Dim it so the refusal is predictable.
+    // A tile held by a neighbour, another faction or a crawler is dimmed, so the refusal of a
+    // click on it is predictable.
     Color_t textColor = style.unworkedTileTextColor;
     if (bIsWorked)
     {

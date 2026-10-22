@@ -152,10 +152,8 @@ BaseView::~BaseView()
 
 void BaseView::Render(Graphics& rGraphics)
 {
-    // Base survives identity-preserving transfer (RebindFaction), so &GetFaction() is always
-    // safe to read here — unlike destroy, which is instead caught by m_destroyedConnection
-    // (OnDestroyed fires while the object is still valid, before UIManager ever renders a
-    // popped view again). Pop rather than render a base that changed hands out from under it.
+    // A transfer keeps the base alive (destruction is m_destroyedConnection's), so close rather
+    // than show a base that changed hands.
     if (&m_rBase.GetFaction() != m_pOwnerAtOpen)
     {
         m_bShouldClose = true;
@@ -254,9 +252,8 @@ void BaseView::HandleTileClick_(const Tile* pTile)
 
     auto& rAssignments = m_rBase.GetWorkerAssignments();
 
-    // Toggle against what *this* base is doing. UserUnassignTile only scans this base's pops,
-    // so routing a click here on a tile a neighbour works silently did nothing; the assign
-    // path handles the "taken by someone else" case by failing to find a free tile.
+    // Toggles against what this base does; assigning a tile someone else works finds no free pop
+    // and fails.
     if (rAssignments.IsTileWorkedByThisBase(pTile))
     {
         rAssignments.UserUnassignTile(pTile);
