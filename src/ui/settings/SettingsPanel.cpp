@@ -242,9 +242,8 @@ WindowLayout_t RowAt_(const WindowLayout_t& rBase, int index, float rowHeight)
     return row;
 }
 
-// Walk the table once, handing each row its on-screen area. Render and HandleMouseClick used to
-// each recompute the row count, the row height and the area, so a change to one could silently
-// paint rows where the other did not click them.
+// Walk the table once, handing each row its on-screen area, so Render and HandleMouseClick agree
+// on where every row is.
 template <typename Visitor>
 void ForEachRow_(const WindowLayout_t& rRowArea, Visitor&& visit)
 {
@@ -270,9 +269,8 @@ void RequireCallbacks_(const SettingDescriptor_t& rRow)
         {
             throw std::runtime_error("Setting row '" + label + "' is Bool but has no getBool/setBool");
         }
-        // Nothing can edit a NewGameOnly bool: the panel has no new-game/in-progress flag, so
-        // HandleMouseClick skips it forever. Until that flag exists, such a row is a table error
-        // rather than a disabled control.
+        // The panel cannot tell a new game from one in progress, so nothing could edit a
+        // NewGameOnly bool; such a row is a table error.
         if (rRow.scope == SettingScope_t::NewGameOnly)
         {
             throw std::runtime_error("Setting row '" + label
@@ -326,8 +324,8 @@ void SettingsPanel::Render(Graphics& rGraphics)
     {
         RequireCallbacks_(rRow);
 
-        // Exhaustive: a new SettingRowKind_t must be handled here rather than falling into the
-        // read-only branch and calling whatever function pointer happens to be null.
+        // Exhaustive, so a new SettingRowKind_t cannot fall into the read-only branch and call a
+        // null function pointer.
         switch (rRow.kind)
         {
         case SettingRowKind_t::Header:
@@ -362,8 +360,7 @@ void SettingsPanel::Render(Graphics& rGraphics)
 
 void SettingsPanel::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    // Every peer element requires the left button. This one acted on any button that reached
-    // it, so a right-click flipped a preference and wrote user_settings.json.
+    // Left button only, like every peer element.
     if (rEvent.button != MouseButton_t::Left)
     {
         return;

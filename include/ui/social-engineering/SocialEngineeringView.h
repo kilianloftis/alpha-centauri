@@ -12,8 +12,7 @@ class SocialRatingRegistry;
 class SocialEngineeringView : public IGameView
 {
 public:
-    // Dead members after the children are built, so nothing is stored: the panels own the
-    // references they need.
+    // Stores nothing: the panels it builds hold the references they need.
     SocialEngineeringView(
         Faction& rFaction,
         const SocialPolicyRegistry& rPolicyRegistry,

@@ -167,8 +167,7 @@ std::vector<std::string> SatelliteView::CollectMissingAttackPrerequisites_() con
 
 void SatelliteView::OnAttackClicked_()
 {
-    // The Attack control is always enabled, so a dead click was the only feedback for
-    // "you have not picked a target yet".
+    // The Attack control is always enabled; this tells the player what it still needs.
     const std::vector<std::string> missing = CollectMissingAttackPrerequisites_();
     if (!missing.empty())
     {
@@ -199,8 +198,7 @@ void SatelliteView::ShowOutcome_(std::string message)
 void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
                                        BuildingId_t targetBuildingId)
 {
-    // A missing player faction during a player-driven view is a broken session, not an empty
-    // state — contrast the explicit outcome string used when there are simply no attackers.
+    // A missing player faction during a player-driven view is a broken session, not an empty state.
     Faction* pPlayer = m_rGameState.GetPlayerFaction();
     if (!pPlayer)
     {

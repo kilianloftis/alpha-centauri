@@ -58,9 +58,8 @@ std::string CapitalizeFirst(std::string text)
     return text;
 }
 
-// "GrowthRate" -> "Growth Rate". Enumerator names reach the player through effect payloads
-// (StatId_t, RuleFlagId_t), and there is no wire-form map in that direction to reuse; splitting
-// on capitals beats a second hand-written table that would drift from ParseStatId.
+// "GrowthRate" -> "Growth Rate", for enumerator names that reach the player through effect
+// payloads (StatId_t, RuleFlagId_t); no display-name table exists for them.
 std::string HumanizeEnumName(std::string_view name)
 {
     std::string text;

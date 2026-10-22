@@ -409,9 +409,8 @@ struct HurryProductionPopupStyle_t
     RatioLayout_t cancelButtonLayout{};
 };
 
-// Header plus stockpile / required / production lines. The growth and production panels are
-// the same widget with different numbers in it, so they share one type and one parser — kept
-// twice, a one-sided tweak silently desynced the two halves of the base screen.
+// Header plus stockpile / required / production lines. Growth and production are the same widget
+// with different numbers, so they share one type and one parser.
 struct ResourceLinesPanelStyle_t
 {
     Color_t backgroundColor{};
@@ -485,10 +484,7 @@ struct BaseWorkableAreaDisplayStyle_t
     Color_t unavailableTileTextColor{};
 };
 
-// Every modal list-selector's metrics. One type, so a tweak cannot land on one screen only;
-// distinct looks are distinct *instances* of it (see componentSelectorPopup).
-// Chrome for NoticePopup. Its own block rather than borrowing satelliteView's — a generic
-// widget reading another screen's style is how a production tweak came to restyle council UI.
+// Chrome for NoticePopup; its own block, so a generic widget never reads another screen's style.
 struct NoticePopupStyle_t
 {
     Color_t backgroundColor{};
@@ -499,6 +495,8 @@ struct NoticePopupStyle_t
     RatioLayout_t okButtonLayout{};
 };
 
+// Every modal list-selector's metrics; distinct looks are instances of it (see
+// componentSelectorPopup).
 struct ListSelectorPopupStyle_t
 {
     float headerFontSizeRatio{};

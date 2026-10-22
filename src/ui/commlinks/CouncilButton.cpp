@@ -26,7 +26,7 @@ void CouncilButton::Render(Graphics& rGraphics)
 
 void CouncilButton::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    // Every peer control requires the left button; this one opened the council on any of them.
+    // Left button only, like every peer control.
     if (rEvent.button != MouseButton_t::Left)
     {
         return;

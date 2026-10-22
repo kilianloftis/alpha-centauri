@@ -79,8 +79,7 @@ void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
     );
 
     oss.str("");
-    // GetTurnsUntilBreakthrough, not GetBreakthroughRate: the label promises turns remaining,
-    // and the rate ignores accumulated progress, so the figure only ever read too high.
+    // The label promises turns remaining, which counts accumulated progress.
     oss << "Research Breakthrough: "
         << FormatTurnCount(m_rFaction.GetTurnsUntilBreakthrough());
     rGraphics.DrawText(

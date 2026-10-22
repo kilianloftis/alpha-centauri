@@ -75,8 +75,8 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
     }
     if (rEvent.key == Key_t::Escape)
     {
-        // Escape resolves rather than abandons: closing would leave GetPending() set, and
-        // Propose throws while it is. Absentees abstain, so resolving is always available.
+        // Escape resolves the vote: closing would leave GetPending() set, and Propose throws
+        // while it is. Absentees abstain, so resolving is always available.
         CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
         if (rVotes.GetPending())
         {

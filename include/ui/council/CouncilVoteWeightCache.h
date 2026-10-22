@@ -12,21 +12,14 @@ namespace ac
 class Faction;
 class PlanetaryCouncil;
 
-// VoteWeight copies the faction's whole effect pool, appends the council's and the world's,
-// and resolves CouncilVotes modifiers over it. The panels ask for it
-// once per member per paint, so it is cached against the three things that move it: the council
-// revision, the faction's own effects version, and its population.
-//
-// Population is compared directly because no counter tracks it. Every population change also
-// moves the effect-pool version in practice, so the field is defensive; it costs one int
-// compare and removes the dependency on that coupling.
+// Caches VoteWeight, which resolves the faction's whole effect pool and is asked for once per
+// member per paint. Keyed on the council revision, the faction's effects version and population.
 class CouncilVoteWeightCache
 {
 public:
     int Get(const PlanetaryCouncil& rCouncil, const Faction& rFaction, CouncilVoteWeight_t mode);
 
-    // How many times the underlying resolve actually ran. The saved work is the entire point
-    // of this class, and it is not observable from the returned weights alone.
+    // How many times the resolve ran; the saved work is not observable from the weights alone.
     uint64_t GetComputeCount() const { return m_computeCount; }
 
 private:
