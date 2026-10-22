@@ -68,7 +68,7 @@ public:
     // Empty if the tile is already worked, an expected outcome while probing. onDisplaced makes
     // the claim displaceable by a founding.
     WorkedTileClaim TryClaim(const Tile& rTile, bool bUserAssigned,
-                             DisplacedWorkerHandler onDisplaced = {});
+                             DisplacedWorkerHandler onDisplaced);
 
     // Claims a base's own tile, displacing its worker after this claim is registered, so the
     // worker cannot take it back. Throws if it is already a base tile.

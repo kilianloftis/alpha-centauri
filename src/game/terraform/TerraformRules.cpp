@@ -303,7 +303,7 @@ bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool bWantSea,
     {
         return false;
     }
-    return CanBuildImprovement(rNeighbor, rConfig);
+    return CanBuildImprovement(rNeighbor, rConfig, {}, {});
 }
 
 } // namespace

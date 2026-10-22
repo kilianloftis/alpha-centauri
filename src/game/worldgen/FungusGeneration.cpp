@@ -41,7 +41,7 @@ bool IsEligible_(const Tile& rTile, const ImprovementConfig_t& rFungus)
     {
         return false;
     }
-    return CanBuildImprovement(rTile, rFungus);
+    return CanBuildImprovement(rTile, rFungus, {}, {});
 }
 
 // True if rTile orthogonally touches fungus outside the current patch (would coalesce).

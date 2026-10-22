@@ -74,8 +74,8 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
         const Tile* pCurrent = queue.front();
         queue.pop();
 
-        const size_t idx = static_cast<size_t>(
-            TileIndex(pCurrent->GetX(), pCurrent->GetY(), width));
+        const int index = TileIndex(pCurrent->GetX(), pCurrent->GetY(), width);
+        const size_t idx = static_cast<size_t>(index);
         const ClaimCandidate_t challenger{factionId, LatticeDistSq_(rOrigin, *pCurrent, width),
                                           baseId};
         ClaimCandidate_t& rIncumbent = rBest[idx];
@@ -85,8 +85,8 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
         }
 
         ForEachOrthogonalNeighbor(*pCurrent, rWorldMap, [&](const Tile* pNeighbor) {
-            const size_t nIdx = static_cast<size_t>(
-                TileIndex(pNeighbor->GetX(), pNeighbor->GetY(), width));
+            const int neighborIndex = TileIndex(pNeighbor->GetX(), pNeighbor->GetY(), width);
+            const size_t nIdx = static_cast<size_t>(neighborIndex);
             if (visited[nIdx])
             {
                 return;

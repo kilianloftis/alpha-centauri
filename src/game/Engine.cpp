@@ -227,7 +227,8 @@ void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTile
                     rBaseTile, rMap, searchRadius, /*includeOrigin=*/false,
                     [&](Tile* pTile, int distance) {
                         if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
-                            || !CanBuildImprovement(*pTile, rConfig) || distance >= bestDistance)
+                            || !CanBuildImprovement(*pTile, rConfig, {}, {})
+                            || distance >= bestDistance)
                         {
                             return;
                         }
@@ -259,7 +260,8 @@ void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTile
                         if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
                             || pTile->HasImprovement(ImprovementIds::k_Farm)
                             || pTile->GetMoisture() != moisture
-                            || !CanBuildImprovement(*pTile, rFarm) || distance >= bestDistance)
+                            || !CanBuildImprovement(*pTile, rFarm, {}, {})
+                            || distance >= bestDistance)
                         {
                             return;
                         }

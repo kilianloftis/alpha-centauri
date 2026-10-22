@@ -84,6 +84,14 @@ One entry per violation, under the rule it breaks:
 - **Problem:** no production caller.
 - **Why not local:** each needs its tests rewritten against behavior, or a fixture seam.
 
+### Map queries and loaders used only by tests
+- **Where:** `ImprovementRegistry::LoadOccupants` (6 test callers) and the two-path
+  `LoadTileOccupants` it calls; `HasRiverConnection` (4) and `GetRiverConnections` (2) in
+  `RiverGeneration.h`; `UnitPositionIndex::SetSingleUnitPerTile` (5)
+- **Problem:** no production caller.
+- **Why not local:** fixtures load occupants this way and tests flip the stacking rule; both
+  need a fixture path through `LoadMapOccupants` and the session config.
+
 ## Rule 7: long functions
 
 ### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
@@ -109,6 +117,11 @@ One entry per violation, under the rule it breaks:
 - **Problem:** an `if constexpr` chain inside one lambda handles every alternative.
 - **Why not local:** over 100 lines. The fix is an exhaustive visitor struct per variant, as
   `EffectReferenceValidator` now uses, with each arm its own member.
+
+### `ExpandFeatureTagReferences`
+- **Where:** `src/game/map/ImprovementConfigParser.cpp`, 116 lines
+- **Problem:** expands tags in four different lists inline.
+- **Why not local:** over 100 lines; the per-list expansion shares the tag index being built.
 
 ## Duplicated logic
 

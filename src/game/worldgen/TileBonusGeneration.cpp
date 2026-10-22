@@ -18,7 +18,7 @@ namespace
 
 bool CanPlaceBonus_(const Tile& rTile, const ImprovementConfig_t& rBonus)
 {
-    return !rTile.HasTerrainFeature(rBonus.id) && CanBuildImprovement(rTile, rBonus);
+    return !rTile.HasTerrainFeature(rBonus.id) && CanBuildImprovement(rTile, rBonus, {}, {});
 }
 
 bool TileAcceptsBonus_(const Tile& rTile, const std::vector<const ImprovementConfig_t*>& rBonuses)

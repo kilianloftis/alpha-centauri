@@ -187,7 +187,7 @@ TEST_CASE("World generation places against bound tiles", "[worldgen][improvement
         if (pTile->GetHasRiver())
         {
             ++riverTiles;
-            CHECK_FALSE(CanBuildImprovement(*pTile, world.improvements.Get("Mine")));
+            CHECK_FALSE(CanBuildImprovement(*pTile, world.improvements.Get("Mine"), {}, {}));
         }
     }
     REQUIRE(riverTiles > 0);

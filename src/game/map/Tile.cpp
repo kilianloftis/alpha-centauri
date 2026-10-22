@@ -442,7 +442,8 @@ void Tile::RefreshTerrainFeatures_()
     // exists in the registry, so a miss here is a broken invariant, not a skippable feature.
     auto pushFeature = [&](std::string_view id)
     {
-        m_terrainFeatures.push_back(&m_pOccupants->Get(std::string(id)));
+        const std::string featureId(id);
+        m_terrainFeatures.push_back(&m_pOccupants->Get(featureId));
     };
 
     pushFeature(magic_enum::enum_name(m_rockiness));
@@ -452,9 +453,10 @@ void Tile::RefreshTerrainFeatures_()
         // General-to-specific: Water carries the rules shared by all sea tiles, then exactly
         // one depth band layers its own on top.
         pushFeature(magic_enum::enum_name(TerrainFeature_t::Water));
-        pushFeature(magic_enum::enum_name(m_elevation >= MapRules().oceanShelfMeters
-                                              ? TerrainFeature_t::OceanShelf
-                                              : TerrainFeature_t::Ocean));
+        const TerrainFeature_t band = m_elevation >= MapRules().oceanShelfMeters
+                                          ? TerrainFeature_t::OceanShelf
+                                          : TerrainFeature_t::Ocean;
+        pushFeature(magic_enum::enum_name(band));
     }
     if (m_bHasRiver)
     {

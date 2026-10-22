@@ -55,15 +55,15 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
     // of its own. Only the Monolith side of the pair is written down.
     REQUIRE(rNutrients.excludes.empty());
 
-    CHECK(CanBuildImprovement(rTile, rMonolith));
-    CHECK(CanBuildImprovement(rTile, rNutrients));
+    CHECK(CanBuildImprovement(rTile, rMonolith, {}, {}));
+    CHECK(CanBuildImprovement(rTile, rNutrients, {}, {}));
 
     rTile.AddTerrainFeature(rMonolith);
 
     // Forward direction: Monolith excludes itself.
-    CHECK_FALSE(CanBuildImprovement(rTile, rMonolith));
+    CHECK_FALSE(CanBuildImprovement(rTile, rMonolith, {}, {}));
     // Reverse direction: the incumbent's excludes bind the candidate too. This one used to pass.
-    CHECK_FALSE(CanBuildImprovement(rTile, rNutrients));
+    CHECK_FALSE(CanBuildImprovement(rTile, rNutrients, {}, {}));
 }
 
 TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclude it back",
@@ -75,13 +75,13 @@ TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclu
 
     const ImprovementConfig_t& rMine = world.improvements.Get("Mine");
     REQUIRE(rMine.excludes.empty());
-    CHECK(CanBuildImprovement(rTile, rMine));
+    CHECK(CanBuildImprovement(rTile, rMine, {}, {}));
 
     // River is a TerrainFeature_t, mirrored into the tile's terrain-feature configs rather
     // than its improvements - the reverse check has to look at both collections.
     rTile.SetHasRiver(true);
     REQUIRE(rTile.HasFeature("River"));
-    CHECK_FALSE(CanBuildImprovement(rTile, rMine));
+    CHECK_FALSE(CanBuildImprovement(rTile, rMine, {}, {}));
 }
 
 TEST_CASE("A feature the caller is clearing does not block the placement", "[map][improvements]")
@@ -92,11 +92,11 @@ TEST_CASE("A feature the caller is clearing does not block the placement", "[map
     rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
 
     const ImprovementConfig_t& rForest = world.improvements.Get("Forest");
-    CHECK_FALSE(CanBuildImprovement(rTile, rForest));
+    CHECK_FALSE(CanBuildImprovement(rTile, rForest, {}, {}));
 
     // Naming an occupant as ignored does not remove it. Forest spread does not use this.
     const std::string fungusLeaving(ImprovementIds::k_Fungus);
-    CHECK(CanBuildImprovement(rTile, rForest, std::span(&fungusLeaving, 1)));
+    CHECK(CanBuildImprovement(rTile, rForest, std::span(&fungusLeaving, 1), {}));
     CHECK(rTile.HasFeature("Fungus"));
 }
 

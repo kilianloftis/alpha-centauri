@@ -179,7 +179,7 @@ TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
     CHECK(rTile.HasFeature("Nutrients"));
 
     const ImprovementConfig_t& rFarm = session.fixtures.improvements.Get("Farm");
-    CHECK_FALSE(CanBuildImprovement(rTile, rFarm));
+    CHECK_FALSE(CanBuildImprovement(rTile, rFarm, {}, {}));
 }
 
 TEST_CASE("A fungal bloom spawns one native lifeform on a new fungal tile", "[map][fungus]")

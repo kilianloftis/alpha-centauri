@@ -136,7 +136,9 @@ void LoadMapOccupants(const std::string& rImprovementsPath, const std::string& r
 {
     TerrainFile_t terrain = ParseTerrainFile(rTerrainPath);
     rOperations.Assign(std::move(terrain.operations));
-    rOccupants.Assign(LoadTileOccupants(rImprovementsPath, std::move(terrain.features)));
+    std::vector<ImprovementConfig_t> occupants =
+        LoadTileOccupants(rImprovementsPath, std::move(terrain.features));
+    rOccupants.Assign(std::move(occupants));
 
     for (const TerrainOperationConfig_t& rOperation : rOperations.GetAll())
     {

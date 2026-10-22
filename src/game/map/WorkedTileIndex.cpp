@@ -100,7 +100,7 @@ WorkedTileClaim WorkedTileIndex::ClaimDisplacing(const Tile& rTile, bool bUserAs
         rCurrent.Release_();
     }
 
-    WorkedTileClaim claim = TryClaim(rTile, bUserAssigned);
+    WorkedTileClaim claim = TryClaim(rTile, bUserAssigned, {});
 
     // Notify only once the new claim is registered, so the displaced worker's owner
     // re-assigns against a world in which this tile is already taken.

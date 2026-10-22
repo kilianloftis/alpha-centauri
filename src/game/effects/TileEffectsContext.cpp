@@ -494,7 +494,7 @@ void TileEffectsContext::RemoveImprovementsThatCannotRemain_(Tile& rTile, std::s
             }
             // The copy already on the tile is not a reason to remove itself
             // (Monolith excludes Monolith so a second one cannot be placed).
-            if (!CanBuildImprovement(rTile, *pConfig, std::span(&pConfig->id, 1)))
+            if (!CanBuildImprovement(rTile, *pConfig, std::span(&pConfig->id, 1), {}))
             {
                 removeIds.push_back(pConfig->id);
             }

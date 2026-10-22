@@ -426,11 +426,11 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     const ImprovementConfig_t* pFarm = world.improvements.Find("Farm");
     REQUIRE(pFarm != nullptr);
 
-    CHECK(CanBuildImprovement(tile, *pFarm));
+    CHECK(CanBuildImprovement(tile, *pFarm, {}, {}));
     tile.SetRockiness(Rockiness_t::Rocky);
-    CHECK_FALSE(CanBuildImprovement(tile, *pFarm)); // Farm excludes Rocky
+    CHECK_FALSE(CanBuildImprovement(tile, *pFarm, {}, {})); // Farm excludes Rocky
     tile.SetRockiness(Rockiness_t::Rolling);
-    CHECK(CanBuildImprovement(tile, *pFarm));
+    CHECK(CanBuildImprovement(tile, *pFarm, {}, {}));
 }
 
 TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf is +1 nutrient",
@@ -518,11 +518,11 @@ TEST_CASE("CanBuildImprovement: sea terraform excludes Ocean but allows OceanShe
 
     Tile& shelf = world.At(8, 8);
     shelf.SetElevation(-100);
-    CHECK(CanBuildImprovement(shelf, *pKelp));
+    CHECK(CanBuildImprovement(shelf, *pKelp, {}, {}));
 
     Tile& ocean = world.At(9, 9);
     ocean.SetElevation(ocean.MapRules().oceanShelfMeters - 1);
-    CHECK_FALSE(CanBuildImprovement(ocean, *pKelp));
+    CHECK_FALSE(CanBuildImprovement(ocean, *pKelp, {}, {}));
 }
 
 TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the host tile",

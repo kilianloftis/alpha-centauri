@@ -241,10 +241,10 @@ int ResolveVisionRadius_(const ImprovementConfig_t& rConfig)
         }
 
         const ActiveEffect_t active(rEffect, rConfig.id, nullptr);
-        const int range = FinalizeResolvedStat(
-            ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision),
-            nullptr)
-                .total);
+        const std::vector<ActiveEffect_t> visionEffects{active};
+        const double vision =
+            ResolveStatModifiers(visionEffects, SeedFor(StatId_t::Vision), nullptr).total;
+        const int range = FinalizeResolvedStat(vision);
         sight = std::max(sight, range);
     }
     return sight;

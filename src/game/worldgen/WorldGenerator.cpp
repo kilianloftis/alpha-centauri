@@ -234,7 +234,7 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     std::vector<Tile*> candidates;
     for (auto& pTile : rWorld.GetTiles())
     {
-        if (pTile && !pTile->GetHasAquifer() && CanBuildImprovement(*pTile, rAquifer))
+        if (pTile && !pTile->GetHasAquifer() && CanBuildImprovement(*pTile, rAquifer, {}, {}))
         {
             candidates.push_back(pTile.get());
         }

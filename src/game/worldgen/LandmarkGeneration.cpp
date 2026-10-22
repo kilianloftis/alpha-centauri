@@ -172,7 +172,7 @@ bool TryStamp_(WorldMap& rWorld,
         {
             return false;
         }
-        if (!CanBuildImprovement(*pTile, rOccupant))
+        if (!CanBuildImprovement(*pTile, rOccupant, {}, {}))
         {
             return false;
         }

@@ -382,7 +382,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     REQUIRE(farm);
     REQUIRE(farm->pPlaces);
     const std::vector<std::string> farmRemoves =
-        ImprovementsDisplacedBy(rFarmTile, *farm->pPlaces);
+        ImprovementsDisplacedBy(rFarmTile, *farm->pPlaces, {});
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Forest") != farmRemoves.end());
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Road") == farmRemoves.end());
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Nutrients") == farmRemoves.end());

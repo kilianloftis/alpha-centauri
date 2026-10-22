@@ -326,7 +326,7 @@ TEST_CASE("Assignment is refused outside the workable set and for non-workers", 
 
     // A non-empty claim handed to a pop that cannot work tiles is a hard error.
     Pop doctor(*fixture.popTypes().Find("Doctor"));
-    WorkedTileClaim claim = fixture.map.GetWorkedTiles().TryClaim(fixture.At(8, 2), false);
+    WorkedTileClaim claim = fixture.map.GetWorkedTiles().TryClaim(fixture.At(8, 2), false, {});
     REQUIRE(claim.GetTile() != nullptr);
     CHECK_THROWS_AS(doctor.SetTileClaim(std::move(claim)), std::logic_error);
 }
