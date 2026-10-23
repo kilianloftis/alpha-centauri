@@ -1008,252 +1008,201 @@ double RequireNumber(const nlohmann::json& parameters, const std::string& key)
     return ParseNumber(parameters, key, 0.0);
 }
 
+namespace
+{
+
+// A required non-empty string at rKey; rWhat names the condition in the error.
+std::string RequireConditionString_(const nlohmann::json& rJson, const char* pKey,
+                                    const std::string& rWhat)
+{
+    if (!rJson.contains(pKey) || !rJson.at(pKey).is_string()
+        || rJson.at(pKey).get<std::string>().empty())
+    {
+        throw std::runtime_error(rWhat + " condition requires a non-empty '" + pKey + "'");
+    }
+    return rJson.at(pKey).get<std::string>();
+}
+
+// An optional boolean at rKey, bDefault when absent.
+bool OptionalConditionBool_(const nlohmann::json& rJson, const char* pKey, bool bDefault,
+                            const std::string& rWhat)
+{
+    if (!rJson.contains(pKey))
+    {
+        return bDefault;
+    }
+    if (!rJson.at(pKey).is_boolean())
+    {
+        throw std::runtime_error(rWhat + " condition '" + pKey + "' must be a boolean");
+    }
+    return rJson.at(pKey).get<bool>();
+}
+
+std::vector<UnitDomain_t> ParseConditionDomains_(const nlohmann::json& rJson,
+                                                 const std::string& rWhat)
+{
+    if (!rJson.contains("domains") || !rJson.at("domains").is_array()
+        || rJson.at("domains").empty())
+    {
+        throw std::runtime_error(rWhat + " condition requires a non-empty 'domains' array");
+    }
+    std::vector<UnitDomain_t> domains;
+    for (const nlohmann::json& rDomain : rJson.at("domains"))
+    {
+        if (!rDomain.is_string())
+        {
+            throw std::runtime_error(rWhat + " condition domains must be strings");
+        }
+        domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+    }
+    return domains;
+}
+
+// "values" desugars to TargetTileHas; "conditions" nests any condition. At least one is given.
+std::vector<Condition_t> ParseNestedConditions_(const nlohmann::json& rJson,
+                                                const std::string& rWhat)
+{
+    const auto nonEmptyArray = [&rJson](const char* pKey) {
+        return rJson.contains(pKey) && rJson.at(pKey).is_array() && !rJson.at(pKey).empty();
+    };
+    const bool bHasValues = nonEmptyArray("values");
+    const bool bHasConditions = nonEmptyArray("conditions");
+    if (!bHasValues && !bHasConditions)
+    {
+        throw std::runtime_error(
+            rWhat + " condition requires a non-empty 'values' and/or 'conditions' array");
+    }
+    std::vector<Condition_t> nested;
+    if (bHasValues)
+    {
+        for (const nlohmann::json& rValue : rJson.at("values"))
+        {
+            if (!rValue.is_string() || rValue.get<std::string>().empty())
+            {
+                throw std::runtime_error(rWhat + " condition values must be non-empty strings");
+            }
+            nested.push_back(TargetTileHas_t{rValue.get<std::string>()});
+        }
+    }
+    if (bHasConditions)
+    {
+        for (const nlohmann::json& rNested : rJson.at("conditions"))
+        {
+            nested.push_back(ParseCondition(rNested));
+        }
+    }
+    return nested;
+}
+
+Condition_t ParseSocialRatingCondition_(const nlohmann::json& rJson)
+{
+    const std::string rating = RequireConditionString_(rJson, "rating", "SocialRating");
+    const auto op = magic_enum::enum_cast<CompareOp_t>(rJson.value("op", ""));
+    if (!op.has_value())
+    {
+        throw std::runtime_error("SocialRating condition 'op' must be Eq, Le, or Ge");
+    }
+    if (!rJson.contains("value") || !rJson.at("value").is_number_integer())
+    {
+        throw std::runtime_error("SocialRating condition requires an integer 'value'");
+    }
+    return SocialRating_t{ParseSocialRatingId(rating), *op, rJson.at("value").get<int>()};
+}
+
+Condition_t ParseTargetTileHasCondition_(const nlohmann::json& rJson)
+{
+    const std::string featureId = RequireConditionString_(rJson, "value", "TargetTileHas");
+    const bool bPresent = OptionalConditionBool_(rJson, "present", true, "TargetTileHas");
+    return TargetTileHas_t{featureId, bPresent};
+}
+
+using ParseConditionFn_ = Condition_t (*)(const nlohmann::json& rJson);
+
+const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
+{
+    static const std::unordered_map<std::string, ParseConditionFn_> k_Parsers = {
+        {"IsDefending",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return IsDefending_t{OptionalConditionBool_(rJson, "value", true, "IsDefending")};
+         }},
+        {"IsInCombat", [](const nlohmann::json&) -> Condition_t { return IsInCombat_t{}; }},
+        {"OriginBaseIsHomeBase",
+         [](const nlohmann::json&) -> Condition_t { return OriginBaseIsHomeBase_t{}; }},
+        {"SubjectIsOnOriginBase",
+         [](const nlohmann::json&) -> Condition_t { return SubjectIsOnOriginBase_t{}; }},
+        {"SocialRating", ParseSocialRatingCondition_},
+        {"OriginBaseHasBuilding",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             const std::string what = "OriginBaseHasBuilding";
+             return OriginBaseHasBuilding_t{RequireConditionString_(rJson, "building", what),
+                                            OptionalConditionBool_(rJson, "value", true, what)};
+         }},
+        {"AttackerIsEmbarked",
+         [](const nlohmann::json&) -> Condition_t { return AttackerIsEmbarked_t{}; }},
+        {"HasAirdroppedThisTurn",
+         [](const nlohmann::json&) -> Condition_t { return HasAirdroppedThisTurn_t{}; }},
+        {"AttackerDomain",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return AttackerDomain_t{ParseConditionDomains_(rJson, "AttackerDomain")};
+         }},
+        {"DefenderDomain",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return DefenderDomain_t{ParseConditionDomains_(rJson, "DefenderDomain")};
+         }},
+        {"IsHeadquarters", [](const nlohmann::json&) -> Condition_t { return IsHeadquarters_t{}; }},
+        {"SubjectDomain",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return SubjectDomain_t{
+                 ParseUnitDomain(RequireConditionString_(rJson, "domain", "SubjectDomain"))};
+         }},
+        {"HasComponent",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return HasComponent_t{RequireConditionString_(rJson, "component", "HasComponent")};
+         }},
+        {"SubjectDesign",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return SubjectDesign_t{RequireConditionString_(rJson, "design", "SubjectDesign")};
+         }},
+        {"HasFlag",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return HasFlag_t{ParseRuleFlagId(RequireConditionString_(rJson, "flag", "HasFlag"))};
+         }},
+        {"IsPrototype", [](const nlohmann::json&) -> Condition_t { return IsPrototype_t{}; }},
+        {"IsCombatUnit", [](const nlohmann::json&) -> Condition_t { return IsCombatUnit_t{}; }},
+        {"IsNativeLife",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return IsNativeLife_t{OptionalConditionBool_(rJson, "value", true, "IsNativeLife")};
+         }},
+        {"BaseHasBuilding",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return BaseHasBuilding_t{
+                 RequireConditionString_(rJson, "building", "BaseHasBuilding")};
+         }},
+        {"AllOf",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return AllOf_t{ParseNestedConditions_(rJson, "AllOf")};
+         }},
+        {"AnyOf",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return AnyOf_t{ParseNestedConditions_(rJson, "AnyOf")};
+         }},
+        {"TargetTileHas", ParseTargetTileHasCondition_},
+    };
+    return k_Parsers;
+}
+
+} // namespace
+
 Condition_t ParseCondition(const nlohmann::json& conditionJson)
 {
-    const std::string kindStr = conditionJson.value("kind", "");
-    if (kindStr == "IsDefending")
+    const std::string kind = RequireConditionString_(conditionJson, "kind", "Every");
+    const auto& rParsers = ConditionParsers_();
+    const auto it = rParsers.find(kind);
+    if (it == rParsers.end())
     {
-        IsDefending_t defending;
-        if (conditionJson.contains("value"))
-        {
-            if (!conditionJson.at("value").is_boolean())
-            {
-                throw std::runtime_error("IsDefending condition 'value' must be a boolean");
-            }
-            defending.bMatches = conditionJson.at("value").get<bool>();
-        }
-        return defending;
+        throw std::runtime_error("Unknown condition kind: '" + kind + "'");
     }
-    if (kindStr == "IsInCombat")
-    {
-        return IsInCombat_t{};
-    }
-    if (kindStr == "OriginBaseIsHomeBase")
-    {
-        return OriginBaseIsHomeBase_t{};
-    }
-    if (kindStr == "SubjectIsOnOriginBase")
-    {
-        return SubjectIsOnOriginBase_t{};
-    }
-    if (kindStr == "SocialRating")
-    {
-        const std::string ratingStr = conditionJson.value("rating", "");
-        if (ratingStr.empty())
-        {
-            throw std::runtime_error("SocialRating condition requires a non-empty 'rating'");
-        }
-        const std::string opStr = conditionJson.value("op", "");
-        const auto op = magic_enum::enum_cast<CompareOp_t>(opStr);
-        if (!op.has_value())
-        {
-            throw std::runtime_error("SocialRating condition 'op' must be Eq, Le, or Ge");
-        }
-        if (!conditionJson.contains("value") || !conditionJson.at("value").is_number_integer())
-        {
-            throw std::runtime_error("SocialRating condition requires an integer 'value'");
-        }
-        return SocialRating_t{ParseSocialRatingId(ratingStr), *op,
-                              conditionJson.at("value").get<int>()};
-    }
-    if (kindStr == "OriginBaseHasBuilding")
-    {
-        const std::string buildingId = conditionJson.value("building", "");
-        if (buildingId.empty())
-        {
-            throw std::runtime_error(
-                "OriginBaseHasBuilding condition requires a non-empty 'building' id");
-        }
-        OriginBaseHasBuilding_t hasBuilding{buildingId};
-        if (conditionJson.contains("value"))
-        {
-            if (!conditionJson.at("value").is_boolean())
-            {
-                throw std::runtime_error(
-                    "OriginBaseHasBuilding condition 'value' must be a boolean");
-            }
-            hasBuilding.bPresent = conditionJson.at("value").get<bool>();
-        }
-        return hasBuilding;
-    }
-    if (kindStr == "AttackerIsEmbarked")
-    {
-        return AttackerIsEmbarked_t{};
-    }
-    if (kindStr == "HasAirdroppedThisTurn")
-    {
-        return HasAirdroppedThisTurn_t{};
-    }
-    if (kindStr == "AttackerDomain")
-    {
-        if (!conditionJson.contains("domains") || !conditionJson.at("domains").is_array()
-            || conditionJson.at("domains").empty())
-        {
-            throw std::runtime_error(
-                "AttackerDomain condition requires a non-empty 'domains' array");
-        }
-        AttackerDomain_t attackerDomain;
-        for (const auto& rDomain : conditionJson.at("domains"))
-        {
-            if (!rDomain.is_string())
-            {
-                throw std::runtime_error(
-                    "AttackerDomain condition domains must be strings");
-            }
-            const std::string domain = rDomain.get<std::string>();
-            attackerDomain.domains.push_back(ParseUnitDomain(domain));
-        }
-        return attackerDomain;
-    }
-    if (kindStr == "DefenderDomain")
-    {
-        if (!conditionJson.contains("domains") || !conditionJson.at("domains").is_array()
-            || conditionJson.at("domains").empty())
-        {
-            throw std::runtime_error(
-                "DefenderDomain condition requires a non-empty 'domains' array");
-        }
-        DefenderDomain_t defenderDomain;
-        for (const auto& rDomain : conditionJson.at("domains"))
-        {
-            if (!rDomain.is_string())
-            {
-                throw std::runtime_error(
-                    "DefenderDomain condition domains must be strings");
-            }
-            const std::string domain = rDomain.get<std::string>();
-            defenderDomain.domains.push_back(ParseUnitDomain(domain));
-        }
-        return defenderDomain;
-    }
-    if (kindStr == "IsHeadquarters")
-    {
-        return IsHeadquarters_t{};
-    }
-    if (kindStr == "SubjectDomain")
-    {
-        const std::string domainStr = conditionJson.value("domain", "");
-        if (domainStr.empty())
-        {
-            throw std::runtime_error("SubjectDomain condition requires a non-empty 'domain'");
-        }
-        return SubjectDomain_t{ParseUnitDomain(domainStr)};
-    }
-    if (kindStr == "HasComponent")
-    {
-        const std::string componentId = conditionJson.value("component", "");
-        if (componentId.empty())
-        {
-            throw std::runtime_error(
-                "HasComponent condition requires a non-empty 'component' id");
-        }
-        return HasComponent_t{componentId};
-    }
-    if (kindStr == "SubjectDesign")
-    {
-        const std::string designId = conditionJson.value("design", "");
-        if (designId.empty())
-        {
-            throw std::runtime_error(
-                "SubjectDesign condition requires a non-empty 'design' id");
-        }
-        return SubjectDesign_t{designId};
-    }
-    if (kindStr == "HasFlag")
-    {
-        const std::string flagId = conditionJson.value("flag", "");
-        if (flagId.empty())
-        {
-            throw std::runtime_error("HasFlag condition requires a non-empty 'flag' id");
-        }
-        return HasFlag_t{ParseRuleFlagId(flagId)};
-    }
-    if (kindStr == "IsPrototype")
-    {
-        return IsPrototype_t{};
-    }
-    if (kindStr == "IsCombatUnit")
-    {
-        return IsCombatUnit_t{};
-    }
-    if (kindStr == "IsNativeLife")
-    {
-        IsNativeLife_t native;
-        if (conditionJson.contains("value"))
-        {
-            if (!conditionJson.at("value").is_boolean())
-            {
-                throw std::runtime_error("IsNativeLife condition 'value' must be a boolean");
-            }
-            native.bMatches = conditionJson.at("value").get<bool>();
-        }
-        return native;
-    }
-    if (kindStr == "BaseHasBuilding")
-    {
-        const std::string buildingId = conditionJson.value("building", "");
-        if (buildingId.empty())
-        {
-            throw std::runtime_error(
-                "BaseHasBuilding condition requires a non-empty 'building' id");
-        }
-        return BaseHasBuilding_t{buildingId};
-    }
-    if (kindStr == "AllOf" || kindStr == "AnyOf")
-    {
-        const bool bHasValues = conditionJson.contains("values")
-            && conditionJson.at("values").is_array()
-            && !conditionJson.at("values").empty();
-        const bool bHasConditions = conditionJson.contains("conditions")
-            && conditionJson.at("conditions").is_array()
-            && !conditionJson.at("conditions").empty();
-        if (!bHasValues && !bHasConditions)
-        {
-            throw std::runtime_error(
-                kindStr + " condition requires a non-empty 'values' and/or 'conditions' array");
-        }
-
-        std::vector<Condition_t> nested;
-        if (bHasValues)
-        {
-            for (const auto& rValue : conditionJson.at("values"))
-            {
-                if (!rValue.is_string() || rValue.get<std::string>().empty())
-                {
-                    throw std::runtime_error(kindStr
-                                             + " condition values must be non-empty strings");
-                }
-                nested.push_back(TargetTileHas_t{rValue.get<std::string>()});
-            }
-        }
-        if (bHasConditions)
-        {
-            for (const auto& rNested : conditionJson.at("conditions"))
-            {
-                nested.push_back(ParseCondition(rNested));
-            }
-        }
-        if (kindStr == "AllOf")
-        {
-            return AllOf_t{std::move(nested)};
-        }
-        return AnyOf_t{std::move(nested)};
-    }
-    if (kindStr == "TargetTileHas")
-    {
-        const std::string featureId = conditionJson.value("value", "");
-        if (featureId.empty())
-        {
-            throw std::runtime_error("Condition requires a non-empty 'value'");
-        }
-        if (conditionJson.contains("present") && !conditionJson.at("present").is_boolean())
-        {
-            throw std::runtime_error("TargetTileHas 'present' must be a boolean");
-        }
-        return TargetTileHas_t{featureId, conditionJson.value("present", true)};
-    }
-
-    throw std::runtime_error("Unknown condition kind: '" + kindStr + "'");
+    return it->second(conditionJson);
 }
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
