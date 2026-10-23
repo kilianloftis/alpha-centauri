@@ -161,97 +161,88 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     }
 }
 
+namespace
+{
+
+// The context member an amount source reads, or a throw naming the source and the member.
+template <typename T>
+const T& RequireSubject_(const T* pSubject, const char* pSource, const char* pMember)
+{
+    if (!pSubject)
+    {
+        throw std::runtime_error(std::string("AmountSourceValue: ") + pSource + " requires "
+                                 + pMember);
+    }
+    return *pSubject;
+}
+
+// A rating missing from the table contributes nothing.
+double SocialRatingAmount_(const StatModifierEffect_t& rMod, const Unit& rUnit)
+{
+    const StatModifierEffect_t::AmountSourceSpec_t& rSource = *rMod.amountSource;
+    if (!rSource.amounts.has_value())
+    {
+        throw std::runtime_error("AmountSourceValue: SocialRating requires amounts");
+    }
+    const auto& rSocial = rUnit.GetFaction().GetSocialEngineering();
+    const int rating = rSocial.GetSocialRating(rSource.rating);
+    const auto it = rSource.amounts->find(rating);
+    return it == rSource.amounts->end() ? 0.0 : it->second;
+}
+
+double LevelsAboveOpponentAmount_(double scale, const Unit& rUnit, const Unit& rOpponent)
+{
+    const int referenceMeters = rUnit.GetTile().MapRules().referenceLevelMeters;
+    if (referenceMeters <= 0)
+    {
+        throw std::runtime_error("AmountSourceValue: reference_level_meters must be > 0");
+    }
+    const int metersAbove = rUnit.GetTile().GetElevation() - rOpponent.GetTile().GetElevation();
+    const int levelsAbove = std::max(0, metersAbove) / referenceMeters;
+    return scale * static_cast<double>(levelsAbove);
+}
+
+} // namespace
+
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
 {
     if (!rMod.amountSource.has_value())
     {
         return rMod.amount;
     }
-    switch (rMod.amountSource->kind)
+    using Source_t = StatModifierEffect_t::AmountSource_t;
+    const EffectContext_t noContext{};
+    const EffectContext_t& rCtx = pCtx ? *pCtx : noContext;
+    const Source_t kind = rMod.amountSource->kind;
+    switch (kind)
     {
-        case StatModifierEffect_t::AmountSource_t::SocialRating:
-        {
-            if (!pCtx || !pCtx->pUnit)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: SocialRating requires pUnit");
-            }
-            const auto& rSocial = pCtx->pUnit->GetFaction().GetSocialEngineering();
-            const int rating = rSocial.GetSocialRating(rMod.amountSource->rating);
-            if (!rMod.amountSource->amounts.has_value())
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: SocialRating requires amounts");
-            }
-            const auto it = rMod.amountSource->amounts->find(rating);
-            if (it == rMod.amountSource->amounts->end())
-            {
-                return 0.0;
-            }
-            return it->second;
-        }
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
-            if (!pCtx || !pCtx->targetTile || !pCtx->pTileYieldRules)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: ElevationEnergy requires targetTile and pTileYieldRules");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->targetTile,
-                                     *pCtx->pTileYieldRules);
-        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
-            if (!pCtx || !pCtx->pStockpile)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: MineralsConverted requires pStockpile");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pStockpile);
-        case StatModifierEffect_t::AmountSource_t::BaseSize:
-            if (!pCtx || !pCtx->pBase)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: BaseSize requires pBase");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pBase);
-        case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
-            if (!pCtx || !pCtx->pBase)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: BuildingUpkeep requires pBase");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pBase);
-        case StatModifierEffect_t::AmountSource_t::BasesOwned:
-            if (!pCtx || !pCtx->pFaction)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: BasesOwned requires pFaction");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pFaction);
-        case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
-            if (!pCtx || !pCtx->pUnit)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: IntrinsicXp requires pUnit");
-            }
-            return AmountSourceValue(rMod.amountSource->kind, rMod.amount, *pCtx->pUnit);
-        case StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent:
-        {
-            const Unit* pOther = pCtx ? OpposingCombatant_(*pCtx) : nullptr;
-            if (!pCtx || !pCtx->pUnit || !pOther)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: LevelsAboveOpponent requires both combatants");
-            }
-            const int referenceMeters = pCtx->pUnit->GetTile().MapRules().referenceLevelMeters;
-            if (referenceMeters <= 0)
-            {
-                throw std::runtime_error(
-                    "AmountSourceValue: reference_level_meters must be > 0");
-            }
-            const int levelsAbove = std::max(
-                0, pCtx->pUnit->GetTile().GetElevation() - pOther->GetTile().GetElevation())
-                / referenceMeters;
-            return rMod.amount * static_cast<double>(levelsAbove);
-        }
+        case Source_t::SocialRating:
+            return SocialRatingAmount_(rMod, RequireSubject_(rCtx.pUnit, "SocialRating", "pUnit"));
+        case Source_t::ElevationEnergy:
+            return AmountSourceValue(
+                kind, rMod.amount,
+                RequireSubject_(rCtx.targetTile, "ElevationEnergy", "targetTile"),
+                RequireSubject_(rCtx.pTileYieldRules, "ElevationEnergy", "pTileYieldRules"));
+        case Source_t::MineralsConverted:
+            return AmountSourceValue(
+                kind, rMod.amount,
+                RequireSubject_(rCtx.pStockpile, "MineralsConverted", "pStockpile"));
+        case Source_t::BaseSize:
+            return AmountSourceValue(kind, rMod.amount,
+                                     RequireSubject_(rCtx.pBase, "BaseSize", "pBase"));
+        case Source_t::BuildingUpkeep:
+            return AmountSourceValue(kind, rMod.amount,
+                                     RequireSubject_(rCtx.pBase, "BuildingUpkeep", "pBase"));
+        case Source_t::BasesOwned:
+            return AmountSourceValue(kind, rMod.amount,
+                                     RequireSubject_(rCtx.pFaction, "BasesOwned", "pFaction"));
+        case Source_t::IntrinsicXp:
+            return AmountSourceValue(kind, rMod.amount,
+                                     RequireSubject_(rCtx.pUnit, "IntrinsicXp", "pUnit"));
+        case Source_t::LevelsAboveOpponent:
+            return LevelsAboveOpponentAmount_(
+                rMod.amount, RequireSubject_(rCtx.pUnit, "LevelsAboveOpponent", "pUnit"),
+                RequireSubject_(OpposingCombatant_(rCtx), "LevelsAboveOpponent", "an opponent"));
     }
     throw std::runtime_error("AmountSourceValue: unknown amount_source");
 }
@@ -542,181 +533,169 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return std::max(std::min(result, maxClamp), minClamp);
 }
 
+namespace
+{
+
+// The unit's domain is one of rDomains; an empty list matches nothing.
+bool DomainListed_(const std::vector<UnitDomain_t>& rDomains, const Unit* pUnit)
+{
+    return pUnit != nullptr && std::ranges::contains(rDomains, pUnit->GetDomain());
+}
+
+// Exhaustive over Condition_t: a new alternative without an arm fails to compile.
+struct ConditionEvaluator_
+{
+    const EffectContext_t& ctx;
+    const BaseManager* pOriginBase;
+
+    bool Holds(const Condition_t& rCondition) const
+    {
+        return std::visit(*this, rCondition.AsVariant());
+    }
+
+    // Fails closed without a tile, whichever polarity was authored.
+    bool operator()(const TargetTileHas_t& rHas) const
+    {
+        return ctx.targetTile != nullptr
+            && ctx.targetTile->HasFeature(rHas.featureId) == rHas.bPresent;
+    }
+
+    bool operator()(const IsDefending_t& rDefending) const
+    {
+        const CombatRole_t wanted =
+            rDefending.bMatches ? CombatRole_t::Defender : CombatRole_t::Attacker;
+        return ctx.combatRole == wanted;
+    }
+
+    bool operator()(const IsInCombat_t&) const
+    {
+        return ctx.combatRole == CombatRole_t::Attacker
+            || ctx.combatRole == CombatRole_t::Defender;
+    }
+
+    bool operator()(const OriginBaseIsHomeBase_t&) const
+    {
+        return pOriginBase != nullptr && ctx.pUnit != nullptr
+            && ctx.pUnit->GetHomeBase() == pOriginBase;
+    }
+
+    bool operator()(const SubjectIsOnOriginBase_t&) const
+    {
+        return pOriginBase != nullptr && ctx.pUnit != nullptr
+            && &ctx.pUnit->GetTile() == &pOriginBase->GetTile();
+    }
+
+    bool operator()(const SocialRating_t& rRating) const
+    {
+        if (ctx.pUnit == nullptr)
+        {
+            return false;
+        }
+        const auto& rSocial = ctx.pUnit->GetFaction().GetSocialEngineering();
+        const int rating = rSocial.GetSocialRating(rRating.rating);
+        return CompareSatisfied(rating, rRating.op, rRating.value);
+    }
+
+    bool operator()(const OriginBaseHasBuilding_t& rHas) const
+    {
+        if (pOriginBase == nullptr)
+        {
+            return false;
+        }
+        const bool bHas =
+            pOriginBase->GetBuildingManager().FindBuilding(rHas.buildingId) != nullptr;
+        return bHas == rHas.bPresent;
+    }
+
+    bool operator()(const AttackerIsEmbarked_t&) const
+    {
+        return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
+    }
+
+    bool operator()(const HasAirdroppedThisTurn_t&) const
+    {
+        const Unit* pSubject = ctx.pUnit != nullptr ? ctx.pUnit : ctx.pAttacker;
+        return pSubject != nullptr && pSubject->HasAirdroppedThisTurn();
+    }
+
+    bool operator()(const AttackerDomain_t& rDomain) const
+    {
+        return DomainListed_(rDomain.domains, ctx.pAttacker);
+    }
+
+    bool operator()(const DefenderDomain_t& rDomain) const
+    {
+        return DomainListed_(rDomain.domains, ctx.pDefender);
+    }
+
+    bool operator()(const IsHeadquarters_t&) const
+    {
+        return ctx.pBase != nullptr && ResolveFlag(*ctx.pBase, RuleFlagId_t::Headquarters);
+    }
+
+    bool operator()(const SubjectDomain_t& rDomain) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->GetDomain() == rDomain.domain;
+    }
+
+    bool operator()(const HasComponent_t& rHas) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().HasComponent(rHas.component);
+    }
+
+    bool operator()(const SubjectDesign_t& rDesign) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().GetId() == rDesign.designId;
+    }
+
+    // IDesign-only: avoid CollectLiveUnitEffects recursion while building that list.
+    bool operator()(const HasFlag_t& rHas) const
+    {
+        return ctx.pUnit != nullptr && ResolveFlag(ctx.pUnit->GetDesign(), rHas.flag);
+    }
+
+    bool operator()(const IsPrototype_t&) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->IsPrototype();
+    }
+
+    bool operator()(const IsCombatUnit_t&) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsCombatUnit();
+    }
+
+    bool operator()(const IsNativeLife_t& rNative) const
+    {
+        return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsNativeLife() == rNative.bMatches;
+    }
+
+    bool operator()(const BaseHasBuilding_t& rHas) const
+    {
+        return ctx.pBase != nullptr
+            && ctx.pBase->GetBuildingManager().FindBuilding(rHas.buildingId) != nullptr;
+    }
+
+    // An empty AllOf holds nothing, not everything.
+    bool operator()(const AllOf_t& rAll) const
+    {
+        return !rAll.conditions.empty()
+            && std::ranges::all_of(rAll.conditions,
+                                   [this](const Condition_t& rNested) { return Holds(rNested); });
+    }
+
+    bool operator()(const AnyOf_t& rAny) const
+    {
+        return std::ranges::any_of(rAny.conditions,
+                                   [this](const Condition_t& rNested) { return Holds(rNested); });
+    }
+};
+
+} // namespace
+
 bool ConditionSatisfied(const Condition_t& condition, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase)
 {
-    return std::visit(
-        [&](const auto& rAlt) -> bool
-        {
-            using T = std::decay_t<decltype(rAlt)>;
-            if constexpr (std::is_same_v<T, TargetTileHas_t>)
-            {
-                // Fails closed without a tile, whichever polarity was authored.
-                if (ctx.targetTile == nullptr)
-                {
-                    return false;
-                }
-                return ctx.targetTile->HasFeature(rAlt.featureId) == rAlt.bPresent;
-            }
-            else if constexpr (std::is_same_v<T, IsDefending_t>)
-            {
-                if (rAlt.bMatches)
-                {
-                    return ctx.combatRole == CombatRole_t::Defender;
-                }
-                return ctx.combatRole == CombatRole_t::Attacker;
-            }
-            else if constexpr (std::is_same_v<T, IsInCombat_t>)
-            {
-                return ctx.combatRole == CombatRole_t::Attacker
-                    || ctx.combatRole == CombatRole_t::Defender;
-            }
-            else if constexpr (std::is_same_v<T, OriginBaseIsHomeBase_t>)
-            {
-                return pOriginBase != nullptr && ctx.pUnit != nullptr
-                    && ctx.pUnit->GetHomeBase() == pOriginBase;
-            }
-            else if constexpr (std::is_same_v<T, SubjectIsOnOriginBase_t>)
-            {
-                return pOriginBase != nullptr && ctx.pUnit != nullptr
-                    && &ctx.pUnit->GetTile() == &pOriginBase->GetTile();
-            }
-            else if constexpr (std::is_same_v<T, SocialRating_t>)
-            {
-                if (ctx.pUnit == nullptr)
-                {
-                    return false;
-                }
-                const auto& rSocial = ctx.pUnit->GetFaction().GetSocialEngineering();
-                const int rating = rSocial.GetSocialRating(rAlt.rating);
-                return CompareSatisfied(rating, rAlt.op, rAlt.value);
-            }
-            else if constexpr (std::is_same_v<T, OriginBaseHasBuilding_t>)
-            {
-                if (pOriginBase == nullptr)
-                {
-                    return false;
-                }
-                const bool bHas =
-                    pOriginBase->GetBuildingManager().FindBuilding(rAlt.buildingId) != nullptr;
-                return bHas == rAlt.bPresent;
-            }
-            else if constexpr (std::is_same_v<T, AttackerIsEmbarked_t>)
-            {
-                return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
-            }
-            else if constexpr (std::is_same_v<T, HasAirdroppedThisTurn_t>)
-            {
-                const Unit* pSubject = ctx.pUnit != nullptr ? ctx.pUnit : ctx.pAttacker;
-                return pSubject != nullptr && pSubject->HasAirdroppedThisTurn();
-            }
-            else if constexpr (std::is_same_v<T, AttackerDomain_t>)
-            {
-                if (ctx.pAttacker == nullptr || rAlt.domains.empty())
-                {
-                    return false;
-                }
-                const UnitDomain_t domain = ctx.pAttacker->GetDomain();
-                for (UnitDomain_t allowed : rAlt.domains)
-                {
-                    if (allowed == domain)
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if constexpr (std::is_same_v<T, DefenderDomain_t>)
-            {
-                if (ctx.pDefender == nullptr || rAlt.domains.empty())
-                {
-                    return false;
-                }
-                const UnitDomain_t domain = ctx.pDefender->GetDomain();
-                for (UnitDomain_t allowed : rAlt.domains)
-                {
-                    if (allowed == domain)
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
-            {
-                return ctx.pBase != nullptr
-                    && ResolveFlag(*ctx.pBase, RuleFlagId_t::Headquarters);
-            }
-            else if constexpr (std::is_same_v<T, SubjectDomain_t>)
-            {
-                return ctx.pUnit != nullptr && ctx.pUnit->GetDomain() == rAlt.domain;
-            }
-            else if constexpr (std::is_same_v<T, HasComponent_t>)
-            {
-                return ctx.pUnit != nullptr
-                    && ctx.pUnit->GetDesign().HasComponent(rAlt.component);
-            }
-            else if constexpr (std::is_same_v<T, SubjectDesign_t>)
-            {
-                return ctx.pUnit != nullptr
-                    && ctx.pUnit->GetDesign().GetId() == rAlt.designId;
-            }
-            else if constexpr (std::is_same_v<T, HasFlag_t>)
-            {
-                // IDesign-only: avoid CollectLiveUnitEffects recursion while building that list.
-                return ctx.pUnit != nullptr
-                    && ResolveFlag(ctx.pUnit->GetDesign(), rAlt.flag);
-            }
-            else if constexpr (std::is_same_v<T, IsPrototype_t>)
-            {
-                return ctx.pUnit != nullptr && ctx.pUnit->IsPrototype();
-            }
-            else if constexpr (std::is_same_v<T, IsCombatUnit_t>)
-            {
-                return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsCombatUnit();
-            }
-            else if constexpr (std::is_same_v<T, IsNativeLife_t>)
-            {
-                return ctx.pUnit != nullptr
-                    && ctx.pUnit->GetDesign().IsNativeLife() == rAlt.bMatches;
-            }
-            else if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
-            {
-                return ctx.pBase != nullptr
-                    && ctx.pBase->GetBuildingManager().FindBuilding(rAlt.buildingId) != nullptr;
-            }
-            else if constexpr (std::is_same_v<T, AllOf_t>)
-            {
-                if (rAlt.conditions.empty())
-                {
-                    return false;
-                }
-                for (const Condition_t& rNested : rAlt.conditions)
-                {
-                    if (!ConditionSatisfied(rNested, ctx, pOriginBase))
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, AnyOf_t>)
-            {
-                for (const Condition_t& rNested : rAlt.conditions)
-                {
-                    if (ConditionSatisfied(rNested, ctx, pOriginBase))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            else
-            {
-                static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
-            }
-        },
-        condition.AsVariant());
+    return ConditionEvaluator_{ctx, pOriginBase}.Holds(condition);
 }
 
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
