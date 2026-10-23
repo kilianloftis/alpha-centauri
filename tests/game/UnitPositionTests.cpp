@@ -197,79 +197,6 @@ TEST_CASE("GetUnitsOnTile is occupants-only; cargo needs GetCargoOnTile", "[unit
     REQUIRE(fixture.map.GetAllUnitsOnTile(fixture.At(9, 9)).size() == 2);
 }
 
-TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied tiles",
-          "[unit][index]")
-{
-    FactionFixture fixture;
-    fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
-    Faction& faction = fixture.MakeFaction();
-    MovementHarness_ move(fixture);
-
-    for (auto& pTile : fixture.map.GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-
-    Unit& blocker = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
-    CHECK_THROWS_AS(fixture.MakeUnit(faction, 8, 8, {"test_chassis"}), std::runtime_error);
-    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
-
-    Unit& mover = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
-    CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(8, 8)));
-    CHECK(&mover.GetTile() == &fixture.At(9, 9));
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).size() == 1);
-
-    // Moving onto the tile the unit already occupies is a no-op.
-    fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(9, 9));
-    CHECK(&mover.GetTile() == &fixture.At(9, 9));
-
-    // The index refuses the illegal move itself, not just the planner. A caller that skips the
-    // step check can no longer overstack behind its back — which is what made the old
-    // file-scope flag an incomplete fix.
-    CHECK_THROWS_AS(fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(8, 8)),
-                    std::logic_error);
-    CHECK(&mover.GetTile() == &fixture.At(9, 9));
-
-    // Destroying the blocker frees the tile.
-    faction.GetUnitManager().DestroyUnit(blocker);
-    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
-    MoveOrder_t stepOrder{&fixture.At(8, 8)};
-    REQUIRE(move.orders.TryStep(mover, fixture.At(8, 8), stepOrder).bEntered);
-    CHECK(&mover.GetTile() == &fixture.At(8, 8));
-}
-
-TEST_CASE("A loaded carrier moves under the stacking rule", "[unit][index][transport]")
-{
-    // The embarked exemption in MoveUnit is load-bearing: cargo is towed by a recursive
-    // MoveUnit onto the tile the carrier just took, so without the exemption every loaded move
-    // would throw. Delete `!rUnit.IsEmbarked()` and this is the test that catches it.
-    FactionFixture fixture;
-    Faction& faction = fixture.MakeFaction();
-    for (auto& pTile : fixture.map.GetTiles())
-    {
-        pTile->SetElevation(-10); // all sea, so the transport can move
-    }
-
-    // Load first: under the strict rule the passenger could not be *created* beside the
-    // carrier, since it is not cargo yet. (That tension is inherent to the rule, not to this
-    // change — boarding in the shipped game happens by stepping onto the carrier's tile.)
-    Unit& transport = fixture.MakeUnit(faction, 8, 8, {"test_sea_chassis", "test_transport"});
-    Unit& cargo = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
-    cargo.EmbarkInto(transport);
-    REQUIRE(cargo.IsEmbarked());
-
-    fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
-
-    // Two units share (4,4) legally — the passenger is not an independent occupant.
-    CHECK_NOTHROW(fixture.map.GetUnitPositions().MoveUnit(transport, fixture.At(9, 9)));
-    CHECK(&transport.GetTile() == &fixture.At(9, 9));
-    CHECK(&cargo.GetTile() == &fixture.At(9, 9));
-
-    // ...and the tile they left is free again, while the one they took is not.
-    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(8, 8)));
-    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(9, 9)));
-}
-
 TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transport]")
 {
     // These invariants used to be documented as caller duties, so one missed call site could
@@ -303,23 +230,3 @@ TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transp
     CHECK(transport.GetCargo().size() == 1);
 }
 
-TEST_CASE("The stacking rule is per world, not per process", "[unit][index]")
-{
-    // It used to be a file-scope global in MovementRules, so two worlds could not disagree and
-    // a test that set it leaked into the next case.
-    FactionFixture strict;
-    strict.map.GetUnitPositions().SetSingleUnitPerTile(true);
-    FactionFixture loose;
-
-    CHECK(strict.map.GetUnitPositions().IsSingleUnitPerTile());
-    CHECK_FALSE(loose.map.GetUnitPositions().IsSingleUnitPerTile());
-
-    // The loose world still stacks freely while the strict one refuses.
-    Faction& rLooseFaction = loose.MakeFaction();
-    loose.MakeUnit(rLooseFaction, 8, 8, {"test_chassis"});
-    CHECK_NOTHROW(loose.MakeUnit(rLooseFaction, 8, 8, {"test_chassis"}));
-
-    Faction& rStrictFaction = strict.MakeFaction();
-    strict.MakeUnit(rStrictFaction, 8, 8, {"test_chassis"});
-    CHECK_THROWS(strict.MakeUnit(rStrictFaction, 8, 8, {"test_chassis"}));
-}

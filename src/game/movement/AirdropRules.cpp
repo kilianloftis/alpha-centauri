@@ -58,21 +58,6 @@ bool EnemyHoldsDropTile_(const Unit& rUnit, const Tile& rDest)
     return rDest.HasImprovement(ImprovementIds::k_Base)
         && std::ranges::any_of(rWorldMap.GetCargoOnTile(rDest), blocks);
 }
-
-// One unit per tile: a friendly occupant leaves no room to land.
-bool FriendFillsDropTile_(const Unit& rUnit, const Tile& rDest)
-{
-    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
-    if (!rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
-    {
-        return false;
-    }
-    const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
-    return std::ranges::any_of(rWorldMap.GetUnitsOnTile(rDest), [factionId](const Unit* pOther)
-    {
-        return pOther && pOther->GetFaction().GetFactionId() == factionId;
-    });
-}
 } // namespace
 
 bool TileIsAirdropLaunchPad(const Tile& rTile, int factionId)
@@ -194,11 +179,6 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest)
     if (EnemyHoldsDropTile_(rUnit, rDest))
     {
         result.failReason = AirdropFailReason_t::EnemyOccupied;
-        return result;
-    }
-    if (FriendFillsDropTile_(rUnit, rDest))
-    {
-        result.failReason = AirdropFailReason_t::CannotEnter;
         return result;
     }
     if (IsAirdropInterdicted(rUnit, rDest))

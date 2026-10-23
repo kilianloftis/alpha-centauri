@@ -180,17 +180,6 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
         result.blockingUnits = KnownZocProjectors_(rMover, rFrom, rTo, knowledge);
         return result;
     }
-    // Not CanPlaceUnit: the planner needs the units that block this mover as far as it knows, so
-    // a hidden occupant does not leak into planning.
-    if (m_rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
-    {
-        result.blockingUnits = KnownOccupantsOn_(rMover, rTo, knowledge);
-        if (!result.blockingUnits.empty())
-        {
-            result.outcome = StepOutcome_t::BlockedByOccupant;
-            return result;
-        }
-    }
     result.outcome = StepOutcome_t::Legal;
     return result;
 }
@@ -237,20 +226,6 @@ std::vector<Unit*> StepEvaluator::KnownZocProjectors_(const Unit& rMover, const 
         });
     }
     return projectors;
-}
-
-std::vector<Unit*> StepEvaluator::KnownOccupantsOn_(const Unit& rMover, const Tile& rTile,
-                                                    Knowledge_t knowledge) const
-{
-    std::vector<Unit*> occupants;
-    for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
-        {
-            occupants.push_back(pUnit);
-        }
-    }
-    return occupants;
 }
 
 StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFrom,

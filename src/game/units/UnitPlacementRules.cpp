@@ -73,12 +73,10 @@ std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& r
 {
     const GameState& rGame = CurrentGameState();
     const WorldMap& rWorldMap = rGame.GetWorldMap();
-    const UnitPositionIndex& rPositions = rWorldMap.GetUnitPositions();
     std::vector<const Tile*> found;
     const auto consider = [&](const Tile* pTile)
     {
-        if (!rPositions.CanPlaceUnit(*pTile)
-            || !DesignCanHoldTile_(rDesign, *pTile, factionId, rWorldMap))
+        if (!DesignCanHoldTile_(rDesign, *pTile, factionId, rWorldMap))
         {
             return;
         }
@@ -86,7 +84,7 @@ std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& r
     };
 
     consider(&rOrigin);
-    // The hardcoded 2 is terrible design, but I think we'll get rid of single-tile mode
+    // TODO: the two-ring search limit is hardcoded.
     for (int radius = 1; found.size() < static_cast<size_t>(needed) && radius <= 2; ++radius)
     {
         ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, radius,

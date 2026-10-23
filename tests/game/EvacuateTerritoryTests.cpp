@@ -129,35 +129,6 @@ TEST_CASE("Evacuate skips unholdable own land for a sea unit", "[evacuate][domai
     CHECK(&ship.GetTile() == &fixture.At(5, 5));
 }
 
-TEST_CASE("Evacuate takes the next tile when the nearest own tile is full", "[evacuate]")
-{
-    FactionFixture fixture;
-    fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
-    Faction& guest = fixture.MakeFaction();
-    Faction& host = fixture.MakeFaction();
-
-    fixture.MakeFactionBase(guest, 5, 5);
-    fixture.MakeFactionBase(host, 11, 11);
-
-    const Tile* pNearest = nullptr;
-    {
-        Unit& probe = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
-        pNearest = FindNearestOwnTerritoryTile(probe);
-        REQUIRE(pNearest);
-        guest.GetUnitManager().DestroyUnit(probe);
-    }
-
-    Unit& blocker = fixture.MakeUnit(guest, pNearest->GetX(), pNearest->GetY(),
-                                     {"test_chassis"});
-    Unit& mover = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
-
-    const EvacuateTerritoryResult_t result = Evacuate_(fixture, guest, host.GetFactionId());
-    CHECK(result.unitsMoved == 1);
-    CHECK(&mover.GetTile() != pNearest);
-    CHECK(&blocker.GetTile() == pNearest);
-    CHECK(fixture.map.GetTerritory().GetOwner(mover.GetTile()) == guest.GetFactionId());
-}
-
 TEST_CASE("Evacuate moves co-stacked units on one host tile to the same own tile",
           "[evacuate]")
 {

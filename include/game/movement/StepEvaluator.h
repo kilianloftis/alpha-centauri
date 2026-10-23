@@ -27,7 +27,7 @@ enum class StepOutcome_t
 struct StepEvaluation_t
 {
     StepOutcome_t outcome = StepOutcome_t::Legal;
-    // Populated for BlockedByOccupant (hostile / stacking units on rTo) and BlockedByZoc
+    // Populated for BlockedByOccupant (hostile units on rTo) and BlockedByZoc
     // (foreign projectors that make the step a ZOC→ZOC violation). Empty otherwise.
     std::vector<Unit*> blockingUnits;
 };
@@ -92,8 +92,6 @@ private:
                                         Knowledge_t knowledge) const;
     std::vector<Unit*> KnownZocProjectors_(const Unit& rMover, const Tile& rFrom,
                                            const Tile& rTo, Knowledge_t knowledge) const;
-    std::vector<Unit*> KnownOccupantsOn_(const Unit& rMover, const Tile& rTile,
-                                         Knowledge_t knowledge) const;
 
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;

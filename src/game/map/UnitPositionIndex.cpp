@@ -55,14 +55,6 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     {
         return;
     }
-    // Enforced here too, so a caller that skips the legality check cannot overstack. Embarked
-    // passengers ride with their carrier and are exempt.
-    if (!rUnit.IsEmbarked() && !CanPlaceUnit(rNewTile))
-    {
-        throw std::logic_error(
-            "UnitPositionIndex::MoveUnit: destination already occupied and this world allows "
-            "only one unit per tile");
-    }
     // Snapshot cargo before mutating occupancy; passengers ride with the carrier.
     const std::vector<Unit*> cargo = rUnit.GetCargo();
     RemoveFromTile_(rUnit);
@@ -105,15 +97,6 @@ void UnitPositionIndex::ForEachUnit(const std::function<void(const Unit&)>& rVis
             }
         }
     }
-}
-
-bool UnitPositionIndex::CanPlaceUnit(const Tile& rTile) const
-{
-    if (!m_bSingleUnitPerTile)
-    {
-        return true;
-    }
-    return GetUnitsOnTile(rTile).empty();
 }
 
 void UnitPositionIndex::Register_(Unit& rUnit, const Tile& rTile)

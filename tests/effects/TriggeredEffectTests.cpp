@@ -348,30 +348,6 @@ TEST_CASE("GrantUnit spawns at the context base and homes the unit there",
     CHECK(game.pFaction->GetMilitary().GetDesign(granted.designId) != nullptr);
 }
 
-TEST_CASE("GrantUnit spills onto a neighbouring tile when the base tile is occupied",
-          "[effects][triggered][grantunit]")
-{
-    TriggerGame_ game;
-    // Only meaningful under the single-unit-per-tile rule; with stacking on, the second unit
-    // simply joins the first on the base tile.
-    game.fixtures.state.GetWorldMap().GetUnitPositions().SetSingleUnitPerTile(true);
-    BaseManager& base = game.MakeBase(8, 8);
-
-    const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(game.fixtures.state, base);
-    ApplyTriggeredEffects(grant, context);
-    const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
-
-    REQUIRE(std::get<UnitsGranted_t>(results[0]).count == 1);
-    REQUIRE(UnitCount_(*game.pFaction) == 2);
-    const Unit& rSecond = LastUnit_(*game.pFaction);
-    CHECK(&rSecond.GetTile() != &base.GetTile());
-    // Still homed at the anchor base even though it stands outside it.
-    CHECK(rSecond.GetHomeBase() == &base);
-}
-
-// The trigger may have no base at all (a council vote). The anchor then falls back through
-// the tile, the headquarters, and finally any base the faction holds.
 TEST_CASE("GrantUnit resolves an anchor base when the context has none",
           "[effects][triggered][grantunit]")
 {

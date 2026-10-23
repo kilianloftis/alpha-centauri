@@ -75,12 +75,11 @@ bool NoteIfAlreadyRazed_(BaseManager& rBase, BaseConquestResult_t& rResult)
 
 std::vector<Tile*> FreeNeighbours_(const Tile& rOrigin, WorldMap& rMap)
 {
-    const UnitPositionIndex& rPositions = rMap.GetUnitPositions();
     std::vector<Tile*> free;
     ForEachNeighborInChebyshevRadius(rOrigin, rMap, 1,
         [&](Tile* pTile, int /*distance*/)
         {
-            if (pTile && rPositions.CanPlaceUnit(*pTile))
+            if (pTile)
             {
                 free.push_back(pTile);
             }

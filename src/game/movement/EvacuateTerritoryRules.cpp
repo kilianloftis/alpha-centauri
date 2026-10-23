@@ -48,11 +48,7 @@ bool IsValidEvacuateDestination_(const Unit& rUnit, const Tile& rTile,
     {
         return false;
     }
-    if (&rTile != &rUnit.GetTile() && HoldsUnitItMayNotShareWith_(rUnit, rTile, rWorldMap))
-    {
-        return false;
-    }
-    return rWorldMap.GetUnitPositions().CanPlaceUnit(rTile);
+    return &rTile == &rUnit.GetTile() || !HoldsUnitItMayNotShareWith_(rUnit, rTile, rWorldMap);
 }
 
 bool IsBetterEvacuateTieBreak_(const Tile& rCandidate, int bestY, int bestX)

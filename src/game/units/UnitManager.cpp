@@ -53,13 +53,6 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
                               const UnitOrigin& rOrigin)
 {
-    if (!rPositions.CanPlaceUnit(rTile))
-    {
-        throw std::runtime_error("UnitManager: tile (" + std::to_string(rTile.GetX())
-                                 + ", " + std::to_string(rTile.GetY())
-                                 + ") already holds a unit (single-unit-per-tile rule)");
-    }
-
     auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, rOrigin, m_rFaction,
                                         m_rMorale);
     Unit& rUnit = *pUnit;

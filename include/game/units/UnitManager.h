@@ -42,7 +42,6 @@ public:
     // Every unit this manager creates borrows rMorale.
     UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
 
-    // Throws when rTile already holds a unit.
     Unit& CreateUnit(UnitId_t unitId, const IDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile, const UnitOrigin& rOrigin);
     void DestroyUnit(Unit& rUnit);

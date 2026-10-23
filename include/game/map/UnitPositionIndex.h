@@ -38,15 +38,8 @@ public:
     // occupied tiles, so this is the way to sweep all units without walking the whole map.
     void ForEachUnit(const std::function<void(const Unit&)>& rVisit) const;
 
-    // At most one non-embarked unit per tile when set; per world, so sessions cannot disagree.
-    void SetSingleUnitPerTile(bool bSingleUnitPerTile) { m_bSingleUnitPerTile = bSingleUnitPerTile; }
-    bool IsSingleUnitPerTile() const { return m_bSingleUnitPerTile; }
-
-    // The one definition of "may a unit occupy rTile"; embarked units do not count.
-    bool CanPlaceUnit(const Tile& rTile) const;
-
-    // Moves rUnit, keeping occupancy and its tile pointer together; throws on overstacking.
-    // Embarked passengers are towed. Emits OnUnitMoved after a real move.
+    // Moves rUnit, keeping occupancy and its tile pointer together. Embarked passengers are
+    // towed. Emits OnUnitMoved after a real move.
     void MoveUnit(Unit& rUnit, const Tile& rNewTile);
 
     // Fired from MoveUnit after occupancy and the unit's tile pointer are updated.
@@ -72,7 +65,6 @@ private:
     };
 
     std::unordered_map<const Tile*, TileUnits_t> m_index;
-    bool m_bSingleUnitPerTile = false;
 };
 
 } // namespace ac
