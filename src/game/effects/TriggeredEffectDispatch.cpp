@@ -515,197 +515,227 @@ int ApplyModifyPopulation_(BaseManager& rBase, const ModifyPopulationEffect_t& r
     return 0;
 }
 
+// The hit points the restore leaves a unit at, from before, against its maximum.
+int RestoredHp_(const RestoreHitPointsEffect_t& rRestore, int before, int maxHp)
+{
+    switch (rRestore.op)
+    {
+    case RestoreHitPointsOp_t::Add:
+        return before + rRestore.amount;
+    case RestoreHitPointsOp_t::AddPercent:
+        return before + (maxHp * rRestore.amount) / 100;
+    case RestoreHitPointsOp_t::MaxClamp:
+        return std::min(before, rRestore.amount);
+    case RestoreHitPointsOp_t::MinClamp:
+        return std::max(before, rRestore.amount);
+    case RestoreHitPointsOp_t::SetPercent:
+        return std::max(before, (maxHp * rRestore.amount) / 100);
+    }
+    return before;
+}
+
+// Exhaustive over TriggeredEffectVariant_t: a new alternative without an arm fails to compile.
+// Each arm returns whether the effect did anything.
+struct TriggeredEffectApplier_
+{
+    const TriggeredEffectConfig_t& rConfig;
+    TriggeredEffectContext_t& rCtx;
+    Faction& rFaction;
+    std::vector<TriggeredEffectResult_t>& rOut;
+
+    bool operator()(const AddBuildingEffect_t& rAdd) const
+    {
+        return AddBuilding_(rCtx, rAdd, rOut);
+    }
+
+    bool operator()(const GrantTechEffect_t& rGrant) const
+    {
+        return AddTech_(rCtx, rFaction, rGrant, rOut);
+    }
+
+    bool operator()(const GrantUnitEffect_t& rGrant) const
+    {
+        return GrantUnit_(rCtx, rGrant, rFaction, rOut);
+    }
+
+    bool operator()(const GrantEnergyEffect_t& rGrant) const
+    {
+        rFaction.GetEconomy().AddEnergy(rGrant.amount);
+        rOut.push_back(EnergyGranted_t{rGrant.amount});
+        return true;
+    }
+
+    // TODO: change sea level and climate through WorldEvents once it has a trigger API. False
+    // meanwhile, so oncePer is not spent.
+    bool operator()(const WorldParameterEffect_t&) const { return false; }
+
+    bool operator()(const SetInfiltrationEffect_t&) const
+    {
+        return SetInfiltration_(rCtx, rConfig, rFaction, rOut);
+    }
+
+    bool operator()(const CommitAtrocityEffect_t& rAtrocity) const
+    {
+        return CommitAtrocity_(rCtx, rAtrocity, rFaction, rOut);
+    }
+
+    bool operator()(const RecordMindControlEffect_t& rRecord) const
+    {
+        rCtx.rGameState.GetMindControlLedger().Record(rFaction.GetFactionId(), rRecord.weight);
+        rOut.push_back(MindControlRecorded_t{rRecord.weight});
+        return true;
+    }
+
+    bool operator()(const GrantCleanMineralsEffect_t& rGrant) const
+    {
+        EcologyLedger& rEcology = rCtx.rGameState.GetEcologyLedger();
+        if (rGrant.bRequiresFirstBloom && rEcology.FungalBlooms(rFaction.GetFactionId()) == 0)
+        {
+            return false;
+        }
+        rEcology.GrantCleanMinerals(rFaction.GetFactionId(), rGrant.amount);
+        rOut.push_back(CleanMineralsGranted_t{rGrant.amount});
+        return true;
+    }
+
+    bool operator()(const AddVirtualMineralsEffect_t& rAdd) const
+    {
+        rCtx.rGameState.GetEcologyLedger().AddVirtualMinerals(rFaction.GetFactionId(),
+                                                              rAdd.amount);
+        rOut.push_back(VirtualMineralsAdded_t{rAdd.amount});
+        return true;
+    }
+
+    bool operator()(const ModifyPopulationEffect_t& rModify) const
+    {
+        if (!rCtx.pBase)
+        {
+            return false;
+        }
+        ModifyPopulationEffect_t floored = rModify;
+        floored.minSize = std::max(floored.minSize, rCtx.populationFloor);
+        const int delta = ApplyModifyPopulation_(*rCtx.pBase, floored);
+        rOut.push_back(PopulationChanged_t{delta});
+        return delta != 0;
+    }
+
+    bool operator()(const GrantXpEffect_t& rGrant) const
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        const int granted = GrantXp_(*rCtx.pUnit, rGrant);
+        rOut.push_back(XpGranted_t{granted});
+        if (granted > 0)
+        {
+            MaybeRemoveHost_(rGrant);
+        }
+        return granted != 0;
+    }
+
+    bool operator()(const RestoreHitPointsEffect_t& rRestore) const
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        Unit& rUnit = *rCtx.pUnit;
+        const int before = rUnit.GetCurrentHp();
+        const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
+        rUnit.SetCurrentHp(RestoredHp_(rRestore, before, maxHp));
+        const int restored = rUnit.GetCurrentHp() - before;
+        rOut.push_back(HitPointsRestored_t{restored});
+        return restored != 0;
+    }
+
+    bool operator()(const DestroyFacilityEffect_t& rDestroy) const
+    {
+        if (!rCtx.pBase)
+        {
+            return false;
+        }
+        std::vector<BuildingId_t> destroyed = DestroyRandomFacilities(
+            *rCtx.pBase, rDestroy.count, rDestroy.exclusions, rCtx.Rng());
+        const bool bDidAnything = !destroyed.empty();
+        rOut.push_back(FacilitiesDestroyed_t{std::move(destroyed)});
+        return bDidAnything;
+    }
+
+    bool operator()(const RebelEffect_t&) const { return Rebel_(rCtx, rOut); }
+
+    bool operator()(const EarthquakeEffect_t& rQuake) const
+    {
+        return Earthquake_(rCtx, rQuake, rOut);
+    }
+
+    bool operator()(const FungalBloomEffect_t& rBloom) const
+    {
+        return FungalBloom_(rCtx, rBloom, rOut);
+    }
+
+    bool operator()(const ExplosionEffect_t& rExplosion) const
+    {
+        return Explosion_(rCtx, rExplosion, rOut);
+    }
+
+    bool operator()(const SetTerrainFeatureEffect_t& rSet) const
+    {
+        return SetTerrainFeature_(rCtx, rSet, rOut);
+    }
+
+    bool operator()(const StepRockinessEffect_t& rStep) const
+    {
+        return StepRockiness_(rCtx, rStep, rOut);
+    }
+
+    bool operator()(const ElevationChangeEffect_t& rChange) const
+    {
+        return ElevationChange_(rCtx, rChange, rOut);
+    }
+
+    bool operator()(const DestroyUnitEffect_t&) const
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        rOut.push_back(UnitDestroyed_t{rCtx.pUnit->GetUnitId()});
+        return true;
+    }
+
+private:
+    // Returns the XP the unit actually gained, after SetXp's own limits.
+    static int GrantXp_(Unit& rUnit, const GrantXpEffect_t& rGrant)
+    {
+        const int before = rUnit.GetXp();
+        const double next = ApplyModifierStack(static_cast<double>(before),
+                                               {{static_cast<double>(rGrant.amount), rGrant.op}});
+        const int nextXp = static_cast<int>(std::lround(next));
+        rUnit.SetXp(nextXp);
+        return rUnit.GetXp() - before;
+    }
+
+    // remove_host_chance: the grant may consume the improvement that gave it.
+    void MaybeRemoveHost_(const GrantXpEffect_t& rGrant) const
+    {
+        if (!rGrant.removeHostChance || !rCtx.hostImprovementId || !rCtx.pTile)
+        {
+            return;
+        }
+        if (RollRational(*rGrant.removeHostChance, rCtx.Rng()))
+        {
+            rCtx.rGameState.GetTileEffects().RemoveOccupantWithEffects(*rCtx.pTile,
+                                                                       *rCtx.hostImprovementId);
+        }
+    }
+};
+
 // Whether the entry changed anything; oncePer is spent only on true.
 bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t& rCtx,
                Faction& rFaction, std::vector<TriggeredEffectResult_t>& rOut)
 {
-    return std::visit(
-        [&](const auto& rConcrete) -> bool
-        {
-            using T = std::decay_t<decltype(rConcrete)>;
-            if constexpr (std::is_same_v<T, AddBuildingEffect_t>)
-            {
-                return AddBuilding_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, GrantTechEffect_t>)
-            {
-                return AddTech_(rCtx, rFaction, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, GrantUnitEffect_t>)
-            {
-                return GrantUnit_(rCtx, rConcrete, rFaction, rOut);
-            }
-            else if constexpr (std::is_same_v<T, GrantEnergyEffect_t>)
-            {
-                rFaction.GetEconomy().AddEnergy(rConcrete.amount);
-                rOut.push_back(EnergyGranted_t{rConcrete.amount});
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, WorldParameterEffect_t>)
-            {
-                // TODO: change sea level and climate through WorldEvents once it
-                // has a trigger API. False meanwhile, so oncePer is not spent.
-                return false;
-            }
-            else if constexpr (std::is_same_v<T, SetInfiltrationEffect_t>)
-            {
-                return SetInfiltration_(rCtx, rConfig, rFaction, rOut);
-            }
-            else if constexpr (std::is_same_v<T, CommitAtrocityEffect_t>)
-            {
-                return CommitAtrocity_(rCtx, rConcrete, rFaction, rOut);
-            }
-            else if constexpr (std::is_same_v<T, RecordMindControlEffect_t>)
-            {
-                rCtx.rGameState.GetMindControlLedger().Record(rFaction.GetFactionId(),
-                                                              rConcrete.weight);
-                rOut.push_back(MindControlRecorded_t{rConcrete.weight});
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, GrantCleanMineralsEffect_t>)
-            {
-                EcologyLedger& rEcology = rCtx.rGameState.GetEcologyLedger();
-                if (rConcrete.bRequiresFirstBloom
-                    && rEcology.FungalBlooms(rFaction.GetFactionId()) == 0)
-                {
-                    return false;
-                }
-                rEcology.GrantCleanMinerals(rFaction.GetFactionId(), rConcrete.amount);
-                rOut.push_back(CleanMineralsGranted_t{rConcrete.amount});
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, AddVirtualMineralsEffect_t>)
-            {
-                rCtx.rGameState.GetEcologyLedger().AddVirtualMinerals(rFaction.GetFactionId(),
-                                                                      rConcrete.amount);
-                rOut.push_back(VirtualMineralsAdded_t{rConcrete.amount});
-                return true;
-            }
-            else if constexpr (std::is_same_v<T, ModifyPopulationEffect_t>)
-            {
-                if (!rCtx.pBase)
-                {
-                    return false;
-                }
-                ModifyPopulationEffect_t floored = rConcrete;
-                floored.minSize = std::max(floored.minSize, rCtx.populationFloor);
-                const int delta = ApplyModifyPopulation_(*rCtx.pBase, floored);
-                rOut.push_back(PopulationChanged_t{delta});
-                return delta != 0;
-            }
-            else if constexpr (std::is_same_v<T, GrantXpEffect_t>)
-            {
-                if (!rCtx.pUnit)
-                {
-                    return false;
-                }
-                const int before = rCtx.pUnit->GetXp();
-                const double next = ApplyModifierStack(
-                    static_cast<double>(before),
-                    {{static_cast<double>(rConcrete.amount), rConcrete.op}});
-                const int nextXp = static_cast<int>(std::lround(next));
-                rCtx.pUnit->SetXp(nextXp);
-                const int granted = rCtx.pUnit->GetXp() - before;
-                rOut.push_back(XpGranted_t{granted});
-                if (granted > 0 && rConcrete.removeHostChance && rCtx.hostImprovementId
-                    && rCtx.pTile)
-                {
-                    if (RollRational(*rConcrete.removeHostChance, rCtx.Rng()))
-                    {
-                        rCtx.rGameState.GetTileEffects().RemoveOccupantWithEffects(
-                            *rCtx.pTile, *rCtx.hostImprovementId);
-                    }
-                }
-                return granted != 0;
-            }
-            else if constexpr (std::is_same_v<T, RestoreHitPointsEffect_t>)
-            {
-                if (!rCtx.pUnit)
-                {
-                    return false;
-                }
-                Unit& rUnit = *rCtx.pUnit;
-                const int before = rUnit.GetCurrentHp();
-                const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
-                int next = before;
-                switch (rConcrete.op)
-                {
-                case RestoreHitPointsOp_t::Add:
-                    next = before + rConcrete.amount;
-                    break;
-                case RestoreHitPointsOp_t::AddPercent:
-                    next = before + (maxHp * rConcrete.amount) / 100;
-                    break;
-                case RestoreHitPointsOp_t::MaxClamp:
-                    next = std::min(before, rConcrete.amount);
-                    break;
-                case RestoreHitPointsOp_t::MinClamp:
-                    next = std::max(before, rConcrete.amount);
-                    break;
-                case RestoreHitPointsOp_t::SetPercent:
-                    next = std::max(before, (maxHp * rConcrete.amount) / 100);
-                    break;
-                }
-                rUnit.SetCurrentHp(next);
-                const int restored = rUnit.GetCurrentHp() - before;
-                rOut.push_back(HitPointsRestored_t{restored});
-                return restored != 0;
-            }
-            else if constexpr (std::is_same_v<T, DestroyFacilityEffect_t>)
-            {
-                if (!rCtx.pBase)
-                {
-                    return false;
-                }
-                std::vector<BuildingId_t> destroyed = DestroyRandomFacilities(
-                    *rCtx.pBase, rConcrete.count, rConcrete.exclusions, rCtx.Rng());
-                const bool bDidAnything = !destroyed.empty();
-                rOut.push_back(FacilitiesDestroyed_t{std::move(destroyed)});
-                return bDidAnything;
-            }
-            else if constexpr (std::is_same_v<T, RebelEffect_t>)
-            {
-                return Rebel_(rCtx, rOut);
-            }
-            else if constexpr (std::is_same_v<T, EarthquakeEffect_t>)
-            {
-                return Earthquake_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, FungalBloomEffect_t>)
-            {
-                return FungalBloom_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, ExplosionEffect_t>)
-            {
-                return Explosion_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, SetTerrainFeatureEffect_t>)
-            {
-                return SetTerrainFeature_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, StepRockinessEffect_t>)
-            {
-                return StepRockiness_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, ElevationChangeEffect_t>)
-            {
-                return ElevationChange_(rCtx, rConcrete, rOut);
-            }
-            else if constexpr (std::is_same_v<T, DestroyUnitEffect_t>)
-            {
-                if (!rCtx.pUnit)
-                {
-                    return false;
-                }
-                rOut.push_back(UnitDestroyed_t{rCtx.pUnit->GetUnitId()});
-                return true;
-            }
-            else
-            {
-                static_assert(k_AlwaysFalse<T>);
-            }
-        },
-        rConfig.effect);
+    return std::visit(TriggeredEffectApplier_{rConfig, rCtx, rFaction, rOut}, rConfig.effect);
 }
 
 void ApplyForFaction_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t& rContext,
