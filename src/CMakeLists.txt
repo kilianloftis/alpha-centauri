@@ -150,6 +150,7 @@ add_library(ac-core STATIC
     game/units/UnitAttackExecutor.cpp
     game/units/UnitMoveExecutor.cpp
     game/units/UnitOrderExecutor.cpp
+    game/units/UnitTransport.cpp
     game/units/UnitPlacementRules.cpp
     game/combat/CombatResolver.cpp
     game/combat/CombatRules.cpp

@@ -218,9 +218,9 @@ TEST_CASE("Transferring a loaded transport preserves cargo and embarkation",
 
     Unit& transport = fixture.MakeUnit(giver, 8, 8, {"test_sea_chassis", "test_transport"});
     Unit& cargo = fixture.MakeUnit(giver, 8, 8, {"test_chassis"});
-    cargo.EmbarkInto(transport);
-    REQUIRE(cargo.IsEmbarked());
-    REQUIRE(transport.GetCargo().size() == 1);
+    cargo.Transport().EmbarkInto(transport);
+    REQUIRE(cargo.Transport().IsEmbarked());
+    REQUIRE(transport.Transport().GetCargo().size() == 1);
 
     Unit* pTransportAddress = &transport;
     Unit* pCargoAddress = &cargo;
@@ -230,10 +230,10 @@ TEST_CASE("Transferring a loaded transport preserves cargo and embarkation",
     // Both the carrier and its passenger moved to the receiver, still embarked together.
     CHECK(&pTransportAddress->GetFaction() == &receiver);
     CHECK(&pCargoAddress->GetFaction() == &receiver);
-    CHECK(pCargoAddress->IsEmbarked());
-    CHECK(pCargoAddress->GetCarrier() == pTransportAddress);
-    REQUIRE(pTransportAddress->GetCargo().size() == 1);
-    CHECK(pTransportAddress->GetCargo().front() == pCargoAddress);
+    CHECK(pCargoAddress->Transport().IsEmbarked());
+    CHECK(pCargoAddress->Transport().GetCarrier() == pTransportAddress);
+    REQUIRE(pTransportAddress->Transport().GetCargo().size() == 1);
+    CHECK(pTransportAddress->Transport().GetCargo().front() == pCargoAddress);
 }
 
 TEST_CASE("Transferring an embarked passenger detaches it cleanly without destroying it",
@@ -245,8 +245,8 @@ TEST_CASE("Transferring an embarked passenger detaches it cleanly without destro
 
     Unit& transport = fixture.MakeUnit(giver, 8, 8, {"test_sea_chassis", "test_transport"});
     Unit& passenger = fixture.MakeUnit(giver, 8, 8, {"test_chassis"});
-    passenger.EmbarkInto(transport);
-    REQUIRE(passenger.IsEmbarked());
+    passenger.Transport().EmbarkInto(transport);
+    REQUIRE(passenger.Transport().IsEmbarked());
 
     Unit* pPassengerAddress = &passenger;
 
@@ -254,9 +254,9 @@ TEST_CASE("Transferring an embarked passenger detaches it cleanly without destro
     // the carrier still occupying the passenger's tile (no CanPlaceUnitOnTile re-check).
     CHECK_NOTHROW(giver.TransferUnitTo(passenger.GetUnitId(), receiver));
 
-    CHECK_FALSE(pPassengerAddress->IsEmbarked());
+    CHECK_FALSE(pPassengerAddress->Transport().IsEmbarked());
     CHECK(&pPassengerAddress->GetFaction() == &receiver);
-    CHECK(transport.GetCargo().empty());
+    CHECK(transport.Transport().GetCargo().empty());
     CHECK(&transport.GetFaction() == &giver);
 }
 

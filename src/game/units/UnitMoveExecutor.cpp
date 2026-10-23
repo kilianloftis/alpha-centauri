@@ -93,7 +93,7 @@ UnitMoveExecutor::AirdropActionResult_t UnitMoveExecutor::TryAirdrop(Unit& rUnit
         return result;
     }
 
-    rUnit.MarkAirdropped();
+    rUnit.Latches().MarkAirdropped();
     rUnit.ClearOrder();
 
     const AirdropLanding_t landing = AirdropLanding(rUnit, rDest);
@@ -133,9 +133,9 @@ bool UnitMoveExecutor::ApplyArrivalEffects_(Unit& rMover)
 
 void UnitMoveExecutor::EnterTile_(Unit& rMover, const Tile& rTo)
 {
-    if (rMover.IsEmbarked())
+    if (rMover.Transport().IsEmbarked())
     {
-        rMover.Disembark();
+        rMover.Transport().Disembark();
     }
 
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);

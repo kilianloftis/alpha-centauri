@@ -36,11 +36,11 @@ bool DefenderIsResting_(const Unit& rDefender, const Tile& rTile, const WorldMap
     {
         return true;
     }
-    if (!rDefender.IsEmbarked())
+    if (!rDefender.Transport().IsEmbarked())
     {
         return false;
     }
-    const Unit* pCarrier = rDefender.GetCarrier();
+    const Unit* pCarrier = rDefender.Transport().GetCarrier();
     return pCarrier && UnitCarries(*pCarrier, domain, factionId);
 }
 

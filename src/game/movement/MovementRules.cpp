@@ -41,7 +41,7 @@ InteractionQuery_t EnterQuery_(const Unit& rMover, const Tile& rTile)
 
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
-    if (rProjector.IsEmbarked())
+    if (rProjector.Transport().IsEmbarked())
     {
         return false;
     }

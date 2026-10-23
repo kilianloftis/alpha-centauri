@@ -73,7 +73,7 @@ bool HasCargoCapacity(const Unit& rCarrier)
 int FreeCargoSlots(const Unit& rCarrier)
 {
     const int capacity = ResolveStat(rCarrier, StatId_t::CargoCapacity);
-    const int used = static_cast<int>(rCarrier.GetCargo().size());
+    const int used = static_cast<int>(rCarrier.Transport().GetCargo().size());
     return capacity - used;
 }
 
@@ -83,12 +83,12 @@ bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger)
     {
         return false;
     }
-    if (rCarrier.IsEmbarked() || FreeCargoSlots(rCarrier) <= 0)
+    if (rCarrier.Transport().IsEmbarked() || FreeCargoSlots(rCarrier) <= 0)
     {
         return false;
     }
     // Already aboard this carrier (capacity already counts them).
-    if (rPassenger.GetCarrier() == &rCarrier)
+    if (rPassenger.Transport().GetCarrier() == &rCarrier)
     {
         return false;
     }
@@ -135,7 +135,7 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile)
 
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo)
 {
-    if (!rPassenger.IsEmbarked())
+    if (!rPassenger.Transport().IsEmbarked())
     {
         return false;
     }
@@ -157,12 +157,12 @@ bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile)
 
 bool CanUnloadTransportInPlace(const Unit& rCarrier)
 {
-    if (rCarrier.GetDomain() != UnitDomain_t::Air || rCarrier.GetCargo().empty())
+    if (rCarrier.GetDomain() != UnitDomain_t::Air || rCarrier.Transport().GetCargo().empty())
     {
         return false;
     }
     const Tile& rTile = rCarrier.GetTile();
-    for (const Unit* pPassenger : rCarrier.GetCargo())
+    for (const Unit* pPassenger : rCarrier.Transport().GetCargo())
     {
         // Dropping in place leaves nothing under the passenger, so it must hold the tile
         // on its own — boarding another carrier here is not what this order does.

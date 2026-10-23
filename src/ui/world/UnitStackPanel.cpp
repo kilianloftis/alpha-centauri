@@ -139,7 +139,7 @@ void UnitStackPanel::DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const
     const unsigned int statFontSize =
         std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));
     std::string label = rSlot.pUnit->GetDesign().FormatCombatRating();
-    if (rSlot.pUnit->IsEmbarked())
+    if (rSlot.pUnit->Transport().IsEmbarked())
     {
         label += " c";
     }

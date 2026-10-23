@@ -199,8 +199,8 @@ TEST_CASE("Embarked combat unit on base tile is not police", "[police][garrison]
     Unit& transport =
         fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_transport"}, &base);
     Unit& combat = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
-    combat.EmbarkInto(transport);
-    REQUIRE(combat.IsEmbarked());
+    combat.Transport().EmbarkInto(transport);
+    REQUIRE(combat.Transport().IsEmbarked());
 
     CHECK(ComputeGarrisonPoliceSuppression(base) == 0);
     CHECK(CombinedPoliceDroneDelta_(base) == 0);

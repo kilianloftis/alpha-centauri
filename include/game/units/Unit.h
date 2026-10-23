@@ -9,6 +9,8 @@
 #include "game/units/IDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrigin.h"
+#include "game/units/UnitTransport.h"
+#include "game/units/UnitTurnLatches.h"
 #include <array>
 #include <optional>
 #include <string>
@@ -121,31 +123,11 @@ public:
     // True when the unit still needs an order this turn (moves left and no active order).
     bool RequiresOrders() const;
 
-    // A unit that attacked this turn or last may not disengage.
-    bool HasAttackedThisTurn() const;
-    bool HasAttackedLastTurn() const;
-    void MarkAttacked();
-    void AdvanceAttackHistory();
+    UnitTurnLatches& Latches() { return m_latches; }
+    const UnitTurnLatches& Latches() const { return m_latches; }
 
-    // Set by an airdrop until BeginTurn. Enables post-drop attack modifiers and blocks a second
-    // drop while moves remain.
-    bool HasAirdroppedThisTurn() const;
-    void MarkAirdropped();
-    void ClearAirdroppedThisTurn();
-
-    // ThisUnit-scoped Intercept deploy cooldown (mission year when ready again).
-    bool IsInterceptReady(int missionYear) const;
-    void DeployIntercept(int readyMissionYear);
-
-    // Embarked units share the carrier's tile. Outside a base they are ignored for targeting,
-    // ZOC and occupancy; in a base they may defend.
-    bool IsEmbarked() const;
-    Unit* GetCarrier() const;
-    const std::vector<Unit*>& GetCargo() const;
-    // Throws when rCarrier cannot take this unit.
-    void EmbarkInto(Unit& rCarrier);
-    // Clear carrier link; passenger remains on its current tile.
-    void Disembark();
+    UnitTransport& Transport() { return m_transport; }
+    const UnitTransport& Transport() const { return m_transport; }
 
 private:
     // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
@@ -156,7 +138,6 @@ private:
     // call once; the destructor skips unregistering an already-detached unit.
     void DetachFromWorld_();
     void ReleaseWorkedTile_();
-    void ClearCargoLinks_();
     int MaxMoveFragments_() const;
 
     UnitId_t m_unitId;
@@ -183,13 +164,8 @@ private:
     // Held while supply-crawling (Pop-equivalent); releases the tile when destroyed/cleared.
     WorkedTileClaim m_tileClaim;
     bool m_bRegistered;
-    bool m_bAttackedThisTurn = false;
-    bool m_bAttackedLastTurn = false;
-    bool m_bAirdroppedThisTurn = false;
-    // Available when missionYear >= this (0 = always ready at game start).
-    int m_interceptReadyMissionYear = 0;
-    Unit* m_pCarrier = nullptr;
-    std::vector<Unit*> m_cargo;
+    UnitTurnLatches m_latches;
+    UnitTransport m_transport;
 };
 
 } // namespace ac

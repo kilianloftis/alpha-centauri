@@ -134,7 +134,7 @@ bool UnitMayOverride(const Unit& rUnit, InteractionGridId_t grid)
 
 InteractionFooting_t FootingFor(const Unit& rUnit)
 {
-    if (rUnit.IsEmbarked())
+    if (rUnit.Transport().IsEmbarked())
     {
         return InteractionFooting_t::Embarked;
     }

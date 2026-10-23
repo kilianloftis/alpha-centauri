@@ -108,9 +108,9 @@ TEST_CASE("Board requires capacity; full transport rejects; attach via L and ste
 
     Unit& land = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
     REQUIRE(TryAttachToTransport(land));
-    CHECK(land.IsEmbarked());
-    CHECK(land.GetCarrier() == &transport);
-    CHECK(transport.GetCargo().size() == 1);
+    CHECK(land.Transport().IsEmbarked());
+    CHECK(land.Transport().GetCarrier() == &transport);
+    CHECK(transport.Transport().GetCargo().size() == 1);
     CHECK(FreeCargoSlots(transport) == 0);
 
     Unit& land2 = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
@@ -132,14 +132,14 @@ TEST_CASE("Step onto transport auto-attaches; carrier move keeps cargo", "[trans
 
     MoveOrder_t order;
     REQUIRE(harness.moves.TryStep(land, fixture.At(9, 9), order).bEntered);
-    CHECK(land.IsEmbarked());
-    CHECK(land.GetCarrier() == &transport);
+    CHECK(land.Transport().IsEmbarked());
+    CHECK(land.Transport().GetCarrier() == &transport);
     CHECK(&land.GetTile() == &fixture.At(9, 9));
 
     MoveOrder_t seaOrder;
     REQUIRE(harness.moves.TryStep(transport, fixture.At(10, 10), seaOrder).bEntered);
     CHECK(&transport.GetTile() == &fixture.At(10, 10));
-    CHECK(land.IsEmbarked());
+    CHECK(land.Transport().IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(10, 10));
 }
 
@@ -158,9 +158,9 @@ TEST_CASE("Unload to adjacent land; destroying a carrier over water drowns its c
 
     MoveOrder_t unload;
     REQUIRE(harness.moves.TryStep(land, fixture.At(8, 8), unload).bEntered);
-    CHECK_FALSE(land.IsEmbarked());
+    CHECK_FALSE(land.Transport().IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(8, 8));
-    CHECK(transport.GetCargo().empty());
+    CHECK(transport.Transport().GetCargo().empty());
 
     Unit& land2 = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
     REQUIRE(TryAttachToTransport(land2));
@@ -194,14 +194,14 @@ TEST_CASE("Land cargo can step from one sea transport onto an adjacent one", "[t
     Unit& transportB = fixture.MakeUnit(faction, 10, 10, {"test_sea_chassis", "test_transport"});
     Unit& land = fixture.MakeUnit(faction, 9, 9, {"test_chassis"});
     REQUIRE(TryAttachToTransport(land));
-    REQUIRE(land.GetCarrier() == &transportA);
+    REQUIRE(land.Transport().GetCarrier() == &transportA);
 
     MoveOrder_t transfer;
     REQUIRE(harness.moves.TryStep(land, fixture.At(10, 10), transfer).bEntered);
-    CHECK(land.IsEmbarked());
-    CHECK(land.GetCarrier() == &transportB);
-    CHECK(transportA.GetCargo().empty());
-    CHECK(transportB.GetCargo().size() == 1);
+    CHECK(land.Transport().IsEmbarked());
+    CHECK(land.Transport().GetCarrier() == &transportB);
+    CHECK(transportA.Transport().GetCargo().empty());
+    CHECK(transportB.Transport().GetCargo().size() == 1);
     CHECK(&land.GetTile() == &fixture.At(10, 10));
 }
 
@@ -220,12 +220,12 @@ TEST_CASE("Entering a base garrisons it rather than boarding a transport there",
 
     MoveOrder_t order;
     REQUIRE(harness.moves.TryStep(land, fixture.At(8, 8), order).bEntered);
-    CHECK_FALSE(land.IsEmbarked());
-    CHECK(airTransport.GetCargo().empty());
+    CHECK_FALSE(land.Transport().IsEmbarked());
+    CHECK(airTransport.Transport().GetCargo().empty());
 
     // The explicit L order still boards: a base is a legal load site for an air transport.
     REQUIRE(TryAttachToTransport(land));
-    REQUIRE(land.IsEmbarked());
+    REQUIRE(land.Transport().IsEmbarked());
 
     // Cargo parked in a base is still what holds the base.
     CHECK(HasBaseGarrison(rBase));
@@ -244,12 +244,12 @@ TEST_CASE("A carrier lost in a base sets its cargo down instead of drowning it",
         fixture.MakeUnit(faction, 8, 8, {"test_flight_chassis", "test_air_transport"});
     Unit& land = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     REQUIRE(TryAttachToTransport(land));
-    REQUIRE(land.IsEmbarked());
+    REQUIRE(land.Transport().IsEmbarked());
 
     faction.GetUnitManager().DestroyUnit(airTransport);
 
     // The passenger is set down in the base, and the base is still held.
-    CHECK_FALSE(land.IsEmbarked());
+    CHECK_FALSE(land.Transport().IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(8, 8));
     CHECK(HasBaseGarrison(rBase));
 
@@ -281,8 +281,8 @@ TEST_CASE("Carrier Deck allows air passengers; without it air cannot board", "[t
     fixture.MoveUnit(air, 8, 10);
     CHECK(CanCarryPassenger(carrier, air));
     REQUIRE(TryAttachToTransport(air));
-    CHECK(air.IsEmbarked());
-    CHECK(air.GetCarrier() == &carrier);
+    CHECK(air.Transport().IsEmbarked());
+    CHECK(air.Transport().GetCarrier() == &carrier);
 }
 
 TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
@@ -299,8 +299,8 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
     Unit& air = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     air.SetCurrentFuel(0);
     REQUIRE(TryAttachToTransport(air));
-    CHECK(air.IsEmbarked());
-    CHECK(air.GetCarrier() == &carrier);
+    CHECK(air.Transport().IsEmbarked());
+    CHECK(air.Transport().GetCarrier() == &carrier);
     // Refuel is TurnEnd / IsRefuelSite, not attach.
     CHECK(air.GetCurrentFuel() == 0);
 
@@ -316,14 +316,14 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
     fixture.MoveUnit(land, 7, 9);
     CHECK(CanLoadAtTile(airTransport, fixture.At(7, 9)));
     REQUIRE(TryAttachToTransport(land));
-    CHECK(land.IsEmbarked());
+    CHECK(land.Transport().IsEmbarked());
 
     // Shift+U in-flight unload over land.
     fixture.MoveUnit(airTransport, 8, 6);
     // Cargo rides with MoveUnit.
     CHECK(&land.GetTile() == &fixture.At(8, 6));
     REQUIRE(TryUnloadTransportInPlace(airTransport));
-    CHECK_FALSE(land.IsEmbarked());
+    CHECK_FALSE(land.Transport().IsEmbarked());
 
     // A carrier deck is not a harbor — air transports still need a Base/Airbase tile.
     MakeWater_(fixture.At(8, 10));

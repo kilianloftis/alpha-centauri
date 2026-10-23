@@ -11,7 +11,7 @@ namespace ac
 
 bool TryAttachToTransport(Unit& rPassenger)
 {
-    if (rPassenger.IsEmbarked())
+    if (rPassenger.Transport().IsEmbarked())
     {
         return false;
     }
@@ -20,7 +20,7 @@ bool TryAttachToTransport(Unit& rPassenger)
     {
         return false;
     }
-    rPassenger.EmbarkInto(*pCarrier);
+    rPassenger.Transport().EmbarkInto(*pCarrier);
     return true;
 }
 
@@ -39,12 +39,12 @@ bool TryUnloadTransportInPlace(Unit& rCarrier)
     {
         return false;
     }
-    std::vector<Unit*> cargo = rCarrier.GetCargo();
+    std::vector<Unit*> cargo = rCarrier.Transport().GetCargo();
     for (Unit* pPassenger : cargo)
     {
         if (pPassenger)
         {
-            pPassenger->Disembark();
+            pPassenger->Transport().Disembark();
         }
     }
     return true;

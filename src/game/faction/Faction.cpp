@@ -644,12 +644,12 @@ void Faction::TransferUnitTo(UnitId_t unitId, Faction& rReceiver)
     }
 
     // Cargo travels with its carrier; a copy, since the vector is the carrier's live state.
-    const std::vector<Unit*> cargo = pFound->GetCargo();
+    const std::vector<Unit*> cargo = pFound->Transport().GetCargo();
 
     // An embarked passenger detaches; it never leaves the map, so placement is not re-checked.
-    if (pFound->IsEmbarked())
+    if (pFound->Transport().IsEmbarked())
     {
-        pFound->Disembark();
+        pFound->Transport().Disembark();
     }
 
     ReleaseAndAdopt_(*this, rReceiver, *pFound);

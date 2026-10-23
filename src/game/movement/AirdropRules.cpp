@@ -73,7 +73,7 @@ bool OccupantBlocksAirdrop(const Unit& rDropper, const Unit& rOccupant)
     {
         return false;
     }
-    if (rOccupant.IsEmbarked() && !rOccupant.GetTile().HasImprovement(ImprovementIds::k_Base))
+    if (rOccupant.Transport().IsEmbarked() && !rOccupant.GetTile().HasImprovement(ImprovementIds::k_Base))
     {
         return false;
     }
@@ -133,7 +133,7 @@ AirdropEligibility_t CanAttemptAirdrop(const Unit& rUnit)
         result.failReason = AirdropFailReason_t::NotCapable;
         return result;
     }
-    if (rUnit.HasAirdroppedThisTurn())
+    if (rUnit.Latches().HasAirdroppedThisTurn())
     {
         result.failReason = AirdropFailReason_t::AlreadyAirdropped;
         return result;

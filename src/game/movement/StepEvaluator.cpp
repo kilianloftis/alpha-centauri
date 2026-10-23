@@ -178,7 +178,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
 bool StepEvaluator::TerrainAllowsStep_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                                        Knowledge_t knowledge) const
 {
-    if (rMover.IsEmbarked())
+    if (rMover.Transport().IsEmbarked())
     {
         return CanUnloadTo(rMover, rFrom, rTo);
     }

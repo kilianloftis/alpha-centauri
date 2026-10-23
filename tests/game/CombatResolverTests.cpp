@@ -723,7 +723,7 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender attacked this turn")
     {
         DisengageSetup_ setup;
-        setup.pDefender->MarkAttacked();
+        setup.pDefender->Latches().MarkAttacked();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -733,8 +733,8 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender attacked last turn")
     {
         DisengageSetup_ setup;
-        setup.pDefender->MarkAttacked();
-        setup.pDefender->AdvanceAttackHistory();
+        setup.pDefender->Latches().MarkAttacked();
+        setup.pDefender->Latches().Roll();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -744,9 +744,9 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("attack two turns ago no longer blocks")
     {
         DisengageSetup_ setup;
-        setup.pDefender->MarkAttacked();
-        setup.pDefender->AdvanceAttackHistory();
-        setup.pDefender->AdvanceAttackHistory();
+        setup.pDefender->Latches().MarkAttacked();
+        setup.pDefender->Latches().Roll();
+        setup.pDefender->Latches().Roll();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);

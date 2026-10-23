@@ -335,9 +335,9 @@ TEST_CASE("Sinking a loaded transport rebuilds visibility once", "[visibility][f
         fixture.MakeUnit(faction, 8, 8, {"test_sea_chassis", "test_transport_2"});
     Unit& rFirst = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     Unit& rSecond = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
-    rFirst.EmbarkInto(rTransport);
-    rSecond.EmbarkInto(rTransport);
-    REQUIRE(rTransport.GetCargo().size() == 2);
+    rFirst.Transport().EmbarkInto(rTransport);
+    rSecond.Transport().EmbarkInto(rTransport);
+    REQUIRE(rTransport.Transport().GetCargo().size() == 2);
 
     int rebuilds = 0;
     faction.OnVisibilityRebuilt.Connect([&rebuilds](Faction&) { ++rebuilds; });

@@ -190,8 +190,8 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
-        CHECK(jet.IsEmbarked());
-        CHECK(jet.GetCarrier() == &carrier);
+        CHECK(jet.Transport().IsEmbarked());
+        CHECK(jet.Transport().GetCarrier() == &carrier);
     }
 
     SECTION("friendly carrier deck — auto-lands at turn end")
@@ -200,11 +200,11 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
         Unit& carrier = fixture.MakeUnit(
             faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
         Unit& jet = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
-        CHECK_FALSE(jet.IsEmbarked());
+        CHECK_FALSE(jet.Transport().IsEmbarked());
         jet.SetCurrentFuel(0);
         ProcessFuelAtTurnEnd(jet);
-        CHECK(jet.IsEmbarked());
-        CHECK(jet.GetCarrier() == &carrier);
+        CHECK(jet.Transport().IsEmbarked());
+        CHECK(jet.Transport().GetCarrier() == &carrier);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
     }
 }
@@ -243,17 +243,17 @@ TEST_CASE("Carrier deck does not refuel air that could not land (no cargo slot)"
         faction, 9, 9, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
     Unit& landed = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
     REQUIRE(TryAttachToTransport(landed));
-    REQUIRE(landed.IsEmbarked());
+    REQUIRE(landed.Transport().IsEmbarked());
     REQUIRE(FreeCargoSlots(carrier) == 0);
 
     Unit& stranded = fixture.MakeUnit(faction, 9, 9, {"test_fuel_flight_chassis"});
-    CHECK_FALSE(stranded.IsEmbarked());
+    CHECK_FALSE(stranded.Transport().IsEmbarked());
     CHECK_FALSE(TryAttachToTransport(stranded));
     stranded.SetCurrentFuel(0);
 
     ProcessFuelAtTurnEnd(stranded);
     CHECK(CountUnits_(faction) == 2); // carrier + landed; stranded destroyed at 0 fuel / 100%
-    CHECK(landed.IsEmbarked());
+    CHECK(landed.Transport().IsEmbarked());
 }
 
 TEST_CASE("Copter takes 30% damage per away turn at zero fuel and survives", "[fuel]")

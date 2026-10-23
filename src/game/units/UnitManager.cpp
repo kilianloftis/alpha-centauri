@@ -87,14 +87,14 @@ void UnitManager::DestroyUnit(Unit& rUnit)
 void UnitManager::UnloadCargoOnLoss_(Unit& rCarrier)
 {
     // A copy, since both branches below unlink the passenger.
-    const std::vector<Unit*> cargo = rCarrier.GetCargo();
+    const std::vector<Unit*> cargo = rCarrier.Transport().GetCargo();
     const Tile& rCarrierTile = rCarrier.GetTile();
     for (Unit* pPassenger : cargo)
     {
         // A ship sunk in port sets its passengers down; at sea they go down with it.
         if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
         {
-            pPassenger->Disembark();
+            pPassenger->Transport().Disembark();
         }
         else
         {

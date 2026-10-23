@@ -171,7 +171,7 @@ TEST_CASE("Airdrop cannot chain through a friendly launch pad", "[unit][airdrop]
 
     auto result = game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, rOtherPad.GetTile());
     REQUIRE(result.Ok());
-    CHECK(dropper.HasAirdroppedThisTurn());
+    CHECK(dropper.Latches().HasAirdroppedThisTurn());
     CHECK(CanAttemptAirdrop(dropper).failReason == AirdropFailReason_t::AlreadyAirdropped);
 
     Tile* pField = rMap.GetTile(10, 10);
@@ -223,7 +223,7 @@ TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
     REQUIRE(result.Ok());
     // 20% of 10 HP = 2
     CHECK(dropper.GetCurrentHp() == maxHp - 2);
-    CHECK(dropper.HasAirdroppedThisTurn());
+    CHECK(dropper.Latches().HasAirdroppedThisTurn());
     CHECK(&dropper.GetTile() == pField);
 
     Unit& toPad =
@@ -348,7 +348,7 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     Tile* pLand = rMap.GetTile(9, 9);
     REQUIRE(pLand);
     REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(attacker, *pLand).Ok());
-    REQUIRE(attacker.HasAirdroppedThisTurn());
+    REQUIRE(attacker.Latches().HasAirdroppedThisTurn());
 
     Unit& defender = game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
     EffectContext_t ctx;
@@ -356,7 +356,7 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     ctx.pAttacker = &attacker;
     ctx.combatRole = CombatRole_t::Attacker;
     const int penalized = ResolveStat(attacker, StatId_t::Attack, ctx);
-    attacker.ClearAirdroppedThisTurn();
+    attacker.Latches().Roll();
     const int normal = ResolveStat(attacker, StatId_t::Attack, ctx);
     CHECK(penalized < normal);
     (void)defender;

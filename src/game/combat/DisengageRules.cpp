@@ -56,7 +56,7 @@ bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent)
     {
         return false; // stacked units hold the line together
     }
-    if (rCandidate.HasAttackedThisTurn() || rCandidate.HasAttackedLastTurn())
+    if (rCandidate.Latches().HasAttackedThisTurn() || rCandidate.Latches().HasAttackedLastTurn())
     {
         return false;
     }

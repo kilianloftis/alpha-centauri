@@ -71,6 +71,7 @@ Unit::Unit(UnitId_t unitId,
     // Latch before RecordBuiltComponents so later IsPrototype() agrees with construction.
     , m_bPrototype(rOrigin.MayBePrototype() && ac::IsPrototype(rFaction, rDesign))
     , m_bRegistered(false)
+    , m_transport(*this, rPositions)
 {
     if (BaseManager* pHome = rOrigin.HomeBase())
     {
@@ -96,87 +97,15 @@ Unit::~Unit()
     DetachFromWorld_();
 }
 
-void Unit::ClearCargoLinks_()
-{
-    if (m_pCarrier)
-    {
-        std::erase(m_pCarrier->m_cargo, this);
-        m_pCarrier = nullptr;
-        // Still listed as cargo in the index until Unregister_ / RemoveFromTile_.
-    }
-    for (Unit* pPassenger : m_cargo)
-    {
-        pPassenger->m_pCarrier = nullptr;
-        // Orphaned passenger becomes an independent occupant on the same tile.
-        m_rPositions.NoteDisembarked_(*pPassenger);
-    }
-    m_cargo.clear();
-}
-
 void Unit::DetachFromWorld_()
 {
-    ClearCargoLinks_();
+    m_transport.ClearLinks();
     ReleaseWorkedTile_();
     if (m_bRegistered)
     {
         m_rPositions.Unregister_(*this);
         m_bRegistered = false;
     }
-}
-
-bool Unit::IsEmbarked() const
-{
-    return m_pCarrier != nullptr;
-}
-
-Unit* Unit::GetCarrier() const
-{
-    return m_pCarrier;
-}
-
-const std::vector<Unit*>& Unit::GetCargo() const
-{
-    return m_cargo;
-}
-
-void Unit::EmbarkInto(Unit& rCarrier)
-{
-    if (m_pCarrier == &rCarrier)
-    {
-        return;
-    }
-    if (&rCarrier == this)
-    {
-        throw std::invalid_argument("Unit::EmbarkInto: a unit cannot carry itself");
-    }
-    if (&rCarrier.GetTile() != &GetTile())
-    {
-        throw std::invalid_argument("Unit::EmbarkInto: carrier and passenger are not on the "
-                                    "same tile");
-    }
-    if (!CanCarryPassenger(rCarrier, *this))
-    {
-        throw std::invalid_argument("Unit::EmbarkInto: carrier cannot take this passenger "
-                                    "(capacity, domain, faction, or the carrier is itself cargo)");
-    }
-    if (m_pCarrier)
-    {
-        Disembark();
-    }
-    m_pCarrier = &rCarrier;
-    rCarrier.m_cargo.push_back(this);
-    m_rPositions.NoteEmbarked_(*this);
-}
-
-void Unit::Disembark()
-{
-    if (!m_pCarrier)
-    {
-        return;
-    }
-    std::erase(m_pCarrier->m_cargo, this);
-    m_pCarrier = nullptr;
-    m_rPositions.NoteDisembarked_(*this);
 }
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }
@@ -237,8 +166,7 @@ int Unit::MaxMoveFragments_() const
 void Unit::BeginTurn()
 {
     SetMoveFragmentsRemaining(MaxMoveFragments_());
-    AdvanceAttackHistory();
-    ClearAirdroppedThisTurn();
+    m_latches.Roll();
 }
 
 void Unit::SpendMoveFragments(int fragments)
@@ -351,29 +279,6 @@ bool Unit::IsSupplyCrawling() const
 bool Unit::RequiresOrders() const
 {
     return !m_order.has_value() && m_moveFragmentsRemaining > 0;
-}
-
-bool Unit::HasAttackedThisTurn() const { return m_bAttackedThisTurn; }
-bool Unit::HasAttackedLastTurn() const { return m_bAttackedLastTurn; }
-void Unit::MarkAttacked()              { m_bAttackedThisTurn = true; }
-void Unit::AdvanceAttackHistory()
-{
-    m_bAttackedLastTurn = m_bAttackedThisTurn;
-    m_bAttackedThisTurn = false;
-}
-
-bool Unit::HasAirdroppedThisTurn() const { return m_bAirdroppedThisTurn; }
-void Unit::MarkAirdropped()              { m_bAirdroppedThisTurn = true; }
-void Unit::ClearAirdroppedThisTurn()     { m_bAirdroppedThisTurn = false; }
-
-bool Unit::IsInterceptReady(int missionYear) const
-{
-    return missionYear >= m_interceptReadyMissionYear;
-}
-
-void Unit::DeployIntercept(int readyMissionYear)
-{
-    m_interceptReadyMissionYear = readyMissionYear;
 }
 
 } // namespace ac

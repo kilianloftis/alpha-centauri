@@ -50,7 +50,7 @@ void UnitAttackExecutor::PromoteOnKill_(Unit& rAttacker, Unit& rDefender,
 
 bool UnitAttackExecutor::SpendAttackAction_(Unit& rAttacker, AttackKind_t kind)
 {
-    rAttacker.MarkAttacked();
+    rAttacker.Latches().MarkAttacked();
     const int fragments = AttackMoveFragments(rAttacker, kind);
     rAttacker.SpendMoveFragments(fragments);
     rAttacker.ClearOrder();

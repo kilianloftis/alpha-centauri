@@ -48,6 +48,7 @@ public:
 private:
     // Registration happens exclusively in Unit's constructor/destructor.
     friend class Unit;
+    friend class UnitTransport;
     void Register_(Unit& rUnit, const Tile& rTile);
     void Unregister_(Unit& rUnit);
 

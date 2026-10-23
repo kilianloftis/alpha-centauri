@@ -221,19 +221,19 @@ TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transp
     Unit& sameTile = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     // Different tiles.
-    CHECK_THROWS_AS(farAway.EmbarkInto(transport), std::invalid_argument);
-    CHECK_FALSE(farAway.IsEmbarked());
+    CHECK_THROWS_AS(farAway.Transport().EmbarkInto(transport), std::invalid_argument);
+    CHECK_FALSE(farAway.Transport().IsEmbarked());
 
     // A unit cannot carry itself.
-    CHECK_THROWS_AS(transport.EmbarkInto(transport), std::invalid_argument);
+    CHECK_THROWS_AS(transport.Transport().EmbarkInto(transport), std::invalid_argument);
 
     // A plain chassis is not a carrier at all (no cargo capacity).
-    CHECK_THROWS_AS(transport.EmbarkInto(sameTile), std::invalid_argument);
+    CHECK_THROWS_AS(transport.Transport().EmbarkInto(sameTile), std::invalid_argument);
 
     // The legal case still works, and re-embarking the same carrier is a no-op, not a throw.
-    CHECK_NOTHROW(sameTile.EmbarkInto(transport));
-    CHECK(sameTile.IsEmbarked());
-    CHECK_NOTHROW(sameTile.EmbarkInto(transport));
-    CHECK(transport.GetCargo().size() == 1);
+    CHECK_NOTHROW(sameTile.Transport().EmbarkInto(transport));
+    CHECK(sameTile.Transport().IsEmbarked());
+    CHECK_NOTHROW(sameTile.Transport().EmbarkInto(transport));
+    CHECK(transport.Transport().GetCargo().size() == 1);
 }
 

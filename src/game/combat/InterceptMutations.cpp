@@ -40,7 +40,7 @@ void DeployInterceptSource_(GameState& rGameState, Unit& rDefender,
     case InterceptSourceKind_t::None:
         return;
     case InterceptSourceKind_t::Unit:
-        rDefender.DeployIntercept(readyYear);
+        rDefender.Latches().DeployIntercept(readyYear);
         return;
     case InterceptSourceKind_t::Building:
     {

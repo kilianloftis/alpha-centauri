@@ -193,8 +193,8 @@ TEST_CASE("Evacuate tows embarked cargo with the carrier and clears both orders"
     Unit& transport =
         fixture.MakeUnit(guest, 10, 10, {"test_sea_chassis", "test_transport"});
     Unit& cargo = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
-    cargo.EmbarkInto(transport);
-    REQUIRE(cargo.IsEmbarked());
+    cargo.Transport().EmbarkInto(transport);
+    REQUIRE(cargo.Transport().IsEmbarked());
 
     transport.SetOrder(HoldOrder_t{});
     cargo.SetOrder(HoldOrder_t{});
@@ -204,7 +204,7 @@ TEST_CASE("Evacuate tows embarked cargo with the carrier and clears both orders"
     CHECK(result.unitsLeftInPlace == 0);
     CHECK(fixture.map.GetTerritory().GetOwner(transport.GetTile()) == guest.GetFactionId());
     CHECK(&cargo.GetTile() == &transport.GetTile());
-    CHECK(cargo.IsEmbarked());
+    CHECK(cargo.Transport().IsEmbarked());
     CHECK_FALSE(transport.GetOrder().has_value());
     CHECK_FALSE(cargo.GetOrder().has_value());
 }

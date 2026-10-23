@@ -27,11 +27,11 @@ bool IsRefuelSite(const Unit& rUnit)
     }
 
     // Carriers: only landed cargo of a domain the carrier carries.
-    if (!rUnit.IsEmbarked())
+    if (!rUnit.Transport().IsEmbarked())
     {
         return false;
     }
-    const Unit* pCarrier = rUnit.GetCarrier();
+    const Unit* pCarrier = rUnit.Transport().GetCarrier();
     return pCarrier
         && UnitCarries(*pCarrier, rUnit.GetDomain(), rUnit.GetFaction().GetFactionId());
 }
@@ -67,7 +67,7 @@ EndOfTurnFuel_t ResolveEndOfTurnFuel(const Unit& rUnit)
     }
 
     const Unit* pCarrier = nullptr;
-    if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air)
+    if (!rUnit.Transport().IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air)
     {
         pCarrier = FindBoardableTransport(rUnit, rUnit.GetTile());
     }

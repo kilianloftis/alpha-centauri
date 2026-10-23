@@ -609,13 +609,13 @@ struct ConditionEvaluator_
 
     bool operator()(const AttackerIsEmbarked_t&) const
     {
-        return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
+        return ctx.pAttacker != nullptr && ctx.pAttacker->Transport().IsEmbarked();
     }
 
     bool operator()(const HasAirdroppedThisTurn_t&) const
     {
         const Unit* pSubject = ctx.pUnit != nullptr ? ctx.pUnit : ctx.pAttacker;
-        return pSubject != nullptr && pSubject->HasAirdroppedThisTurn();
+        return pSubject != nullptr && pSubject->Latches().HasAirdroppedThisTurn();
     }
 
     bool operator()(const AttackerDomain_t& rDomain) const

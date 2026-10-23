@@ -27,7 +27,7 @@ FreeByOrigin_t ClearOrdersAndGroupFreeByOrigin_(const std::vector<Unit*>& rOnHos
     for (Unit* pUnit : rOnHost)
     {
         pUnit->ClearOrder();
-        if (!pUnit->IsEmbarked())
+        if (!pUnit->Transport().IsEmbarked())
         {
             freeByOrigin[&pUnit->GetTile()].push_back(pUnit);
         }

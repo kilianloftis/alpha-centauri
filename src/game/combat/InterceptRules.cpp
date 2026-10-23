@@ -124,7 +124,7 @@ bool InterceptSourceReady(const InterceptSource_t& rSource, const Unit& rDefende
     case InterceptSourceKind_t::None:
         return true;
     case InterceptSourceKind_t::Unit:
-        return rDefender.IsInterceptReady(missionYear);
+        return rDefender.Latches().IsInterceptReady(missionYear);
     case InterceptSourceKind_t::Building:
         return Ledger_(rSource).CountReadyBuildings(rSource.sourceId, missionYear) > 0;
     }
