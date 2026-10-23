@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Readable code: hard rules
 
-These seven rules apply to every new or changed line. Existing code is not rewritten to meet them
+These eight rules apply to every new or changed line. Existing code is not rewritten to meet them
 unless a change touches it. A change that breaks one is not finished.
 
 1. **One call deep.** A call may take another call's result as an argument, but not a call of a
@@ -55,8 +55,18 @@ unless a change touches it. A change that breaks one is not finished.
    test can reach inside. A struct is a return type only when a function returns more than one
    thing.
 7. **One level of abstraction per function.** A function either does the work or calls the steps
-   that do it. When it passes about 40 lines or nests more than three deep, its steps become
-   named functions. A long `switch` that maps one value to another is a table, not a long function.
+   that do it. A block you have to read and sum up before you know which step it is, is a step
+   that needs a name. A comment labelling a block, a bare `{ }` scope, a multi-line lambda in the
+   middle of a function, and a loop body with phases of its own each mark one. A line or two that
+   prepares an argument or clamps a result belongs to its step. When a function passes about 40
+   lines or nests more than three deep, its steps become named functions. A long `switch` that
+   maps one value to another is a table, not a long function.
+8. **Named steps have named siblings.** When some of a function's steps are named calls, the
+   inline mutations or calculations before, between or after them are steps too, and get names.
+   Glue stays inline: a calculation that only feeds a call's arguments, or a line that records
+   what a call did. A sibling written out as lower-level code (an RNG draw, a loop, container or
+   index work, field-by-field writes) gets a name. A step that repeats an existing function calls
+   it. A run of single domain calls on one object is already one level.
 
 ## General
 
