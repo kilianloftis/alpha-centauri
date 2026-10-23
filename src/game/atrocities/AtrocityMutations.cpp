@@ -83,10 +83,7 @@ void RallyWorldAgainst_(GameState& rGameState, Faction& rPerpetrator,
     }
     if (rOutcome.bExpelFromCouncil)
     {
-        if (CouncilVoteExecutor* pVotes = rGameState.GetCouncilVotes())
-        {
-            pVotes->Expel(rPerpetrator);
-        }
+        rGameState.GetCouncilVotes().Expel(rPerpetrator);
     }
 }
 

@@ -40,7 +40,7 @@ private:
 
 class GameState;
 
-// Queues an interaction for the player faction; a no-op in an all-AI game.
+// Queues an interaction for the player faction.
 void EnqueueForPlayer(GameState& rGameState, PlayerInteraction_t payload);
 
 } // namespace ac

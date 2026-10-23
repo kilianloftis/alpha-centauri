@@ -21,7 +21,7 @@ constexpr int k_TallMapHeight = 100;
 
 struct CameraRig_t
 {
-    ViewFixture fixture{false, k_TallMapHeight};
+    ViewFixture fixture{k_TallMapHeight};
     WorldDisplay display{fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen()};
     CameraInputController controller{display, fixture.state.GetWorldMap(),
                                      ViewFixture::FullScreen(), *fixture.pHotkeys};

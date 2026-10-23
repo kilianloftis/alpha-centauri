@@ -230,7 +230,8 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 
         // Faction A's own pool already carries its WorldGlobal effects; the world pass
         // excludes them so they are not double-counted.
-        CHECK(fixture.state.CollectWorldExtras(factionA).empty());
+        const auto forA = fixture.state.CollectWorldExtras(factionA);
+        CHECK(ResolveStatModifiers(FilterByStatId(forA, StatId_t::Energy), 0.0, nullptr).total == Approx(0.0));
     }
 
     SECTION("faction B's base production includes faction A's WorldGlobal energy")

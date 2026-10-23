@@ -28,12 +28,8 @@ void YieldingPerFactionTurnStage::ResetPassState_()
 
 bool YieldingPerFactionTurnStage::PlayerHasPending_(const GameState& rGameState)
 {
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return false;
-    }
-    return rGameState.GetPlayerInteractions().HasPendingFor(pPlayer->GetFactionId());
+    const FactionId_t playerId = rGameState.GetPlayerFaction().GetFactionId();
+    return rGameState.GetPlayerInteractions().HasPendingFor(playerId);
 }
 
 } // namespace ac

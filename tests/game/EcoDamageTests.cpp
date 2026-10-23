@@ -7,6 +7,8 @@
 
 #include "game/GameState.h"
 #include "game/atrocities/AtrocityLedger.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/PlanetaryCouncil.h"
 #include "game/ecology/EcoDamageCalculator.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/ecology/EcologyLedger.h"
@@ -306,15 +308,12 @@ TEST_CASE("AddVirtualMinerals is ungated by the Charter and records no atrocity"
 {
     for (const bool bCharterInForce : {true, false})
     {
-        std::vector<EffectConfig_t> worldRules;
-        if (bCharterInForce)
+        EcoFixture_ eco;
+        if (!bCharterInForce)
         {
-            EffectConfig_t charter;
-            charter.scope = EffectScope_t::WorldGlobal;
-            charter.effect = RuleFlagEffect_t{RuleFlagId_t::AtrocitiesForbidden, std::nullopt};
-            worldRules.push_back(charter);
+            PlanetaryCouncil& rCouncil = eco.fixtures.state.GetPlanetaryCouncil();
+            rCouncil.RecordPassed(rCouncil.GetRegistry().Get("repeal_un_charter"));
         }
-        EcoFixture_ eco(worldRules);
         REQUIRE(ResolveFlag(*eco.pFaction, RuleFlagId_t::AtrocitiesForbidden) == bCharterInForce);
 
         TriggeredEffectConfig_t tectonic;

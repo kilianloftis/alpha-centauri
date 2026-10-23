@@ -171,13 +171,10 @@ MinimapDisplay::TerrainCacheKey_t MinimapDisplay::CurrentTerrainKey_() const
     key.appearanceRevision = rWorldMap.GetAppearanceRevision();
     key.mapWidth = rWorldMap.GetWidth();
     key.mapHeight = rWorldMap.GetHeight();
-    if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
-    {
-        key.bHasViewer = true;
-        key.exploredRevision = pPlayer->GetExploredMap().GetRevision();
-        key.visibleRevision = pPlayer->GetVisibleMap().GetRevision();
-        key.memoryRevision = pPlayer->GetTileMemory().GetRevision();
-    }
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    key.exploredRevision = rPlayer.GetExploredMap().GetRevision();
+    key.visibleRevision = rPlayer.GetVisibleMap().GetRevision();
+    key.memoryRevision = rPlayer.GetTileMemory().GetRevision();
     return key;
 }
 
@@ -191,7 +188,7 @@ void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLa
 
     const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
     const MapAppearance appearance =
-        MapAppearance::Fogged(rWorldMap, m_rGameState.GetPlayerFaction());
+        MapAppearance::Fogged(rWorldMap, &m_rGameState.GetPlayerFaction());
     const size_t pixelCount =
         static_cast<size_t>(rLayout.mapWidth) * static_cast<size_t>(rLayout.mapHeight);
     m_terrainPixels.assign(pixelCount * 4, 0);

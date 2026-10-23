@@ -30,14 +30,8 @@ void CommlinksPanel::Render(Graphics& rGraphics)
         style.titleFontSize,
         style.titleColor);
 
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return;
-    }
-
     const DiplomacyLedger& rLedger = m_rGameState.GetDiplomacyLedger();
-    const FactionId_t playerId = pPlayer->GetFactionId();
+    const FactionId_t playerId = m_rGameState.GetPlayerFaction().GetFactionId();
     int row = 0;
 
     for (const Faction& rFaction : m_rGameState.Factions())

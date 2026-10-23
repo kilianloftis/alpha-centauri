@@ -49,7 +49,7 @@ struct ViewFixture : WorldFixture
         (void)bLoaded;
     }
 
-    explicit ViewFixture(bool bWithPlayerFaction = true, int mapHeight = k_TestMapHeight)
+    explicit ViewFixture(int mapHeight = k_TestMapHeight)
         : WorldFixture(k_TestMapWidth, mapHeight)
     {
         EnsureStyleLoaded();
@@ -73,12 +73,9 @@ struct ViewFixture : WorldFixture
             pTile->SetMoisture(ac::Moisture_t::Wet);
         }
 
-        if (bWithPlayerFaction)
-        {
-            pPlayer = &state.AddFaction(std::make_unique<ac::Faction>(
-                state.AllocateFactionId(), /*bIsPlayerControlled*/ true, factionDefinition,
-                dataContext, map, settings, k_TestFactionSeed));
-        }
+        pPlayer = &state.AddFaction(std::make_unique<ac::Faction>(
+            state.AllocateFactionId(), /*bIsPlayerControlled*/ true, factionDefinition,
+            dataContext, map, settings, k_TestFactionSeed));
 
         // WorldView reads player hotkeys from this path; relative defaults break under ctest's
         // build-dir cwd.

@@ -33,7 +33,6 @@ struct CouncilFixture_
 
     CouncilFixture_()
     {
-        InstallCouncil(fixtures.dataContext);
         FillLand(fixtures.map);
 
         pA = &fixtures.state.AddFaction(std::make_unique<Faction>(
@@ -46,11 +45,10 @@ struct CouncilFixture_
         fixtures.MakeFactionBase(*pA, 8, 4);
         fixtures.MakeFactionBase(*pB, 12, 8);
 
-        fixtures.state.CreatePlanetaryCouncil();
         fixtures.state.SetMissionYear(2100);
     }
 
-    PlanetaryCouncil& Council() { return *fixtures.state.GetPlanetaryCouncil(); }
+    PlanetaryCouncil& Council() { return fixtures.state.GetPlanetaryCouncil(); }
 };
 
 } // namespace

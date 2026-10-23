@@ -19,39 +19,6 @@
 namespace ac
 {
 
-namespace
-{
-
-// This view exists only for an active council vote. A missing council or player faction is a
-// broken session, not an empty state.
-PlanetaryCouncil& RequireCouncil_(GameState& rGameState)
-{
-    PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        throw std::runtime_error("CouncilVoteView: no planetary council in this session");
-    }
-    return *pCouncil;
-}
-
-CouncilVoteExecutor& RequireVotes_(GameState& rGameState)
-{
-    RequireCouncil_(rGameState);
-    return *rGameState.GetCouncilVotes();
-}
-
-Faction& RequirePlayer_(GameState& rGameState)
-{
-    Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        throw std::runtime_error("CouncilVoteView: no player faction");
-    }
-    return *pPlayer;
-}
-
-} // namespace
-
 CouncilVoteView::CouncilVoteView(GameState& rGameState, WindowLayout_t layout)
     : IGameView(layout)
     , m_rGameState(rGameState)
@@ -77,7 +44,7 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
     {
         // Escape resolves the vote: closing would leave GetPending() set, and Propose throws
         // while it is. Absentees abstain, so resolving is always available.
-        CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
+        CouncilVoteExecutor& rVotes = m_rGameState.GetCouncilVotes();
         if (rVotes.GetPending())
         {
             rVotes.Resolve(m_rGameState);
@@ -90,7 +57,7 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
 
 void CouncilVoteView::TryResolveAndClose_()
 {
-    CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
+    CouncilVoteExecutor& rVotes = m_rGameState.GetCouncilVotes();
     if (!rVotes.GetPending())
     {
         return;
@@ -103,9 +70,8 @@ void CouncilVoteView::TryResolveAndClose_()
 
 void CouncilVoteView::OpenBallotSelector_()
 {
-    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-    const CouncilVoteExecutor& rVotes = RequireVotes_(m_rGameState);
-    RequirePlayer_(m_rGameState);
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    const CouncilVoteExecutor& rVotes = m_rGameState.GetCouncilVotes();
     if (!rVotes.GetPending())
     {
         return;
@@ -149,13 +115,13 @@ void CouncilVoteView::OpenBallotSelector_()
 
 void CouncilVoteView::CastElectionVote_(Faction* pCandidate)
 {
-    RequireVotes_(m_rGameState).CastElectionVote(RequirePlayer_(m_rGameState), pCandidate);
+    m_rGameState.GetCouncilVotes().CastElectionVote(m_rGameState.GetPlayerFaction(), pCandidate);
     TryResolveAndClose_();
 }
 
 void CouncilVoteView::CastBallot_(CouncilBallot_t ballot)
 {
-    RequireVotes_(m_rGameState).CastVote(RequirePlayer_(m_rGameState), ballot);
+    m_rGameState.GetCouncilVotes().CastVote(m_rGameState.GetPlayerFaction(), ballot);
     TryResolveAndClose_();
 }
 

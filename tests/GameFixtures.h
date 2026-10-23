@@ -281,6 +281,11 @@ struct SessionInputs
             ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
         dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
             ac::ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
+        // GameState builds its council from these, enacting the initially active proposals.
+        dataContext.councilProposalRegistry = std::make_unique<ac::CouncilProposalRegistry>();
+        dataContext.councilProposalRegistry->Load(FixturePath("council/proposals.json"));
+        dataContext.councilRules = std::make_unique<ac::CouncilRulesConfig_t>(
+            ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
         // Built before any Faction: the pool holds a reference into `effects`. Tests that want
         // a different formula edit damageFormula in place.
         dataContext.ecoDamageConfig = std::make_unique<ac::EcoDamageConfig_t>(
@@ -493,17 +498,6 @@ inline void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int
     life.fungalBloomNativeLifeformsMin = lifeformsMin;
     life.fungalBloomNativeLifeformsMax = lifeformsMax;
     rData.nativeUnitRegistry->SetFungalBloomLifeforms(life);
-}
-
-// The fixture council rules plus the proposals in rProposalsFile. Call before
-// GameState::CreatePlanetaryCouncil.
-inline void InstallCouncil(ac::GameDataContext& rData,
-                           const std::string& rProposalsFile = "council/proposals.json")
-{
-    rData.councilProposalRegistry = std::make_unique<ac::CouncilProposalRegistry>();
-    rData.councilProposalRegistry->Load(FixturePath(rProposalsFile));
-    rData.councilRules = std::make_unique<ac::CouncilRulesConfig_t>(
-        ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
 }
 
 // Raise every tile so the map is all land. Call on the fixture's map before any AddFaction.

@@ -197,14 +197,8 @@ void SatelliteView::ShowOutcome_(std::string message)
 void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
                                        BuildingId_t targetBuildingId)
 {
-    // A missing player faction during a player-driven view is a broken session, not an empty state.
-    Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        throw std::runtime_error("SatelliteView: no player faction; cannot open the attacker list");
-    }
-
-    auto attackers = ListReadyOrbitalAttackers(*pPlayer, m_rGameState.GetMissionYear());
+    auto attackers =
+        ListReadyOrbitalAttackers(m_rGameState.GetPlayerFaction(), m_rGameState.GetMissionYear());
     if (attackers.empty())
     {
         ShowOutcome_("No ready orbital attackers.");
@@ -225,15 +219,15 @@ void SatelliteView::CommenceAttack_(BuildingId_t attackerBuildingId,
                                     FactionId_t targetFactionId,
                                     BuildingId_t targetBuildingId)
 {
-    Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    Faction& rPlayer = m_rGameState.GetPlayerFaction();
     Faction* pTarget = m_rGameState.FindFaction(targetFactionId);
-    if (!pPlayer || !pTarget)
+    if (!pTarget)
     {
         ShowOutcome_("The attack could not be completed.");
         return;
     }
 
-    const OrbitalAttackResult_t result = TryAttackSatellite(m_rGameState, *pPlayer, *pTarget,
+    const OrbitalAttackResult_t result = TryAttackSatellite(m_rGameState, rPlayer, *pTarget,
                                                             attackerBuildingId, targetBuildingId,
                                                             m_rGameState.GetRng());
     m_pendingOutcomeMessage = FormatAttackOutcome_(result, m_rBuildings);
@@ -285,10 +279,10 @@ void SatelliteView::BuildAttackMode_(const WindowLayout_t& topPanel)
         [this]() { OnAttackClicked_(); }));
 
     std::vector<SatelliteButtonListPanel::Item_t> factionItems;
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const FactionId_t playerId = m_rGameState.GetPlayerFaction().GetFactionId();
     for (const Faction& rFaction : m_rGameState.Factions())
     {
-        if (pPlayer && rFaction.GetFactionId() == pPlayer->GetFactionId())
+        if (rFaction.GetFactionId() == playerId)
         {
             continue;
         }

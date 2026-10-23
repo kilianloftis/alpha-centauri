@@ -20,47 +20,13 @@ bool HasContinuousWorldEffects_(const CouncilProposalConfig_t& rConfig)
                        IsContinuousWorldEffect);
 }
 
-// At least one, each a council participant, none twice.
-void RequireValidMembers_(const std::vector<Faction*>& rMembers)
-{
-    if (rMembers.empty())
-    {
-        throw std::invalid_argument("PlanetaryCouncil: members must not be empty");
-    }
-    for (Faction* pMember : rMembers)
-    {
-        if (!pMember)
-        {
-            throw std::invalid_argument("PlanetaryCouncil: member pointer is null");
-        }
-        if (!pMember->GetDefinition().identity.participatesInCouncil)
-        {
-            throw std::invalid_argument(
-                "PlanetaryCouncil: faction does not participate in the council");
-        }
-    }
-    for (size_t i = 0; i < rMembers.size(); ++i)
-    {
-        for (size_t j = i + 1; j < rMembers.size(); ++j)
-        {
-            if (rMembers[i]->GetFactionId() == rMembers[j]->GetFactionId())
-            {
-                throw std::invalid_argument("PlanetaryCouncil: duplicate member faction");
-            }
-        }
-    }
-}
-
 } // namespace
 
 PlanetaryCouncil::PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
-                                   const CouncilRulesConfig_t& rRules,
-                                   std::vector<Faction*> members)
+                                   const CouncilRulesConfig_t& rRules)
     : m_rRegistry(rRegistry)
     , m_rRules(rRules)
-    , m_members(std::move(members))
 {
-    RequireValidMembers_(m_members);
     for (const CouncilProposalConfig_t& rConfig : m_rRegistry.GetAll())
     {
         if (rConfig.initiallyActive)
@@ -73,6 +39,20 @@ PlanetaryCouncil::PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
 bool PlanetaryCouncil::IsCouncilMember(const Faction& rFaction) const
 {
     return std::find(m_members.begin(), m_members.end(), &rFaction) != m_members.end();
+}
+
+void PlanetaryCouncil::Seat(Faction& rFaction)
+{
+    if (!rFaction.GetDefinition().identity.participatesInCouncil)
+    {
+        throw std::invalid_argument("PlanetaryCouncil: faction does not participate in the council");
+    }
+    if (IsCouncilMember(rFaction))
+    {
+        throw std::invalid_argument("PlanetaryCouncil: faction is already seated");
+    }
+    m_members.push_back(&rFaction);
+    m_revision.Bump();
 }
 
 void PlanetaryCouncil::Expel(const Faction& rFaction)

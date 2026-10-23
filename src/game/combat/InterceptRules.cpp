@@ -104,12 +104,9 @@ std::vector<InterceptSource_t> CollectInterceptSources(const Unit& rAttacker,
                                   {EffectScope_t::WorldGlobal}, InterceptSourceKind_t::Building,
                                   std::nullopt, rGrantor.GetFactionId());
     }
-    if (const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil())
-    {
-        AppendMatchingIntercepts_(sources, pCouncil->CollectWorldEffects(), ctx,
-                                  {EffectScope_t::WorldGlobal}, InterceptSourceKind_t::None,
-                                  std::nullopt, defenderId);
-    }
+    AppendMatchingIntercepts_(sources, rState.GetPlanetaryCouncil().CollectWorldEffects(), ctx,
+                              {EffectScope_t::WorldGlobal}, InterceptSourceKind_t::None,
+                              std::nullopt, defenderId);
 
     // TODO: tile sources ignore cooldownTurns; that needs a per-tile deploy record.
     // TODO: tile sources ignore ownerFaction; whether a neutral or allied aura intercepts is open.

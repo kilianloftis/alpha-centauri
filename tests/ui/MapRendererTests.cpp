@@ -153,7 +153,7 @@ TEST_CASE("A shrouded tile shows only the shroud and land-coloured edges", "[ui]
 TEST_CASE("An edge between placed tiles draws once, and a partial scene keeps a closed outline",
           "[ui][map][grid]")
 {
-    ViewFixture fixture(false);
+    ViewFixture fixture;
     const WorldMap& rMap = fixture.state.GetWorldMap();
     const Tile& rBack = *rMap.GetTile(8, 8);
     // Lattice (1, 0) is map (+1, +1): the tile in front, down and to the right.

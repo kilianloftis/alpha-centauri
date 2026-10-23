@@ -105,8 +105,6 @@ public:
     WindowLayout_t GetFullscreenLayout() const;
 
 private:
-    // Throws rather than handing PushView a null view.
-    Faction* RequirePlayerFaction_() const;
 
     GameState& m_rGameState;
     const GameDataContext& m_rGameDataContext;

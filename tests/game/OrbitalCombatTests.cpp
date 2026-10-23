@@ -1,4 +1,6 @@
 #include "GameFixtures.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/PlanetaryCouncil.h"
 
 #include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
@@ -594,8 +596,8 @@ TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
           "[orbital][intercept][world][council]")
 {
     OrbitalGame_ game;
-    InstallCouncil(game.fixtures.dataContext, "council/world_intercept.json");
-    game.fixtures.state.CreatePlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    rCouncil.Enact(rCouncil.GetRegistry().Get("world_land_intercept"));
 
     Unit& defender = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_armor"});
     Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});

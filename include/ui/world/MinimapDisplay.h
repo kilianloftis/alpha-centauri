@@ -50,7 +50,6 @@ private:
         uint64_t memoryRevision = 0;
         int mapWidth = 0;
         int mapHeight = 0;
-        bool bHasViewer = false;
 
         bool operator==(const TerrainCacheKey_t&) const = default;
     };

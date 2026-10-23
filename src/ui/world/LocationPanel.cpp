@@ -47,7 +47,7 @@ void LocationPanel::Render(Graphics& rGraphics)
     const float textX = m_layout.x + padding;
 
     const MapAppearance appearance =
-        MapAppearance::Clear(m_rGameState.GetWorldMap(), m_rGameState.GetPlayerFaction());
+        MapAppearance::Clear(m_rGameState.GetWorldMap(), &m_rGameState.GetPlayerFaction());
     const PlacedTile_t preview{m_pSelectedTile, FlatTileShape(previewX, previewY, previewSize)};
     m_rMapRenderer.Render(rGraphics, std::span(&preview, 1), appearance, MapContent_t{});
 

@@ -209,20 +209,18 @@ WorldView::PresentationSnapshot_t WorldView::CapturePresentationSnapshot_() cons
         .missionYear = m_rGameState.GetMissionYear(),
         .appearanceRevision = m_rGameState.GetWorldMap().GetAppearanceRevision(),
     };
-    if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    snapshot.energy = rPlayer.GetEconomy().GetEnergy();
+    snapshot.research = rPlayer.GetResearch().GetAccumulatedPoints();
+    if (rPlayer.GetExploredMap().IsSized())
     {
-        snapshot.energy = pPlayer->GetEconomy().GetEnergy();
-        snapshot.research = pPlayer->GetResearch().GetAccumulatedPoints();
-        if (pPlayer->GetExploredMap().IsSized())
-        {
-            snapshot.exploredRevision = pPlayer->GetExploredMap().GetRevision();
-        }
-        if (pPlayer->GetVisibleMap().IsSized())
-        {
-            snapshot.visibleRevision = pPlayer->GetVisibleMap().GetRevision();
-        }
-        snapshot.unitRevision = pPlayer->GetUnitManager().GetRevision();
+        snapshot.exploredRevision = rPlayer.GetExploredMap().GetRevision();
     }
+    if (rPlayer.GetVisibleMap().IsSized())
+    {
+        snapshot.visibleRevision = rPlayer.GetVisibleMap().GetRevision();
+    }
+    snapshot.unitRevision = rPlayer.GetUnitManager().GetRevision();
     return snapshot;
 }
 
@@ -260,12 +258,7 @@ void WorldView::ProcessPendingAutoEndTurn()
 
 bool WorldView::PlayerUnitsNeedOrders_() const
 {
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return false;
-    }
-    return pPlayer->GetUnitManager().HasUnitsRequiringOrders();
+    return m_rGameState.GetPlayerFaction().GetUnitManager().HasUnitsRequiringOrders();
 }
 
 void WorldView::CenterOnTile(int tileX, int tileY)
@@ -347,8 +340,8 @@ void WorldView::SelectNextAvailableUnit_()
         return;
     }
 
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr) : nullptr;
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    Unit* pNext = rPlayer.GetUnitManager().GetNextAvailableUnit(nullptr);
     SetSelectedUnit_(pNext, false);
     if (pNext)
     {
@@ -358,12 +351,6 @@ void WorldView::SelectNextAvailableUnit_()
 
 void WorldView::SelectNextAvailableUnitIfNeeded_()
 {
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return;
-    }
-
     // Manual map browse: empty tile (no unit) or a unit that does not need orders
     // (already moved / has an order). Leave selection alone so the player can inspect.
     if (m_bManualSelection && (!m_pSelectedUnit || !m_pSelectedUnit->RequiresOrders()))
@@ -377,7 +364,8 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     }
 
     // Empty selection, or the auto-cycled unit is done (out of moves / has an order).
-    if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit(nullptr))
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    if (Unit* pNext = rPlayer.GetUnitManager().GetNextAvailableUnit(nullptr))
     {
         SetSelectedUnit_(pNext, false);
         TryAutoReturnLowFuel_(*pNext);
@@ -404,11 +392,9 @@ void WorldView::RefreshInfoPanel_()
     const auto& s = Style().worldView;
     std::vector<InfoPanelElement::InfoLine> infoLines;
     infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), s.missionYearColor});
-    if (const Faction* pPlayerFaction = m_rGameState.GetPlayerFaction())
-    {
-        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), s.energyTextColor});
-        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), s.researchTextColor});
-    }
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    infoLines.push_back({"Energy: " + std::to_string(rPlayer.GetEconomy().GetEnergy()), s.energyTextColor});
+    infoLines.push_back({"Research: " + std::to_string(rPlayer.GetResearch().GetAccumulatedPoints()), s.researchTextColor});
     m_pInfoPanel->SetInfoLines(infoLines);
 }
 
@@ -420,10 +406,10 @@ std::vector<Unit*> WorldView::VisibleStackUnits_() const
     {
         return stackUnits;
     }
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     for (Unit* pUnit : m_rGameState.GetWorldMap().GetAllUnitsOnTile(*m_pSelectedTile))
     {
-        if (pUnit && (!pPlayer || IsUnitVisibleTo(*pPlayer, *pUnit)))
+        if (pUnit && IsUnitVisibleTo(rPlayer, *pUnit))
         {
             stackUnits.push_back(pUnit);
         }
@@ -614,10 +600,8 @@ bool WorldView::HandleChromeKey_(const KeyEvent_t& rEvent)
     }
     if (m_rHotkeys.Matches(HotkeyAction_t::NextUnit, rEvent))
     {
-        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        SetSelectedUnit_(
-            pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit) : nullptr,
-            false);
+        const Faction& rPlayer = m_rGameState.GetPlayerFaction();
+        SetSelectedUnit_(rPlayer.GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit), false);
         return true;
     }
     return false;
@@ -755,12 +739,12 @@ void WorldView::ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable
 // Without a sized explored map, every tile counts as explored.
 bool WorldView::IsExploredByPlayer_(int worldX, int worldY) const
 {
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pPlayer || !pPlayer->GetExploredMap().IsSized())
+    const FactionExploredMap& rExplored = m_rGameState.GetPlayerFaction().GetExploredMap();
+    if (!rExplored.IsSized())
     {
         return true;
     }
-    return pPlayer->GetExploredMap().IsExplored(worldX, worldY);
+    return rExplored.IsExplored(worldX, worldY);
 }
 
 void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
@@ -919,7 +903,7 @@ std::shared_ptr<WorldView::BombardPlayback_t> WorldView::SnapshotBombardTargets_
     pPlayback->pAttackerTile = &rAttacker.GetTile();
     pPlayback->pTargetTile = &rTargetTile;
     pPlayback->attackerName = rAttacker.GetDesign().GetName();
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     const WorldMap& rMap = m_rGameState.GetWorldMap();
     const std::vector<Unit*>& rOccupants = rMap.GetUnitsOnTile(rTargetTile);
     const std::vector<Unit*>& rCargo = rMap.GetCargoOnTile(rTargetTile);
@@ -932,7 +916,7 @@ std::shared_ptr<WorldView::BombardPlayback_t> WorldView::SnapshotBombardTargets_
                 continue;
             }
             pPlayback->names[pUnit->GetUnitId()] = pUnit->GetDesign().GetName();
-            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
+            if (!IsUnitVisibleTo(rPlayer, *pUnit))
             {
                 pPlayback->playbackUnitIds.insert(pUnit->GetUnitId());
             }
@@ -1059,14 +1043,14 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         return;
     }
 
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     for (Unit* pUnit : units)
     {
         if (!pUnit)
         {
             continue;
         }
-        if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
+        if (!IsUnitVisibleTo(rPlayer, *pUnit))
         {
             continue;
         }

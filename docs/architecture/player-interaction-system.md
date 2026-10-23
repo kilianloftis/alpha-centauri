@@ -33,7 +33,7 @@ sequenceDiagram
 | `PlayerInteraction_t` / `QueuedInteraction_t` | headers under `include/game/` | Why the player is paused and how to present |
 | `PlayerInteractionQueue` | `GameState` | FIFO; `Enqueue` / `Front` / `CompleteFront` / `HasPendingFor` |
 | `YieldingPerFactionTurnStage` | turn stages | Faction bind + `PlayerHasPending_` |
-| `EnqueueForPlayer` | free function by `PlayerInteractionQueue` | Address the player faction; no-op in an all-AI game |
+| `EnqueueForPlayer` | free function by `PlayerInteractionQueue` | Address the player faction; every session has one |
 | `InteractionPresenter` | `Engine` | Visit Front → Notice / OpenView; then CompleteFront + Advance |
 
 Diplomacy and Planetary Council keep **their own** pending slots. They are not this queue.

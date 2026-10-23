@@ -80,16 +80,9 @@ std::optional<FactionId_t> BlastVictim(const std::vector<FactionId_t>& rBaseOwne
 namespace
 {
 
-// No council means no vote has ever repealed anything, and proposals.json declares un_charter
-// initially_active, so the Charter is in force, as a freshly built council would report.
 bool CharterInForce_(const GameState& rGameState)
 {
-    const PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        return true;
-    }
-    return pCouncil->HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden);
+    return rGameState.GetPlanetaryCouncil().HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden);
 }
 
 // Handicapping the player is what difficulty is for, so the two sides read separate numbers

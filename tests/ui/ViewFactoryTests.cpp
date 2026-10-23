@@ -23,38 +23,6 @@
 using namespace ac;
 using actest::ViewFixture;
 
-TEST_CASE("A view that needs the player faction throws when there is none", "[ui][factory]")
-{
-    // These returned nullptr and PushView dereferenced whatever it was handed.
-    ViewFixture fixture(/*bWithPlayerFaction*/ false);
-    REQUIRE(fixture.state.GetPlayerFaction() == nullptr);
-
-    CHECK_THROWS_AS(fixture.pFactory->CreateResearchView(ViewFixture::FullScreen()),
-                    std::runtime_error);
-    CHECK_THROWS_AS(fixture.pFactory->CreateSocialEngineeringView(ViewFixture::FullScreen()),
-                    std::runtime_error);
-    CHECK_THROWS_AS(fixture.pFactory->CreateUnitDesignerView(ViewFixture::FullScreen()),
-                    std::runtime_error);
-}
-
-TEST_CASE("Opening a base needs the player faction too", "[ui][factory]")
-{
-    // CreateBaseView reads the player faction to decide editability, and it is the view the
-    // world-screen base click reaches.
-    ViewFixture fixture(/*bWithPlayerFaction*/ false);
-    ac::Faction& rOwner = fixture.state.AddFaction(std::make_unique<ac::Faction>(
-        fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false,
-        fixture.factionDefinition, fixture.dataContext, fixture.state.GetWorldMap(),
-        fixture.settings, actest::k_TestFactionSeed));
-    ac::BaseManager* pBase = rOwner.CreateBase(
-        fixture.state.AllocateBaseId(), "Rival", fixture.state.GetWorldMap().GetTile(8, 8),
-        fixture.state.GetTileEffects(), std::nullopt, false);
-    REQUIRE(pBase != nullptr);
-
-    CHECK_THROWS_AS(fixture.pFactory->CreateBaseView(*pBase, ViewFixture::FullScreen()),
-                    std::runtime_error);
-}
-
 TEST_CASE("The same views build when a player faction exists", "[ui][factory]")
 {
     ViewFixture fixture;
@@ -275,21 +243,6 @@ TEST_CASE("The settings panel ignores non-left clicks", "[ui][settings]")
     // The same point with the left button does toggle it, so the coordinates are right.
     pView->HandleMouse(MouseEvent_t{MouseButton_t::Left, rowX, rowY, {}, true});
     CHECK(fixture.settings.IsPauseAtEndOfTurn() != before);
-}
-
-TEST_CASE("The council view refuses to run without a council", "[ui][council]")
-{
-    // The view exists only for an active vote. Every path returned quietly on a missing council
-    // or player, leaving a Vote button that did nothing.
-    ViewFixture fixture;
-    REQUIRE(fixture.state.GetPlanetaryCouncil() == nullptr);
-
-    auto pView = fixture.pFactory->CreateCouncilVoteView(ViewFixture::FullScreen());
-    REQUIRE(pView);
-
-    // Escape resolves a pending proposal before closing; with no council that is a broken
-    // session, not a no-op.
-    CHECK_THROWS_AS(pView->HandleKey(KeyEvent_t{Key_t::Escape, {}}), std::runtime_error);
 }
 
 TEST_CASE("The social-engineering panel reports turns remaining, not full duration",

@@ -154,6 +154,13 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
+    if (!rGameData.councilProposalRegistry || !rGameData.councilRules)
+    {
+        throw std::invalid_argument("GameState: the council proposals and rules are not loaded");
+    }
+    m_pCouncil = std::make_unique<PlanetaryCouncil>(*rGameData.councilProposalRegistry,
+                                                    *rGameData.councilRules);
+    m_pCouncilVotes = std::make_unique<CouncilVoteExecutor>(*m_pCouncil);
     m_pTileEffects = std::make_unique<TileEffectsContext>(
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
         rGameData.tileYieldRules, rGameData.interactionGrids);
@@ -343,6 +350,10 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 
 void GameState::AttachToSession_(Faction& rFaction)
 {
+    if (rFaction.GetDefinition().identity.participatesInCouncil)
+    {
+        m_pCouncil->Seat(rFaction);
+    }
     // The session wiring that has to close over this GameState.
     rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
                                    GetWorldMap().GetUnitPositions());
@@ -504,28 +515,22 @@ const Faction& GameState::RequireFaction(FactionId_t factionId) const
     return *pFaction;
 }
 
-const Faction* GameState::GetPlayerFaction() const
+const Faction& GameState::GetPlayerFaction() const
 {
     for (const auto& pFaction : m_factions)
     {
         if (pFaction->IsPlayerControlled())
         {
-            return pFaction.get();
+            return *pFaction;
         }
     }
-    return nullptr;
+    throw std::logic_error("GameState: no faction is player-controlled");
 }
 
-Faction* GameState::GetPlayerFaction()
+Faction& GameState::GetPlayerFaction()
 {
-    for (const auto& pFaction : m_factions)
-    {
-        if (pFaction->IsPlayerControlled())
-        {
-            return pFaction.get();
-        }
-    }
-    return nullptr;
+    const GameState& rConstThis = *this;
+    return const_cast<Faction&>(rConstThis.GetPlayerFaction());
 }
 
 DiplomacyLedger& GameState::GetDiplomacyLedger()
@@ -737,40 +742,19 @@ const WorldEventTracker* GameState::GetWorldEvents() const
     return m_pWorldEvents.get();
 }
 
-void GameState::CreatePlanetaryCouncil()
+CouncilVoteExecutor& GameState::GetCouncilVotes()
 {
-    if (m_pCouncil)
-    {
-        throw std::logic_error("GameState::CreatePlanetaryCouncil: council already exists");
-    }
-
-    std::vector<Faction*> members;
-    for (Faction& rFaction : Factions())
-    {
-        if (rFaction.GetDefinition().identity.participatesInCouncil)
-        {
-            members.push_back(&rFaction);
-        }
-    }
-    m_pCouncil = std::make_unique<PlanetaryCouncil>(*m_rGameData.councilProposalRegistry,
-                                                    *m_rGameData.councilRules,
-                                                    std::move(members));
-    m_pCouncilVotes = std::make_unique<CouncilVoteExecutor>(*m_pCouncil);
+    return *m_pCouncilVotes;
 }
 
-CouncilVoteExecutor* GameState::GetCouncilVotes()
+PlanetaryCouncil& GameState::GetPlanetaryCouncil()
 {
-    return m_pCouncilVotes.get();
+    return *m_pCouncil;
 }
 
-PlanetaryCouncil* GameState::GetPlanetaryCouncil()
+const PlanetaryCouncil& GameState::GetPlanetaryCouncil() const
 {
-    return m_pCouncil.get();
-}
-
-const PlanetaryCouncil* GameState::GetPlanetaryCouncil() const
-{
-    return m_pCouncil.get();
+    return *m_pCouncil;
 }
 
 void GameState::RebuildTerritory()

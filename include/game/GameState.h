@@ -59,7 +59,6 @@ public:
 
     // Builds the council and its vote executor from the participating factions, once the
     // starting factions are in. Throws if already created.
-    void CreatePlanetaryCouncil();
 
     // Registries, configs and calculators: the rules every stage, rule module and view reads.
     const GameDataContext& GetGameData() const;
@@ -103,8 +102,9 @@ public:
     Faction& RequireFaction(FactionId_t factionId);
     const Faction& RequireFaction(FactionId_t factionId) const;
     // Returns the faction with IsPlayerControlled() set, or nullptr if none has been added yet.
-    const Faction* GetPlayerFaction() const;
-    Faction* GetPlayerFaction();
+    // Throws when no faction is player-controlled; Engine always seats one.
+    const Faction& GetPlayerFaction() const;
+    Faction& GetPlayerFaction();
 
     DiplomacyLedger& GetDiplomacyLedger();
     const DiplomacyLedger& GetDiplomacyLedger() const;
@@ -169,11 +169,9 @@ public:
     const ProbeActionExecutor& GetProbeActions() const;
 
 
-    // Null until CreatePlanetaryCouncil (most unit-test fixtures never create one).
-    PlanetaryCouncil* GetPlanetaryCouncil();
-    const PlanetaryCouncil* GetPlanetaryCouncil() const;
-    // Null until CreatePlanetaryCouncil, like the council it votes on.
-    CouncilVoteExecutor* GetCouncilVotes();
+    PlanetaryCouncil& GetPlanetaryCouncil();
+    const PlanetaryCouncil& GetPlanetaryCouncil() const;
+    CouncilVoteExecutor& GetCouncilVotes();
 
     // Start tracking the world-event registry. Throws if already created. Without it the
     // WorldEvents stage runs no events.

@@ -113,19 +113,19 @@ void WorldDisplay::Render(Graphics& rGraphics)
 
     m_viewport.SetRelief(m_rGameState.GetSettings().GetMapDisplay().relief,
                          Style().tileRenderer.relief);
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
 
     MapContent_t content;
     content.showsBase = [](const BaseManager&) { return true; };
-    content.showsUnit = [this, pPlayer](const Unit& rUnit) {
+    content.showsUnit = [this, &rPlayer](const Unit& rUnit) {
         // Per-unit visibility (fog, Conceal/Detect, contact reveal), not tile fog alone.
         return (m_pPlaybackVisibleUnits && m_pPlaybackVisibleUnits->contains(rUnit.GetUnitId()))
-               || !pPlayer || IsUnitVisibleTo(*pPlayer, rUnit);
+               || IsUnitVisibleTo(rPlayer, rUnit);
     };
     content.pSelectedUnit = m_pSelectedUnit;
 
     m_unitMarkers = m_rMapRenderer.Render(rGraphics, m_viewport.VisibleTiles(),
-                                          MapAppearance::Fogged(rWorldMap, pPlayer), content);
+                                          MapAppearance::Fogged(rWorldMap, &rPlayer), content);
     RenderPathPreview_(rGraphics);
 }
 

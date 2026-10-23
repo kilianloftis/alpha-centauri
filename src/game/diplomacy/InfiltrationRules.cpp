@@ -22,14 +22,7 @@ bool IsCouncilMemberTarget_(FactionId_t candidate)
     {
         return false;
     }
-    const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        // No council ⇒ no council members. Do not treat participatesInCouncil
-        // (eligibility for council construction) as membership.
-        return false;
-    }
-    return pCouncil->IsCouncilMember(*pCandidate);
+    return rState.GetPlanetaryCouncil().IsCouncilMember(*pCandidate);
 }
 
 bool FilterSelects_(const FactionFilter_t& rFilter, FactionId_t candidate,
@@ -132,9 +125,8 @@ bool HasInfiltration(FactionId_t infiltrator, FactionId_t target)
     {
         return true;
     }
-    const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil();
-    return pCouncil
-        && AnyGrantsInfiltration_(pCouncil->CollectFactionEffects(*pInfiltrator), infiltrator,
+    const PlanetaryCouncil& rCouncil = rState.GetPlanetaryCouncil();
+    return AnyGrantsInfiltration_(rCouncil.CollectFactionEffects(*pInfiltrator), infiltrator,
                                   target);
 }
 

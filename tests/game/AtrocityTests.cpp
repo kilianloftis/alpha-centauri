@@ -47,7 +47,6 @@ struct AtrocityGame_
 
     AtrocityGame_()
     {
-        InstallCouncil(fixtures.dataContext);
 
         FillLand(fixtures.map);
 
@@ -59,7 +58,6 @@ struct AtrocityGame_
         fixtures.MakeFactionBase(*pB, 12, 8);
         fixtures.MakeFactionBase(*pC, 6, 10);
 
-        fixtures.state.CreatePlanetaryCouncil();
         fixtures.state.SetMissionYear(k_StartYear);
     }
 
@@ -82,8 +80,8 @@ struct AtrocityGame_
     // Every member votes Yea on rProposalId, which is how the Charter gets repealed here.
     void PassStandard(Faction& rProposer, const std::string& rProposalId)
     {
-        PlanetaryCouncil& rCouncil = *fixtures.state.GetPlanetaryCouncil();
-        CouncilVoteExecutor& rVotes = *fixtures.state.GetCouncilVotes();
+        PlanetaryCouncil& rCouncil = fixtures.state.GetPlanetaryCouncil();
+        CouncilVoteExecutor& rVotes = fixtures.state.GetCouncilVotes();
         for (Faction* pOther : rCouncil.Members())
         {
             if (pOther->GetFactionId() != rProposer.GetFactionId())
@@ -115,7 +113,7 @@ struct AtrocityGame_
             rProposer.GetResearch().AddDiscoveredTech("advanced_military_algorithms");
         }
         PassStandard(rProposer, "repeal_un_charter");
-        REQUIRE_FALSE(fixtures.state.GetPlanetaryCouncil()->HasActiveRuleFlag(
+        REQUIRE_FALSE(fixtures.state.GetPlanetaryCouncil().HasActiveRuleFlag(
             RuleFlagId_t::AtrocitiesForbidden));
     }
 };
@@ -145,7 +143,7 @@ TEST_CASE("A Simple atrocity under the Charter sanctions and the victim remember
     // vendetta from bystanders, and the seat is kept.
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
     CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("A sanction lapses on its expiry year, not the turn before", "[atrocity]")
@@ -218,7 +216,7 @@ TEST_CASE("Lesser atrocities escalate to Major once their count reaches the thre
             CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
         REQUIRE(committed.severity == k_Simple);
     }
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t escalated =
         CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
@@ -226,7 +224,7 @@ TEST_CASE("Lesser atrocities escalate to Major once their count reaches the thre
     // Universal Vendetta covers living AI bystanders; the victim is at Vendetta from the act.
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), game.pA->GetFactionId())
           == DiplomaticStatus_t::Vendetta);
-    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("Transcend escalates lesser atrocities at its stated threshold", "[atrocity]")
@@ -294,7 +292,7 @@ TEST_CASE("An excused Simple act is recorded and does not escalate", "[atrocity]
     }
 
     CHECK(game.Ledger().SimpleCount(game.pA->GetFactionId()) == 0);
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
     // Excused from penalties, but still an attack on the victim.
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), game.pA->GetFactionId()));
     CHECK_FALSE(game.Diplomacy().HasVendetta(game.pC->GetFactionId(), game.pA->GetFactionId()));
@@ -327,7 +325,7 @@ TEST_CASE("A Simple act against another species does not move the simple counter
         CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
     CHECK(counted.severity == k_Simple);
     CHECK(counted.PenaltiesApplied());
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 }
 
 TEST_CASE("A Major atrocity does not fill the Simple counter", "[atrocity]")
@@ -413,7 +411,7 @@ TEST_CASE("A repealed Charter lifts Major penalties and the victim still remembe
     CHECK_FALSE(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
     CHECK(game.Diplomacy().HasVendetta(game.pB->GetFactionId(), id));
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
@@ -449,7 +447,7 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
     CHECK_FALSE(game.Sanctioned(humanId));
     CHECK(game.Ledger().HasVictimized(humanId, rAlien.GetFactionId()));
     CHECK(game.Diplomacy().HasVendetta(rAlien.GetFactionId(), humanId));
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t major =
         CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Major);
@@ -458,7 +456,7 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
     CHECK(game.Ledger().HasCommittedMajorAgainst(humanId, rAlien.GetFactionId()));
     CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), humanId)
           != DiplomaticStatus_t::Vendetta);
-    CHECK(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
 
     const AtrocityCommitted_t progenitorPerp =
         CommitAtrocity(game.fixtures.state, rAlien, game.pA, k_Major);
@@ -487,7 +485,7 @@ TEST_CASE("A victimless Major atrocity is still answered for", "[atrocity]")
     CHECK(committed.PenaltiesApplied());
     CHECK(committed.sanctionUntilYear.has_value() == false);
     CHECK_FALSE(game.Sanctioned(game.pA->GetFactionId()));
-    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil()->IsCouncilMember(*game.pA));
+    CHECK_FALSE(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
     CHECK(game.Ledger().Records().back().victim.has_value() == false);
     // No victim to exclude: every living AI declares Vendetta. The human player is not forced.
     CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), game.pA->GetFactionId())

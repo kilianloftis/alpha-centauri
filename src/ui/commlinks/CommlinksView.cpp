@@ -19,32 +19,6 @@
 namespace ac
 {
 
-namespace
-{
-
-// Commlinks opens only in a running game, which always has a council and a player.
-const PlanetaryCouncil& RequireCouncil_(const GameState& rGameState)
-{
-    const PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        throw std::runtime_error("CommlinksView: no planetary council in this session");
-    }
-    return *pCouncil;
-}
-
-Faction& RequirePlayer_(GameState& rGameState)
-{
-    Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        throw std::runtime_error("CommlinksView: no player faction");
-    }
-    return *pPlayer;
-}
-
-} // namespace
-
 CommlinksView::CommlinksView(
     GameState& rGameState,
     WindowLayout_t layout,
@@ -78,8 +52,8 @@ bool CommlinksView::HandleKey(const KeyEvent_t& rEvent)
 
 void CommlinksView::OpenCouncilCooldownPopup_()
 {
-    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-    const Faction& rPlayer = RequirePlayer_(m_rGameState);
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
 
     const CouncilRulesConfig_t& rRules = rCouncil.GetRules();
     // OK dismisses this council cooldown UI (and the parent Commlinks overlay).
@@ -97,8 +71,8 @@ void CommlinksView::OpenCouncilCooldownPopup_()
 
 void CommlinksView::OpenCouncilProposals_()
 {
-    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-    const Faction& rPlayer = RequirePlayer_(m_rGameState);
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
 
     std::vector<PopupChoice_t> choices;
     for (const CouncilProposalConfig_t& rProposal : rCouncil.GetRegistry().GetAll())
@@ -128,9 +102,9 @@ void CommlinksView::ShowNotice_(std::string message)
 
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)
 {
-    const PlanetaryCouncil& rCouncil = RequireCouncil_(m_rGameState);
-    CouncilVoteExecutor& rVotes = *m_rGameState.GetCouncilVotes();
-    Faction& rPlayer = RequirePlayer_(m_rGameState);
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = m_rGameState.GetCouncilVotes();
+    Faction& rPlayer = m_rGameState.GetPlayerFaction();
 
     // The proposals popup closes itself on selection, so each gate below explains itself.
     if (rVotes.GetPending())

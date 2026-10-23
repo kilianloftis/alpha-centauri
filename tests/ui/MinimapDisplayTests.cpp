@@ -30,7 +30,7 @@ constexpr float k_PixelH = 10.0f;
 
 struct MinimapRig_t
 {
-    ViewFixture fixture{false};
+    ViewFixture fixture;
     WorldDisplay display{fixture.state, *fixture.pMapRenderer, ViewFixture::FullScreen()};
     WindowLayout_t layout{100.0f, 50.0f, 720.0f, 170.0f};
     std::vector<std::pair<int, int>> centered;

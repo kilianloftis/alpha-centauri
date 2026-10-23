@@ -46,13 +46,8 @@ bool PlayerInteractionQueue::HasPendingFor(FactionId_t audienceFactionId) const
 
 void EnqueueForPlayer(GameState& rGameState, PlayerInteraction_t payload)
 {
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return;
-    }
-    rGameState.GetPlayerInteractions().Enqueue(
-        QueuedInteraction_t{std::move(payload), pPlayer->GetFactionId()});
+    const FactionId_t playerId = rGameState.GetPlayerFaction().GetFactionId();
+    rGameState.GetPlayerInteractions().Enqueue(QueuedInteraction_t{std::move(payload), playerId});
 }
 
 } // namespace ac

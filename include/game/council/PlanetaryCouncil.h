@@ -18,14 +18,13 @@ namespace ac
 class CouncilProposalRegistry;
 class Faction;
 
-// The council's standing state: members (seated at construction, outliving it; Expel is the one
-// way out), the governor, and the laws in force with their history.
+// The council's standing state: members (seated as they join the session, outliving it; Expel is
+// the one way out), the governor, and the laws in force with their history.
 class PlanetaryCouncil
 {
 public:
     PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
-                     const CouncilRulesConfig_t& rRules,
-                     std::vector<Faction*> members);
+                     const CouncilRulesConfig_t& rRules);
 
     const CouncilProposalRegistry& GetRegistry() const { return m_rRegistry; }
     const CouncilRulesConfig_t& GetRules() const { return m_rRules; }
@@ -33,6 +32,9 @@ public:
     // --- Membership ---
     const std::vector<Faction*>& Members() const { return m_members; }
     bool IsCouncilMember(const Faction& rFaction) const;
+
+    // Throws for a faction that does not participate in the council or is already seated.
+    void Seat(Faction& rFaction);
 
     // Remove a member for good, vacating the governorship and its standing effects if they held
     // it. Expelling a faction that is not a member does nothing.
@@ -79,7 +81,7 @@ private:
     const CouncilProposalRegistry& m_rRegistry;
     const CouncilRulesConfig_t& m_rRules;
 
-    // Non-owning; fixed for the life of the council. Members must outlive this object.
+    // Non-owning. Members must outlive this object.
     std::vector<Faction*> m_members;
 
     // Mission year when each faction last put a proposal before the council.

@@ -81,19 +81,15 @@ void CouncilFactionVotesPanel::Render(Graphics& rGraphics)
     rGraphics.DrawRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        return;
-    }
-    const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes()->GetPending();
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes().GetPending();
     if (!pPending)
     {
         return;
     }
 
-    const CouncilProposalConfig_t& rConfig = pCouncil->GetRegistry().Get(pPending->proposalId);
-    const std::vector<Faction*>& rMembers = pCouncil->Members();
+    const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(pPending->proposalId);
+    const std::vector<Faction*>& rMembers = rCouncil.Members();
     if (rMembers.empty())
     {
         return;
@@ -112,8 +108,8 @@ void CouncilFactionVotesPanel::Render(Graphics& rGraphics)
         rGraphics.DrawRect(sliceX, m_layout.y, sliceWidth, m_layout.height, style.borderColor);
 
         const std::string& rName = pMember->GetDefinition().identity.name;
-        const std::string voteLabel = MemberVoteLabel_(*pCouncil, *pPending, rConfig, *pMember);
-        const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
+        const std::string voteLabel = MemberVoteLabel_(rCouncil, *pPending, rConfig, *pMember);
+        const int weight = m_weights.Get(rCouncil, *pMember, rConfig.voteWeight);
 
         rGraphics.DrawText(
             rName,

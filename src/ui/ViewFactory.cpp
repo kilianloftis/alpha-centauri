@@ -20,16 +20,6 @@
 namespace ac
 {
 
-Faction* ViewFactory::RequirePlayerFaction_() const
-{
-    Faction* pFaction = m_rGameState.GetPlayerFaction();
-    if (!pFaction)
-    {
-        throw std::runtime_error("ViewFactory: no player faction; cannot build a player view");
-    }
-    return pFaction;
-}
-
 ViewFactory::ViewFactory(
     GameState& rGameState,
     const GameDataContext& rGameDataContext,
@@ -82,9 +72,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
     const WindowLayout_t& layout
 ) const
 {
-    const Faction* pFaction = RequirePlayerFaction_();
-
-    const bool bEditable = (rBase.GetFactionId() == pFaction->GetFactionId());
+    const bool bEditable = (rBase.GetFactionId() == m_rGameState.GetPlayerFaction().GetFactionId());
     return std::make_unique<BaseView>(rBase, layout, bEditable, m_rMapRenderer, m_rSprites);
 }
 
@@ -92,20 +80,16 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
     const WindowLayout_t& layout
 ) const
 {
-    const Faction* pFaction = RequirePlayerFaction_();
-
     return std::make_unique<ResearchView>(
-        pFaction->GetResearch(), *m_rGameDataContext.techRegistry, m_rSprites, layout);
+        m_rGameState.GetPlayerFaction().GetResearch(), *m_rGameDataContext.techRegistry, m_rSprites, layout);
 }
 
 std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(
     const WindowLayout_t& layout
 ) const
 {
-    Faction* pFaction = RequirePlayerFaction_();
-
     return std::make_unique<SocialEngineeringView>(
-        *pFaction,
+        m_rGameState.GetPlayerFaction(),
         *m_rGameDataContext.socialPolicyRegistry,
         *m_rGameDataContext.socialRatingRegistry,
         layout
@@ -116,15 +100,14 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
     const WindowLayout_t& layout
 ) const
 {
-    Faction* pFaction = RequirePlayerFaction_();
-    const std::vector<std::string>& rDiscoveredTechs =
-        pFaction->GetResearch().GetDiscoveredTechs();
+    Faction& rPlayer = m_rGameState.GetPlayerFaction();
+    const std::vector<std::string>& rDiscoveredTechs = rPlayer.GetResearch().GetDiscoveredTechs();
 
     return std::make_unique<UnitDesignerView>(
-        pFaction->GetMilitary(),
+        rPlayer.GetMilitary(),
         GetAvailableUnitSlots(*m_rGameDataContext.unitSlotRegistry, rDiscoveredTechs),
         GetAvailableUnitComponents(*m_rGameDataContext.unitComponentRegistry, rDiscoveredTechs),
-        pFaction->GetUnitManager(),
+        rPlayer.GetUnitManager(),
         layout
     );
 }

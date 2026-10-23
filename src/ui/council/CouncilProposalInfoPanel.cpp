@@ -29,18 +29,14 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
     rGraphics.DrawRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
-    if (!pCouncil)
-    {
-        return;
-    }
-    const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes()->GetPending();
+    const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
+    const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes().GetPending();
     if (!pPending)
     {
         return;
     }
 
-    const CouncilProposalConfig_t& rConfig = pCouncil->GetRegistry().Get(pPending->proposalId);
+    const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(pPending->proposalId);
     const float padX = style.paddingRatio * m_layout.width;
     const float padY = style.paddingRatio * m_layout.height;
     const float lineHeight = style.lineHeightRatio * m_layout.height;
@@ -59,8 +55,8 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
         style.nameColor);
 
     const std::string tallyLine = rConfig.kind == CouncilProposalKind_t::Election
-                                      ? ElectionTally_(*pCouncil, *pPending, rConfig)
-                                      : BallotTally_(*pCouncil, *pPending, rConfig);
+                                      ? ElectionTally_(rCouncil, *pPending, rConfig)
+                                      : BallotTally_(rCouncil, *pPending, rConfig);
     rGraphics.DrawText(
         tallyLine,
         m_layout.x + padX,

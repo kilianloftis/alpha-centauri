@@ -90,11 +90,14 @@ graph TB
   `repeal_un_charter` permanently and a reinstated charter could never be repealed again.
 - **Transitions** (called by `CouncilVoteExecutor`): `RecordProposal`, `RecordPassed`
   (repeals its targets and counts the pass), `Enact` (puts continuous laws in force),
-  `InstallGovernor`, `SetSupremeLeaderVictory`, and `Expel`.
+  `InstallGovernor`, `SetSupremeLeaderVictory`, and `Expel`. `GameState::AddFaction` calls
+  `Seat` for a faction that participates in the council.
 - **Revision** bumps when membership, the governor or the laws in force change, so `Faction`
   composed-pool caches recompose. The pending vote is not council state and does not bump it;
   vote weights do not depend on it.
-- **Owned by**: `GameState` (`m_pCouncil`), created by `GameState::CreatePlanetaryCouncil`.
+- **Owned by**: `GameState` (`m_pCouncil`), built with the session from the loaded proposals
+  and rules, so every session has one. `GetPlanetaryCouncil()` and `GetCouncilVotes()` return
+  references.
 - **Depends on**: `CouncilProposalRegistry` + `CouncilRulesConfig_t` (references) and
   `Faction*` members (non-owning, must outlive the council).
 
@@ -211,9 +214,10 @@ vote weighs and what passes; `CouncilVoteExecutor` runs the vote; `CouncilMutati
 the outcomes beyond the council; `CouncilEffects` stores the effects it projects. Each has one
 reason to change.
 
-### Membership is seated once and only ever shrinks
-Members are non-owning pointers fixed at construction, with `Expel` as the single exception: a
-faction that commits a major atrocity loses its seat for good (`atrocity-system.md`, through
+### Membership is seated on joining and only ever shrinks afterwards
+Members are non-owning pointers. A faction that participates in the council takes its seat when
+it joins the session, and `Expel` is the only way out: a faction that commits a major atrocity
+loses its seat for good (`atrocity-system.md`, through
 `CouncilVoteExecutor::Expel`). Expulsion does three things beyond dropping the pointer, because
 a vote may be open at the time:
 

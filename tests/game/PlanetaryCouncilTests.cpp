@@ -45,7 +45,6 @@ struct CouncilGame_
 
     CouncilGame_()
     {
-        InstallCouncil(fixtures.dataContext);
 
         FillLand(fixtures.map);
 
@@ -68,14 +67,13 @@ struct CouncilGame_
         fixtures.MakeFactionBase(*pB, 12, 8);
         fixtures.MakeFactionBase(*pC, 6, 10);
 
-        fixtures.state.CreatePlanetaryCouncil();
         fixtures.state.SetMissionYear(2100);
     }
 
     void GiveAllCommlinksTo(Faction& rFaction)
     {
         DiplomacyLedger& rDiplomacy = fixtures.state.GetDiplomacyLedger();
-        for (Faction* pOther : fixtures.state.GetPlanetaryCouncil()->Members())
+        for (Faction* pOther : fixtures.state.GetPlanetaryCouncil().Members())
         {
             if (pOther->GetFactionId() == rFaction.GetFactionId())
             {
@@ -95,7 +93,7 @@ struct CouncilGame_
 
     void AdvancePastProposeCooldown(Faction& rFaction)
     {
-        PlanetaryCouncil& rCouncil = *fixtures.state.GetPlanetaryCouncil();
+        PlanetaryCouncil& rCouncil = fixtures.state.GetPlanetaryCouncil();
         const int wait = YearsUntilCanPropose(rCouncil, rFaction);
         if (wait > 0)
         {
@@ -105,8 +103,8 @@ struct CouncilGame_
 
     void PassStandard(Faction& rProposer, const std::string& rProposalId)
     {
-        PlanetaryCouncil& rCouncil = *fixtures.state.GetPlanetaryCouncil();
-        CouncilVoteExecutor& rVotes = *fixtures.state.GetCouncilVotes();
+        PlanetaryCouncil& rCouncil = fixtures.state.GetPlanetaryCouncil();
+        CouncilVoteExecutor& rVotes = fixtures.state.GetCouncilVotes();
         GiveAllCommlinksTo(rProposer);
         AdvancePastProposeCooldown(rProposer);
         rVotes.Propose(fixtures.state, rProposer, rProposalId);
@@ -278,8 +276,8 @@ TEST_CASE("Tile yield rules reject illegal scopes", "[effects][parser][tile_yiel
 TEST_CASE("Proposing requires commlinks to every council member and shares them", "[council]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     CHECK_THROWS_AS(
         rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor"),
@@ -305,8 +303,8 @@ TEST_CASE("Proposing requires commlinks to every council member and shares them"
 TEST_CASE("Proposing while on cooldown is rejected", "[council]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
 
     const int proposedYear = game.fixtures.state.GetMissionYear();
@@ -329,40 +327,6 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
     CHECK(rVotes.GetPending());
 }
 
-TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists", "[council][infiltration]")
-{
-    // participatesInCouncil is eligibility for council construction, not membership.
-    // Without CreatePlanetaryCouncil, CouncilMembers must fail closed for every candidate.
-    FactionFixture fixtures;
-    REQUIRE(fixtures.factionDefinition.identity.participatesInCouncil);
-
-    EffectConfig_t config;
-    config.effect = InfiltrationEffect_t{};
-    config.scope = EffectScope_t::FactionGlobal;
-    config.factionFilter = FactionFilter_t{FactionFilterKind_t::CouncilMembers};
-    // Declared on the faction definition so it reaches the faction's active effect pool —
-    // otherwise HasInfiltration walks an empty list and passes regardless of the filter.
-    fixtures.factionDefinition.effects.push_back(config);
-
-    FillLand(fixtures.map);
-    Faction& rA = fixtures.state.AddFaction(std::make_unique<Faction>(
-        fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
-    Faction& rB = fixtures.state.AddFaction(std::make_unique<Faction>(
-        fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
-    REQUIRE(fixtures.state.GetPlanetaryCouncil() == nullptr);
-
-    const std::vector<ActiveEffect_t>& rActive = rA.GetActiveEffects().effects;
-    REQUIRE(std::any_of(rActive.begin(), rActive.end(), [](const ActiveEffect_t& rEffect)
-    {
-        return std::get_if<InfiltrationEffect_t>(&rEffect.config->effect) != nullptr;
-    }));
-
-    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId(), std::nullopt));
-    CHECK_FALSE(HasInfiltration(rA.GetFactionId(), rB.GetFactionId()));
-}
-
 TEST_CASE("Non-participating factions are excluded from the council", "[council]")
 {
     CouncilGame_ game;
@@ -375,8 +339,8 @@ TEST_CASE("Non-participating factions are excluded from the council", "[council]
         game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed);
     Faction& rAlien = game.fixtures.state.AddFaction(std::move(pAlien));
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     CHECK(rCouncil.Members().size() == 3);
     CHECK(rCouncil.IsCouncilMember(*game.pA));
     CHECK_FALSE(rCouncil.IsCouncilMember(rAlien));
@@ -411,8 +375,8 @@ TEST_CASE("Non-members cannot cast council votes", "[council]")
     Faction& rAlien = game.fixtures.state.AddFaction(std::move(pAlien));
 
     game.GiveAllCommlinksTo(*game.pA);
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     // Election ballot: a non-member cannot cast an election vote.
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor");
@@ -433,8 +397,8 @@ TEST_CASE("Council emits open and resolve notifications", "[council]")
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics"); // for global_trade_pact below
     game.GiveAllCommlinksTo(*game.pA);
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     int openedCount = 0;
     FactionId_t openedProposer = 0;
@@ -489,8 +453,8 @@ TEST_CASE("Stub AI votes fill non-player ballots only", "[council]")
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
     game.GiveAllCommlinksTo(*game.pA);
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     REQUIRE(game.pA->IsPlayerControlled());
     REQUIRE_FALSE(game.pB->IsPlayerControlled());
@@ -517,8 +481,8 @@ TEST_CASE("Stub AI election votes pick the proposer", "[council]")
 {
     CouncilGame_ game;
     game.GiveAllCommlinksTo(*game.pA);
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor");
     CastStubCouncilVotes(rVotes, rCouncil);
@@ -532,22 +496,28 @@ TEST_CASE("Stub AI election votes pick the proposer", "[council]")
     CHECK(pPending->electionVotes.at(game.pC->GetFactionId()) == game.pA->GetFactionId());
 }
 
-TEST_CASE("Council membership is fixed at construction", "[council]")
+TEST_CASE("A faction joining the session takes a council seat only if it participates",
+          "[council]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     REQUIRE(rCouncil.Members().size() == 3);
 
     FactionConfig_t lateDef = game.fixtures.factionDefinition;
     lateDef.id = "late_joiner";
-    lateDef.identity.participatesInCouncil = true;
-    auto pLate = std::make_unique<Faction>(
+    Faction& rLate = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, lateDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed);
-    Faction& rLate = game.fixtures.state.AddFaction(std::move(pLate));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+    CHECK(rCouncil.IsCouncilMember(rLate));
 
-    CHECK(rCouncil.Members().size() == 3);
-    CHECK_FALSE(rCouncil.IsCouncilMember(rLate));
+    FactionConfig_t outsiderDef = game.fixtures.factionDefinition;
+    outsiderDef.id = "outsider";
+    outsiderDef.identity.participatesInCouncil = false;
+    Faction& rOutsider = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, outsiderDef, game.fixtures.dataContext,
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+    CHECK_FALSE(rCouncil.IsCouncilMember(rOutsider));
+    CHECK(rCouncil.Members().size() == 4);
 }
 
 TEST_CASE("Salvage Unity Fusion Core grants energy to every council member", "[council]")
@@ -566,7 +536,7 @@ TEST_CASE("Salvage Unity Fusion Core grants energy to every council member", "[c
     CHECK(game.pC->GetEconomy().GetEnergy() == beforeC + 500);
 
     // One-shot: cannot pass again.
-    CHECK_FALSE(CanPropose(*game.fixtures.state.GetPlanetaryCouncil(), *game.pA,
+    CHECK_FALSE(CanPropose(game.fixtures.state.GetPlanetaryCouncil(), *game.pA,
                            "salvage_unity_fusion_core"));
 }
 
@@ -575,7 +545,7 @@ TEST_CASE("Global Trade Pact activates and can be repealed", "[council]")
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     game.PassStandard(*game.pA, "global_trade_pact");
     CHECK(rCouncil.IsActive("global_trade_pact"));
 
@@ -600,7 +570,7 @@ TEST_CASE("Council world effect config pointers survive RebuildWorld", "[council
 {
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
 
     // U.N. Charter starts active — retain a copy of its wrappers.
     REQUIRE_FALSE(rCouncil.CollectWorldEffects().empty());
@@ -631,7 +601,7 @@ TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", 
     game.Discover(*game.pA, "advanced_spaceflight");
     game.Discover(*game.pA, "advanced_ecological_engineering");
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     game.PassStandard(*game.pA, "launch_solar_shade");
     // These carry only one-shot outcomes, so they are history, not standing law: HasPassed,
     // not IsActive. The in-force set means "contributes continuous world effects right now" —
@@ -655,7 +625,7 @@ TEST_CASE("U.N. Charter starts in force and can be repealed then reinstated", "[
     CouncilGame_ game;
     game.Discover(*game.pA, "advanced_military_algorithms");
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     CHECK(rCouncil.IsActive("un_charter"));
     CHECK(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
 
@@ -677,8 +647,8 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
     game.fixtures.MakeFactionBase(*game.pB, 14, 8);
 
     game.GiveAllCommlinksTo(*game.pA);
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     const std::vector<Faction*> candidates = GovernorCandidates(rCouncil);
     REQUIRE(candidates.size() == 2);
@@ -711,8 +681,8 @@ TEST_CASE("Governor veto stands unless every other member voted yea", "[council]
     game.Discover(*game.pB, "planetary_economics");
     game.GiveAllCommlinksTo(*game.pA);
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     // Elect A as governor first.
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor");
@@ -747,8 +717,8 @@ TEST_CASE("Supreme Leader election stubs diplomatic victory at 75 percent", "[co
     game.Discover(*game.pA, "mind_machine_interface");
     game.GiveAllCommlinksTo(*game.pA);
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_supreme_leader");
 
     // Equal population → each has 1/3. Need 75%, so A alone cannot win.
@@ -774,8 +744,8 @@ TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffe
     game.Discover(*game.pA, "planetary_economics");
     game.GiveAllCommlinksTo(*game.pA);
 
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     BaseManager& baseA = *game.pA->Bases().begin();
     BaseManager& baseB = *game.pB->Bases().begin();
 
@@ -858,8 +828,8 @@ TEST_CASE("A pending vote resolves when a member never votes", "[council][lifecy
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
     game.Discover(*game.pB, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
@@ -886,7 +856,7 @@ TEST_CASE("A repeal can be used again after its target is re-enacted", "[council
     // charter could be repealed once and never again.
     CouncilGame_ game;
     game.Discover(*game.pA, "advanced_military_algorithms");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
 
     REQUIRE(rCouncil.IsActive("un_charter"));
     game.PassStandard(*game.pA, "repeal_un_charter");
@@ -910,7 +880,7 @@ TEST_CASE("A repeal is unavailable while its target is not in force", "[council]
     // meaningless, and this is what keeps the repeal re-proposable without making it free.
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
 
     CHECK_FALSE(rCouncil.IsActive("global_trade_pact"));
     CHECK_FALSE(CanPropose(rCouncil, *game.pA, "repeal_trade_pact"));
@@ -936,8 +906,8 @@ TEST_CASE("A standard proposal honors vote_threshold", "[council][tally]")
     // means an abstention counts against reaching the bar (same rule the election tally uses).
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     // Representative weight: one vote per member, three members. 2 of 3 is 0.667, so a 0.75
     // bar needs all three — and a bare majority must not be enough.
@@ -973,8 +943,8 @@ TEST_CASE("The AI stub never votes for an ineligible candidate", "[council][elec
     // ineligible pick throws out of Propose — and would strand m_pending, which is a worse
     // brick than the one this package removed.
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     // Make the proposer the *least* populous member, so it is outside the top two.
     game.fixtures.MakeFactionBase(*game.pB, 11, 11);
@@ -1008,8 +978,8 @@ TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council
     // The "two most populous factions" rule lived only in GovernorCandidates(), which nothing
     // enforcing anything called — the UI passed full membership as the candidate list.
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
@@ -1042,8 +1012,8 @@ TEST_CASE("The governor cannot veto an election", "[council][veto]")
     // See docs/game-rules-decisions.md #5. This is also why VetoOverruled may read
     // standard ballots: an election never reaches it.
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     // Elect a governor, then have that governor propose another election.
     game.GiveAllCommlinksTo(*game.pA);
@@ -1072,8 +1042,8 @@ TEST_CASE("Expel removes the seat and discards the ballot it held", "[council][e
 {
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
 
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
@@ -1094,8 +1064,8 @@ TEST_CASE("Expel removes the seat and discards the ballot it held", "[council][e
 TEST_CASE("Expelling the governor vacates the office and its standing effects", "[council][expel]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
 
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor");
@@ -1117,8 +1087,8 @@ TEST_CASE("An expelled faction cannot propose", "[council][expel]")
 {
     CouncilGame_ game;
     game.Discover(*game.pA, "planetary_economics");
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     game.GiveAllCommlinksTo(*game.pA);
     game.AdvancePastProposeCooldown(*game.pA);
 
@@ -1131,8 +1101,8 @@ TEST_CASE("An expelled faction cannot propose", "[council][expel]")
 TEST_CASE("Expelling a faction that holds no seat changes nothing", "[council][expel]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
-    CouncilVoteExecutor& rVotes = *game.fixtures.state.GetCouncilVotes();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
+    CouncilVoteExecutor& rVotes = game.fixtures.state.GetCouncilVotes();
     const size_t before = rCouncil.Members().size();
 
     rVotes.Expel(*game.pA);
@@ -1146,7 +1116,7 @@ TEST_CASE("Expelling a faction that holds no seat changes nothing", "[council][e
 TEST_CASE("A tied election goes to the candidate with the lower faction id", "[council][election]")
 {
     CouncilGame_ game;
-    const PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    const PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     const FactionId_t a = game.pA->GetFactionId();
     const FactionId_t b = game.pB->GetFactionId();
 
@@ -1164,7 +1134,7 @@ TEST_CASE("A faction has commlinks to the council once it knows every other memb
           "[council][commlinks]")
 {
     CouncilGame_ game;
-    const PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    const PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     DiplomacyLedger& rDiplomacy = game.fixtures.state.GetDiplomacyLedger();
     const FactionId_t a = game.pA->GetFactionId();
     REQUIRE_FALSE(HasCommlinksToAllMembers(rCouncil, *game.pA));
@@ -1179,7 +1149,7 @@ TEST_CASE("A faction has commlinks to the council once it knows every other memb
 TEST_CASE("Without a threshold, a proposal passes when Yea outweighs Nay", "[council][tally]")
 {
     CouncilGame_ game;
-    const PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    const PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     PendingProposal_t pending;
     pending.proposalId = "global_trade_pact";
     pending.ballots[game.pA->GetFactionId()] = CouncilBallot_t::Yea;
@@ -1196,7 +1166,7 @@ TEST_CASE("Without a threshold, a proposal passes when Yea outweighs Nay", "[cou
 TEST_CASE("Only the governor may veto, and never an election", "[council][veto]")
 {
     CouncilGame_ game;
-    PlanetaryCouncil& rCouncil = *game.fixtures.state.GetPlanetaryCouncil();
+    PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
     rCouncil.InstallGovernor(*game.pA);
     PendingProposal_t standard;
     standard.proposalId = "global_trade_pact";

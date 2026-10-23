@@ -159,10 +159,8 @@ void InteractionPresenter::PresentOpenView_(const OpenViewInteraction_t& rOpen)
     {
     case OpenViewInteraction_t::View_t::Base:
     {
-        Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        BaseManager* pBase = (pPlayer && rOpen.baseId.has_value())
-            ? pPlayer->FindBase(*rOpen.baseId)
-            : nullptr;
+        Faction& rPlayer = m_rGameState.GetPlayerFaction();
+        BaseManager* pBase = rOpen.baseId.has_value() ? rPlayer.FindBase(*rOpen.baseId) : nullptr;
         if (!pBase)
         {
             CompleteAndAdvance_();
@@ -371,18 +369,18 @@ void InteractionPresenter::PresentArtifactLink_(const ArtifactLinkInteraction_t&
 
 void InteractionPresenter::PresentPactObligation_(const PactObligationInteraction_t& rObligation)
 {
-    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     const Faction* pAlly = m_rGameState.FindFaction(rObligation.allyId);
     const Faction* pAggressor = m_rGameState.FindFaction(rObligation.aggressorId);
-    if (!pPlayer || !pAlly || !pAggressor
-        || !IsObligedToDefend(pPlayer->GetFactionId(), rObligation.allyId,
+    if (!pAlly || !pAggressor
+        || !IsObligedToDefend(rPlayer.GetFactionId(), rObligation.allyId,
                               rObligation.aggressorId))
     {
         CompleteAndAdvance_();
         return;
     }
 
-    const FactionId_t playerId = pPlayer->GetFactionId();
+    const FactionId_t playerId = rPlayer.GetFactionId();
     const FactionId_t allyId = rObligation.allyId;
     const FactionId_t aggressorId = rObligation.aggressorId;
     const VendettaKind_t kind = rObligation.kind;

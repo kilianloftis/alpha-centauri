@@ -435,21 +435,19 @@ void Engine::StartNewGame_()
 
     std::vector<const BaseManager*> placedBases = AddFactions_();
     // Temporary: extra player bases to eyeball land/water sprites and defense overlays.
-    if (Faction* pPlayer = m_pGameState->GetPlayerFaction();
-        pPlayer && !pPlayer->Bases().empty())
+    if (Faction& rPlayer = m_pGameState->GetPlayerFaction(); !rPlayer.Bases().empty())
     {
-        PlacePreviewFactionBases_(*m_pGameState, *pPlayer, placedBases);
+        PlacePreviewFactionBases_(*m_pGameState, rPlayer, placedBases);
     }
     // Each AddFaction folded in its own territory; this is the whole-world pass.
     m_pGameState->RebuildTerritory();
     SetUpStartingDiplomacy_();
 
-    m_pGameState->CreatePlanetaryCouncil();
     m_pGameState->CreateWorldEvents();
-    m_councilAiVoteConn = m_pGameState->GetCouncilVotes()->OnProposalOpened.ConnectScoped(
+    m_councilAiVoteConn = m_pGameState->GetCouncilVotes().OnProposalOpened.ConnectScoped(
         [this](Faction& /*rProposer*/, const std::string& /*rProposalId*/) {
-            CastStubCouncilVotes(*m_pGameState->GetCouncilVotes(),
-                                 *m_pGameState->GetPlanetaryCouncil());
+            CastStubCouncilVotes(m_pGameState->GetCouncilVotes(),
+                                 m_pGameState->GetPlanetaryCouncil());
         });
 
 #ifdef AC_PLACE_TEST_IMPROVEMENTS
@@ -459,7 +457,7 @@ void Engine::StartNewGame_()
 #endif
 
     std::cout << "Test setup complete. " << m_pGameState->GetNumFactions() << " faction(s), "
-              << m_pGameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
+              << m_pGameState->GetPlayerFaction().GetBaseCount() << " base(s)\n";
 }
 
 void Engine::PickSessionSeed_()
@@ -622,14 +620,8 @@ void Engine::PlaceTestUnit_(Faction& rFaction, const UnitDesign& rDesign, const 
 // Temporary: give the player commerce partners — first AI Pact, second AI Treaty.
 void Engine::SetUpStartingDiplomacy_()
 {
-    Faction* pPlayer = m_pGameState->GetPlayerFaction();
-    if (pPlayer == nullptr)
-    {
-        throw std::runtime_error("Engine setup: no player faction for starting diplomacy");
-    }
-
     DiplomacyLedger& rDiplomacy = m_pGameState->GetDiplomacyLedger();
-    const FactionId_t playerId = pPlayer->GetFactionId();
+    const FactionId_t playerId = m_pGameState->GetPlayerFaction().GetFactionId();
     int aiIndex = 0;
     for (Faction& rFaction : m_pGameState->Factions())
     {
