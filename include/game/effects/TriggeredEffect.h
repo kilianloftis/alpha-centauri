@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/buildings/FacilityExclusions.h"
 #include "game/atrocities/AtrocityConfig.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
@@ -99,8 +100,7 @@ struct RestoreHitPointsEffect_t
 struct DestroyFacilityEffect_t
 {
     int count = 0;
-    bool excludeHq = false;
-    bool excludeSecretProjects = false;
+    FacilityExclusions_t exclusions;
 };
 
 // Base ownership transfer to a weighted other faction (riot rebellion). Candidate selection

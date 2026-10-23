@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/buildings/FacilityExclusions.h"
 #include "game/buildings/BuildingConfig.h"
 
 #include <random>
@@ -24,8 +25,9 @@ struct OrbitalAttackResult_t
 
 // Destroy up to `count` uniformly shuffled eligible facilities. Returns the destroyed ids
 // (empty when nothing was eligible).
-std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
-                                                  bool bExcludeSecretProjects, std::mt19937& rRng);
+std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count,
+                                                  const FacilityExclusions_t& rExclusions,
+                                                  std::mt19937& rRng);
 
 // ASAT with a chosen ready attacker building, which deploys either way. A hit destroys one
 // defender orbital; a miss may lose the attacker. Throws for the same faction.

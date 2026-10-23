@@ -22,6 +22,15 @@
 namespace ac
 {
 
+namespace
+{
+
+// Capture and native raids may take the Headquarters but never a secret project.
+constexpr FacilityExclusions_t k_ConquestFacilityExclusions{.excludeHq = false,
+                                                            .excludeSecretProjects = true};
+
+} // namespace
+
 bool HasBaseGarrison(const BaseManager& rBase)
 {
     const GameState& rGame = CurrentGameState();
@@ -108,7 +117,7 @@ CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase)
     const bool bCrossSpecies = IsCrossSpeciesConquest(capturer, owner);
 
     outcome.facilityCandidates =
-        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
+        CollectDestroyableFacilities(rBase, k_ConquestFacilityExclusions);
     if (!outcome.facilityCandidates.empty())
     {
         // Both bounds clamp to what the base has, so no modifier can invert the range.
@@ -147,7 +156,7 @@ NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase)
     NativeRaidPlan_t plan;
     plan.popLoss = pConfig->nativeRaid.popLoss;
     plan.facilityCandidates =
-        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
+        CollectDestroyableFacilities(rBase, k_ConquestFacilityExclusions);
     if (!plan.facilityCandidates.empty())
     {
         plan.facilityChancePercent = pConfig->nativeRaid.facilityChancePercent;

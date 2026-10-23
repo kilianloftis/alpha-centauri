@@ -1321,8 +1321,8 @@ TEST_CASE("ParseTriggeredEffectConfig: DestroyFacility", "[effects][parser][trig
     const auto* pDestroy = std::get_if<DestroyFacilityEffect_t>(&config.effect);
     REQUIRE(pDestroy != nullptr);
     CHECK(pDestroy->count == 2);
-    CHECK_FALSE(pDestroy->excludeHq);
-    CHECK(pDestroy->excludeSecretProjects);
+    CHECK_FALSE(pDestroy->exclusions.excludeHq);
+    CHECK(pDestroy->exclusions.excludeSecretProjects);
 
     // Every parameter is required: which facilities are off-limits is a per-caller rule, and
     // a silent default is what let the shipping config and this fixture disagree about

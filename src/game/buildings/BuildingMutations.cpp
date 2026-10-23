@@ -31,8 +31,9 @@ void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
 
 } // namespace
 
-std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
-                                                  bool bExcludeSecretProjects, std::mt19937& rRng)
+std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count,
+                                                  const FacilityExclusions_t& rExclusions,
+                                                  std::mt19937& rRng)
 {
     if (count <= 0)
     {
@@ -40,7 +41,7 @@ std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count,
     }
 
     std::vector<const BuildingConfig_t*> candidates =
-        CollectDestroyableFacilities(rBase, bExcludeHq, bExcludeSecretProjects);
+        CollectDestroyableFacilities(rBase, rExclusions);
     if (candidates.empty())
     {
         return {};

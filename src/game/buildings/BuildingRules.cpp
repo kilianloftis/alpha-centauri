@@ -69,9 +69,8 @@ bool IsSecretProjectOwned(const BuildingId_t& buildingId)
     return false;
 }
 
-std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,
-                                                                  bool bExcludeHq,
-                                                                  bool bExcludeSecretProjects)
+std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
+    const BaseManager& rBase, const FacilityExclusions_t& rExclusions)
 {
     std::vector<const BuildingConfig_t*> candidates;
     for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
@@ -80,11 +79,11 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseMana
         {
             continue;
         }
-        if (bExcludeSecretProjects && pBuilding->bIsSecretProject)
+        if (rExclusions.excludeSecretProjects && pBuilding->bIsSecretProject)
         {
             continue;
         }
-        if (bExcludeHq && BuildingIsHeadquarters_(*pBuilding))
+        if (rExclusions.excludeHq && BuildingIsHeadquarters_(*pBuilding))
         {
             continue;
         }

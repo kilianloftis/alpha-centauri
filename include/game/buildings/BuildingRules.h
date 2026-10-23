@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/buildings/FacilityExclusions.h"
 #include "game/buildings/BuildingConfig.h"
 
 #include <vector>
@@ -35,10 +36,9 @@ bool IsSecretProjectUnavailable(const BuildingId_t& buildingId);
 // Some base holds the project now. A destroyed project is unavailable but owned by nobody.
 bool IsSecretProjectOwned(const BuildingId_t& buildingId);
 
-// Facilities that may be randomly destroyed under the given filters.
-std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,
-                                                                  bool bExcludeHq,
-                                                                  bool bExcludeSecretProjects);
+// Facilities that may be randomly destroyed under the given exclusions.
+std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
+    const BaseManager& rBase, const FacilityExclusions_t& rExclusions);
 
 // The building's first OrbitalAttack effect, or null when it cannot attack satellites.
 const OrbitalAttackEffect_t* FindOrbitalAttackEffect(const BuildingConfig_t& rBuilding);

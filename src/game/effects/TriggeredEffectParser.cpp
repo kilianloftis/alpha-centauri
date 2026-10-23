@@ -193,8 +193,8 @@ void ParseDestroyFacility_(const nlohmann::json& parameters, TriggeredEffectConf
 
     DestroyFacilityEffect_t destroy;
     destroy.count = ParsePositiveInt_(parameters, "count", "DestroyFacility");
-    destroy.excludeHq = requireBool("exclude_hq");
-    destroy.excludeSecretProjects = requireBool("exclude_secret_projects");
+    destroy.exclusions.excludeHq = requireBool("exclude_hq");
+    destroy.exclusions.excludeSecretProjects = requireBool("exclude_secret_projects");
     rEffect.effect = destroy;
 }
 

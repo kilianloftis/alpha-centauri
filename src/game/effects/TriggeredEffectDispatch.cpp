@@ -658,8 +658,7 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                     return false;
                 }
                 std::vector<BuildingId_t> destroyed = DestroyRandomFacilities(
-                    *rCtx.pBase, rConcrete.count, rConcrete.excludeHq,
-                    rConcrete.excludeSecretProjects, rCtx.Rng());
+                    *rCtx.pBase, rConcrete.count, rConcrete.exclusions, rCtx.Rng());
                 const bool bDidAnything = !destroyed.empty();
                 rOut.push_back(FacilitiesDestroyed_t{std::move(destroyed)});
                 return bDidAnything;
