@@ -856,7 +856,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
     ac::BaseManager* pBase = rFaction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
         fixtures.ctx,
-        /*initialPopulation*/ 3, false);
+        /*initialPopulation*/ 3);
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("drone_hall");

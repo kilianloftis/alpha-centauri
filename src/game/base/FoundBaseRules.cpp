@@ -95,11 +95,6 @@ bool CanFoundBase(const Unit& rUnit)
     return CanFoundBaseAt(rTile, rUnit.GetFaction().GetFactionId(), bases);
 }
 
-bool FoundedBaseMayOccupyWater(const Unit& rUnit)
-{
-    return rUnit.GetTile().IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
-}
-
 int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
 {
     std::vector<ActiveEffect_t> combined;

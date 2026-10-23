@@ -264,7 +264,7 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     REQUIRE(pTile);
     BaseManager* pBase = game.pPlayer->CreateBase(
         game.fixtures.state.AllocateBaseId(), "TestBase", pTile,
-        game.fixtures.state.GetTileEffects(), std::nullopt, false);
+        game.fixtures.state.GetTileEffects(), std::nullopt);
     REQUIRE(pBase);
 
     int goldenAgeCallbacks = 0;

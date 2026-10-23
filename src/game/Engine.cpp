@@ -181,7 +181,7 @@ void PlacePreviewFactionBases_(GameState& rGameState, Faction& rPlayer,
         }
         BaseManager* pBase = rPlayer.CreateBase(
             rGameState.AllocateBaseId(), rPreview.name, pTile, rGameState.GetTileEffects(),
-            rPreview.population, rPreview.bWater);
+            rPreview.population);
         if (!pBase)
         {
             continue;
@@ -547,7 +547,7 @@ void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionI
     BaseManager* pBase = pFaction->CreateBase(
         m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
         m_pGameState->GetTileEffects(),
-        /*initialPopulation=*/3, false);
+        /*initialPopulation=*/3);
     rPlacedBases.push_back(pBase);
 
     Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));

@@ -96,8 +96,7 @@ BaseManager::BaseManager(
     Tile& tile,
     const BaseRuleset_t& rRules,
     TileEffectsContext& rTileEffects,
-    std::optional<int> initialPopulation,
-    bool bMayOccupyWater)
+    std::optional<int> initialPopulation)
     : m_pFaction(&rFaction)
     , m_baseId(baseId)
     , m_tile(tile)
@@ -129,7 +128,7 @@ BaseManager::BaseManager(
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
     , m_ecology(*this, rRules.rEcoDamage)
-    , m_bMayOccupyWater(bMayOccupyWater)
+    , m_bMayOccupyWater(tile.IsWater())
 {
     m_pBuildings->OnBuildingDestroyed.Connect(
         std::bind_front(&BaseManager::OnBuildingDestroyed_, this));
@@ -272,7 +271,6 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
     snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
     snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
     snapshot.mood = m_pPopulation->CaptureMoodState();
-    snapshot.bMayOccupyWater = m_bMayOccupyWater;
     return snapshot;
 }
 

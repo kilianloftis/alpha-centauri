@@ -69,8 +69,6 @@ struct BaseSnapshot_t
     int nutrientStockpile = 0; // growth bank
     // Mood state (riot / golden age).
     MoodState_t mood;
-    // Set when a sea colony pod founds this base on water. Survives transfer.
-    bool bMayOccupyWater = false;
 };
 
 // Outcome published after BaseManager mutates inventory / spawns a unit for a completed
@@ -95,8 +93,7 @@ public:
         Tile& tile,
         const BaseRuleset_t& rRules,
         TileEffectsContext& rTileEffects,
-        std::optional<int> initialPopulation,
-        bool bMayOccupyWater);
+        std::optional<int> initialPopulation);
     ~BaseManager();
 
     // Capture identity, size, buildings, production, and stockpiles for transfer.
@@ -156,8 +153,8 @@ public:
     BuildingManager& GetBuildingManager();
     const BuildingManager& GetBuildingManager() const;
 
-    // True when this base may sit on water: a sea colony pod founded it there, or it has
-    // Pressure_Dome. Checked when the tile becomes water.
+    // True when this base may sit on water: it was built on water, or it has Pressure_Dome.
+    // Checked when the tile becomes water.
     bool MayOccupyWater() const;
 
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.

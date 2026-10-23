@@ -417,7 +417,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
         fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = rFaction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
-        fixtures.ctx, std::nullopt, false);
+        fixtures.ctx, std::nullopt);
     REQUIRE(pBase != nullptr);
 
     // A costed facility: the fixtures' default 0-mineral buildings finish in one mineral, and

@@ -81,7 +81,7 @@ struct ModHarness_
     {
         BaseManager* pBase = pFaction->CreateBase(
             fixtures.state.AllocateBaseId(), "ModBase", fixtures.state.GetWorldMap().GetTile(x, y),
-            fixtures.state.GetTileEffects(), std::nullopt, false);
+            fixtures.state.GetTileEffects(), std::nullopt);
         REQUIRE(pBase != nullptr);
         return *pBase;
     }

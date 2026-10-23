@@ -66,7 +66,7 @@ struct TriggerGame_
         REQUIRE(pTile);
         BaseManager* pBase = pFaction->CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", pTile,
-            fixtures.state.GetTileEffects(), std::nullopt, false);
+            fixtures.state.GetTileEffects(), std::nullopt);
         REQUIRE(pBase);
         return *pBase;
     }
@@ -638,7 +638,7 @@ TEST_CASE("In a probe mission context RecordMindControl credits the actor, not t
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
         game.fixtures.state.AllocateBaseId(), "Target", pTile,
-        game.fixtures.state.GetTileEffects(), std::nullopt, false);
+        game.fixtures.state.GetTileEffects(), std::nullopt);
     REQUIRE(pVictimBase);
 
     const std::vector<TriggeredEffectConfig_t> effects = {
@@ -742,7 +742,7 @@ TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not 
     REQUIRE(pTile);
     BaseManager* pVictimBase = victim.CreateBase(
         game.fixtures.state.AllocateBaseId(), "Target", pTile,
-        game.fixtures.state.GetTileEffects(), std::nullopt, false);
+        game.fixtures.state.GetTileEffects(), std::nullopt);
     REQUIRE(pVictimBase);
 
     TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);

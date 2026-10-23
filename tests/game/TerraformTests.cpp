@@ -65,7 +65,7 @@ struct TerraformGame_
         REQUIRE(pTile);
         BaseManager* pBase = pPlayer->CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", pTile,
-            fixtures.state.GetTileEffects(), std::nullopt, false);
+            fixtures.state.GetTileEffects(), std::nullopt);
         REQUIRE(pBase);
         return *pBase;
     }

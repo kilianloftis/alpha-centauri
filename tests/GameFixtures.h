@@ -406,7 +406,7 @@ struct BaseFixture : WorldFixture
             rFaction, state.AllocateBaseId(), "TestBase", At(x, y),
             ac::MakeBaseRuleset(dataContext),
             ctx,
-            initialPopulation, false);
+            initialPopulation);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;
@@ -536,7 +536,7 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& 
 {
     ac::BaseManager* pBase = rFaction.CreateBase(
         rFixtures.state.AllocateBaseId(), "TestBase", rFixtures.map.GetTile(x, y),
-        rFixtures.ctx, std::nullopt, false);
+        rFixtures.ctx, std::nullopt);
     if (!pBase)
     {
         throw std::runtime_error("MakeSessionBase: CreateBase failed");

@@ -463,14 +463,9 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
 
     Faction& rFaction = rUnit.GetFaction();
     Tile& rTile = MutableTile_(rGameState.GetWorldMap(), rUnit.GetTile());
-    const bool bMayOccupyWater = FoundedBaseMayOccupyWater(rUnit);
-    BaseManager* pBase = rFaction.CreateBase(
-        rGameState.AllocateBaseId(),
-        rFaction.SuggestBaseName(),
-        &rTile,
-        rGameState.GetTileEffects(),
-        std::nullopt,
-        bMayOccupyWater);
+    BaseManager* pBase = rFaction.CreateBase(rGameState.AllocateBaseId(),
+                                             rFaction.SuggestBaseName(), &rTile,
+                                             rGameState.GetTileEffects(), std::nullopt);
 
     // Before SingleUse destroy: founding-unit StartingMinerals still resolve on the pod.
     ApplyStartingMinerals(*pBase, &rUnit);

@@ -97,7 +97,7 @@ struct FoundBaseGame_
         REQUIRE(pTile);
         BaseManager* pBase = rFaction.CreateBase(
             fixtures.state.AllocateBaseId(), "TestBase", pTile,
-            fixtures.state.GetTileEffects(), std::nullopt, false);
+            fixtures.state.GetTileEffects(), std::nullopt);
         REQUIRE(pBase);
         return *pBase;
     }
@@ -450,7 +450,6 @@ TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile"
 
     CHECK_FALSE(CanFoundBase(landPod));
     CHECK(CanFoundBase(seaPod));
-    CHECK(FoundedBaseMayOccupyWater(seaPod));
     CHECK_FALSE(CanFoundBase(rover));
 }
 

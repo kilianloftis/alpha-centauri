@@ -473,8 +473,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
         MakeBaseRuleset(m_rDataContext),
         rTileEffects,
-        rSnapshot.populationSize,
-        rSnapshot.bMayOccupyWater);
+        rSnapshot.populationSize);
 
     for (const std::string& buildingId : rSnapshot.buildingIds)
     {
@@ -855,8 +854,7 @@ const BaseManager* Faction::FindNearestBase(const Tile& rFrom) const
 
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   TileEffectsContext& rTileEffects,
-                                  std::optional<int> initialPopulation,
-                                  bool bMayOccupyWater)
+                                  std::optional<int> initialPopulation)
 {
     if (!pTile)
     {
@@ -866,8 +864,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         *this, baseId, name, *pTile,
         MakeBaseRuleset(m_rDataContext),
         rTileEffects,
-        initialPopulation,
-        bMayOccupyWater);
+        initialPopulation);
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->GetWorkerAssignments().AutoAssignWorkers();

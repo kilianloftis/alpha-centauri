@@ -120,7 +120,7 @@ TEST_CASE("A shrouded tile shows only the shroud and land-coloured edges", "[ui]
     WorldMap& rMap = fixture.state.GetWorldMap();
     Tile& rTile = *rMap.GetTile(8, 8);
     REQUIRE(enemy.CreateBase(fixture.state.AllocateBaseId(), "Hidden", &rTile,
-                             fixture.state.GetTileEffects(), std::nullopt, false));
+                             fixture.state.GetTileEffects(), std::nullopt));
     const ImprovementConfig_t* pBonus = rTile.FindOccupantConfig("Nutrients");
     REQUIRE(pBonus);
     rTile.AddTerrainFeature(*pBonus);

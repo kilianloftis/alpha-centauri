@@ -118,7 +118,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
     };
     auto pBase = std::make_unique<BaseManager>(rFaction, rFixtures.state.AllocateBaseId(),
                                                "TestBase", rFixtures.At(8, 8), rules,
-                                               rFixtures.ctx, std::nullopt, false);
+                                               rFixtures.ctx, std::nullopt);
     BaseManager& rBase = *pBase;
     rFaction.AddBase(std::move(pBase));
     return rBase;
@@ -324,7 +324,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
         fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
-        fixtures.ctx, std::nullopt, false);
+        fixtures.ctx, std::nullopt);
     REQUIRE(pBase != nullptr);
 
     const StockpileConfig_t* pStockpile = fixtures.stockpiles().Find("Stockpile_Energy");
@@ -623,7 +623,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
         fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
-        fixtures.ctx, std::nullopt, false);
+        fixtures.ctx, std::nullopt);
     REQUIRE(pBase != nullptr);
     REQUIRE(pBase->GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
     pBase->GetBuildingManager().AddBuilding("mineral_cache");
@@ -660,7 +660,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
         fixtures.map, fixtures.settings, k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
-        fixtures.ctx, std::nullopt, false);
+        fixtures.ctx, std::nullopt);
     REQUIRE(pBase != nullptr);
     pBase->GetProduction().SetMineralStockpile(12);
 

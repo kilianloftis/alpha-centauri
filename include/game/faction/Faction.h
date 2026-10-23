@@ -101,8 +101,7 @@ public:
     // Builds a base from the faction's ruleset; a faction without a Headquarters gets one there.
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             TileEffectsContext& rTileEffects,
-                            std::optional<int> initialPopulation,
-                            bool bMayOccupyWater);
+                            std::optional<int> initialPopulation);
     // Live bases. Razed ones are filtered here, not erased, so a base can die mid-iteration; the
     // object lasts until ReapRazedBases.
     auto Bases() { return LiveBasesView(m_bases); }

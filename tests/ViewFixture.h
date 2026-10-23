@@ -96,7 +96,7 @@ struct ViewFixture : WorldFixture
     {
         ac::BaseManager* pBase = pPlayer->CreateBase(
             state.AllocateBaseId(), "TestBase", map.GetTile(x, y),
-            ctx, std::nullopt, false);
+            ctx, std::nullopt);
         if (!pBase)
         {
             throw std::runtime_error("ViewFixture: base creation failed");
