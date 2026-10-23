@@ -7,6 +7,7 @@ namespace ac
 
 class Faction;
 class SocialPolicyRegistry;
+struct SocialPolicyConfig_t;
 class SocialRatingRegistry;
 
 class SocialEngineeringDisplay : public UIElement
@@ -35,6 +36,11 @@ private:
     void DrawFrame_(Graphics& rGraphics) const;
     void DrawCategory_(Graphics& rGraphics, size_t categoryIndex,
                        const WindowLayout_t& rPolicyGrid, const Padding_t& rPadding) const;
+    // In the active colour, with a border, when rPolicy is pActivePolicy.
+    void DrawPolicyCell_(Graphics& rGraphics, const WindowLayout_t& rCell,
+                         const SocialPolicyConfig_t& rPolicy,
+                         const SocialPolicyConfig_t* pActivePolicy, float horizontalPadding,
+                         float nameRowHeight) const;
     void DrawScores_(Graphics& rGraphics, const WindowLayout_t& rScoresList,
                      const Padding_t& rPadding) const;
     void DrawFactionBonus_(Graphics& rGraphics, const WindowLayout_t& rBonusSection,

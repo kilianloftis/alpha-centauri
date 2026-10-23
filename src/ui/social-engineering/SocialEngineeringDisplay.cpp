@@ -203,46 +203,6 @@ std::string FormatFactionBonuses(
     return first ? "None" : oss.str();
 }
 
-void RenderPolicyCell(
-    Graphics& rGraphics,
-    const WindowLayout_t& rCell,
-    const SocialPolicyConfig_t& rPolicy,
-    bool bIsActive,
-    unsigned int policyFontSize,
-    unsigned int bonusFontSize,
-    float horizontalPadding,
-    float nameRowHeight
-)
-{
-    const Color_t policyColor = bIsActive
-        ? Style().socialEngineeringDisplay.activePolicyColor
-        : Style().socialEngineeringDisplay.inactivePolicyColor;
-
-    rGraphics.DrawText(
-        rPolicy.name,
-        rCell.x + horizontalPadding,
-        rCell.y,
-        policyFontSize,
-        policyColor
-    );
-
-    rGraphics.DrawText(
-        FormatPolicyBonuses(rPolicy),
-        rCell.x + horizontalPadding,
-        rCell.y + nameRowHeight,
-        bonusFontSize,
-        policyColor
-    );
-
-    if (bIsActive)
-    {
-        rGraphics.DrawRect(
-            rCell.x, rCell.y, rCell.width, rCell.height,
-            Style().socialEngineeringDisplay.activePolicyColor
-        , Style().outline.width);
-    }
-}
-
 WindowLayout_t GetPolicyGridLayout(const WindowLayout_t& displayLayout)
 {
     return ResolveLayout(displayLayout, {
@@ -408,17 +368,28 @@ void SocialEngineeringDisplay::DrawCategory_(Graphics& rGraphics, size_t categor
                                s.hiddenPolicySlotColor, Style().outline.width);
             continue;
         }
-        const bool bIsActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
-        RenderPolicyCell(
-            rGraphics,
-            policyCell,
-            *pPolicy,
-            bIsActive,
-            FontSize_(s.policyFontSizeRatio),
-            FontSize_(s.bonusFontSizeRatio),
-            rPadding.horizontal,
-            nameRowHeight
-        );
+        DrawPolicyCell_(rGraphics, policyCell, *pPolicy, pActivePolicy, rPadding.horizontal,
+                        nameRowHeight);
+    }
+}
+
+void SocialEngineeringDisplay::DrawPolicyCell_(Graphics& rGraphics, const WindowLayout_t& rCell,
+                                               const SocialPolicyConfig_t& rPolicy,
+                                               const SocialPolicyConfig_t* pActivePolicy,
+                                               float horizontalPadding, float nameRowHeight) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    const bool bIsActive = pActivePolicy && pActivePolicy->id == rPolicy.id;
+    const Color_t policyColor = bIsActive ? s.activePolicyColor : s.inactivePolicyColor;
+
+    rGraphics.DrawText(rPolicy.name, rCell.x + horizontalPadding, rCell.y,
+                       FontSize_(s.policyFontSizeRatio), policyColor);
+    rGraphics.DrawText(FormatPolicyBonuses(rPolicy), rCell.x + horizontalPadding,
+                       rCell.y + nameRowHeight, FontSize_(s.bonusFontSizeRatio), policyColor);
+    if (bIsActive)
+    {
+        rGraphics.DrawRect(rCell.x, rCell.y, rCell.width, rCell.height, s.activePolicyColor,
+                           Style().outline.width);
     }
 }
 
