@@ -10,6 +10,12 @@
 namespace ac
 {
 
+// The one-pixel outline every panel, button and box border draws with.
+struct OutlineStyle_t
+{
+    float width{};
+};
+
 struct LayoutsStyle_t
 {
     RatioLayout_t fullscreen{};
@@ -398,6 +404,8 @@ struct HurryProductionPopupStyle_t
     Color_t buttonFillColor{};
     Color_t buttonBorderColor{};
     Color_t buttonLabelColor{};
+    // The shared outline width, copied in because the popup is handed its style.
+    float borderWidth{};
     float headerFontSizeRatio{};
     float entryFontSizeRatio{};
     float paddingRatio{};
@@ -610,6 +618,7 @@ struct DesignListPanelStyle_t
     Color_t backgroundColor{};
     Color_t borderColor{};
     Color_t emptyListTextColor{};
+    Color_t textColor{};
     Color_t selectedBoxFillColor{};
     Color_t unselectedBoxFillColor{};
     Color_t unselectedBoxBorderColor{};
@@ -629,6 +638,7 @@ struct UnitStatusPanelStyle_t
     Color_t backgroundColor{};
     Color_t borderColor{};
     Color_t mutedTextColor{};
+    Color_t textColor{};
     Color_t headerColor{};
     float headerFontSizeRatio{};
     float statFontSizeRatio{};
@@ -679,6 +689,7 @@ public:
     static const UiStyle& Get();
 
     LayoutsStyle_t layouts;
+    OutlineStyle_t outline;
     ViewFactoryStyle_t viewFactory;
     TileRendererStyle_t tileRenderer;
     MapRendererStyle_t mapRenderer;

@@ -21,7 +21,8 @@ void CommlinksPanel::Render(Graphics& rGraphics)
     const auto& style = Style().commlinksPanel;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     rGraphics.DrawText(
         "Commlinks",

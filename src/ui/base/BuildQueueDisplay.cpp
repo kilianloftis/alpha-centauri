@@ -51,7 +51,8 @@ void BuildQueueDisplay::Render(Graphics& rGraphics)
         button.x, button.y, button.width, button.height,
         bEnabled ? style.hurryFillColor : style.hurryDisabledFillColor);
     rGraphics.DrawRect(
-        button.x, button.y, button.width, button.height, style.hurryBorderColor);
+        button.x, button.y, button.width, button.height,
+        style.hurryBorderColor, Style().outline.width);
 
     const unsigned int hurryFontSize =
         static_cast<unsigned int>(m_layout.height * style.hurryFontSizeRatio);

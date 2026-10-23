@@ -68,7 +68,8 @@ void CouncilCooldownPopup::Render(Graphics& rGraphics)
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
                              style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
     rGraphics.DrawText(
         "Planetary Council", textX, m_layout.y + padding, headerFontSize, style.headerColor);
 
@@ -104,7 +105,8 @@ void CouncilCooldownPopup::DrawOkButton_(Graphics& rGraphics) const
     const auto& buttonStyle = Style().commlinksButton;
     const Rectangle_t& rRect = m_okButtonRect;
     rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, buttonStyle.fillColor);
-    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, buttonStyle.borderColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height,
+        buttonStyle.borderColor, Style().outline.width);
     rGraphics.DrawText("OK", rRect.x + buttonStyle.textPadX, rRect.y + buttonStyle.textPadY,
                        buttonStyle.fontSize, buttonStyle.labelColor);
 }

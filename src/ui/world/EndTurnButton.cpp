@@ -17,7 +17,8 @@ void EndTurnButton::Render(Graphics& rGraphics)
     const Color_t& rFill = m_bReady ? s.readyFillColor : s.idleFillColor;
     const Color_t& rBorder = m_bReady ? s.readyBorderColor : s.borderColor;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rFill);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rBorder);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        rBorder, Style().outline.width);
     rGraphics.DrawText(
         "End Turn",
         m_layout.x + s.textPadX,

@@ -15,7 +15,8 @@ void PlaceholderPanel::Render(Graphics& rGraphics)
 {
     const auto& s = Style().infoPanel;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        s.borderColor, Style().outline.width);
     rGraphics.DrawText(
         m_label,
         m_layout.x + s.textHorizontalPadding,

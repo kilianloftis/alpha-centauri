@@ -112,7 +112,8 @@ void HurryProductionPopup::DrawButton_(Graphics& rGraphics, const WindowLayout_t
     rGraphics.DrawFilledRect(
         rLayout.x, rLayout.y, rLayout.width, rLayout.height, m_rStyle.buttonFillColor);
     rGraphics.DrawRect(
-        rLayout.x, rLayout.y, rLayout.width, rLayout.height, m_rStyle.buttonBorderColor);
+        rLayout.x, rLayout.y, rLayout.width, rLayout.height,
+        m_rStyle.buttonBorderColor, m_rStyle.borderWidth);
     const unsigned int fontSize =
         static_cast<unsigned int>(m_layout.height * m_rStyle.buttonFontSizeRatio);
     rGraphics.DrawText(
@@ -139,7 +140,8 @@ void HurryProductionPopup::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, m_rStyle.backgroundColor);
     rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, m_rStyle.borderColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        m_rStyle.borderColor, m_rStyle.borderWidth);
 
     rGraphics.DrawText(
         "Hurry", m_layout.x + padding, m_layout.y + padding, headerFontSize, m_rStyle.headerColor);
@@ -157,7 +159,8 @@ void HurryProductionPopup::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         field.x, field.y, field.width, field.height, m_rStyle.fieldFillColor);
     rGraphics.DrawRect(
-        field.x, field.y, field.width, field.height, m_rStyle.fieldBorderColor);
+        field.x, field.y, field.width, field.height,
+        m_rStyle.fieldBorderColor, m_rStyle.borderWidth);
     rGraphics.DrawText(
         m_creditsText.substr(0, m_cursor) + "|" + m_creditsText.substr(m_cursor),
         field.x + field.width * 0.04f,

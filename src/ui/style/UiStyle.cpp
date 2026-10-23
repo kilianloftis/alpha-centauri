@@ -813,6 +813,7 @@ DesignListPanelStyle_t ParseDesignListPanelStyle_(const nlohmann::json& j)
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.emptyListTextColor = ParseColor_(j, "empty_list_text_color");
+    s.textColor = ParseColor_(j, "text_color");
     s.selectedBoxFillColor = ParseColor_(j, "selected_box_fill_color");
     s.unselectedBoxFillColor = ParseColor_(j, "unselected_box_fill_color");
     s.unselectedBoxBorderColor = ParseColor_(j, "unselected_box_border_color");
@@ -834,6 +835,7 @@ UnitStatusPanelStyle_t ParseUnitStatusPanelStyle_(const nlohmann::json& j)
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
+    s.textColor = ParseColor_(j, "text_color");
     s.headerColor = ParseColor_(j, "header_color");
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
     s.statFontSizeRatio = j.at("stat_font_size_ratio").get<float>();
@@ -900,6 +902,7 @@ void UiStyle::Load(const std::string& filePath)
 
     UiStyle style{};
     style.layouts = ParseLayoutsStyle_(root.at("layouts"));
+    style.outline.width = root.at("outline").at("width").get<float>();
     style.viewFactory = ParseViewFactoryStyle_(root.at("view_factory"));
     style.tileRenderer = ParseTileRendererStyle_(root.at("tile_renderer"));
     style.mapRenderer = ParseMapRendererStyle_(root.at("map_renderer"));
@@ -935,6 +938,7 @@ void UiStyle::Load(const std::string& filePath)
     style.listSelectorPopup = ParseListSelectorPopupStyle_(root.at("list_selector_popup"));
     style.noticePopup = ParseNoticePopupStyle_(root.at("notice_popup"));
     style.hurryProductionPopup = ParseHurryProductionPopupStyle_(root.at("hurry_production_popup"));
+    style.hurryProductionPopup.borderWidth = style.outline.width;
     style.socialEngineeringDisplay = ParseSocialEngineeringDisplayStyle_(root.at("social_engineering_display"));
     style.socialEngineeringBottomPanel = ParseSocialEngineeringBottomPanelStyle_(root.at("social_engineering_bottom_panel"));
     style.unitDesignerView = ParseUnitDesignerViewStyle_(root.at("unit_designer_view"));

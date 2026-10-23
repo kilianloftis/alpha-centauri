@@ -239,7 +239,7 @@ void RenderPolicyCell(
         rGraphics.DrawRect(
             rCell.x, rCell.y, rCell.width, rCell.height,
             Style().socialEngineeringDisplay.activePolicyColor
-        );
+        , Style().outline.width);
     }
 }
 
@@ -357,7 +357,8 @@ void SocialEngineeringDisplay::DrawFrame_(Graphics& rGraphics) const
     const auto& s = Style().socialEngineeringDisplay;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
                              s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        s.borderColor, Style().outline.width);
 }
 
 // The category's name, then a cell per policy: hidden slots for ones the faction cannot pick.
@@ -404,7 +405,7 @@ void SocialEngineeringDisplay::DrawCategory_(Graphics& rGraphics, size_t categor
         if (!pPolicy || !PolicyAvailable(m_rFaction, *pPolicy))
         {
             rGraphics.DrawRect(policyCell.x, policyCell.y, policyCell.width, policyCell.height,
-                               s.hiddenPolicySlotColor);
+                               s.hiddenPolicySlotColor, Style().outline.width);
             continue;
         }
         const bool bIsActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
@@ -464,7 +465,7 @@ void SocialEngineeringDisplay::DrawFactionBonus_(Graphics& rGraphics,
         s.factionBonusRowRatio
     });
     rGraphics.DrawRect(rBonusSection.x, rBonusSection.y, rBonusSection.width,
-                       rBonusSection.height, s.borderColor);
+                       rBonusSection.height, s.borderColor, Style().outline.width);
     rGraphics.DrawText(
         GetFactionDisplayName(m_rFaction),
         factionNameRow.x + rPadding.horizontal,

@@ -1,4 +1,7 @@
 {
+  "outline": {
+    "width": 1.0
+  },
   "layouts": {
     "fullscreen": [
       0.0, 0.0, 1.0, 1.0
@@ -881,6 +884,9 @@
     "empty_list_text_color": [
       100, 100, 100, 255
     ],
+    "text_color": [
+      255, 255, 255, 255
+    ],
     "selected_box_fill_color": [
       50, 50, 90, 255
     ],
@@ -911,6 +917,9 @@
     ],
     "muted_text_color": [
       100, 100, 100, 255
+    ],
+    "text_color": [
+      255, 255, 255, 255
     ],
     "header_color": [
       255, 255, 0, 255

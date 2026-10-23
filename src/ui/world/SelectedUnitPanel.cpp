@@ -149,7 +149,7 @@ void SelectedUnitPanel::DrawUnitIcon_(Graphics& rGraphics, float iconX, float ic
     const bool bExhausted = m_pSelectedUnit->GetMoveFragmentsRemaining() <= 0;
     const Color_t& rIconColor = bExhausted ? s.iconExhaustedColor : s.iconColor;
     rGraphics.DrawFilledRect(iconX, iconY, iconSize, iconSize, rIconColor);
-    rGraphics.DrawRect(iconX, iconY, iconSize, iconSize, s.borderColor);
+    rGraphics.DrawRect(iconX, iconY, iconSize, iconSize, s.borderColor, Style().outline.width);
 
     const std::string& unitName = m_pSelectedUnit->GetDesign().GetName();
     if (unitName.empty())

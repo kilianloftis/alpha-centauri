@@ -54,7 +54,8 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
     rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     if (m_orbitalTypes.empty() || m_factions.empty())
     {
@@ -84,7 +85,8 @@ void SatelliteSummaryPanel::DrawBuildingColumns_(Graphics& rGraphics, const Grid
     for (int col = 0; col < rGrid.cols; ++col)
     {
         const float x = m_layout.x + static_cast<float>(col) * rGrid.cellW;
-        rGraphics.DrawRect(x, m_layout.y, rGrid.cellW, m_layout.height, style.borderColor);
+        rGraphics.DrawRect(x, m_layout.y, rGrid.cellW, m_layout.height,
+            style.borderColor, Style().outline.width);
         if (col == 0)
         {
             continue;
@@ -101,7 +103,8 @@ void SatelliteSummaryPanel::DrawFactionRows_(Graphics& rGraphics, const Grid_t& 
     for (int row = 0; row < rGrid.rows; ++row)
     {
         const float y = m_layout.y + static_cast<float>(row) * rGrid.cellH;
-        rGraphics.DrawRect(m_layout.x, y, m_layout.width, rGrid.cellH, style.borderColor);
+        rGraphics.DrawRect(m_layout.x, y, m_layout.width, rGrid.cellH,
+            style.borderColor, Style().outline.width);
         if (row == 0)
         {
             continue;

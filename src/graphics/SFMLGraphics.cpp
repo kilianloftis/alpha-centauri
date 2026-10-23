@@ -334,7 +334,8 @@ public:
         m_window.draw(fan, std::size(fan), sf::PrimitiveType::TriangleFan);
     }
 
-    void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) override
+    void DrawText(const std::string& text, float x, float y, unsigned int size,
+                  const Color_t& color) override
     {
         sf::Text drawable(m_font, text, size);
         drawable.setFillColor(sf::Color(color.r, color.g, color.b, color.a));

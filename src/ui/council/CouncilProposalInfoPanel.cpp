@@ -27,7 +27,8 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
     rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     const PlanetaryCouncil& rCouncil = m_rGameState.GetPlanetaryCouncil();
     const PendingProposal_t* pPending = m_rGameState.GetCouncilVotes().GetPending();

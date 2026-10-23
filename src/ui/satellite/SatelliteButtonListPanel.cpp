@@ -75,7 +75,8 @@ void SatelliteButtonListPanel::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
     rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     const float padX = style.listPadX;
     const float padY = style.listPadY;

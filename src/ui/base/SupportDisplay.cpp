@@ -21,7 +21,8 @@ void SupportDisplay::Render(Graphics& rGraphics)
 {
     const auto& s = Style().supportDisplay;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        s.borderColor, Style().outline.width);
 
     const float padding = m_layout.width * s.paddingRatio;
     const float iconSize = m_layout.width * s.iconSizeRatio;

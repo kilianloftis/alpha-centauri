@@ -24,7 +24,8 @@ void SatelliteLabeledButton::Render(Graphics& rGraphics)
     const auto& s = Style().satelliteView;
     const Color_t& rFill = m_bSelected ? s.tabSelectedFillColor : s.tabFillColor;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rFill);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.tabBorderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        s.tabBorderColor, Style().outline.width);
     rGraphics.DrawText(
         m_label,
         m_layout.x + s.tabTextPadX,

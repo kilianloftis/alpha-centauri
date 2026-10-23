@@ -92,7 +92,8 @@ void SatelliteView::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(
         topPanel.x, topPanel.y, topPanel.width, topPanel.height, style.backgroundColor);
     rGraphics.DrawRect(
-        topPanel.x, topPanel.y, topPanel.width, topPanel.height, style.borderColor);
+        topPanel.x, topPanel.y, topPanel.width, topPanel.height,
+        style.borderColor, Style().outline.width);
 
     IGameView::Render(rGraphics);
 }

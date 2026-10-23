@@ -74,7 +74,8 @@ Rectangle_t DrawSaveButton_(Graphics& rGraphics,
     };
 
     rGraphics.DrawFilledRect(rect.x, rect.y, rect.width, rect.height, style.saveButtonFillColor);
-    rGraphics.DrawRect(rect.x, rect.y, rect.width, rect.height, style.saveButtonBorderColor);
+    rGraphics.DrawRect(rect.x, rect.y, rect.width, rect.height,
+        style.saveButtonBorderColor, Style().outline.width);
     const float textY = rect.y + buttonH * style.saveButtonTextYOffsetRatio;
     rGraphics.DrawText("Save Design", rect.x + padding, textY, rMetrics.statSize,
                        style.saveButtonTextColor);
@@ -100,7 +101,8 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     const auto& style = Style().designStatsDisplay;
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     const StatsMetrics_t metrics = MetricsFor_(m_layout);
     const float textX = m_layout.x + metrics.padding;

@@ -46,7 +46,7 @@ void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
     rGraphics.DrawRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height,
         Style().socialEngineeringBottomPanel.borderColor
-    );
+    , Style().outline.width);
 
     const unsigned int valueFontSize = static_cast<unsigned int>(
         m_layout.height * Style().socialEngineeringBottomPanel.valueFontSizeRatio);

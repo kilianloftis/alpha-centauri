@@ -23,7 +23,8 @@ void DesignListPanel::Render(Graphics& rGraphics)
     const auto& style = Style().designListPanel;
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        style.borderColor, Style().outline.width);
 
     const std::vector<DesignBox_t> boxes = LayoutBoxes_();
     if (boxes.empty())
@@ -52,11 +53,12 @@ void DesignListPanel::Render(Graphics& rGraphics)
         const Color_t borderColor =
             bSelected ? style.selectedBoxBorderColor : style.unselectedBoxBorderColor;
         rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, fillColor);
-        rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, borderColor);
+        rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height,
+            borderColor, Style().outline.width);
 
         const float textX = rRect.x + rRect.width * style.textPadRatio;
         const float textY = rRect.y + rRect.height * style.textVerticalRatio;
-        rGraphics.DrawText(rBox.pDesign->GetName(), textX, textY, fontSize);
+        rGraphics.DrawText(rBox.pDesign->GetName(), textX, textY, fontSize, style.textColor);
     }
 }
 

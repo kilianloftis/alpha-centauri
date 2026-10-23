@@ -15,7 +15,8 @@ void CouncilVoteButton::Render(Graphics& rGraphics)
 {
     const auto& s = Style().commlinksButton;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.fillColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        s.borderColor, Style().outline.width);
     rGraphics.DrawText(
         "Vote",
         m_layout.x + s.textPadX,

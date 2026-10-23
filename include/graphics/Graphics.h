@@ -94,9 +94,11 @@ public:
                                 const TileShape_t& rShape) = 0;
     // Fills the shape's four triangles with one colour.
     virtual void FillTileShape(const TileShape_t& rShape, const Color_t& color) = 0;
-    virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) = 0;
+    virtual void DrawText(const std::string& text, float x, float y, unsigned int size,
+                          const Color_t& color) = 0;
     virtual float MeasureTextWidth(const std::string& text, unsigned int size) const = 0;
-    virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
+    virtual void DrawRect(float x, float y, float width, float height, const Color_t& color,
+                          float thickness) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;
     virtual void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color,
                           float thickness) = 0;

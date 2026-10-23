@@ -98,7 +98,8 @@ void SlotColumnPanel::DrawArrow_(Graphics& rGraphics,
 {
     const auto& style = Style().slotColumnPanel;
     rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, style.arrowFillColor);
-    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, style.arrowBorderColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height,
+        style.arrowBorderColor, Style().outline.width);
 
     const unsigned int fontSize =
         static_cast<unsigned int>(rRect.height * style.arrowFontSizeRatio);
@@ -112,7 +113,8 @@ void SlotColumnPanel::DrawSlot_(Graphics& rGraphics,
 {
     const auto& style = Style().slotColumnPanel;
     rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, style.slotFillColor);
-    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, style.slotBorderColor);
+    rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height,
+        style.slotBorderColor, Style().outline.width);
 
     const float padding = rRect.height * style.paddingRatio;
     const unsigned int labelSize =

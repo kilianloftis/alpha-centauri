@@ -313,7 +313,8 @@ void SettingsPanel::Render(Graphics& rGraphics)
     const SettingsPanelStyle_t& rStyle = Style().settingsPanel;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.borderColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        rStyle.borderColor, Style().outline.width);
 
     const WindowLayout_t titleArea = ResolveLayout(m_layout, rStyle.titleLayout);
     const WindowLayout_t rowArea = ResolveLayout(m_layout, rStyle.rowLayout);
