@@ -509,6 +509,19 @@ inline void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int
     rData.nativeUnitRegistry->SetFungalBloomLifeforms(life);
 }
 
+// Advances rState's mission year one year at a time, as turns do, until it is year.
+inline void AdvanceToYear(ac::GameState& rState, int year)
+{
+    if (year < rState.GetMissionYear())
+    {
+        throw std::logic_error("AdvanceToYear: year " + std::to_string(year) + " is already past");
+    }
+    while (rState.GetMissionYear() < year)
+    {
+        rState.IncrementMissionYear();
+    }
+}
+
 // Raise every tile so the map is all land. Call on the fixture's map before any AddFaction.
 inline void FillLand(ac::WorldMap& rMap)
 {

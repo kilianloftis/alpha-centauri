@@ -66,7 +66,7 @@ TEST_CASE("The elevation row cycles smooth, stepped and flat, saving each change
         std::filesystem::temp_directory_path() / "ac_settings_panel_relief.json";
     std::filesystem::remove(path);
     GameSettings settings;
-    settings.SetSavePath(path.string());
+    settings.Load(path.string());
     SettingsPanel panel(settings, WindowLayout_t{0.0f, 0.0f, 800.0f, 1600.0f});
 
     const auto row = Row_(panel, "Elevation");
@@ -93,7 +93,7 @@ TEST_CASE("The ocean grid row toggles the ocean grid", "[ui][settings]")
         std::filesystem::temp_directory_path() / "ac_settings_panel_ocean_grid.json";
     std::filesystem::remove(path);
     GameSettings settings;
-    settings.SetSavePath(path.string());
+    settings.Load(path.string());
     SettingsPanel panel(settings, WindowLayout_t{0.0f, 0.0f, 800.0f, 1600.0f});
 
     const auto row = Row_(panel, "Ocean Grid");

@@ -17,9 +17,12 @@
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
 
+#include <filesystem>
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 
 namespace actest
 {
@@ -36,6 +39,10 @@ struct ViewFixture : WorldFixture
     std::unique_ptr<SpriteRig> pSprites;
     std::unique_ptr<ac::MapRenderer> pMapRenderer;
     std::unique_ptr<ac::ViewFactory> pFactory;
+    // The settings UI saves on every toggle, so each fixture saves to a file of its own rather
+    // than the developer's user_settings.json or a file another test process shares.
+    std::filesystem::path settingsPath = std::filesystem::temp_directory_path()
+        / ("ac_view_settings_" + std::to_string(std::random_device{}()) + ".json");
 
     // Loaded once per process — UiStyle is still a singleton (deferred, package 14), so every
     // test loads this same file.
@@ -54,9 +61,8 @@ struct ViewFixture : WorldFixture
     {
         EnsureStyleLoaded();
 
-        // The settings UI saves on every toggle. Without this, a test that clicks a settings row
-        // rewrites the developer's real user_settings.json in the working directory.
-        settings.SetSavePath(std::string(AC_TEST_FIXTURES_DIR) + "/../../build/test_settings.json");
+        // A missing file keeps the defaults and becomes where Save writes.
+        settings.Load(settingsPath.string());
 
         factionDefinition.id = "test_faction";
         factionDefinition.identity.name = "Test Faction";
@@ -90,6 +96,12 @@ struct ViewFixture : WorldFixture
         pFactory = std::make_unique<ac::ViewFactory>(
             state, dataContext, *pHotkeys, graphics, *pMapRenderer, pSprites->sprites,
             settings);
+    }
+
+    ~ViewFixture()
+    {
+        std::error_code ignored;
+        std::filesystem::remove(settingsPath, ignored);
     }
 
     ac::BaseManager& MakeBase(int x, int y)

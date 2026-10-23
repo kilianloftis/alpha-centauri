@@ -56,11 +56,6 @@ struct ResearchTestFixture
 
 TEST_CASE("GameCategory_t parses canonical category strings", "[research][selector]")
 {
-    CHECK(GameCategoryToString(GameCategory_t::Build) == "build");
-    CHECK(GameCategoryToString(GameCategory_t::Grow) == "grow");
-    CHECK(GameCategoryToString(GameCategory_t::Discover) == "discover");
-    CHECK(GameCategoryToString(GameCategory_t::Conquer) == "conquer");
-
     CHECK(ParseGameCategory("build") == GameCategory_t::Build);
     CHECK(ParseGameCategory("GROW") == GameCategory_t::Grow);
     CHECK(ParseGameCategory("Discover") == GameCategory_t::Discover);

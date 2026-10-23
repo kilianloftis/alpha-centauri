@@ -76,7 +76,7 @@ struct EcoSession_
 
     void RunWorldEvents(int yearsSinceFirstPlayable)
     {
-        fixtures.state.SetMissionYear(GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
+        actest::AdvanceToYear(fixtures.state, GameState::k_FirstPlayableMissionYear + yearsSinceFirstPlayable);
         WorldEvents stage(HookContext("WorldEvents"));
         REQUIRE(stage.Execute(fixtures.state) == StageResult_t::Continue);
     }

@@ -67,7 +67,7 @@ struct CouncilGame_
         fixtures.MakeFactionBase(*pB, 12, 8);
         fixtures.MakeFactionBase(*pC, 6, 10);
 
-        fixtures.state.SetMissionYear(2100);
+        actest::AdvanceToYear(fixtures.state, 2100);
     }
 
     void GiveAllCommlinksTo(Faction& rFaction)
@@ -97,7 +97,7 @@ struct CouncilGame_
         const int wait = YearsUntilCanPropose(rCouncil, rFaction);
         if (wait > 0)
         {
-            fixtures.state.SetMissionYear(fixtures.state.GetMissionYear() + wait);
+            actest::AdvanceToYear(fixtures.state, fixtures.state.GetMissionYear() + wait);
         }
     }
 
@@ -321,7 +321,7 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
         rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
 
-    game.fixtures.state.SetMissionYear(game.fixtures.state.GetMissionYear() + 10);
+    actest::AdvanceToYear(game.fixtures.state, game.fixtures.state.GetMissionYear() + 10);
     CHECK(YearsUntilCanPropose(rCouncil, *game.pA) == 0);
     rVotes.Propose(game.fixtures.state, *game.pA, "elect_planetary_governor");
     CHECK(rVotes.GetPending());

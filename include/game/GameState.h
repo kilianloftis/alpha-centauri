@@ -64,7 +64,6 @@ public:
     const GameDataContext& GetGameData() const;
 
     int GetMissionYear() const;
-    void SetMissionYear(int year);
     void IncrementMissionYear();
     // Years since k_FirstPlayableMissionYear (0 on the first playable year); never negative.
     int GetYearsSinceFirstPlayableYear() const;

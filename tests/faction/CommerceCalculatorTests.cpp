@@ -496,7 +496,7 @@ TEST_CASE("Atrocity sanctions zero commerce for both sides of the pair", "[comme
     CHECK(ComputeCommerceForBase(b1).empty());
 
     // Time passing is what lifts it, whether or not the expiry sweep has run.
-    game.fixtures.state.SetMissionYear(until);
+    actest::AdvanceToYear(game.fixtures.state, until);
     CHECK(ComputeCommerceForBase(a1).size() == 1);
     CHECK(ComputeCommerceForBase(b1).size() == 1);
 }

@@ -5,11 +5,6 @@
 namespace ac
 {
 
-std::string GameCategoryToString(GameCategory_t category)
-{
-    return EnumToLowerName(category);
-}
-
 GameCategory_t ParseGameCategory(const std::string& category)
 {
     return EnumFromName<GameCategory_t>(category, "game category");

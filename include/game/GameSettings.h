@@ -53,9 +53,6 @@ public:
     void Save() const;
     void Save(const std::string& path) const;
 
-    // Points Save at another file, so tests do not overwrite the developer's settings.
-    void SetSavePath(std::string path) { m_path = std::move(path); }
-
     Signal<> OnGameRulesChanged;
     Signal<> OnVisibilityChanged;
     Signal<> OnPauseOnEventsChanged;
@@ -70,7 +67,7 @@ private:
     MapGenerationConfig_t m_mapGeneration;
     MapDisplayConfig_t m_mapDisplay;
     GraphicsConfig_t m_graphics;
-    // Where Save() writes. Set by Load / SetSavePath; k_DefaultPath until then.
+    // Where Save() writes. Set by Load; k_DefaultPath until then.
     std::string m_path = k_DefaultPath;
 };
 

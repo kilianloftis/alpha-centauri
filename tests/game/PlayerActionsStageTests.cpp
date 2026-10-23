@@ -322,7 +322,7 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
             , scope(*pState)
         {
             pState->GetRng().seed(seed);
-            pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);
+            actest::AdvanceToYear(*pState, GameState::k_FirstPlayableMissionYear);
         }
     };
 

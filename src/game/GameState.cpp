@@ -210,11 +210,6 @@ int GameState::GetMissionYear() const
     return m_missionYear;
 }
 
-void GameState::SetMissionYear(int year)
-{
-    m_missionYear = year;
-}
-
 void GameState::IncrementMissionYear()
 {
     ++m_missionYear;

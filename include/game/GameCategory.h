@@ -19,7 +19,6 @@ enum class GameCategory_t
 // Derived from the enum: fixed-size arrays sized by this stay in step with the enumerators.
 constexpr size_t k_GameCategoryCount = magic_enum::enum_count<GameCategory_t>();
 
-std::string GameCategoryToString(GameCategory_t category);
 GameCategory_t ParseGameCategory(const std::string& category);
 
 // Named apart from ParseGameCategory(const std::string&): a string literal converts to both a

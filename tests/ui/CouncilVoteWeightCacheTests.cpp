@@ -45,7 +45,7 @@ struct CouncilFixture_
         fixtures.MakeFactionBase(*pA, 8, 4);
         fixtures.MakeFactionBase(*pB, 12, 8);
 
-        fixtures.state.SetMissionYear(2100);
+        actest::AdvanceToYear(fixtures.state, 2100);
     }
 
     PlanetaryCouncil& Council() { return fixtures.state.GetPlanetaryCouncil(); }

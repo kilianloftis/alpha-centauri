@@ -58,7 +58,7 @@ struct AtrocityGame_
         fixtures.MakeFactionBase(*pB, 12, 8);
         fixtures.MakeFactionBase(*pC, 6, 10);
 
-        fixtures.state.SetMissionYear(k_StartYear);
+        actest::AdvanceToYear(fixtures.state, k_StartYear);
     }
 
     Faction& AddFaction_(const FactionConfig_t& rDefinition, bool bPlayer)
@@ -92,7 +92,7 @@ struct AtrocityGame_
         const int wait = YearsUntilCanPropose(rCouncil, rProposer);
         if (wait > 0)
         {
-            fixtures.state.SetMissionYear(fixtures.state.GetMissionYear() + wait);
+            actest::AdvanceToYear(fixtures.state, fixtures.state.GetMissionYear() + wait);
         }
         rVotes.Propose(fixtures.state, rProposer, rProposalId);
         for (Faction* pMember : rCouncil.Members())
@@ -154,10 +154,10 @@ TEST_CASE("A sanction lapses on its expiry year, not the turn before", "[atrocit
     REQUIRE(until.has_value());
     const FactionId_t id = game.pA->GetFactionId();
 
-    game.fixtures.state.SetMissionYear(*until - 1);
+    actest::AdvanceToYear(game.fixtures.state, *until - 1);
     CHECK(game.Sanctioned(id));
 
-    game.fixtures.state.SetMissionYear(*until);
+    actest::AdvanceToYear(game.fixtures.state, *until);
     CHECK_FALSE(game.Sanctioned(id));
 
     // The sweep only drops the entry the query already reports as lifted.
