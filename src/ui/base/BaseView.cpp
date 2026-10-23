@@ -43,14 +43,13 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     WindowLayout_t layout,
-    bool bEditable,
     MapRenderer& rMapRenderer,
     SpriteLibrary& rSprites
 )
     : IGameView(layout)
     , m_rBase(rBase)
     , m_pOwnerAtOpen(&rBase.GetFaction())
-    , m_bEditable(bEditable)
+    , m_bEditable(rBase.GetFaction().IsPlayerControlled())
     , m_rSprites(rSprites)
     , m_destroyedConnection(rBase.OnDestroyed.ConnectScoped([this]() { m_bShouldClose = true; }))
 {

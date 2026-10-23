@@ -27,12 +27,11 @@ struct ScrapPayout_t;
 class BaseView : public IGameView
 {
 public:
-    // The base's owner is the only faction this view needs: pop types are offered only when
-    // the view is editable, which ViewFactory grants only for the player's own base.
+    // Editable only for the player's own base. The base's owner is the only faction this view
+    // needs: pop types are offered only when it is editable.
     BaseView(
         BaseManager& rBase,
         WindowLayout_t layout,
-        bool bEditable,
         MapRenderer& rMapRenderer,
         SpriteLibrary& rSprites
     );
