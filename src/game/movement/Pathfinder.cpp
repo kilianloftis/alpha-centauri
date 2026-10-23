@@ -17,6 +17,8 @@ namespace ac
 namespace
 {
 
+constexpr int k_Inf = std::numeric_limits<int>::max();
+
 bool IsDesiredContactCandidate_(StepOutcome_t outcome)
 {
     return outcome == StepOutcome_t::Legal
@@ -52,33 +54,44 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
         return result;
     }
 
-    const int tileCount = static_cast<int>(m_rWorldMap.GetTiles().size());
-    constexpr int k_inf = std::numeric_limits<int>::max();
-
-    // (forbidden-territory tiles entered, fragments): a route into forbidden territory wins only
-    // when nothing avoids it.
-    using Cost_t = std::pair<int, int>;
-    const Cost_t k_unreached{k_inf, k_inf};
-    std::vector<Cost_t> dist(static_cast<size_t>(tileCount), k_unreached);
-    std::vector<int> parent(static_cast<size_t>(tileCount), -1);
-    const auto& tiles = m_rWorldMap.GetTiles();
-
     const int startIdx = m_rWorldMap.GetTileIndex(rStart);
     const int destIdx = m_rWorldMap.GetTileIndex(rDestination);
-    dist[static_cast<size_t>(startIdx)] = Cost_t{0, 0};
+    const SearchTree_t tree = Search_(rMover, startIdx, destIdx);
+    const Cost_t& rDestCost = tree.dist[static_cast<size_t>(destIdx)];
+    if (rDestCost == Cost_t{k_Inf, k_Inf})
+    {
+        return result;
+    }
+    std::optional<std::vector<const Tile*>> tiles = TraceBack_(tree, startIdx, destIdx);
+    if (!tiles)
+    {
+        return Path_t{};
+    }
+    result.tiles = std::move(*tiles);
+    result.totalCostFragments = rDestCost.second;
+    result.forbiddenTerritoryTiles = rDestCost.first;
+    result.bReachable = true;
+    return result;
+}
 
+Pathfinder::SearchTree_t Pathfinder::Search_(const Unit& rMover, int startIdx, int destIdx) const
+{
+    const size_t tileCount = m_rWorldMap.GetTiles().size();
+    SearchTree_t tree{std::vector<Cost_t>(tileCount, Cost_t{k_Inf, k_Inf}),
+                      std::vector<int>(tileCount, -1)};
+    tree.dist[static_cast<size_t>(startIdx)] = Cost_t{0, 0};
+    const auto& tiles = m_rWorldMap.GetTiles();
     const auto costs = m_rMoveCosts.ForUnit(rMover, m_rWorldMap);
 
     // Min-heap of (cost, tileIndex).
     using Node_t = std::pair<Cost_t, int>;
     std::priority_queue<Node_t, std::vector<Node_t>, std::greater<Node_t>> open;
     open.push({Cost_t{0, 0}, startIdx});
-
     while (!open.empty())
     {
         const auto [cost, idx] = open.top();
         open.pop();
-        if (cost > dist[static_cast<size_t>(idx)])
+        if (cost > tree.dist[static_cast<size_t>(idx)])
         {
             continue;
         }
@@ -86,13 +99,11 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
         {
             break;
         }
-
         const Tile* pFrom = tiles[static_cast<size_t>(idx)].get();
         if (!pFrom)
         {
             continue;
         }
-
         ForEachNeighborInChebyshevRadius(*pFrom, m_rWorldMap, /*radius=*/1,
             [&](const Tile* pNeighbor, int /*distance*/)
             {
@@ -110,42 +121,38 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
                     // Overflow guard for pathological sums; treat as unreachable via this edge.
                     return;
                 }
-                const int neighborIdx = m_rWorldMap.GetTileIndex(*pNeighbor);
-                if (newCost < dist[static_cast<size_t>(neighborIdx)])
+                const size_t neighborIdx =
+                    static_cast<size_t>(m_rWorldMap.GetTileIndex(*pNeighbor));
+                if (newCost < tree.dist[neighborIdx])
                 {
-                    dist[static_cast<size_t>(neighborIdx)] = newCost;
-                    parent[static_cast<size_t>(neighborIdx)] = idx;
-                    open.push({newCost, neighborIdx});
+                    tree.dist[neighborIdx] = newCost;
+                    tree.parent[neighborIdx] = idx;
+                    open.push({newCost, static_cast<int>(neighborIdx)});
                 }
             });
     }
+    return tree;
+}
 
-    if (dist[static_cast<size_t>(destIdx)] == k_unreached)
-    {
-        return result;
-    }
-
-    // Reconstruct path destination -> start, then reverse into result.tiles.
+std::optional<std::vector<const Tile*>> Pathfinder::TraceBack_(const SearchTree_t& rTree,
+                                                               int startIdx, int destIdx) const
+{
+    const auto& tiles = m_rWorldMap.GetTiles();
     std::vector<const Tile*> reversed;
-    for (int idx = destIdx; idx != startIdx; idx = parent[static_cast<size_t>(idx)])
+    for (int idx = destIdx; idx != startIdx; idx = rTree.parent[static_cast<size_t>(idx)])
     {
         if (idx < 0)
         {
-            return Path_t{};
+            return std::nullopt;
         }
         const Tile* pTile = tiles[static_cast<size_t>(idx)].get();
         if (!pTile)
         {
-            return Path_t{};
+            return std::nullopt;
         }
         reversed.push_back(pTile);
     }
-
-    result.tiles.assign(reversed.rbegin(), reversed.rend());
-    result.totalCostFragments = dist[static_cast<size_t>(destIdx)].second;
-    result.forbiddenTerritoryTiles = dist[static_cast<size_t>(destIdx)].first;
-    result.bReachable = true;
-    return result;
+    return std::vector<const Tile*>(reversed.rbegin(), reversed.rend());
 }
 
 const Tile* Pathfinder::NextStep(const Unit& rMover, const Tile& rDestination) const

@@ -85,6 +85,15 @@ private:
     bool CanEnterTerrain_(const Unit& rMover, const Tile& rTile, Knowledge_t knowledge) const;
     bool UnitCountsForPlanner_(const Unit& rMover, const Unit& rOther,
                                Knowledge_t knowledge) const;
+    bool TerrainAllowsStep_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
+                            Knowledge_t knowledge) const;
+    // The units below that the mover knows about.
+    std::vector<Unit*> KnownHostilesOn_(const Unit& rMover, const Tile& rTile,
+                                        Knowledge_t knowledge) const;
+    std::vector<Unit*> KnownZocProjectors_(const Unit& rMover, const Tile& rFrom,
+                                           const Tile& rTo, Knowledge_t knowledge) const;
+    std::vector<Unit*> KnownOccupantsOn_(const Unit& rMover, const Tile& rTile,
+                                         Knowledge_t knowledge) const;
 
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;

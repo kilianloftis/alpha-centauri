@@ -30,6 +30,49 @@ bool UnitHasFullMoves_(const Unit& rUnit)
     return rUnit.GetMoveFragmentsRemaining() >= full;
 }
 
+
+// Orbital insertion reaches anywhere; otherwise the unit's AirdropRange applies.
+bool WithinAirdropRange_(const Unit& rUnit, const Tile& rDest)
+{
+    if (ResolveFlag(rUnit.GetFaction(), RuleFlagId_t::OrbitalInsertion))
+    {
+        return true;
+    }
+    const int range = ResolveStat(rUnit, StatId_t::AirdropRange);
+    const int mapWidth = CurrentGameState().GetWorldMap().GetWidth();
+    return range > 0 && ChebyshevDistance(rUnit.GetTile(), rDest, mapWidth) <= range;
+}
+
+// A blocking occupant, or blocking cargo inside a base.
+bool EnemyHoldsDropTile_(const Unit& rUnit, const Tile& rDest)
+{
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
+    const auto blocks = [&rUnit](const Unit* pOther)
+    {
+        return pOther && OccupantBlocksAirdrop(rUnit, *pOther);
+    };
+    if (std::ranges::any_of(rWorldMap.GetUnitsOnTile(rDest), blocks))
+    {
+        return true;
+    }
+    return rDest.HasImprovement(ImprovementIds::k_Base)
+        && std::ranges::any_of(rWorldMap.GetCargoOnTile(rDest), blocks);
+}
+
+// One unit per tile: a friendly occupant leaves no room to land.
+bool FriendFillsDropTile_(const Unit& rUnit, const Tile& rDest)
+{
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
+    if (!rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
+    {
+        return false;
+    }
+    const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
+    return std::ranges::any_of(rWorldMap.GetUnitsOnTile(rDest), [factionId](const Unit* pOther)
+    {
+        return pOther && pOther->GetFaction().GetFactionId() == factionId;
+    });
+}
 } // namespace
 
 bool TileIsAirdropLaunchPad(const Tile& rTile, int factionId)
@@ -138,59 +181,26 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest)
         return result;
     }
 
-    const GameState& rGame = CurrentGameState();
-    const WorldMap& rWorldMap = rGame.GetWorldMap();
-    const Faction& rFaction = rUnit.GetFaction();
-    const bool bOrbital = ResolveFlag(rFaction, RuleFlagId_t::OrbitalInsertion);
-    if (!bOrbital)
+    if (!WithinAirdropRange_(rUnit, rDest))
     {
-        const int range = ResolveStat(rUnit, StatId_t::AirdropRange);
-        if (range <= 0
-            || ChebyshevDistance(rUnit.GetTile(), rDest, rWorldMap.GetWidth()) > range)
-        {
-            result.failReason = AirdropFailReason_t::OutOfRange;
-            return result;
-        }
+        result.failReason = AirdropFailReason_t::OutOfRange;
+        return result;
     }
-
     if (!CanEnterTile(rUnit, rDest))
     {
         result.failReason = AirdropFailReason_t::CannotEnter;
         return result;
     }
-
-    for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rDest))
+    if (EnemyHoldsDropTile_(rUnit, rDest))
     {
-        if (pUnit && OccupantBlocksAirdrop(rUnit, *pUnit))
-        {
-            result.failReason = AirdropFailReason_t::EnemyOccupied;
-            return result;
-        }
+        result.failReason = AirdropFailReason_t::EnemyOccupied;
+        return result;
     }
-    if (rDest.HasImprovement(ImprovementIds::k_Base))
+    if (FriendFillsDropTile_(rUnit, rDest))
     {
-        for (Unit* pCargo : rWorldMap.GetCargoOnTile(rDest))
-        {
-            if (pCargo && OccupantBlocksAirdrop(rUnit, *pCargo))
-            {
-                result.failReason = AirdropFailReason_t::EnemyOccupied;
-                return result;
-            }
-        }
+        result.failReason = AirdropFailReason_t::CannotEnter;
+        return result;
     }
-
-    if (rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
-    {
-        for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rDest))
-        {
-            if (pUnit && pUnit->GetFaction().GetFactionId() == rFaction.GetFactionId())
-            {
-                result.failReason = AirdropFailReason_t::CannotEnter;
-                return result;
-            }
-        }
-    }
-
     if (IsAirdropInterdicted(rUnit, rDest))
     {
         result.failReason = AirdropFailReason_t::Interdicted;

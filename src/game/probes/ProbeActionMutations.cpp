@@ -111,27 +111,32 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     return true;
 }
 
+// Targeted sabotage with an empty or unknown facility id fails; it is not random sabotage.
+bool ApplyTargetedSabotage_(BaseManager& rBase, const BuildingId_t& facilityId,
+                            ProbeActionResult_t& rResult)
+{
+    const BuildingConfig_t* pTarget =
+        facilityId.empty() ? nullptr : rBase.GetBuildingManager().FindBuilding(facilityId);
+    if (!pTarget)
+    {
+        rResult.detail = ProbeActionStatus_t::NoTarget;
+        return false;
+    }
+    // TODO: whether sabotage should permanently delete a secret project is unconfirmed.
+    rBase.GetBuildingManager().DestroyBuilding(pTarget->id);
+    rResult.detail = ProbeDestroyedFacility_t{facilityId};
+    return true;
+}
+
 bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
                     const ProbeActionConfig_t& rAction,
                     const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                     std::mt19937& rRng)
 {
-    // Targeted sabotage with an empty or unknown facility id fails; it is not random sabotage.
     if (rAction.id == ProbeActionId_t::SabotageFacility)
     {
-        const BuildingConfig_t* pTarget =
-            facilityId.empty() ? nullptr : rBase.GetBuildingManager().FindBuilding(facilityId);
-        if (!pTarget)
-        {
-            rResult.detail = ProbeActionStatus_t::NoTarget;
-            return false;
-        }
-        // TODO: whether sabotage should permanently delete a secret project is unconfirmed.
-        rBase.GetBuildingManager().DestroyBuilding(pTarget->id);
-        rResult.detail = ProbeDestroyedFacility_t{facilityId};
-        return true;
+        return ApplyTargetedSabotage_(rBase, facilityId, rResult);
     }
-
     // The DestroyFacility entry carries which facilities are off-limits. With nothing eligible,
     // current production is wiped instead.
     TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);

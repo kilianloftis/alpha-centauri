@@ -263,6 +263,22 @@ bool IsHeadquarters(const BaseManager& rBase)
     return ResolveFlag(rBase, RuleFlagId_t::Headquarters);
 }
 
+namespace
+{
+
+bool HqAllowsAction_(const ProbeActionConfig_t& rAction, const BaseManager& rBase)
+{
+    const bool bHq = IsHeadquarters(rBase);
+    if (rAction.bHqOnly && !bHq)
+    {
+        return false;
+    }
+    // Paid mind-control style actions are never available against an HQ.
+    return !bHq || (!rAction.bNotHq && !rAction.cost.has_value());
+}
+
+} // namespace
+
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                     const ProbeTarget_t& rTarget)
 {
@@ -281,21 +297,10 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
         return false;
     }
 
-    if (const BaseManager* pBase = AsBase(rTarget))
+    const BaseManager* pBase = AsBase(rTarget);
+    if (pBase && !HqAllowsAction_(rAction, *pBase))
     {
-        if (rAction.bHqOnly && !IsHeadquarters(*pBase))
-        {
-            return false;
-        }
-        if (rAction.bNotHq && IsHeadquarters(*pBase))
-        {
-            return false;
-        }
-        // Paid mind-control style actions are never available against an HQ.
-        if (rAction.cost.has_value() && IsHeadquarters(*pBase))
-        {
-            return false;
-        }
+        return false;
     }
 
     if (rAction.cost.has_value() && !bIgnoresBlock

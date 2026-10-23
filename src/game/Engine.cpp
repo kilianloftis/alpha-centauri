@@ -515,7 +515,8 @@ void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionI
     const bool bNativeLife = IsNativeLifeFaction(rFactionConfig.identity.species);
     const bool bIsPlayerControlled = (positionIndex == 0) && !bNativeLife;
     // Per faction, so adding a faction does not shift another's picks.
-    const auto factionSeed = static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1));
+    const auto factionSeed =
+        static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1));
     auto pFaction = std::make_unique<Faction>(
         m_pGameState->AllocateFactionId(),
         bIsPlayerControlled,

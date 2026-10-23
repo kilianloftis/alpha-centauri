@@ -24,6 +24,39 @@ namespace ac
 namespace
 {
 
+bool HasBoardableCarrier_(const WorldMap& rWorldMap, const Tile& rTile, const Unit& rPassenger)
+{
+    return std::ranges::any_of(rWorldMap.GetUnitsOnTile(rTile), [&rPassenger](const Unit* pOther)
+    {
+        return pOther && pOther != &rPassenger && CanCarryPassenger(*pOther, rPassenger);
+    });
+}
+
+// The candidate reachable this turn at the lowest cost; the first wins a tie.
+const Tile* CheapestReachable_(const Unit& rUnit, const Pathfinder& rPathfinder,
+                               const std::vector<const Tile*>& rCandidates)
+{
+    const int remainingFragments = rUnit.GetMoveFragmentsRemaining();
+    const Tile* pBest = nullptr;
+    int bestCost = INT_MAX;
+    for (const Tile* pDest : rCandidates)
+    {
+        if (!pDest || pDest == &rUnit.GetTile())
+        {
+            continue;
+        }
+        const Path_t path = rPathfinder.FindPath(rUnit, *pDest);
+        if (!path.bReachable || path.totalCostFragments > remainingFragments
+            || path.totalCostFragments >= bestCost)
+        {
+            continue;
+        }
+        bestCost = path.totalCostFragments;
+        pBest = pDest;
+    }
+    return pBest;
+}
+
 // Pads / carriers the mover could reach this turn (Chebyshev radius = remaining move points).
 // Pathfinding still decides real reachability and cost.
 void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
@@ -55,16 +88,8 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
                 rOut.push_back(pTile);
             }
 
-            for (const Unit* pOccupant : rWorldMap.GetUnitsOnTile(*pTile))
+            if (HasBoardableCarrier_(rWorldMap, *pTile, rUnit))
             {
-                if (!pOccupant || pOccupant == &rUnit)
-                {
-                    continue;
-                }
-                if (!CanCarryPassenger(*pOccupant, rUnit))
-                {
-                    continue;
-                }
                 rOut.push_back(pTile);
             }
         });
@@ -83,26 +108,7 @@ bool TryAssignAutoReturnToFuel(Unit& rUnit, const Pathfinder& rPathfinder)
     std::vector<const Tile*> candidates;
     CollectFriendlyRefuelTiles_(rUnit, rWorldMap, candidates);
 
-    const int remainingFragments = rUnit.GetMoveFragmentsRemaining();
-    const Tile* pBest = nullptr;
-    int bestCost = INT_MAX;
-    for (const Tile* pDest : candidates)
-    {
-        if (!pDest || pDest == &rUnit.GetTile())
-        {
-            continue;
-        }
-
-        const Path_t path = rPathfinder.FindPath(rUnit, *pDest);
-        if (!path.bReachable || path.totalCostFragments > remainingFragments
-            || path.totalCostFragments >= bestCost)
-        {
-            continue;
-        }
-        bestCost = path.totalCostFragments;
-        pBest = pDest;
-    }
-
+    const Tile* pBest = CheapestReachable_(rUnit, rPathfinder, candidates);
     if (!pBest)
     {
         return false;

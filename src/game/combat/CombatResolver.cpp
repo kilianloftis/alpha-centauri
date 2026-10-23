@@ -22,6 +22,20 @@
 namespace ac
 {
 
+namespace
+{
+
+// A unit at 0 HP is destroyed unless it got away first.
+void RecordOutcome_(const Unit& rAttacker, const Unit& rDefender, CombatResult_t& rResult)
+{
+    rResult.bAttackerDestroyed = rAttacker.GetCurrentHp() <= 0 && !rResult.bAttackerDisengaged;
+    rResult.bDefenderDestroyed = rDefender.GetCurrentHp() <= 0 && !rResult.bDefenderDisengaged;
+    const bool bAttackerLost = rResult.bAttackerDestroyed || rResult.bAttackerDisengaged;
+    rResult.victor = bAttackerLost ? CombatSide_t::Defender : CombatSide_t::Attacker;
+}
+
+} // namespace
+
 CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
@@ -46,14 +60,15 @@ int CombatResolver::Roll_(int strength) const
     return dist(m_rRng);
 }
 
-bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int startHp,
-                                   bool bMayDisengage, CombatResult_t& rResult)
+bool CombatResolver::TryDisengage_(const Combatant_t& rCombatant, CombatResult_t& rResult)
 {
-    if (!bMayDisengage || rCandidate.GetCurrentHp() <= 0)
+    Unit& rCandidate = rCombatant.rUnit;
+    const CombatSide_t side = rCombatant.side;
+    if (!rCombatant.bMayDisengage || rCandidate.GetCurrentHp() <= 0)
     {
         return false;
     }
-    if (!PastDisengageThreshold(rCandidate, startHp))
+    if (!PastDisengageThreshold(rCandidate, rCombatant.startHp))
     {
         return false;
     }
@@ -120,96 +135,79 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender,
     result.defenseStrength = strength.defenseStrength;
     result.bPsiCombat = strength.bPsiCombat;
 
-    const int attackerStartHp = rAttacker.GetCurrentHp();
-    const int defenderStartHp = rDefender.GetCurrentHp();
-    const bool bAttackerMayDisengage =
-        !bArtillery && m_disengage.CanDisengage(rAttacker, rDefender);
-    const bool bDefenderMayDisengage =
-        !bArtillery && m_disengage.CanDisengage(rDefender, rAttacker);
+    const Combatant_t attacker{rAttacker, CombatSide_t::Attacker, rAttacker.GetCurrentHp(),
+                               !bArtillery && m_disengage.CanDisengage(rAttacker, rDefender)};
+    const Combatant_t defender{rDefender, CombatSide_t::Defender, rDefender.GetCurrentHp(),
+                               !bArtillery && m_disengage.CanDisengage(rDefender, rAttacker)};
     const int hpFloor = bStrike ? BombardHpFloor_(rDefender) : 0;
 
-    int roundsPlayed = 0;
     while (rAttacker.GetCurrentHp() > 0 && rDefender.GetCurrentHp() > 0)
     {
-        if (bStrike && roundsPlayed >= 1)
+        if (bStrike && !result.rounds.empty())
         {
             break;
         }
-
-        CombatRound_t round;
-        round.attackRoll = Roll_(result.attackStrength);
-        round.defenseRoll = Roll_(result.defenseStrength);
-        const CombatRoundOutcome_t outcome = ResolveCombatRound(
-            rAttacker, rDefender, round.attackRoll, round.defenseRoll, rOptions.engagement,
-            hpFloor);
-        round.roundWinner = outcome.winner;
-        round.damage = outcome.damage;
-        // Only the loser is written; a losing strike attacker is left as it was.
-        if (outcome.winner == CombatSide_t::Attacker)
-        {
-            rDefender.SetCurrentHp(rDefender.GetCurrentHp() - outcome.defenderHpLoss);
-        }
-        else if (outcome.attackerHpLoss > 0)
-        {
-            rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - outcome.attackerHpLoss);
-        }
-
-        round.attackerHpAfter = rAttacker.GetCurrentHp();
-        round.defenderHpAfter = rDefender.GetCurrentHp();
+        const CombatRound_t round =
+            PlayRound_(rAttacker, rDefender, result, rOptions.engagement, hpFloor);
         result.rounds.push_back(round);
-        ++roundsPlayed;
-
         if (bArtillery)
         {
             continue;
         }
-
         // The side that just took damage is checked first (it may have newly crossed the
         // half-HP threshold); then the other, in case both already qualify.
-        const CombatSide_t damaged =
-            round.roundWinner == CombatSide_t::Attacker ? CombatSide_t::Defender
-                                                        : CombatSide_t::Attacker;
-        const bool bDisengaged =
-            damaged == CombatSide_t::Defender
-                ? (TryDisengage_(rDefender, CombatSide_t::Defender, defenderStartHp,
-                                 bDefenderMayDisengage, result)
-                   || TryDisengage_(rAttacker, CombatSide_t::Attacker, attackerStartHp,
-                                    bAttackerMayDisengage, result))
-                : (TryDisengage_(rAttacker, CombatSide_t::Attacker, attackerStartHp,
-                                 bAttackerMayDisengage, result)
-                   || TryDisengage_(rDefender, CombatSide_t::Defender, defenderStartHp,
-                                    bDefenderMayDisengage, result));
-        if (bDisengaged)
+        const bool bDefenderHit = round.roundWinner == CombatSide_t::Attacker;
+        const Combatant_t& rHit = bDefenderHit ? defender : attacker;
+        const Combatant_t& rOther = bDefenderHit ? attacker : defender;
+        if (TryDisengage_(rHit, result) || TryDisengage_(rOther, result))
         {
             break;
         }
     }
 
-    result.bAttackerDestroyed =
-        rAttacker.GetCurrentHp() <= 0 && !result.bAttackerDisengaged;
-    result.bDefenderDestroyed =
-        rDefender.GetCurrentHp() <= 0 && !result.bDefenderDisengaged;
-    if (result.bAttackerDestroyed || result.bAttackerDisengaged)
-    {
-        result.victor = CombatSide_t::Defender;
-    }
-    else
-    {
-        result.victor = CombatSide_t::Attacker;
-    }
+    RecordOutcome_(rAttacker, rDefender, result);
+    DestroyLosers_(rAttacker, rDefender, result);
+    return result;
+}
 
-    if (result.bDefenderDestroyed)
+CombatRound_t CombatResolver::PlayRound_(Unit& rAttacker, Unit& rDefender,
+                                         const CombatResult_t& rResult,
+                                         CombatEngagement_t engagement, int hpFloor)
+{
+    CombatRound_t round;
+    round.attackRoll = Roll_(rResult.attackStrength);
+    round.defenseRoll = Roll_(rResult.defenseStrength);
+    const CombatRoundOutcome_t outcome = ResolveCombatRound(
+        rAttacker, rDefender, round.attackRoll, round.defenseRoll, engagement, hpFloor);
+    round.roundWinner = outcome.winner;
+    round.damage = outcome.damage;
+    // Only the loser is written; a losing strike attacker is left as it was.
+    if (outcome.winner == CombatSide_t::Attacker)
+    {
+        rDefender.SetCurrentHp(rDefender.GetCurrentHp() - outcome.defenderHpLoss);
+    }
+    else if (outcome.attackerHpLoss > 0)
+    {
+        rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - outcome.attackerHpLoss);
+    }
+    round.attackerHpAfter = rAttacker.GetCurrentHp();
+    round.defenderHpAfter = rDefender.GetCurrentHp();
+    return round;
+}
+
+void CombatResolver::DestroyLosers_(Unit& rAttacker, Unit& rDefender,
+                                    const CombatResult_t& rResult)
+{
+    if (rResult.bDefenderDestroyed)
     {
         ApplyStackCollateral(m_rMorale, rAttacker, rDefender);
         GrantPlanetPearls(m_rMorale, rAttacker.GetFaction(), rDefender);
         rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
     }
-    if (result.bAttackerDestroyed)
+    if (rResult.bAttackerDestroyed)
     {
         rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
     }
-
-    return result;
 }
 
 } // namespace ac

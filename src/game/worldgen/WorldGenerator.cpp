@@ -133,9 +133,8 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     }
 }
 
-std::vector<float> WorldGenerator::SampleElevationField_(const WorldMap& rWorld,
-                                                         const FbmNoise& rNoise,
-                                                         const WorldGenPresetConfig_t& rPreset) const
+std::vector<float> WorldGenerator::SampleElevationField_(
+    const WorldMap& rWorld, const FbmNoise& rNoise, const WorldGenPresetConfig_t& rPreset) const
 {
     const int width = rWorld.GetWidth();
     const int height = rWorld.GetHeight();

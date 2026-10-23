@@ -215,7 +215,8 @@ void LoadEffectRegistries_(GameDataContext& rData)
     rData.popTypeAvailabilityCalculator =
         std::make_unique<PopTypeAvailabilityCalculator>(*rData.popTypeRegistry);
     rData.buildingRegistry = LoadRegistry_<BuildingRegistry>(rPaths.buildings);
-    rData.mapOverlayChannels = ParseOwned_<MapOverlayChannelsConfigParser>(rPaths.mapOverlayChannels);
+    rData.mapOverlayChannels =
+        ParseOwned_<MapOverlayChannelsConfigParser>(rPaths.mapOverlayChannels);
     ValidateOverlayChannels_(rData);
     rData.baseSpriteSizes = ParseOwned_<BaseSpriteSizesConfigParser>(rPaths.baseSpriteSizes);
     ValidateStageBumpBuildings_(rData);

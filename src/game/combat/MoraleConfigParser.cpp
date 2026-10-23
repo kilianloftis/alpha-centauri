@@ -46,62 +46,75 @@ void ValidateContiguousLevels_(const MoraleConfig_t& rConfig)
     }
 }
 
-void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
+[[noreturn]] void FailLevel_(int levelIndex, const std::string& rMessage)
 {
-    const auto fail = [&](const std::string& rMessage) {
-        throw std::runtime_error("morale_levels.json level " + std::to_string(levelIndex) + ": "
-                                 + rMessage);
-    };
+    throw std::runtime_error("morale_levels.json level " + std::to_string(levelIndex) + ": "
+                             + rMessage);
+}
 
+// A plain unconditional ThisUnit StatModifier, the only shape a morale level may carry.
+const StatModifierEffect_t& RequireMoraleEffectShape_(const EffectConfig_t& rEffect,
+                                                      int levelIndex)
+{
     const StatModifierEffect_t* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
     if (!pMod)
     {
-        fail("only StatModifier effects are allowed");
+        FailLevel_(levelIndex, "only StatModifier effects are allowed");
     }
     if (rEffect.scope != EffectScope_t::ThisUnit)
     {
-        fail("effects must use scope ThisUnit");
+        FailLevel_(levelIndex, "effects must use scope ThisUnit");
     }
     if (rEffect.condition.has_value())
     {
-        fail("conditions are not supported on morale level effects");
+        FailLevel_(levelIndex, "conditions are not supported on morale level effects");
     }
     if (pMod->amountSource.has_value())
     {
-        fail("amount_source is not supported on morale level effects");
+        FailLevel_(levelIndex, "amount_source is not supported on morale level effects");
     }
     if (pMod->selector.has_value())
     {
-        fail("tile selectors are not supported on morale level effects");
+        FailLevel_(levelIndex, "tile selectors are not supported on morale level effects");
     }
+    return *pMod;
+}
 
-    switch (pMod->stat)
+void ValidateMoraleStatOp_(const StatModifierEffect_t& rMod, int levelIndex)
+{
+    switch (rMod.stat)
     {
         case StatId_t::Attack:
         case StatId_t::Defense:
-            fail("attack/defense combat scale is percent_per_level, not a level effect");
-            break;
+            FailLevel_(levelIndex,
+                       "attack/defense combat scale is percent_per_level, not a level effect");
         case StatId_t::PromotionChance:
-            switch (pMod->op)
+            switch (rMod.op)
             {
                 case ModifierOp_t::MinClamp:
                 case ModifierOp_t::MultiplyGeometric:
                 case ModifierOp_t::MaxClamp:
-                    break;
+                    return;
                 default:
-                    fail("promotion_chance effects must use MinClamp, MultiplyGeometric, or "
-                         "MaxClamp");
+                    FailLevel_(levelIndex, "promotion_chance effects must use MinClamp, "
+                                           "MultiplyGeometric, or MaxClamp");
             }
-            break;
         case StatId_t::PlanetPearls:
-            if (pMod->op != ModifierOp_t::MultiplyGeometric)
+            if (rMod.op != ModifierOp_t::MultiplyGeometric)
             {
-                fail("planet_pearls morale effects must use MultiplyGeometric");
+                FailLevel_(levelIndex, "planet_pearls morale effects must use MultiplyGeometric");
             }
-            break;
+            return;
         default:
-            fail("stat is not allowed on morale levels (use promotion_chance or planet_pearls)");
+            FailLevel_(levelIndex, "stat is not allowed on morale levels (use promotion_chance "
+                                   "or planet_pearls)");
     }
+}
+
+void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
+{
+    const StatModifierEffect_t& rMod = RequireMoraleEffectShape_(rEffect, levelIndex);
+    ValidateMoraleStatOp_(rMod, levelIndex);
 }
 
 void ValidateMoraleLevelEffects_(const MoraleConfig_t& rConfig)
@@ -125,6 +138,44 @@ int RequireInt_(const json& rRoot, const char* pKey)
     return rRoot.at(pKey).get<int>();
 }
 
+std::string RequireFormula_(const json& rRoot)
+{
+    const auto missing = std::runtime_error(
+        "morale_levels.json: 'promotion_seed_formula' must be a non-empty string");
+    if (!rRoot.contains("promotion_seed_formula")
+        || !rRoot.at("promotion_seed_formula").is_string())
+    {
+        throw missing;
+    }
+    std::string formula = rRoot.at("promotion_seed_formula").get<std::string>();
+    if (formula.empty())
+    {
+        throw missing;
+    }
+    return formula;
+}
+
+std::vector<MoraleLevel_t> ParseLevels_(const json& rRoot)
+{
+    if (!rRoot.contains("levels") || !rRoot.at("levels").is_array())
+    {
+        throw std::runtime_error("morale_levels.json: expected 'levels' array");
+    }
+    std::vector<MoraleLevel_t> levels;
+    for (const json& rLevelJson : rRoot.at("levels"))
+    {
+        MoraleLevel_t level;
+        level.index = rLevelJson.at("index").get<int>();
+        level.conventional = rLevelJson.at("conventional").get<std::string>();
+        level.native = rLevelJson.at("native").get<std::string>();
+        const std::string sourceId = "morale_level_" + std::to_string(level.index);
+        level.effects = EffectConfigParser::ParseEffects(
+            rLevelJson, EffectSourceKind_t::MoraleLevel, sourceId);
+        levels.push_back(std::move(level));
+    }
+    return levels;
+}
+
 } // namespace
 
 MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
@@ -143,34 +194,8 @@ MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
     config.defenseFloorIndex = root.value("defense_floor_index", 1);
     config.percentPerLevel = EffectConfigParser::RequireNumber(root, "percent_per_level");
     config.baselineIndex = RequireInt_(root, "baseline_index");
-    if (!root.contains("promotion_seed_formula") || !root.at("promotion_seed_formula").is_string())
-    {
-        throw std::runtime_error(
-            "morale_levels.json: 'promotion_seed_formula' must be a non-empty string");
-    }
-    config.promotionSeedFormula = root.at("promotion_seed_formula").get<std::string>();
-    if (config.promotionSeedFormula.empty())
-    {
-        throw std::runtime_error(
-            "morale_levels.json: 'promotion_seed_formula' must be a non-empty string");
-    }
-
-    if (!root.contains("levels") || !root.at("levels").is_array())
-    {
-        throw std::runtime_error("morale_levels.json: expected 'levels' array");
-    }
-
-    for (const json& rLevelJson : root.at("levels"))
-    {
-        MoraleLevel_t level;
-        level.index = rLevelJson.at("index").get<int>();
-        level.conventional = rLevelJson.at("conventional").get<std::string>();
-        level.native = rLevelJson.at("native").get<std::string>();
-        const std::string sourceId = "morale_level_" + std::to_string(level.index);
-        level.effects = EffectConfigParser::ParseEffects(
-            rLevelJson, EffectSourceKind_t::MoraleLevel, sourceId);
-        config.levels.push_back(std::move(level));
-    }
+    config.promotionSeedFormula = RequireFormula_(root);
+    config.levels = ParseLevels_(root);
 
     ValidateContiguousLevels_(config);
     ValidateMoraleLevelEffects_(config);

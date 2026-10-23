@@ -80,6 +80,33 @@ bool RunsOnSuccessEffects_(ProbeActionId_t id)
     throw std::logic_error("RunsOnSuccessEffects_: unhandled enumerator");
 }
 
+int ParseRiotTurns_(const json& rActionJson, const std::string& rName)
+{
+    if (!rActionJson.contains("riot_turns"))
+    {
+        throw std::runtime_error("Probe action '" + rName
+                                 + "': missing required field 'riot_turns'");
+    }
+    const int riotTurns = rActionJson.at("riot_turns").get<int>();
+    if (riotTurns < 1)
+    {
+        throw std::runtime_error("Probe action '" + rName + "': riot_turns must be >= 1");
+    }
+    return riotTurns;
+}
+
+std::vector<EffectConfig_t> ParseActionEffects_(const json& rActionJson, ProbeActionId_t id)
+{
+    if (!rActionJson.contains("effects"))
+    {
+        return {};
+    }
+    nlohmann::json wrapper = nlohmann::json::object();
+    wrapper["effects"] = rActionJson.at("effects");
+    return EffectConfigParser::ParseEffects(wrapper, EffectSourceKind_t::ProbeAction,
+                                            ProbeActionIdToString(id));
+}
+
 ProbeActionConfig_t ParseAction_(const json& rActionJson)
 {
     ProbeActionConfig_t action;
@@ -94,24 +121,14 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     action.requiredTech = rActionJson.value("required_tech", "");
     action.bHqOnly = rActionJson.value("hq_only", false);
     action.bNotHq = rActionJson.value("not_hq", false);
-    // Only the riot action has a riot duration; accepting the key elsewhere would silently
-    // ignore it.
     if (action.id == ProbeActionId_t::InciteDroneRiots)
     {
-        if (!rActionJson.contains("riot_turns"))
-        {
-            throw std::runtime_error("Probe action '" + action.name
-                                     + "': missing required field 'riot_turns'");
-        }
-        action.riotTurns = rActionJson.at("riot_turns").get<int>();
-        if (action.riotTurns < 1)
-        {
-            throw std::runtime_error("Probe action '" + action.name
-                                     + "': riot_turns must be >= 1");
-        }
+        action.riotTurns = ParseRiotTurns_(rActionJson, action.name);
     }
     else if (rActionJson.contains("riot_turns"))
     {
+        // Only the riot action has a riot duration; accepting the key elsewhere would silently
+        // ignore it.
         throw std::runtime_error("Probe action '" + action.name
                                  + "': riot_turns applies only to incite_drone_riots");
     }
@@ -119,14 +136,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     {
         action.cost = ParseCost_(rActionJson.at("cost"), action.target, action.name);
     }
-    if (rActionJson.contains("effects"))
-    {
-        nlohmann::json wrapper = nlohmann::json::object();
-        wrapper["effects"] = rActionJson.at("effects");
-        action.effects = EffectConfigParser::ParseEffects(
-            wrapper, EffectSourceKind_t::ProbeAction,
-            ProbeActionIdToString(action.id));
-    }
+    action.effects = ParseActionEffects_(rActionJson, action.id);
     if (rActionJson.contains("on_success_effects") && !RunsOnSuccessEffects_(action.id))
     {
         throw std::runtime_error("Probe action '" + action.name

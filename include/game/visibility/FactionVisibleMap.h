@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
 #include "game/map/TileFlagMap.h"
 
 namespace ac
@@ -48,6 +49,10 @@ public:
 private:
     void RevealAround_(const Tile& rOrigin, int radius, const WorldMap& rWorldMap,
         FactionExploredMap& rExplored);
+    // Vision ThisTile effects on improvements (e.g. Sensor): territory-owned improvements
+    // only grant sight to the territory owner.
+    void RevealImprovementSight_(FactionId_t factionId, const WorldMap& rWorldMap,
+                                 FactionExploredMap& rExplored);
 
     void RecordVisible_(const WorldMap& rWorldMap, FactionTileMemory& rMemory) const;
 

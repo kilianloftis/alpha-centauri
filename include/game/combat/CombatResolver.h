@@ -90,12 +90,25 @@ public:
                            const CombatResolveOptions_t& rOptions);
 
 private:
+    // One side of the fight, as the disengage check needs it.
+    struct Combatant_t
+    {
+        Unit& rUnit;
+        CombatSide_t side;
+        int startHp;
+        bool bMayDisengage;
+    };
+
     int Roll_(int strength) const;
     int BombardHpFloor_(const Unit& rDefender) const;
+    // Rolls one round and writes its damage to the loser.
+    CombatRound_t PlayRound_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult,
+                             CombatEngagement_t engagement, int hpFloor);
     // If eligible, past the threshold, with a retreat tile and a won chance roll, moves
-    // rCandidate and records the disengage on rResult. Returns true when combat should end.
-    bool TryDisengage_(Unit& rCandidate, CombatSide_t side, int startHp,
-                       bool bMayDisengage, CombatResult_t& rResult);
+    // the candidate and records the disengage on rResult. Returns true when combat should end.
+    bool TryDisengage_(const Combatant_t& rCandidate, CombatResult_t& rResult);
+    // Stack collateral and pearls for a kill, then the destroyed units are removed.
+    void DestroyLosers_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);
 
     DisengageRules m_disengage;
     WorldMap& m_rWorldMap;

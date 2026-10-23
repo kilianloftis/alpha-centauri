@@ -81,6 +81,35 @@ bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const st
     return false;
 }
 
+// The tile is in view, or explored and the subject shows through fog.
+bool InSight_(const Faction& rObserver, const Unit& rSubject)
+{
+    const Tile& rTile = rSubject.GetTile();
+    if (rObserver.GetVisibleMap().IsVisible(rTile))
+    {
+        return true;
+    }
+    return ResolveFlag(rSubject, RuleFlagId_t::VisibleInFog)
+        && rObserver.GetExploredMap().IsExplored(rTile);
+}
+
+bool DetectsEveryConcealment_(const Faction& rObserver, const Unit& rSubject)
+{
+    const Tile& rTile = rSubject.GetTile();
+    const TileEffectsContext& rTileEffects = CurrentGameState().GetTileEffects();
+    const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);
+    std::unordered_set<std::string> channels;
+    CollectConcealmentChannels_(rSubject, areaEffects, channels);
+    for (const std::string& rChannel : channels)
+    {
+        if (!HasDetectionCovering_(rObserver, rTile, rChannel, areaEffects))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject)
@@ -96,30 +125,7 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject)
         return true;
     }
 
-    const Tile& rTile = rSubject.GetTile();
-    if (!rObserver.GetVisibleMap().IsVisible(rTile))
-    {
-        const bool bVisibleInFog = ResolveFlag(rSubject, RuleFlagId_t::VisibleInFog)
-            && rObserver.GetExploredMap().IsExplored(rTile);
-        if (!bVisibleInFog)
-        {
-            return false;
-        }
-    }
-
-    const GameState& rGame = CurrentGameState();
-    const TileEffectsContext& rTileEffects = rGame.GetTileEffects();
-    const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);
-    std::unordered_set<std::string> channels;
-    CollectConcealmentChannels_(rSubject, areaEffects, channels);
-    for (const std::string& rChannel : channels)
-    {
-        if (!HasDetectionCovering_(rObserver, rTile, rChannel, areaEffects))
-        {
-            return false;
-        }
-    }
-    return true;
+    return InSight_(rObserver, rSubject) && DetectsEveryConcealment_(rObserver, rSubject);
 }
 
 bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject)

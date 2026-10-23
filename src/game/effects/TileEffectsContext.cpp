@@ -388,8 +388,8 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
 }
 
 // Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
-TileResources_t TileEffectsContext::ResolveResources_(const Tile& rTile,
-                                                      std::span<const ActiveEffect_t*> effects) const
+TileResources_t TileEffectsContext::ResolveResources_(
+    const Tile& rTile, std::span<const ActiveEffect_t*> effects) const
 {
     return TileResources_t{
         ResolveResource_(rTile, effects, StatId_t::Nutrients),

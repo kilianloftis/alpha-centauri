@@ -152,91 +152,105 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
                                               const Tile& rTo, Knowledge_t knowledge) const
 {
     StepEvaluation_t result;
-
     if (!AreChebyshevAdjacent(rFrom, rTo, m_rWorldMap.GetWidth()))
     {
         result.outcome = StepOutcome_t::NotAdjacent;
         return result;
     }
-
-    // Embarked units may only unload to an adjacent legal tile.
-    if (rMover.IsEmbarked())
-    {
-        if (!CanUnloadTo(rMover, rFrom, rTo))
-        {
-            result.outcome = StepOutcome_t::BlockedByTerrain;
-            return result;
-        }
-    }
-    else if (!CanEnterTerrain_(rMover, rTo, knowledge))
+    if (!TerrainAllowsStep_(rMover, rFrom, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByTerrain;
         return result;
     }
-
     if (knowledge == Knowledge_t::Objective && IsForbiddenTerritory(rMover, rTo))
     {
         result.outcome = StepOutcome_t::BlockedByTerritory;
         return result;
     }
-
     // Hostile units never share a tile; combat is resolved from an adjacent tile.
-    ForEachHostileOnTile_(rMover, rTo, m_rWorldMap, [&](Unit& rHostile)
-    {
-        if (UnitCountsForPlanner_(rMover, rHostile, knowledge))
-        {
-            result.blockingUnits.push_back(&rHostile);
-        }
-        return true;
-    });
+    result.blockingUnits = KnownHostilesOn_(rMover, rTo, knowledge);
     if (!result.blockingUnits.empty())
     {
         result.outcome = StepOutcome_t::BlockedByOccupant;
         return result;
     }
-
     if (IsZocViolation_(rMover, rFrom, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByZoc;
-        ForEachZocProjectorAround_(rMover, rFrom, m_rWorldMap, [&](Unit& rProjector)
-        {
-            if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
-            {
-                result.blockingUnits.push_back(&rProjector);
-            }
-            return true;
-        });
-        ForEachZocProjectorAround_(rMover, rTo, m_rWorldMap, [&](Unit& rProjector)
-        {
-            if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
-            {
-                result.blockingUnits.push_back(&rProjector);
-            }
-            return true;
-        });
+        result.blockingUnits = KnownZocProjectors_(rMover, rFrom, rTo, knowledge);
         return result;
     }
-
     // Not CanPlaceUnit: the planner needs the units that block this mover as far as it knows, so
     // a hidden occupant does not leak into planning.
     if (m_rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
     {
-        for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))
-        {
-            if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
-            {
-                result.blockingUnits.push_back(pUnit);
-            }
-        }
+        result.blockingUnits = KnownOccupantsOn_(rMover, rTo, knowledge);
         if (!result.blockingUnits.empty())
         {
             result.outcome = StepOutcome_t::BlockedByOccupant;
             return result;
         }
     }
-
     result.outcome = StepOutcome_t::Legal;
     return result;
+}
+
+// Embarked units may only unload to an adjacent legal tile.
+bool StepEvaluator::TerrainAllowsStep_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
+                                       Knowledge_t knowledge) const
+{
+    if (rMover.IsEmbarked())
+    {
+        return CanUnloadTo(rMover, rFrom, rTo);
+    }
+    return CanEnterTerrain_(rMover, rTo, knowledge);
+}
+
+std::vector<Unit*> StepEvaluator::KnownHostilesOn_(const Unit& rMover, const Tile& rTile,
+                                                   Knowledge_t knowledge) const
+{
+    std::vector<Unit*> hostiles;
+    ForEachHostileOnTile_(rMover, rTile, m_rWorldMap, [&](Unit& rHostile)
+    {
+        if (UnitCountsForPlanner_(rMover, rHostile, knowledge))
+        {
+            hostiles.push_back(&rHostile);
+        }
+        return true;
+    });
+    return hostiles;
+}
+
+std::vector<Unit*> StepEvaluator::KnownZocProjectors_(const Unit& rMover, const Tile& rFrom,
+                                                      const Tile& rTo, Knowledge_t knowledge) const
+{
+    std::vector<Unit*> projectors;
+    for (const Tile* pTile : {&rFrom, &rTo})
+    {
+        ForEachZocProjectorAround_(rMover, *pTile, m_rWorldMap, [&](Unit& rProjector)
+        {
+            if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
+            {
+                projectors.push_back(&rProjector);
+            }
+            return true;
+        });
+    }
+    return projectors;
+}
+
+std::vector<Unit*> StepEvaluator::KnownOccupantsOn_(const Unit& rMover, const Tile& rTile,
+                                                    Knowledge_t knowledge) const
+{
+    std::vector<Unit*> occupants;
+    for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
+        {
+            occupants.push_back(pUnit);
+        }
+    }
+    return occupants;
 }
 
 StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFrom,

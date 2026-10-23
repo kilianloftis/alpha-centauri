@@ -2,6 +2,8 @@
 
 #include "game/movement/StepEvaluator.h"
 
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -46,6 +48,22 @@ public:
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
 
 private:
+    // (forbidden-territory tiles entered, fragments): a route into forbidden territory wins only
+    // when nothing avoids it.
+    using Cost_t = std::pair<int, int>;
+    // Cheapest known cost and predecessor per tile index; -1 marks no predecessor.
+    struct SearchTree_t
+    {
+        std::vector<Cost_t> dist;
+        std::vector<int> parent;
+    };
+
+    // Dijkstra from startIdx, stopping once destIdx is settled.
+    SearchTree_t Search_(const Unit& rMover, int startIdx, int destIdx) const;
+    // The route from start to destination, origin excluded; nullopt on a broken chain.
+    std::optional<std::vector<const Tile*>> TraceBack_(const SearchTree_t& rTree, int startIdx,
+                                                       int destIdx) const;
+
     const MoveCostRules& m_rMoveCosts;
     const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;

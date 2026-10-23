@@ -55,6 +55,32 @@ void FactionVisibleMap::RecordVisible_(const WorldMap& rWorldMap, FactionTileMem
     }
 }
 
+void FactionVisibleMap::RevealImprovementSight_(FactionId_t factionId, const WorldMap& rWorldMap,
+                                                FactionExploredMap& rExplored)
+{
+    const TerritoryMap& rTerritory = rWorldMap.GetTerritory();
+    for (const auto& pOwnedTile : rWorldMap.GetTiles())
+    {
+        const Tile* pTile = pOwnedTile.get();
+        if (!pTile)
+        {
+            continue;
+        }
+        for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
+        {
+            if (!pImprovement || pImprovement->visionRadius <= 0)
+            {
+                continue;
+            }
+            if (pImprovement->ownedByTerritory && rTerritory.GetOwner(*pTile) != factionId)
+            {
+                continue;
+            }
+            RevealAround_(*pTile, pImprovement->visionRadius, rWorldMap, rExplored);
+        }
+    }
+}
+
 void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
                                            FactionExploredMap& rExplored,
                                            FactionTileMemory& rMemory)
@@ -77,37 +103,7 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
         RevealAround_(rBase.GetTile(), k_BaseVisionRadius, rWorldMap, rExplored);
     }
 
-    // Vision ThisTile effects on improvements (e.g. Sensor): territory-owned improvements
-    // only grant sight to the territory owner.
-    const FactionId_t factionId = rFaction.GetFactionId();
-    const TerritoryMap& rTerritory = rWorldMap.GetTerritory();
-    for (const auto& pOwnedTile : rWorldMap.GetTiles())
-    {
-        const Tile* pTile = pOwnedTile.get();
-        if (!pTile)
-        {
-            continue;
-        }
-        for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
-        {
-            if (!pImprovement)
-            {
-                continue;
-            }
-            const int sight = pImprovement->visionRadius;
-            if (sight <= 0)
-            {
-                continue;
-            }
-            if (pImprovement->ownedByTerritory
-                && rTerritory.GetOwner(*pTile) != factionId)
-            {
-                continue;
-            }
-            RevealAround_(*pTile, sight, rWorldMap, rExplored);
-        }
-    }
-
+    RevealImprovementSight_(rFaction.GetFactionId(), rWorldMap, rExplored);
     RecordVisible_(rWorldMap, rMemory);
 }
 
