@@ -284,12 +284,6 @@ screenshots.
 - **Why not local:** a per-action dispatch (the hotkey config already names the actions) would
   replace the flags and the chains together.
 
-### `SocialEngineeringDisplay::Render`
-- **Where:** `src/ui/social-engineering/SocialEngineeringDisplay.cpp:327` (164 lines)
-- **Problem:** the policy grid, each policy cell and the scores list are laid out inline.
-- **Why not local:** over 100 lines; the grid and the scores list share layout values that the
-  split must pass between them.
-
 ### `moisture_gen::GenerateRainfall`
 - **Where:** `src/game/worldgen/MoistureGeneration.cpp`, 281 lines, nesting 9
 - **Problem:** the whole Thinker world_rainfall port is one function.

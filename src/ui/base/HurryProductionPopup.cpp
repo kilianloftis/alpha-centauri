@@ -183,27 +183,17 @@ bool HurryProductionPopup::HandleKey(const KeyEvent_t& rEvent)
     }
     if (rEvent.key == Key_t::Backspace)
     {
-        if (m_cursor > 0)
-        {
-            m_creditsText.erase(m_cursor - 1, 1);
-            --m_cursor;
-        }
+        EraseBeforeCursor_();
         return true;
     }
     if (rEvent.key == Key_t::ArrowLeft)
     {
-        if (m_cursor > 0)
-        {
-            --m_cursor;
-        }
+        MoveCursorLeft_();
         return true;
     }
     if (rEvent.key == Key_t::ArrowRight)
     {
-        if (m_cursor < m_creditsText.size())
-        {
-            ++m_cursor;
-        }
+        MoveCursorRight_();
         return true;
     }
     if (const std::optional<char> digit = DigitFromKey_(rEvent.key))
@@ -212,6 +202,31 @@ bool HurryProductionPopup::HandleKey(const KeyEvent_t& rEvent)
         return true;
     }
     return false;
+}
+
+void HurryProductionPopup::EraseBeforeCursor_()
+{
+    if (m_cursor > 0)
+    {
+        m_creditsText.erase(m_cursor - 1, 1);
+        --m_cursor;
+    }
+}
+
+void HurryProductionPopup::MoveCursorLeft_()
+{
+    if (m_cursor > 0)
+    {
+        --m_cursor;
+    }
+}
+
+void HurryProductionPopup::MoveCursorRight_()
+{
+    if (m_cursor < m_creditsText.size())
+    {
+        ++m_cursor;
+    }
 }
 
 void HurryProductionPopup::HandleMouseClick(const MouseEvent_t& rEvent)

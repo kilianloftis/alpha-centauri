@@ -326,185 +326,158 @@ SocialEngineeringDisplay::SocialEngineeringDisplay(
 
 void SocialEngineeringDisplay::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().socialEngineeringDisplay.backgroundColor
-    );
-    rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Style().socialEngineeringDisplay.borderColor
-    );
-
+    const auto& s = Style().socialEngineeringDisplay;
+    DrawFrame_(rGraphics);
     const WindowLayout_t policyGridLayout = GetPolicyGridLayout(m_layout);
-    const WindowLayout_t scoresLayout = ResolveLayout(m_layout, {
-        1.0f - Style().socialEngineeringDisplay.scoresPanelWidthRatio,
-        0.0f,
-        Style().socialEngineeringDisplay.scoresPanelWidthRatio,
-        1.0f
-    });
-
-    const unsigned int categoryFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.categoryFontSizeRatio);
-    const unsigned int policyFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.policyFontSizeRatio);
-    const unsigned int bonusFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.bonusFontSizeRatio);
-    const unsigned int scoreFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.scoreFontSizeRatio);
-    const unsigned int headerFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.headerFontSizeRatio);
-    const unsigned int factionNameFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.factionNameFontSizeRatio);
-    const unsigned int factionBonusFontSize = static_cast<unsigned int>(
-        m_layout.height * Style().socialEngineeringDisplay.factionBonusFontSizeRatio);
-
-    const float horizontalPadding =
-        policyGridLayout.width * Style().socialEngineeringDisplay.horizontalPaddingRatio;
-    const float verticalPadding =
-        policyGridLayout.height * Style().socialEngineeringDisplay.verticalPaddingRatio;
-
+    const Padding_t padding{policyGridLayout.width * s.horizontalPaddingRatio,
+                            policyGridLayout.height * s.verticalPaddingRatio};
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
-        const SocialCategory_t category = k_Categories[categoryIndex];
-        const WindowLayout_t categoryBand = ResolveLayout(policyGridLayout, {
-            0.0f,
-            static_cast<float>(categoryIndex) * Style().socialEngineeringDisplay.categoryRowHeightRatio,
-            1.0f,
-            Style().socialEngineeringDisplay.categoryRowHeightRatio
-        });
-
-        const WindowLayout_t categoryNameRow = ResolveLayout(categoryBand, {
-            0.0f,
-            0.0f,
-            1.0f,
-            Style().socialEngineeringDisplay.categoryNameRowRatio
-        });
-
-        rGraphics.DrawText(
-            CategoryDisplayName(category),
-            categoryNameRow.x + horizontalPadding,
-            categoryNameRow.y + verticalPadding,
-            categoryFontSize,
-            Style().socialEngineeringDisplay.categoryColor
-        );
-
-        const std::vector<const SocialPolicyConfig_t*> policies = m_rPolicyRegistry.GetByCategory(category);
-        const SocialPolicyConfig_t* pActivePolicy = m_rFaction.GetSocialEngineering().GetActivePolicy(category);
-
-        const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
-            0.0f,
-            Style().socialEngineeringDisplay.categoryNameRowRatio,
-            1.0f,
-            Style().socialEngineeringDisplay.policyNameRowRatio
-                + Style().socialEngineeringDisplay.policyBonusRowRatio
-        });
-        const float nameRowHeight = policyRowsBand.height * (
-            Style().socialEngineeringDisplay.policyNameRowRatio
-            / (Style().socialEngineeringDisplay.policyNameRowRatio
-                + Style().socialEngineeringDisplay.policyBonusRowRatio));
-
-        for (size_t policyIndex = 0; policyIndex < policies.size(); ++policyIndex)
-        {
-            const WindowLayout_t policyCell = GetPolicyCellLayout(
-                m_layout, categoryIndex, policyIndex, policies.size());
-
-            const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
-            if (!pPolicy || !PolicyAvailable(m_rFaction, *pPolicy))
-            {
-                rGraphics.DrawRect(
-                    policyCell.x, policyCell.y, policyCell.width, policyCell.height,
-                    Style().socialEngineeringDisplay.hiddenPolicySlotColor
-                );
-                continue;
-            }
-
-            const bool bIsActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
-            RenderPolicyCell(
-                rGraphics,
-                policyCell,
-                *pPolicy,
-                bIsActive,
-                policyFontSize,
-                bonusFontSize,
-                horizontalPadding,
-                nameRowHeight
-            );
-        }
+        DrawCategory_(rGraphics, categoryIndex, policyGridLayout, padding);
     }
 
-    const WindowLayout_t scoresListLayout = ResolveLayout(scoresLayout, {
-        0.0f,
-        0.0f,
-        1.0f,
-        1.0f - Style().socialEngineeringDisplay.factionBonusSectionRatio
-    });
-    const WindowLayout_t factionBonusLayout = ResolveLayout(scoresLayout, {
-        0.0f,
-        1.0f - Style().socialEngineeringDisplay.factionBonusSectionRatio,
-        1.0f,
-        Style().socialEngineeringDisplay.factionBonusSectionRatio
-    });
+    const WindowLayout_t scoresLayout =
+        ResolveLayout(m_layout, {1.0f - s.scoresPanelWidthRatio, 0.0f, s.scoresPanelWidthRatio,
+                                 1.0f});
+    const float bonusRatio = s.factionBonusSectionRatio;
+    DrawScores_(rGraphics, ResolveLayout(scoresLayout, {0.0f, 0.0f, 1.0f, 1.0f - bonusRatio}),
+                padding);
+    DrawFactionBonus_(rGraphics,
+                      ResolveLayout(scoresLayout, {0.0f, 1.0f - bonusRatio, 1.0f, bonusRatio}),
+                      padding);
+}
 
+unsigned int SocialEngineeringDisplay::FontSize_(float heightRatio) const
+{
+    return static_cast<unsigned int>(m_layout.height * heightRatio);
+}
+
+void SocialEngineeringDisplay::DrawFrame_(Graphics& rGraphics) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+                             s.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
+}
+
+// The category's name, then a cell per policy: hidden slots for ones the faction cannot pick.
+void SocialEngineeringDisplay::DrawCategory_(Graphics& rGraphics, size_t categoryIndex,
+                                             const WindowLayout_t& rPolicyGrid,
+                                             const Padding_t& rPadding) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    const SocialCategory_t category = k_Categories[categoryIndex];
+    const WindowLayout_t categoryBand = ResolveLayout(rPolicyGrid, {
+        0.0f,
+        static_cast<float>(categoryIndex) * s.categoryRowHeightRatio,
+        1.0f,
+        s.categoryRowHeightRatio
+    });
+    const WindowLayout_t categoryNameRow =
+        ResolveLayout(categoryBand, {0.0f, 0.0f, 1.0f, s.categoryNameRowRatio});
     rGraphics.DrawText(
-        "Social Scores",
-        scoresListLayout.x + horizontalPadding,
-        scoresListLayout.y + verticalPadding,
-        headerFontSize,
-        Style().socialEngineeringDisplay.scoreHeaderColor
+        CategoryDisplayName(category),
+        categoryNameRow.x + rPadding.horizontal,
+        categoryNameRow.y + rPadding.vertical,
+        FontSize_(s.categoryFontSizeRatio),
+        s.categoryColor
     );
 
-    const float scoreLineHeight = scoresListLayout.height / static_cast<float>(k_AllRatings.size() + 1);
+    const std::vector<const SocialPolicyConfig_t*> policies =
+        m_rPolicyRegistry.GetByCategory(category);
+    const SocialPolicyConfig_t* pActivePolicy =
+        m_rFaction.GetSocialEngineering().GetActivePolicy(category);
+    const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
+        0.0f,
+        s.categoryNameRowRatio,
+        1.0f,
+        s.policyNameRowRatio + s.policyBonusRowRatio
+    });
+    const float nameRowHeight = policyRowsBand.height * (
+        s.policyNameRowRatio / (s.policyNameRowRatio + s.policyBonusRowRatio));
+
+    for (size_t policyIndex = 0; policyIndex < policies.size(); ++policyIndex)
+    {
+        const WindowLayout_t policyCell = GetPolicyCellLayout(
+            m_layout, categoryIndex, policyIndex, policies.size());
+        const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
+        if (!pPolicy || !PolicyAvailable(m_rFaction, *pPolicy))
+        {
+            rGraphics.DrawRect(policyCell.x, policyCell.y, policyCell.width, policyCell.height,
+                               s.hiddenPolicySlotColor);
+            continue;
+        }
+        const bool bIsActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
+        RenderPolicyCell(
+            rGraphics,
+            policyCell,
+            *pPolicy,
+            bIsActive,
+            FontSize_(s.policyFontSizeRatio),
+            FontSize_(s.bonusFontSizeRatio),
+            rPadding.horizontal,
+            nameRowHeight
+        );
+    }
+}
+
+void SocialEngineeringDisplay::DrawScores_(Graphics& rGraphics,
+                                           const WindowLayout_t& rScoresList,
+                                           const Padding_t& rPadding) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    rGraphics.DrawText(
+        "Social Scores",
+        rScoresList.x + rPadding.horizontal,
+        rScoresList.y + rPadding.vertical,
+        FontSize_(s.headerFontSizeRatio),
+        s.scoreHeaderColor
+    );
+    const float scoreLineHeight = rScoresList.height / static_cast<float>(k_AllRatings.size() + 1);
     for (size_t ratingIndex = 0; ratingIndex < k_AllRatings.size(); ++ratingIndex)
     {
         const SocialRatingId_t rating = k_AllRatings[ratingIndex];
         const int score = m_rFaction.GetSocialEngineering().GetSocialRating(rating);
-
         std::ostringstream oss;
         oss << RatingDisplayName(rating) << ": " << score;
         rGraphics.DrawText(
             oss.str(),
-            scoresListLayout.x + horizontalPadding,
-            scoresListLayout.y + scoreLineHeight * static_cast<float>(ratingIndex + 1),
-            scoreFontSize,
-            Style().socialEngineeringDisplay.scoreValueColor
+            rScoresList.x + rPadding.horizontal,
+            rScoresList.y + scoreLineHeight * static_cast<float>(ratingIndex + 1),
+            FontSize_(s.scoreFontSizeRatio),
+            s.scoreValueColor
         );
     }
+}
 
-    const WindowLayout_t factionNameRow = ResolveLayout(factionBonusLayout, {
+void SocialEngineeringDisplay::DrawFactionBonus_(Graphics& rGraphics,
+                                                 const WindowLayout_t& rBonusSection,
+                                                 const Padding_t& rPadding) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    const WindowLayout_t factionNameRow =
+        ResolveLayout(rBonusSection, {0.0f, 0.0f, 1.0f, s.factionNameRowRatio});
+    const WindowLayout_t factionBonusRow = ResolveLayout(rBonusSection, {
         0.0f,
-        0.0f,
+        s.factionNameRowRatio,
         1.0f,
-        Style().socialEngineeringDisplay.factionNameRowRatio
+        s.factionBonusRowRatio
     });
-    const WindowLayout_t factionBonusRow = ResolveLayout(factionBonusLayout, {
-        0.0f,
-        Style().socialEngineeringDisplay.factionNameRowRatio,
-        1.0f,
-        Style().socialEngineeringDisplay.factionBonusRowRatio
-    });
-
-    rGraphics.DrawRect(
-        factionBonusLayout.x,
-        factionBonusLayout.y,
-        factionBonusLayout.width,
-        factionBonusLayout.height,
-        Style().socialEngineeringDisplay.borderColor
-    );
-
+    rGraphics.DrawRect(rBonusSection.x, rBonusSection.y, rBonusSection.width,
+                       rBonusSection.height, s.borderColor);
     rGraphics.DrawText(
         GetFactionDisplayName(m_rFaction),
-        factionNameRow.x + horizontalPadding,
-        factionNameRow.y + verticalPadding,
-        factionNameFontSize,
-        Style().socialEngineeringDisplay.scoreHeaderColor
+        factionNameRow.x + rPadding.horizontal,
+        factionNameRow.y + rPadding.vertical,
+        FontSize_(s.factionNameFontSizeRatio),
+        s.scoreHeaderColor
     );
-
     rGraphics.DrawText(
         FormatFactionBonuses(m_rFaction, m_rRatingRegistry),
-        factionBonusRow.x + horizontalPadding,
-        factionBonusRow.y + verticalPadding,
-        factionBonusFontSize,
-        Style().socialEngineeringDisplay.factionBonusBodyColor
+        factionBonusRow.x + rPadding.horizontal,
+        factionBonusRow.y + rPadding.vertical,
+        FontSize_(s.factionBonusFontSizeRatio),
+        s.factionBonusBodyColor
     );
 }
 

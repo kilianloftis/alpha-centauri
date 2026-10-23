@@ -32,6 +32,9 @@ private:
     void Confirm_();
     void Cancel_();
     int ParsedCredits_() const;
+    void EraseBeforeCursor_();
+    void MoveCursorLeft_();
+    void MoveCursorRight_();
     void InsertDigit_(char digit);
     WindowLayout_t FieldLayout_() const;
     WindowLayout_t OkLayout_() const;
