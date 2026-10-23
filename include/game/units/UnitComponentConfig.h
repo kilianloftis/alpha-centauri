@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/production/ScrapConfig.h"
@@ -60,7 +61,7 @@ struct UnitComponentConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        return requiredTech.empty() || std::ranges::contains(rDiscoveredTechs, requiredTech);
+        return MeetsTechRequirement(requiredTech, rDiscoveredTechs);
     }
 };
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@ struct UnitSlotConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        return requiredTech.empty() || std::ranges::contains(rDiscoveredTechs, requiredTech);
+        return MeetsTechRequirement(requiredTech, rDiscoveredTechs);
     }
 };
 

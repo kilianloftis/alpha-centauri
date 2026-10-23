@@ -1,6 +1,7 @@
 #include "game/terraform/TerraformRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/research/TechRequirement.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -52,15 +53,6 @@ bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
 
 namespace
 {
-
-bool HasRequiredTech_(const Faction& rFaction, const std::string& rRequiredTech)
-{
-    if (rRequiredTech.empty())
-    {
-        return true;
-    }
-    return rFaction.GetResearch().HasDiscoveredTech(rRequiredTech);
-}
 
 bool FormerMatchesTile_(const Unit& rUnit, const Tile& rTile)
 {
@@ -219,7 +211,8 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
     {
         return false;
     }
-    if (!HasRequiredTech_(rUnit.GetFaction(), rProject.project.requiredTech))
+    if (!MeetsTechRequirement(rProject.project.requiredTech,
+                              rUnit.GetFaction().GetResearch().GetDiscoveredTechs()))
     {
         return false;
     }

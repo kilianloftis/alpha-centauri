@@ -1,6 +1,7 @@
 #include "game/probes/ProbeRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/research/TechRequirement.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/faction/Faction.h"
@@ -147,12 +148,8 @@ bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAc
     {
         return false;
     }
-    if (!rAction.requiredTech.empty()
-        && !rProbe.GetFaction().GetResearch().HasDiscoveredTech(rAction.requiredTech))
-    {
-        return false;
-    }
-    return true;
+    return MeetsTechRequirement(rAction.requiredTech,
+                                rProbe.GetFaction().GetResearch().GetDiscoveredTechs());
 }
 
 } // namespace

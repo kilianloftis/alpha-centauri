@@ -38,9 +38,9 @@ private:
 
     // The one definition of the obsolescence rule, over a discovered set built once.
     std::string ResolveSuccessorId_(const std::string& rTypeId,
-                                    const std::unordered_set<std::string>& rDiscovered) const;
+                                    const std::vector<std::string>& rDiscovered) const;
     SuccessorLevel_t NextLevel_(const std::vector<std::string>& rFrontier,
-                                const std::unordered_set<std::string>& rDiscovered,
+                                const std::vector<std::string>& rDiscovered,
                                 std::unordered_set<std::string>& rVisited) const;
 
     const PopTypeRegistry& m_rRegistry;

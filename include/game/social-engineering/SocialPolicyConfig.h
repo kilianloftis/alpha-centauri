@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include "game/effects/EffectConfig.h"
 #include <algorithm>
 #include <string>
@@ -28,12 +29,7 @@ struct SocialPolicyConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(rDiscoveredTechIds.begin(), rDiscoveredTechIds.end(), requiredTech)
-               != rDiscoveredTechIds.end();
+        return MeetsTechRequirement(requiredTech, rDiscoveredTechIds);
     }
 };
 

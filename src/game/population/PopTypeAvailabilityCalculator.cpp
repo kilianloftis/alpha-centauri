@@ -2,6 +2,7 @@
 
 #include "game/population/PopTypeRegistry.h"
 #include "game/population/PopTypeConfigParser.h"
+#include "game/research/TechRequirement.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -10,16 +11,6 @@
 namespace ac
 {
 
-namespace
-{
-
-bool HasTech_(const PopTypeConfig_t& rConfig, const std::unordered_set<std::string>& rDiscovered)
-{
-    return rConfig.requiredTech.empty() || rDiscovered.count(rConfig.requiredTech) > 0;
-}
-
-} // namespace
-
 PopTypeAvailabilityCalculator::PopTypeAvailabilityCalculator(const PopTypeRegistry& rRegistry)
     : m_rRegistry(rRegistry)
 {
@@ -27,7 +18,7 @@ PopTypeAvailabilityCalculator::PopTypeAvailabilityCalculator(const PopTypeRegist
 
 std::string PopTypeAvailabilityCalculator::ResolveSuccessorId_(
     const std::string& rTypeId,
-    const std::unordered_set<std::string>& rDiscovered) const
+    const std::vector<std::string>& rDiscovered) const
 {
     // Breadth-first over "who obsoletes this", so ids are reached in distance order and the
     // deepest available one wins.
@@ -49,7 +40,7 @@ std::string PopTypeAvailabilityCalculator::ResolveSuccessorId_(
 // Within a level the earliest in registry order wins.
 PopTypeAvailabilityCalculator::SuccessorLevel_t PopTypeAvailabilityCalculator::NextLevel_(
     const std::vector<std::string>& rFrontier,
-    const std::unordered_set<std::string>& rDiscovered,
+    const std::vector<std::string>& rDiscovered,
     std::unordered_set<std::string>& rVisited) const
 {
     SuccessorLevel_t level;
@@ -70,7 +61,7 @@ PopTypeAvailabilityCalculator::SuccessorLevel_t PopTypeAvailabilityCalculator::N
             level.ids.push_back(rConfig.id);
             // Intermediate steps are walked whether or not their own tech is discovered;
             // only the answer has to be something the player actually has.
-            if (HasTech_(rConfig, rDiscovered) && (!level.bestAvailableId || index < bestIndex))
+            if (MeetsTechRequirement(rConfig.requiredTech, rDiscovered) && (!level.bestAvailableId || index < bestIndex))
             {
                 level.bestAvailableId = rConfig.id;
                 bestIndex = index;
@@ -83,18 +74,16 @@ PopTypeAvailabilityCalculator::SuccessorLevel_t PopTypeAvailabilityCalculator::N
 std::vector<const PopTypeConfig_t*> PopTypeAvailabilityCalculator::GetAvailable(
     const std::vector<std::string>& rDiscoveredTechs) const
 {
-    const std::unordered_set<std::string> discovered(rDiscoveredTechs.begin(),
-                                                     rDiscoveredTechs.end());
 
     std::vector<const PopTypeConfig_t*> available;
     for (const PopTypeConfig_t& rConfig : m_rRegistry.GetAll())
     {
-        if (!rConfig.bPlayerAssignable || !HasTech_(rConfig, discovered))
+        if (!rConfig.bPlayerAssignable || !MeetsTechRequirement(rConfig.requiredTech, rDiscoveredTechs))
         {
             continue;
         }
         // Superseded by something the player has: the same question ResolveCurrentType answers.
-        if (ResolveSuccessorId_(rConfig.id, discovered) != rConfig.id)
+        if (ResolveSuccessorId_(rConfig.id, rDiscoveredTechs) != rConfig.id)
         {
             continue;
         }
@@ -108,9 +97,7 @@ const PopTypeConfig_t& PopTypeAvailabilityCalculator::ResolveCurrentType(
     const std::string& rTypeId,
     const std::vector<std::string>& rDiscoveredTechs) const
 {
-    const std::unordered_set<std::string> discovered(rDiscoveredTechs.begin(),
-                                                     rDiscoveredTechs.end());
-    const std::string resolvedId = ResolveSuccessorId_(rTypeId, discovered);
+    const std::string resolvedId = ResolveSuccessorId_(rTypeId, rDiscoveredTechs);
 
     const PopTypeConfig_t* pResolved = m_rRegistry.Find(resolvedId);
     if (!pResolved)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include "game/production/IConstructable.h"
 #include "game/effects/EffectConfig.h"
 #include <algorithm>
@@ -44,12 +45,7 @@ struct StockpileConfig_t : public IConstructable
 
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(discoveredTechs.begin(), discoveredTechs.end(), requiredTech)
-               != discoveredTechs.end();
+        return MeetsTechRequirement(requiredTech, discoveredTechs);
     }
 };
 

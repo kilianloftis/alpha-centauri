@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 
@@ -63,12 +64,7 @@ struct CouncilProposalConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(rDiscoveredTechIds.begin(), rDiscoveredTechIds.end(), requiredTech)
-               != rDiscoveredTechIds.end();
+        return MeetsTechRequirement(requiredTech, rDiscoveredTechIds);
     }
 };
 

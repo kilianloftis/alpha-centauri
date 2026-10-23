@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/research/TechRequirement.h"
 #include "game/GameCategory.h"
 #include "game/production/IConstructable.h"
 #include "game/effects/EffectConfig.h"
@@ -65,15 +66,9 @@ struct BuildingConfig_t : public IConstructable
     }
     // Per-turn energy-credit maintenance for this building type (UI / upkeep stage).
 
-    // Empty requiredTech = always available (matches SocialPolicyConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
-        if (requiredTech.empty())
-        {
-            return true;
-        }
-        return std::find(discoveredTechs.begin(), discoveredTechs.end(), requiredTech)
-               != discoveredTechs.end();
+        return MeetsTechRequirement(requiredTech, discoveredTechs);
     }
 };
 
