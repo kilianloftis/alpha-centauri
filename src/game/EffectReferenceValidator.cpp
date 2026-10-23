@@ -69,14 +69,13 @@ const T& RequireRegistry(const std::unique_ptr<T>& pRegistry, const char* fieldN
 struct EffectPayloadValidator
 {
     const std::string& rSourceId;
-    const BuildingRegistry* pBuildings;
-    const ImprovementRegistry* pImprovements;
-    const TechRegistry* pTechs;
-    const SocialRatingRegistry* pSocialRatings;
+    const BuildingRegistry& rBuildings;
+    const ImprovementRegistry& rImprovements;
+    const SocialRatingRegistry& rSocialRatings;
 
     void operator()(const GrantBuildingEffect_t& rGrant) const
     {
-        if (pBuildings && !pBuildings->Find(rGrant.buildingId))
+        if (!rBuildings.Find(rGrant.buildingId))
         {
             ThrowBadReference(rSourceId, "building", rGrant.buildingId);
         }
@@ -84,14 +83,14 @@ struct EffectPayloadValidator
 
     void operator()(const StatModifierEffect_t& rModifier) const
     {
-        if (!rModifier.selector || !pImprovements)
+        if (!rModifier.selector)
         {
             return;
         }
         if (const auto* pHas =
                 std::get_if<TileSelectorHasImprovement_t>(&*rModifier.selector))
         {
-            if (!pImprovements->Find(pHas->improvement))
+            if (!rImprovements.Find(pHas->improvement))
             {
                 ThrowBadReference(rSourceId, "selector improvement", pHas->improvement);
             }
@@ -106,7 +105,7 @@ struct EffectPayloadValidator
     // non-zero.
     void operator()(const SocialRatingModifierEffect_t& rModifier) const
     {
-        if (pSocialRatings && !pSocialRatings->Find(SocialRatingIdToString(rModifier.rating)))
+        if (!rSocialRatings.Find(SocialRatingIdToString(rModifier.rating)))
         {
             ThrowBadReference(rSourceId, "social rating axis",
                               SocialRatingIdToString(rModifier.rating));
@@ -123,13 +122,9 @@ struct EffectPayloadValidator
 
     void operator()(const CoexistenceOverrideEffect_t& rOverride) const
     {
-        if (!pImprovements)
-        {
-            return;
-        }
         for (const std::string& rId : {rOverride.firstId, rOverride.secondId})
         {
-            if (!rId.empty() && !pImprovements->Find(rId))
+            if (!rId.empty() && !rImprovements.Find(rId))
             {
                 ThrowBadReference(rSourceId, "coexistence occupant", rId);
             }
@@ -141,14 +136,14 @@ struct EffectPayloadValidator
 struct TriggeredPayloadValidator
 {
     const std::string& rSourceId;
-    const BuildingRegistry* pBuildings;
-    const TechRegistry* pTechs;
-    const UnitComponentRegistry* pUnitComponents;
-    const ImprovementRegistry* pImprovements;
+    const BuildingRegistry& rBuildings;
+    const TechRegistry& rTechs;
+    const UnitComponentRegistry& rUnitComponents;
+    const ImprovementRegistry& rImprovements;
 
     void operator()(const AddBuildingEffect_t& rAdd) const
     {
-        if (pBuildings && !pBuildings->Find(rAdd.buildingId))
+        if (!rBuildings.Find(rAdd.buildingId))
         {
             ThrowBadReference(rSourceId, "building", rAdd.buildingId);
         }
@@ -156,11 +151,7 @@ struct TriggeredPayloadValidator
 
     void operator()(const GrantTechEffect_t& rTech) const
     {
-        if (!rTech.techId || !pTechs)
-        {
-            return;
-        }
-        if (!pTechs->Find(*rTech.techId))
+        if (rTech.techId && !rTechs.Find(*rTech.techId))
         {
             ThrowBadReference(rSourceId, "tech", *rTech.techId);
         }
@@ -169,13 +160,9 @@ struct TriggeredPayloadValidator
     // Checked at load: a unit may be granted hours into a session.
     void operator()(const GrantUnitEffect_t& rGrant) const
     {
-        if (!pUnitComponents)
-        {
-            return;
-        }
         for (const std::string& rId : rGrant.componentIds)
         {
-            if (!pUnitComponents->Find(rId))
+            if (!rUnitComponents.Find(rId))
             {
                 ThrowBadReference(rSourceId, "unit component", rId);
             }
@@ -206,11 +193,7 @@ struct TriggeredPayloadValidator
     // elevation.
     void operator()(const SetTerrainFeatureEffect_t& rSet) const
     {
-        if (!pImprovements)
-        {
-            return;
-        }
-        const ImprovementConfig_t* pConfig = pImprovements->Find(rSet.featureId);
+        const ImprovementConfig_t* pConfig = rImprovements.Find(rSet.featureId);
         if (!pConfig || pConfig->placement != OccupantPlacement_t::Terrain)
         {
             ThrowBadReference(rSourceId, "terrain feature", rSet.featureId);
@@ -227,10 +210,10 @@ struct TriggeredPayloadValidator
 struct ConditionReferenceValidator
 {
     const std::string& rSourceId;
-    const ImprovementRegistry* pImprovements;
-    const UnitComponentRegistry* pUnitComponents;
-    const NativeUnitRegistry* pNativeUnits;
-    const BuildingRegistry* pBuildings;
+    const ImprovementRegistry& rImprovements;
+    const UnitComponentRegistry& rUnitComponents;
+    const NativeUnitRegistry& rNativeUnits;
+    const BuildingRegistry& rBuildings;
 
     void Check(const Condition_t& rCondition) const
     {
@@ -239,7 +222,7 @@ struct ConditionReferenceValidator
 
     void operator()(const TargetTileHas_t& rHas) const
     {
-        if (pImprovements && !pImprovements->Find(rHas.featureId))
+        if (!rImprovements.Find(rHas.featureId))
         {
             ThrowBadReference(rSourceId, "condition feature", rHas.featureId);
         }
@@ -263,7 +246,7 @@ struct ConditionReferenceValidator
 
     void operator()(const HasComponent_t& rHas) const
     {
-        if (pUnitComponents && !pUnitComponents->Find(rHas.component))
+        if (!rUnitComponents.Find(rHas.component))
         {
             ThrowBadReference(rSourceId, "condition component", rHas.component);
         }
@@ -271,7 +254,7 @@ struct ConditionReferenceValidator
 
     void operator()(const SubjectDesign_t& rDesign) const
     {
-        if (pNativeUnits && !pNativeUnits->Find(rDesign.designId))
+        if (!rNativeUnits.Find(rDesign.designId))
         {
             ThrowBadReference(rSourceId, "condition design", rDesign.designId);
         }
@@ -306,83 +289,14 @@ struct ConditionReferenceValidator
 private:
     void CheckBuilding_(const std::string& rBuildingId) const
     {
-        if (pBuildings && !pBuildings->Find(rBuildingId))
+        if (!rBuildings.Find(rBuildingId))
         {
             ThrowBadReference(rSourceId, "condition building", rBuildingId);
         }
     }
 };
 
-} // namespace
-
-void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
-                              const std::string& rSourceId,
-                              const BuildingRegistry* pBuildings,
-                              const ImprovementRegistry* pImprovements,
-                              const TechRegistry* pTechs,
-                              const UnitComponentRegistry* pUnitComponents,
-                              const SocialRatingRegistry* pSocialRatings,
-                              const NativeUnitRegistry* pNativeUnits)
-{
-    for (const EffectConfig_t& rEffect : rEffects)
-    {
-        std::visit(
-            EffectPayloadValidator{rSourceId, pBuildings, pImprovements, pTechs, pSocialRatings},
-            rEffect.effect);
-
-        if (!rEffect.removedByTech.empty() && pTechs && !pTechs->Find(rEffect.removedByTech))
-        {
-            ThrowBadReference(rSourceId, "tech", rEffect.removedByTech);
-        }
-
-        if (rEffect.condition)
-        {
-            const ConditionReferenceValidator conditions{rSourceId, pImprovements, pUnitComponents,
-                                                         pNativeUnits, pBuildings};
-            conditions.Check(*rEffect.condition);
-        }
-
-        if (rEffect.buildingFilter && pBuildings)
-        {
-            if (const auto* pId = std::get_if<BuildingFilterId_t>(&*rEffect.buildingFilter))
-            {
-                if (!pBuildings->Find(pId->buildingId))
-                {
-                    ThrowBadReference(rSourceId, "buildingFilter building", pId->buildingId);
-                }
-            }
-        }
-    }
-}
-
-void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t>& rEffects,
-                                       const std::string& rSourceId,
-                                       const BuildingRegistry* pBuildings,
-                                       const TechRegistry* pTechs,
-                                       const UnitComponentRegistry* pUnitComponents,
-                                       const ImprovementRegistry* pImprovements,
-                                       const NativeUnitRegistry* pNativeUnits)
-{
-    for (const TriggeredEffectConfig_t& rEffect : rEffects)
-    {
-        std::visit(
-            TriggeredPayloadValidator{rSourceId, pBuildings, pTechs, pUnitComponents,
-                                      pImprovements},
-            rEffect.effect);
-        if (rEffect.condition)
-        {
-            const ConditionReferenceValidator conditions{rSourceId, pImprovements, pUnitComponents,
-                                                         pNativeUnits, pBuildings};
-            conditions.Check(*rEffect.condition);
-        }
-    }
-}
-
-namespace
-{
-
-// Checks one source's effects against the registries LoadGameData always installs; a null one
-// would pass every id check vacuously.
+// Checks one source's effects against the registries LoadGameData always installs.
 class EffectSourceChecker_
 {
 public:
@@ -398,18 +312,64 @@ public:
 
     void Effects(const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId) const
     {
-        ValidateEffectReferences(rEffects, rSourceId, &m_rBuildings, &m_rImprovements, &m_rTechs,
-                                 &m_rUnitComponents, &m_rSocialRatings, &m_rNativeUnits);
+        const EffectPayloadValidator payloads{rSourceId, m_rBuildings, m_rImprovements,
+                                              m_rSocialRatings};
+        for (const EffectConfig_t& rEffect : rEffects)
+        {
+            std::visit(payloads, rEffect.effect);
+            CheckRemovedByTech_(rEffect, rSourceId);
+            CheckCondition_(rEffect.condition, rSourceId);
+            CheckBuildingFilter_(rEffect, rSourceId);
+        }
     }
 
     void Triggered(const std::vector<TriggeredEffectConfig_t>& rEffects,
                    const std::string& rSourceId) const
     {
-        ValidateTriggeredEffectReferences(rEffects, rSourceId, &m_rBuildings, &m_rTechs,
-                                          &m_rUnitComponents, &m_rImprovements, &m_rNativeUnits);
+        const TriggeredPayloadValidator payloads{rSourceId, m_rBuildings, m_rTechs,
+                                                 m_rUnitComponents, m_rImprovements};
+        for (const TriggeredEffectConfig_t& rEffect : rEffects)
+        {
+            std::visit(payloads, rEffect.effect);
+            CheckCondition_(rEffect.condition, rSourceId);
+        }
     }
 
 private:
+    void CheckRemovedByTech_(const EffectConfig_t& rEffect, const std::string& rSourceId) const
+    {
+        if (!rEffect.removedByTech.empty() && !m_rTechs.Find(rEffect.removedByTech))
+        {
+            ThrowBadReference(rSourceId, "tech", rEffect.removedByTech);
+        }
+    }
+
+    void CheckCondition_(const std::optional<Condition_t>& rCondition,
+                         const std::string& rSourceId) const
+    {
+        if (!rCondition)
+        {
+            return;
+        }
+        const ConditionReferenceValidator conditions{rSourceId, m_rImprovements,
+                                                     m_rUnitComponents, m_rNativeUnits,
+                                                     m_rBuildings};
+        conditions.Check(*rCondition);
+    }
+
+    void CheckBuildingFilter_(const EffectConfig_t& rEffect, const std::string& rSourceId) const
+    {
+        if (!rEffect.buildingFilter)
+        {
+            return;
+        }
+        const auto* pId = std::get_if<BuildingFilterId_t>(&*rEffect.buildingFilter);
+        if (pId && !m_rBuildings.Find(pId->buildingId))
+        {
+            ThrowBadReference(rSourceId, "buildingFilter building", pId->buildingId);
+        }
+    }
+
     const BuildingRegistry& m_rBuildings;
     const ImprovementRegistry& m_rImprovements;
     const TechRegistry& m_rTechs;
@@ -442,14 +402,12 @@ void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& 
         rCheck.Effects(rConfig.effects, rConfig.id);
         rCheck.Triggered(rConfig.onVisitEffects, rConfig.id);
     }
-    // A terrain operation is only its effects, so a typo makes it do nothing. Absent in
-    // movement-only harnesses.
-    if (rData.terrainOperationRegistry)
+    // A terrain operation is only its effects, so a typo makes it do nothing.
+    const TerrainOperationRegistry& rOperations =
+        RequireRegistry(rData.terrainOperationRegistry, "terrainOperationRegistry");
+    for (const TerrainOperationConfig_t& rConfig : rOperations.GetAll())
     {
-        for (const TerrainOperationConfig_t& rConfig : rData.terrainOperationRegistry->GetAll())
-        {
-            rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
-        }
+        rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
     }
 }
 

@@ -21,6 +21,8 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
 #include "game/map/TerrainFeatureValidation.h"
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
@@ -80,6 +82,28 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
+    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
+}
+
+// The buildings the reference tests name, with no effects of their own to validate.
+constexpr const char* k_ReferenceBuildings = R"([
+    { "id": "granted_hall", "name": "Granted Hall", "mineral_cost": 10, "category": "grow" },
+    { "id": "upkeep_hall", "name": "Upkeep Hall", "mineral_cost": 10, "category": "build" },
+    { "id": "Network_Node", "name": "Network Node", "mineral_cost": 10, "category": "discover" }
+])";
+
+// The context above with the registries the reference tests check ids against. Every effect
+// source stays empty, so a test fills the one it validates.
+void LoadFixtureRegistries(GameDataContext& rData)
+{
+    FillEffectReferenceContext(rData);
+    const actest::TempConfigFile buildings("reference_buildings.json", k_ReferenceBuildings);
+    rData.buildingRegistry->Load(buildings.Path());
+    rData.unitComponentRegistry->Load(actest::FixturePath("unit_components.json"));
+    rData.nativeUnitRegistry->Load(actest::FixturePath("native_units_full.json"));
+    rData.socialRatingRegistry->Load(actest::FixturePath("social_rating_effects.json"));
+    LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
+                     *rData.improvementRegistry, *rData.terrainOperationRegistry);
 }
 
 } // namespace
@@ -249,18 +273,15 @@ static_assert(DomainFor(StatId_t::BombardMinHpPercent) == ResolveDomain_t::Tile)
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {
-    BuildingRegistry buildings;
-    buildings.Load(actest::FixturePath("buildings.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
-    const std::vector<EffectConfig_t> good = {GrantBuilding("granted_hall")};
-    CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
+    data.productionConfig->effects = {GrantBuilding("granted_hall")};
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
-    const std::vector<EffectConfig_t> bad = {GrantBuilding("no_such_building")};
-    CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
+    data.productionConfig->effects = {GrantBuilding("no_such_building")};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
                       Catch::Matchers::ContainsSubstring("no_such_building"));
-
-    // A null registry skips the check (partial validation context).
-    CHECK_NOTHROW(ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr));
 }
 
 TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
@@ -269,11 +290,14 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
     // SocialRatingResolver looks up the axis table whenever the accumulated total is non-zero,
     // which is the first turn after a player adopts a policy declaring the modifier. A modifier
     // naming an axis with no table has to fail at load, not there.
-    const actest::TempConfigFile growthOnly("growth_only_ratings.json", R"([
-        { "id": "growth", "levels": { "2": [] } }
+    // The fixture unit components name the morale axis, so it stays.
+    const actest::TempConfigFile noPlanet("no_planet_ratings.json", R"([
+        { "id": "growth", "levels": { "2": [] } },
+        { "id": "morale", "levels": { "2": [] } }
     ])");
-    SocialRatingRegistry ratings;
-    ratings.Load(growthOnly.Path());
+    GameDataContext data;
+    LoadFixtureRegistries(data);
+    data.socialRatingRegistry->Load(noPlanet.Path());
 
     const auto ratingModifier = [](SocialRatingId_t rating) {
         EffectConfig_t config;
@@ -282,76 +306,71 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
         return std::vector<EffectConfig_t>{config};
     };
 
-    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Growth), "policy_x",
-                                           nullptr, nullptr, nullptr, nullptr, &ratings));
+    data.productionConfig->effects = ratingModifier(SocialRatingId_t::Growth);
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
     // The registry defines no table for Planet.
-    REQUIRE(ratings.Find("planet") == nullptr);
-    CHECK_THROWS_WITH(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Planet),
-                                               "policy_x", nullptr, nullptr, nullptr, nullptr,
-                                               &ratings),
+    REQUIRE(data.socialRatingRegistry->Find("planet") == nullptr);
+    data.productionConfig->effects = ratingModifier(SocialRatingId_t::Planet);
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
                       Catch::Matchers::ContainsSubstring("planet")
-                          && Catch::Matchers::ContainsSubstring("policy_x"));
-
-    // A null registry skips the check (partial validation context).
-    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Planet), "policy_x",
-                                           nullptr, nullptr, nullptr, nullptr, nullptr));
+                          && Catch::Matchers::ContainsSubstring("production"));
 }
 
 TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[effects][validation]")
 {
-    ImprovementRegistry improvements;
-    improvements.Assign(ParseImprovementsUnexpanded(actest::FixturePath("improvements.json")));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     actest::EffectPool pool;
-    const std::vector<EffectConfig_t> good = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      actest::ImprovementSelector("Farm"))};
-    CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, &improvements, nullptr));
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
-    const std::vector<EffectConfig_t> bad = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      actest::ImprovementSelector("Fram"))};
-    CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", nullptr, &improvements, nullptr),
-                      Catch::Matchers::ContainsSubstring("Fram"));
+    CHECK_THROWS_WITH(ValidateEffectReferences(data), Catch::Matchers::ContainsSubstring("Fram"));
 }
 
 TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and improvement ids",
           "[effects][validation]")
 {
-    ImprovementRegistry improvements;
-    improvements.LoadOccupants(actest::FixturePath("improvements.json"),
-                               actest::FixturePath("terrain.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     actest::EffectPool pool;
     // "Rocky" / "Water" are terrain ids and "Base" is an improvement id.
-    const std::vector<EffectConfig_t> good = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Rocky")),
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Base")),
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Water"))};
-    CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, &improvements, nullptr));
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
-    const std::vector<EffectConfig_t> bad = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Swamp"))};
-    CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", nullptr, &improvements, nullptr),
-                      Catch::Matchers::ContainsSubstring("Swamp"));
+    CHECK_THROWS_WITH(ValidateEffectReferences(data), Catch::Matchers::ContainsSubstring("Swamp"));
 }
 
 TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have a terrain entry",
           "[effects][validation][terrain]")
 {
     ImprovementRegistry occupants;
-    occupants.LoadOccupants(actest::FixturePath("improvements.json"),
-                            actest::FixturePath("terrain.json"));
+    TerrainOperationRegistry operations;
+    LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
+                     occupants, operations);
     CHECK_NOTHROW(ValidateTerrainFeatures(occupants));
 
     ImprovementRegistry incomplete;
-    incomplete.LoadOccupants(actest::FixturePath("improvements.json"),
-                             actest::FixturePath("improvements_missing_terrain.json"));
+    TerrainOperationRegistry incompleteOperations;
+    LoadMapOccupants(actest::FixturePath("improvements.json"),
+                     actest::FixturePath("improvements_missing_terrain.json"), incomplete,
+                     incompleteOperations);
     CHECK_THROWS_WITH(ValidateTerrainFeatures(incomplete),
                       Catch::Matchers::ContainsSubstring("Aquifer"));
 }
@@ -359,88 +378,79 @@ TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have a terra
 TEST_CASE("ValidateEffectReferences: BuildingId buildingFilter ids must exist",
           "[effects][validation][buildingFilter]")
 {
-    BuildingRegistry buildings;
-    buildings.Load(actest::FixturePath("buildings.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     actest::EffectPool pool;
-    const std::vector<EffectConfig_t> good = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
                      EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"upkeep_hall"})};
-    CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
-    const std::vector<EffectConfig_t> bad = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
                      EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"no_such_building"})};
-    CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
                       Catch::Matchers::ContainsSubstring("no_such_building"));
 }
 
 TEST_CASE("ValidateEffectReferences: HasComponent condition ids must exist",
           "[effects][validation][condition]")
 {
-    UnitComponentRegistry components;
-    components.Load(actest::FixturePath("unit_components.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     actest::EffectPool pool;
-    const std::vector<EffectConfig_t> good = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
                      std::nullopt, actest::HasComponentCondition("test_weapon"))};
-    CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, nullptr, nullptr, &components));
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
-    const std::vector<EffectConfig_t> bad = {
+    data.productionConfig->effects = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
                      std::nullopt, actest::HasComponentCondition("no_such_component"))};
-    CHECK_THROWS_WITH(
-        ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, &components),
-        Catch::Matchers::ContainsSubstring("no_such_component"));
-
-    // A null registry skips the check (partial validation context).
-    CHECK_NOTHROW(ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, nullptr));
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                      Catch::Matchers::ContainsSubstring("no_such_component"));
 }
 
-TEST_CASE("ValidateTriggeredEffectReferences: SubjectDesign ids must exist",
+TEST_CASE("ValidateEffectReferences: triggered SubjectDesign ids must exist",
           "[effects][validation][condition]")
 {
-    NativeUnitRegistry natives;
-    natives.Load(actest::FixturePath("native_units_full.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     TriggeredEffectConfig_t good;
     good.effect = GrantTechEffect_t{};
     good.condition = SubjectDesign_t{"Alien_Artifact"};
-    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
-        {good}, "src", nullptr, nullptr, nullptr, nullptr, &natives));
+    data.ecoDamageConfig->onPopEffects = {good};
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
     TriggeredEffectConfig_t bad = good;
     bad.condition = SubjectDesign_t{"No_Such_Native"};
-    CHECK_THROWS_WITH(
-        ValidateTriggeredEffectReferences(
-            {bad}, "src", nullptr, nullptr, nullptr, nullptr, &natives),
-        Catch::Matchers::ContainsSubstring("No_Such_Native"));
-
-    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
-        {bad}, "src", nullptr, nullptr, nullptr, nullptr, nullptr));
+    data.ecoDamageConfig->onPopEffects = {bad};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                      Catch::Matchers::ContainsSubstring("No_Such_Native"));
 }
 
-TEST_CASE("ValidateTriggeredEffectReferences: BaseHasBuilding ids must exist",
+TEST_CASE("ValidateEffectReferences: triggered BaseHasBuilding ids must exist",
           "[effects][validation][condition]")
 {
-    BuildingRegistry buildings;
-    buildings.Load(actest::FixturePath("buildings.json"));
+    GameDataContext data;
+    LoadFixtureRegistries(data);
 
     TriggeredEffectConfig_t good;
     good.effect = GrantTechEffect_t{};
     good.condition = BaseHasBuilding_t{"Network_Node"};
-    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
-        {good}, "src", &buildings, nullptr, nullptr, nullptr, nullptr));
+    data.ecoDamageConfig->onPopEffects = {good};
+    CHECK_NOTHROW(ValidateEffectReferences(data));
 
     TriggeredEffectConfig_t bad = good;
     bad.condition = BaseHasBuilding_t{"No_Such_Building"};
-    CHECK_THROWS_WITH(
-        ValidateTriggeredEffectReferences(
-            {bad}, "src", &buildings, nullptr, nullptr, nullptr, nullptr),
-        Catch::Matchers::ContainsSubstring("No_Such_Building"));
+    data.ecoDamageConfig->onPopEffects = {bad};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                      Catch::Matchers::ContainsSubstring("No_Such_Building"));
 }
 
 TEST_CASE("ValidateEffectReferences(GameDataContext): null required registry throws",
