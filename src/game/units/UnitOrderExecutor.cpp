@@ -214,10 +214,7 @@ UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUn
     rUnit.ClearOrder();
 
     const AirdropLanding_t landing = AirdropLanding(rUnit, rDest);
-    if (landing.hpAfter < rUnit.GetCurrentHp())
-    {
-        rUnit.SetCurrentHp(landing.hpAfter);
-    }
+    rUnit.SetCurrentHp(landing.hpAfter);
 
     EnterTile_(rUnit, rDest);
     result.bEntered = true;
@@ -339,10 +336,8 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 
 CombatResult_t UnitOrderExecutor::FightDefender_(Unit& rAttacker, Unit& rDefender)
 {
-    // Snapshot before Resolve may DestroyUnit the defender (and free its tile reference).
+    // Read before Resolve may destroy the defender.
     const Tile& rDefenderTile = rDefender.GetTile();
-    const bool bDefenderOnBase =
-        m_rWorld.FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
 
     std::vector<const Tile*> scrambleHops;
     Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, rDefender, scrambleHops);
@@ -358,7 +353,7 @@ CombatResult_t UnitOrderExecutor::FightDefender_(Unit& rAttacker, Unit& rDefende
     }
 
     // A native raider spends itself on the raid, so playback must not show it surviving.
-    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase
+    if (result.bDefenderDestroyed && !result.bAttackerDestroyed
         && ApplyLastDefenderConquest_(rAttacker, rDefenderTile))
     {
         result.bAttackerDestroyed = true;

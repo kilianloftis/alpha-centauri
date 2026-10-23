@@ -27,6 +27,7 @@ public:
     virtual std::optional<CombatResult_t> TryInterceptAttack(
         Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) = 0;
 
+    // Nothing happens when no base stands on rDefenderTile.
     virtual BaseConquestResult_t ResolvePostCombatBaseConquest(
         Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) = 0;
 

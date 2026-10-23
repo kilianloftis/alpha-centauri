@@ -10,7 +10,6 @@
 #include "game/units/UnitOrder.h"
 
 #include <cstdint>
-#include <functional>
 #include <optional>
 #include <random>
 #include <string>
