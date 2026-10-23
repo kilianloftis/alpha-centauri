@@ -57,41 +57,15 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
     const auto destructionScope = rUnitManager.DeferDestruction();
     for (Unit& rUnit : rUnitManager.Units())
     {
-        if (m_advancedUnitIds.contains(rUnit.GetUnitId()))
+        if (!ShouldAdvance_(rUnit))
         {
             continue;
         }
-
-        if (!rUnit.GetOrder().has_value())
-        {
-            continue;
-        }
-
-        if (std::holds_alternative<MoveOrder_t>(*rUnit.GetOrder())
-            && rUnit.GetMoveFragmentsRemaining() <= 0)
-        {
-            continue;
-        }
-
-        const OrderProgress_t progress = rExecutor.Execute(rUnit);
-        if (progress == OrderProgress_t::Continue)
-        {
-            // Multi-turn order still in progress — do not re-tick on mid-pass Yield resume.
-            m_advancedUnitIds.insert(rUnit.GetUnitId());
-        }
-
-        if (progress == OrderProgress_t::UnitDestroyed)
-        {
-            // Already destroyed while advancing (e.g. a native raider consumed by its raid).
-            continue;
-        }
-        if (progress == OrderProgress_t::Expended)
-        {
-            rUnitManager.DestroyUnit(rUnit);
-            continue;
-        }
-
-        if (bPlayer && rUnit.RequiresOrders())
+        const OrderProgress_t progress = AdvanceUnit_(rUnit, rExecutor, rUnitManager);
+        // Already destroyed while advancing (e.g. a native raider consumed by its raid).
+        const bool bGone = progress == OrderProgress_t::UnitDestroyed
+                           || progress == OrderProgress_t::Expended;
+        if (!bGone && bPlayer && rUnit.RequiresOrders())
         {
             return StageResult_t::Yield;
         }
@@ -99,6 +73,32 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
 
     ResetPassState_();
     return StageResult_t::Continue;
+}
+
+bool PlayerActions::ShouldAdvance_(const Unit& rUnit) const
+{
+    if (m_advancedUnitIds.contains(rUnit.GetUnitId()) || !rUnit.GetOrder().has_value())
+    {
+        return false;
+    }
+    return !std::holds_alternative<MoveOrder_t>(*rUnit.GetOrder())
+        || rUnit.GetMoveFragmentsRemaining() > 0;
+}
+
+OrderProgress_t PlayerActions::AdvanceUnit_(Unit& rUnit, UnitOrderExecutor& rExecutor,
+                                            UnitManager& rUnitManager)
+{
+    const OrderProgress_t progress = rExecutor.Execute(rUnit);
+    if (progress == OrderProgress_t::Continue)
+    {
+        // Multi-turn order still in progress — do not re-tick on mid-pass Yield resume.
+        m_advancedUnitIds.insert(rUnit.GetUnitId());
+    }
+    if (progress == OrderProgress_t::Expended)
+    {
+        rUnitManager.DestroyUnit(rUnit);
+    }
+    return progress;
 }
 
 } // namespace ac

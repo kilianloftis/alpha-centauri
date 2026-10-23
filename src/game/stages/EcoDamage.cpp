@@ -39,26 +39,26 @@ StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     }
     for (const BaseId_t baseId : baseIds)
     {
-        BaseManager* pBase = rFaction.FindBase(baseId);
-        if (!pBase)
+        if (BaseManager* pBase = rFaction.FindBase(baseId))
         {
-            continue;
-        }
-        const int chance = FungalPopChance(*pBase);
-        if (chance <= 0)
-        {
-            continue;
-        }
-        if (std::uniform_int_distribution<int>(0, 99)(rRng) >= chance)
-        {
-            continue;
-        }
-        if (Tile* pPopTile = PickPopTile_(rGameState, *pBase, rRng))
-        {
-            Pop_(rGameState, *pBase, *pPopTile);
+            MaybePopFungus_(rGameState, *pBase, rRng);
         }
     }
     return StageResult_t::Continue;
+}
+
+// Rolls the base's fungal pop chance and, on a hit, pops a tile next to it.
+void EcoDamage::MaybePopFungus_(GameState& rGameState, BaseManager& rBase, std::mt19937& rRng)
+{
+    const int chance = FungalPopChance(rBase);
+    if (chance <= 0 || std::uniform_int_distribution<int>(0, 99)(rRng) >= chance)
+    {
+        return;
+    }
+    if (Tile* pPopTile = PickPopTile_(rGameState, rBase, rRng))
+    {
+        Pop_(rGameState, rBase, *pPopTile);
+    }
 }
 
 Tile* EcoDamage::PickPopTile_(GameState& rGameState, const BaseManager& rBase,

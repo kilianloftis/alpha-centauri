@@ -22,6 +22,54 @@ std::unordered_map<std::string, TurnStageFactory::PerFactionCreator_t>& PerFacti
     return registry;
 }
 
+bool TryAddGlobalBuiltIn_(TurnStageRegistries_t& rRegistries, const TurnStageConfig_t& rConfig)
+{
+    const auto& rCreators = GlobalCreatorRegistry();
+    const auto it = rCreators.find(rConfig.id);
+    if (it == rCreators.end())
+    {
+        return false;
+    }
+    if (rConfig.bRepeatForEachFaction)
+    {
+        throw std::runtime_error("Turn stage '" + rConfig.id
+                                 + "' is a global built-in but repeatForEachFaction is true");
+    }
+    rRegistries.global[rConfig.id] = it->second(rConfig.hookContext);
+    return true;
+}
+
+bool TryAddPerFactionBuiltIn_(TurnStageRegistries_t& rRegistries,
+                              const TurnStageConfig_t& rConfig)
+{
+    const auto& rCreators = PerFactionCreatorRegistry();
+    const auto it = rCreators.find(rConfig.id);
+    if (it == rCreators.end())
+    {
+        return false;
+    }
+    if (!rConfig.bRepeatForEachFaction)
+    {
+        throw std::runtime_error("Turn stage '" + rConfig.id
+                                 + "' is a per-faction built-in but repeatForEachFaction is false");
+    }
+    rRegistries.perFaction[rConfig.id] = it->second(rConfig.hookContext);
+    return true;
+}
+
+// Mod-defined id: shape comes from the config flag (no C++ type to derive it from).
+void AddCustomStage_(TurnStageRegistries_t& rRegistries, const TurnStageConfig_t& rConfig)
+{
+    if (rConfig.bRepeatForEachFaction)
+    {
+        rRegistries.perFaction[rConfig.id] =
+            std::make_unique<CustomPerFactionTurnStage>(rConfig.hookContext, rConfig.name);
+        return;
+    }
+    rRegistries.global[rConfig.id] =
+        std::make_unique<CustomGlobalTurnStage>(rConfig.hookContext, rConfig.name);
+}
+
 } // namespace
 
 void TurnStageFactory::RegisterGlobalCreator(const std::string& id, GlobalCreator_t creator)
@@ -53,46 +101,10 @@ TurnStageRegistries_t TurnStageFactory::CreateStages()
         {
             throw std::runtime_error("Duplicate turn stage id '" + config.id + "'");
         }
-
-        const auto& globalCreators = GlobalCreatorRegistry();
-        const auto& perFactionCreators = PerFactionCreatorRegistry();
-
-        auto globalIt = globalCreators.find(config.id);
-        if (globalIt != globalCreators.end())
+        if (!TryAddGlobalBuiltIn_(registries, config)
+            && !TryAddPerFactionBuiltIn_(registries, config))
         {
-            if (config.bRepeatForEachFaction)
-            {
-                throw std::runtime_error(
-                    "Turn stage '" + config.id
-                    + "' is a global built-in but repeatForEachFaction is true");
-            }
-            registries.global[config.id] = globalIt->second(config.hookContext);
-            continue;
-        }
-
-        auto perFactionIt = perFactionCreators.find(config.id);
-        if (perFactionIt != perFactionCreators.end())
-        {
-            if (!config.bRepeatForEachFaction)
-            {
-                throw std::runtime_error(
-                    "Turn stage '" + config.id
-                    + "' is a per-faction built-in but repeatForEachFaction is false");
-            }
-            registries.perFaction[config.id] = perFactionIt->second(config.hookContext);
-            continue;
-        }
-
-        // Mod-defined id: shape comes from the config flag (no C++ type to derive it from).
-        if (config.bRepeatForEachFaction)
-        {
-            registries.perFaction[config.id] =
-                std::make_unique<CustomPerFactionTurnStage>(config.hookContext, config.name);
-        }
-        else
-        {
-            registries.global[config.id] =
-                std::make_unique<CustomGlobalTurnStage>(config.hookContext, config.name);
+            AddCustomStage_(registries, config);
         }
     }
     return registries;

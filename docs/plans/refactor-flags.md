@@ -254,13 +254,6 @@ kind, registered the way the effect types are.
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
-### `ParseOccupantArt` and `ParseTileSet_`
-- **Where:** `src/game/display/OccupantArtParser.cpp`: `ParseOccupantArt` (107 lines),
-  `ParseTileSet_` (86 lines, nesting 6)
-- **Problem:** every art shape is parsed inline.
-- **Why not local:** over 100 lines; one parser per art shape (variants, tile sets, yield rows)
-  would each fill the shared occupant art struct.
-
 ### `HotkeyConfig::Load` and `TileRenderer::DrawLinkNetworks_`
 - **Where:** `src/ui/HotkeyConfig.cpp` (`Load`, 86 lines, nesting 4), `src/ui/TileRenderer.cpp`
   (`DrawLinkNetworks_`, 93 lines, complexity 28)

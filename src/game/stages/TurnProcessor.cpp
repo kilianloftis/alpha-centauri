@@ -94,22 +94,10 @@ StageResult_t TurnProcessor::ExecutePerFactionStage_(PerFactionTurnStage& rStage
     {
         EnsureEntered_(rStage, rGameState);
 
-        if (m_bHasResumeFaction)
+        // Resume faction was eliminated while yielded; process remaining factions.
+        if (m_bHasResumeFaction && !rGameState.FindFaction(m_resumeFactionId))
         {
-            bool bResumePresent = false;
-            for (Faction& rFaction : rGameState.Factions())
-            {
-                if (rFaction.GetFactionId() == m_resumeFactionId)
-                {
-                    bResumePresent = true;
-                    break;
-                }
-            }
-            if (!bResumePresent)
-            {
-                // Resume faction was eliminated while yielded; process remaining factions.
-                m_bHasResumeFaction = false;
-            }
+            m_bHasResumeFaction = false;
         }
 
         for (Faction& rFaction : rGameState.Factions())

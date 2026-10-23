@@ -8,6 +8,9 @@
 namespace ac
 {
 
+class UnitManager;
+class UnitOrderExecutor;
+
 class PlayerActions : public YieldingPerFactionTurnStage
 {
 public:
@@ -26,6 +29,12 @@ private:
         AwaitingInteraction,
         EndingInteraction
     };
+
+    // A unit with an order this pass has not advanced yet, and moves left for a move order.
+    bool ShouldAdvance_(const Unit& rUnit) const;
+    // Runs one step of the unit's order; an expended unit is destroyed under the open deferral.
+    OrderProgress_t AdvanceUnit_(Unit& rUnit, UnitOrderExecutor& rExecutor,
+                                 UnitManager& rUnitManager);
 
     Phase_t m_phase = Phase_t::AwaitingInteraction;
     // Units whose multi-turn order already advanced this pass (Continue). Complete/Expended
