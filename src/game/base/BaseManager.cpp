@@ -87,6 +87,25 @@ int ResolveFoundingPopulation_(Faction& rFaction, std::optional<int> initialPopu
     return size;
 }
 
+std::unique_ptr<PopulationManager> MakePopulation_(const BaseRuleset_t& rRules, Faction& rFaction,
+                                                   BaseManager& rBase,
+                                                   std::optional<int> initialPopulation)
+{
+    const int foundingSize = ResolveFoundingPopulation_(rFaction, initialPopulation);
+    return std::make_unique<PopulationManager>(rRules.rPopTypes, rRules.rPopTypeAvailability,
+                                               rRules.rGrowth, rRules.rComposition, rRules.rDrones,
+                                               rFaction.GetResearch(), rBase, foundingSize);
+}
+
+std::unique_ptr<WorkerAssignmentManager> MakeWorkerAssignments_(TileEffectsContext& rTileEffects,
+                                                                const Tile& tile,
+                                                                PopulationManager& rPopulation)
+{
+    return std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile),
+                                                     rPopulation, rTileEffects,
+                                                     rTileEffects.GetWorldMap().GetWorkedTiles());
+}
+
 } // namespace
 
 BaseManager::BaseManager(
@@ -109,36 +128,36 @@ BaseManager::BaseManager(
     , m_rHurryCalculator(rRules.rHurry)
     , m_rScrapCalculator(rRules.rScrap)
     , m_rProductionConfig(rRules.rProduction)
-    , m_pPopulation(std::make_unique<PopulationManager>(
-          rRules.rPopTypes, rRules.rPopTypeAvailability, rRules.rGrowth, rRules.rComposition,
-          rRules.rDrones, rFaction.GetResearch(), *this,
-          ResolveFoundingPopulation_(rFaction, initialPopulation)))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
-          ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
-          rTileEffects.GetWorldMap().GetWorkedTiles()))
+    , m_pPopulation(MakePopulation_(rRules, rFaction, *this, initialPopulation))
+    , m_pWorkerAssignments(MakeWorkerAssignments_(rTileEffects, tile, *m_pPopulation))
     , m_pBuildings(std::make_unique<BuildingManager>(rRules.rBuildings, rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(rFaction.GetCommerce(), *this))
     , m_pProduction(std::make_unique<ProductionManager>(
-          rRules.rProduction,
-          [this]() -> const IConstructable* {
-              return m_rStockpileRegistry.FindFallback(
-                  m_pFaction->GetResearch().GetDiscoveredTechs());
-          },
-          *this))
+          rRules.rProduction, [this]() { return FallbackProduction_(); }, *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
     , m_ecology(*this, rRules.rEcoDamage)
     , m_bMayOccupyWater(tile.IsWater())
 {
-    m_pBuildings->OnBuildingDestroyed.Connect(
-        std::bind_front(&BaseManager::OnBuildingDestroyed_, this));
+    ConnectSignals_();
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
     WirePopulation_();
     // Newly created pops start unassigned; auto-assign once after construction.
     m_pWorkerAssignments->AutoAssignWorkers();
+}
+
+void BaseManager::ConnectSignals_()
+{
+    m_pBuildings->OnBuildingDestroyed.Connect(
+        std::bind_front(&BaseManager::OnBuildingDestroyed_, this));
     m_pProduction->OnProductionCompleted.Connect(
         std::bind_front(&BaseManager::OnItemCompleted_, this));
+}
+
+const IConstructable* BaseManager::FallbackProduction_() const
+{
+    return m_rStockpileRegistry.FindFallback(m_pFaction->GetResearch().GetDiscoveredTechs());
 }
 
 void BaseManager::OnBuildingDestroyed_(const BuildingConfig_t& rBuilding)

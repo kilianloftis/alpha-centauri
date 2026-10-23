@@ -310,6 +310,9 @@ private:
     void OnBuildingDestroyed_(const BuildingConfig_t& rBuilding);
     // Growth, starvation and the base's own pop and riot signals.
     void WirePopulation_();
+    void ConnectSignals_();
+    // What production builds when the queue is empty.
+    const IConstructable* FallbackProduction_() const;
     // A finished building joins the base; a finished design becomes a unit here.
     void OnItemCompleted_(const std::string& itemId);
     void CompleteBuilding_(const std::string& itemId);
