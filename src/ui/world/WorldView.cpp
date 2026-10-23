@@ -187,71 +187,49 @@ void WorldView::UpdatePresentation()
 
     Update_();
 
-    const Path_t* pPath = m_pUnitOrderInputController->GetPathPreview();
-    const bool bHadPath = pPath != nullptr;
-    const size_t pathLen = pPath ? pPath->tiles.size() : 0;
-    const Tile* pPathEnd =
-        (pPath && !pPath->tiles.empty()) ? pPath->tiles.back() : nullptr;
-
-    int energy = -1;
-    int research = -1;
-    uint64_t exploredRevision = 0;
-    uint64_t visibleRevision = 0;
-    uint64_t unitRevision = 0;
-    if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
-    {
-        energy = pPlayer->GetEconomy().GetEnergy();
-        research = pPlayer->GetResearch().GetAccumulatedPoints();
-        if (pPlayer->GetExploredMap().IsSized())
-        {
-            exploredRevision = pPlayer->GetExploredMap().GetRevision();
-        }
-        if (pPlayer->GetVisibleMap().IsSized())
-        {
-            visibleRevision = pPlayer->GetVisibleMap().GetRevision();
-        }
-        unitRevision = pPlayer->GetUnitManager().GetRevision();
-    }
-    const int missionYear = m_rGameState.GetMissionYear();
-    const bool bEndTurnReady = m_pEndTurnButton->IsReady();
-    const uint64_t appearanceRevision = m_rGameState.GetWorldMap().GetAppearanceRevision();
-
-    if (m_pSelectedUnit != m_pLastPresentedUnit
-        || m_pSelectedTile != m_pLastPresentedTile
-        || bEndTurnReady != m_bLastEndTurnReady
-        || bHadPath != m_bLastHadPathPreview
-        || pathLen != m_lastPathPreviewLength
-        || pPathEnd != m_pLastPathPreviewEnd
-        || rViewport.CameraX() != camXBefore
-        || rViewport.CameraY() != camYBefore
-        || rViewport.CameraX() != m_lastCameraX
-        || rViewport.CameraY() != m_lastCameraY
-        || missionYear != m_lastMissionYear
-        || energy != m_lastEnergy
-        || research != m_lastResearch
-        || exploredRevision != m_lastExploredRevision
-        || visibleRevision != m_lastVisibleRevision
-        || unitRevision != m_lastUnitRevision
-        || appearanceRevision != m_lastAppearanceRevision)
+    const PresentationSnapshot_t snapshot = CapturePresentationSnapshot_();
+    const bool bCameraMovedThisUpdate =
+        snapshot.cameraX != camXBefore || snapshot.cameraY != camYBefore;
+    if (bCameraMovedThisUpdate || snapshot != m_lastPresented)
     {
         m_bPresentationDirty = true;
     }
+    m_lastPresented = snapshot;
+}
 
-    m_pLastPresentedUnit = m_pSelectedUnit;
-    m_pLastPresentedTile = m_pSelectedTile;
-    m_bLastEndTurnReady = bEndTurnReady;
-    m_bLastHadPathPreview = bHadPath;
-    m_lastPathPreviewLength = pathLen;
-    m_pLastPathPreviewEnd = pPathEnd;
-    m_lastCameraX = rViewport.CameraX();
-    m_lastCameraY = rViewport.CameraY();
-    m_lastMissionYear = missionYear;
-    m_lastEnergy = energy;
-    m_lastResearch = research;
-    m_lastExploredRevision = exploredRevision;
-    m_lastVisibleRevision = visibleRevision;
-    m_lastUnitRevision = unitRevision;
-    m_lastAppearanceRevision = appearanceRevision;
+WorldView::PresentationSnapshot_t WorldView::CapturePresentationSnapshot_() const
+{
+    const MapViewport& rViewport = m_pWorldDisplay->GetViewport();
+    const Path_t* pPath = m_pUnitOrderInputController->GetPathPreview();
+    const bool bHasPathTiles = pPath && !pPath->tiles.empty();
+
+    PresentationSnapshot_t snapshot{
+        .pSelectedUnit = m_pSelectedUnit,
+        .pSelectedTile = m_pSelectedTile,
+        .bEndTurnReady = m_pEndTurnButton->IsReady(),
+        .bHadPathPreview = pPath != nullptr,
+        .pathPreviewLength = pPath ? pPath->tiles.size() : 0,
+        .pPathPreviewEnd = bHasPathTiles ? pPath->tiles.back() : nullptr,
+        .cameraX = rViewport.CameraX(),
+        .cameraY = rViewport.CameraY(),
+        .missionYear = m_rGameState.GetMissionYear(),
+        .appearanceRevision = m_rGameState.GetWorldMap().GetAppearanceRevision(),
+    };
+    if (const Faction* pPlayer = m_rGameState.GetPlayerFaction())
+    {
+        snapshot.energy = pPlayer->GetEconomy().GetEnergy();
+        snapshot.research = pPlayer->GetResearch().GetAccumulatedPoints();
+        if (pPlayer->GetExploredMap().IsSized())
+        {
+            snapshot.exploredRevision = pPlayer->GetExploredMap().GetRevision();
+        }
+        if (pPlayer->GetVisibleMap().IsSized())
+        {
+            snapshot.visibleRevision = pPlayer->GetVisibleMap().GetRevision();
+        }
+        snapshot.unitRevision = pPlayer->GetUnitManager().GetRevision();
+    }
+    return snapshot;
 }
 
 bool WorldView::ConsumePresentationDirty()

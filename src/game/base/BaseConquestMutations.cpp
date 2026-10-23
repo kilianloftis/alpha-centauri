@@ -117,6 +117,21 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     return spawnCount;
 }
 
+int DestroyRandomFacilities_(BaseManager& rBase,
+                             std::vector<const BuildingConfig_t*> candidates,
+                             int count,
+                             std::mt19937& rRng)
+{
+    std::shuffle(candidates.begin(), candidates.end(), rRng);
+    const int candidateCount = static_cast<int>(candidates.size());
+    const int destroyed = std::min(count, candidateCount);
+    for (int i = 0; i < destroyed; ++i)
+    {
+        rBase.GetBuildingManager().DestroyBuilding(candidates[static_cast<size_t>(i)]->id);
+    }
+    return destroyed;
+}
+
 void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutcome,
                                std::mt19937& rRng, BaseConquestResult_t& rResult)
 {
@@ -127,13 +142,8 @@ void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutc
     std::uniform_int_distribution<int> countDist(rOutcome.minFacilitiesDestroyed,
                                                  rOutcome.maxFacilitiesDestroyed);
     const int toDestroy = countDist(rRng);
-    std::vector<const BuildingConfig_t*> candidates = rOutcome.facilityCandidates;
-    std::shuffle(candidates.begin(), candidates.end(), rRng);
-    for (int i = 0; i < toDestroy; ++i)
-    {
-        rBase.GetBuildingManager().DestroyBuilding(candidates[static_cast<size_t>(i)]->id);
-    }
-    rResult.facilitiesDestroyed = toDestroy;
+    rResult.facilitiesDestroyed =
+        DestroyRandomFacilities_(rBase, rOutcome.facilityCandidates, toDestroy, rRng);
 }
 
 BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase)
@@ -155,9 +165,8 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, std::mt
 
     if (bDestroyFacility)
     {
-        std::uniform_int_distribution<size_t> pick(0, plan.facilityCandidates.size() - 1);
-        rBase.GetBuildingManager().DestroyBuilding(plan.facilityCandidates[pick(rRng)]->id);
-        result.facilitiesDestroyed = 1;
+        result.facilitiesDestroyed =
+            DestroyRandomFacilities_(rBase, plan.facilityCandidates, 1, rRng);
     }
     else
     {

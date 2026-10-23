@@ -82,7 +82,30 @@ public:
     void PushModal(std::unique_ptr<UIElement> pElement);
 
 private:
+    // Everything a repaint depends on that can change without input.
+    struct PresentationSnapshot_t
+    {
+        const Unit* pSelectedUnit = nullptr;
+        const Tile* pSelectedTile = nullptr;
+        bool bEndTurnReady = false;
+        bool bHadPathPreview = false;
+        size_t pathPreviewLength = 0;
+        const Tile* pPathPreviewEnd = nullptr;
+        int cameraX = 0;
+        int cameraY = 0;
+        int missionYear = -1;
+        int energy = -1;
+        int research = -1;
+        uint64_t exploredRevision = 0;
+        uint64_t visibleRevision = 0;
+        uint64_t unitRevision = 0;
+        uint64_t appearanceRevision = 0;
+
+        bool operator==(const PresentationSnapshot_t&) const = default;
+    };
+
     void Update_();
+    PresentationSnapshot_t CapturePresentationSnapshot_() const;
     void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
     void SetSelectedTile_(const Tile* pTile);
     void SelectUnitAtTile_(int tileX, int tileY);
@@ -159,22 +182,7 @@ private:
     };
     TargetingCursor_t m_appliedTargetingCursor = TargetingCursor_t::None;
 
-    // Snapshots used by UpdatePresentation to detect paint-relevant changes without input.
-    Unit* m_pLastPresentedUnit = nullptr;
-    const Tile* m_pLastPresentedTile = nullptr;
-    bool m_bLastEndTurnReady = false;
-    bool m_bLastHadPathPreview = false;
-    size_t m_lastPathPreviewLength = 0;
-    const Tile* m_pLastPathPreviewEnd = nullptr;
-    int m_lastCameraX = 0;
-    int m_lastCameraY = 0;
-    int m_lastMissionYear = -1;
-    int m_lastEnergy = -1;
-    int m_lastResearch = -1;
-    uint64_t m_lastExploredRevision = 0;
-    uint64_t m_lastVisibleRevision = 0;
-    uint64_t m_lastUnitRevision = 0;
-    uint64_t m_lastAppearanceRevision = 0;
+    PresentationSnapshot_t m_lastPresented;
 
     std::unique_ptr<CameraInputController> m_pCameraInputController;
     std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;

@@ -3,7 +3,8 @@
 #include "game/base/BaseManager.h"
 
 #include <algorithm>
-#include <unordered_map>
+#include <map>
+#include <stdexcept>
 
 namespace ac
 {
@@ -38,7 +39,7 @@ bool FacilityUpkeepEffectApplies_(const ActiveEffect_t& rEffect,
 // are still rejected: per-building upkeep has no conditional rule yet.
 std::vector<ActiveEffect_t> MatchingFacilityUpkeepEffects_(
     const BuildingConfig_t& rBuilding,
-    const std::vector<ActiveEffect_t>& rEffects,
+    std::span<const ActiveEffect_t> rEffects,
     const BaseManager* pOriginBase,
     const EffectContext_t& rCtx)
 {
@@ -57,16 +58,33 @@ std::vector<ActiveEffect_t> MatchingFacilityUpkeepEffects_(
     return matching;
 }
 
+// Keyed by an ordered map so the lines come out sorted by id.
+std::map<BuildingId_t, BuildingUpkeepLine_t> CountCopiesById_(
+    const std::vector<const BuildingConfig_t*>& rBuildings)
+{
+    std::map<BuildingId_t, BuildingUpkeepLine_t> byId;
+    for (const BuildingConfig_t* pBuilding : rBuildings)
+    {
+        if (!pBuilding)
+        {
+            throw std::logic_error("CountCopiesById_: null building");
+        }
+        BuildingUpkeepLine_t& rLine = byId[pBuilding->id];
+        rLine.pConfig = pBuilding;
+        ++rLine.count;
+    }
+    return byId;
+}
+
 } // namespace
 
 int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
                                        std::span<const ActiveEffect_t> rEffects,
                                        const BaseManager* pOriginBase)
 {
-    const std::vector<ActiveEffect_t> effects(rEffects.begin(), rEffects.end());
     const EffectContext_t ctx{.pBase = pOriginBase};
     const std::vector<ActiveEffect_t> matching =
-        MatchingFacilityUpkeepEffects_(rBuilding, effects, pOriginBase, ctx);
+        MatchingFacilityUpkeepEffects_(rBuilding, rEffects, pOriginBase, ctx);
     // FacilityEnergyUpkeep is RawScaled: seed with the building's base upkeep.
     const double seed = static_cast<double>(rBuilding.upkeep);
     const int resolved = FinalizeResolvedStat(ResolveStatModifiers(matching, seed, &ctx).total);
@@ -78,36 +96,15 @@ std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     std::span<const ActiveEffect_t> rEffects,
     const BaseManager* pOriginBase)
 {
-    std::unordered_map<BuildingId_t, BuildingUpkeepLine_t> byId;
-    for (const BuildingConfig_t* pBuilding : rBuildings)
-    {
-        if (!pBuilding)
-        {
-            continue;
-        }
-        BuildingUpkeepLine_t& rLine = byId[pBuilding->id];
-        rLine.pConfig = pBuilding;
-        ++rLine.count;
-    }
-
-    const std::vector<ActiveEffect_t> effects(rEffects.begin(), rEffects.end());
-    const EffectContext_t ctx{.pBase = pOriginBase};
+    std::map<BuildingId_t, BuildingUpkeepLine_t> byId = CountCopiesById_(rBuildings);
     std::vector<BuildingUpkeepLine_t> lines;
     lines.reserve(byId.size());
     for (auto& [rUnusedId, rLine] : byId)
     {
-        const std::vector<ActiveEffect_t> matching =
-            MatchingFacilityUpkeepEffects_(*rLine.pConfig, effects, pOriginBase, ctx);
-        const double seed = static_cast<double>(rLine.pConfig->upkeep);
-        const int resolved = FinalizeResolvedStat(ResolveStatModifiers(matching, seed, &ctx).total);
-        rLine.upkeepPerCopy = std::max(0, resolved);
+        rLine.upkeepPerCopy =
+            ResolveFacilityEnergyUpkeepPerCopy(*rLine.pConfig, rEffects, pOriginBase);
         lines.push_back(rLine);
     }
-    std::sort(lines.begin(), lines.end(),
-              [](const BuildingUpkeepLine_t& a, const BuildingUpkeepLine_t& b)
-              {
-                  return a.pConfig->id < b.pConfig->id;
-              });
     return lines;
 }
 
