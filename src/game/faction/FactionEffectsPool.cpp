@@ -28,6 +28,26 @@
 namespace ac
 {
 
+namespace
+{
+
+void AppendAll_(std::vector<ActiveEffect_t>& rOut, const std::vector<ActiveEffect_t>& rSource)
+{
+    rOut.insert(rOut.end(), rSource.begin(), rSource.end());
+}
+
+std::vector<const BaseManager*> BasePointers_(const Faction& rFaction)
+{
+    std::vector<const BaseManager*> bases;
+    for (const BaseManager& rBase : rFaction.Bases())
+    {
+        bases.push_back(&rBase);
+    }
+    return bases;
+}
+
+} // namespace
+
 FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const BuildingRegistry& rBuildingRegistry,
                                        const Revision& rBaseListRevision,
@@ -308,89 +328,12 @@ void FactionEffectsPool::Rebuild_() const
     // Collect, then gate after every expansion (grants, faction-lane ratings), so no derivative
     // outlives the effect that produced it.
     FactionEffects_t factionEffects(m_rFaction);
-
-    const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
-                                  tileYieldRules.end());
-
-    const std::vector<ActiveEffect_t> conquestEffects = CollectBaseConquestEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), conquestEffects.begin(),
-                                  conquestEffects.end());
-
-    const std::vector<ActiveEffect_t> policeEffects = CollectPoliceRulesEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), policeEffects.begin(),
-                                  policeEffects.end());
-
-    const std::vector<ActiveEffect_t> compositionEffects = CollectPopCompositionEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), compositionEffects.begin(),
-                                  compositionEffects.end());
-
-    const std::vector<ActiveEffect_t> diffEffects = CollectDifficultyEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), diffEffects.begin(),
-                                  diffEffects.end());
-
-    const std::vector<ActiveEffect_t> nativeLifeEffects = CollectNativeLifeEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), nativeLifeEffects.begin(),
-                                  nativeLifeEffects.end());
-
-    const std::vector<ActiveEffect_t> ecoDamageEffects = CollectEcoDamageEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), ecoDamageEffects.begin(),
-                                  ecoDamageEffects.end());
-
-    const std::vector<ActiveEffect_t> productionEffects = CollectProductionEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), productionEffects.begin(),
-                                  productionEffects.end());
-
-    const std::vector<ActiveEffect_t> growthEffects = CollectGrowthEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), growthEffects.begin(),
-                                  growthEffects.end());
-
-    const std::vector<ActiveEffect_t> diplomacyEffects = CollectDiplomaticStatusEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), diplomacyEffects.begin(),
-                                  diplomacyEffects.end());
-
-    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),
-                                  defEffects.end());
-
-    const std::vector<ActiveEffect_t> techEffects = CollectDiscoveredTechEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), techEffects.begin(),
-                                  techEffects.end());
-
-    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(),
-                                  buildingEffects.end());
-
-    const std::vector<ActiveEffect_t> seEffects =
-        m_rFaction.GetSocialEngineering().CollectEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(),
-                                  seEffects.end());
-
-    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(),
-                                  popEffects.end());
-
-    const std::vector<ActiveEffect_t> moodEffects = CollectMoodEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), moodEffects.begin(),
-                                  moodEffects.end());
-
-    const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_();
-    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(),
-                                  unitEffects.end());
-
+    factionEffects.effects = CollectSources_();
     const ResearchManager& rResearch = m_rFaction.GetResearch();
     ApplyRemovedByTech_(factionEffects, rResearch);
 
-    {
-        std::vector<const BaseManager*> bases;
-        for (const BaseManager& rBase : m_rFaction.Bases())
-        {
-            bases.push_back(&rBase);
-        }
-        factionEffects.effects = ExpandGrantBuildingEffects(
-            std::move(factionEffects.effects), m_rBuildingRegistry, bases);
-    }
-
+    factionEffects.effects = ExpandGrantBuildingEffects(
+        std::move(factionEffects.effects), m_rBuildingRegistry, BasePointers_(m_rFaction));
     // Before anything reads the grants: a granted building's effects can be removed by tech, and
     // the rating effects they would produce carry no gate of their own.
     ApplyRemovedByTech_(factionEffects, rResearch);
@@ -398,13 +341,35 @@ void FactionEffectsPool::Rebuild_() const
     // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →
     // morale_rank). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
     ExpandFactionLaneSocialRatingEffects(factionEffects, m_rSocialRatings);
-
     // Rating level effects are the last derivatives; gate them too.
     ApplyRemovedByTech_(factionEffects, rResearch);
 
     m_cachedPool = std::move(factionEffects);
     m_cachedStamp = m_scratchRevisions;
     ++m_version;
+}
+
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectSources_() const
+{
+    std::vector<ActiveEffect_t> effects;
+    AppendAll_(effects, CollectTileYieldRuleEffects_());
+    AppendAll_(effects, CollectBaseConquestEffects_());
+    AppendAll_(effects, CollectPoliceRulesEffects_());
+    AppendAll_(effects, CollectPopCompositionEffects_());
+    AppendAll_(effects, CollectDifficultyEffects_());
+    AppendAll_(effects, CollectNativeLifeEffects_());
+    AppendAll_(effects, CollectEcoDamageEffects_());
+    AppendAll_(effects, CollectProductionEffects_());
+    AppendAll_(effects, CollectGrowthEffects_());
+    AppendAll_(effects, CollectDiplomaticStatusEffects_());
+    AppendAll_(effects, CollectDefinitionEffects_());
+    AppendAll_(effects, CollectDiscoveredTechEffects_());
+    AppendAll_(effects, CollectBuildingEffects_());
+    AppendAll_(effects, m_rFaction.GetSocialEngineering().CollectEffects());
+    AppendAll_(effects, CollectPopEffects_());
+    AppendAll_(effects, CollectMoodEffects_());
+    AppendAll_(effects, CollectUnitEffects_());
+    return effects;
 }
 
 } // namespace ac

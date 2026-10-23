@@ -97,7 +97,7 @@ private:
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 
     // Every contributor's revision in fixed order, to validate and stamp the cache. A new
-    // contributor is added here and in Rebuild_.
+    // contributor is added here and in CollectSources_.
     void CollectRevisions_(std::vector<uint64_t>& rOut) const;
 
     // Rebuild the pool if any contributor revision changed since the last stamp.
@@ -105,6 +105,8 @@ private:
 
     // Recollect the pool, stamp from the pre-rebuild scratch revisions, advance version.
     void Rebuild_() const;
+    // Every source's effects, in the order resolution has always seen them.
+    std::vector<ActiveEffect_t> CollectSources_() const;
 
     const Faction& m_rFaction;
     const BuildingRegistry& m_rBuildingRegistry;

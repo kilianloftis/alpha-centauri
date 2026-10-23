@@ -30,6 +30,21 @@ FactionSpecies_t ParseFactionSpecies_(const std::string& rValue)
     throw std::runtime_error("identity.json: unknown species '" + rValue + "'");
 }
 
+// Sorted, so faction order does not depend on the filesystem.
+std::vector<std::filesystem::path> SortedSubdirectories_(const std::string& rPath)
+{
+    std::vector<std::filesystem::path> dirs;
+    for (const auto& rEntry : std::filesystem::directory_iterator(rPath))
+    {
+        if (rEntry.is_directory())
+        {
+            dirs.push_back(rEntry.path());
+        }
+    }
+    std::sort(dirs.begin(), dirs.end());
+    return dirs;
+}
+
 } // namespace
 
 std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string& configPath)
@@ -43,30 +58,14 @@ std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string&
         throw std::runtime_error("Faction config path does not exist: " + configPath);
     }
 
-    std::vector<FactionConfig_t> configs;
-
-    if (fs::is_directory(configPath))
-    {
-        std::vector<fs::path> factionDirs;
-        for (const auto& rEntry : fs::directory_iterator(configPath))
-        {
-            if (rEntry.is_directory())
-            {
-                factionDirs.push_back(rEntry.path());
-            }
-        }
-        std::sort(factionDirs.begin(), factionDirs.end());
-
-        for (const auto& rDir : factionDirs)
-        {
-            FactionConfig_t config =
-                ParseFactionDirectory_(rDir.filename().string(), rDir.string());
-            configs.push_back(std::move(config));
-        }
-    }
-    else
+    if (!fs::is_directory(configPath))
     {
         throw std::runtime_error("Faction config path must be a directory: " + configPath);
+    }
+    std::vector<FactionConfig_t> configs;
+    for (const fs::path& rDir : SortedSubdirectories_(configPath))
+    {
+        configs.push_back(ParseFactionDirectory_(rDir.filename().string(), rDir.string()));
     }
 
     std::cout << "Loaded " << configs.size() << " faction configurations\n";

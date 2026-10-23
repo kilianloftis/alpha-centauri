@@ -375,6 +375,11 @@ private:
     void MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver);
     // Drop every deploy record for baseId (base destroyed: razed on capture).
     void DropBuildingDeploys_(BaseId_t baseId);
+    // Revision, observers and visibility follow every change to the base list.
+    void NoteBaseListChanged_();
+    // Each snapshot production id as a building, stockpile or design; throws on an unknown one.
+    std::vector<const IConstructable*> ResolveProductionItems_(
+        const std::vector<std::string>& rItemIds) const;
 
     // ASAT and intercept cooldowns, keyed by (base, building); unavailable while missionYear <
     // readyMissionYear.

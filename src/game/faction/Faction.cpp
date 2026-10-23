@@ -353,11 +353,16 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     }
     BaseManager& rAdded = *pBase;
     m_bases.push_back(std::move(pBase));
+    NoteBaseListChanged_();
+    // The single "a base now exists in this faction" hook, which EventBridge wires from.
+    OnBaseAdded.Emit(rAdded);
+}
+
+void Faction::NoteBaseListChanged_()
+{
     m_baseListRevision.Bump();
     OnBaseListChanged.Emit();
     RebuildVisibility();
-    // The single "a base now exists in this faction" hook, which EventBridge wires from.
-    OnBaseAdded.Emit(rAdded);
 }
 
 std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
@@ -373,9 +378,7 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
             m_bases.erase(it);
             pExtracted.reset();
             DropBuildingDeploys_(baseId);
-            m_baseListRevision.Bump();
-            OnBaseListChanged.Emit();
-            RebuildVisibility();
+            NoteBaseListChanged_();
             return snapshot;
         }
     }
@@ -390,13 +393,71 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
         {
             std::unique_ptr<BaseManager> pReleased = std::move(*it);
             m_bases.erase(it);
-            m_baseListRevision.Bump();
-            OnBaseListChanged.Emit();
-            RebuildVisibility();
+            NoteBaseListChanged_();
             return pReleased;
         }
     }
     throw std::runtime_error("Faction::ReleaseBase: base not found");
+}
+
+namespace
+{
+
+void RecomposeUnderOwner_(BaseManager& rBase)
+{
+    rBase.GetPopulation().RecalculateComposition();
+    rBase.GetWorkerAssignments().UnassignAll();
+    rBase.GetWorkerAssignments().AutoAssignWorkers();
+}
+
+// The first item becomes current production; the rest queue behind it in order.
+void RestoreProductionQueue_(ProductionManager& rProduction, const BaseEffects_t& rEffects,
+                             const std::vector<const IConstructable*>& rItems)
+{
+    for (std::size_t i = 0; i < rItems.size(); ++i)
+    {
+        if (i == 0)
+        {
+            rProduction.SetProduction(rItems[i], rEffects);
+            continue;
+        }
+        const int slot = static_cast<int>(rProduction.GetQueue().size());
+        rProduction.Insert(slot, *rItems[i]);
+    }
+}
+
+} // namespace
+
+std::vector<const IConstructable*> Faction::ResolveProductionItems_(
+    const std::vector<std::string>& rItemIds) const
+{
+    std::vector<const IConstructable*> items;
+    for (const std::string& rItemId : rItemIds)
+    {
+        const IConstructable* pItem = nullptr;
+        if (m_rDataContext.buildingRegistry)
+        {
+            pItem = m_rDataContext.buildingRegistry->Find(rItemId);
+        }
+        if (!pItem && m_rDataContext.stockpileRegistry)
+        {
+            pItem = m_rDataContext.stockpileRegistry->Find(rItemId);
+        }
+        if (!pItem)
+        {
+            if (const IDesign* pDesign = GetMilitary().GetDesign(rItemId))
+            {
+                pItem = dynamic_cast<const IConstructable*>(pDesign);
+            }
+        }
+        if (!pItem)
+        {
+            throw std::runtime_error(
+                "Faction::CreateBaseFromSnapshot: unknown production item '" + rItemId + "'");
+        }
+        items.push_back(pItem);
+    }
+    return items;
 }
 
 BaseManager* Faction::CreateBaseFromSnapshot(
@@ -423,43 +484,8 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     pBase->GetPopulation().SetNutrientStockpile(rSnapshot.nutrientStockpile);
     pBase->GetPopulation().RestoreMoodState(rSnapshot.mood);
 
-    ProductionManager& rProduction = pBase->GetProduction();
-    const BaseEffects_t& rEffects = pBase->GetBaseEffects();
-    bool bSetCurrent = true;
-    for (const std::string& rItemId : rSnapshot.productionItemIds)
-    {
-        const IConstructable* pItem = nullptr;
-        if (m_rDataContext.buildingRegistry)
-        {
-            pItem = m_rDataContext.buildingRegistry->Find(rItemId);
-        }
-        if (!pItem && m_rDataContext.stockpileRegistry)
-        {
-            pItem = m_rDataContext.stockpileRegistry->Find(rItemId);
-        }
-        if (!pItem)
-        {
-            if (const IDesign* pDesign = GetMilitary().GetDesign(rItemId))
-            {
-                pItem = dynamic_cast<const IConstructable*>(pDesign);
-            }
-        }
-        if (!pItem)
-        {
-            throw std::runtime_error(
-                "Faction::CreateBaseFromSnapshot: unknown production item '" + rItemId + "'");
-        }
-        if (bSetCurrent)
-        {
-            rProduction.SetProduction(pItem, rEffects);
-            bSetCurrent = false;
-        }
-        else
-        {
-            const int slot = static_cast<int>(rProduction.GetQueue().size());
-            rProduction.Insert(slot, *pItem);
-        }
-    }
+    RestoreProductionQueue_(pBase->GetProduction(), pBase->GetBaseEffects(),
+                            ResolveProductionItems_(rSnapshot.productionItemIds));
     pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
 
     BaseManager* pRawBase = pBase.get();
@@ -467,9 +493,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     // After AddBase: psych may differ under the new owner, and composition needs the base in
     // Bases().
-    pRawBase->GetPopulation().RecalculateComposition();
-    pRawBase->GetWorkerAssignments().UnassignAll();
-    pRawBase->GetWorkerAssignments().AutoAssignWorkers();
+    RecomposeUnderOwner_(*pRawBase);
 
     return pRawBase;
 }
@@ -532,9 +556,7 @@ void Faction::RazeBase(BaseManager& rBase)
     DropAllHomeClaims_(rBase);
     rBase.MarkRazed_();
     DropBuildingDeploys_(rBase.GetBaseId());
-    m_baseListRevision.Bump();
-    OnBaseListChanged.Emit();
-    RebuildVisibility();
+    NoteBaseListChanged_();
 }
 
 void Faction::ReapRazedBases()
@@ -579,9 +601,7 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
     rBase.GetPopulation().ResetMoodEscalation();
 
     // Psych, and so drone and talent targets, may differ under the new owner.
-    rBase.GetPopulation().RecalculateComposition();
-    rBase.GetWorkerAssignments().UnassignAll();
-    rBase.GetWorkerAssignments().AutoAssignWorkers();
+    RecomposeUnderOwner_(rBase);
 }
 
 namespace
@@ -665,6 +685,42 @@ int Faction::ScrapBuilding(BaseManager& rBase, const BuildingId_t& buildingId)
     return rBase.ScrapBuilding_(buildingId);
 }
 
+namespace
+{
+
+int CopiesAt_(const BaseManager& rBase, const BuildingId_t& buildingId)
+{
+    const auto& rBuildings = rBase.GetBuildingManager().GetBuildings();
+    const auto copies = std::ranges::count_if(rBuildings, [&buildingId](const BuildingConfig_t* p) {
+        return p && p->id == buildingId;
+    });
+    return static_cast<int>(copies);
+}
+
+// One base's per-copy quote, folded into the faction total. Bases that refund to different
+// destinations leave the total with none.
+void AddToScrapQuote_(std::optional<ScrapPayout_t>& rTotal, const ScrapPayout_t& rOne, int copies,
+                      const BuildingId_t& buildingId)
+{
+    if (!rTotal)
+    {
+        rTotal = rOne;
+        rTotal->amount = 0;
+    }
+    else if (rOne.refundType != rTotal->refundType)
+    {
+        throw std::logic_error("Faction::QuoteScrapBuildings: '" + buildingId
+                               + "' quoted mixed refund types");
+    }
+    else if (rOne.destBaseId != rTotal->destBaseId)
+    {
+        rTotal->destBaseId.reset();
+    }
+    rTotal->amount += rOne.amount * copies;
+}
+
+} // namespace
+
 std::optional<ScrapPayout_t> Faction::QuoteScrapBuildings(const BuildingId_t& buildingId) const
 {
     std::optional<ScrapPayout_t> total;
@@ -676,31 +732,7 @@ std::optional<ScrapPayout_t> Faction::QuoteScrapBuildings(const BuildingId_t& bu
             continue;
         }
 
-        int copies = 0;
-        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
-        {
-            if (pBuilding && pBuilding->id == buildingId)
-            {
-                ++copies;
-            }
-        }
-
-        if (!total)
-        {
-            total = *one;
-            total->amount = 0;
-        }
-        else if (one->refundType != total->refundType)
-        {
-            throw std::logic_error(
-                "Faction::QuoteScrapBuildings: '" + buildingId
-                + "' quoted mixed refund types");
-        }
-        else if (one->destBaseId != total->destBaseId)
-        {
-            total->destBaseId.reset();
-        }
-        total->amount += one->amount * copies;
+        AddToScrapQuote_(total, *one, CopiesAt_(rBase, buildingId), buildingId);
     }
     return total;
 }

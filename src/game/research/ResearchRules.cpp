@@ -5,6 +5,8 @@
 #include "game/research/ResearchManager.h"
 #include "game/research/TechRegistry.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -60,16 +62,10 @@ std::vector<const TechConfig_t*> AvailableTechs(const ResearchManager& rResearch
             continue;
         }
 
-        bool bPrerequisitesMet = true;
-        for (const TechId& rPrereq : rConfig.prerequisites)
-        {
-            if (!rResearch.HasDiscoveredTech(rPrereq))
-            {
-                bPrerequisitesMet = false;
-                break;
-            }
-        }
-
+        const bool bPrerequisitesMet =
+            std::ranges::all_of(rConfig.prerequisites, [&rResearch](const TechId& rPrereq) {
+                return rResearch.HasDiscoveredTech(rPrereq);
+            });
         if (bPrerequisitesMet)
         {
             available.push_back(&rConfig);
