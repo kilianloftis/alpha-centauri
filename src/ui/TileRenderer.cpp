@@ -293,6 +293,145 @@ std::vector<std::string> HiddenOccupantIds_(const TileOccupants_t& rOccupants)
     });
     return hidden;
 }
+using LinkMask_t = std::array<bool, k_LinkDirections>;
+
+// The networks drawn on a tile: those found on it or a neighbor (a base joins whatever reaches
+// it), with the directions each links in.
+struct LinkNetworks_t
+{
+    std::vector<const ImprovementConfig_t*> networks;
+    std::vector<LinkMask_t> links;
+};
+
+std::array<const Tile*, k_LinkDirections> RingNeighbors_(const WorldMap& rMap, const Tile& rTile)
+{
+    std::array<const Tile*, k_LinkDirections> neighbors{};
+    for (std::size_t dir = 0; dir < neighbors.size(); ++dir)
+    {
+        const LatticeOffset_t& offset = k_RingNeighbors[dir];
+        neighbors[dir] = GetTileAtLatticeOffset(rMap, rTile, offset.p, offset.q);
+    }
+    return neighbors;
+}
+
+void CollectNetworksOn_(const MapAppearance& rAppearance, const Tile& rTile,
+                        std::vector<const ImprovementConfig_t*>& rNetworks)
+{
+    for (const ImprovementConfig_t* pImprovement : rAppearance.OccupantsOf(rTile).improvements)
+    {
+        if (pImprovement && HasLayerArt_(*pImprovement, ArtLayer_t::Road)
+            && !NetworkOf_(*pImprovement).paths.land.empty()
+            && std::ranges::find(rNetworks, pImprovement) == rNetworks.end())
+        {
+            rNetworks.push_back(pImprovement);
+        }
+    }
+}
+
+LinkMask_t MarkLinks_(const MapAppearance& rAppearance, const Tile& rTile,
+                      const std::array<const Tile*, k_LinkDirections>& rNeighbors,
+                      const OccupantTileSet_t& rNetwork)
+{
+    LinkMask_t links{};
+    if (!CarriesNetwork_(rAppearance, rTile, rNetwork))
+    {
+        return links;
+    }
+    for (std::size_t dir = 0; dir < links.size(); ++dir)
+    {
+        links[dir] = rNeighbors[dir] && CarriesNetwork_(rAppearance, *rNeighbors[dir], rNetwork);
+    }
+    return links;
+}
+
+// A replacing network's link stands in for the one it replaces.
+void ApplyLinkReplacements_(LinkNetworks_t& rFound)
+{
+    for (std::size_t n = 0; n < rFound.networks.size(); ++n)
+    {
+        const std::string& rReplaced = NetworkOf_(*rFound.networks[n]).replacesLinksOf;
+        for (std::size_t m = 0; m < rFound.networks.size(); ++m)
+        {
+            if (rFound.networks[m]->id != rReplaced)
+            {
+                continue;
+            }
+            for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
+            {
+                rFound.links[m][dir] = rFound.links[m][dir] && !rFound.links[n][dir];
+            }
+        }
+    }
+}
+
+LinkNetworks_t FindLinkNetworks_(const MapAppearance& rAppearance, const Tile& rTile)
+{
+    const std::array<const Tile*, k_LinkDirections> neighbors =
+        RingNeighbors_(rAppearance.Map(), rTile);
+    LinkNetworks_t found;
+    CollectNetworksOn_(rAppearance, rTile, found.networks);
+    for (const Tile* pNeighbor : neighbors)
+    {
+        if (pNeighbor)
+        {
+            CollectNetworksOn_(rAppearance, *pNeighbor, found.networks);
+        }
+    }
+    for (const ImprovementConfig_t* pNetwork : found.networks)
+    {
+        found.links.push_back(MarkLinks_(rAppearance, rTile, neighbors, NetworkOf_(*pNetwork)));
+    }
+    ApplyLinkReplacements_(found);
+    return found;
+}
+
+// One cell per link, in network then direction order.
+std::vector<const std::string*> LinkCellSprites_(const LinkNetworks_t& rFound)
+{
+    std::vector<const std::string*> sprites;
+    for (std::size_t n = 0; n < rFound.networks.size(); ++n)
+    {
+        const std::vector<std::string>& rCells = NetworkOf_(*rFound.networks[n]).paths.land;
+        for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
+        {
+            if (rFound.links[n][dir])
+            {
+                const unsigned cell = 1 + ((static_cast<unsigned>(dir) + 2) & 7u);
+                sprites.push_back(&rCells.at(cell));
+            }
+        }
+    }
+    return sprites;
+}
+
+// Only the network's own occupant draws a hub (a base never does), and a plain network only
+// when no link of any network was drawn.
+std::vector<const std::string*> HubSprites_(const MapAppearance& rAppearance, const Tile& rTile,
+                                            const LinkNetworks_t& rFound, bool bAnyLink)
+{
+    std::vector<const std::string*> sprites;
+    const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
+    for (std::size_t n = 0; n < rFound.networks.size(); ++n)
+    {
+        const ImprovementConfig_t& rConfig = *rFound.networks[n];
+        const OccupantTileSet_t& rNetwork = NetworkOf_(rConfig);
+        const bool bOwn = std::ranges::find(occupants.improvements, &rConfig)
+                          != occupants.improvements.end();
+        const bool bOnlyLinkOccupant =
+            std::ranges::none_of(rNetwork.linkOccupants, [&](const std::string& rId) {
+                return rId != rConfig.id && HasOccupantId_(rAppearance, rTile, rId);
+            });
+        const bool bNoOwnLink =
+            std::ranges::none_of(rFound.links[n], [](bool bLink) { return bLink; });
+        if (bOwn && bOnlyLinkOccupant && bNoOwnLink
+            && (!rNetwork.replacesLinksOf.empty() || !bAnyLink))
+        {
+            sprites.push_back(&rNetwork.paths.land.at(0));
+        }
+    }
+    return sprites;
+}
+
 } // namespace
 
 size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t count)
@@ -490,98 +629,19 @@ void TileRenderer::DrawLinkNetworks_(Graphics& rGraphics, const Tile& rTile,
                                      const MapAppearance& rAppearance,
                                      const TileShape_t& rShape) const
 {
-    const WorldMap& rMap = rAppearance.Map();
     if (!rTile.IsLand())
     {
         return;
     }
-    // Networks are found on the tile and its neighbors: a base joins whatever reaches it.
-    std::vector<const ImprovementConfig_t*> networks;
-    const auto collect = [&networks, &rAppearance](const Tile& rAny) {
-        for (const ImprovementConfig_t* pImprovement : rAppearance.OccupantsOf(rAny).improvements)
-        {
-            if (pImprovement && HasLayerArt_(*pImprovement, ArtLayer_t::Road)
-                && !NetworkOf_(*pImprovement).paths.land.empty()
-                && std::ranges::find(networks, pImprovement) == networks.end())
-            {
-                networks.push_back(pImprovement);
-            }
-        }
-    };
-    collect(rTile);
-    std::array<const Tile*, k_LinkDirections> neighbors{};
-    for (int dir = 0; dir < k_LinkDirections; ++dir)
+    const LinkNetworks_t found = FindLinkNetworks_(rAppearance, rTile);
+    const std::vector<const std::string*> linkCells = LinkCellSprites_(found);
+    const std::vector<const std::string*> hubs =
+        HubSprites_(rAppearance, rTile, found, !linkCells.empty());
+    for (const std::vector<const std::string*>* pSprites : {&linkCells, &hubs})
     {
-        const LatticeOffset_t& offset = k_RingNeighbors[static_cast<std::size_t>(dir)];
-        neighbors[static_cast<std::size_t>(dir)] =
-            GetTileAtLatticeOffset(rMap, rTile, offset.p, offset.q);
-        if (neighbors[static_cast<std::size_t>(dir)])
+        for (const std::string* pPath : *pSprites)
         {
-            collect(*neighbors[static_cast<std::size_t>(dir)]);
-        }
-    }
-
-    std::vector<std::array<bool, k_LinkDirections>> links(networks.size());
-    for (std::size_t n = 0; n < networks.size(); ++n)
-    {
-        const OccupantTileSet_t& rNetwork = NetworkOf_(*networks[n]);
-        if (!CarriesNetwork_(rAppearance, rTile, rNetwork))
-        {
-            continue;
-        }
-        for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
-        {
-            links[n][dir] = neighbors[dir] && CarriesNetwork_(rAppearance, *neighbors[dir], rNetwork);
-        }
-    }
-    // A replacing network's link stands in for the one it replaces.
-    for (std::size_t n = 0; n < networks.size(); ++n)
-    {
-        const std::string& rReplaced = NetworkOf_(*networks[n]).replacesLinksOf;
-        for (std::size_t m = 0; m < networks.size(); ++m)
-        {
-            if (networks[m]->id != rReplaced)
-            {
-                continue;
-            }
-            for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
-            {
-                links[m][dir] = links[m][dir] && !links[n][dir];
-            }
-        }
-    }
-
-    bool bAnyLink = false;
-    for (std::size_t n = 0; n < networks.size(); ++n)
-    {
-        const std::vector<std::string>& rCells = NetworkOf_(*networks[n]).paths.land;
-        for (std::size_t dir = 0; dir < k_LinkDirections; ++dir)
-        {
-            if (links[n][dir])
-            {
-                bAnyLink = true;
-                const unsigned cell = 1 + ((static_cast<unsigned>(dir) + 2) & 7u);
-                (void)TryDrawTileSprite_(rGraphics, rCells.at(cell), rShape);
-            }
-        }
-    }
-    for (std::size_t n = 0; n < networks.size(); ++n)
-    {
-        const ImprovementConfig_t& rConfig = *networks[n];
-        const OccupantTileSet_t& rNetwork = NetworkOf_(rConfig);
-        // Only the network's own occupant draws a hub (a base never does), and a plain network
-        // only when no link of any network was drawn.
-        const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
-        const bool bOwnOnly = std::ranges::find(occupants.improvements, &rConfig)
-                                  != occupants.improvements.end()
-                              && std::ranges::none_of(rNetwork.linkOccupants, [&](const std::string& rId) {
-                                     return rId != rConfig.id
-                                            && HasOccupantId_(rAppearance, rTile, rId);
-                                 });
-        const bool bNoOwnLink = std::ranges::none_of(links[n], [](bool bLink) { return bLink; });
-        if (bOwnOnly && bNoOwnLink && (!rNetwork.replacesLinksOf.empty() || !bAnyLink))
-        {
-            (void)TryDrawTileSprite_(rGraphics, rNetwork.paths.land.at(0), rShape);
+            (void)TryDrawTileSprite_(rGraphics, *pPath, rShape);
         }
     }
 }
