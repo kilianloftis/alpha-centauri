@@ -104,7 +104,23 @@ private:
         bool operator==(const PresentationSnapshot_t&) const = default;
     };
 
+    void AddConsolePanels_(MapRenderer& rMapRenderer);
+    void AddMinimapAndEndTurn_(MapRenderer& rMapRenderer);
+    void WatchSelectionDepartures_();
+    void DeselectIfSelected_(Unit& rUnit);
+    // Keeps the element alive in m_elements and hands back the panel for direct calls.
+    template <typename T>
+    T& Adopt_(std::unique_ptr<T> pElement)
+    {
+        T& rElement = *pElement;
+        m_elements.push_back(std::move(pElement));
+        return rElement;
+    }
     void Update_();
+    void RefreshInfoPanel_();
+    std::vector<Unit*> VisibleStackUnits_() const;
+    // The End Turn highlight, and the auto end-turn latch when pause-at-end is off.
+    void RefreshEndTurnState_();
     PresentationSnapshot_t CapturePresentationSnapshot_() const;
     void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
     void SetSelectedTile_(const Tile* pTile);
@@ -125,7 +141,33 @@ private:
     // Bombard and former projects bound to this chord. Runs the one that is valid and
     // throws when more than one is.
     bool TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit);
+    std::vector<std::string> StartableTerraforms_(const KeyEvent_t& rEvent,
+                                                  const Unit& rUnit) const;
+    // A chord valid for two actions on one unit is a hotkey config defect.
+    [[noreturn]] static void ThrowAmbiguousChord_(const KeyEvent_t& rEvent, bool bBombard,
+                                                  const std::vector<std::string>& rProjects);
     void ToggleBombardTargeting_();
+    bool ApplyOrderInput_(Unit* pControllable);
+    void OpenSupplyCrawlMenu_(Unit& rUnit);
+    void FoundBaseWith_(Unit& rUnit);
+    void Detonate_(Unit& rUnit);
+    void ToggleAirdropTargeting_();
+    // A hold order may link the unit to its base's on-hold effects; then the next unit.
+    void OnOrderAssigned_(Unit* pControllable);
+    // Cancel, End Turn and Next Unit.
+    bool HandleChromeKey_(const KeyEvent_t& rEvent);
+    // Cancel leaves targeting first, and only exits when nothing is being targeted.
+    void CancelTargetingOrExit_();
+    // Topmost chrome element under a press takes it.
+    bool RouteClickToChrome_(const MouseEvent_t& rEvent);
+    bool TryTargetingClick_(const MouseEvent_t& rEvent, Unit* pControllable,
+                            const Tile* pClickedTile);
+    // Acts on what the order controller just recognised from the click.
+    void ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable,
+                          const Tile* pClickedTile, int worldX, int worldY);
+    bool IsExploredByPlayer_(int worldX, int worldY) const;
+    // Selects the clicked tile, then its base or its visible unit.
+    void SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY);
     struct BombardPlayback_t
     {
         std::vector<CombatResult_t> combats;
@@ -135,6 +177,9 @@ private:
         const Tile* pTargetTile = nullptr;
         std::string attackerName;
     };
+    std::shared_ptr<BombardPlayback_t> SnapshotBombardTargets_(const Unit& rAttacker,
+                                                               const Tile& rTargetTile) const;
+    static std::vector<CombatResult_t> AsBombardPlayback_(std::vector<CombatResult_t> combats);
     void ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback, size_t index);
     void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;

@@ -97,6 +97,8 @@ public:
 
     // Empty when this action has no entry. An unbound action is simply unavailable.
     std::optional<HotkeyChord_t> Find(HotkeyAction_t action) const;
+    // The action is bound and rEvent presses its chord.
+    bool Matches(HotkeyAction_t action, const KeyEvent_t& rEvent) const;
 
     const std::vector<TerraformHotkey_t>& Terraform() const { return m_terraform; }
 

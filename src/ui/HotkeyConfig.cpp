@@ -285,4 +285,10 @@ std::optional<HotkeyChord_t> HotkeyConfig::Find(HotkeyAction_t action) const
     return m_chords[ActionIndex(action)];
 }
 
+bool HotkeyConfig::Matches(HotkeyAction_t action, const KeyEvent_t& rEvent) const
+{
+    const std::optional<HotkeyChord_t>& rChord = m_chords[ActionIndex(action)];
+    return rChord && rChord->Matches(rEvent);
+}
+
 } // namespace ac

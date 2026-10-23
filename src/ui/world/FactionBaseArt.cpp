@@ -94,6 +94,61 @@ void CollectBuildingOverlay_(std::vector<CandidateOverlay_t>& rOut, const Buildi
     rOut.push_back(std::move(candidate));
 }
 
+
+// Built buildings first, then granted ones; a building seen twice overlays once.
+std::vector<CandidateOverlay_t> CollectOverlayCandidates_(
+    const BaseManager& rBase, const std::string& rSheetStem, bool bWater, int sizeStage,
+    const MapOverlayChannelsConfig_t& rChannels)
+{
+    std::vector<CandidateOverlay_t> candidates;
+    std::unordered_set<std::string> seenIds;
+    const std::vector<const BuildingConfig_t*> granted = rBase.GetGrantedBuildings();
+    for (const auto* pBuildings : {&rBase.GetBuildingManager().GetBuildings(), &granted})
+    {
+        for (const BuildingConfig_t* pBuilding : *pBuildings)
+        {
+            if (pBuilding)
+            {
+                CollectBuildingOverlay_(candidates, *pBuilding, rSheetStem, bWater, sizeStage,
+                                        rChannels, seenIds);
+            }
+        }
+    }
+    return candidates;
+}
+
+// Higher priority wins a channel; a tie goes to the lower building id.
+bool Outranks_(const CandidateOverlay_t& rCand, const CandidateOverlay_t& rPrev)
+{
+    return rCand.priority > rPrev.priority
+        || (rCand.priority == rPrev.priority && rCand.pBuilding->id < rPrev.pBuilding->id);
+}
+
+// Indices to draw: every channel-less candidate, then one winner per channel.
+std::vector<size_t> ChannelWinners_(const std::vector<CandidateOverlay_t>& rCandidates)
+{
+    std::unordered_map<std::string, size_t> channelWinner;
+    std::vector<size_t> keep;
+    for (size_t i = 0; i < rCandidates.size(); ++i)
+    {
+        const std::string& rChannel = rCandidates[i].pBuilding->mapOverlayChannel;
+        if (rChannel.empty())
+        {
+            keep.push_back(i);
+            continue;
+        }
+        const auto [it, bInserted] = channelWinner.emplace(rChannel, i);
+        if (!bInserted && Outranks_(rCandidates[i], rCandidates[it->second]))
+        {
+            it->second = i;
+        }
+    }
+    for (const auto& [rUnused, index] : channelWinner)
+    {
+        keep.push_back(index);
+    }
+    return keep;
+}
 } // namespace
 
 Color_t FactionColors_t::LabelColor(const Color_t& rFallback) const
@@ -203,54 +258,9 @@ std::vector<ResolvedBaseOverlay_t> ResolveBaseMapOverlays(
     const BaseManager& rBase, const std::string& rSheetStem, bool bWater, int sizeStage,
     const MapOverlayChannelsConfig_t& rChannels)
 {
-    std::vector<CandidateOverlay_t> candidates;
-    std::unordered_set<std::string> seenIds;
-    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
-    {
-        if (pBuilding)
-        {
-            CollectBuildingOverlay_(candidates, *pBuilding, rSheetStem, bWater, sizeStage, rChannels,
-                                    seenIds);
-        }
-    }
-    for (const BuildingConfig_t* pGranted : rBase.GetGrantedBuildings())
-    {
-        if (pGranted)
-        {
-            CollectBuildingOverlay_(candidates, *pGranted, rSheetStem, bWater, sizeStage, rChannels,
-                                    seenIds);
-        }
-    }
-
-    // Channel → best candidate index.
-    std::unordered_map<std::string, size_t> channelWinner;
-    std::vector<size_t> keep;
-    for (size_t i = 0; i < candidates.size(); ++i)
-    {
-        const CandidateOverlay_t& rCand = candidates[i];
-        if (rCand.pBuilding->mapOverlayChannel.empty())
-        {
-            keep.push_back(i);
-            continue;
-        }
-        const auto it = channelWinner.find(rCand.pBuilding->mapOverlayChannel);
-        if (it == channelWinner.end())
-        {
-            channelWinner.emplace(rCand.pBuilding->mapOverlayChannel, i);
-            continue;
-        }
-        const CandidateOverlay_t& rPrev = candidates[it->second];
-        if (rCand.priority > rPrev.priority
-            || (rCand.priority == rPrev.priority && rCand.pBuilding->id < rPrev.pBuilding->id))
-        {
-            it->second = i;
-        }
-    }
-    for (const auto& [rUnused, index] : channelWinner)
-    {
-        keep.push_back(index);
-    }
-
+    const std::vector<CandidateOverlay_t> candidates =
+        CollectOverlayCandidates_(rBase, rSheetStem, bWater, sizeStage, rChannels);
+    const std::vector<size_t> keep = ChannelWinners_(candidates);
     std::vector<ResolvedBaseOverlay_t> resolved;
     resolved.reserve(keep.size());
     for (size_t index : keep)

@@ -90,42 +90,38 @@ WorldView::WorldView(
       *m_pWorldDisplay, rWorldMap, m_mapLayout, rHotkeys))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys))
 {
+    AddConsolePanels_(rMapRenderer);
+    AddMinimapAndEndTurn_(rMapRenderer);
+    WatchSelectionDepartures_();
+}
+
+void WorldView::AddConsolePanels_(MapRenderer& rMapRenderer)
+{
     const auto& console = Style().worldView;
     const WindowLayout_t& rConsole = m_consolePlacement.layout;
-
-    const GameDataContext& rData = rGameState.GetGameData();
-    const MoraleCalculator* pMorale = rData.moraleCalculator.get();
+    const MoraleCalculator* pMorale = m_rGameState.GetGameData().moraleCalculator.get();
     if (!pMorale)
     {
         throw std::runtime_error("WorldView: morale calculator is not loaded");
     }
-    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(
-        ResolveLayout(rConsole, console.consoleUnit), m_rSprites, *pMorale);
-    m_pSelectedUnitPanel = pSelectedUnit.get();
-    m_elements.push_back(std::move(pSelectedUnit));
-
-    auto pLocation = std::make_unique<LocationPanel>(
-        rGameState, rMapRenderer, m_rSprites,
-        ResolveLayout(rConsole, console.consoleLocation));
-    m_pLocationPanel = pLocation.get();
-    m_elements.push_back(std::move(pLocation));
-
-    auto pInfo = std::make_unique<InfoPanelElement>(
-        ResolveLayout(rConsole, console.consoleInfo), m_rSprites);
-    m_pInfoPanel = pInfo.get();
-    m_elements.push_back(std::move(pInfo));
-
-    auto pUnitStack = std::make_unique<UnitStackPanel>(
+    m_pSelectedUnitPanel = &Adopt_(std::make_unique<SelectedUnitPanel>(
+        ResolveLayout(rConsole, console.consoleUnit), m_rSprites, *pMorale));
+    m_pLocationPanel = &Adopt_(std::make_unique<LocationPanel>(
+        m_rGameState, rMapRenderer, m_rSprites, ResolveLayout(rConsole, console.consoleLocation)));
+    m_pInfoPanel = &Adopt_(std::make_unique<InfoPanelElement>(
+        ResolveLayout(rConsole, console.consoleInfo), m_rSprites));
+    m_pUnitStackPanel = &Adopt_(std::make_unique<UnitStackPanel>(
         ResolveLayout(rConsole, console.consoleStack), m_rSprites,
-        [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); });
-    m_pUnitStackPanel = pUnitStack.get();
-    m_elements.push_back(std::move(pUnitStack));
-
+        [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); }));
     m_elements.push_back(std::make_unique<CommlinksButton>(
         ResolveLayout(rConsole, console.consoleCommlinks),
         [this]() { m_onOpenCommlinks(); }));
+}
 
-    const WindowLayout_t rightPanel = ResolveLayout(rConsole, console.consoleMinimap);
+void WorldView::AddMinimapAndEndTurn_(MapRenderer& rMapRenderer)
+{
+    const WindowLayout_t rightPanel =
+        ResolveLayout(m_consolePlacement.layout, Style().worldView.consoleMinimap);
     m_elements.push_back(std::make_unique<MinimapDisplay>(
         m_rGameState,
         rMapRenderer,
@@ -134,33 +130,31 @@ WorldView::WorldView(
         [this](int tileX, int tileY) {
             m_pCameraInputController->CenterOnTile(tileX, tileY);
         }));
-
     // Nested in rightPanel so End Turn sits on top of the minimap (and receives clicks first).
-    auto pEndTurn = std::make_unique<EndTurnButton>(
+    m_pEndTurnButton = &Adopt_(std::make_unique<EndTurnButton>(
         ResolveLayout(rightPanel, Style().endTurnButton.layout),
-        [this]() { m_onProcessTurn(); });
-    m_pEndTurnButton = pEndTurn.get();
-    m_elements.push_back(std::move(pEndTurn));
+        [this]() { m_onProcessTurn(); }));
+}
 
-    // Every faction exists by now and none are added later, so this covers unit death for the
-    // whole game.
+// Every faction exists by now and none are added later, so this covers unit death for the
+// whole game. A unit that left this faction is no longer the player's selection, though still
+// alive.
+void WorldView::WatchSelectionDepartures_()
+{
     for (Faction& rFaction : m_rGameState.Factions())
     {
-        rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed) {
-            if (m_pSelectedUnit == &rDestroyed)
-            {
-                SetSelectedUnit_(nullptr, false);
-            }
-        });
-        // A unit that left this faction is no longer the player's selection, though still alive.
-        rFaction.GetUnitManager().OnUnitReleased.Connect([this](Unit& rReleased) {
-            if (m_pSelectedUnit == &rReleased)
-            {
-                SetSelectedUnit_(nullptr, false);
-            }
-        });
+        UnitManager& rUnits = rFaction.GetUnitManager();
+        rUnits.OnUnitDestroyed.Connect(std::bind_front(&WorldView::DeselectIfSelected_, this));
+        rUnits.OnUnitReleased.Connect(std::bind_front(&WorldView::DeselectIfSelected_, this));
     }
+}
 
+void WorldView::DeselectIfSelected_(Unit& rUnit)
+{
+    if (m_pSelectedUnit == &rUnit)
+    {
+        SetSelectedUnit_(nullptr, false);
+    }
 }
 
 void WorldView::Render(Graphics& rGraphics)
@@ -392,6 +386,21 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
 
 void WorldView::Update_()
 {
+    RefreshInfoPanel_();
+    if (!m_bSuppressDashboard)
+    {
+        SelectNextAvailableUnitIfNeeded_();
+    }
+    m_pSelectedUnitPanel->SetSelectedUnit(m_pSelectedUnit);
+    m_pLocationPanel->SetSelectedTile(m_pSelectedTile);
+    m_pUnitStackPanel->SetUnits(VisibleStackUnits_(), m_pSelectedUnit);
+    RefreshEndTurnState_();
+    m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
+    m_pWorldDisplay->SetPathPreview(m_pUnitOrderInputController->GetPathPreview());
+}
+
+void WorldView::RefreshInfoPanel_()
+{
     const auto& s = Style().worldView;
     std::vector<InfoPanelElement::InfoLine> infoLines;
     infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), s.missionYearColor});
@@ -401,34 +410,29 @@ void WorldView::Update_()
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), s.researchTextColor});
     }
     m_pInfoPanel->SetInfoLines(infoLines);
+}
 
-    if (!m_bSuppressDashboard)
-    {
-        SelectNextAvailableUnitIfNeeded_();
-    }
-
-    m_pSelectedUnitPanel->SetSelectedUnit(m_pSelectedUnit);
-    m_pLocationPanel->SetSelectedTile(m_pSelectedTile);
-
+// The selected tile's units the player can see.
+std::vector<Unit*> WorldView::VisibleStackUnits_() const
+{
     std::vector<Unit*> stackUnits;
-    if (m_pSelectedTile)
+    if (!m_pSelectedTile)
     {
-        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        for (Unit* pUnit : m_rGameState.GetWorldMap().GetAllUnitsOnTile(*m_pSelectedTile))
+        return stackUnits;
+    }
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    for (Unit* pUnit : m_rGameState.GetWorldMap().GetAllUnitsOnTile(*m_pSelectedTile))
+    {
+        if (pUnit && (!pPlayer || IsUnitVisibleTo(*pPlayer, *pUnit)))
         {
-            if (!pUnit)
-            {
-                continue;
-            }
-            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit))
-            {
-                continue;
-            }
             stackUnits.push_back(pUnit);
         }
     }
-    m_pUnitStackPanel->SetUnits(std::move(stackUnits), m_pSelectedUnit);
+    return stackUnits;
+}
 
+void WorldView::RefreshEndTurnState_()
+{
     const bool bNeedOrders = PlayerUnitsNeedOrders_();
     const bool bPauseAtEnd = m_rGameState.GetSettings().IsPauseAtEndOfTurn();
 
@@ -446,9 +450,6 @@ void WorldView::Update_()
     {
         m_bHadUnitsNeedingOrders = bNeedOrders;
     }
-
-    m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
-    m_pWorldDisplay->SetPathPreview(m_pUnitOrderInputController->GetPathPreview());
 }
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
@@ -460,145 +461,158 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         (void)pModal->HandleKey(rEvent);
         return true;
     }
-
     Unit* pControllable = GetControllableSelectedUnit_();
-    if (m_pUnitOrderInputController->HandleKey(rEvent, pControllable))
+    if (m_pUnitOrderInputController->HandleKey(rEvent, pControllable)
+        && ApplyOrderInput_(pControllable))
     {
-        if (m_pUnitOrderInputController->WasAttachTransportRequested())
-        {
-            if (pControllable
-                && TryAttachToTransport(*pControllable))
-            {
-                return true;
-            }
-            // Attach failed — fall through so terraform can use L (LevelTerrain).
-        }
-        else if (m_pUnitOrderInputController->WasUnloadTransportRequested())
-        {
-            if (pControllable)
-            {
-                TryUnloadTransportInPlace(*pControllable);
-            }
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
-        {
-            Unit* pUnit = pControllable;
-            std::vector<PopupChoice_t> choices;
-            for (const StatId_t resource : k_CrawlResources)
-            {
-                choices.push_back({std::string(magic_enum::enum_name(resource)),
-                                   [this, pUnit, resource]
-                                   {
-                                       if (m_pSelectedUnit != pUnit)
-                                       {
-                                           return;
-                                       }
-                                       if (pUnit->TryStartSupplyCrawl(resource))
-                                       {
-                                           SelectNextAvailableUnit_();
-                                       }
-                                   }});
-            }
-
-            DismissOpenModals_();
-            auto pPopup = std::make_unique<ListSelectorPopup>(
-                "Supply Crawl", "No resources available", std::move(choices),
-                GetPopupLayout(),
-                Style().listSelectorPopup, &m_rSprites);
-            m_elements.push_back(std::move(pPopup));
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasDisbandRequested() && pControllable)
-        {
-            OpenDisbandMenu_(*pControllable);
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
-        {
-            if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(*pControllable, m_rGameState))
-            {
-                // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
-                SelectNextAvailableUnit_();
-            }
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasDetonateRequested() && pControllable)
-        {
-            if (ApplyDetonation(m_rGameState, *pControllable))
-            {
-                // A DestroyUnit entry in the list clears selection via OnUnitDestroyed.
-                SelectNextAvailableUnit_();
-            }
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasAirdropModeToggleRequested() && pControllable)
-        {
-            if (m_bAirdropTargeting)
-            {
-                ClearAirdropTargeting_();
-            }
-            else
-            {
-                ClearBombardTargeting_();
-                m_bAirdropTargeting = true;
-                m_bPresentationDirty = true;
-            }
-            return true;
-        }
-        else if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
-                 && m_pUnitOrderInputController->GetProbeTarget())
-        {
-            TryOpenProbeActions_(*pControllable, *m_pUnitOrderInputController->GetProbeTarget());
-            return true;
-        }
-        else
-        {
-            if (m_pUnitOrderInputController->WasOrderAssigned())
-            {
-                if (pControllable && pControllable->GetOrder()
-                    && std::holds_alternative<HoldOrder_t>(*pControllable->GetOrder()))
-                {
-                    m_rGameState.ConsiderHoldLink(*pControllable);
-                }
-                SelectNextAvailableUnit_();
-            }
-            return true;
-        }
+        return true;
     }
-
     if (pControllable && TrySharedChord_(rEvent, *pControllable))
     {
         return true;
     }
-
     if (m_pCameraInputController->HandleKey(rEvent))
     {
         return true;
     }
+    return HandleChromeKey_(rEvent);
+}
 
-    const auto chrome = [&](HotkeyAction_t action) {
-        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
-        return chord && chord->Matches(rEvent);
-    };
-    if (chrome(HotkeyAction_t::Cancel))
+// Acts on what the order controller just recognised. False only when an attach fails, so the
+// same key can still reach the shared chords.
+bool WorldView::ApplyOrderInput_(Unit* pControllable)
+{
+    UnitOrderInputController& rInput = *m_pUnitOrderInputController;
+    if (rInput.WasAttachTransportRequested())
     {
-        if (m_bAirdropTargeting || m_bBombardTargeting)
+        // Attach failed — fall through so terraform can use L (LevelTerrain).
+        return pControllable && TryAttachToTransport(*pControllable);
+    }
+    if (rInput.WasUnloadTransportRequested())
+    {
+        if (pControllable)
         {
-            ClearAirdropTargeting_();
-            ClearBombardTargeting_();
-            m_bPresentationDirty = true;
-            return true;
+            TryUnloadTransportInPlace(*pControllable);
         }
-        m_onRequestExit();
         return true;
     }
-    else if (chrome(HotkeyAction_t::EndTurn))
+    if (rInput.WasSupplyCrawlRequested() && pControllable)
+    {
+        OpenSupplyCrawlMenu_(*pControllable);
+        return true;
+    }
+    if (rInput.WasDisbandRequested() && pControllable)
+    {
+        OpenDisbandMenu_(*pControllable);
+        return true;
+    }
+    if (rInput.WasFoundBaseRequested() && pControllable)
+    {
+        FoundBaseWith_(*pControllable);
+        return true;
+    }
+    if (rInput.WasDetonateRequested() && pControllable)
+    {
+        Detonate_(*pControllable);
+        return true;
+    }
+    if (rInput.WasAirdropModeToggleRequested() && pControllable)
+    {
+        ToggleAirdropTargeting_();
+        return true;
+    }
+    if (rInput.WasProbeActionRequested() && pControllable && rInput.GetProbeTarget())
+    {
+        TryOpenProbeActions_(*pControllable, *rInput.GetProbeTarget());
+        return true;
+    }
+    if (rInput.WasOrderAssigned())
+    {
+        OnOrderAssigned_(pControllable);
+    }
+    return true;
+}
+
+void WorldView::OpenSupplyCrawlMenu_(Unit& rUnit)
+{
+    Unit* pUnit = &rUnit;
+    std::vector<PopupChoice_t> choices;
+    for (const StatId_t resource : k_CrawlResources)
+    {
+        choices.push_back({std::string(magic_enum::enum_name(resource)),
+                           [this, pUnit, resource]
+                           {
+                               if (m_pSelectedUnit != pUnit)
+                               {
+                                   return;
+                               }
+                               if (pUnit->TryStartSupplyCrawl(resource))
+                               {
+                                   SelectNextAvailableUnit_();
+                               }
+                           }});
+    }
+    DismissOpenModals_();
+    auto pPopup = std::make_unique<ListSelectorPopup>(
+        "Supply Crawl", "No resources available", std::move(choices),
+        GetPopupLayout(),
+        Style().listSelectorPopup, &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
+}
+
+void WorldView::FoundBaseWith_(Unit& rUnit)
+{
+    if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(rUnit, m_rGameState))
+    {
+        // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
+        SelectNextAvailableUnit_();
+    }
+}
+
+void WorldView::Detonate_(Unit& rUnit)
+{
+    if (ApplyDetonation(m_rGameState, rUnit))
+    {
+        // A DestroyUnit entry in the list clears selection via OnUnitDestroyed.
+        SelectNextAvailableUnit_();
+    }
+}
+
+void WorldView::ToggleAirdropTargeting_()
+{
+    if (m_bAirdropTargeting)
+    {
+        ClearAirdropTargeting_();
+        return;
+    }
+    ClearBombardTargeting_();
+    m_bAirdropTargeting = true;
+    m_bPresentationDirty = true;
+}
+
+void WorldView::OnOrderAssigned_(Unit* pControllable)
+{
+    if (pControllable && pControllable->GetOrder()
+        && std::holds_alternative<HoldOrder_t>(*pControllable->GetOrder()))
+    {
+        m_rGameState.ConsiderHoldLink(*pControllable);
+    }
+    SelectNextAvailableUnit_();
+}
+
+bool WorldView::HandleChromeKey_(const KeyEvent_t& rEvent)
+{
+    if (m_rHotkeys.Matches(HotkeyAction_t::Cancel, rEvent))
+    {
+        CancelTargetingOrExit_();
+        return true;
+    }
+    if (m_rHotkeys.Matches(HotkeyAction_t::EndTurn, rEvent))
     {
         m_onProcessTurn();
         return true;
     }
-    else if (chrome(HotkeyAction_t::NextUnit))
+    if (m_rHotkeys.Matches(HotkeyAction_t::NextUnit, rEvent))
     {
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
         SetSelectedUnit_(
@@ -606,8 +620,19 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             false);
         return true;
     }
-
     return false;
+}
+
+void WorldView::CancelTargetingOrExit_()
+{
+    if (m_bAirdropTargeting || m_bBombardTargeting)
+    {
+        ClearAirdropTargeting_();
+        ClearBombardTargeting_();
+        m_bPresentationDirty = true;
+        return;
+    }
+    m_onRequestExit();
 }
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
@@ -622,24 +647,13 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         }
         return;
     }
-
     // UI chrome (End Turn) above the map takes priority over tile/unit input.
-    if (rEvent.bPressed)
+    if (rEvent.bPressed && RouteClickToChrome_(rEvent))
     {
-        const float x = static_cast<float>(rEvent.x);
-        const float y = static_cast<float>(rEvent.y);
-        for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
-        {
-            if (m_elements[static_cast<size_t>(i)]->Contains(x, y))
-            {
-                m_elements[static_cast<size_t>(i)]->HandleMouseClick(rEvent);
-                return;
-            }
-        }
+        return;
     }
 
     const MapViewport& rViewport = m_pWorldDisplay->GetViewport();
-
     const auto worldCoords = rViewport.WorldCoordsAtPixel(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y));
     const int worldX = worldCoords ? worldCoords->first : k_InvalidTileCoord;
@@ -647,100 +661,126 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
     Unit* pControllable = GetControllableSelectedUnit_();
-    if (m_bAirdropTargeting && pControllable && pClickedTile
-        && rEvent.button == MouseButton_t::Left && rEvent.bPressed)
+    if (TryTargetingClick_(rEvent, pControllable, pClickedTile))
     {
-        TryCommitAirdrop_(*pControllable, *pClickedTile);
         return;
     }
-    if (m_bBombardTargeting && pControllable && pClickedTile
-        && rEvent.button == MouseButton_t::Left && rEvent.bPressed)
+    if (m_pUnitOrderInputController->HandleMouse(
+            rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState))
+    {
+        ApplyOrderClick_(rEvent, pControllable, pClickedTile, worldX, worldY);
+        return;
+    }
+    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && worldCoords)
+    {
+        SelectAtClick_(pClickedTile, worldX, worldY);
+    }
+}
+
+bool WorldView::RouteClickToChrome_(const MouseEvent_t& rEvent)
+{
+    const float x = static_cast<float>(rEvent.x);
+    const float y = static_cast<float>(rEvent.y);
+    for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
+    {
+        if (m_elements[static_cast<size_t>(i)]->Contains(x, y))
+        {
+            m_elements[static_cast<size_t>(i)]->HandleMouseClick(rEvent);
+            return true;
+        }
+    }
+    return false;
+}
+
+// A left press while airdrop or bombard targeting is armed picks the target tile.
+bool WorldView::TryTargetingClick_(const MouseEvent_t& rEvent, Unit* pControllable,
+                                   const Tile* pClickedTile)
+{
+    if (!pControllable || !pClickedTile || rEvent.button != MouseButton_t::Left
+        || !rEvent.bPressed)
+    {
+        return false;
+    }
+    if (m_bAirdropTargeting)
+    {
+        TryCommitAirdrop_(*pControllable, *pClickedTile);
+        return true;
+    }
+    if (m_bBombardTargeting)
     {
         if (TryBeginBombard_(*pControllable, *pClickedTile))
         {
             ClearBombardTargeting_();
             m_bPresentationDirty = true;
         }
-        return;
+        return true;
     }
+    return false;
+}
 
-    const bool bOrderHandled = m_pUnitOrderInputController->HandleMouse(
-        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState);
-
-    if (bOrderHandled)
+void WorldView::ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable,
+                                 const Tile* pClickedTile, int worldX, int worldY)
+{
+    UnitOrderInputController& rInput = *m_pUnitOrderInputController;
+    const bool bDidOrderAction = rInput.WasAttackRequested() || rInput.WasBombardRequested()
+                                 || rInput.WasProbeActionRequested() || rInput.WasOrderAssigned();
+    // Move / attack / bombard / probe still focus the location panel on the target tile.
+    // An aborted long-press (held past threshold, no order) must not change selection.
+    if (bDidOrderAction && rEvent.button == MouseButton_t::Left && !rEvent.bPressed
+        && pClickedTile && IsExploredByPlayer_(worldX, worldY))
     {
-        const bool bDidOrderAction =
-            m_pUnitOrderInputController->WasAttackRequested()
-            || m_pUnitOrderInputController->WasBombardRequested()
-            || m_pUnitOrderInputController->WasProbeActionRequested()
-            || m_pUnitOrderInputController->WasOrderAssigned();
-
-        // Move / attack / bombard / probe still focus the location panel on the target tile.
-        // An aborted long-press (held past threshold, no order) must not change selection.
-        if (bDidOrderAction && rEvent.button == MouseButton_t::Left && !rEvent.bPressed
-            && pClickedTile)
-        {
-            const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-            const FactionExploredMap* pExplored =
-                (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap()
-                                                                : nullptr;
-            if (!pExplored || pExplored->IsExplored(worldX, worldY))
-            {
-                SetSelectedTile_(pClickedTile);
-            }
-        }
-
-        if (m_pUnitOrderInputController->WasBombardRequested() && pControllable
-            && m_pUnitOrderInputController->GetBombardTarget())
-        {
-            TryBeginBombard_(*pControllable, *m_pUnitOrderInputController->GetBombardTarget());
-            return;
-        }
-        if (m_pUnitOrderInputController->WasAttackRequested() && pControllable
-            && m_pUnitOrderInputController->GetAttackTarget())
-        {
-            TryBeginAttack_(*pControllable, *m_pUnitOrderInputController->GetAttackTarget());
-            return;
-        }
-        if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
-            && m_pUnitOrderInputController->GetProbeTarget())
-        {
-            TryOpenProbeActions_(*pControllable, *m_pUnitOrderInputController->GetProbeTarget());
-            return;
-        }
-        if (m_pUnitOrderInputController->WasOrderAssigned() && pControllable)
-        {
-            m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
-            SelectNextAvailableUnit_();
-        }
-        return;
-    }
-
-    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && worldCoords)
-    {
-        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        const FactionExploredMap* pExplored =
-            (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap() : nullptr;
-
-        if (pExplored && !pExplored->IsExplored(worldX, worldY))
-        {
-            return;
-        }
-
         SetSelectedTile_(pClickedTile);
-
-        // Base takes priority over garrison selection: the base screen has its own unit stack
-        // for picking units on the tile. Matches docs/architecture/ui-system.md.
-        if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
-        {
-            SetSelectedUnit_(nullptr, true);
-            m_onOpenBase(*pBase);
-            return;
-        }
-
-        // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
-        SelectUnitAtTile_(worldX, worldY);
     }
+    if (rInput.WasBombardRequested() && pControllable && rInput.GetBombardTarget())
+    {
+        TryBeginBombard_(*pControllable, *rInput.GetBombardTarget());
+        return;
+    }
+    if (rInput.WasAttackRequested() && pControllable && rInput.GetAttackTarget())
+    {
+        TryBeginAttack_(*pControllable, *rInput.GetAttackTarget());
+        return;
+    }
+    if (rInput.WasProbeActionRequested() && pControllable && rInput.GetProbeTarget())
+    {
+        TryOpenProbeActions_(*pControllable, *rInput.GetProbeTarget());
+        return;
+    }
+    if (rInput.WasOrderAssigned() && pControllable)
+    {
+        m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
+        SelectNextAvailableUnit_();
+    }
+}
+
+// True before the player's explored map is sized, so early clicks are not swallowed.
+bool WorldView::IsExploredByPlayer_(int worldX, int worldY) const
+{
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    if (!pPlayer || !pPlayer->GetExploredMap().IsSized())
+    {
+        return true;
+    }
+    return pPlayer->GetExploredMap().IsExplored(worldX, worldY);
+}
+
+void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
+{
+    if (!IsExploredByPlayer_(worldX, worldY))
+    {
+        return;
+    }
+    SetSelectedTile_(pClickedTile);
+    // Base takes priority over garrison selection: the base screen has its own unit stack
+    // for picking units on the tile. Matches docs/architecture/ui-system.md.
+    if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
+    {
+        SetSelectedUnit_(nullptr, true);
+        m_onOpenBase(*pBase);
+        return;
+    }
+    // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
+    SelectUnitAtTile_(worldX, worldY);
 }
 
 void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
@@ -779,30 +819,8 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
 
 bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
 {
-    bool bBombard = false;
-    if (const std::optional<HotkeyChord_t> bombard = m_rHotkeys.Find(HotkeyAction_t::Bombard))
-    {
-        bBombard = bombard->Matches(rEvent) && CanBombard(rUnit);
-    }
-
-    std::vector<std::string> projects;
-    if (ResolveFlag(rUnit, RuleFlagId_t::Terraform))
-    {
-        for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
-        {
-            if (!rBinding.chord.Matches(rEvent))
-            {
-                continue;
-            }
-            if (!m_rGameState.GetUnitOrderExecutor().CanStartTerraformProject(
-                    rUnit, rBinding.projectId))
-            {
-                continue;
-            }
-            projects.push_back(rBinding.projectId);
-        }
-    }
-
+    const bool bBombard = m_rHotkeys.Matches(HotkeyAction_t::Bombard, rEvent) && CanBombard(rUnit);
+    const std::vector<std::string> projects = StartableTerraforms_(rEvent, rUnit);
     const std::size_t count = (bBombard ? 1 : 0) + projects.size();
     if (count == 0)
     {
@@ -810,32 +828,57 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
     }
     if (count > 1)
     {
-        const HotkeyChord_t chord{rEvent.key, rEvent.modifier.bCtrl, rEvent.modifier.bAlt,
-                                  rEvent.modifier.bShift};
-        std::string message = DescribeHotkeyChord(chord) + " has more than one valid action:";
-        if (bBombard)
-        {
-            message += " bombard";
-        }
-        for (const std::string& rProjectId : projects)
-        {
-            message += " ";
-            message += rProjectId;
-        }
-        throw std::logic_error(message);
+        ThrowAmbiguousChord_(rEvent, bBombard, projects);
     }
-
     if (bBombard)
     {
         ToggleBombardTargeting_();
         return true;
     }
-
     if (m_rGameState.GetUnitOrderExecutor().TryStartTerraform(rUnit, projects.front(), m_rGameState))
     {
         SelectNextAvailableUnit_();
     }
     return true;
+}
+
+// Terraform projects bound to this chord that the unit could start now.
+std::vector<std::string> WorldView::StartableTerraforms_(const KeyEvent_t& rEvent,
+                                                         const Unit& rUnit) const
+{
+    std::vector<std::string> projects;
+    if (!ResolveFlag(rUnit, RuleFlagId_t::Terraform))
+    {
+        return projects;
+    }
+    for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
+    {
+        if (rBinding.chord.Matches(rEvent)
+            && m_rGameState.GetUnitOrderExecutor().CanStartTerraformProject(rUnit,
+                                                                            rBinding.projectId))
+        {
+            projects.push_back(rBinding.projectId);
+        }
+    }
+    return projects;
+}
+
+void WorldView::ThrowAmbiguousChord_(const KeyEvent_t& rEvent, bool bBombard,
+                                     const std::vector<std::string>& rProjects)
+{
+    const HotkeyChord_t chord{rEvent.key, rEvent.modifier.bCtrl, rEvent.modifier.bAlt,
+                              rEvent.modifier.bShift};
+    std::string message = DescribeHotkeyChord(chord) + " has more than one valid action:";
+    if (bBombard)
+    {
+        message += " bombard";
+    }
+    for (const std::string& rProjectId : rProjects)
+    {
+        message += " ";
+        message += rProjectId;
+    }
+    throw std::logic_error(message);
 }
 
 void WorldView::ToggleBombardTargeting_()
@@ -854,15 +897,34 @@ void WorldView::ToggleBombardTargeting_()
 
 bool WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
 {
+    // Snapshot before the shot: it may destroy the targets whose names playback shows.
+    std::shared_ptr<BombardPlayback_t> pPlayback = SnapshotBombardTargets_(rAttacker, rTargetTile);
+    auto result = m_rGameState.GetUnitOrderExecutor().TryBombard(rAttacker, rTargetTile);
+    if (!result)
+    {
+        return false;
+    }
+    pPlayback->combats = AsBombardPlayback_(std::move(result->combats));
+    m_pWorldDisplay->SetPlaybackVisibleUnits(&pPlayback->playbackUnitIds);
+    m_bPresentationDirty = true;
+    ContinueBombardPlayback_(std::move(pPlayback), 0);
+    return true;
+}
+
+// Names every unit on the target tile, and marks the ones the player cannot see so playback
+// shows them for the duration.
+std::shared_ptr<WorldView::BombardPlayback_t> WorldView::SnapshotBombardTargets_(
+    const Unit& rAttacker, const Tile& rTargetTile) const
+{
     auto pPlayback = std::make_shared<BombardPlayback_t>();
     pPlayback->pAttackerTile = &rAttacker.GetTile();
     pPlayback->pTargetTile = &rTargetTile;
     pPlayback->attackerName = rAttacker.GetDesign().GetName();
-
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    auto remember = [&](const std::vector<Unit*>& rUnits)
+    const WorldMap& rMap = m_rGameState.GetWorldMap();
+    for (const auto* pUnits : {&rMap.GetUnitsOnTile(rTargetTile), &rMap.GetCargoOnTile(rTargetTile)})
     {
-        for (Unit* pUnit : rUnits)
+        for (Unit* pUnit : *pUnits)
         {
             if (!pUnit)
             {
@@ -874,31 +936,22 @@ bool WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
                 pPlayback->playbackUnitIds.insert(pUnit->GetUnitId());
             }
         }
-    };
-    remember(m_rGameState.GetWorldMap().GetUnitsOnTile(rTargetTile));
-    remember(m_rGameState.GetWorldMap().GetCargoOnTile(rTargetTile));
-
-    auto result = m_rGameState.GetUnitOrderExecutor().TryBombard(rAttacker, rTargetTile);
-    if (!result)
-    {
-        return false;
     }
+    return pPlayback;
+}
 
-    pPlayback->combats = std::move(result->combats);
-    if (pPlayback->combats.empty())
+// A shot that hit nothing still plays once.
+std::vector<CombatResult_t> WorldView::AsBombardPlayback_(std::vector<CombatResult_t> combats)
+{
+    if (combats.empty())
     {
-        CombatResult_t shot;
-        shot.bBombardPlayback = true;
-        pPlayback->combats.push_back(std::move(shot));
+        combats.emplace_back();
     }
-    for (CombatResult_t& rCombat : pPlayback->combats)
+    for (CombatResult_t& rCombat : combats)
     {
         rCombat.bBombardPlayback = true;
     }
-    m_pWorldDisplay->SetPlaybackVisibleUnits(&pPlayback->playbackUnitIds);
-    m_bPresentationDirty = true;
-    ContinueBombardPlayback_(std::move(pPlayback), 0);
-    return true;
+    return combats;
 }
 
 void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback,

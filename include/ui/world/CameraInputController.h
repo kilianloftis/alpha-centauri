@@ -4,6 +4,7 @@
 #include "ui/UIElement.h"
 
 #include <optional>
+#include <utility>
 
 namespace ac
 {
@@ -31,6 +32,8 @@ private:
     bool ApplyCameraDelta_(int deltaCamX, int deltaCamY);
     bool ApplyZoom_(float factor);
     bool ApplyEdgeScroll_(int mouseX, int mouseY);
+    std::optional<std::pair<float, float>> EdgeScrollDirection_(int mouseX, int mouseY) const;
+    void ResetEdgeScroll_();
 
     WorldDisplay& m_rWorldDisplay;
     const WorldMap& m_rWorldMap;

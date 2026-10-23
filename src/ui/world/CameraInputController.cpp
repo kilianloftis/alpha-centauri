@@ -77,10 +77,7 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
     const auto& s = Style().cameraInput;
     const int step = s.cameraScrollStep * k_MapUnitsPerScreenTile;
 
-    const auto match = [&](HotkeyAction_t action) {
-        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
-        return chord && chord->Matches(rEvent);
-    };
+    const auto match = [&](HotkeyAction_t action) { return m_rHotkeys.Matches(action, rEvent); };
 
     if (match(HotkeyAction_t::ZoomIn))
     {
@@ -132,8 +129,7 @@ bool CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t>
 {
     if (!bEnabled || !mousePosition)
     {
-        m_edgeScrollAccumulatorX = 0.0f;
-        m_edgeScrollAccumulatorY = 0.0f;
+        ResetEdgeScroll_();
         return false;
     }
 
@@ -142,43 +138,16 @@ bool CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t>
 
 bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
 {
-    const auto& s = Style().cameraInput;
-
-    const float relX = static_cast<float>(mouseX - m_mapLayout.x) / m_mapLayout.width;
-    const float relY = static_cast<float>(mouseY - m_mapLayout.y) / m_mapLayout.height;
-
-    const bool bInMap = relX >= s.relativeMin && relX <= s.relativeMax
-        && relY >= s.relativeMin && relY <= s.relativeMax;
-    if (!bInMap)
+    const std::optional<std::pair<float, float>> direction = EdgeScrollDirection_(mouseX, mouseY);
+    if (!direction)
     {
-        m_edgeScrollAccumulatorX = 0.0f;
-        m_edgeScrollAccumulatorY = 0.0f;
-        return false;
-    }
-
-    float scrollDirX = s.relativeMin;
-    float scrollDirY = s.relativeMin;
-
-    if (relX < s.edgeZone)
-        scrollDirX = k_ScrollDirectionLeft;
-    else if (relX > s.relativeMax - s.edgeZone)
-        scrollDirX = k_ScrollDirectionRight;
-
-    if (relY < s.edgeZone)
-        scrollDirY = k_ScrollDirectionUp;
-    else if (relY > s.relativeMax - s.edgeZone)
-        scrollDirY = k_ScrollDirectionDown;
-
-    if (scrollDirX == s.relativeMin && scrollDirY == s.relativeMin)
-    {
-        m_edgeScrollAccumulatorX = 0.0f;
-        m_edgeScrollAccumulatorY = 0.0f;
+        ResetEdgeScroll_();
         return false;
     }
 
     // Accumulate in screen-tile units, then convert to map units (2 per screen tile).
-    m_edgeScrollAccumulatorX += scrollDirX * m_edgeScrollSpeed;
-    m_edgeScrollAccumulatorY += scrollDirY * m_edgeScrollSpeed;
+    m_edgeScrollAccumulatorX += direction->first * m_edgeScrollSpeed;
+    m_edgeScrollAccumulatorY += direction->second * m_edgeScrollSpeed;
 
     const int screenDx = static_cast<int>(m_edgeScrollAccumulatorX);
     const int screenDy = static_cast<int>(m_edgeScrollAccumulatorY);
@@ -192,6 +161,45 @@ bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
 
     return ApplyCameraDelta_(screenDx * k_MapUnitsPerScreenTile,
                              screenDy * k_MapUnitsPerScreenTile);
+}
+
+// Which way the mouse pushes the camera; nullopt off the map or away from its edges.
+std::optional<std::pair<float, float>> CameraInputController::EdgeScrollDirection_(
+    int mouseX, int mouseY) const
+{
+    const auto& s = Style().cameraInput;
+    const float relX = static_cast<float>(mouseX - m_mapLayout.x) / m_mapLayout.width;
+    const float relY = static_cast<float>(mouseY - m_mapLayout.y) / m_mapLayout.height;
+    const bool bInMap = relX >= s.relativeMin && relX <= s.relativeMax
+        && relY >= s.relativeMin && relY <= s.relativeMax;
+    if (!bInMap)
+    {
+        return std::nullopt;
+    }
+
+    float scrollDirX = s.relativeMin;
+    float scrollDirY = s.relativeMin;
+    if (relX < s.edgeZone)
+        scrollDirX = k_ScrollDirectionLeft;
+    else if (relX > s.relativeMax - s.edgeZone)
+        scrollDirX = k_ScrollDirectionRight;
+
+    if (relY < s.edgeZone)
+        scrollDirY = k_ScrollDirectionUp;
+    else if (relY > s.relativeMax - s.edgeZone)
+        scrollDirY = k_ScrollDirectionDown;
+
+    if (scrollDirX == s.relativeMin && scrollDirY == s.relativeMin)
+    {
+        return std::nullopt;
+    }
+    return std::pair{scrollDirX, scrollDirY};
+}
+
+void CameraInputController::ResetEdgeScroll_()
+{
+    m_edgeScrollAccumulatorX = 0.0f;
+    m_edgeScrollAccumulatorY = 0.0f;
 }
 
 } // namespace ac

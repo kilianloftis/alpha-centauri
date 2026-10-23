@@ -277,13 +277,12 @@ Rule 7. The plan: an exhaustive visitor struct per variant, as `EffectReferenceV
 Rule 7. The plan: split each into named steps, checking SMAC ports against the disassembly or
 screenshots.
 
-### `WorldView` input and construction
-- **Where:** `src/ui/world/WorldView.cpp`: `HandleKey` (146 lines, nesting 11), `HandleMouse`
-  (111), the constructor (89, eleven parameters);
-  `UnitOrderInputController::HandleKey` (91)
-- **Problem:** every key and click case is handled inline.
-- **Why not local:** over 100 lines; a per-action dispatch (the hotkey config already names the
-  actions) would replace the chains.
+### `WorldView` order dispatch and construction
+- **Where:** `src/ui/world/WorldView.cpp`: `ApplyOrderInput_` and `ApplyOrderClick_` (the
+  `Was…Requested` chains), the constructor (eleven parameters)
+- **Problem:** each recognised order is a flag the view tests in a fixed chain.
+- **Why not local:** a per-action dispatch (the hotkey config already names the actions) would
+  replace the flags and the chains together.
 
 ### `SocialEngineeringDisplay::Render`
 - **Where:** `src/ui/social-engineering/SocialEngineeringDisplay.cpp:327` (164 lines)

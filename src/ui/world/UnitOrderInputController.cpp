@@ -26,52 +26,64 @@ UnitOrderInputController::UnitOrderInputController(const HotkeyConfig& rHotkeys)
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
     ClearRequestFlags_();
-
     if (!pSelectedUnit)
     {
         return false;
     }
-
-    std::vector<HotkeyAction_t> valid;
-    const auto consider = [&](HotkeyAction_t action, bool bValid)
-    {
-        const std::optional<HotkeyChord_t> chord = m_rHotkeys.Find(action);
-        if (!chord || !chord->Matches(rEvent) || !bValid)
-        {
-            return;
-        }
-        valid.push_back(action);
-    };
-
-    // Unload, disband and attach apply to any selected unit; the rest wait for one that can do
-    // them, so a shared chord can mean a different order.
-    consider(HotkeyAction_t::UnloadTransport, true);
-    consider(HotkeyAction_t::Disband, true);
-    consider(HotkeyAction_t::AttachTransport, true);
-    consider(HotkeyAction_t::SupplyCrawl,
-             ResolveFlag(*pSelectedUnit, RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase());
-    consider(HotkeyAction_t::FoundBase, ResolveFlag(*pSelectedUnit, RuleFlagId_t::FoundBase));
-    consider(HotkeyAction_t::Detonate, UnitCanDetonate(*pSelectedUnit));
-    consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(*pSelectedUnit).Ok());
-    consider(HotkeyAction_t::Hold, true);
-    consider(HotkeyAction_t::SkipTurn, true);
-
+    const std::vector<HotkeyAction_t> valid = MatchingOrderActions_(rEvent, *pSelectedUnit);
     if (valid.empty())
     {
         return false;
     }
-    if (valid.size() > 1)
-    {
-        std::string message = "More than one order is valid:";
-        for (const HotkeyAction_t action : valid)
-        {
-            message += " ";
-            message += magic_enum::enum_name(action);
-        }
-        throw std::logic_error(message);
-    }
+    RequireSingleOrder_(valid);
+    ApplyOrderAction_(valid.front(), *pSelectedUnit);
+    return true;
+}
 
-    switch (valid.front())
+// Unload, disband and attach apply to any selected unit; the rest wait for one that can do
+// them, so a shared chord can mean a different order.
+std::vector<HotkeyAction_t> UnitOrderInputController::MatchingOrderActions_(
+    const KeyEvent_t& rEvent, const Unit& rUnit) const
+{
+    std::vector<HotkeyAction_t> valid;
+    const auto consider = [&](HotkeyAction_t action, bool bValid)
+    {
+        if (bValid && m_rHotkeys.Matches(action, rEvent))
+        {
+            valid.push_back(action);
+        }
+    };
+    consider(HotkeyAction_t::UnloadTransport, true);
+    consider(HotkeyAction_t::Disband, true);
+    consider(HotkeyAction_t::AttachTransport, true);
+    consider(HotkeyAction_t::SupplyCrawl,
+             ResolveFlag(rUnit, RuleFlagId_t::SupplyCrawl) && rUnit.GetHomeBase());
+    consider(HotkeyAction_t::FoundBase, ResolveFlag(rUnit, RuleFlagId_t::FoundBase));
+    consider(HotkeyAction_t::Detonate, UnitCanDetonate(rUnit));
+    consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(rUnit).Ok());
+    consider(HotkeyAction_t::Hold, true);
+    consider(HotkeyAction_t::SkipTurn, true);
+    return valid;
+}
+
+void UnitOrderInputController::RequireSingleOrder_(const std::vector<HotkeyAction_t>& rValid)
+{
+    if (rValid.size() <= 1)
+    {
+        return;
+    }
+    std::string message = "More than one order is valid:";
+    for (const HotkeyAction_t action : rValid)
+    {
+        message += " ";
+        message += magic_enum::enum_name(action);
+    }
+    throw std::logic_error(message);
+}
+
+void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rUnit)
+{
+    switch (action)
     {
     case HotkeyAction_t::UnloadTransport:
         m_bUnloadTransportRequested = true;
@@ -95,11 +107,11 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         m_bAirdropModeToggleRequested = true;
         break;
     case HotkeyAction_t::Hold:
-        pSelectedUnit->SetOrder(HoldOrder_t{});
+        rUnit.SetOrder(HoldOrder_t{});
         m_bOrderAssigned = true;
         break;
     case HotkeyAction_t::SkipTurn:
-        pSelectedUnit->SetOrder(SkipTurnOrder_t{});
+        rUnit.SetOrder(SkipTurnOrder_t{});
         m_bOrderAssigned = true;
         break;
     case HotkeyAction_t::Bombard:
@@ -119,7 +131,6 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
     case HotkeyAction_t::Satellites:
         break;
     }
-    return true;
 }
 
 bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit,

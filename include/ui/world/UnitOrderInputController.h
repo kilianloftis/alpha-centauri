@@ -3,15 +3,16 @@
 #include "game/units/Unit.h"
 #include "game/movement/Pathfinder.h"
 #include "input/Input.h"
+#include "ui/HotkeyConfig.h"
 
 #include <chrono>
+#include <vector>
 
 namespace ac
 {
 
 class Tile;
 class GameState;
-class HotkeyConfig;
 
 class UnitOrderInputController
 {
@@ -72,6 +73,12 @@ public:
     void CancelPreview();
 
 private:
+    std::vector<HotkeyAction_t> MatchingOrderActions_(const KeyEvent_t& rEvent,
+                                                      const Unit& rUnit) const;
+    // A chord that means two orders for this unit is a hotkey config defect.
+    static void RequireSingleOrder_(const std::vector<HotkeyAction_t>& rValid);
+    // Raises the request flag WorldView acts on, or assigns Hold / Skip directly.
+    void ApplyOrderAction_(HotkeyAction_t action, Unit& rUnit);
     void ClearRequestFlags_();
     bool HasExceededHoldThreshold_() const;
 
