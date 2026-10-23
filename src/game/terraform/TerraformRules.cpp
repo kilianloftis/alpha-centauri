@@ -11,6 +11,7 @@
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
 #include "game/base/BaseTypes.h"
+#include "game/population/PopulationManager.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
@@ -519,24 +520,77 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
     return TerraformSpread_t{pBest, &rConfig};
 }
 
+namespace
+{
+
+// Land units on water and sea units on land; air and orbital units do not care.
+std::vector<Unit*> StrandedUnits_(const Tile& rTile, bool bNowWater)
+{
+    const UnitDomain_t stranded = bNowWater ? UnitDomain_t::Land : UnitDomain_t::Sea;
+    std::vector<Unit*> units;
+    for (Unit* pUnit : CurrentGameState().GetWorldMap().GetAllUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit->GetDomain() == stranded)
+        {
+            units.push_back(pUnit);
+        }
+    }
+    return units;
+}
+
+SubmergedBase_t SubmergedBase_(const BaseManager& rBase, const ElevationRulesConfig_t& rRules)
+{
+    SubmergedBase_t submerged;
+    submerged.size = rBase.GetPopulation().GetSize();
+    submerged.rollMin = rRules.submergedPopLossRollMin;
+    submerged.rollMax = rRules.submergedPopLossRollMax;
+    submerged.lossCap = rRules.submergedPopLossCap;
+    submerged.bLastBase = rBase.GetFaction().GetBaseCount() <= 1;
+    return submerged;
+}
+
+} // namespace
+
 SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
                                                   const BaseManager* pBase)
 {
     SurfaceFlipConsequences_t consequences;
-    const bool bBaseOnWaterAllowed = pBase != nullptr && pBase->MayOccupyWater();
-    consequences.bRazesBase = bNowWater && pBase != nullptr && !bBaseOnWaterAllowed;
-    const bool bSpareBase = bNowWater && bBaseOnWaterAllowed;
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
         const bool bSeaDomain = pImprovement->domain == ImprovementDomain_t::Sea;
         const bool bDomainKept = !pImprovement->domain.has_value() || bSeaDomain == bNowWater;
-        if (bDomainKept || (bSpareBase && pImprovement->id == ImprovementIds::k_Base))
+        // A destroyed base takes its own marker with it.
+        if (bDomainKept || (pBase && pImprovement->id == ImprovementIds::k_Base))
         {
             continue;
         }
         consequences.removedImprovements.push_back(pImprovement->id);
     }
+    const bool bBaseUntouched = pBase && (!bNowWater || pBase->MayOccupyWater());
+    if (bBaseUntouched)
+    {
+        return consequences;
+    }
+    if (pBase)
+    {
+        consequences.submerged = SubmergedBase_(*pBase, rTile.MapRules());
+    }
+    consequences.strandedUnits = StrandedUnits_(rTile, bNowWater);
     return consequences;
+}
+
+SubmergenceOutcome_t ResolveSubmergence(const SubmergedBase_t& rSubmerged, int roll)
+{
+    const int loss = std::clamp(rSubmerged.size / 2, roll, rSubmerged.lossCap);
+    if (loss < rSubmerged.size)
+    {
+        return SubmergenceOutcome_t{.popLoss = loss, .bDestroyed = false};
+    }
+    if (rSubmerged.bLastBase)
+    {
+        return SubmergenceOutcome_t{.popLoss = rSubmerged.size - 1, .bDestroyed = false};
+    }
+    return SubmergenceOutcome_t{.popLoss = rSubmerged.size, .bDestroyed = true};
 }
 
 } // namespace ac

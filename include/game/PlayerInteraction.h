@@ -18,7 +18,8 @@ namespace ac
 // `event` selects the PauseOnEventsConfig_t flag that can skip presentation.
 struct NoticeInteraction_t
 {
-    PauseOnEventId_t event = PauseOnEventId_t::NewFacilityBuilt;
+    // The pause-on-events setting that gates it; unset for a notice that always shows.
+    std::optional<PauseOnEventId_t> event;
     std::string title;
     std::string body;
     std::optional<TileCoord_t> cameraTile;

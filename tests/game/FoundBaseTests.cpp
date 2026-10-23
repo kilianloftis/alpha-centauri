@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "game/population/PopulationManager.h"
 
 #include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
@@ -399,25 +400,44 @@ TEST_CASE("A surface flip removes improvements whose domain no longer matches",
     CHECK(sea.HasImprovement("Road"));
 }
 
-TEST_CASE("A land base is razed when its tile becomes water unless it may occupy water",
+namespace
+{
+
+bool HasUnit_(Faction& rFaction, UnitId_t unitId)
+{
+    for (const Unit& rUnit : rFaction.GetUnitManager().Units())
+    {
+        if (rUnit.GetUnitId() == unitId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void GrowTo_(BaseManager& rBase, int size)
+{
+    while (rBase.GetPopulation().GetSize() < size)
+    {
+        rBase.GetPopulation().AddPop("Worker");
+    }
+}
+
+} // namespace
+
+TEST_CASE("A domed base and a sea base keep their tiles across a flip",
           "[unit][found-base][elevation][surface]")
 {
     FoundBaseGame_ game;
-    BaseManager& land = game.MakeBase(*game.pPlayer, 8, 8);
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(land.GetTile(), "Farm");
-    CrossElevation_(game.fixtures.state, land.GetTile(), -500);
-    CHECK(land.GetTile().IsWater());
-    CHECK(land.IsRazed());
-    CHECK_FALSE(land.GetTile().HasImprovement(ImprovementIds::k_Base));
-    CHECK_FALSE(land.GetTile().HasImprovement("Farm"));
-    CHECK(game.fixtures.state.FindBaseAt(4, 4) == nullptr);
-
+    game.MakeBase(*game.pPlayer, 14, 14);
     BaseManager& domed = game.MakeBase(*game.pPlayer, 5, 11);
     domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(domed.GetTile(), "Farm");
+    const int domedSize = domed.GetPopulation().GetSize();
     CrossElevation_(game.fixtures.state, domed.GetTile(), -500);
     CHECK(domed.GetTile().IsWater());
     CHECK_FALSE(domed.IsRazed());
+    CHECK(domed.GetPopulation().GetSize() == domedSize);
     CHECK(domed.GetTile().HasImprovement(ImprovementIds::k_Base));
     CHECK_FALSE(domed.GetTile().HasImprovement("Farm"));
 
@@ -434,8 +454,66 @@ TEST_CASE("A land base is razed when its tile becomes water unless it may occupy
     CrossElevation_(game.fixtures.state, pSea->GetTile(), -500);
     CHECK(pSea->GetTile().IsWater());
     CHECK_FALSE(pSea->IsRazed());
-    CHECK(pSea->MayOccupyWater());
     CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
+}
+
+TEST_CASE("A flooded base loses half its population and gains a Pressure Dome",
+          "[unit][found-base][elevation][surface]")
+{
+    FoundBaseGame_ game;
+    game.MakeBase(*game.pPlayer, 14, 14);
+    BaseManager& flooded = game.MakeBase(*game.pPlayer, 8, 8);
+    actest::SetMaxBaseSize(*game.fixtures.dataContext.growthConfig, 20);
+    GrowTo_(flooded, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(flooded.GetTile(), "Farm");
+    CrossElevation_(game.fixtures.state, flooded.GetTile(), -500);
+
+    // Half of 10 beats every roll (2-4) and stays under the cap of 10.
+    CHECK_FALSE(flooded.IsRazed());
+    CHECK(flooded.GetPopulation().GetSize() == 5);
+    CHECK(flooded.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+    CHECK(flooded.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK_FALSE(flooded.GetTile().HasImprovement("Farm"));
+}
+
+TEST_CASE("A flooded base left with no population is destroyed, unless it is the last one",
+          "[unit][found-base][elevation][surface]")
+{
+    FoundBaseGame_ game;
+    BaseManager& last = game.MakeBase(*game.pAi, 4, 4);
+    REQUIRE(last.GetPopulation().GetSize() == 1);
+    CrossElevation_(game.fixtures.state, last.GetTile(), -500);
+    CHECK_FALSE(last.IsRazed());
+    CHECK(last.GetPopulation().GetSize() == 1);
+    CHECK(last.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+
+    game.MakeBase(*game.pPlayer, 14, 14);
+    BaseManager& small = game.MakeBase(*game.pPlayer, 8, 8);
+    REQUIRE(small.GetPopulation().GetSize() == 1);
+    CrossElevation_(game.fixtures.state, small.GetTile(), -500);
+    CHECK(small.IsRazed());
+    CHECK_FALSE(small.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK(game.fixtures.state.FindBaseAt(8, 8) == nullptr);
+}
+
+TEST_CASE("A flip kills units on the wrong surface unless a standing base shelters them",
+          "[unit][found-base][elevation][surface]")
+{
+    FoundBaseGame_ game;
+    Unit& exposed = game.MakeUnit(*game.pPlayer, 10, 4, {"test_chassis"});
+    const UnitId_t exposedId = exposed.GetUnitId();
+    CrossElevation_(game.fixtures.state, *game.fixtures.state.GetWorldMap().GetTile(10, 4), -500);
+    CHECK_FALSE(HasUnit_(*game.pPlayer, exposedId));
+
+    game.MakeBase(*game.pPlayer, 14, 14);
+    BaseManager& flooded = game.MakeBase(*game.pPlayer, 8, 8);
+    actest::SetMaxBaseSize(*game.fixtures.dataContext.growthConfig, 20);
+    GrowTo_(flooded, 10);
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis"});
+    const UnitId_t garrisonId = garrison.GetUnitId();
+    CrossElevation_(game.fixtures.state, flooded.GetTile(), -500);
+    REQUIRE_FALSE(flooded.IsRazed());
+    CHECK(HasUnit_(*game.pPlayer, garrisonId));
 }
 
 TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile",
@@ -452,7 +530,7 @@ TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile"
     CHECK_FALSE(CanFoundBase(rover));
 }
 
-TEST_CASE("A flip to water names what it removes and whether the base is razed",
+TEST_CASE("A flip to water names what it removes and which base floods",
           "[unit][found-base][surface]")
 {
     FoundBaseGame_ game;
@@ -461,18 +539,40 @@ TEST_CASE("A flip to water names what it removes and whether the base is razed",
     BaseManager& domed = game.MakeBase(*game.pPlayer, 5, 11);
     domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
 
-    const SurfaceFlipConsequences_t razed =
+    const SurfaceFlipConsequences_t flooded =
         SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, &land);
-    CHECK(razed.bRazesBase);
-    CHECK(std::ranges::count(razed.removedImprovements, std::string(ImprovementIds::k_Base)) == 1);
-    CHECK(std::ranges::count(razed.removedImprovements, std::string("Farm")) == 1);
+    REQUIRE(flooded.submerged.has_value());
+    CHECK(flooded.submerged->size == land.GetPopulation().GetSize());
+    CHECK_FALSE(flooded.submerged->bLastBase);
+    CHECK(std::ranges::count(flooded.removedImprovements, std::string(ImprovementIds::k_Base))
+          == 0);
+    CHECK(std::ranges::count(flooded.removedImprovements, std::string("Farm")) == 1);
     CHECK_FALSE(land.IsRazed());
 
     const SurfaceFlipConsequences_t spared =
         SurfaceFlipConsequences(domed.GetTile(), /*bNowWater=*/true, &domed);
-    CHECK_FALSE(spared.bRazesBase);
-    CHECK(std::ranges::count(spared.removedImprovements, std::string(ImprovementIds::k_Base))
-          == 0);
+    CHECK_FALSE(spared.submerged.has_value());
+}
+
+TEST_CASE("Submergence loses clamp(size / 2, roll, cap) pop", "[surface]")
+{
+    SubmergedBase_t base;
+    base.rollMin = 2;
+    base.rollMax = 4;
+    base.lossCap = 10;
+
+    base.size = 7; // half 3
+    CHECK(ResolveSubmergence(base, 2).popLoss == 3);
+    CHECK(ResolveSubmergence(base, 4).popLoss == 4);
+    base.size = 30; // half 15, capped
+    CHECK(ResolveSubmergence(base, 2).popLoss == 10);
+
+    base.size = 3;
+    CHECK(ResolveSubmergence(base, 4).bDestroyed);
+    base.bLastBase = true;
+    const SubmergenceOutcome_t last = ResolveSubmergence(base, 4);
+    CHECK_FALSE(last.bDestroyed);
+    CHECK(last.popLoss == 2);
 }
 
 TEST_CASE("Only a faction without a headquarters is granted one by its next base",

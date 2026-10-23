@@ -539,7 +539,7 @@ Some consequences have no condition, no choice and no amount: a transferred base
 
 ### [D] TFM-4 What a land/sea flip does
 `SurfaceOccupancy.cpp:102` (`ReconcileSurfaceFlips`).
-- Improvements of the wrong domain are removed. A submerged base is razed unless it may occupy water.
+- Improvements of the wrong domain are removed. A submerged base that may not occupy water floods as in terranx.exe's `alt_set`: it loses population and gains a Pressure Dome, and is destroyed only when emptied and not the faction's last base. Wrong-domain units die unless a standing base shelters them.
 - **Added to the plan (commit 11):** `TerraformRules::SurfaceFlipConsequences(const Tile&, bool bNowWater)` returns the improvements to remove and whether the base is razed.
 
 ### [D] TFM-5 Terraform progress is one turn per former per turn

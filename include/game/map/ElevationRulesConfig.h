@@ -25,6 +25,11 @@ struct ElevationRulesConfig_t
     // Land above this takes forest and fungus spread only when moist or wet. Separate from
     // reference_level_meters so a mod can move either.
     int spreadAltitudeLimitMeters = 0;
+    // A base flooded without a Pressure Dome loses clamp(size / 2, roll, cap) pop, the roll
+    // uniform in [rollMin, rollMax] (terranx alt_set: 2-4, capped at 10).
+    int submergedPopLossRollMin = 0;
+    int submergedPopLossRollMax = 0;
+    int submergedPopLossCap = 0;
 };
 
 } // namespace ac

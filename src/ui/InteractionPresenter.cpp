@@ -134,7 +134,7 @@ void InteractionPresenter::CompleteAndAdvance_()
 
 void InteractionPresenter::PresentNotice_(const NoticeInteraction_t& rNotice)
 {
-    if (!m_rGameState.GetSettings().GetPauseOnEvents().Allows(rNotice.event))
+    if (rNotice.event && !m_rGameState.GetSettings().GetPauseOnEvents().Allows(*rNotice.event))
     {
         CompleteAndAdvance_();
         return;

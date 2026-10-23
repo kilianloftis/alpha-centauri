@@ -25,6 +25,27 @@ int RequireWholeMeters_(const nlohmann::json& rJson, const char* pKey)
     return static_cast<int>(value);
 }
 
+int RequireCount_(const nlohmann::json& rJson, const char* pKey)
+{
+    if (!rJson.contains(pKey) || !rJson.at(pKey).is_number_integer())
+    {
+        throw std::runtime_error(std::string("map_rules '") + pKey + "' must be an integer");
+    }
+    return rJson.at(pKey).get<int>();
+}
+
+void ValidateSubmergedPopLoss_(const ElevationRulesConfig_t& rConfig)
+{
+    if (rConfig.submergedPopLossRollMin < 1
+        || rConfig.submergedPopLossRollMax < rConfig.submergedPopLossRollMin
+        || rConfig.submergedPopLossCap < rConfig.submergedPopLossRollMax)
+    {
+        throw std::runtime_error(
+            "map_rules submerged pop loss needs 1 <= 'submerged_pop_loss_roll_min' <= "
+            "'submerged_pop_loss_roll_max' <= 'submerged_pop_loss_cap'");
+    }
+}
+
 void ValidateElevationRules_(const ElevationRulesConfig_t& rConfig)
 {
     if (rConfig.oceanShelfMeters >= rConfig.oceanLevelMeters)
@@ -64,6 +85,7 @@ void ValidateElevationRules_(const ElevationRulesConfig_t& rConfig)
             + std::to_string(rConfig.spreadAltitudeLimitMeters) + " < "
             + std::to_string(rConfig.oceanLevelMeters));
     }
+    ValidateSubmergedPopLoss_(rConfig);
 }
 
 } // namespace
@@ -87,6 +109,9 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
     config.referenceLevelMeters = RequireWholeMeters_(json, "reference_level_meters");
     config.spreadAltitudeLimitMeters =
         RequireWholeMeters_(json, "spread_altitude_limit_meters");
+    config.submergedPopLossRollMin = RequireCount_(json, "submerged_pop_loss_roll_min");
+    config.submergedPopLossRollMax = RequireCount_(json, "submerged_pop_loss_roll_max");
+    config.submergedPopLossCap = RequireCount_(json, "submerged_pop_loss_cap");
 
     ValidateElevationRules_(config);
     return config;
