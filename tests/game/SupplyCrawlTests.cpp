@@ -1,3 +1,4 @@
+#include "game/units/SupplyCrawlMutations.h"
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
@@ -24,7 +25,7 @@ TEST_CASE("Supply crawl claims a free tile and registers via home base", "[unit]
     Unit& crawler = fixture.MakeUnit(faction, 12, 12, {"test_chassis", "test_supply_crawler"}, &base);
     REQUIRE(ResolveFlag(crawler, RuleFlagId_t::SupplyCrawl));
 
-    CHECK(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
+    CHECK(TryStartSupplyCrawl(crawler, StatId_t::Minerals));
     REQUIRE(crawler.IsSupplyCrawling());
     CHECK(crawler.GetWorkedTile() == &crawler.GetTile());
     CHECK(fixture.map.GetWorkedTiles().IsWorked(crawler.GetTile()));
@@ -42,7 +43,7 @@ TEST_CASE("Supply crawl fails when the tile is already worked", "[unit][supply]"
     REQUIRE(fixture.map.GetWorkedTiles().IsWorked(farmTile));
 
     Unit& crawler = fixture.MakeUnit(faction, 9, 9, {"test_chassis", "test_supply_crawler"}, &base);
-    CHECK_FALSE(crawler.TryStartSupplyCrawl(StatId_t::Nutrients));
+    CHECK_FALSE(TryStartSupplyCrawl(crawler, StatId_t::Nutrients));
     CHECK_FALSE(crawler.IsSupplyCrawling());
     CHECK_FALSE(crawler.GetOrder().has_value());
 }
@@ -54,10 +55,10 @@ TEST_CASE("Supply crawl fails without the flag or a home base", "[unit][supply]"
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     Unit& noFlag = fixture.MakeUnit(faction, 12, 12, {"test_chassis"}, &base);
-    CHECK_FALSE(noFlag.TryStartSupplyCrawl(StatId_t::Energy));
+    CHECK_FALSE(TryStartSupplyCrawl(noFlag, StatId_t::Energy));
 
     Unit& noHome = fixture.MakeUnit(faction, 11, 11, {"test_chassis", "test_supply_crawler"}, nullptr);
-    CHECK_FALSE(noHome.TryStartSupplyCrawl(StatId_t::Energy));
+    CHECK_FALSE(TryStartSupplyCrawl(noHome, StatId_t::Energy));
 }
 
 TEST_CASE("Clearing or replacing an order abandons a supply crawl claim", "[unit][supply]")
@@ -67,7 +68,7 @@ TEST_CASE("Clearing or replacing an order abandons a supply crawl claim", "[unit
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     Unit& crawler = fixture.MakeUnit(faction, 12, 12, {"test_chassis", "test_supply_crawler"}, &base);
-    REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Nutrients));
+    REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Nutrients));
     const Tile& crawled = crawler.GetTile();
     REQUIRE(fixture.map.GetWorkedTiles().IsWorked(crawled));
 
@@ -75,7 +76,7 @@ TEST_CASE("Clearing or replacing an order abandons a supply crawl claim", "[unit
     CHECK_FALSE(crawler.IsSupplyCrawling());
     CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(crawled));
 
-    REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Nutrients));
+    REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Nutrients));
     crawler.SetOrder(MoveOrder_t{&fixture.At(11, 11)});
     CHECK_FALSE(crawler.IsSupplyCrawling());
     CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(crawled));
@@ -95,7 +96,7 @@ TEST_CASE("Supply crawl credits only the chosen resource to the home base", "[un
     rocky.SetMoisture(Moisture_t::Wet);     // +2 nutrients (ignored when crawling minerals)
 
     Unit& crawler = fixture.MakeUnit(faction, 12, 12, {"test_chassis", "test_supply_crawler"}, &base);
-    REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
+    REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Minerals));
 
     CHECK(base.GetMineralProduction() == mineralsBefore + 2);
     CHECK(base.GetNutrientProduction() == nutrientsBefore);

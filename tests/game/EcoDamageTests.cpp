@@ -18,6 +18,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
+#include "game/units/SupplyCrawlMutations.h"
 #include "game/units/Unit.h"
 #include "lib/LuaRuntime.h"
 
@@ -151,7 +152,7 @@ TEST_CASE("A crawled borehole counts its unworked weight only", "[ecology][terra
         Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 9, 9,
                                               {"test_chassis", "test_supply_crawler"},
                                               eco.pBase);
-        REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
+        REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Minerals));
         CHECK(eco.pBase->GetEcologicalDamage() == 9);
     }
     SECTION("crawler homed at a neighbouring base")
@@ -163,7 +164,7 @@ TEST_CASE("A crawled borehole counts its unworked weight only", "[ecology][terra
         Unit& crawler = eco.fixtures.MakeUnit(*eco.pFaction, 10, 10,
                                               {"test_chassis", "test_supply_crawler"},
                                               &rNeighbour);
-        REQUIRE(crawler.TryStartSupplyCrawl(StatId_t::Minerals));
+        REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Minerals));
         CHECK(eco.pBase->GetEcologicalDamage() == 9);
     }
 }

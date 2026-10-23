@@ -239,34 +239,11 @@ void Unit::ClearOrder()
     m_order.reset();
 }
 
-bool Unit::TryStartSupplyCrawl(StatId_t resource)
+void Unit::AdoptSupplyCrawl(WorkedTileClaim claim, StatId_t resource)
 {
-    if (!IsCrawlResource(resource))
-    {
-        throw std::runtime_error("TryStartSupplyCrawl: resource must be nutrients, minerals, or energy");
-    }
-    BaseManager* pHomeBase = GetHomeBase();
-    if (!ResolveFlag(*this, RuleFlagId_t::SupplyCrawl) || !pHomeBase)
-    {
-        return false;
-    }
-
-    ClearOrder();
-
-    // Claim the current tile directly (same WorkedTileIndex as workers; any free tile).
-    WorkedTileClaim claim = pHomeBase->GetTileEffects().GetWorldMap().GetWorkedTiles().TryClaim(
-        GetTile(),
-        /*bUserAssigned*/ true,
-        [this]() { ClearOrder(); });
-    if (!claim.GetTile())
-    {
-        return false;
-    }
-
     m_tileClaim = std::move(claim);
     // Claim is held; set the order without SetOrder (which would release it).
     m_order = SupplyCrawlOrder_t{resource};
-    return true;
 }
 
 bool Unit::IsSupplyCrawling() const

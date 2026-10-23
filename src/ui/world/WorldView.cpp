@@ -1,4 +1,6 @@
 #include "ui/world/WorldView.h"
+
+#include "game/units/SupplyCrawlMutations.h"
 #include <algorithm>
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
@@ -519,7 +521,7 @@ void WorldView::OpenSupplyCrawlMenu_(Unit& rUnit)
                                {
                                    return;
                                }
-                               if (pUnit->TryStartSupplyCrawl(resource))
+                               if (TryStartSupplyCrawl(*pUnit, resource))
                                {
                                    SelectNextAvailableUnit_();
                                }

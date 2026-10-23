@@ -147,6 +147,8 @@ add_library(ac-core STATIC
     game/natives/NativeRules.cpp
     game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp
+    game/units/SupplyCrawlMutations.cpp
+    game/units/SupplyCrawlRules.cpp
     game/units/UnitAttackExecutor.cpp
     game/units/UnitMoveExecutor.cpp
     game/units/UnitOrderExecutor.cpp

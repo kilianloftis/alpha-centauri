@@ -113,9 +113,8 @@ public:
     // The claimed harvest tile, or nullptr when unassigned. Not the unit's map position.
     const Tile* GetWorkedTile() const;
 
-    // Harvests resource (one of k_CrawlResources) from the unit's tile. Needs the SupplyCrawl
-    // flag, a home base and an unclaimed tile.
-    bool TryStartSupplyCrawl(StatId_t resource);
+    // Holds claim and sets a SupplyCrawl order for resource; SupplyCrawlMutations decides.
+    void AdoptSupplyCrawl(WorkedTileClaim claim, StatId_t resource);
 
     // True while a SupplyCrawl order is active and the unit holds a worked-tile claim.
     bool IsSupplyCrawling() const;
