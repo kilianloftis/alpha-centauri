@@ -392,6 +392,119 @@ std::map<int, double> ParseAmountMap_(const nlohmann::json& rAmounts)
     return amounts;
 }
 
+// move_cost is a MaxClamp in move fragments, authored as a rational number of move points.
+double ParseMoveCostAmount_(const nlohmann::json& parameters, ModifierOp_t op)
+{
+    if (op != ModifierOp_t::MaxClamp)
+    {
+        throw std::runtime_error("StatModifier move_cost requires op MaxClamp");
+    }
+    if (parameters.contains("amount_source"))
+    {
+        throw std::runtime_error("StatModifier move_cost does not accept amount_source");
+    }
+    if (!parameters.contains("amount"))
+    {
+        throw std::runtime_error("StatModifier move_cost requires 'amount'");
+    }
+    const Rational_t cost = Rational_t::ParseJson(parameters.at("amount"));
+    if (cost.numerator < 0 || cost.denominator <= 0)
+    {
+        throw std::runtime_error("StatModifier move_cost amount must be non-negative");
+    }
+    try
+    {
+        const int fragments = cost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
+        return static_cast<double>(fragments);
+    }
+    catch (const std::exception& e)
+    {
+        throw std::runtime_error(std::string("StatModifier move_cost amount: ") + e.what());
+    }
+}
+
+// Any op: the source computes the amount and ApplyModifierStack is op-agnostic. The legality
+// checks are what constrain it.
+void ParseAmountSourceFields_(const nlohmann::json& parameters, const EffectConfig_t& rEffect,
+                              StatModifierEffect_t& rModifier)
+{
+    rModifier.amountSource = ParseAmountSource(parameters.at("amount_source"));
+    if (rModifier.amountSource->amounts && parameters.contains("amount"))
+    {
+        throw std::runtime_error(
+            "StatModifier amount_source amounts cannot be combined with 'amount'");
+    }
+    if (!rModifier.amountSource->amounts)
+    {
+        // amount is the per-source scale when amount_source is set (default 1).
+        rModifier.amount = ParseNumber(parameters, "amount", 1.0);
+    }
+    ValidateAmountSourceLegality_(rModifier, rEffect, parameters.value("stat", ""));
+}
+
+// Selectors resolve only during tile yield, so a selector on any other stat would never apply,
+// and tile-yield resolution supplies only a tile subject, so it never combines with an
+// amount_source.
+std::optional<TileSelector_t> ParseModifierSelector_(const nlohmann::json& parameters,
+                                                     const StatModifierEffect_t& rModifier)
+{
+    if (!parameters.contains("selector"))
+    {
+        return std::nullopt;
+    }
+    if (!IsTileResourceStat_(rModifier.stat))
+    {
+        throw std::runtime_error(
+            "StatModifier 'selector' is only valid on tile resource "
+            "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+    }
+    if (rModifier.amountSource)
+    {
+        throw std::runtime_error("StatModifier 'selector' cannot be combined with 'amount_source'");
+    }
+    return ParseTileSelector(parameters.at("selector"));
+}
+
+// MaxClamp / MinClamp on tile resources must carry a selector so they apply per-tile (via
+// ResolveTileYield) rather than clamping the base-wide production total.
+void RequireTileClampSelector_(const StatModifierEffect_t& rModifier)
+{
+    const bool bClamp =
+        rModifier.op == ModifierOp_t::MaxClamp || rModifier.op == ModifierOp_t::MinClamp;
+    if (bClamp && IsTileResourceStat_(rModifier.stat) && !rModifier.selector)
+    {
+        throw std::runtime_error(
+            "StatModifier MaxClamp/MinClamp on tile resource stats requires a 'selector' "
+            "(e.g. AnyTile) so the clamp applies per tile, not to base-level totals");
+    }
+}
+
+bool ParseBypassClamp_(const nlohmann::json& parameters, const StatModifierEffect_t& rModifier)
+{
+    const bool bBypassClamp = parameters.value("bypass_clamp", false);
+    if (bBypassClamp && !IsTileResourceStat_(rModifier.stat))
+    {
+        throw std::runtime_error(
+            "StatModifier 'bypass_clamp' is only valid on tile resource "
+            "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+    }
+    if (bBypassClamp && rModifier.op != ModifierOp_t::Add)
+    {
+        throw std::runtime_error("StatModifier 'bypass_clamp' requires op Add");
+    }
+    return bBypassClamp;
+}
+
+void RequireBombardFloorOp_(const StatModifierEffect_t& rModifier)
+{
+    if (rModifier.stat == StatId_t::BombardMinHpPercent && rModifier.op == ModifierOp_t::AddPercent)
+    {
+        throw std::runtime_error(
+            "StatModifier bombard_min_hp_percent is already a percent of hit points; "
+            "AddPercent would be a percent of a percent. Use Add or MinClamp");
+    }
+}
+
 void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     StatModifierEffect_t statModifier;
@@ -399,102 +512,20 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
     if (statModifier.stat == StatId_t::MoveCost)
     {
-        if (statModifier.op != ModifierOp_t::MaxClamp)
-        {
-            throw std::runtime_error("StatModifier move_cost requires op MaxClamp");
-        }
-        if (parameters.contains("amount_source"))
-        {
-            throw std::runtime_error("StatModifier move_cost does not accept amount_source");
-        }
-        if (!parameters.contains("amount"))
-        {
-            throw std::runtime_error("StatModifier move_cost requires 'amount'");
-        }
-        const Rational_t cost = Rational_t::ParseJson(parameters.at("amount"));
-        if (cost.numerator < 0 || cost.denominator <= 0)
-        {
-            throw std::runtime_error("StatModifier move_cost amount must be non-negative");
-        }
-        try
-        {
-            statModifier.amount =
-                static_cast<double>(cost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint));
-        }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(std::string("StatModifier move_cost amount: ") + e.what());
-        }
+        statModifier.amount = ParseMoveCostAmount_(parameters, statModifier.op);
     }
     else if (parameters.contains("amount_source"))
     {
-        // Any op: the source computes the amount and ApplyModifierStack is op-agnostic.
-        // The legality checks below are what constrain it.
-        statModifier.amountSource = ParseAmountSource(parameters.at("amount_source"));
-        if (statModifier.amountSource->amounts)
-        {
-            if (parameters.contains("amount"))
-            {
-                throw std::runtime_error(
-                    "StatModifier amount_source amounts cannot be combined with 'amount'");
-            }
-        }
-        else
-        {
-            // amount is the per-source scale when amount_source is set (default 1).
-            statModifier.amount = ParseNumber(parameters, "amount", 1.0);
-        }
-        ValidateAmountSourceLegality_(statModifier, rEffect, parameters.value("stat", ""));
+        ParseAmountSourceFields_(parameters, rEffect, statModifier);
     }
     else
     {
         statModifier.amount = ParseNumber(parameters, "amount", 0.0);
     }
-    // Selectors resolve only during tile yield, so a selector on any other stat would never apply.
-    if (parameters.contains("selector"))
-    {
-        if (!IsTileResourceStat_(statModifier.stat))
-        {
-            throw std::runtime_error(
-                "StatModifier 'selector' is only valid on tile resource "
-                "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
-        }
-        // Tile-yield resolution supplies only a tile subject, so a selector never combines with an
-        // amount_source.
-        if (statModifier.amountSource)
-        {
-            throw std::runtime_error(
-                "StatModifier 'selector' cannot be combined with 'amount_source'");
-        }
-        statModifier.selector = ParseTileSelector(parameters.at("selector"));
-    }
-    // MaxClamp / MinClamp on tile resources must carry a selector so they apply per-tile
-    // (via ResolveTileYield) rather than clamping the base-wide production total.
-    if ((statModifier.op == ModifierOp_t::MaxClamp || statModifier.op == ModifierOp_t::MinClamp)
-        && IsTileResourceStat_(statModifier.stat) && !statModifier.selector)
-    {
-        throw std::runtime_error(
-            "StatModifier MaxClamp/MinClamp on tile resource stats requires a 'selector' "
-            "(e.g. AnyTile) so the clamp applies per tile, not to base-level totals");
-    }
-    statModifier.bypassClamp = parameters.value("bypass_clamp", false);
-    if (statModifier.bypassClamp && !IsTileResourceStat_(statModifier.stat))
-    {
-        throw std::runtime_error(
-            "StatModifier 'bypass_clamp' is only valid on tile resource "
-            "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
-    }
-    if (statModifier.bypassClamp && statModifier.op != ModifierOp_t::Add)
-    {
-        throw std::runtime_error("StatModifier 'bypass_clamp' requires op Add");
-    }
-    if (statModifier.stat == StatId_t::BombardMinHpPercent
-        && statModifier.op == ModifierOp_t::AddPercent)
-    {
-        throw std::runtime_error(
-            "StatModifier bombard_min_hp_percent is already a percent of hit points; "
-            "AddPercent would be a percent of a percent. Use Add or MinClamp");
-    }
+    statModifier.selector = ParseModifierSelector_(parameters, statModifier);
+    RequireTileClampSelector_(statModifier);
+    statModifier.bypassClamp = ParseBypassClamp_(parameters, statModifier);
+    RequireBombardFloorOp_(statModifier);
     rEffect.effect = statModifier;
 }
 
