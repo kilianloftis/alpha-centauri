@@ -50,7 +50,7 @@ bool PlaceImprovement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
 
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
                           TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
-                          IUnitOrderWorld* pWorld)
+                          IUnitOrderWorld& rWorld)
 {
     bool bDidAnything = false;
     if (rProject.pPlaces)
@@ -61,15 +61,8 @@ bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
     }
     if (!rProject.onCompleteEffects.empty())
     {
-        // The effects mutate world state, which a movement-only harness has no session for.
-        if (!pWorld)
-        {
-            throw std::runtime_error("Terraform project '" + rProject.id
-                                     + "' declares on_complete_effects but there is no session "
-                                       "to apply them");
-        }
         const bool bEffectsApplied =
-            pWorld->ApplyTerraformCompleteEffects(rTile, rProject, rFormer, rRng);
+            rWorld.ApplyTerraformCompleteEffects(rTile, rProject, rFormer, rRng);
         bDidAnything = bEffectsApplied || bDidAnything;
     }
     return bDidAnything;

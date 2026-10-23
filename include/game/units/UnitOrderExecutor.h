@@ -40,7 +40,6 @@ struct StepResult_t
 class UnitOrderExecutor
 {
 public:
-    // A null pWorld disables intercept and base conquest.
     UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
@@ -49,14 +48,7 @@ public:
                       const MoraleCalculator& rMorale,
                       const TerrainOperationRegistry& rTerrainOperations,
                       std::mt19937& rRng,
-                      IUnitOrderWorld* pWorld = nullptr);
-
-    // Handles arrival on tiles with on_visit_effects. Unset skips them.
-    using ImprovementVisitHandler = std::function<void(Unit&)>;
-    void SetImprovementVisitHandler(ImprovementVisitHandler handler)
-    {
-        m_improvementVisitHandler = std::move(handler);
-    }
+                      IUnitOrderWorld& rWorld);
 
     // Advances the unit's order one pass, and clears the order once it ends.
     OrderProgress_t Execute(Unit& rUnit);
@@ -173,8 +165,7 @@ private:
     const TerrainOperationRegistry& m_rTerrainOperations;
     std::mt19937& m_rRng;
     CombatResolver m_combat;
-    ImprovementVisitHandler m_improvementVisitHandler;
-    IUnitOrderWorld* const m_pWorld;
+    IUnitOrderWorld& m_rWorld;
 };
 
 } // namespace ac

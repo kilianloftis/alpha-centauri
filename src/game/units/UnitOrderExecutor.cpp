@@ -76,7 +76,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostRules& rMoveCosts,
                                      const MoraleCalculator& rMorale,
                                      const TerrainOperationRegistry& rTerrainOperations,
                                      std::mt19937& rRng,
-                                     IUnitOrderWorld* pWorld)
+                                     IUnitOrderWorld& rWorld)
     : m_rMoveCosts(rMoveCosts)
     , m_rSteps(rSteps)
     , m_rWorldMap(rWorldMap)
@@ -86,7 +86,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostRules& rMoveCosts,
     , m_rTerrainOperations(rTerrainOperations)
     , m_rRng(rRng)
     , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, rRng)
-    , m_pWorld(pWorld)
+    , m_rWorld(rWorld)
 {
 }
 
@@ -124,11 +124,7 @@ bool UnitOrderExecutor::SpendAttackAction_(Unit& rAttacker, AttackKind_t kind)
 
 bool UnitOrderExecutor::ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile)
 {
-    if (!m_pWorld)
-    {
-        return false;
-    }
-    return m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, m_rRng)
+    return m_rWorld.ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, m_rRng)
         .bActorDestroyed;
 }
 
@@ -248,19 +244,11 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
     {
         // Stop multi-hop so the unit does not walk off before Investigate / Leave resolves.
         rMover.ClearOrder();
-
-        if (m_improvementVisitHandler)
-        {
-            m_improvementVisitHandler(rMover);
-        }
+        m_rWorld.OnImprovementVisited(rMover);
     }
 
-    if (!m_pWorld)
-    {
-        return true;
-    }
     // A native raider spends itself on the raid, so this can free rMover.
-    return !m_pWorld->ResolveBaseEntryConquest(rMover, m_rRng).bActorDestroyed;
+    return !m_rWorld.ResolveBaseEntryConquest(rMover, m_rRng).bActorDestroyed;
 }
 
 void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo)
@@ -354,7 +342,7 @@ CombatResult_t UnitOrderExecutor::FightDefender_(Unit& rAttacker, Unit& rDefende
     // Snapshot before Resolve may DestroyUnit the defender (and free its tile reference).
     const Tile& rDefenderTile = rDefender.GetTile();
     const bool bDefenderOnBase =
-        m_pWorld && m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
+        m_rWorld.FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
 
     std::vector<const Tile*> scrambleHops;
     Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, rDefender, scrambleHops);
@@ -380,20 +368,13 @@ CombatResult_t UnitOrderExecutor::FightDefender_(Unit& rAttacker, Unit& rDefende
 
 void UnitOrderExecutor::ReportHostileAct_(const HostileAct_t& rAct)
 {
-    if (m_pWorld)
-    {
-        m_pWorld->OnHostileAct(rAct);
-    }
+    m_rWorld.OnHostileAct(rAct);
 }
 
 std::optional<CombatResult_t> UnitOrderExecutor::TryIntercept_(Unit& rAttacker, Unit& rDefender)
 {
-    if (!m_pWorld)
-    {
-        return std::nullopt;
-    }
     std::optional<CombatResult_t> intercepted =
-        m_pWorld->TryInterceptAttack(rAttacker, rDefender, m_rRng);
+        m_rWorld.TryInterceptAttack(rAttacker, rDefender, m_rRng);
     if (!intercepted)
     {
         return std::nullopt;
@@ -645,9 +626,9 @@ OrderProgress_t UnitOrderExecutor::StepTowardContact_(Unit& rUnit, const Tile& r
 
 OrderProgress_t UnitOrderExecutor::RefuseTerritoryEntry_(Unit& rUnit, const Tile& rNext)
 {
-    if (m_pWorld && rUnit.GetFaction().IsPlayerControlled())
+    if (rUnit.GetFaction().IsPlayerControlled())
     {
-        m_pWorld->OnTerritoryEntryRefused(rUnit, m_rWorldMap.GetTerritory().GetOwner(rNext));
+        m_rWorld.OnTerritoryEntryRefused(rUnit, m_rWorldMap.GetTerritory().GetOwner(rNext));
         return OrderProgress_t::Continue;
     }
     rUnit.ClearOrder();
@@ -710,7 +691,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     Tile& rTile = MutableTile_(m_rWorldMap, rUnit.GetTile());
 
     // Fails only on a surface the project cannot change, such as the wrong depth band.
-    if (!ApplyTerraformResult(rTile, project, m_rTileEffects, rUnit, m_rRng, m_pWorld))
+    if (!ApplyTerraformResult(rTile, project, m_rTileEffects, rUnit, m_rRng, m_rWorld))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.projectId
                   << "' could not be applied at (" << rTile.GetX() << ", " << rTile.GetY()

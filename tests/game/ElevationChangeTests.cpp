@@ -93,7 +93,7 @@ struct OrderHarness_
         , pathfinder(moveCosts, steps, rFixture.map)
         , rng(k_TestRngSeed)
         , orders(moveCosts, steps, rFixture.map, rFixture.ctx, pathfinder, rFixture.morale(),
-                 *rFixture.dataContext.terrainOperationRegistry, rng)
+                 *rFixture.dataContext.terrainOperationRegistry, rng, rFixture.state)
     {
     }
 };
@@ -203,8 +203,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
     {
         At_(map, 8, 8).SetElevation(0);
         At_(map, 7, 9).SetElevation(0);
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), 1000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == 1000);
         CHECK(At_(map, 7, 9).GetElevation() == 0);
     }
@@ -213,8 +213,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
     {
         At_(map, 8, 8).SetElevation(0);
         At_(map, 7, 9).SetElevation(-2000);
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), 1000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == 1000);
         CHECK(At_(map, 7, 9).GetElevation() == 1000 - rules.maxAdjacentDifferenceMeters);
     }
@@ -223,8 +223,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
     {
         At_(map, 8, 8).SetElevation(3000);
         At_(map, 7, 9).SetElevation(3000);
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, -2000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), -2000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == 1000);
         CHECK(At_(map, 7, 9).GetElevation() == 1000 + rules.maxAdjacentDifferenceMeters);
     }
@@ -234,8 +234,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
         At_(map, 8, 8).SetElevation(0);
         At_(map, 7, 9).SetElevation(0);
         At_(map, 6, 10).SetElevation(0);
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 4500, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), 4500, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == rules.maxElevationMeters);
         CHECK(At_(map, 7, 9).GetElevation()
               == rules.maxElevationMeters - rules.maxAdjacentDifferenceMeters);
@@ -248,8 +248,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
         At_(map, 8, 8).SetElevation(-1000);
         At_(map, 7, 9).SetElevation(1000);
         REQUIRE(At_(map, 7, 9).IsLand());
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, -2000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), -2000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == -3000);
         CHECK(At_(map, 7, 9).GetElevation()
               == -3000 + rules.maxAdjacentDifferenceMeters);
@@ -263,8 +263,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
         At_(map, 8, 8).SetElevation(0);
         At_(map, 7, 9).SetElevation(-3000);
         REQUIRE(At_(map, 7, 9).IsWater());
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 2000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), 2000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 7, 9).GetElevation() == 2000 - rules.maxAdjacentDifferenceMeters);
         CHECK(At_(map, 7, 9).IsLand());
     }
@@ -273,8 +273,8 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
     {
         At_(map, 8, 8).SetElevation(0);
         At_(map, 8, 0).SetElevation(3000);
-        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), map, 1000, rules, rules.minElevationMeters,
-                                    rules.maxElevationMeters, nullptr, nullptr));
+        REQUIRE(ApplyElevationDelta(At_(map, 8, 8), 1000, rules, rules.minElevationMeters,
+                                    rules.maxElevationMeters, fixture.state));
         CHECK(At_(map, 8, 8).GetElevation() == 1000);
         CHECK(At_(map, 8, 0).GetElevation() == 3000);
     }
@@ -290,17 +290,17 @@ TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
     WorldMap& map = fixture.map;
 
     At_(map, 8, 4).SetElevation(3000);
-    REQUIRE(ApplyElevationDelta(At_(map, 8, 4), map, 2000, rules, rules.minElevationMeters,
-                                rules.maxElevationMeters, nullptr, nullptr));
+    REQUIRE(ApplyElevationDelta(At_(map, 8, 4), 2000, rules, rules.minElevationMeters,
+                                rules.maxElevationMeters, fixture.state));
     CHECK(At_(map, 8, 4).GetElevation() == rules.maxElevationMeters);
 
     At_(map, 8, 4).SetElevation(3000);
     std::mt19937 rng(1);
-    REQUIRE(ApplyEarthquake(At_(map, 8, 4), map, 4, rng, rules, nullptr, nullptr));
+    REQUIRE(ApplyEarthquake(At_(map, 8, 4), 4, rng, rules, fixture.state));
     CHECK(At_(map, 8, 4).GetElevation() == rules.maxElevationMeters);
 
     At_(map, 7, 5).SetElevation(0);
-    CHECK_FALSE(ApplyEarthquake(At_(map, 7, 5), map, 0, rng, rules, nullptr, nullptr));
+    CHECK_FALSE(ApplyEarthquake(At_(map, 7, 5), 0, rng, rules, fixture.state));
     CHECK(At_(map, 7, 5).GetElevation() == 0);
 }
 

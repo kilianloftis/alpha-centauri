@@ -335,9 +335,8 @@ TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][
 void CrossElevation_(GameState& rState, Tile& rTile, int deltaMeters)
 {
     const ElevationRulesConfig_t& rRules = rTile.MapRules();
-    REQUIRE(ApplyElevationDelta(rTile, rState.GetWorldMap(), deltaMeters, rRules,
-                                rRules.minElevationMeters, rRules.maxElevationMeters,
-                                &rState.GetTileEffects(), &rState));
+    REQUIRE(ApplyElevationDelta(rTile, deltaMeters, rRules, rRules.minElevationMeters,
+                                rRules.maxElevationMeters, rState));
 }
 
 TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy water",

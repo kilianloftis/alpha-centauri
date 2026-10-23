@@ -169,9 +169,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     // Safe: the executor only stores the pointer during construction.
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
-        *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, this);
-    m_pUnitOrderExecutor->SetImprovementVisitHandler(
-        std::bind_front(&GameState::OnImprovementVisited_, this));
+        *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, *this);
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(
         *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng);
 }
@@ -376,14 +374,14 @@ void GameState::OnUnitMoved_(Unit& rMoved)
     m_pFirstContact->ConsiderUnit(rMoved);
 }
 
-void GameState::OnImprovementVisited_(Unit& rMover)
+void GameState::OnImprovementVisited(Unit& rVisitor)
 {
-    if (rMover.GetFaction().IsPlayerControlled())
+    if (rVisitor.GetFaction().IsPlayerControlled())
     {
-        EnqueueForPlayer(*this, ImprovementVisitInteraction_t{rMover.GetUnitId()});
+        EnqueueForPlayer(*this, ImprovementVisitInteraction_t{rVisitor.GetUnitId()});
         return;
     }
-    ApplyVisitEffects(*this, rMover, m_rng);
+    ApplyVisitEffects(*this, rVisitor, m_rng);
 }
 
 void GameState::WireFactionObservers_(Faction& rFaction)

@@ -16,6 +16,6 @@ class Unit;
 // pair. Refuses before removing anything if terrain would still conflict.
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
                           TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
-                          IUnitOrderWorld* pWorld);
+                          IUnitOrderWorld& rWorld);
 
 } // namespace ac

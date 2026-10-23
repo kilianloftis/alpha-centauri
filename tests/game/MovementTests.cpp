@@ -45,7 +45,7 @@ struct MovementHarness_
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
-                 *fixture.dataContext.terrainOperationRegistry, rng)
+                 *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
     {
     }
 };

@@ -471,15 +471,8 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     // Glass cannon defender: 0 armor so attacker wins quickly.
     attacker.SetCurrentHp(ResolveStat(attacker, StatId_t::HitPoints));
 
-    MoveCostRules moveCosts(fixture.improvements, MovementConstants_t{});
-    StepEvaluator steps(fixture.map, fixture.ctx);
-    Pathfinder pathfinder(moveCosts, steps, fixture.map);
-    std::mt19937 rng(/*seed*/ 42);
-    UnitOrderExecutor orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder,
-                             fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng);
-
     const int xpBefore = attacker.GetXp();
-    auto result = orders.TryAttack(attacker, defender.GetTile());
+    auto result = fixture.state.GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
     REQUIRE(result.has_value());
     if (result->bDefenderDestroyed && !result->bAttackerDestroyed)
     {

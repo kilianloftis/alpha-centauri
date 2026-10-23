@@ -60,7 +60,7 @@ struct OrderHarness_
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)
         , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder,
-                 fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng)
+                 fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
     {
     }
 };

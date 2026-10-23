@@ -1,7 +1,7 @@
 #include "game/terraform/ElevationChange.h"
 
 #include "game/CurrentGameState.h"
-#include "game/effects/TileEffectsContext.h"
+#include "game/GameState.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -62,8 +62,7 @@ std::vector<SurfaceFlip_t> FlippedSurfaces_(const std::vector<SurfaceFlip_t>& rB
 
 // Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
 // recomputes rivers. Returns false when there was nothing to write.
-bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMap& rWorldMap,
-                           TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
+bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, GameState& rGameState)
 {
     if (rWrites.empty())
     {
@@ -71,12 +70,9 @@ bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMa
     }
 
     TileChangeDeferral defer;
+    WorldMap& rWorldMap = rGameState.GetWorldMap();
     const std::vector<SurfaceFlip_t> before = WriteElevations_(rWrites, rWorldMap);
-    if (pTileEffects)
-    {
-        ReconcileSurfaceFlips(*pTileEffects, pWorld, FlippedSurfaces_(before));
-    }
-
+    ReconcileSurfaceFlips(rGameState, FlippedSurfaces_(before));
     RecomputeRivers(rWorldMap);
     return true;
 }
@@ -93,22 +89,20 @@ int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules)
     return distribution(rRng);
 }
 
-bool ApplyElevationDelta(Tile& rOrigin, WorldMap& rWorldMap, int deltaMeters,
-                         const ElevationRulesConfig_t& rRules, int floorMeters, int ceilingMeters,
-                         TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
+bool ApplyElevationDelta(Tile& rOrigin, int deltaMeters, const ElevationRulesConfig_t& rRules,
+                         int floorMeters, int ceilingMeters, GameState& rGameState)
 {
-    RequireCurrentWorldMap(rWorldMap);
+    RequireCurrentGameState(rGameState);
     const ElevationSeed_t seed{&rOrigin, deltaMeters};
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
         std::span<const ElevationSeed_t>(&seed, 1), floorMeters, ceilingMeters, rRules);
-    return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
+    return ApplyElevationWrites_(writes, rGameState);
 }
 
-bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt19937& rRng,
-                     const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
-                     IUnitOrderWorld* pWorld)
+bool ApplyEarthquake(Tile& rOrigin, int levelCount, std::mt19937& rRng,
+                     const ElevationRulesConfig_t& rRules, GameState& rGameState)
 {
-    RequireCurrentWorldMap(rWorldMap);
+    RequireCurrentGameState(rGameState);
     if (levelCount <= 0)
     {
         return false;
@@ -122,15 +116,14 @@ bool ApplyEarthquake(Tile& rOrigin, WorldMap& rWorldMap, int levelCount, std::mt
         rolls.push_back(RollLevelMeters(rRng, rRules));
     }
     const int delta = EarthquakeDeltaMeters(rolls, rRules);
-    return ApplyElevationDelta(rOrigin, rWorldMap, delta, rRules, rRules.minElevationMeters,
-                               rRules.maxElevationMeters, pTileEffects, pWorld);
+    return ApplyElevationDelta(rOrigin, delta, rRules, rRules.minElevationMeters,
+                               rRules.maxElevationMeters, rGameState);
 }
 
-bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt19937& rRng,
-                        const ElevationRulesConfig_t& rRules, TileEffectsContext* pTileEffects,
-                        IUnitOrderWorld* pWorld)
+bool LowerTilesOneLevel(std::span<Tile*> tiles, std::mt19937& rRng,
+                        const ElevationRulesConfig_t& rRules, GameState& rGameState)
 {
-    RequireCurrentWorldMap(rWorldMap);
+    RequireCurrentGameState(rGameState);
     if (tiles.empty())
     {
         return false;
@@ -148,7 +141,7 @@ bool LowerTilesOneLevel(std::span<Tile*> tiles, WorldMap& rWorldMap, std::mt1993
     }
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
         seeds, rRules.minElevationMeters, rRules.maxElevationMeters, rRules);
-    return ApplyElevationWrites_(writes, rWorldMap, pTileEffects, pWorld);
+    return ApplyElevationWrites_(writes, rGameState);
 }
 
 } // namespace ac

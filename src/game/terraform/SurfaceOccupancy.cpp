@@ -4,13 +4,11 @@
 #include "game/base/BaseManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/terraform/TerraformRules.h"
-#include "game/units/IUnitOrderWorld.h"
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 
-#include <algorithm>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -29,11 +27,10 @@ void RemoveImprovements_(TileEffectsContext& rTileEffects, Tile& rTile,
     }
 }
 
-void ReconcileTile_(TileEffectsContext& rTileEffects, IUnitOrderWorld* pWorld,
-                    const SurfaceFlip_t& rFlip)
+void ReconcileTile_(GameState& rGameState, const SurfaceFlip_t& rFlip)
 {
     Tile& rTile = *rFlip.pTile;
-    BaseManager* pBase = pWorld ? pWorld->FindBaseAt(rTile.GetX(), rTile.GetY()) : nullptr;
+    BaseManager* pBase = rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
     const SurfaceFlipConsequences_t consequences =
         SurfaceFlipConsequences(rTile, rFlip.bNowWater, pBase);
     const std::vector<std::string>& rRemoved = consequences.removedImprovements;
@@ -41,24 +38,17 @@ void ReconcileTile_(TileEffectsContext& rTileEffects, IUnitOrderWorld* pWorld,
     {
         pBase->GetFaction().RazeBase(*pBase);
     }
-    else if (rFlip.bNowWater && pWorld == nullptr
-             && std::find(rRemoved.begin(), rRemoved.end(), ImprovementIds::k_Base)
-                    != rRemoved.end())
-    {
-        throw std::logic_error(
-            "ReconcileSurfaceFlips: a base tile became water with no world to raze it");
-    }
-    RemoveImprovements_(rTileEffects, rTile, rRemoved);
+    RemoveImprovements_(rGameState.GetTileEffects(), rTile, rRemoved);
 }
 
 } // namespace
 
-void ReconcileSurfaceFlips(TileEffectsContext& rTileEffects, IUnitOrderWorld* pWorld,
-                           const std::vector<SurfaceFlip_t>& rFlips)
+void ReconcileSurfaceFlips(GameState& rGameState, const std::vector<SurfaceFlip_t>& rFlips)
 {
+    RequireCurrentGameState(rGameState);
     for (const SurfaceFlip_t& rFlip : rFlips)
     {
-        ReconcileTile_(rTileEffects, pWorld, rFlip);
+        ReconcileTile_(rGameState, rFlip);
     }
 }
 

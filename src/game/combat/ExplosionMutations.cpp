@@ -120,8 +120,7 @@ ExplosionResult_t ApplyExplosion(Tile& rOrigin, WorldMap& rWorldMap, int radius,
         });
     result.tiles = static_cast<int>(disk.size());
 
-    if (LowerTilesOneLevel(disk, rWorldMap, rRng, rOrigin.MapRules(),
-                           &rGameState.GetTileEffects(), &rGameState))
+    if (LowerTilesOneLevel(disk, rRng, rOrigin.MapRules(), rGameState))
     {
         result.bChanged = true;
     }

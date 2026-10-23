@@ -526,30 +526,6 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     CHECK(aiMover.GetXp() == aiXp + 1);
 }
 
-TEST_CASE("Unset visit handler skips Investigate enqueue and auto-apply",
-          "[effects][triggered][visit][movement]")
-{
-    TriggerGame_ game;
-    for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
-    {
-        pTile->SetElevation(100);
-    }
-    game.fixtures.state.GetUnitOrderExecutor().SetImprovementVisitHandler({});
-
-    Tile& rMono = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMono, "Monolith");
-
-    Unit& playerUnit = MakeUnitOn_(game, 8, 8, {"test_chassis", "test_weapon"});
-    playerUnit.SetCurrentHp(1);
-    const int xpBefore = playerUnit.GetXp();
-    const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
-    MoveOrder_t move;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
-    CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
-    CHECK(playerUnit.GetCurrentHp() == 1);
-    CHECK(playerUnit.GetXp() == xpBefore);
-}
-
 TEST_CASE("First discoverer of Secrets gets Available GrantTech; second does not",
           "[effects][triggered][discover][secrets]")
 {

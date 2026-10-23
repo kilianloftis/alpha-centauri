@@ -273,9 +273,8 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     }
     // The tile already carries the map rules WorldMap bound to it, so the quake needs no
     // GameDataContext of its own.
-    if (!ApplyEarthquake(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), levels, rCtx.Rng(),
-                         rCtx.pTile->MapRules(), &rCtx.rGameState.GetTileEffects(),
-                         &rCtx.rGameState))
+    if (!ApplyEarthquake(*rCtx.pTile, levels, rCtx.Rng(), rCtx.pTile->MapRules(),
+                         rCtx.rGameState))
     {
         return false;
     }
@@ -373,9 +372,8 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
     const int delta = rConfig.bRaise ? roll : -roll;
     const int floor =
         rConfig.bRaise ? rRules.minElevationMeters : FormerLowerFloorMeters(domain, rRules);
-    if (!ApplyElevationDelta(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), delta, rRules, floor,
-                             rRules.maxElevationMeters, &rCtx.rGameState.GetTileEffects(),
-                             &rCtx.rGameState))
+    if (!ApplyElevationDelta(*rCtx.pTile, delta, rRules, floor, rRules.maxElevationMeters,
+                             rCtx.rGameState))
     {
         return false;
     }

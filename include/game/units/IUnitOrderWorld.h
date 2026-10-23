@@ -32,6 +32,9 @@ public:
 
     virtual BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) = 0;
 
+    // rVisitor arrived on a tile with on_visit_effects.
+    virtual void OnImprovementVisited(Unit& rVisitor) = 0;
+
     // A unit's attack, described before it resolved. Called once it has resolved.
     virtual void OnHostileAct(const HostileAct_t& rAct) = 0;
 
