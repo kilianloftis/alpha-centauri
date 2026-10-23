@@ -18,15 +18,10 @@ bool Military::AddDesign(std::unique_ptr<IDesign> pDesign)
         throw std::invalid_argument("Military::AddDesign: pDesign is null");
     }
 
-    const std::string newDesignId = pDesign->GetId();
-    for (const std::unique_ptr<IDesign>& rExisting : m_designs)
+    if (GetDesign(pDesign->GetId()))
     {
-        if (rExisting->GetId() == newDesignId)
-        {
-            return false;
-        }
+        return false;
     }
-
     m_designs.push_back(std::move(pDesign));
     return true;
 }

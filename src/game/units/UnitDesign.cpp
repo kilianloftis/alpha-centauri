@@ -84,6 +84,40 @@ std::string UnitNameOf_(const UnitDesign& rDesign)
     return name;
 }
 
+using SlotComponents_t = std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>>;
+
+InteractionGridMask_t ComponentsInteractionMask_(
+    const std::vector<const UnitComponentConfig_t*>& rComponents)
+{
+    InteractionGridMask_t mask = 0;
+    for (const UnitComponentConfig_t* pComp : rComponents)
+    {
+        mask |= InteractionMaskOf(pComp->effects);
+    }
+    return mask;
+}
+
+int RawComponentCost_(const SlotComponents_t& rSlotComponents)
+{
+    int rawCost = 0;
+    for (const auto& [rSlot, pComp] : rSlotComponents)
+    {
+        if (pComp)
+        {
+            rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
+        }
+    }
+    return rawCost;
+}
+
+float CostMultiplier_(const std::vector<ActiveEffect_t>& rEffects)
+{
+    auto costEffects = FilterByStatId(rEffects, StatId_t::CostMultiplier);
+    const double seed = SeedFor(StatId_t::CostMultiplier);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(costEffects, seed, nullptr);
+    return static_cast<float>(breakdown.total);
+}
+
 } // namespace
 
 UnitDesign::UnitDesign(
@@ -107,11 +141,7 @@ UnitDesign::UnitDesign(
     const int turnsOfFuel = ResolveStat(*this, StatId_t::TurnsOfFuel);
     m_bUsesFuel = turnsOfFuel > 0;
     m_maxFuel = m_bUsesFuel ? turnsOfFuel * GetMovementPoints() : 0;
-
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        m_interactionMask |= InteractionMaskOf(pComp->effects);
-    }
+    m_interactionMask = ComponentsInteractionMask_(m_components);
 }
 
 const std::string& UnitDesign::GetId() const   { return m_id; }
@@ -189,21 +219,8 @@ std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnDetonateEffects() cons
 
 int UnitDesign::GetBaseCost() const
 {
-    int rawCost = 0;
-    for (const auto& [rSlot, pComp] : m_slotComponents)
-    {
-        if (pComp)
-        {
-            rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
-        }
-    }
-
-    const std::vector<ActiveEffect_t> allEffects = CollectEffects();
-    auto costEffects = FilterByStatId(allEffects, StatId_t::CostMultiplier);
-    const double seed = SeedFor(StatId_t::CostMultiplier);
-    const StatBreakdown_t breakdown = ResolveStatModifiers(costEffects, seed, nullptr);
-    const float costMult = static_cast<float>(breakdown.total);
-
+    const int rawCost = RawComponentCost_(m_slotComponents);
+    const float costMult = CostMultiplier_(CollectEffects());
     return FinalizeResolvedStat(static_cast<double>(rawCost) * costMult);
 }
 
@@ -254,6 +271,20 @@ std::string DecorateCombatRatingField_(
     return prefixes + rValue + suffixes;
 }
 
+std::string CombatRatingLabels_(const std::vector<const UnitComponentConfig_t*>& rComponents)
+{
+    std::string labels;
+    for (const UnitComponentConfig_t* pComp : rComponents)
+    {
+        for (const std::string& rLabel : pComp->combatRatingLabels)
+        {
+            labels += ", ";
+            labels += rLabel;
+        }
+    }
+    return labels;
+}
+
 } // namespace
 
 std::string UnitDesign::FormatCombatRating() const
@@ -267,20 +298,11 @@ std::string UnitDesign::FormatCombatRating() const
     const std::string defense = decorate(CombatRatingTarget_t::Defense, StatId_t::Defense);
     const std::string movement = decorate(CombatRatingTarget_t::Movement, StatId_t::Movement);
 
-    std::string rating = DecorateCombatRatingField_(
+    const std::string rating = DecorateCombatRatingField_(
         m_components,
         CombatRatingTarget_t::Rating,
         attack + "-" + defense + "-" + movement);
-
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        for (const std::string& rLabel : pComp->combatRatingLabels)
-        {
-            rating += ", ";
-            rating += rLabel;
-        }
-    }
-    return rating;
+    return rating + CombatRatingLabels_(m_components);
 }
 
 } // namespace ac

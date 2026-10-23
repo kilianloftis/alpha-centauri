@@ -367,3 +367,21 @@ Classes that look like more than one responsibility. Record which signals they s
 - **Signals:** about 50 public methods in groups that touch disjoint members: cargo
   (`m_pCarrier`, `m_cargo`), supply crawl (`m_tileClaim`, `m_order`), per-turn latches (attack
   history, airdrop, intercept cooldown) and moves and fuel.
+
+## Noted during the abstraction-level pass
+
+Found while applying rules 7 and 8. Each needs a closer look before it changes.
+
+### `UnitOrderExecutor::FightDefender_` — a base check that may be redundant
+- **Where:** `src/game/units/UnitOrderExecutor.cpp`, `bDefenderOnBase` in `FightDefender_`
+- **Problem:** the attacker only conquers when the defender stood on a base, checked before
+  combat. `ResolvePostCombatBaseConquest` already returns nothing without a base, and the
+  comment's reason (the tile reference is freed) does not hold, since tiles belong to the map.
+  `TryBombard` makes the same call without the check.
+- **Why not now:** removing it relies on every `IUnitOrderWorld` doing that check.
+
+### `UnitOrderExecutor::TryAirdrop` — a mechanic decision in an executor
+- **Where:** `src/game/units/UnitOrderExecutor.cpp`, `landing.hpAfter < rUnit.GetCurrentHp()`
+- **Problem:** the landing only ever lowers hit points. That is a decision `AirdropLanding`
+  should make, per `code-kinds.mdc`.
+- **Why not now:** it moves the rule into `AirdropLanding` and its tests.

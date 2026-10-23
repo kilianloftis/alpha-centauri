@@ -570,58 +570,66 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
 
     // Snapshot: TryStep may ClearOrder on new hostiles, invalidating rOrder.
     const Tile& rDestination = *rOrder.pDestination;
-
-    while (true)
+    std::optional<OrderProgress_t> progress;
+    while (!progress)
     {
-        if (&rUnit.GetTile() == &rDestination)
-        {
-            return OrderProgress_t::Complete;
-        }
-
-        if (rUnit.GetMoveFragmentsRemaining() <= 0)
-        {
-            return OrderProgress_t::Continue;
-        }
-
-        // Re-resolve each step: rOrder from visit is dangling after mid-flight ClearOrder.
-        MoveOrder_t& rLiveOrder = std::get<MoveOrder_t>(*rUnit.GetOrder());
-
-        // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
-        const Tile* pNext = m_rPathfinder.NextStep(rUnit, rDestination);
-        if (!pNext)
-        {
-            return StepTowardContact_(rUnit, rDestination, rLiveOrder);
-        }
-
-        if (m_rSteps.EvaluateStep(rUnit, rUnit.GetTile(), *pNext).outcome
-            == StepOutcome_t::BlockedByTerritory)
-        {
-            return RefuseTerritoryEntry_(rUnit, *pNext);
-        }
-
-        const Tile* pTileBefore = &rUnit.GetTile();
-        const int movesBefore = rUnit.GetMoveFragmentsRemaining();
-
-        const StepResult_t stepped = TryStep(rUnit, *pNext, rLiveOrder);
-        if (stepped.bMoverDestroyed)
-        {
-            return OrderProgress_t::UnitDestroyed;
-        }
-        if (!stepped.bEntered)
-        {
-            return ProgressOfHaltedMove_(rUnit);
-        }
-
-        if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
-        {
-            return OrderProgress_t::Continue;
-        }
-
-        if (!rUnit.GetOrder().has_value())
-        {
-            return OrderProgress_t::Complete;
-        }
+        progress = AdvanceMove_(rUnit, rDestination);
     }
+    return *progress;
+}
+
+std::optional<OrderProgress_t> UnitOrderExecutor::AdvanceMove_(Unit& rUnit,
+                                                              const Tile& rDestination)
+{
+    if (&rUnit.GetTile() == &rDestination)
+    {
+        return OrderProgress_t::Complete;
+    }
+
+    if (rUnit.GetMoveFragmentsRemaining() <= 0)
+    {
+        return OrderProgress_t::Continue;
+    }
+
+    // Re-resolve each step: rOrder from visit is dangling after mid-flight ClearOrder.
+    MoveOrder_t& rLiveOrder = std::get<MoveOrder_t>(*rUnit.GetOrder());
+
+    // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
+    const Tile* pNext = m_rPathfinder.NextStep(rUnit, rDestination);
+    if (!pNext)
+    {
+        return StepTowardContact_(rUnit, rDestination, rLiveOrder);
+    }
+
+    if (m_rSteps.EvaluateStep(rUnit, rUnit.GetTile(), *pNext).outcome
+        == StepOutcome_t::BlockedByTerritory)
+    {
+        return RefuseTerritoryEntry_(rUnit, *pNext);
+    }
+
+    const Tile* pTileBefore = &rUnit.GetTile();
+    const int movesBefore = rUnit.GetMoveFragmentsRemaining();
+
+    const StepResult_t stepped = TryStep(rUnit, *pNext, rLiveOrder);
+    if (stepped.bMoverDestroyed)
+    {
+        return OrderProgress_t::UnitDestroyed;
+    }
+    if (!stepped.bEntered)
+    {
+        return ProgressOfHaltedMove_(rUnit);
+    }
+
+    if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
+    {
+        return OrderProgress_t::Continue;
+    }
+
+    if (!rUnit.GetOrder().has_value())
+    {
+        return OrderProgress_t::Complete;
+    }
+    return std::nullopt;
 }
 
 OrderProgress_t UnitOrderExecutor::StepTowardContact_(Unit& rUnit, const Tile& rDestination,
@@ -721,34 +729,37 @@ Unit& UnitOrderExecutor::ResolveScrambleDefender_(Unit& rAttacker,
     {
         return rOriginalDefender;
     }
+    if (!ScrambleTo_(*pScrambler, rOriginalDefender.GetTile(), rOutPath))
+    {
+        rOutPath.clear();
+        return rOriginalDefender;
+    }
+    return *pScrambler;
+}
 
-    const Tile& rDest = rOriginalDefender.GetTile();
-    MoveOrder_t order;
-    order.pDestination = &rDest;
-    pScrambler->SetOrder(order);
-
+bool UnitOrderExecutor::ScrambleTo_(Unit& rScrambler, const Tile& rDest,
+                                    std::vector<const Tile*>& rOutPath)
+{
+    rScrambler.SetOrder(MoveOrder_t{.pDestination = &rDest});
     auto movedConn = m_rWorldMap.GetUnitPositions().OnUnitMoved.ConnectScoped(
         [&](Unit& rUnit)
         {
-            if (&rUnit == pScrambler)
+            if (&rUnit == &rScrambler)
             {
                 rOutPath.push_back(&rUnit.GetTile());
             }
         });
 
-    const OrderProgress_t progress = Execute(*pScrambler);
-    if (progress == OrderProgress_t::UnitDestroyed)
+    if (Execute(rScrambler) == OrderProgress_t::UnitDestroyed)
     {
-        rOutPath.clear();
-        return rOriginalDefender;
+        return false;
     }
-    if (&pScrambler->GetTile() != &rDest)
+    if (&rScrambler.GetTile() != &rDest)
     {
-        rOutPath.clear();
-        pScrambler->ClearOrder();
-        return rOriginalDefender;
+        rScrambler.ClearOrder();
+        return false;
     }
-    return *pScrambler;
+    return true;
 }
 
 } // namespace ac

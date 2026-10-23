@@ -14,15 +14,14 @@
 namespace ac
 {
 
-const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegistry& rComponents,
-                                    std::span<const std::string> componentIds,
-                                    std::string_view slotPrefix)
+namespace
 {
-    if (componentIds.empty())
-    {
-        return nullptr;
-    }
 
+// One required slot per component, so the design takes exactly these components.
+std::unique_ptr<UnitDesign> MakeAdHocDesign_(const UnitComponentRegistry& rComponents,
+                                             std::span<const std::string> componentIds,
+                                             std::string_view slotPrefix)
+{
     std::vector<UnitSlotConfig_t> slots;
     std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
     int slotIndex = 0;
@@ -37,8 +36,21 @@ const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegist
         assigned[slot.id] = &rComponent;
         slots.push_back(slot);
     }
+    return std::make_unique<UnitDesign>(slots, assigned);
+}
 
-    auto pDesign = std::make_unique<UnitDesign>(slots, assigned);
+} // namespace
+
+const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const UnitComponentRegistry& rComponents,
+                                    std::span<const std::string> componentIds,
+                                    std::string_view slotPrefix)
+{
+    if (componentIds.empty())
+    {
+        return nullptr;
+    }
+
+    auto pDesign = MakeAdHocDesign_(rComponents, componentIds, slotPrefix);
     Military& rMilitary = rFaction.GetMilitary();
     if (const IDesign* pExisting = rMilitary.GetDesign(pDesign->GetId()))
     {

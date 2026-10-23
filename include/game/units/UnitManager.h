@@ -104,6 +104,8 @@ private:
 
     // Throws when this manager does not own rUnit.
     OwnedUnits_t::iterator FindOwned_(const Unit& rUnit);
+    void UnloadCargoOnLoss_(Unit& rCarrier);
+    void NoteRosterChanged_();
     void BeginDestructionDeferral_();
     void EndDestructionDeferral_();
     void FlushPendingDestructions_();

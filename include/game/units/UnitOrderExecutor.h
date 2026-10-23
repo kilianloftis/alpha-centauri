@@ -107,6 +107,8 @@ private:
     OrderProgress_t ExpendIfSingleUse_(const Unit& rUnit) const;
 
     OrderProgress_t Execute_(Unit& rUnit, MoveOrder_t& rOrder);
+    // One step toward rDestination; nullopt while the move goes on.
+    std::optional<OrderProgress_t> AdvanceMove_(Unit& rUnit, const Tile& rDestination);
     // No path to rDestination: steps into contact with what blocks it, if anything.
     OrderProgress_t StepTowardContact_(Unit& rUnit, const Tile& rDestination,
                                        MoveOrder_t& rOrder);
@@ -159,6 +161,8 @@ private:
     Unit& ResolveScrambleDefender_(Unit& rAttacker,
                                    Unit& rOriginalDefender,
                                    std::vector<const Tile*>& rOutPath);
+    // Moves rScrambler onto rDest, recording each hop. False when it did not arrive.
+    bool ScrambleTo_(Unit& rScrambler, const Tile& rDest, std::vector<const Tile*>& rOutPath);
 
     const MoveCostRules& m_rMoveCosts;
     const StepEvaluator& m_rSteps;

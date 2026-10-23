@@ -67,11 +67,8 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
     m_units.push_back(std::move(pUnit));
     // After construction, so the unit has already latched IsPrototype.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
-    // Same three-valued production base as Unit's stamp path: omit → home; explicit null → skip.
-    BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase;
-    m_revision.Bump();
-    m_rFaction.RebuildVisibility();
-    OnUnitCreated.Emit(rUnit, pBuiltAt);
+    NoteRosterChanged_();
+    OnUnitCreated.Emit(rUnit, pProducedAt.value_or(pHomeBase));
     return rUnit;
 }
 
@@ -79,22 +76,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
 {
     // One rebuild for the carrier and everything aboard, not one per hull.
     Faction::VisibilityRebuildScope visibilityScope = m_rFaction.DeferVisibilityRebuild();
-
-    // A copy, since both branches below unlink the passenger.
-    const std::vector<Unit*> cargo = rUnit.GetCargo();
-    const Tile& rCarrierTile = rUnit.GetTile();
-    for (Unit* pPassenger : cargo)
-    {
-        // A ship sunk in port sets its passengers down; at sea they go down with it.
-        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
-        {
-            pPassenger->Disembark();
-        }
-        else
-        {
-            DestroyUnit(*pPassenger);
-        }
-    }
+    UnloadCargoOnLoss_(rUnit);
 
     const auto it = FindOwned_(rUnit);
     OnUnitDestroyed.Emit(rUnit);
@@ -107,8 +89,26 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     {
         m_units.erase(it);
     }
-    m_revision.Bump();
-    m_rFaction.RebuildVisibility();
+    NoteRosterChanged_();
+}
+
+void UnitManager::UnloadCargoOnLoss_(Unit& rCarrier)
+{
+    // A copy, since both branches below unlink the passenger.
+    const std::vector<Unit*> cargo = rCarrier.GetCargo();
+    const Tile& rCarrierTile = rCarrier.GetTile();
+    for (Unit* pPassenger : cargo)
+    {
+        // A ship sunk in port sets its passengers down; at sea they go down with it.
+        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
+        {
+            pPassenger->Disembark();
+        }
+        else
+        {
+            DestroyUnit(*pPassenger);
+        }
+    }
 }
 
 std::unique_ptr<Unit> UnitManager::ReleaseUnit(Unit& rUnit)
@@ -119,8 +119,7 @@ std::unique_ptr<Unit> UnitManager::ReleaseUnit(Unit& rUnit)
 
     std::unique_ptr<Unit> pReleased = std::move(*it);
     m_units.erase(it);
-    m_revision.Bump();
-    m_rFaction.RebuildVisibility();
+    NoteRosterChanged_();
     return pReleased;
 }
 
@@ -133,8 +132,7 @@ Unit& UnitManager::AdoptUnit(std::unique_ptr<Unit> pUnit)
     pUnit->RebindFaction(m_rFaction);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
-    m_revision.Bump();
-    m_rFaction.RebuildVisibility();
+    NoteRosterChanged_();
     OnUnitAdopted.Emit(rUnit);
     return rUnit;
 }
@@ -155,6 +153,12 @@ bool UnitManager::IsPendingDestruction(const Unit& rUnit) const
         [&rUnit](const std::unique_ptr<Unit>& pUnit) {
             return pUnit.get() == &rUnit;
         });
+}
+
+void UnitManager::NoteRosterChanged_()
+{
+    m_revision.Bump();
+    m_rFaction.RebuildVisibility();
 }
 
 void UnitManager::BeginDestructionDeferral_()

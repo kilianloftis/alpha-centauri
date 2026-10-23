@@ -78,7 +78,7 @@ Unit::Unit(UnitId_t unitId,
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
+    if (BaseManager* pBuiltAt = pProducedAt.value_or(pHomeBase))
     {
         m_productionGrants = ProductionGrants_(*this, rFaction, *pBuiltAt);
     }
