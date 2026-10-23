@@ -1,11 +1,11 @@
 #include "game/diplomacy/DiplomacyConfigParser.h"
 
+#include "lib/config/ConfigSets.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "lib/config/EnumNames.h"
 
-#include <algorithm>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -18,18 +18,6 @@ namespace ac
 
 namespace
 {
-
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
 
 const nlohmann::json& Require_(const nlohmann::json& rJson, const std::string& rKey,
                                const std::string& rContext)
@@ -98,7 +86,7 @@ DiplomaticStatusRules_t ParseStatus_(const nlohmann::json& rJson, DiplomaticStat
         "enter_territory",      "share_tiles", "repair_at_bases", "may_attack",
         "defensive_obligation", "effects",     "duration_turns",
     };
-    RejectUnknownKeys_(rJson, known, rContext);
+    ConfigFields::RejectUnknownKeys(rJson, known, rContext);
 
     DiplomaticStatusRules_t rules;
     rules.bEnterTerritory = RequireBool_(rJson, "enter_territory", rContext);
@@ -133,35 +121,6 @@ DefensiveObligationMode_t RequireObligationMode_(const nlohmann::json& rJson,
                                                    "defensive obligation mode");
 }
 
-// Every status exactly once.
-decltype(DiplomacyConfig_t::statuses) ParseStatuses_(const nlohmann::json& rStatuses,
-                                                     const std::string& rContext)
-{
-    decltype(DiplomacyConfig_t::statuses) statuses{};
-    std::array<bool, k_DiplomaticStatusCount> seen{};
-    for (const auto& [rName, rEntry] : rStatuses.items())
-    {
-        const DiplomaticStatus_t status =
-            EnumFromName<DiplomaticStatus_t>(rName, "diplomatic status");
-        const std::size_t index = static_cast<std::size_t>(status);
-        if (seen[index])
-        {
-            throw std::runtime_error(rContext + " repeats status '" + rName + "'");
-        }
-        seen[index] = true;
-        statuses[index] = ParseStatus_(rEntry, status, "statuses." + rName);
-    }
-    for (const DiplomaticStatus_t status : magic_enum::enum_values<DiplomaticStatus_t>())
-    {
-        if (!seen[static_cast<std::size_t>(status)])
-        {
-            throw std::runtime_error(rContext + " is missing status '"
-                                     + std::string(magic_enum::enum_name(status)) + "'");
-        }
-    }
-    return statuses;
-}
-
 } // namespace
 
 DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPath)
@@ -178,7 +137,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     {
         throw std::runtime_error(context + " must be a JSON object");
     }
-    RejectUnknownKeys_(json, {"statuses", "defensive_obligation_mode"}, context);
+    ConfigFields::RejectUnknownKeys(json, {"statuses", "defensive_obligation_mode"}, context);
     const nlohmann::json& rStatuses = Require_(json, "statuses", context);
     if (!rStatuses.is_object())
     {
@@ -187,7 +146,12 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
 
     DiplomacyConfig_t config;
     config.defensiveObligationMode = RequireObligationMode_(json, context);
-    config.statuses = ParseStatuses_(rStatuses, context);
+    config.statuses =
+        ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
+            rStatuses, "diplomatic status", context,
+            [](const nlohmann::json& rEntry, DiplomaticStatus_t status, const std::string& rName) {
+                return ParseStatus_(rEntry, status, "statuses." + rName);
+            });
     return config;
 }
 

@@ -23,6 +23,10 @@ std::string ParseRequiredTech(const nlohmann::json& j);
 // Reads a string array at j[key]. Returns {} if the key is absent (missing == empty list).
 std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::string& key);
 
+// Throws "<rContext>: unknown key '<key>'" for the first key of j not in rKnown.
+void RejectUnknownKeys(const nlohmann::json& j, const std::vector<std::string>& rKnown,
+                       const std::string& rContext);
+
 } // namespace ConfigFields
 
 } // namespace ac

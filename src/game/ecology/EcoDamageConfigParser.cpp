@@ -1,5 +1,6 @@
 #include "game/ecology/EcoDamageConfig.h"
 
+#include "lib/config/ConfigFields.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "lib/LuaRuntime.h"
@@ -7,7 +8,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -17,18 +17,6 @@ namespace ac
 
 namespace
 {
-
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
 
 const nlohmann::json& RequireKey_(const nlohmann::json& rJson, const char* pKey,
                                   const std::string& rContext)
@@ -67,7 +55,7 @@ void ParseFungalPop_(const nlohmann::json& rPop, const std::string& rCtx,
     {
         throw std::runtime_error(rCtx + " must be an object");
     }
-    RejectUnknownKeys_(rPop, {"max_chance_percent", "on_pop_effects"}, rCtx);
+    ConfigFields::RejectUnknownKeys(rPop, {"max_chance_percent", "on_pop_effects"}, rCtx);
 
     const nlohmann::json& rMax = RequireKey_(rPop, "max_chance_percent", rCtx);
     if (!rMax.is_number_integer())
@@ -90,7 +78,7 @@ void ParseFungalPop_(const nlohmann::json& rPop, const std::string& rCtx,
 
 EcoDamageConfig_t ParseEcoDamage_(const nlohmann::json& rJson, const std::string& rCtx)
 {
-    RejectUnknownKeys_(rJson, {"effects", "fungal_pop"}, rCtx);
+    ConfigFields::RejectUnknownKeys(rJson, {"effects", "fungal_pop"}, rCtx);
     EcoDamageConfig_t parsed;
     if (!RequireKey_(rJson, "effects", rCtx).is_array())
     {

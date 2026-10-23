@@ -1,9 +1,8 @@
 #include "game/atrocities/AtrocityConfigParser.h"
 
+#include "lib/config/ConfigSets.h"
 #include "lib/config/EnumNames.h"
 
-#include <algorithm>
-#include <array>
 #include <fstream>
 #include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
@@ -16,18 +15,6 @@ namespace ac
 
 namespace
 {
-
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
 
 int RequireInt_(const nlohmann::json& rJson, const std::string& rKey,
                 const std::string& rContext)
@@ -61,44 +48,13 @@ AtrocitySeverityConfig_t ParseSeverity_(const nlohmann::json& rJson, const std::
         "universal_vendetta",
         "expel_from_council",
     };
-    RejectUnknownKeys_(rJson, known, rContext);
+    ConfigFields::RejectUnknownKeys(rJson, known, rContext);
 
     AtrocitySeverityConfig_t config;
     config.ecoVirtualMinerals = RequireInt_(rJson, "eco_virtual_minerals", rContext);
     config.bUniversalVendetta = RequireBool_(rJson, "universal_vendetta", rContext);
     config.bExpelFromCouncil = RequireBool_(rJson, "expel_from_council", rContext);
     return config;
-}
-
-// Every severity exactly once.
-decltype(AtrocitiesConfig_t::severities) ParseSeverities_(const nlohmann::json& rSeverities,
-                                                          const std::string& rConfigPath)
-{
-    decltype(AtrocitiesConfig_t::severities) severities{};
-    std::array<bool, k_AtrocitySeverityCount> seen{};
-    for (const auto& [rName, rEntry] : rSeverities.items())
-    {
-        const AtrocitySeverityId_t id =
-            EnumFromName<AtrocitySeverityId_t>(rName, "atrocity severity");
-        const auto index = magic_enum::enum_index(id);
-        if (!index || seen[*index])
-        {
-            throw std::runtime_error("Atrocities config '" + rConfigPath
-                                     + "' repeats severity '" + rName + "'");
-        }
-        seen[*index] = true;
-        severities[*index] = ParseSeverity_(rEntry, "severities." + rName);
-    }
-    for (const AtrocitySeverityId_t id : magic_enum::enum_values<AtrocitySeverityId_t>())
-    {
-        const auto index = magic_enum::enum_index(id);
-        if (!index || !seen[*index])
-        {
-            throw std::runtime_error("Atrocities config '" + rConfigPath + "' is missing severity '"
-                                     + std::string(magic_enum::enum_name(id)) + "'");
-        }
-    }
-    return severities;
 }
 
 } // namespace
@@ -120,7 +76,7 @@ AtrocitiesConfig_t AtrocityConfigParser::ParseConfig(const std::string& configPa
         "severities",
         "sanction_years_per_atrocity",
     };
-    RejectUnknownKeys_(json, knownKeys, "Atrocities config '" + configPath + "'");
+    ConfigFields::RejectUnknownKeys(json, knownKeys, "Atrocities config '" + configPath + "'");
 
     if (!json.contains("severities") || !json.at("severities").is_object())
     {
@@ -129,7 +85,12 @@ AtrocitiesConfig_t AtrocityConfigParser::ParseConfig(const std::string& configPa
     }
 
     AtrocitiesConfig_t config;
-    config.severities = ParseSeverities_(json.at("severities"), configPath);
+    config.severities =
+        ConfigFields::ParseEnumKeyedObject<AtrocitySeverityId_t, AtrocitySeverityConfig_t>(
+            json.at("severities"), "atrocity severity", "Atrocities config '" + configPath + "'",
+            [](const nlohmann::json& rEntry, AtrocitySeverityId_t, const std::string& rName) {
+                return ParseSeverity_(rEntry, "severities." + rName);
+            });
 
     config.sanctionYearsPerAtrocity =
         RequireInt_(json, "sanction_years_per_atrocity", "atrocities config");

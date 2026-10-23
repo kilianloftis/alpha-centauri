@@ -1,7 +1,6 @@
 #include "game/production/ScrapConfigParser.h"
 
-#include <algorithm>
-#include <initializer_list>
+#include "lib/config/ConfigFields.h"
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -15,18 +14,6 @@ namespace
 [[noreturn]] void Fail_(const std::string& rPath, const std::string& rMessage)
 {
     throw std::runtime_error(rPath + " " + rMessage);
-}
-
-void RejectUnknownKeys_(const nlohmann::json& rValue, const std::string& rPath,
-                        std::initializer_list<std::string_view> knownKeys)
-{
-    for (const auto& [rKey, rUnused] : rValue.items())
-    {
-        if (std::find(knownKeys.begin(), knownKeys.end(), rKey) == knownKeys.end())
-        {
-            Fail_(rPath, "unknown key '" + rKey + "'");
-        }
-    }
 }
 
 std::optional<std::string> OptionalString_(const nlohmann::json& rValue, const std::string& rPath,
@@ -75,7 +62,8 @@ ScrapKindConfig_t ScrapConfigParser::ParseKindConfig(const nlohmann::json& rValu
     {
         Fail_(rPath, "must be an object with formula, refund_type, and refund_ceiling_percent");
     }
-    RejectUnknownKeys_(rValue, rPath, {"formula", "refund_type", "refund_ceiling_percent"});
+    ConfigFields::RejectUnknownKeys(rValue, {"formula", "refund_type", "refund_ceiling_percent"},
+                                    rPath);
 
     ScrapKindConfig_t kind;
     const std::optional<std::string> formula = OptionalString_(rValue, rPath, "formula");
@@ -113,7 +101,7 @@ ScrapOverride_t ScrapConfigParser::ParseOverride(const nlohmann::json& rValue,
     {
         Fail_(rPath, "must be an object with formula and/or refund_type");
     }
-    RejectUnknownKeys_(rValue, rPath, {"formula", "refund_type"});
+    ConfigFields::RejectUnknownKeys(rValue, {"formula", "refund_type"}, rPath);
 
     ScrapOverride_t override;
     if (rValue.contains("formula"))

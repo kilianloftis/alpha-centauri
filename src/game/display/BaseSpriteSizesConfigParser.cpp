@@ -1,7 +1,7 @@
 #include "game/display/BaseSpriteSizesConfigParser.h"
+#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 
-#include <algorithm>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -15,18 +15,6 @@ namespace
 
 constexpr const char* k_Context = "base_sprite_sizes";
 
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
-
 BaseSpriteSizeStage_t ParseSizeStage_(const nlohmann::json& rEntry, size_t index, int previousMin)
 {
     const std::string context = std::string(k_Context) + ": size_stages[" + std::to_string(index)
@@ -35,7 +23,7 @@ BaseSpriteSizeStage_t ParseSizeStage_(const nlohmann::json& rEntry, size_t index
     {
         throw std::runtime_error(context + " must be an object");
     }
-    RejectUnknownKeys_(rEntry, {"min_population", "origin_y_ratio"}, context);
+    ConfigFields::RejectUnknownKeys(rEntry, {"min_population", "origin_y_ratio"}, context);
     if (!rEntry.contains("min_population") || !rEntry.at("min_population").is_number_integer())
     {
         throw std::runtime_error(context + ": 'min_population' must be an integer");
@@ -121,7 +109,7 @@ std::vector<std::string> ParseStageBumpBuildings_(const nlohmann::json& rJson)
 
 BaseSpriteSizesConfig_t ParseBaseSpriteSizes_(const nlohmann::json& rJson)
 {
-    RejectUnknownKeys_(rJson, {"size_stages", "stage_bump_buildings"}, k_Context);
+    ConfigFields::RejectUnknownKeys(rJson, {"size_stages", "stage_bump_buildings"}, k_Context);
     BaseSpriteSizesConfig_t config;
     config.sizeStages = ParseSizeStages_(rJson);
     config.stageBumpBuildings = ParseStageBumpBuildings_(rJson);

@@ -1,11 +1,11 @@
 #include "game/production/ProductionConfigParser.h"
+#include "lib/config/ConfigFields.h"
 #include "game/production/ScrapConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "game/production/ConstructableKind.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
-#include <algorithm>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -22,17 +22,11 @@ namespace
     throw std::runtime_error("Production config '" + rConfigPath + "': " + rMessage);
 }
 
-// rPrefix names where the keys sit: "" at the top level, "kinds.<kind> " inside a kind.
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rPrefix, const std::string& rConfigPath)
+// rWhere names where the keys sit: "" at the top level, else a kind or hurry path.
+std::string ProductionContext_(const std::string& rConfigPath, const std::string& rWhere)
 {
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            FailProduction_(rConfigPath, rPrefix + "unknown key '" + rKey + "'");
-        }
-    }
+    const std::string file = "Production config '" + rConfigPath + "'";
+    return rWhere.empty() ? file : file + ": " + rWhere;
 }
 
 int ReadInRange_(const nlohmann::json& rJson, const char* pKey, int minimum,
@@ -87,8 +81,9 @@ HurryKindConfig_t ParseHurry_(const nlohmann::json& rValue, const std::string& r
         FailProduction_(rConfigPath, hurryPath + "must be an object with formula, "
                                      "mineral_threshold, and below_threshold_multiplier");
     }
-    RejectUnknownKeys_(rValue, {"formula", "mineral_threshold", "below_threshold_multiplier"},
-                       hurryPath, rConfigPath);
+    ConfigFields::RejectUnknownKeys(
+        rValue, {"formula", "mineral_threshold", "below_threshold_multiplier"},
+        ProductionContext_(rConfigPath, rKindPath + ".hurry"));
     if (!rValue.contains("formula") || !rValue.at("formula").is_string()
         || rValue.at("formula").get<std::string>().empty())
     {
@@ -153,7 +148,8 @@ ProductionKindConfig_t ParseKind_(ConstructableKind_t kindId, const nlohmann::js
         FailProduction_(rConfigPath,
                         rKindPath + " must be an object with hurry and/or default_scrap");
     }
-    RejectUnknownKeys_(rValue, {"hurry", "default_scrap"}, rKindPath + " ", rConfigPath);
+    ConfigFields::RejectUnknownKeys(rValue, {"hurry", "default_scrap"},
+                                    ProductionContext_(rConfigPath, rKindPath));
     ProductionKindConfig_t kindConfig;
     if (rValue.contains("hurry"))
     {
@@ -191,11 +187,11 @@ decltype(ProductionConfig_t::kinds) ParseKinds_(const nlohmann::json& rJson,
 
 ProductionConfig_t ParseProduction_(const nlohmann::json& rJson, const std::string& rConfigPath)
 {
-    RejectUnknownKeys_(rJson,
+    ConfigFields::RejectUnknownKeys(rJson,
                        {"retool_penalty_threshold", "retool_penalty_percent",
                         "prototype_surcharge_percent", "kinds", "effects",
                         "on_unit_produced_effects"},
-                       "", rConfigPath);
+                       ProductionContext_(rConfigPath, ""));
     ProductionConfig_t config;
     config.retoolPenaltyThreshold =
         ReadInRange_(rJson, "retool_penalty_threshold", 0, std::nullopt, rConfigPath);

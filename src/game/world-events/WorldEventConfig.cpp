@@ -1,12 +1,12 @@
 #include "game/world-events/WorldEventConfig.h"
 
+#include "lib/config/ConfigFields.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -15,18 +15,6 @@ namespace ac
 
 namespace
 {
-
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
 
 const nlohmann::json& RequireKey_(const nlohmann::json& rJson, const char* pKey,
                                   const std::string& rContext)
@@ -57,7 +45,7 @@ WorldEventCycle_t ParseTrigger_(const nlohmann::json& rJson, const std::string& 
     {
         throw std::runtime_error(ctx + " must be an object");
     }
-    RejectUnknownKeys_(rJson, {"kind", "cycle_years", "duration_years", "start_year_offset"},
+    ConfigFields::RejectUnknownKeys(rJson, {"kind", "cycle_years", "duration_years", "start_year_offset"},
                        ctx);
     const nlohmann::json& rKind = RequireKey_(rJson, "kind", ctx);
     if (!rKind.is_string() || rKind.get<std::string>() != "Cycle")
@@ -81,7 +69,7 @@ WorldEventConfig_t ParseEvent_(const nlohmann::json& rJson, const std::string& r
     {
         throw std::runtime_error(rContext + ": event entry must be an object");
     }
-    RejectUnknownKeys_(rJson,
+    ConfigFields::RejectUnknownKeys(rJson,
                        {"id", "name", "trigger", "effects", "on_start_effects", "on_end_effects"},
                        rContext + " event");
     const nlohmann::json& rId = RequireKey_(rJson, "id", rContext);
@@ -117,7 +105,7 @@ WorldEventConfig_t ParseEvent_(const nlohmann::json& rJson, const std::string& r
 
 WorldEventsConfig_t ParseWorldEvents_(const nlohmann::json& rJson, const std::string& rCtx)
 {
-    RejectUnknownKeys_(rJson, {"events"}, rCtx);
+    ConfigFields::RejectUnknownKeys(rJson, {"events"}, rCtx);
     const nlohmann::json& rEvents = RequireKey_(rJson, "events", rCtx);
     if (!rEvents.is_array())
     {

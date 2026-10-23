@@ -1,15 +1,13 @@
 #include "game/DifficultyConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/ConfigSets.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace ac
@@ -17,18 +15,6 @@ namespace ac
 
 namespace
 {
-
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
 
 int ReadRequiredThreshold_(const nlohmann::json& rJson, const char* key)
 {
@@ -97,7 +83,7 @@ DifficultyRules_t ParseRules_(const nlohmann::json& rJson, const std::string& rL
         "player_atrocity_threshold",
         "ai_atrocity_threshold",
     };
-    RejectUnknownKeys_(rJson, known, ctx);
+    ConfigFields::RejectUnknownKeys(rJson, known, ctx);
 
     DifficultyRules_t rules;
     try
@@ -157,7 +143,7 @@ DifficultyLevel_t ParseLevel_(const nlohmann::json& rJson)
     static const std::vector<std::string> known = {
         "id", "name", "rules", "effects",
     };
-    RejectUnknownKeys_(rJson, known, "difficulty level");
+    ConfigFields::RejectUnknownKeys(rJson, known, "difficulty level");
 
     if (!rJson.contains("id") || !rJson.at("id").is_string()
         || rJson.at("id").get<std::string>().empty())
@@ -179,55 +165,13 @@ DifficultyLevel_t ParseLevel_(const nlohmann::json& rJson)
     return level;
 }
 
-[[noreturn]] void FailDifficulty_(const std::string& rConfigPath, const std::string& rMessage)
-{
-    throw std::runtime_error("Difficulty config '" + rConfigPath + "': " + rMessage);
-}
-
-void RequireTopLevelKeys_(const nlohmann::json& rJson, const std::string& rConfigPath)
-{
-    static const std::vector<std::string> knownKeys = {"default", "levels"};
-    RejectUnknownKeys_(rJson, knownKeys, "Difficulty config '" + rConfigPath + "'");
-    if (!rJson.contains("default") || !rJson.at("default").is_string()
-        || rJson.at("default").get<std::string>().empty())
-    {
-        FailDifficulty_(rConfigPath, "'default' must be a non-empty string");
-    }
-    if (!rJson.contains("levels") || !rJson.at("levels").is_array()
-        || rJson.at("levels").empty())
-    {
-        FailDifficulty_(rConfigPath, "'levels' must be a non-empty array");
-    }
-}
-
-std::vector<DifficultyLevel_t> ParseLevels_(const nlohmann::json& rLevelsJson,
-                                            const std::string& rConfigPath)
-{
-    std::vector<DifficultyLevel_t> levels;
-    std::unordered_set<std::string> seenIds;
-    for (const nlohmann::json& rLevelJson : rLevelsJson)
-    {
-        DifficultyLevel_t level = ParseLevel_(rLevelJson);
-        if (!seenIds.insert(level.id).second)
-        {
-            FailDifficulty_(rConfigPath, "duplicate level id '" + level.id + "'");
-        }
-        levels.push_back(std::move(level));
-    }
-    return levels;
-}
-
 DifficultyConfig_t ParseDifficulty_(const nlohmann::json& rJson, const std::string& rConfigPath)
 {
-    RequireTopLevelKeys_(rJson, rConfigPath);
+    ConfigFields::LevelSet_t<DifficultyLevel_t> set = ConfigFields::ParseLevelSet<DifficultyLevel_t>(
+        rJson, "Difficulty config '" + rConfigPath + "'", ParseLevel_);
     DifficultyConfig_t config;
-    config.defaultId = rJson.at("default").get<std::string>();
-    config.levels = ParseLevels_(rJson.at("levels"), rConfigPath);
-    if (!config.FindById(config.defaultId))
-    {
-        FailDifficulty_(rConfigPath,
-                        "default '" + config.defaultId + "' does not match any level id");
-    }
+    config.defaultId = std::move(set.defaultId);
+    config.levels = std::move(set.levels);
     return config;
 }
 

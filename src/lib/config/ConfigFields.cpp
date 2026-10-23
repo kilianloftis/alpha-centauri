@@ -1,5 +1,6 @@
 #include "lib/config/ConfigFields.h"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace ac
@@ -58,6 +59,18 @@ std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::st
         values.push_back(rEntry.get<std::string>());
     }
     return values;
+}
+
+void RejectUnknownKeys(const nlohmann::json& j, const std::vector<std::string>& rKnown,
+                       const std::string& rContext)
+{
+    for (const auto& [rKey, rUnused] : j.items())
+    {
+        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
+        {
+            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
+        }
+    }
 }
 
 } // namespace ConfigFields

@@ -1,13 +1,12 @@
 #include "game/natives/NativeLifeLevelConfig.h"
 
+#include "lib/config/ConfigSets.h"
 #include "game/effects/EffectConfigParser.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
 #include <stdexcept>
-#include <unordered_set>
 
 namespace ac
 {
@@ -15,25 +14,13 @@ namespace ac
 namespace
 {
 
-void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
-                        const std::string& rContext)
-{
-    for (const auto& [rKey, rUnused] : rJson.items())
-    {
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error(rContext + ": unknown key '" + rKey + "'");
-        }
-    }
-}
-
 NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
 {
     if (!rJson.is_object())
     {
         throw std::runtime_error("native life level entry must be a JSON object");
     }
-    RejectUnknownKeys_(rJson, {"id", "name", "effects"}, "native life level");
+    ConfigFields::RejectUnknownKeys(rJson, {"id", "name", "effects"}, "native life level");
     if (!rJson.contains("id") || !rJson.at("id").is_string()
         || rJson.at("id").get<std::string>().empty())
     {
@@ -56,44 +43,13 @@ NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
     return level;
 }
 
-std::vector<NativeLifeLevel_t> ParseUniqueLevels_(const nlohmann::json& rLevelsJson,
-                                                  const std::string& rCtx)
-{
-    std::vector<NativeLifeLevel_t> levels;
-    std::unordered_set<std::string> seenIds;
-    for (const nlohmann::json& rLevelJson : rLevelsJson)
-    {
-        NativeLifeLevel_t level = ParseLevel_(rLevelJson);
-        if (!seenIds.insert(level.id).second)
-        {
-            throw std::runtime_error(rCtx + ": duplicate level id '" + level.id + "'");
-        }
-        levels.push_back(std::move(level));
-    }
-    return levels;
-}
-
 NativeLifeLevelConfig_t ParseNativeLifeLevels_(const nlohmann::json& rJson, const std::string& rCtx)
 {
-    RejectUnknownKeys_(rJson, {"default", "levels"}, rCtx);
-    if (!rJson.contains("default") || !rJson.at("default").is_string()
-        || rJson.at("default").get<std::string>().empty())
-    {
-        throw std::runtime_error(rCtx + ": 'default' must be a non-empty string");
-    }
-    if (!rJson.contains("levels") || !rJson.at("levels").is_array()
-        || rJson.at("levels").empty())
-    {
-        throw std::runtime_error(rCtx + ": 'levels' must be a non-empty array");
-    }
+    ConfigFields::LevelSet_t<NativeLifeLevel_t> set =
+        ConfigFields::ParseLevelSet<NativeLifeLevel_t>(rJson, rCtx, ParseLevel_);
     NativeLifeLevelConfig_t config;
-    config.defaultId = rJson.at("default").get<std::string>();
-    config.levels = ParseUniqueLevels_(rJson.at("levels"), rCtx);
-    if (!config.FindById(config.defaultId))
-    {
-        throw std::runtime_error(rCtx + ": default '" + config.defaultId
-                                 + "' does not match any level id");
-    }
+    config.defaultId = std::move(set.defaultId);
+    config.levels = std::move(set.levels);
     return config;
 }
 
