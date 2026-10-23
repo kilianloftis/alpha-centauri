@@ -11,36 +11,6 @@
 namespace ac
 {
 
-RiverConnection_t GetRiverConnections(const Tile& rTile, const WorldMap& rWorld)
-{
-    if (!rTile.GetHasRiver())
-    {
-        return RiverConnection_t::None;
-    }
-
-    // Parallel to ForEachOrthogonalNeighbor (N, E, S, W lattice). Loop deltas directly so a
-    // null Y-edge neighbor does not shift later direction bits.
-    static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-    static constexpr RiverConnection_t k_Dirs[4] = {
-        RiverConnection_t::North,
-        RiverConnection_t::East,
-        RiverConnection_t::South,
-        RiverConnection_t::West,
-    };
-
-    RiverConnection_t mask = RiverConnection_t::None;
-    for (int i = 0; i < 4; ++i)
-    {
-        const Tile* pNeighbor =
-            GetTileAtLatticeOffset(rWorld, rTile, k_Deltas[i][0], k_Deltas[i][1]);
-        if (pNeighbor && pNeighbor->GetHasRiver())
-        {
-            mask |= k_Dirs[i];
-        }
-    }
-    return mask;
-}
-
 bool TileTerminatesRiver(const Tile& rTile)
 {
     return rTile.ForEachOccupant([](const ImprovementConfig_t& rConfig) {

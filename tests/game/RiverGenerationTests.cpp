@@ -37,26 +37,6 @@ constexpr int k_RiverMapHeight = 9;
 
 } // namespace
 
-TEST_CASE("GetRiverConnections reports orthogonal river neighbors", "[worldgen][rivers]")
-{
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
-    FillElevation_(world, 1000);
-
-    world.GetTile(6, 4)->SetHasRiver(true);
-    world.GetTile(7, 3)->SetHasRiver(true); // N
-    world.GetTile(7, 5)->SetHasRiver(true); // E
-    // The tile due east on screen is a lattice diagonal and must not count.
-    world.GetTile(8, 4)->SetHasRiver(true);
-
-    const RiverConnection_t mask = GetRiverConnections(*world.GetTile(6, 4), world);
-    CHECK(HasRiverConnection(mask, RiverConnection_t::North));
-    CHECK(HasRiverConnection(mask, RiverConnection_t::East));
-    CHECK_FALSE(HasRiverConnection(mask, RiverConnection_t::South));
-    CHECK_FALSE(HasRiverConnection(mask, RiverConnection_t::West));
-
-    CHECK(GetRiverConnections(*world.GetTile(0, 0), world) == RiverConnection_t::None);
-}
-
 TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing",
           "[worldgen][aquifers][parser]")
 {
