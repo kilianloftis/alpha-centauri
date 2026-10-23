@@ -459,7 +459,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Faction System
 - **Purpose**: Manages all factions and their mutable save-game state
 - **Components**:
-  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
+  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless unit executors (`UnitMoveExecutor`, `UnitOrderExecutor`, `UnitAttackExecutor`). `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` holds the ruleset by reference and hands it to session-level code through `GetGameData()`; the Planetary Council and world events read their configs from it — see the `GameDataContext` section above.
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `Faction`: Represents a single faction with all its subsystems
   - `Faction Subsystems`: FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy
@@ -602,12 +602,14 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `AttackRules`: Attack legality — enterability (`CanAttackTile` = enter), targeting (`FindVisibleHostileOnTile`, which ranks the visible hostiles with `SelectDefender`), declare gate (`FindAttackableHostileOnTile` + `attack_unit` resolve), attack cost (`AttackMoveFragments`). Bombard legality is `IsWithinBombardRange` (any fragments, Chebyshev `bombard_range`, no visibility or entry requirement). `ArtilleryDuelTarget` and `BombardStrikeTargets` choose a duel or per-unit strikes from the shared hostile census. `BombardImprovementTargets` is the empty-tile wreck query
   - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
   - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
-  - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
+  - `UnitMoveExecutor`: One step or airdrop; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
+  - `UnitOrderExecutor`: Executes unit orders turn by turn through `UnitMoveExecutor`, founds bases and starts terraforming
+  - `UnitAttackExecutor`: Attacks and bombards, with intercepts, scramblers (moved through `UnitOrderExecutor`), promotion and the attack's cost
   - `TerritoryEntryMutations`: `BreakAgreementAndContinue`, the player's choice to break the agreement when a move order stops at territory its faction may not enter — declare Vendetta on the owner and resume the order
   - `BaseConquestRules` / `BaseConquestMutations`: Pure conquest predicates (garrison, capture veto, species) split from the world mutations they gate (population loss, facility destruction, capture, raze, native raid)
-  - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest — that `GameState` implements and injects into `UnitOrderExecutor`; nullable so movement-only harnesses need no `GameState`
+  - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest, visits — that `GameState` implements and injects into the three unit executors by reference
 - **Dependencies**:
-  - GameState owns UnitOrderExecutor and implements `IUnitOrderWorld` for it; all bind the live WorldMap
+  - GameState owns the three unit executors and implements `IUnitOrderWorld` for them; all bind the live WorldMap
   - MoveCostRules reads ImprovementRegistry configs (`move_cost`, and `move_cost` MaxClamp effects)
   - BaseConquestMutations reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
 - **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture.

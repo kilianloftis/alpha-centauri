@@ -198,12 +198,12 @@ TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conques
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_sea_chassis"}, &rBase);
     Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
 
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    CHECK_FALSE(game.fixtures.state.GetUnitAttacks().TryAttack(
         land, defender.GetTile()).has_value());
 
     defender.GetFaction().GetUnitManager().DestroyUnit(defender);
     MoveOrder_t order;
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStep(
+    CHECK_FALSE(game.fixtures.state.GetUnitMoves().TryStep(
         land, rBase.GetTile(), order).bEntered);
     CHECK(game.pAi->GetBaseCount() == 1);
     CHECK(game.pPlayer->GetBaseCount() == 0);
@@ -220,7 +220,7 @@ TEST_CASE("Pods land can attack then step into a sea base to capture",
     Unit& amph = game.MakeUnit(*game.pPlayer, 8, 8,
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         amph, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -230,7 +230,7 @@ TEST_CASE("Pods land can attack then step into a sea base to capture",
     REQUIRE(amph.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(amph, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(amph, rBase.GetTile(), order).bEntered);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK(game.pAi->GetBaseCount() == 0);
 }
@@ -246,7 +246,7 @@ TEST_CASE("Pods land can enter an undefended sea base to capture it",
     Unit& amph = game.MakeUnit(*game.pPlayer, 8, 8,
                                {"test_chassis", "test_weapon", "test_amphibious"});
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(
         amph, *game.fixtures.state.GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 0);
@@ -265,7 +265,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     attacker.SetCurrentHp(1);
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -278,7 +278,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     // Capture pop (-1); at least one non-SP facility destroyed, SP kept.
     CHECK(game.pAi->GetBaseCount() == 0);
@@ -308,7 +308,7 @@ TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss s
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -318,7 +318,7 @@ TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss s
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK((*game.pPlayer->Bases().begin()).GetPopulation().GetSize() == 2);
@@ -336,13 +336,13 @@ TEST_CASE("A facility can clamp capture facility destruction to nothing", "[unit
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();
@@ -364,7 +364,7 @@ TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -373,7 +373,7 @@ TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK((*game.pPlayer->Bases().begin()).GetPopulation().GetSize() == 2);
@@ -389,7 +389,7 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_fuel_flight_chassis", "test_weapon"});
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -405,7 +405,7 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
     attacker.SetMoveFragmentsRemaining(
         attacker.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
     REQUIRE(game.pAi->GetBaseCount() == 1);
     CHECK((*game.pAi->Bases().begin()).GetBaseId() == baseId);
     CHECK(game.pPlayer->GetBaseCount() == 0);
@@ -419,7 +419,7 @@ TEST_CASE("Entering an undefended foreign base captures it", "[unit][conquest]")
 
     Unit& mover = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(
         mover, *game.fixtures.state.GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 0);
@@ -450,7 +450,7 @@ TEST_CASE("Former cannot capture an undefended base on entry", "[unit][conquest]
 
     Unit& former = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_terraformer"});
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(
         former, *game.fixtures.state.GetWorldMap().GetTile(9, 9), order).bEntered);
 
     CHECK(game.pAi->GetBaseCount() == 1);
@@ -467,7 +467,7 @@ TEST_CASE("Native life raids an undefended base then disappears", "[unit][conque
     const size_t nativesBefore = CountUnits_(*game.pPlayer);
 
     MoveOrder_t order;
-    const StepResult_t stepped = game.fixtures.state.GetUnitOrderExecutor().TryStep(
+    const StepResult_t stepped = game.fixtures.state.GetUnitMoves().TryStep(
         worm, *game.fixtures.state.GetWorldMap().GetTile(9, 9), order);
     REQUIRE(stepped.bEntered);
     // The raid consumes the worm: the step must say so, or callers keep using freed memory.
@@ -495,7 +495,7 @@ TEST_CASE("Human conquering Progenitor reduces population to one and spawns esca
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
     const size_t aiUnitsBefore = CountUnits_(*game.pAi);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -506,7 +506,7 @@ TEST_CASE("Human conquering Progenitor reduces population to one and spawns esca
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     // Species clash leaves 1.
@@ -526,7 +526,7 @@ TEST_CASE("Population reduced to zero razes the base and tombstones Secret Proje
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
@@ -550,14 +550,14 @@ TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
     attacker.SetCurrentHp(1);
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK(attacker.GetCurrentHp() == 1);
@@ -623,7 +623,7 @@ TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit]
 
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();

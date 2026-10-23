@@ -24,6 +24,8 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/TriggeredEffectRules.h"
 #include "game/terraform/TerraformRules.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/probes/ProbeActionExecutor.h"
 #include "game/movement/Pathfinder.h"
@@ -173,10 +175,15 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         *m_pDiplomacy, m_factions);
     m_worldMap->GetUnitPositions().OnUnitMoved.Connect(
         std::bind_front(&GameState::OnUnitMoved_, this));
-    // Safe: the executor only stores the pointer during construction.
+    // Safe while this is still being built: the executors only store the reference.
+    m_pUnitMoves = std::make_unique<UnitMoveExecutor>(*m_pMoveCosts, *m_pSteps, *m_worldMap,
+                                                      m_rng, *this);
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
-        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
-        *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, *this);
+        *m_pUnitMoves, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
+        *rGameData.terrainOperationRegistry, m_rng, *this);
+    m_pUnitAttacks = std::make_unique<UnitAttackExecutor>(
+        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *rGameData.moraleCalculator, m_rng,
+        *this, *m_pUnitOrderExecutor);
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(
         *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng);
 }
@@ -689,9 +696,19 @@ const Pathfinder& GameState::GetPathfinder() const
     return *m_pPathfinder;
 }
 
+UnitMoveExecutor& GameState::GetUnitMoves()
+{
+    return *m_pUnitMoves;
+}
+
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return *m_pUnitOrderExecutor;
+}
+
+UnitAttackExecutor& GameState::GetUnitAttacks()
+{
+    return *m_pUnitAttacks;
 }
 
 void GameState::ConsiderHoldLink(Unit& rUnit)

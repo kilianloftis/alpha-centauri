@@ -15,6 +15,8 @@
 #include "game/units/UnitComponentConfigParser.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -85,15 +87,20 @@ struct OrderHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     explicit OrderHarness_(FactionFixture& rFixture)
         : moveCosts(rFixture.improvements, MovementConstants_t{})
         , steps(rFixture.map, rFixture.ctx)
         , pathfinder(moveCosts, steps, rFixture.map)
         , rng(k_TestRngSeed)
-        , orders(moveCosts, steps, rFixture.map, rFixture.ctx, pathfinder, rFixture.morale(),
+        , moves(moveCosts, steps, rFixture.map, rng, rFixture.state)
+        , orders(moves, steps, rFixture.map, rFixture.ctx, pathfinder,
                  *rFixture.dataContext.terrainOperationRegistry, rng, rFixture.state)
+        , attacks(moveCosts, steps, rFixture.map, rFixture.ctx, rFixture.morale(), rng, rFixture.state,
+                  orders)
     {
     }
 };
@@ -397,7 +404,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     const int targetElevation = fixture.At(9, 9).GetElevation();
 
     OrderHarness_ harness(fixture);
-    const auto result = harness.orders.TryAttack(attacker, fixture.At(9, 9));
+    const auto result = harness.attacks.TryAttack(attacker, fixture.At(9, 9));
     REQUIRE(result.has_value());
     CHECK(fixture.At(9, 9).GetElevation() == targetElevation);
 }

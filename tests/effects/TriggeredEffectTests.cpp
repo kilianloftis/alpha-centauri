@@ -471,7 +471,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     playerUnit.SetCurrentHp(1);
     const int xpBefore = playerUnit.GetXp();
     MoveOrder_t move;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(playerUnit, rMono, move).bEntered);
     REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);
     CHECK(std::holds_alternative<ImprovementVisitInteraction_t>(
         game.fixtures.state.GetPlayerInteractions().Front()->payload));
@@ -496,7 +496,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     const int aiXp = aiMover.GetXp();
     const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
     MoveOrder_t aiMove;
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStep(aiMover, rMono2, aiMove).bEntered);
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(aiMover, rMono2, aiMove).bEntered);
     CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore);
     CHECK(aiMover.GetCurrentHp() == ResolveStat(aiMover, StatId_t::HitPoints));
     CHECK(aiMover.GetXp() == aiXp + 1);

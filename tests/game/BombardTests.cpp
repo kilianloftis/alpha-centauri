@@ -20,6 +20,8 @@
 #include "game/movement/StepEvaluator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -55,15 +57,20 @@ struct OrderHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
                  *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };
@@ -136,8 +143,8 @@ TEST_CASE("Bombard range includes adjacent and the configured edge", "[bombard]"
 
     OrderHarness_ orders(fixture, 1);
     const int before = attacker.GetMoveFragmentsRemaining();
-    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(8, 8)));
-    CHECK_FALSE(orders.orders.TryBombard(attacker, fixture.At(11, 11)));
+    CHECK_FALSE(orders.attacks.TryBombard(attacker, fixture.At(8, 8)));
+    CHECK_FALSE(orders.attacks.TryBombard(attacker, fixture.At(11, 11)));
     CHECK(attacker.GetMoveFragmentsRemaining() == before);
 
     Unit& plain = fixture.MakeUnit(player, 8, 6, {"test_chassis"});
@@ -220,7 +227,7 @@ TEST_CASE("A strike rolls every hostile and cancels each order", "[bombard]")
     second.SetOrder(HoldOrder_t{});
 
     OrderHarness_ orders(fixture, 1);
-    const auto result = orders.orders.TryBombard(attacker, fixture.At(9, 9));
+    const auto result = orders.attacks.TryBombard(attacker, fixture.At(9, 9));
     REQUIRE(result);
     REQUIRE(result->combats.size() == 2);
     CHECK(result->combats[0].rounds.size() == 1);
@@ -314,7 +321,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
         ResolveCombatStrength(attacker, defender, fixture.ctx, fixture.morale(),
                               CombatEngagement_t::ArtilleryStrike);
     OrderHarness_ orders(fixture, 1);
-    const auto strike = orders.orders.TryBombard(attacker, defender.GetTile());
+    const auto strike = orders.attacks.TryBombard(attacker, defender.GetTile());
     REQUIRE(strike);
     REQUIRE(strike->combats.size() == 1);
     CHECK(strike->combats.front().attackStrength == expectedStrike.attackStrength);
@@ -329,7 +336,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     const CombatStrength_t expectedDuel = ResolveCombatStrength(
         duelAttacker, duelDefender, fixture.ctx, fixture.morale(),
         CombatEngagement_t::ArtilleryDuel);
-    const auto duel = orders.orders.TryBombard(duelAttacker, duelDefender.GetTile());
+    const auto duel = orders.attacks.TryBombard(duelAttacker, duelDefender.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);
     CHECK(duel->combats.front().attackStrength == expectedDuel.attackStrength);
@@ -381,7 +388,7 @@ TEST_CASE("An empty tile loses one non-base improvement, including outside visio
     CHECK_FALSE(player.GetVisibleMap().IsVisible(rFar));
 
     OrderHarness_ orders(fixture, 1);
-    const auto empty = orders.orders.TryBombard(attacker, rFar);
+    const auto empty = orders.attacks.TryBombard(attacker, rFar);
     REQUIRE(empty);
     CHECK(empty->combats.empty());
     CHECK(empty->destroyedImprovementId == "Farm");
@@ -393,7 +400,7 @@ TEST_CASE("An empty tile loses one non-base improvement, including outside visio
     Faction& enemy = fixture.MakeFaction();
     Unit& occupant = fixture.MakeUnit(enemy, 11, 7, {"test_chassis"});
     fixture.At(11, 7).AddImprovement(fixture.improvements.Get("Farm"));
-    const auto occupied = orders.orders.TryBombard(second, fixture.At(11, 7));
+    const auto occupied = orders.attacks.TryBombard(second, fixture.At(11, 7));
     REQUIRE(occupied);
     CHECK_FALSE(occupied->destroyedImprovementId.has_value());
     CHECK(fixture.At(11, 7).HasImprovement(ImprovementIds::k_Farm));
@@ -415,7 +422,7 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK_FALSE(IsUnitVisibleTo(player, fogged));
 
     OrderHarness_ orders(fixture, 1);
-    const auto strike = orders.orders.TryBombard(attacker, fogged.GetTile());
+    const auto strike = orders.attacks.TryBombard(attacker, fogged.GetTile());
     REQUIRE(strike);
     REQUIRE(strike->combats.size() == 1);
     CHECK_FALSE(player.GetRevealedUnits().IsRevealed(fogged));
@@ -432,7 +439,7 @@ TEST_CASE("Bombard hits fogged and concealed units and leaves them hidden", "[bo
     CHECK_FALSE(IsUnitVisibleTo(player, artillery));
 
     Unit& second = fixture.MakeUnit(player, 6, 10, {"test_chassis", "bombard"});
-    const auto duel = orders.orders.TryBombard(second, artillery.GetTile());
+    const auto duel = orders.attacks.TryBombard(second, artillery.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);
     CHECK(duel->combats.front().defenderId == artillery.GetUnitId());

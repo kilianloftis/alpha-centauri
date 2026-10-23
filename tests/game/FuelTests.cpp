@@ -16,6 +16,8 @@
 #include "game/movement/TransportMutations.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -51,14 +53,19 @@ struct FuelHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     explicit FuelHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
                  *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };
@@ -118,7 +125,7 @@ TEST_CASE("Partial move then end turn burns the same net fuel as a full away tur
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
     MoveOrder_t stepOrder{&fixture.At(9, 9)};
-    REQUIRE(harness.orders.TryStep(jet, fixture.At(9, 9), stepOrder).bEntered);
+    REQUIRE(harness.moves.TryStep(jet, fixture.At(9, 9), stepOrder).bEntered);
     CHECK(jet.GetCurrentFuel() == 7);
     CHECK(jet.GetMoveFragmentsRemaining() == 3 * k_point);
 
@@ -139,7 +146,7 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     REQUIRE(jet.GetCurrentFuel() == 8);
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
-    REQUIRE(harness.orders.TryAttack(jet, fixture.At(9, 9)).has_value());
+    REQUIRE(harness.attacks.TryAttack(jet, fixture.At(9, 9)).has_value());
     CHECK(jet.GetMoveFragmentsRemaining() == 0);
     CHECK(jet.GetCurrentFuel() == 4);
     CHECK(FindAttackableHostileOnTile(jet, fixture.At(9, 9)) == nullptr);

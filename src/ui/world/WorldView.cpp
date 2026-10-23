@@ -767,7 +767,7 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     const std::string attackerName = rAttacker.GetDesign().GetName();
     const std::string defenderName = FindUnitNameOnTile_(rTargetTile);
 
-    const auto result = m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile);
+    const auto result = m_rGameState.GetUnitAttacks().TryAttack(rAttacker, rTargetTile);
     if (!result)
     {
         return;
@@ -876,7 +876,7 @@ bool WorldView::TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile)
 {
     // Snapshot before the shot: it may destroy the targets whose names playback shows.
     std::shared_ptr<BombardPlayback_t> pPlayback = SnapshotBombardTargets_(rAttacker, rTargetTile);
-    auto result = m_rGameState.GetUnitOrderExecutor().TryBombard(rAttacker, rTargetTile);
+    auto result = m_rGameState.GetUnitAttacks().TryBombard(rAttacker, rTargetTile);
     if (!result)
     {
         return false;
@@ -1247,7 +1247,7 @@ void WorldView::ShowAirdropNotice_(std::string message)
 
 void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)
 {
-    const auto result = m_rGameState.GetUnitOrderExecutor().TryAirdrop(rUnit, rDest);
+    const auto result = m_rGameState.GetUnitMoves().TryAirdrop(rUnit, rDest);
     if (!result.Ok())
     {
         ShowAirdropNotice_(AirdropFailReasonMessage(result.failReason));

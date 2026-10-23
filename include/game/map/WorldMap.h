@@ -34,6 +34,9 @@ public:
     // Y out of bounds returns nullptr. Odd parity throws.
     Tile* GetTile(int x, int y);
     const Tile* GetTile(int x, int y) const;
+    // This map's own tile at rTile's position, for callers that hold it const. Throws when no
+    // tile is there.
+    Tile& MutableTile(const Tile& rTile);
 
     // Row-major index into GetTiles() for an in-bounds even-parity (x, y). Throws on odd parity.
     int GetTileIndex(int x, int y) const;

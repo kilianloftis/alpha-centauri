@@ -19,16 +19,6 @@ namespace ac
 namespace
 {
 
-Tile& MutableTile_(WorldMap& rWorldMap, const Tile& rTile)
-{
-    Tile* pTile = rWorldMap.GetTile(rTile.GetX(), rTile.GetY());
-    if (pTile == nullptr)
-    {
-        throw std::logic_error("ElevationChange: a planned tile is not on this world");
-    }
-    return *pTile;
-}
-
 // Each written tile's surface before its first write.
 std::vector<SurfaceFlip_t> WriteElevations_(const std::vector<ElevationWrite_t>& rWrites,
                                             WorldMap& rWorldMap)
@@ -37,7 +27,7 @@ std::vector<SurfaceFlip_t> WriteElevations_(const std::vector<ElevationWrite_t>&
     std::unordered_set<const Tile*> seen;
     for (const ElevationWrite_t& rWrite : rWrites)
     {
-        Tile& rTile = MutableTile_(rWorldMap, *rWrite.pTile);
+        Tile& rTile = rWorldMap.MutableTile(*rWrite.pTile);
         if (seen.insert(&rTile).second)
         {
             before.push_back(SurfaceFlip_t{&rTile, rTile.IsWater()});

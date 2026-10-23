@@ -540,8 +540,8 @@ context: the actor is the subject faction, the target base or unit is the subjec
 owner is `actionTarget`.
 
 `on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
-unit arrives. `UnitOrderExecutor` receives an injected visit handler from `GameState` (player
-enqueue vs `ApplyVisitEffects`); movement harnesses leave it unset and skip visit. Continuous
+unit arrives. `UnitMoveExecutor` reports the arrival through `IUnitOrderWorld::OnImprovementVisited`,
+which `GameState` answers (player enqueue vs `ApplyVisitEffects`). Continuous
 tile yields stay in `effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit
 `GrantXp` with optional `remove_host_chance`.
 

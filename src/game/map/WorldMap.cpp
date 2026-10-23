@@ -51,6 +51,16 @@ int WorldMap::GetHeight() const
     return m_height;
 }
 
+Tile& WorldMap::MutableTile(const Tile& rTile)
+{
+    Tile* pTile = GetTile(rTile.GetX(), rTile.GetY());
+    if (!pTile)
+    {
+        throw std::logic_error("WorldMap::MutableTile: the tile is not on this map");
+    }
+    return *pTile;
+}
+
 Tile* WorldMap::GetTile(int x, int y)
 {
     if (y < 0 || y >= m_height)

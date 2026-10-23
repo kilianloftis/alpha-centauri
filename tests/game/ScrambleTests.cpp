@@ -148,7 +148,7 @@ TEST_CASE("Air Superiority scrambler becomes combat defender", "[unit][scramble]
     const UnitId_t scramblerId = scrambler.GetUnitId();
     const UnitId_t groundId = ground.GetUnitId();
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, rGroundTile);
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, rGroundTile);
     REQUIRE(result);
     CHECK(result->defenderId == scramblerId);
     CHECK(result->defenderId != groundId);
@@ -228,7 +228,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
 
         const UnitId_t groundId = ground.GetUnitId();
         auto result =
-            game.fixtures.state.GetUnitOrderExecutor().TryAttack(landAttacker, ground.GetTile());
+            game.fixtures.state.GetUnitAttacks().TryAttack(landAttacker, ground.GetTile());
         REQUIRE(result);
         CHECK(result->defenderId == groundId);
         CHECK(result->scramblePath.empty());
@@ -296,7 +296,7 @@ TEST_CASE("Scramble MoveOrder walks hop by hop via Execute", "[unit][scramble]")
             }
         });
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAttack(attacker, ground.GetTile());
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, ground.GetTile());
     REQUIRE(result);
     REQUIRE(result->scramblePath.size() == 2);
     CHECK(tilesSeen == result->scramblePath);

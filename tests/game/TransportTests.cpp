@@ -14,6 +14,8 @@
 #include "game/movement/TransportMutations.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/Pathfinder.h"
@@ -54,14 +56,19 @@ struct TransportHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     explicit TransportHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
                  *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };
@@ -124,13 +131,13 @@ TEST_CASE("Step onto transport auto-attaches; carrier move keeps cargo", "[trans
     Unit& land = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
     MoveOrder_t order;
-    REQUIRE(harness.orders.TryStep(land, fixture.At(9, 9), order).bEntered);
+    REQUIRE(harness.moves.TryStep(land, fixture.At(9, 9), order).bEntered);
     CHECK(land.IsEmbarked());
     CHECK(land.GetCarrier() == &transport);
     CHECK(&land.GetTile() == &fixture.At(9, 9));
 
     MoveOrder_t seaOrder;
-    REQUIRE(harness.orders.TryStep(transport, fixture.At(10, 10), seaOrder).bEntered);
+    REQUIRE(harness.moves.TryStep(transport, fixture.At(10, 10), seaOrder).bEntered);
     CHECK(&transport.GetTile() == &fixture.At(10, 10));
     CHECK(land.IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(10, 10));
@@ -150,7 +157,7 @@ TEST_CASE("Unload to adjacent land; destroying a carrier over water drowns its c
     REQUIRE(TryAttachToTransport(land));
 
     MoveOrder_t unload;
-    REQUIRE(harness.orders.TryStep(land, fixture.At(8, 8), unload).bEntered);
+    REQUIRE(harness.moves.TryStep(land, fixture.At(8, 8), unload).bEntered);
     CHECK_FALSE(land.IsEmbarked());
     CHECK(&land.GetTile() == &fixture.At(8, 8));
     CHECK(transport.GetCargo().empty());
@@ -190,7 +197,7 @@ TEST_CASE("Land cargo can step from one sea transport onto an adjacent one", "[t
     REQUIRE(land.GetCarrier() == &transportA);
 
     MoveOrder_t transfer;
-    REQUIRE(harness.orders.TryStep(land, fixture.At(10, 10), transfer).bEntered);
+    REQUIRE(harness.moves.TryStep(land, fixture.At(10, 10), transfer).bEntered);
     CHECK(land.IsEmbarked());
     CHECK(land.GetCarrier() == &transportB);
     CHECK(transportA.GetCargo().empty());
@@ -212,7 +219,7 @@ TEST_CASE("Entering a base garrisons it rather than boarding a transport there",
     Unit& land = fixture.MakeUnit(faction, 7, 7, {"test_chassis"});
 
     MoveOrder_t order;
-    REQUIRE(harness.orders.TryStep(land, fixture.At(8, 8), order).bEntered);
+    REQUIRE(harness.moves.TryStep(land, fixture.At(8, 8), order).bEntered);
     CHECK_FALSE(land.IsEmbarked());
     CHECK(airTransport.GetCargo().empty());
 

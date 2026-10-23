@@ -5,6 +5,8 @@
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/map/MapUtils.h"
@@ -57,14 +59,19 @@ struct PathHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     explicit PathHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
                  *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };

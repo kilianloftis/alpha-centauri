@@ -169,14 +169,14 @@ TEST_CASE("Airdrop cannot chain through a friendly launch pad", "[unit][airdrop]
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(dropper);
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(dropper, rOtherPad.GetTile());
+    auto result = game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, rOtherPad.GetTile());
     REQUIRE(result.Ok());
     CHECK(dropper.HasAirdroppedThisTurn());
     CHECK(CanAttemptAirdrop(dropper).failReason == AirdropFailReason_t::AlreadyAirdropped);
 
     Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
-    result = game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(dropper, *pField);
+    result = game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, *pField);
     CHECK(result.failReason == AirdropFailReason_t::AlreadyAirdropped);
 }
 
@@ -219,7 +219,7 @@ TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
 
     Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(dropper, *pField);
+    auto result = game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, *pField);
     REQUIRE(result.Ok());
     // 20% of 10 HP = 2
     CHECK(dropper.GetCurrentHp() == maxHp - 2);
@@ -230,7 +230,7 @@ TEST_CASE("Airdrop landing damage and airdrop_launch skip", "[unit][airdrop]")
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
     game.LatchTurnStart(toPad);
     const int padHp = toPad.GetCurrentHp();
-    result = game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(toPad, rOtherPad.GetTile());
+    result = game.fixtures.state.GetUnitMoves().TryAirdrop(toPad, rOtherPad.GetTile());
     REQUIRE(result.Ok());
     CHECK(toPad.GetCurrentHp() == padHp);
 }
@@ -251,7 +251,7 @@ TEST_CASE("Singularity increases airdrop landing damage", "[unit][airdrop]")
 
     Tile* pField = rMap.GetTile(10, 10);
     REQUIRE(pField);
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(dropper, *pField).Ok());
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, *pField).Ok());
     CHECK(dropper.GetCurrentHp() == 50 - 13);
 }
 
@@ -328,10 +328,10 @@ TEST_CASE("Noncombat airdrop spends remaining moves; combat keeps them", "[unit]
     REQUIRE(pB);
 
     const int combatMoves = combat.GetMoveFragmentsRemaining();
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(combat, *pA).Ok());
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(combat, *pA).Ok());
     CHECK(combat.GetMoveFragmentsRemaining() == combatMoves);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(former, *pB).Ok());
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(former, *pB).Ok());
     CHECK(former.GetMoveFragmentsRemaining() == 0);
 }
 
@@ -347,7 +347,7 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
 
     Tile* pLand = rMap.GetTile(9, 9);
     REQUIRE(pLand);
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(attacker, *pLand).Ok());
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(attacker, *pLand).Ok());
     REQUIRE(attacker.HasAirdroppedThisTurn());
 
     Unit& defender = game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
@@ -378,7 +378,7 @@ TEST_CASE("Airdrop into empty foreign base captures via arrival", "[unit][airdro
     game.LatchTurnStart(dropper);
     game.pPlayer->GetResearch().AddDiscoveredTech("graviton_theory");
 
-    auto result = game.fixtures.state.GetUnitOrderExecutor().TryAirdrop(dropper, rEnemyBase.GetTile());
+    auto result = game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, rEnemyBase.GetTile());
     REQUIRE(result.Ok());
     CHECK(&dropper.GetTile() == &rEnemyBase.GetTile());
     CHECK(rEnemyBase.GetFaction().GetFactionId() == game.pPlayer->GetFactionId());

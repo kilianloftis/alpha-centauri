@@ -60,7 +60,7 @@ graph TB
     end
 
     subgraph "Hostile act sources"
-        Combat[UnitOrderExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
+        Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
         Atrocity[CommitAtrocity<br/>always attributed]
     end
@@ -354,7 +354,7 @@ covert unit is never identified.
 
 `ApplyHostileAct` is called by:
 
-- `UnitOrderExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, after
+- `UnitAttackExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, after
   combat resolves (including an attack ended by interception). A sneak attack on a Pact partner
   clears shared tiles, and doing that first would teleport a stacked attacker or defender away
   before the blow.

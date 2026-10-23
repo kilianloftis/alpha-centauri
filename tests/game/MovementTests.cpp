@@ -9,6 +9,8 @@
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/TransportRules.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/map/MapUtils.h"
@@ -38,14 +40,19 @@ struct MovementHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     explicit MovementHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder, fixture.morale(),
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
                  *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };
@@ -81,7 +88,7 @@ TEST_CASE("Step requires adjacency and spends one move", "[movement]")
 
     CHECK_FALSE(move.steps.CanStep(unit, unit.GetTile(), fixture.At(10, 10))); // not adjacent
     MoveOrder_t stepOrder{&fixture.At(9, 9)};
-    REQUIRE(move.orders.TryStep(unit, fixture.At(9, 9), stepOrder).bEntered);
+    REQUIRE(move.moves.TryStep(unit, fixture.At(9, 9), stepOrder).bEntered);
     CHECK(&unit.GetTile() == &fixture.At(9, 9));
     CHECK(unit.GetMoveFragmentsRemaining() == k_point);
 }
@@ -213,7 +220,7 @@ TEST_CASE("Enter ZOC allowed; ZOC to ZOC blocked; leave ZOC allowed", "[movement
 
     // Enter ZOC: (3,4) -> (4,4)
     MoveOrder_t enterZoc{&fixture.At(8, 8)};
-    REQUIRE(move.orders.TryStep(mover, fixture.At(8, 8), enterZoc).bEntered);
+    REQUIRE(move.moves.TryStep(mover, fixture.At(8, 8), enterZoc).bEntered);
 
     // ZOC -> ZOC: (4,4) -> (4,5) both in ZOC of enemy at (5,4)
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(7, 9)));
@@ -272,10 +279,10 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
 
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(9, 9)));
     MoveOrder_t bumpHostile{&fixture.At(9, 9)};
-    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(9, 9), bumpHostile).bEntered);
+    CHECK_FALSE(move.moves.TryStep(mover, fixture.At(9, 9), bumpHostile).bEntered);
 
     const int movesBefore = mover.GetMoveFragmentsRemaining();
-    const auto result = move.orders.TryAttack(mover, fixture.At(9, 9));
+    const auto result = move.attacks.TryAttack(mover, fixture.At(9, 9));
     REQUIRE(result.has_value());
     CHECK(result->bDefenderDestroyed);
     CHECK_FALSE(result->bAttackerDestroyed);
@@ -300,14 +307,14 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
-    CHECK_FALSE(move.orders.TryAttack(mover, fixture.At(9, 9)));
+    CHECK_FALSE(move.attacks.TryAttack(mover, fixture.At(9, 9)));
     CHECK(mover.GetMoveFragmentsRemaining() == 2 * k_point);
 
     // Bumping the occupied tile reveals the cloaked unit.
     MoveOrder_t bumpCloaked{&fixture.At(9, 9)};
-    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(9, 9), bumpCloaked).bEntered);
+    CHECK_FALSE(move.moves.TryStep(mover, fixture.At(9, 9), bumpCloaked).bEntered);
     CHECK(IsUnitVisibleTo(player, cloaked));
-    REQUIRE(move.orders.TryAttack(mover, fixture.At(9, 9)));
+    REQUIRE(move.attacks.TryAttack(mover, fixture.At(9, 9)));
 }
 
 TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
@@ -326,9 +333,9 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
     // ZOC -> ZOC toward (4,5) is blocked by the cloaked projector.
     MoveOrder_t zocBump{&fixture.At(7, 9)};
-    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(7, 9), zocBump).bEntered);
+    CHECK_FALSE(move.moves.TryStep(mover, fixture.At(7, 9), zocBump).bEntered);
     CHECK(IsUnitVisibleTo(player, cloaked));
-    CHECK(move.orders.TryAttack(mover, fixture.At(9, 9)));
+    CHECK(move.attacks.TryAttack(mover, fixture.At(9, 9)));
 }
 
 TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
@@ -425,7 +432,7 @@ TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
     {
         mover.SetMoveFragmentsRemaining(0);
         MoveOrder_t order{&fixture.At(7, 9)};
-        CHECK_FALSE(move.orders.TryStep(mover, fixture.At(7, 9), order).bEntered);
+        CHECK_FALSE(move.moves.TryStep(mover, fixture.At(7, 9), order).bEntered);
         CHECK(&mover.GetTile() == &fixture.At(8, 8));
     }
 }
@@ -543,14 +550,14 @@ TEST_CASE("TryStep spends tile move-cost fragments", "[movement][move-cost]")
     Tile& rocky = fixture.At(9, 9);
     rocky.SetRockiness(Rockiness_t::Rocky);
     MoveOrder_t rockyOrder{&rocky};
-    REQUIRE(move.orders.TryStep(unit, rocky, rockyOrder).bEntered);
+    REQUIRE(move.moves.TryStep(unit, rocky, rockyOrder).bEntered);
     CHECK(unit.GetMoveFragmentsRemaining() == 0); // 2-point rocky drains a 2-move unit
 
     Unit& roadUnit = fixture.MakeUnit(faction, 7, 9, {"test_chassis"});
     Tile& road = fixture.At(8, 10);
     road.AddImprovement(fixture.improvements.Get("Road"));
     MoveOrder_t roadOrder{&road};
-    REQUIRE(move.orders.TryStep(roadUnit, road, roadOrder).bEntered);
+    REQUIRE(move.moves.TryStep(roadUnit, road, roadOrder).bEntered);
     CHECK(roadUnit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
 
     // Any fragments left suffice even when tile cost is higher; remaining zeroes (clamped).
@@ -559,7 +566,7 @@ TEST_CASE("TryStep spends tile move-cost fragments", "[movement][move-cost]")
     Tile& rocky2 = fixture.At(11, 11);
     rocky2.SetRockiness(Rockiness_t::Rocky);
     MoveOrder_t rocky2Order{&rocky2};
-    REQUIRE(move.orders.TryStep(lastFragments, rocky2, rocky2Order).bEntered);
+    REQUIRE(move.moves.TryStep(lastFragments, rocky2, rocky2Order).bEntered);
     CHECK(lastFragments.GetMoveFragmentsRemaining() == 0);
 }
 
@@ -643,7 +650,7 @@ TEST_CASE("Friendly on fungus allows immediate entry and ends the turn", "[movem
     fixture.MakeUnit(faction, 9, 9, {"test_chassis"}); // friendly already there
 
     MoveOrder_t stepOrder{&fungus};
-    REQUIRE(move.orders.TryStep(unit, fungus, stepOrder).bEntered);
+    REQUIRE(move.moves.TryStep(unit, fungus, stepOrder).bEntered);
     CHECK(&unit.GetTile() == &fungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
 
@@ -651,7 +658,7 @@ TEST_CASE("Friendly on fungus allows immediate entry and ends the turn", "[movem
     Unit& lastFragment = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     lastFragment.SetMoveFragmentsRemaining(1);
     MoveOrder_t lastOrder{&fungus};
-    REQUIRE(move.orders.TryStep(lastFragment, fungus, lastOrder).bEntered);
+    REQUIRE(move.moves.TryStep(lastFragment, fungus, lastOrder).bEntered);
     CHECK(&lastFragment.GetTile() == &fungus);
     CHECK(lastFragment.GetMoveFragmentsRemaining() == 0);
 }
@@ -694,7 +701,7 @@ TEST_CASE("Road built on fungus negates the entry rules", "[movement][fungus]")
     roadFungus.AddImprovement(fixture.improvements.Get("Road"));
 
     MoveOrder_t stepOrder{&roadFungus};
-    REQUIRE(move.orders.TryStep(unit, roadFungus, stepOrder).bEntered);
+    REQUIRE(move.moves.TryStep(unit, roadFungus, stepOrder).bEntered);
     CHECK(&unit.GetTile() == &roadFungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
 }
@@ -711,7 +718,7 @@ TEST_CASE("TreatFungusAsRoad uses road cost without forced end-turn", "[movement
     Tile& fungus = fixture.At(9, 9);
     fungus.AddTerrainFeature(fixture.improvements.Get("Fungus"));
     MoveOrder_t stepOrder{&fungus};
-    REQUIRE(move.orders.TryStep(unit, fungus, stepOrder).bEntered);
+    REQUIRE(move.moves.TryStep(unit, fungus, stepOrder).bEntered);
     CHECK(&unit.GetTile() == &fungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
 }
@@ -729,7 +736,7 @@ TEST_CASE("Step wraps horizontally across the map seam", "[movement][wrap]")
     CHECK_FALSE(move.steps.CanStep(unit, unit.GetTile(), fixture.At(width - 4, 4)));
 
     MoveOrder_t wrapStep{&fixture.At(width - 2, 4)};
-    REQUIRE(move.orders.TryStep(unit, fixture.At(width - 2, 4), wrapStep).bEntered);
+    REQUIRE(move.moves.TryStep(unit, fixture.At(width - 2, 4), wrapStep).bEntered);
     CHECK(unit.GetTile().GetX() == width - 2);
 }
 
@@ -763,8 +770,8 @@ TEST_CASE("Attack wraps horizontally across the map seam", "[movement][zoc][wrap
     fixture.MakeUnit(enemy, width - 2, 4, {"test_chassis"});
     Unit& mover = fixture.MakeUnit(player, 0, 4, {"test_chassis", "test_weapon"});
 
-    CHECK_FALSE(move.orders.TryAttack(mover, fixture.At(width - 4, 4))); // not adjacent
-    const auto result = move.orders.TryAttack(mover, fixture.At(width - 2, 4));
+    CHECK_FALSE(move.attacks.TryAttack(mover, fixture.At(width - 4, 4))); // not adjacent
+    const auto result = move.attacks.TryAttack(mover, fixture.At(width - 2, 4));
     REQUIRE(result.has_value());
     CHECK(mover.GetTile().GetX() == 0);
 }

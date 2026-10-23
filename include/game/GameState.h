@@ -18,6 +18,8 @@
 #include "game/movement/StepEvaluator.h"
 #include "game/movement/Pathfinder.h"
 #include "game/units/IUnitOrderWorld.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/probes/ProbeActionExecutor.h"
 #include "lib/DerefView.h"
@@ -158,7 +160,9 @@ public:
     Pathfinder& GetPathfinder();
     const Pathfinder& GetPathfinder() const;
 
+    UnitMoveExecutor& GetUnitMoves();
     UnitOrderExecutor& GetUnitOrderExecutor();
+    UnitAttackExecutor& GetUnitAttacks();
 
     // A Hold whose design matches this friendly base: the player is asked to link, an AI links at
     // once. Also runs when a building completes under a Holding unit.
@@ -231,7 +235,9 @@ private:
     std::unique_ptr<FirstContactResolver> m_pFirstContact;
     // Before the executors that reference it.
     std::mt19937 m_rng;
+    std::unique_ptr<UnitMoveExecutor> m_pUnitMoves;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
+    std::unique_ptr<UnitAttackExecutor> m_pUnitAttacks;
     std::unique_ptr<ProbeActionExecutor> m_pProbeActions;
     std::unique_ptr<PlanetaryCouncil> m_pCouncil;
     // Declared after the council it holds a reference to.

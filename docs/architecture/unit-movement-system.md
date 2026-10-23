@@ -3,8 +3,10 @@
 Movement is split into components with one-way dependencies: rule resolution
 (`MoveCostRules`), legality checks (`StepEvaluator` + the free functions in
 `MovementRules.h` and `TransportRules.h`), planning (`Pathfinder`), and execution
-(`UnitOrderExecutor`). All entry-cost and fungus rules live in `MoveCostRules`; the
-executor and pathfinder only consume its output and never inspect tile features themselves.
+(`UnitMoveExecutor` for steps and airdrops, `UnitOrderExecutor` for the order loop,
+founding and terraforming, `UnitAttackExecutor` for attacks and bombards). All entry-cost and
+fungus rules live in `MoveCostRules`; the executors and pathfinder only consume its output and
+never inspect tile features themselves.
 
 ```mermaid
 graph TD
@@ -52,10 +54,14 @@ graph TD
 
     StepEvaluator[StepEvaluator<br/>edge legality: adjacency, terrain,<br/>occupants, ZOC — objective or<br/>faction-known knowledge]
     Pathfinder[Pathfinder<br/>Dijkstra over PlannedCostFragments<br/>+ CanPlanStep]
-    UnitOrderExecutor[UnitOrderExecutor<br/>TryStep / TryAttack / order loop,<br/>spends fragments, banks charges]
-    UnitOrderExecutor --> AttackRules
-    UnitOrderExecutor --> InterceptMutations
-    UnitOrderExecutor --> ScrambleRules
+    UnitMoveExecutor[UnitMoveExecutor<br/>TryStep / TryAirdrop,<br/>spends fragments, banks charges]
+    UnitOrderExecutor[UnitOrderExecutor<br/>order loop, found base, terraform]
+    UnitAttackExecutor[UnitAttackExecutor<br/>TryAttack / TryBombard,<br/>intercept, scramble]
+    UnitOrderExecutor --> UnitMoveExecutor
+    UnitAttackExecutor -->|scramble move| UnitOrderExecutor
+    UnitAttackExecutor --> AttackRules
+    UnitAttackExecutor --> InterceptMutations
+    UnitAttackExecutor --> ScrambleRules
     IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, conquest]
     GameState[GameState]
     TerritoryEntryMutations[TerritoryEntryMutations<br/>BreakAgreementAndContinue at a forbidden border:<br/>Vendetta and resume]
@@ -66,13 +72,16 @@ graph TD
     MoveCostRules --> MovementRules
     Pathfinder --> StepEvaluator
     Pathfinder -->|PlannedCostFragments| MoveCostRules
-    UnitOrderExecutor -->|EntryTerms| MoveCostRules
+    UnitMoveExecutor -->|EntryTerms| MoveCostRules
+    UnitMoveExecutor --> StepEvaluator
+    UnitMoveExecutor --> TransportRules
     UnitOrderExecutor --> StepEvaluator
     UnitOrderExecutor --> Pathfinder
-    UnitOrderExecutor --> TransportRules
-    UnitOrderExecutor --> BaseConquestRules
-    UnitOrderExecutor --> CombatResolver
-    UnitOrderExecutor -->|optional, ctor-injected| IUnitOrderWorld
+    UnitAttackExecutor --> BaseConquestRules
+    UnitAttackExecutor --> CombatResolver
+    UnitMoveExecutor -->|ctor-injected| IUnitOrderWorld
+    UnitOrderExecutor -->|ctor-injected| IUnitOrderWorld
+    UnitAttackExecutor -->|ctor-injected| IUnitOrderWorld
     GameState -.->|implements| IUnitOrderWorld
     IUnitOrderWorld --> BaseConquestMutations
 ```
@@ -109,7 +118,7 @@ movement point, so fractional configs like Road's `"1/3"` stay exact integers.
 The `Query` exposes two views of the same terms, one per consumer:
 
 - `EntryTerms(tile)` — the raw rules, resolved from objective tile state. Consumed by
-  `UnitOrderExecutor` when actually spending fragments.
+  `UnitMoveExecutor` when actually spending fragments.
 - `PlannedCostFragments(tile)` — Dijkstra edge weight for `Pathfinder`. Shrouded
   (unexplored) tiles report the default cost so the planner cannot see rockiness / fungus /
   roads under fog. End-turn entries are valued in whole turns of the unit's movement
@@ -120,7 +129,7 @@ The `Query` exposes two views of the same terms, one per consumer:
 ## Execution
 
 `ResolveEntryPayment` (`MovementRules`) turns the terms, this turn's fragments and what is
-already banked toward the tile into an `EntryPayment_t`; `UnitOrderExecutor::SpendMovesAndEnter_`
+already banked toward the tile into an `EntryPayment_t`; `UnitMoveExecutor::SpendMovesAndEnter_`
 charges it and keeps the bank on the move order:
 
 1. `bRequiresFullCost` and the banked total (`MoveOrder_t::chargeFragmentsPaid` toward
@@ -351,7 +360,8 @@ Conquest is split so the predicates stay testable without a live world:
 - `BaseConquestMutations` — every world mutation, returning a `BaseConquestResult_t` tally
   (population lost, facilities destroyed, escape pods, razed, actor destroyed).
 
-Two entry points, reached from `UnitOrderExecutor`:
+Two entry points, reached from `UnitAttackExecutor` (after combat) and `UnitMoveExecutor` (on
+entry):
 
 - `ResolvePostCombatBaseConquest` — after the last garrison on a base tile dies. Applies
   last-defender population loss (Additive `LastDefenderPopLoss`; `base_conquest.json` Adds the

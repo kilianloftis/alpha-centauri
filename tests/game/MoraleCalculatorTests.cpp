@@ -471,7 +471,7 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     attacker.SetCurrentHp(ResolveStat(attacker, StatId_t::HitPoints));
 
     const int xpBefore = attacker.GetXp();
-    auto result = fixture.state.GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
+    auto result = fixture.state.GetUnitAttacks().TryAttack(attacker, defender.GetTile());
     REQUIRE(result.has_value());
     if (result->bDefenderDestroyed && !result->bAttackerDestroyed)
     {

@@ -9,6 +9,8 @@
 #include "game/movement/Pathfinder.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -52,15 +54,20 @@ struct OrderHarness_
     StepEvaluator steps;
     Pathfinder pathfinder;
     std::mt19937 rng;
+    UnitMoveExecutor moves;
     UnitOrderExecutor orders;
+    UnitAttackExecutor attacks;
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , rng(seed)
-        , orders(moveCosts, steps, fixture.map, fixture.ctx, pathfinder,
-                 fixture.morale(), *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , moves(moveCosts, steps, fixture.map, rng, fixture.state)
+        , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
+                 *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+        , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
+                  orders)
     {
     }
 };
@@ -307,7 +314,7 @@ TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat]
 
     // Expenditure is on UnitOrderExecutor::TryAttack, not CombatResolver::Resolve.
     OrderHarness_ harness(fixture, /*seed*/ 42);
-    const auto result = harness.orders.TryAttack(attacker, defender.GetTile());
+    const auto result = harness.attacks.TryAttack(attacker, defender.GetTile());
     REQUIRE(result.has_value());
 
     CHECK(result->bDefenderDestroyed);
