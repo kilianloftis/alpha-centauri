@@ -1020,21 +1020,6 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "parameters": { "passenger_domains": ["air"] }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "TransportParams",
-        "scope": "ThisUnit",
-        "parameters": { "load_site_flags": ["loads_air_transport"] }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "TransportParams",
-        "scope": "ThisUnit",
-        "parameters": { "carries": ["air"], "refuels_cargo": true }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "TransportParams",
-        "scope": "ThisUnit",
         "parameters": {}
     })")));
 

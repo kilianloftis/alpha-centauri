@@ -97,26 +97,33 @@ std::set<std::string>* OnceSubjectFor_(const OncePer_t& rOncePer, TriggeredEffec
     return nullptr;
 }
 
+// The configured tech, or a random one the faction could research next.
+std::optional<TechId> PickTechToGrant_(TriggeredEffectContext_t& rCtx, const Faction& rFaction,
+                                       const GrantTechEffect_t& rGrant)
+{
+    if (rGrant.techId.has_value())
+    {
+        return rGrant.techId;
+    }
+    const std::vector<const TechConfig_t*> available = AvailableTechs(rFaction.GetResearch());
+    if (available.empty())
+    {
+        return std::nullopt;
+    }
+    std::uniform_int_distribution<std::size_t> dist(0, available.size() - 1);
+    const std::size_t picked = dist(rCtx.Rng());
+    return available[picked]->id;
+}
+
 bool AddTech_(TriggeredEffectContext_t& rCtx, Faction& rFaction, const GrantTechEffect_t& rGrant,
               std::vector<TriggeredEffectResult_t>& rOut)
 {
-    TechId techId;
-    if (rGrant.techId.has_value())
+    const std::optional<TechId> picked = PickTechToGrant_(rCtx, rFaction, rGrant);
+    if (!picked)
     {
-        techId = *rGrant.techId;
+        return false;
     }
-    else
-    {
-        const std::vector<const TechConfig_t*> available = AvailableTechs(rFaction.GetResearch());
-        if (available.empty())
-        {
-            return false;
-        }
-        std::uniform_int_distribution<std::size_t> dist(0, available.size() - 1);
-        const std::size_t picked = dist(rCtx.Rng());
-        techId = available[picked]->id;
-    }
-
+    const TechId& techId = *picked;
     // Granting what the faction already knows is an ordinary outcome — two facilities can
     // grant the same tech — not the programmer error AddDiscoveredTech throws on.
     if (rFaction.GetResearch().HasDiscoveredTech(techId))
@@ -196,6 +203,30 @@ bool Rebel_(TriggeredEffectContext_t& rCtx, std::vector<TriggeredEffectResult_t>
     return true;
 }
 
+// A full map grants fewer units rather than throwing: the caller is told the real count.
+int SpawnGrantedUnits_(GameState& rGameState, Faction& rFaction, const UnitDesign& rDesign,
+                       BaseManager& rAnchor, int count)
+{
+    WorldMap& rMap = rGameState.GetWorldMap();
+    const std::vector<const Tile*> tiles =
+        PlacementTiles(rAnchor.GetTile(), rDesign, rFaction.GetFactionId(), count);
+    int spawned = 0;
+    for (const Tile* pTile : tiles)
+    {
+        if (spawned >= count)
+        {
+            break;
+        }
+        // Homed at the anchor so it pays support, but explicitly produced nowhere: a gift is
+        // not a build, so it receives no on_unit_produced train bonuses and no prototype latch.
+        rFaction.GetUnitManager().CreateUnit(rGameState.AllocateUnitId(), rDesign,
+                                             rMap.GetUnitPositions(), *pTile, &rAnchor,
+                                             /*pProducedAt=*/nullptr);
+        ++spawned;
+    }
+    return spawned;
+}
+
 bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
                 Faction& rFaction, std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -218,27 +249,8 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
         return false;
     }
 
-    WorldMap& rMap = rCtx.rGameState.GetWorldMap();
-    const Tile& rAnchorTile = pAnchor->GetTile();
-    const FactionId_t factionId = rFaction.GetFactionId();
-    const std::vector<const Tile*> tiles =
-        PlacementTiles(rAnchorTile, *pDesign, factionId, rGrant.count);
-
-    // A full map grants fewer units rather than throwing: the caller is told the real count.
-    int spawned = 0;
-    for (const Tile* pTile : tiles)
-    {
-        if (spawned >= rGrant.count)
-        {
-            break;
-        }
-        // Homed at the anchor so it pays support, but explicitly produced nowhere: a gift is
-        // not a build, so it receives no on_unit_produced train bonuses and no prototype latch.
-        rFaction.GetUnitManager().CreateUnit(rCtx.rGameState.AllocateUnitId(), *pDesign,
-                                             rMap.GetUnitPositions(), *pTile, pAnchor,
-                                             /*pProducedAt=*/nullptr);
-        ++spawned;
-    }
+    const int spawned = SpawnGrantedUnits_(rCtx.rGameState, rFaction, *pDesign, *pAnchor,
+                                           rGrant.count);
     rOut.push_back(UnitsGranted_t{spawned, pDesign->GetId()});
     return spawned > 0;
 }
@@ -271,54 +283,52 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     return true;
 }
 
-// Aquifer and river are tile bools; other occupants are optional terrain.
-bool SetTerrainFeature_(TriggeredEffectContext_t& rCtx, const SetTerrainFeatureEffect_t& rConfig,
-                        std::vector<TriggeredEffectResult_t>& rOut)
+// Aquifer and river are tile bools; other occupants are optional terrain. False when the tile
+// already had the requested state.
+bool ToggleTerrainFeature_(GameState& rGameState, Tile& rTile, const std::string& rFeatureId,
+                           bool bPresent)
 {
-    if (!rCtx.pTile)
+    if (rFeatureId == magic_enum::enum_name(TerrainFeature_t::Aquifer))
+    {
+        if (rTile.GetHasAquifer() == bPresent)
+        {
+            return false;
+        }
+        rTile.SetHasAquifer(bPresent);
+        RecomputeRivers(rGameState.GetWorldMap());
+        return true;
+    }
+    if (rFeatureId == magic_enum::enum_name(TerrainFeature_t::River))
+    {
+        if (rTile.GetHasRiver() == bPresent)
+        {
+            return false;
+        }
+        rTile.SetHasRiver(bPresent);
+        return true;
+    }
+    if (rTile.HasTerrainFeature(rFeatureId) == bPresent)
     {
         return false;
     }
-    Tile& rTile = *rCtx.pTile;
-    TileEffectsContext& rTileEffects = rCtx.rGameState.GetTileEffects();
-    const std::string_view aquifer = magic_enum::enum_name(TerrainFeature_t::Aquifer);
-    const std::string_view river = magic_enum::enum_name(TerrainFeature_t::River);
-
-    bool bChanged = false;
-    if (rConfig.featureId == aquifer)
+    TileEffectsContext& rTileEffects = rGameState.GetTileEffects();
+    if (bPresent)
     {
-        bChanged = rTile.GetHasAquifer() != rConfig.bPresent;
-        if (bChanged)
-        {
-            rTile.SetHasAquifer(rConfig.bPresent);
-            RecomputeRivers(rCtx.rGameState.GetWorldMap());
-        }
-    }
-    else if (rConfig.featureId == river)
-    {
-        bChanged = rTile.GetHasRiver() != rConfig.bPresent;
-        if (bChanged)
-        {
-            rTile.SetHasRiver(rConfig.bPresent);
-        }
+        rTileEffects.AddOccupantWithEffects(rTile, rFeatureId);
     }
     else
     {
-        bChanged = rTile.HasTerrainFeature(rConfig.featureId) != rConfig.bPresent;
-        if (bChanged)
-        {
-            if (rConfig.bPresent)
-            {
-                rTileEffects.AddOccupantWithEffects(rTile, rConfig.featureId);
-            }
-            else
-            {
-                rTileEffects.RemoveOccupantWithEffects(rTile, rConfig.featureId);
-            }
-        }
+        rTileEffects.RemoveOccupantWithEffects(rTile, rFeatureId);
     }
+    return true;
+}
 
-    if (!bChanged)
+bool SetTerrainFeature_(TriggeredEffectContext_t& rCtx, const SetTerrainFeatureEffect_t& rConfig,
+                        std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile
+        || !ToggleTerrainFeature_(rCtx.rGameState, *rCtx.pTile, rConfig.featureId,
+                                  rConfig.bPresent))
     {
         return false;
     }
@@ -701,6 +711,83 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
         rConfig.effect);
 }
 
+void ApplyForFaction_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t& rContext,
+                      Faction* pFaction, std::vector<TriggeredEffectResult_t>& rResults)
+{
+    if (!pFaction)
+    {
+        return;
+    }
+    // Stamp before condition so a future faction-identity arm sees the apply subject.
+    rContext.pFaction = pFaction;
+    if (rConfig.condition
+        && !ConditionSatisfied(*rConfig.condition, rContext.Subjects(), nullptr))
+    {
+        return;
+    }
+    std::set<std::string>* pConsumed = nullptr;
+    if (rConfig.oncePer)
+    {
+        pConsumed = OnceSubjectFor_(*rConfig.oncePer, rContext, *pFaction);
+        if (!pConsumed || pConsumed->count(rConfig.oncePer->key) != 0)
+        {
+            return;
+        }
+    }
+    // Only a real change spends the key: an entry that found nothing to do has not
+    // been used up, and the player should still get it when the situation changes.
+    if (ApplyOne_(rConfig, rContext, *pFaction, rResults) && pConsumed)
+    {
+        pConsumed->insert(rConfig.oncePer->key);
+    }
+}
+
+Faction* DefaultSubjectFaction_(const TriggeredEffectContext_t& rContext)
+{
+    if (rContext.pBase)
+    {
+        return &rContext.pBase->GetFaction();
+    }
+    return rContext.factions.empty() ? nullptr : rContext.factions.front();
+}
+
+void DestroySubjectIfKilled_(TriggeredEffectContext_t& rContext,
+                             const std::vector<TriggeredEffectResult_t>& rResults,
+                             std::size_t firstNew)
+{
+    if (!rContext.pUnit)
+    {
+        return;
+    }
+    const auto newResults = std::span(rResults).subspan(firstNew);
+    const bool bKilled = std::ranges::any_of(newResults, [](const TriggeredEffectResult_t& rResult)
+    {
+        return std::holds_alternative<UnitDestroyed_t>(rResult);
+    });
+    if (!bKilled)
+    {
+        return;
+    }
+    Unit& rSubject = *rContext.pUnit;
+    rContext.pUnit = nullptr;
+    rSubject.GetFaction().GetUnitManager().DestroyUnit(rSubject);
+}
+
+// Snapshot first: GrantXp remove_host_chance can erase an improvement mid-loop. Config pointers
+// stay valid (registry-owned) even after the tile loses the improvement.
+std::vector<const ImprovementConfig_t*> VisitHosts_(const Tile& rTile)
+{
+    std::vector<const ImprovementConfig_t*> hosts;
+    rTile.ForEachOccupant([&](const ImprovementConfig_t& rHost) {
+        if (ImprovementHasVisitEffects(rHost))
+        {
+            hosts.push_back(&rHost);
+        }
+        return false;
+    });
+    return hosts;
+}
+
 } // namespace
 
 std::vector<TriggeredEffectResult_t>
@@ -711,63 +798,21 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
     std::vector<TriggeredEffectResult_t> results;
     for (const TriggeredEffectConfig_t& rConfig : rEffects)
     {
+        const std::size_t resultsBefore = results.size();
         // Once per listed faction for a faction-subject entry, once otherwise (attributed to the
         // base's owner).
-        const auto applyFor = [&](Faction* pFaction)
-        {
-            if (!pFaction)
-            {
-                return;
-            }
-            // Stamp before condition so a future faction-identity arm sees the apply subject.
-            rContext.pFaction = pFaction;
-            if (rConfig.condition
-                && !ConditionSatisfied(*rConfig.condition, rContext.Subjects(), nullptr))
-            {
-                return;
-            }
-            std::set<std::string>* pConsumed = nullptr;
-            if (rConfig.oncePer)
-            {
-                pConsumed = OnceSubjectFor_(*rConfig.oncePer, rContext, *pFaction);
-                if (!pConsumed || pConsumed->count(rConfig.oncePer->key) != 0)
-                {
-                    return;
-                }
-            }
-            // Only a real change spends the key: an entry that found nothing to do has not
-            // been used up, and the player should still get it when the situation changes.
-            if (ApplyOne_(rConfig, rContext, *pFaction, results) && pConsumed)
-            {
-                pConsumed->insert(rConfig.oncePer->key);
-            }
-        };
-
-        const std::size_t resultsBefore = results.size();
         if (IsPerFactionSubject_(rConfig.effect))
         {
             for (Faction* pFaction : rContext.factions)
             {
-                applyFor(pFaction);
+                ApplyForFaction_(rConfig, rContext, pFaction, results);
             }
         }
         else
         {
-            applyFor(rContext.pBase ? &rContext.pBase->GetFaction()
-                                    : (rContext.factions.empty() ? nullptr
-                                                                 : rContext.factions.front()));
+            ApplyForFaction_(rConfig, rContext, DefaultSubjectFaction_(rContext), results);
         }
-        for (std::size_t i = resultsBefore; i < results.size(); ++i)
-        {
-            if (!std::holds_alternative<UnitDestroyed_t>(results[i]) || !rContext.pUnit)
-            {
-                continue;
-            }
-            Unit& rSubject = *rContext.pUnit;
-            rContext.pUnit = nullptr;
-            rSubject.GetFaction().GetUnitManager().DestroyUnit(rSubject);
-            break;
-        }
+        DestroySubjectIfKilled_(rContext, results, resultsBefore);
     }
     rContext.pFaction = pFactionOnEntry;
     return results;
@@ -800,17 +845,7 @@ void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
         throw std::runtime_error("ApplyVisitEffects: mover tile is not on the world map");
     }
 
-    // Snapshot hosts first: GrantXp remove_host_chance can erase an improvement mid-loop.
-    // Config pointers stay valid (registry-owned) even after the tile loses the improvement.
-    std::vector<const ImprovementConfig_t*> hosts;
-    pTile->ForEachOccupant([&](const ImprovementConfig_t& rHost) {
-        if (ImprovementHasVisitEffects(rHost))
-        {
-            hosts.push_back(&rHost);
-        }
-        return false;
-    });
-
+    const std::vector<const ImprovementConfig_t*> hosts = VisitHosts_(*pTile);
     TriggeredEffectContext_t context(rGameState, rMover.GetFaction());
     context.pUnit = &rMover;
     context.pTile = pTile;

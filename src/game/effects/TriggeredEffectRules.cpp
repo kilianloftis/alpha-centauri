@@ -14,6 +14,7 @@
 #include "game/units/UnitOrder.h"
 
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -99,6 +100,34 @@ std::string HostNameForEffect_(const TriggeredEffectConfig_t& rEffect, const Bas
     return rBase.GetName();
 }
 
+struct HoldLink_t
+{
+    TriggeredEffectConfig_t effect;
+    const BaseManager* pBase;
+};
+
+// The first on-hold effect a holding unit triggers at its own base.
+std::optional<HoldLink_t> FindHoldLink_(const Unit& rUnit)
+{
+    if (!HoldOrderActive_(rUnit))
+    {
+        return std::nullopt;
+    }
+    const BaseManager* pBase = OwnBaseAt_(CurrentGameState(), rUnit);
+    if (!pBase)
+    {
+        return std::nullopt;
+    }
+    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
+    {
+        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
+        {
+            return HoldLink_t{rEffect, pBase};
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 bool ImprovementHasVisitEffects(const ImprovementConfig_t& rHost)
@@ -113,46 +142,13 @@ bool TileHasVisitEffects(const Tile& rTile)
 
 bool UnitHasHoldLink(const Unit& rUnit)
 {
-    const GameState& rGameState = CurrentGameState();
-    if (!HoldOrderActive_(rUnit))
-    {
-        return false;
-    }
-    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
-    if (!pBase)
-    {
-        return false;
-    }
-    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
-    {
-        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
-        {
-            return true;
-        }
-    }
-    return false;
+    return FindHoldLink_(rUnit).has_value();
 }
 
 std::string HoldLinkHostName(const Unit& rUnit)
 {
-    const GameState& rGameState = CurrentGameState();
-    if (!HoldOrderActive_(rUnit))
-    {
-        return {};
-    }
-    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
-    if (!pBase)
-    {
-        return {};
-    }
-    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
-    {
-        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
-        {
-            return HostNameForEffect_(rEffect, *pBase);
-        }
-    }
-    return {};
+    const std::optional<HoldLink_t> link = FindHoldLink_(rUnit);
+    return link ? HostNameForEffect_(link->effect, *link->pBase) : std::string();
 }
 
 bool UnitCanDetonate(const Unit& rUnit)

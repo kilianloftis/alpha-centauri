@@ -906,8 +906,10 @@ void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveD
     }
 }
 
-// Identity conditions apply here; situational ones remain for in-context resolve.
-UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
+namespace
+{
+
+std::vector<ActiveEffect_t> GatherUnitEffects_(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
@@ -916,22 +918,32 @@ UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
     AppendWorldGlobalEffects(rPool, ResolveDomain_t::Unit, effects);
     const auto& rGrants = rUnit.GetProductionGrants();
     effects.insert(effects.end(), rGrants.begin(), rGrants.end());
+    return effects;
+}
 
+// Situational conditions wait for combat / tile context.
+void DropFailedIdentityConditions_(std::vector<ActiveEffect_t>& rEffects, const Unit& rUnit)
+{
     EffectContext_t identityCtx;
     identityCtx.pUnit = &rUnit;
-    std::erase_if(effects, [&](const ActiveEffect_t& rEffect)
+    std::erase_if(rEffects, [&](const ActiveEffect_t& rEffect)
     {
-        if (!rEffect.config->condition)
-        {
-            return false;
-        }
-        // Situational conditions wait for combat / tile context.
-        if (ConditionNeedsSituationalContext(*rEffect.config->condition))
+        if (!rEffect.config->condition
+            || ConditionNeedsSituationalContext(*rEffect.config->condition))
         {
             return false;
         }
         return !ConditionSatisfied(*rEffect.config, identityCtx, rEffect.originBase);
     });
+}
+
+} // namespace
+
+// Identity conditions apply here; situational ones remain for in-context resolve.
+UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
+{
+    std::vector<ActiveEffect_t> effects = GatherUnitEffects_(rUnit);
+    DropFailedIdentityConditions_(effects, rUnit);
     return UnitEffects_t(rUnit, std::move(effects));
 }
 

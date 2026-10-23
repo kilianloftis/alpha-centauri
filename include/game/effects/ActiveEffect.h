@@ -344,6 +344,36 @@ inline const Unit* OpposingCombatant_(const EffectContext_t& ctx)
 // Whether a FactionPair effect's partner is ctx.pPartner. False when ctx names no partner.
 bool MatchesPartner(const ActiveEffect_t& effect, const EffectContext_t& ctx);
 
+// Drops an amount source this context cannot evaluate, rather than throwing at resolve.
+inline bool AmountSourceEvaluable_(const StatModifierEffect_t& rModifier,
+                                   const EffectContext_t& ctx)
+{
+    using Source_t = StatModifierEffect_t::AmountSource_t;
+    if (ctx.pBase == nullptr
+        && (rModifier.HasAmountSource(Source_t::BaseSize)
+            || rModifier.HasAmountSource(Source_t::BuildingUpkeep)))
+    {
+        return false;
+    }
+    if (ctx.pFaction == nullptr && rModifier.HasAmountSource(Source_t::BasesOwned))
+    {
+        return false;
+    }
+    if (ctx.pUnit == nullptr
+        && (rModifier.HasAmountSource(Source_t::IntrinsicXp)
+            || rModifier.HasAmountSource(Source_t::SocialRating)))
+    {
+        return false;
+    }
+    if ((ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr)
+        && rModifier.HasAmountSource(Source_t::ElevationEnergy))
+    {
+        return false;
+    }
+    return !rModifier.HasAmountSource(Source_t::LevelsAboveOpponent)
+        || OpposingCombatant_(ctx) != nullptr;
+}
+
 inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
                                          const EffectContext_t& ctx)
 {
@@ -357,39 +387,7 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
-    // Drops an amount source this context cannot evaluate, rather than throwing at resolve.
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BaseSize)
-        && ctx.pBase == nullptr)
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BuildingUpkeep)
-        && ctx.pBase == nullptr)
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::BasesOwned)
-        && ctx.pFaction == nullptr)
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::IntrinsicXp)
-        && ctx.pUnit == nullptr)
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::SocialRating)
-        && ctx.pUnit == nullptr)
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::ElevationEnergy)
-        && (ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr))
-    {
-        return false;
-    }
-    if (pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent)
-        && OpposingCombatant_(ctx) == nullptr)
+    if (!AmountSourceEvaluable_(*pStatModifier, ctx))
     {
         return false;
     }

@@ -436,6 +436,44 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
     return k_Parsers;
 }
 
+const ParseFn_& FindTypeParser_(const std::string& rTypeStr, const std::string& rListName)
+{
+    const auto& parsers = TypeParsers_();
+    const auto it = parsers.find(rTypeStr);
+    if (it != parsers.end())
+    {
+        return it->second;
+    }
+    // The continuous parser's own table, so a new continuous type is reported as belonging
+    // in `effects`.
+    if (EffectConfigParser::IsEffectType(rTypeStr))
+    {
+        throw std::runtime_error(
+            "'" + rTypeStr + "' is a continuous effect and belongs in 'effects', not '"
+            + rListName + "'; a triggered list holds one-shot effects only");
+    }
+    throw std::runtime_error("Unknown triggered effect type: '" + rTypeStr + "' in '"
+                             + rListName + "'");
+}
+
+// Timing comes from the list and resolution from an explicit context, so the continuous-only
+// keys are rejected.
+void RejectContinuousOnlyKeys_(const nlohmann::json& rEffectJson, const std::string& rTypeStr,
+                               const std::string& rListName)
+{
+    for (const char* pKey : {"scope", "persistence", "radius", "min_radius",
+                             "buildingFilter", "removed_by_tech"})
+    {
+        if (rEffectJson.contains(pKey))
+        {
+            throw std::runtime_error(std::string("Triggered effect '") + rTypeStr + "' in '"
+                                     + rListName + "' cannot carry '" + pKey
+                                     + "': it fires when its list's trigger fires, against that "
+                                       "trigger's subject");
+        }
+    }
+}
+
 OncePer_t ParseOncePer_(const nlohmann::json& onceJson)
 {
     OncePer_t oncePer;
@@ -475,22 +513,7 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
 {
     TriggeredEffectConfig_t effect;
     const std::string typeStr = effectJson.at("type").get<std::string>();
-
-    const auto& parsers = TypeParsers_();
-    const auto it = parsers.find(typeStr);
-    if (it == parsers.end())
-    {
-        // The continuous parser's own table, so a new continuous type is reported as belonging
-        // in `effects`.
-        if (EffectConfigParser::IsEffectType(typeStr))
-        {
-            throw std::runtime_error(
-                "'" + typeStr + "' is a continuous effect and belongs in 'effects', not '"
-                + rListName + "'; a triggered list holds one-shot effects only");
-        }
-        throw std::runtime_error("Unknown triggered effect type: '" + typeStr + "' in '"
-                                 + rListName + "'");
-    }
+    const ParseFn_& rParseParameters = FindTypeParser_(typeStr, rListName);
 
     if (effectJson.contains("factionFilter"))
     {
@@ -513,22 +536,10 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
     {
         effect.condition = EffectConfigParser::ParseCondition(effectJson.at("condition"));
     }
-    // Timing comes from the list and resolution from an explicit context, so the continuous-only
-    // keys are rejected.
-    for (const char* pKey : {"scope", "persistence", "radius", "min_radius",
-                             "buildingFilter", "removed_by_tech"})
-    {
-        if (effectJson.contains(pKey))
-        {
-            throw std::runtime_error(std::string("Triggered effect '") + typeStr + "' in '"
-                                     + rListName + "' cannot carry '" + pKey
-                                     + "': it fires when its list's trigger fires, against that "
-                                       "trigger's subject");
-        }
-    }
+    RejectContinuousOnlyKeys_(effectJson, typeStr, rListName);
 
     const auto& parameters = effectJson.value("parameters", nlohmann::json::object());
-    it->second(parameters, effect);
+    rParseParameters(parameters, effect);
     return effect;
 }
 

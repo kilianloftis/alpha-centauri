@@ -74,6 +74,8 @@ private:
     // One resource lane from partitioned pointers.
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
                          StatId_t stat) const;
+    TileResources_t ResolveResources_(const Tile& rTile,
+                                      std::span<const ActiveEffect_t*> effects) const;
 
     // Pointer-partition + resolve into effective (clamped) / potential (unclamped) totals.
     // Both include bypass_clamp Adds.

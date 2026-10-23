@@ -729,46 +729,37 @@ void ParseScramble_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
     rEffect.effect = scramble;
 }
 
+std::vector<UnitDomain_t> ParseCarries_(const nlohmann::json& parameters)
+{
+    std::vector<UnitDomain_t> carries;
+    if (!parameters.contains("carries"))
+    {
+        return carries;
+    }
+    if (!parameters.at("carries").is_array())
+    {
+        throw std::runtime_error("TransportParams 'carries' must be an array");
+    }
+    for (const auto& rDomainJson : parameters.at("carries"))
+    {
+        if (!rDomainJson.is_string())
+        {
+            throw std::runtime_error("TransportParams carries entries must be strings");
+        }
+        const std::string domain = rDomainJson.get<std::string>();
+        carries.push_back(ParseUnitDomain(domain));
+    }
+    return carries;
+}
+
 void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     RequireScope_(
         rEffect.scope,
         {EffectScope_t::ThisUnit},
         "TransportParams requires scope ThisUnit");
-    if (parameters.contains("passenger_domains"))
-    {
-        throw std::runtime_error(
-            "TransportParams no longer accepts 'passenger_domains'; use 'carries'");
-    }
-    if (parameters.contains("load_site_flags"))
-    {
-        throw std::runtime_error(
-            "TransportParams no longer accepts 'load_site_flags'; use 'requires_harbor'");
-    }
-    if (parameters.contains("refuels_cargo"))
-    {
-        throw std::runtime_error(
-            "TransportParams no longer accepts 'refuels_cargo'; carrying a domain refuels "
-            "that cargo");
-    }
     TransportParamsEffect_t transport;
-    if (parameters.contains("carries"))
-    {
-        if (!parameters.at("carries").is_array())
-        {
-            throw std::runtime_error("TransportParams 'carries' must be an array");
-        }
-        for (const auto& rDomainJson : parameters.at("carries"))
-        {
-            if (!rDomainJson.is_string())
-            {
-                throw std::runtime_error(
-                    "TransportParams carries entries must be strings");
-            }
-            const std::string domain = rDomainJson.get<std::string>();
-            transport.carries.push_back(ParseUnitDomain(domain));
-        }
-    }
+    transport.carries = ParseCarries_(parameters);
     transport.requiresHarbor = parameters.value("requires_harbor", false);
     if (transport.carries.empty() && !transport.requiresHarbor)
     {
@@ -778,16 +769,8 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
     rEffect.effect = transport;
 }
 
-void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+InteractionCell_t ParseCoexistenceCell_(const nlohmann::json& parameters)
 {
-    if (rEffect.scope != EffectScope_t::ThisUnit
-        && rEffect.scope != EffectScope_t::FactionUnits)
-    {
-        throw std::runtime_error(
-            "CoexistenceOverride scope must be ThisUnit or FactionUnits");
-    }
-
-    CoexistenceOverrideEffect_t overrideFx;
     const std::string cellStr = parameters.value("cell", "");
     if (cellStr.empty())
     {
@@ -795,19 +778,19 @@ void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t&
     }
     if (cellStr == "allow")
     {
-        overrideFx.cell = InteractionCell_t::Allow;
+        return InteractionCell_t::Allow;
     }
-    else if (cellStr == "deny")
+    if (cellStr == "deny")
     {
-        overrideFx.cell = InteractionCell_t::Deny;
+        return InteractionCell_t::Deny;
     }
-    else
-    {
-        throw std::runtime_error("Unknown CoexistenceOverride cell: '" + cellStr + "'");
-    }
+    throw std::runtime_error("Unknown CoexistenceOverride cell: '" + cellStr + "'");
+}
 
-    // One or two occupant ids. Two names the exact pair; one wild-cards the other side.
-    // Zero would wild-card both and switch coexistence off wholesale, so it is rejected.
+// One or two occupant ids. Two names the exact pair; one wild-cards the other side.
+// Zero would wild-card both and switch coexistence off wholesale, so it is rejected.
+std::vector<std::string> ParseCoexistenceOccupants_(const nlohmann::json& parameters)
+{
     if (!parameters.contains("occupants") || !parameters.at("occupants").is_array())
     {
         throw std::runtime_error("CoexistenceOverride needs an 'occupants' array of one or "
@@ -829,6 +812,20 @@ void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t&
         }
         ids.push_back(rEntry.get<std::string>());
     }
+    return ids;
+}
+
+void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+{
+    if (rEffect.scope != EffectScope_t::ThisUnit
+        && rEffect.scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "CoexistenceOverride scope must be ThisUnit or FactionUnits");
+    }
+    CoexistenceOverrideEffect_t overrideFx;
+    overrideFx.cell = ParseCoexistenceCell_(parameters);
+    const std::vector<std::string> ids = ParseCoexistenceOccupants_(parameters);
     overrideFx.firstId = ids.front();
     if (ids.size() == 2)
     {
@@ -861,6 +858,35 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
     return k_Parsers;
 }
 
+
+// radius and min_radius: a ring of tiles around a ThisTile host.
+void ParseReach_(const nlohmann::json& rEffectJson, EffectConfig_t& rEffect)
+{
+    rEffect.radius = rEffectJson.value("radius", 0);
+    if (rEffect.radius < 0)
+    {
+        throw std::runtime_error("Effect 'radius' must be >= 0");
+    }
+    if (rEffect.radius != 0 && rEffect.scope != EffectScope_t::ThisTile)
+    {
+        throw std::runtime_error("Effect 'radius' is only valid with scope ThisTile");
+    }
+    rEffect.minRadius = rEffectJson.value("min_radius", 0);
+    if (rEffect.minRadius < 0)
+    {
+        throw std::runtime_error("Effect 'min_radius' must be >= 0");
+    }
+    if (rEffect.minRadius != 0 && rEffect.scope != EffectScope_t::ThisTile)
+    {
+        throw std::runtime_error("Effect 'min_radius' is only valid with scope ThisTile");
+    }
+    if (rEffect.minRadius > rEffect.radius)
+    {
+        throw std::runtime_error("Effect 'min_radius' (" + std::to_string(rEffect.minRadius)
+                                 + ") must be <= 'radius' (" + std::to_string(rEffect.radius)
+                                 + "); the effect would reach no tile at all");
+    }
+}
 } // namespace
 
 ModifierOp_t ParseModifierOp(const std::string& rOp)
@@ -1341,30 +1367,7 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     const auto& parameters = effectJson.value("parameters", nlohmann::json::object());
 
     effect.scope = ParseEffectScope(scopeStr);
-    effect.radius = effectJson.value("radius", 0);
-    if (effect.radius < 0)
-    {
-        throw std::runtime_error("Effect 'radius' must be >= 0");
-    }
-    if (effect.radius != 0 && effect.scope != EffectScope_t::ThisTile)
-    {
-        throw std::runtime_error("Effect 'radius' is only valid with scope ThisTile");
-    }
-    effect.minRadius = effectJson.value("min_radius", 0);
-    if (effect.minRadius < 0)
-    {
-        throw std::runtime_error("Effect 'min_radius' must be >= 0");
-    }
-    if (effect.minRadius != 0 && effect.scope != EffectScope_t::ThisTile)
-    {
-        throw std::runtime_error("Effect 'min_radius' is only valid with scope ThisTile");
-    }
-    if (effect.minRadius > effect.radius)
-    {
-        throw std::runtime_error("Effect 'min_radius' (" + std::to_string(effect.minRadius)
-                                 + ") must be <= 'radius' (" + std::to_string(effect.radius)
-                                 + "); the effect would reach no tile at all");
-    }
+    ParseReach_(effectJson, effect);
     if (effectJson.contains("condition"))
     {
         effect.condition = ParseCondition(effectJson.at("condition"));

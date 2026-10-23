@@ -78,20 +78,40 @@ void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConf
     }
 }
 
-void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
-                           std::vector<ActiveEffect_t>& rOut)
+void AppendOccupantEffects_(const Tile& rTile, int distance, const WorldMap& rWorldMap,
+                            std::vector<ActiveEffect_t>& rOut)
 {
     for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
         if (pFeature)
         {
-            AppendTileEffects(pFeature->effects, pFeature->id, 0, rOut);
+            AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
         }
     }
-
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        AppendOwnedImprovementEffects_(rTile, *pImprovement, 0, rWorldMap, rOut);
+        AppendOwnedImprovementEffects_(rTile, *pImprovement, distance, rWorldMap, rOut);
+    }
+}
+
+void AppendUnitAuraEffects_(const Tile& rTile, int distance, const WorldMap& rWorldMap,
+                            std::vector<ActiveEffect_t>& rOut)
+{
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (!pUnit)
+        {
+            continue;
+        }
+        const FactionId_t owner = pUnit->GetFaction().GetFactionId();
+        for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
+        {
+            if (TileEffectReaches(*rActive.config, distance))
+            {
+                rActive.ownerFaction = owner;
+                rOut.push_back(std::move(rActive));
+            }
+        }
     }
 }
 
@@ -105,37 +125,9 @@ void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWor
         {
             if (distance > 0)
             {
-                for (const ImprovementConfig_t* pFeature : pNearby->GetTerrainFeatures())
-                {
-                    if (pFeature)
-                    {
-                        AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
-                    }
-                }
-
-                for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
-                {
-                    AppendOwnedImprovementEffects_(*pNearby, *pImprovement, distance, rWorldMap,
-                                                   rOut);
-                }
+                AppendOccupantEffects_(*pNearby, distance, rWorldMap, rOut);
             }
-
-            for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNearby))
-            {
-                if (!pUnit)
-                {
-                    continue;
-                }
-                const FactionId_t owner = pUnit->GetFaction().GetFactionId();
-                for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
-                {
-                    if (TileEffectReaches(*rActive.config, distance))
-                    {
-                        rActive.ownerFaction = owner;
-                        rOut.push_back(std::move(rActive));
-                    }
-                }
-            }
+            AppendUnitAuraEffects_(*pNearby, distance, rWorldMap, rOut);
         });
 }
 
@@ -195,30 +187,70 @@ void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffect
         });
 }
 
+std::unordered_set<std::string> SuppressedYieldSources_(const Tile& rTile)
+{
+    std::unordered_set<std::string> suppress;
+    for (const auto* pConfigs : {&rTile.GetImprovements(), &rTile.GetTerrainFeatures()})
+    {
+        for (const ImprovementConfig_t* pConfig : *pConfigs)
+        {
+            if (!pConfig)
+            {
+                continue;
+            }
+            suppress.insert(pConfig->suppressYieldSources.begin(),
+                            pConfig->suppressYieldSources.end());
+        }
+    }
+    return suppress;
+}
+
+// Scan bound: only ThisTile-scoped radii (same rule for improvements and unit components).
+// Nonzero radius on any other scope is rejected at parse time.
+int MaxThisTileRadius_(const std::vector<EffectConfig_t>& rEffects)
+{
+    int radius = 0;
+    for (const EffectConfig_t& rEffect : rEffects)
+    {
+        if (rEffect.scope == EffectScope_t::ThisTile)
+        {
+            radius = std::max(radius, rEffect.radius);
+        }
+    }
+    return radius;
+}
+
+int MaxAuraRadius_(const ImprovementRegistry& rImprovements,
+                   const UnitComponentRegistry* pUnitComponents)
+{
+    int radius = 0;
+    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    {
+        radius = std::max(radius, MaxThisTileRadius_(rConfig.effects));
+    }
+    if (pUnitComponents)
+    {
+        for (const UnitComponentConfig_t& rComponent : pUnitComponents->GetAll())
+        {
+            radius = std::max(radius, MaxThisTileRadius_(rComponent.effects));
+        }
+    }
+    return radius;
+}
+
+TileResources_t SumResources_(const TileResources_t& a, const TileResources_t& b)
+{
+    return TileResources_t{a.nutrients + b.nutrients, a.energy + b.energy,
+                           a.minerals + b.minerals};
+}
+
 // Pointer-partition into pre-clamp vs bypass_clamp lanes, skipping suppressed sources.
 // Does not clone ActiveEffect_t — callers resolve through the pointer lists.
 void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
                             std::vector<const ActiveEffect_t*>& rBeforeClamp,
                             std::vector<const ActiveEffect_t*>& rBypassClamp)
 {
-    std::unordered_set<std::string> suppress;
-    auto absorbSuppress = [&](const std::vector<const ImprovementConfig_t*>& rConfigs)
-    {
-        for (const ImprovementConfig_t* pConfig : rConfigs)
-        {
-            if (!pConfig)
-            {
-                continue;
-            }
-            for (const std::string& rId : pConfig->suppressYieldSources)
-            {
-                suppress.insert(rId);
-            }
-        }
-    };
-    absorbSuppress(rTile.GetImprovements());
-    absorbSuppress(rTile.GetTerrainFeatures());
-
+    const std::unordered_set<std::string> suppress = SuppressedYieldSources_(rTile);
     rBeforeClamp.reserve(effects.size());
     rBypassClamp.reserve(effects.size());
     for (const ActiveEffect_t& rEffect : effects)
@@ -250,7 +282,7 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     , m_rImprovements(rImprovements)
     , m_rYieldRules(rYieldRules)
     , m_rInteractionGrids(rInteractionGrids)
-    , m_maxRadius(0)
+    , m_maxRadius(MaxAuraRadius_(rImprovements, pUnitComponents))
 {
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
     {
@@ -258,31 +290,6 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
         pTile->BindTileChangeListener(this);
     }
 
-    // Scan bound: only ThisTile-scoped radii (same rule for improvements and unit components).
-    // Nonzero radius on any other scope is rejected at parse time.
-    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
-    {
-        for (const EffectConfig_t& rEffect : rConfig.effects)
-        {
-            if (rEffect.scope == EffectScope_t::ThisTile)
-            {
-                m_maxRadius = std::max(m_maxRadius, rEffect.radius);
-            }
-        }
-    }
-    if (pUnitComponents)
-    {
-        for (const UnitComponentConfig_t& rComponent : pUnitComponents->GetAll())
-        {
-            for (const EffectConfig_t& rEffect : rComponent.effects)
-            {
-                if (rEffect.scope == EffectScope_t::ThisTile)
-                {
-                    m_maxRadius = std::max(m_maxRadius, rEffect.radius);
-                }
-            }
-        }
-    }
 }
 
 TileEffectsContext::~TileEffectsContext()
@@ -324,7 +331,7 @@ void TileEffectsContext::UnbindWorldEffects()
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
     std::vector<ActiveEffect_t> effects;
-    AppendOwnTileEffects_(rTile, m_rWorldMap, effects);
+    AppendOccupantEffects_(rTile, 0, m_rWorldMap, effects);
     AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     if (m_pWorldEffects)
     {
@@ -372,35 +379,22 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
     std::vector<const ActiveEffect_t*> bypassClamp;
     PartitionYieldEffects_(rTile, effects, beforeClamp, bypassClamp);
 
-    // Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
-    const TileResources_t preClamped{
-        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Energy),
-        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals),
-    };
+    const TileResources_t preClamped = ResolveResources_(rTile, beforeClamp);
     // UI potential yield: the same effects with the clamps left out.
     std::vector<const ActiveEffect_t*> unclamped = WithoutClamps_(beforeClamp);
-    const TileResources_t preUnclamped{
-        ResolveResource_(rTile, unclamped, StatId_t::Nutrients),
-        ResolveResource_(rTile, unclamped, StatId_t::Energy),
-        ResolveResource_(rTile, unclamped, StatId_t::Minerals),
-    };
-    const TileResources_t bypass{
-        ResolveResource_(rTile, bypassClamp, StatId_t::Nutrients),
-        ResolveResource_(rTile, bypassClamp, StatId_t::Energy),
-        ResolveResource_(rTile, bypassClamp, StatId_t::Minerals),
-    };
-    return YieldLanes_t{
-        TileResources_t{
-            preClamped.nutrients + bypass.nutrients,
-            preClamped.energy + bypass.energy,
-            preClamped.minerals + bypass.minerals,
-        },
-        TileResources_t{
-            preUnclamped.nutrients + bypass.nutrients,
-            preUnclamped.energy + bypass.energy,
-            preUnclamped.minerals + bypass.minerals,
-        },
+    const TileResources_t preUnclamped = ResolveResources_(rTile, unclamped);
+    const TileResources_t bypass = ResolveResources_(rTile, bypassClamp);
+    return YieldLanes_t{SumResources_(preClamped, bypass), SumResources_(preUnclamped, bypass)};
+}
+
+// Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
+TileResources_t TileEffectsContext::ResolveResources_(const Tile& rTile,
+                                                      std::span<const ActiveEffect_t*> effects) const
+{
+    return TileResources_t{
+        ResolveResource_(rTile, effects, StatId_t::Nutrients),
+        ResolveResource_(rTile, effects, StatId_t::Energy),
+        ResolveResource_(rTile, effects, StatId_t::Minerals),
     };
 }
 
