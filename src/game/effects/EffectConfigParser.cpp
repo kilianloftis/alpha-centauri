@@ -41,212 +41,287 @@ void RequireScope_(EffectScope_t scope,
 
 // Legality per amount source, independent of DomainFor(stat): the subject AmountSourceValue
 // needs, and the stats and scopes it allows.
-void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
+void ValidateElevationEnergySource_(const StatModifierEffect_t& rMod,
+                                    const EffectConfig_t& rEffect,
+                                    const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    // Energy, ThisTile, no radius: the source reads the receiving
+    // tile, so an aura would scale off whatever tile it lands on.
+    if (stat != StatId_t::Energy)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' ElevationEnergy is only valid on the energy "
+            "stat, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisTile)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' ElevationEnergy requires scope ThisTile");
+    }
+    if (rEffect.radius != 0)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' ElevationEnergy cannot carry a radius: the "
+            "contribution is read from the receiving tile, not the aura's host");
+    }
+}
+
+void ValidateMineralsConvertedSource_(const StatModifierEffect_t& rMod,
+                                      const EffectConfig_t& rEffect,
+                                      const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const double amount = rMod.amount;
+    // Required subject: Stockpile conversion. Allowed: stockpile-output stats +
+    // ThisBase + Continuous (source-kind Stockpile checked in ValidateEffectForSource).
+    if (!IsStockpileOutputStat(stat))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' MineralsConverted is only valid on a stockpile "
+            "output stat (nutrients, energy, econ, labs, psych), got '"
+            + rStatWire
+            + "'. Minerals are the conversion input, so converting to them is a loop");
+    }
+    if (scope != EffectScope_t::ThisBase)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
+    }
+    if (amount <= 0.0 || !std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' MineralsConverted requires amount > 0");
+    }
+}
+
+void ValidateBaseSizeSource_(const StatModifierEffect_t& rMod,
+                             const EffectConfig_t& rEffect,
+                             const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const double amount = rMod.amount;
+    // Required subject: Base. Allowed on Base-domain stats with base/faction scopes.
+    if (DomainFor(stat) != ResolveDomain_t::Base)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BaseSize is only valid on a Base-domain stat, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisBase
+        && scope != EffectScope_t::AllOwnerBases
+        && scope != EffectScope_t::FactionGlobal)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BaseSize requires scope ThisBase, AllOwnerBases, "
+            "or FactionGlobal");
+    }
+    if (!std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BaseSize requires a finite amount (per-pop scale)");
+    }
+}
+
+void ValidateBasesOwnedSource_(const StatModifierEffect_t& rMod,
+                               const EffectConfig_t& rEffect,
+                               const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const double amount = rMod.amount;
+    // Required subject: Faction. Allowed on Unit-domain stats with ThisUnit
+    // (weapon / chassis components that scale with empire size).
+    if (DomainFor(stat) != ResolveDomain_t::Unit)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BasesOwned is only valid on a Unit-domain stat, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisUnit)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BasesOwned requires scope ThisUnit");
+    }
+    if (!std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BasesOwned requires a finite amount "
+            "(per-base scale)");
+    }
+}
+
+void ValidateIntrinsicXpSource_(const StatModifierEffect_t& rMod,
+                                const EffectConfig_t& rEffect,
+                                const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const double amount = rMod.amount;
+    // Required subject: Unit. Allowed on Unit-domain stats with ThisUnit
+    // (e.g. Isle of the Deep cargo = 1 × intrinsic XP).
+    if (DomainFor(stat) != ResolveDomain_t::Unit)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' IntrinsicXp is only valid on a Unit-domain "
+            "stat, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisUnit)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' IntrinsicXp requires scope ThisUnit");
+    }
+    if (rMod.op != ModifierOp_t::Add)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' IntrinsicXp requires op Add");
+    }
+    if (!std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' IntrinsicXp requires a finite amount "
+            "(per-XP scale)");
+    }
+}
+
+void ValidateBuildingUpkeepSource_(const StatModifierEffect_t& rMod,
                                    const EffectConfig_t& rEffect,
                                    const std::string& rStatWire)
 {
     const StatId_t stat = rMod.stat;
     const EffectScope_t scope = rEffect.scope;
     const double amount = rMod.amount;
+    // Required subject: Base. Allowed: Continuous MaxClamp on econ (cap energy
+    // commerce at facility upkeep). Base-level scopes only.
+    if (stat != StatId_t::Econ)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BuildingUpkeep is only valid on the econ "
+            "stat, got '"
+            + rStatWire + "'");
+    }
+    if (rMod.op != ModifierOp_t::MaxClamp)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BuildingUpkeep requires op MaxClamp");
+    }
+    if (scope != EffectScope_t::ThisBase
+        && scope != EffectScope_t::AllOwnerBases
+        && scope != EffectScope_t::FactionGlobal)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BuildingUpkeep requires scope ThisBase, "
+            "AllOwnerBases, or FactionGlobal");
+    }
+    if (!std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' BuildingUpkeep requires a finite amount "
+            "(upkeep scale)");
+    }
+}
+
+void ValidateLevelsAboveOpponentSource_(const StatModifierEffect_t& rMod,
+                                        const EffectConfig_t& rEffect,
+                                        const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const double amount = rMod.amount;
+    if (rMod.op != ModifierOp_t::AddPercent)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' LevelsAboveOpponent requires op AddPercent");
+    }
+    if (stat != StatId_t::Attack && stat != StatId_t::Defense)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' LevelsAboveOpponent is only valid on attack "
+            "or defense, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::WorldGlobal)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' LevelsAboveOpponent requires scope ThisUnit "
+            "or WorldGlobal");
+    }
+    if (!std::isfinite(amount))
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' LevelsAboveOpponent requires a finite amount "
+            "(percent per elevation level)");
+    }
+}
+
+void ValidateSocialRatingSource_(const StatModifierEffect_t& rMod,
+                                 const EffectConfig_t& rEffect,
+                                 const std::string& rStatWire)
+{
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    if (DomainFor(stat) != ResolveDomain_t::Unit)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' SocialRating is only valid on a Unit-domain "
+            "stat, got '"
+            + rStatWire + "'");
+    }
+    if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' SocialRating requires scope ThisUnit or "
+            "FactionUnits");
+    }
+    if (rMod.op != ModifierOp_t::Add)
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' SocialRating requires op Add");
+    }
+    if (!rMod.amountSource || !rMod.amountSource->amounts.has_value()
+        || rMod.amountSource->amounts->empty())
+    {
+        throw std::runtime_error(
+            "StatModifier 'amount_source' SocialRating requires a non-empty 'amounts' "
+            "object");
+    }
+}
+
+void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
+                                   const EffectConfig_t& rEffect,
+                                   const std::string& rStatWire)
+{
     switch (rMod.amountSource->kind)
     {
         case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
-            // Energy, ThisTile, no radius: the source reads the receiving
-            // tile, so an aura would scale off whatever tile it lands on.
-            if (stat != StatId_t::Energy)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergy is only valid on the energy "
-                    "stat, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisTile)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergy requires scope ThisTile");
-            }
-            if (rEffect.radius != 0)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergy cannot carry a radius: the "
-                    "contribution is read from the receiving tile, not the aura's host");
-            }
-            break;
+            ValidateElevationEnergySource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::MineralsConverted:
-            // Required subject: Stockpile conversion. Allowed: stockpile-output stats +
-            // ThisBase + Continuous (source-kind Stockpile checked in ValidateEffectForSource).
-            if (!IsStockpileOutputStat(stat))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted is only valid on a stockpile "
-                    "output stat (nutrients, energy, econ, labs, psych), got '"
-                    + rStatWire
-                    + "'. Minerals are the conversion input, so converting to them is a loop");
-            }
-            if (scope != EffectScope_t::ThisBase)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
-            }
-            if (amount <= 0.0 || !std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires amount > 0");
-            }
-            break;
+            ValidateMineralsConvertedSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::BaseSize:
-            // Required subject: Base. Allowed on Base-domain stats with base/faction scopes.
-            if (DomainFor(stat) != ResolveDomain_t::Base)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BaseSize is only valid on a Base-domain stat, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisBase
-                && scope != EffectScope_t::AllOwnerBases
-                && scope != EffectScope_t::FactionGlobal)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BaseSize requires scope ThisBase, AllOwnerBases, "
-                    "or FactionGlobal");
-            }
-            if (!std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BaseSize requires a finite amount (per-pop scale)");
-            }
-            break;
+            ValidateBaseSizeSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::BasesOwned:
-            // Required subject: Faction. Allowed on Unit-domain stats with ThisUnit
-            // (weapon / chassis components that scale with empire size).
-            if (DomainFor(stat) != ResolveDomain_t::Unit)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BasesOwned is only valid on a Unit-domain stat, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisUnit)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BasesOwned requires scope ThisUnit");
-            }
-            if (!std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BasesOwned requires a finite amount "
-                    "(per-base scale)");
-            }
-            break;
+            ValidateBasesOwnedSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
-            // Required subject: Unit. Allowed on Unit-domain stats with ThisUnit
-            // (e.g. Isle of the Deep cargo = 1 × intrinsic XP).
-            if (DomainFor(stat) != ResolveDomain_t::Unit)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' IntrinsicXp is only valid on a Unit-domain "
-                    "stat, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisUnit)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' IntrinsicXp requires scope ThisUnit");
-            }
-            if (rMod.op != ModifierOp_t::Add)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' IntrinsicXp requires op Add");
-            }
-            if (!std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' IntrinsicXp requires a finite amount "
-                    "(per-XP scale)");
-            }
-            break;
+            ValidateIntrinsicXpSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
-            // Required subject: Base. Allowed: Continuous MaxClamp on econ (cap energy
-            // commerce at facility upkeep). Base-level scopes only.
-            if (stat != StatId_t::Econ)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BuildingUpkeep is only valid on the econ "
-                    "stat, got '"
-                    + rStatWire + "'");
-            }
-            if (rMod.op != ModifierOp_t::MaxClamp)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BuildingUpkeep requires op MaxClamp");
-            }
-            if (scope != EffectScope_t::ThisBase
-                && scope != EffectScope_t::AllOwnerBases
-                && scope != EffectScope_t::FactionGlobal)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BuildingUpkeep requires scope ThisBase, "
-                    "AllOwnerBases, or FactionGlobal");
-            }
-            if (!std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BuildingUpkeep requires a finite amount "
-                    "(upkeep scale)");
-            }
-            break;
+            ValidateBuildingUpkeepSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::LevelsAboveOpponent:
-            if (rMod.op != ModifierOp_t::AddPercent)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' LevelsAboveOpponent requires op AddPercent");
-            }
-            if (stat != StatId_t::Attack && stat != StatId_t::Defense)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' LevelsAboveOpponent is only valid on attack "
-                    "or defense, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::WorldGlobal)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' LevelsAboveOpponent requires scope ThisUnit "
-                    "or WorldGlobal");
-            }
-            if (!std::isfinite(amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' LevelsAboveOpponent requires a finite amount "
-                    "(percent per elevation level)");
-            }
-            break;
+            ValidateLevelsAboveOpponentSource_(rMod, rEffect, rStatWire);
+            return;
         case StatModifierEffect_t::AmountSource_t::SocialRating:
-            if (DomainFor(stat) != ResolveDomain_t::Unit)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' SocialRating is only valid on a Unit-domain "
-                    "stat, got '"
-                    + rStatWire + "'");
-            }
-            if (scope != EffectScope_t::ThisUnit && scope != EffectScope_t::FactionUnits)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' SocialRating requires scope ThisUnit or "
-                    "FactionUnits");
-            }
-            if (rMod.op != ModifierOp_t::Add)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' SocialRating requires op Add");
-            }
-            if (!rMod.amountSource || !rMod.amountSource->amounts.has_value()
-                || rMod.amountSource->amounts->empty())
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' SocialRating requires a non-empty 'amounts' "
-                    "object");
-            }
-            break;
+            ValidateSocialRatingSource_(rMod, rEffect, rStatWire);
+            return;
     }
 }
 
