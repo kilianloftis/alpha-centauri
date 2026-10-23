@@ -212,21 +212,19 @@ TEST_CASE("ApplyRemoveShroud marks the entire map explored", "[visibility][fog][
     CHECK_FALSE(faction.GetVisibleMap().IsVisible(8, 0));
 }
 
-TEST_CASE("ApplyRemoveFog makes every tile currently visible", "[visibility][fog]")
+TEST_CASE("A RemoveFog rule flag makes every tile visible", "[visibility][fog]")
 {
     actest::FactionFixture fixture;
+    EffectConfig_t removeFog;
+    removeFog.scope = EffectScope_t::FactionGlobal;
+    removeFog.effect = RuleFlagEffect_t{RuleFlagId_t::RemoveFog, std::nullopt};
+    fixture.factionDefinition.effects.push_back(removeFog);
     Faction& faction = fixture.MakeFaction();
     fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
-    REQUIRE_FALSE(faction.GetVisibleMap().IsVisible(8, 0));
-    ApplyRemoveFog(faction);
-    CHECK(faction.IsFogRemoved());
-    CHECK(faction.GetVisibleMap().IsVisible(8, 0));
-    CHECK(faction.GetVisibleMap().IsVisible(8, 16));
-
-    // Sticky fog removal survives a vision rebuild.
     faction.RebuildVisibility();
     CHECK(faction.GetVisibleMap().IsVisible(8, 0));
+    CHECK(faction.GetVisibleMap().IsVisible(8, 16));
 }
 
 TEST_CASE("Visibility remove_shroud explores the map on rebuild", "[visibility][fog][shroud]")

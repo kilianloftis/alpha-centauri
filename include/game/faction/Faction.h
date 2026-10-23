@@ -299,11 +299,6 @@ public:
     UnitId_t AllocateUnitId() const;
     UnitPositionIndex& GetUnitPositions();
 
-    // Sticky fog removal from ApplyRemoveFog (one-shot project completion). Continuous
-    // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
-    void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
-    bool IsFogRemoved() const { return m_bFogRemoved; }
-
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
     // IEffectsProvider — composed view: local FactionEffectsPool plus bound world extras.
@@ -356,7 +351,6 @@ private:
     const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected
     std::function<UnitId_t()> m_allocateUnitId;
     UnitPositionIndex* m_pUnitPositions = nullptr;
-    bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     int m_visibilityDeferralDepth = 0;
     bool m_bVisibilityDirty = false;
 

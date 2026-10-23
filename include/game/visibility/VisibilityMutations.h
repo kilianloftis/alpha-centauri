@@ -11,7 +11,6 @@ void ApplyRemoveShroud(Faction& rFaction);
 
 // Stickily remove fog of war for this faction (e.g. completing a secret project).
 // Survives visibility rebuilds until cleared; also sets the visible-map bypass immediately.
-void ApplyRemoveFog(Faction& rFaction);
 
 // Re-applies RemoveShroud and RemoveFog from rule flags and settings, after
 // RebuildFromSources.
