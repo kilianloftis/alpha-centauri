@@ -296,7 +296,7 @@ TEST_CASE("A captured base gains recently-conquered drones",
     rGiver.TransferBaseTo(rBase.GetBaseId(), rTaker);
     // Cap (6 + 1 − 2)/4 = 1 extra drone while assimilating.
     CHECK(rBase.GetPopulation().GetDroneCount() == 1);
-    CHECK(rBase.GetPopulation().GetAssimilation().IsAssimilating());
+    CHECK(rBase.GetPopulation().GetAssimilation().OccupierWindow().IsActive());
 }
 
 TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")

@@ -389,13 +389,13 @@ TEST_CASE("Growth threshold saturates instead of overflowing", "[population][gro
     BaseManager& base = fixture.MakeBase(8, 8);
     const BaseEffects_t noEffects{base};
 
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     config.nutrientsPerPop = 1000000;
 
     CHECK(ComputeNutrientsRequired(config, 1000000, noEffects)
           == std::numeric_limits<int>::max());
 
-    GrowthConfig_t normal;
+    GrowthConfig_t normal = actest::FixtureGrowthConfig();
     normal.nutrientsPerPop = 10;
     CHECK(ComputeNutrientsRequired(normal, 3, noEffects) == 40);
 }

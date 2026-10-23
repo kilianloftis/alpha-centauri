@@ -41,7 +41,7 @@ TEST_CASE("A third-party capture keeps the original owner's reclaim claim",
     CHECK(tracker.ClaimFor(k_B).turnsElapsed == 0);
 
     tracker.NotifyCaptured(k_C, k_A, k_Peak, k_Decay);
-    CHECK(tracker.IsAssimilating());
+    CHECK(tracker.OccupierWindow().IsActive());
     CHECK(tracker.OccupierWindow().peakDrones == 1);
     CHECK(tracker.OccupierWindow().durationTurns == 12);
     CHECK(tracker.OccupierWindow().formerOwner == k_C);

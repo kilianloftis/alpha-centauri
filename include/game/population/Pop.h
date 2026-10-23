@@ -67,9 +67,6 @@ public:
     // From the type's ThisPop effects at seed 0; types that declare neither stay out of mood.
     MoodWeights_t GetMoodWeights() const;
 
-    // Drone pressure this body absorbs (Drone 1, SuperDrone 2; 0 for everything else).
-    int GetDroneWeight() const;
-
 
     // Swap this pop's type config in-place.
     // Clears tile assignment if the new type is not a worker.

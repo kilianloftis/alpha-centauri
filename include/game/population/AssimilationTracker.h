@@ -30,7 +30,6 @@ public:
     void Advance();
 
     const AssimilationState& OccupierWindow() const { return m_occupier; }
-    bool IsAssimilating() const { return m_occupier.IsActive(); }
 
     // The claim that would reverse if this faction recaptured now. Inactive if none.
     AssimilationState ClaimFor(FactionId_t factionId) const;

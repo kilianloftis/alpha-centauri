@@ -75,11 +75,6 @@ MoodWeights_t Pop::GetMoodWeights() const
     return MoodWeights_t{resolve(StatId_t::RiotWeight), resolve(StatId_t::GoldenAgeWeight)};
 }
 
-int Pop::GetDroneWeight() const
-{
-    return m_pConfig->droneWeight;
-}
-
 void Pop::Convert(const PopTypeConfig_t& rConfig)
 {
     m_pConfig = &rConfig;

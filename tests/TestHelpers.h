@@ -215,7 +215,26 @@ inline ac::Condition_t HasComponentCondition(std::string componentId)
     return ac::HasComponent_t{std::move(componentId)};
 }
 
-// Replace (or append) a population baseline on a programmatic GrowthConfig_t.
+// The fixture pop_growth.json, for tests that adjust a growth config of their own.
+inline ac::GrowthConfig_t FixtureGrowthConfig()
+{
+    return ac::GrowthConfigParser{}.ParseConfig(FixturePath("pop_growth.json"));
+}
+
+// An AllOwnerBases Add of amount to stat, the shape pop_growth.json's baselines take.
+inline ac::EffectConfig_t GrowthBaselineStat(ac::StatId_t stat, double amount)
+{
+    ac::EffectConfig_t effect;
+    effect.scope = ac::EffectScope_t::AllOwnerBases;
+    ac::StatModifierEffect_t modifier;
+    modifier.stat = stat;
+    modifier.amount = amount;
+    modifier.op = ac::ModifierOp_t::Add;
+    effect.effect = modifier;
+    return effect;
+}
+
+// Replace (or append) a population baseline on a growth config.
 // Mutates in place so FactionEffectsPool ActiveEffect_t pointers stay valid.
 inline void SetGrowthBaseline(ac::GrowthConfig_t& rConfig, ac::StatId_t stat, double amount)
 {
@@ -229,7 +248,7 @@ inline void SetGrowthBaseline(ac::GrowthConfig_t& rConfig, ac::StatId_t stat, do
             return;
         }
     }
-    rConfig.effects.push_back(ac::MakeGrowthBaselineStat(stat, amount, ac::ModifierOp_t::Add));
+    rConfig.effects.push_back(GrowthBaselineStat(stat, amount));
 }
 
 inline void SetMaxBaseSize(ac::GrowthConfig_t& rConfig, double maxSize)

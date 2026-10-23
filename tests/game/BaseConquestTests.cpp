@@ -619,7 +619,7 @@ TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit]
 {
     ConquestGame_ game;
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
-    CHECK_FALSE(rBase.GetPopulation().GetAssimilation().IsAssimilating());
+    CHECK_FALSE(rBase.GetPopulation().GetAssimilation().OccupierWindow().IsActive());
 
     Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
     MoveOrder_t order;
@@ -628,7 +628,7 @@ TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit]
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();
     const AssimilationTracker& rAssim = rCaptured.GetPopulation().GetAssimilation();
-    CHECK(rAssim.IsAssimilating());
+    CHECK(rAssim.OccupierWindow().IsActive());
     CHECK(rAssim.OccupierWindow().formerOwner == game.pAi->GetFactionId());
     CHECK(rAssim.OccupierWindow().peakDrones == 5);
     CHECK(rAssim.OccupierWindow().durationTurns == 50);
@@ -640,7 +640,7 @@ TEST_CASE("Diplomatic transfer does not start assimilation", "[unit][conquest][d
     ConquestGame_ game;
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
     game.pAi->TransferBaseTo(rBase.GetBaseId(), *game.pPlayer);
-    CHECK_FALSE(rBase.GetPopulation().GetAssimilation().IsAssimilating());
+    CHECK_FALSE(rBase.GetPopulation().GetAssimilation().OccupierWindow().IsActive());
 }
 
 TEST_CASE("Recapture by the former owner reverses remaining assimilation",
@@ -659,7 +659,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
 
     rPops.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
     const AssimilationTracker& rAssim = rPops.GetAssimilation();
-    CHECK(rAssim.IsAssimilating());
+    CHECK(rAssim.OccupierWindow().IsActive());
     CHECK(rAssim.OccupierWindow().formerOwner == game.pPlayer->GetFactionId());
     CHECK(rAssim.OccupierWindow().peakDrones == 1);
     CHECK(rAssim.OccupierWindow().durationTurns == 12);
@@ -669,7 +669,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
     {
         rPops.AdvanceAssimilation();
     }
-    CHECK_FALSE(rPops.GetAssimilation().IsAssimilating());
+    CHECK_FALSE(rPops.GetAssimilation().OccupierWindow().IsActive());
 }
 
 TEST_CASE("Recapture within ten turns clears the penalty", "[unit][conquest][drones]")
@@ -684,7 +684,7 @@ TEST_CASE("Recapture within ten turns clears the penalty", "[unit][conquest][dro
         rPops.AdvanceAssimilation();
     }
     rPops.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
-    CHECK_FALSE(rPops.GetAssimilation().IsAssimilating());
+    CHECK_FALSE(rPops.GetAssimilation().OccupierWindow().IsActive());
 }
 
 TEST_CASE("A third faction capturing during assimilation starts a fresh occupier window",
@@ -727,7 +727,7 @@ TEST_CASE("The original owner recapturing after a third party gets the reversed 
 
     rPops.NotifyCaptured(third, original);
     const AssimilationTracker& rAssim = rPops.GetAssimilation();
-    CHECK(rAssim.IsAssimilating());
+    CHECK(rAssim.OccupierWindow().IsActive());
     CHECK(rAssim.OccupierWindow().peakDrones == 1);
     CHECK(rAssim.OccupierWindow().durationTurns == 12);
     CHECK(rAssim.OccupierWindow().turnsElapsed == 0);
@@ -745,7 +745,7 @@ TEST_CASE("Assimilation expires after fifty turns and the next capture is fresh"
     {
         rPops.AdvanceAssimilation();
     }
-    CHECK_FALSE(rPops.GetAssimilation().IsAssimilating());
+    CHECK_FALSE(rPops.GetAssimilation().OccupierWindow().IsActive());
 
     rPops.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
     const AssimilationState& rWindow = rPops.GetAssimilation().OccupierWindow();

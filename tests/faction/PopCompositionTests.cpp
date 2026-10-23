@@ -132,8 +132,8 @@ TEST_CASE("Drone weight and riot weight are different quantities", "[population]
     const Pop superDrone(reg.popTypes.Get("SuperDrone"));
 
     // A super drone absorbs two drones of *pressure* into one body...
-    CHECK(drone.GetDroneWeight() == 1);
-    CHECK(superDrone.GetDroneWeight() == 2);
+    CHECK(drone.GetConfig().droneWeight == 1);
+    CHECK(superDrone.GetConfig().droneWeight == 2);
 
     // ...but riots like any single citizen. Conflating these is what riot_contribution did.
     CHECK(drone.GetMoodWeights().riot == 1);
@@ -384,7 +384,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
     CHECK(resolveEcon(4.0) == Approx(5.0));
     CHECK(resolveGrowthRate() == Approx(102.0));
 
-    GrowthConfig_t growthConfig;
+    GrowthConfig_t growthConfig = actest::FixtureGrowthConfig();
     growthConfig.nutrientsPerPop = 10;
     CHECK(ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 39);
 

@@ -30,7 +30,7 @@ using actest::Active;
 TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently normalizing",
           "[population][growth]")
 {
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     config.nutrientsPerPop = 10;
 
     actest::BaseFixture fixture;
@@ -89,7 +89,7 @@ TEST_CASE("MaxBaseSize Adds stack with the pop_growth baseline", "[population][g
     // Baseline 7 + Hab-Dome-style large Add → classic-ish hard cap.
     actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
     fixture.dataContext.growthConfig->effects.push_back(
-        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 120.0, ModifierOp_t::Add));
+        actest::GrowthBaselineStat(StatId_t::MaxBaseSize, 120.0));
 
     BaseManager& base = fixture.MakeBase(8, 4);
     CHECK(base.GetPopulation().GetMaxSize() == 127);
@@ -144,7 +144,7 @@ TEST_CASE("Threshold at size 3 uses size+1 rows", "[population][growth]")
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(8, 4);
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     config.nutrientsPerPop = 10;
     CHECK(ComputeNutrientsRequired(config, 3, BaseEffects_t{base}) == 40);
 }
@@ -389,7 +389,7 @@ GrowthInputs_t GrowthInputs_(int stockpile, int net, bool bRoomToGrow)
 
 TEST_CASE("ResolveGrowth: a full box at the population limit keeps half", "[population][growth]")
 {
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(40, 4, false), config);
     CHECK_FALSE(outcome.bGrows);
     CHECK_FALSE(outcome.bStarves);
@@ -398,7 +398,7 @@ TEST_CASE("ResolveGrowth: a full box at the population limit keeps half", "[popu
 
 TEST_CASE("ResolveGrowth: growth empties the box and the new citizen eats", "[population][growth]")
 {
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     config.nutrientIntakePerCitizen = 2;
     const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(40, 4, true), config);
     CHECK(outcome.bGrows);
@@ -411,7 +411,7 @@ TEST_CASE("ResolveGrowth: growth empties the box and the new citizen eats", "[po
 
 TEST_CASE("ResolveGrowth: starvation empties the box", "[population][growth]")
 {
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(3, -5, true), config);
     CHECK(outcome.bStarves);
     CHECK_FALSE(outcome.bGrows);
@@ -420,7 +420,7 @@ TEST_CASE("ResolveGrowth: starvation empties the box", "[population][growth]")
 
 TEST_CASE("ResolveGrowth: the deposit is capped at the box", "[population][growth]")
 {
-    GrowthConfig_t config;
+    GrowthConfig_t config = actest::FixtureGrowthConfig();
     const GrowthOutcome_t outcome = ResolveGrowth(GrowthInputs_(10, 50, true), config);
     CHECK_FALSE(outcome.bGrows);
     CHECK(outcome.stockpileAfter == 40);

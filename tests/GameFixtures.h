@@ -236,7 +236,7 @@ struct SessionInputs
         dataContext.stockpileRegistry->Load(FixturePath("stockpiles.json"));
         dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
-        dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
+        dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>(FixtureGrowthConfig());
         dataContext.productionConfig = std::make_unique<ac::ProductionConfig_t>(
             ac::ProductionConfigParser{}.ParseConfig(FixturePath("production.json")));
         dataContext.commerceConfig = std::make_unique<ac::CommerceConfig_t>(
