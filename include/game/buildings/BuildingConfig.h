@@ -64,7 +64,6 @@ struct BuildingConfig_t : public IConstructable
         return bIsSecretProject ? ConstructableKind_t::SecretProject : ConstructableKind_t::Building;
     }
     // Per-turn energy-credit maintenance for this building type (UI / upkeep stage).
-    int GetUpkeep() const { return upkeep; }
 
     // Empty requiredTech = always available (matches SocialPolicyConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const

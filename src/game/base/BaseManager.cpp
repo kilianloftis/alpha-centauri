@@ -338,11 +338,6 @@ int BaseManager::GetMineralProduction() const
     return m_pResources->GetMineralProduction(m_effects.Get());
 }
 
-int BaseManager::GetMineralSupportCost() const
-{
-    return MineralSupportCost(*this);
-}
-
 std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
@@ -386,17 +381,6 @@ int BaseManager::GetLabsProduction() const
 int BaseManager::GetPsychProduction() const
 {
     return m_pResources->GetPsychProduction(m_effects.Get());
-}
-
-int BaseManager::GetDroneModifier() const
-{
-    return FinalizeResolvedStat(
-        ResolveBaseStat(m_effects.Get(), StatId_t::Drones, SeedFor(StatId_t::Drones), nullptr));
-}
-
-int BaseManager::GetTalentModifier() const
-{
-    return FinalizeResolvedStat(ResolveBaseStat(m_effects.Get(), StatId_t::Talents, 0.0, nullptr));
 }
 
 BuildingManager& BaseManager::GetBuildingManager()

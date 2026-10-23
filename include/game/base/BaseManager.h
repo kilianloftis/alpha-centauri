@@ -127,8 +127,6 @@ public:
     // Resource production per turn (calculated live).
     int GetNutrientProduction() const;
     int GetMineralProduction() const;
-    // Home-unit mineral support this turn (free slots applied; current roster, no disband).
-    int GetMineralSupportCost() const;
     // Turns until the queued item completes; empty when it never will. 1 if already met.
     std::optional<int> GetTurnsToProductionCompletion() const;
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
@@ -139,11 +137,6 @@ public:
     int GetLabsProduction() const;
     // Local energy-psych share + this base's Psych StatModifiers.
     int GetPsychProduction() const;
-
-    // Composition modifiers from StatModifier(drones/talents) effects at this base
-    // (facilities, etc.). Away-from-home / garrison police are separate calculators.
-    int GetDroneModifier() const;
-    int GetTalentModifier() const;
 
     // Resource subsystem: per-turn stockpiles and their consumption.
     ResourceManager& GetResources();

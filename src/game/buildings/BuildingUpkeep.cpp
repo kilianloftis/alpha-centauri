@@ -76,11 +76,9 @@ std::map<BuildingId_t, BuildingUpkeepLine_t> CountCopiesById_(
     return byId;
 }
 
-} // namespace
-
-int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
-                                       std::span<const ActiveEffect_t> rEffects,
-                                       const BaseManager* pOriginBase)
+int ResolveFacilityEnergyUpkeepPerCopy_(const BuildingConfig_t& rBuilding,
+                                        std::span<const ActiveEffect_t> rEffects,
+                                        const BaseManager* pOriginBase)
 {
     const EffectContext_t ctx{.pBase = pOriginBase};
     const std::vector<ActiveEffect_t> matching =
@@ -90,6 +88,8 @@ int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
     const int resolved = FinalizeResolvedStat(ResolveStatModifiers(matching, seed, &ctx).total);
     return std::max(0, resolved);
 }
+
+} // namespace
 
 std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     const std::vector<const BuildingConfig_t*>& rBuildings,
@@ -102,7 +102,7 @@ std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     for (auto& [rUnusedId, rLine] : byId)
     {
         rLine.upkeepPerCopy =
-            ResolveFacilityEnergyUpkeepPerCopy(*rLine.pConfig, rEffects, pOriginBase);
+            ResolveFacilityEnergyUpkeepPerCopy_(*rLine.pConfig, rEffects, pOriginBase);
         lines.push_back(rLine);
     }
     return lines;

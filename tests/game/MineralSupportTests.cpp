@@ -284,7 +284,7 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
     base.GetBuildingManager().AddBuilding("mineral_cache");
     const int gross = base.GetMineralProduction();
     REQUIRE(gross > 1);
-    CHECK(base.GetMineralSupportCost() == 0);
+    CHECK(MineralSupportCost(base) == 0);
     CHECK(MineralsForProduction(base) == gross);
 
     // Support 0 covers two chassis; the third costs 1 mineral.
@@ -292,7 +292,7 @@ TEST_CASE("Minerals for production are yield after unit support", "[unit][suppor
     fixture.MakeUnit(faction, 10, 10, {"test_chassis"}, &base);
     fixture.MakeUnit(faction, 11, 11, {"test_chassis"}, &base);
 
-    CHECK(base.GetMineralSupportCost() == 1);
+    CHECK(MineralSupportCost(base) == 1);
     CHECK(MineralsForProduction(base) == gross - 1);
     CHECK(MineralsForProduction(base) == base.GetMineralProduction() - 1);
 }

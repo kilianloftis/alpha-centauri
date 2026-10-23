@@ -105,18 +105,18 @@ TEST_CASE("Building upkeep is available per type for UI", "[building][upkeep]")
     const BuildingConfig_t* pHall =
         baseA.GetBuildingManager().GetBuildings().front();
     REQUIRE(pHall != nullptr);
-    CHECK(pHall->GetUpkeep() == 2);
+    CHECK(pHall->upkeep == 2);
 
     // Base panel: types owned at this base.
     const std::vector<BuildingUpkeepLine_t> baseLines = baseA.GetBuildingUpkeepByType();
     REQUIRE(baseLines.size() == 2);
     CHECK(baseLines[0].pConfig->id == "test_facility_a");
     CHECK(baseLines[0].count == 1);
-    CHECK(baseLines[0].UpkeepPerCopy() == 0);
+    CHECK(baseLines[0].upkeepPerCopy == 0);
     CHECK(baseLines[0].TotalUpkeep() == 0);
     CHECK(baseLines[1].pConfig->id == "upkeep_hall");
     CHECK(baseLines[1].count == 2);
-    CHECK(baseLines[1].UpkeepPerCopy() == 2);
+    CHECK(baseLines[1].upkeepPerCopy == 2);
     CHECK(baseLines[1].TotalUpkeep() == 4);
     CHECK(baseA.GetBuildingUpkeep() == 4);
 
@@ -235,13 +235,13 @@ TEST_CASE("FacilityEnergyUpkeep modifiers apply via buildingFilter", "[building]
     ActiveEffect_t idFx{rId, "test", nullptr};
     ActiveEffect_t catFx{rCat, "test", nullptr};
 
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, {}, nullptr) == 2);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{allFx}, nullptr) == 1);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{idFx}, nullptr) == 1);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{idFx}, nullptr) == 5);
+    CHECK(TallyBuildingUpkeepByType({&rHall}, {}, nullptr).front().upkeepPerCopy == 2);
+    CHECK(TallyBuildingUpkeepByType({&rHall}, std::vector{allFx}, nullptr).front().upkeepPerCopy == 1);
+    CHECK(TallyBuildingUpkeepByType({&rHall}, std::vector{idFx}, nullptr).front().upkeepPerCopy == 1);
+    CHECK(TallyBuildingUpkeepByType({&rGranted}, std::vector{idFx}, nullptr).front().upkeepPerCopy == 5);
     // Discover category −50% on granted_hall (upkeep 5): 5 × 0.5 → lround 3
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rGranted, std::vector{catFx}, nullptr) == 3);
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(rHall, std::vector{catFx}, nullptr) == 2);
+    CHECK(TallyBuildingUpkeepByType({&rGranted}, std::vector{catFx}, nullptr).front().upkeepPerCopy == 3);
+    CHECK(TallyBuildingUpkeepByType({&rHall}, std::vector{catFx}, nullptr).front().upkeepPerCopy == 2);
 }
 
 TEST_CASE("Discovered tech FacilityEnergyUpkeep reduces maintenance", "[building][upkeep][tech]")
@@ -260,9 +260,9 @@ TEST_CASE("Discovered tech FacilityEnergyUpkeep reduces maintenance", "[building
     const std::vector<BuildingUpkeepLine_t> lines = faction.GetBuildingUpkeepByType();
     REQUIRE(lines.size() == 2);
     CHECK(lines[0].pConfig->id == "granted_hall");
-    CHECK(lines[0].UpkeepPerCopy() == 5);
+    CHECK(lines[0].upkeepPerCopy == 5);
     CHECK(lines[1].pConfig->id == "upkeep_hall");
-    CHECK(lines[1].UpkeepPerCopy() == 1);
+    CHECK(lines[1].upkeepPerCopy == 1);
 }
 
 TEST_CASE("Fusion and Quantum Power raise Command Center upkeep", "[building][upkeep][tech]")
@@ -285,7 +285,7 @@ TEST_CASE("Fusion and Quantum Power raise Command Center upkeep", "[building][up
     const std::vector<BuildingUpkeepLine_t> lines = faction.GetBuildingUpkeepByType();
     REQUIRE(lines.size() == 2);
     CHECK(lines[0].pConfig->id == "Command_Center");
-    CHECK(lines[0].UpkeepPerCopy() == 3);
+    CHECK(lines[0].upkeepPerCopy == 3);
     CHECK(lines[1].pConfig->id == "upkeep_hall");
-    CHECK(lines[1].UpkeepPerCopy() == 2);
+    CHECK(lines[1].upkeepPerCopy == 2);
 }

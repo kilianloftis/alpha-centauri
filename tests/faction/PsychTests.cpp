@@ -2,6 +2,7 @@
 // Econ/labs are collected by the faction; psych stays local for composition later.
 // Also covers drones/talents StatModifiers used by composition later.
 
+#include "game/population/CompositionInputs.h"
 #include "GameFixtures.h"
 
 #include "game/faction/Faction.h"
@@ -95,15 +96,19 @@ TEST_CASE("Drone and talent StatModifiers resolve on bases", "[effects][psych][p
                 .total);
     };
 
+    const auto resolveTalents = [&]() {
+        return BuildCompositionInputs(base, *fixture.dataContext.droneCalculator).resolvedTalents;
+    };
+
     CHECK(resolveDrones() == 0);
-    CHECK(base.GetTalentModifier() == 0);
+    const int talentsBefore = resolveTalents();
 
     base.GetBuildingManager().AddBuilding("drone_hall");
     CHECK(resolveDrones() == 2);
 
     base.GetBuildingManager().AddBuilding("talent_academy");
-    CHECK(base.GetTalentModifier() == 1);
+    CHECK(resolveTalents() == talentsBefore + 1);
 
     base.GetBuildingManager().AddBuilding("punishment_sphere");
-    CHECK(base.GetTalentModifier() == 0);
+    CHECK(resolveTalents() == talentsBefore);
 }

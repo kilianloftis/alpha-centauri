@@ -17,14 +17,8 @@ struct BuildingUpkeepLine_t
     // Resolved FacilityEnergyUpkeep (RawScaled from config base + matching mods). Set by tally.
     int upkeepPerCopy = 0;
 
-    int UpkeepPerCopy() const { return upkeepPerCopy; }
     int TotalUpkeep() const { return count * upkeepPerCopy; }
 };
-
-// One copy's energy upkeep, context-free. Base-tagged scopes need a matching pOriginBase.
-int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
-                                       std::span<const ActiveEffect_t> rEffects,
-                                       const BaseManager* pOriginBase);
 
 // Group building copies by id; resolve upkeepPerCopy via FacilityEnergyUpkeep modifiers.
 // Lines are sorted ascending by id for stable UI order.

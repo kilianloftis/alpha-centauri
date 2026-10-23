@@ -36,6 +36,19 @@ using json = nlohmann::json;
 namespace
 {
 
+// The census entry for this faction's copies of buildingId; zero when it has none in orbit.
+int OrbitalCount_(FactionId_t factionId, const BuildingId_t& buildingId)
+{
+    for (const OrbitalCensusEntry_t& rEntry : BuildOrbitalCensus())
+    {
+        if (rEntry.factionId == factionId && rEntry.buildingId == buildingId)
+        {
+            return rEntry.count;
+        }
+    }
+    return 0;
+}
+
 constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
 
 struct OrbitalGame_
@@ -132,11 +145,11 @@ TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbita
     // Non-orbital must not appear.
     playerBase.GetBuildingManager().AddBuilding("granted_hall");
 
-    CHECK(CountFactionOrbitalBuildings(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
+    CHECK(OrbitalCount_(game.pPlayer->GetFactionId(), "Sky_Hydroponics_Lab")
           == 2);
-    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
+    CHECK(OrbitalCount_(game.pAi->GetFactionId(), "Orbital_Power_Transmitter")
           == 1);
-    CHECK(CountFactionOrbitalBuildings(game.pPlayer->GetFactionId(), "granted_hall") == 0);
+    CHECK(OrbitalCount_(game.pPlayer->GetFactionId(), "granted_hall") == 0);
 
     const auto census = BuildOrbitalCensus();
     int sky = 0;
@@ -196,7 +209,7 @@ TEST_CASE("TryAttackSatellite hit destroys one orbital and deploys the pod", "[o
     CHECK(result.bAttempted);
     CHECK(result.bHit);
     CHECK(result.attackerBuildingId == "test_odp_always_hit");
-    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(OrbitalCount_(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year) == 0);
     // Still unavailable early next year.
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_hit", year + 1) == 0);
@@ -218,7 +231,7 @@ TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK_FALSE(result.bAttackerDestroyed);
-    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(OrbitalCount_(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.fixtures.state.GetMissionYear())
           == 0);
@@ -239,7 +252,7 @@ TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbit
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
     CHECK(result.bAttackerDestroyed);
-    CHECK(CountFactionOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(OrbitalCount_(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 

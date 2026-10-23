@@ -324,7 +324,7 @@ TEST_CASE("Command Center MaxClamp follows difficulty", "[difficulty][effects][u
     BuildingConfig_t synthetic;
     synthetic.id = "Command_Center";
     synthetic.upkeep = 2;
-    CHECK(ResolveFacilityEnergyUpkeepPerCopy(synthetic, rBase.GetBaseEffects().effects, nullptr) == 0);
+    CHECK(TallyBuildingUpkeepByType({&synthetic}, rBase.GetBaseEffects().effects, nullptr).front().upkeepPerCopy == 0);
 }
 
 TEST_CASE("Changing difficulty mid-campaign re-resolves live factions", "[difficulty][effects]")

@@ -1,5 +1,6 @@
 // Away-from-home drones and garrison police (both tuned by Police SE, separate calculators).
 
+#include "game/population/CompositionInputs.h"
 #include "GameFixtures.h"
 
 #include "game/faction/Faction.h"
@@ -44,6 +45,11 @@ int CombinedPoliceDroneDelta_(const BaseManager& rBase)
     return ComputeAwayFromHomeDrones(rBase) - ComputeGarrisonPoliceSuppression(rBase);
 }
 
+int DronePressure_(const FactionFixture& rFixture, const BaseManager& rBase)
+{
+    return BuildCompositionInputs(rBase, *rFixture.dataContext.droneCalculator).dronePressure;
+}
+
 } // namespace
 
 TEST_CASE("Combat unit away from home adds drones at home base; former does not",
@@ -82,9 +88,10 @@ TEST_CASE("Police -5 doubles away-from-home drones; no flat SE drones", "[police
     BaseManager& home = fixture.MakeFactionBase(faction, 8, 8);
     RebuildTerritory_(fixture);
 
+    const int dronesBefore = DronePressure_(fixture, home);
     SetPolice_(faction, fixture, "police_minus5_policy");
     REQUIRE(home.GetEffectiveSocialRating(SocialRatingId_t::Police) == -5);
-    CHECK(home.GetDroneModifier() == 0);
+    CHECK(DronePressure_(fixture, home) == dronesBefore);
 
     Unit& combat = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &home);
     fixture.MoveUnit(combat, 8, 40);
@@ -205,10 +212,10 @@ TEST_CASE("Facility drones are independent of police delta", "[police][drones]")
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
-    CHECK(base.GetDroneModifier() == 0);
+    const int dronesBefore = DronePressure_(fixture, base);
     CHECK(CombinedPoliceDroneDelta_(base) == 0);
 
     base.GetBuildingManager().AddBuilding("drone_hall");
-    CHECK(base.GetDroneModifier() == 2);
+    CHECK(DronePressure_(fixture, base) == dronesBefore + 2);
     CHECK(CombinedPoliceDroneDelta_(base) == 0);
 }
