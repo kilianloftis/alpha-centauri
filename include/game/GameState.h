@@ -207,6 +207,10 @@ private:
     void WireFactionObservers_(Faction& rFaction);
     void WireUnitObservers_(UnitManager& rUnits);
     void WireBaseObservers_(Faction& rFaction);
+    void WireBaseSession_(BaseManager& rBase);
+    void ConsiderAllObservers_();
+    void OnUnitMoved_(Unit& rMoved);
+    void OnImprovementVisited_(Unit& rMover);
 
     int m_missionYear;
     GameSettings& m_rSettings;

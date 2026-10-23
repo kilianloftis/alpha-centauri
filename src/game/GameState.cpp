@@ -39,6 +39,7 @@
 #include "game/council/CouncilRulesConfig.h"
 #include "lib/EventBus.h"
 #include <algorithm>
+#include <functional>
 #include <random>
 #include <stdexcept>
 
@@ -48,44 +49,59 @@ namespace ac
 namespace
 {
 
+void ApplyBuildingCompleteEffects_(GameState& rGameState, BaseManager& rBase,
+                                   const BuildingConfig_t& rBuilding)
+{
+    TriggeredEffectContext_t context(rGameState, rBase);
+    context.populationFloor = CompletionPopulationFloor();
+    ApplyTriggeredEffects(rBuilding.onCompleteEffects, context);
+    // A copy, since a hold link can move units off the tile.
+    const std::vector<Unit*> holders =
+        rGameState.GetWorldMap().GetUnitPositions().GetUnitsOnTile(rBase.GetTile());
+    for (Unit* pUnit : holders)
+    {
+        if (pUnit)
+        {
+            rGameState.ConsiderHoldLink(*pUnit);
+        }
+    }
+}
+
+// Only a produced unit pays completion costs; free spawns never come through here.
+void ApplyUnitCompleteEffects_(GameState& rGameState, const ProductionCompleted_t& rCompleted,
+                               const UnitDesign& rDesign)
+{
+    TriggeredEffectContext_t context(rGameState, rCompleted.rBase);
+    context.pUnit = rCompleted.pUnit;
+    context.populationFloor = CompletionPopulationFloor();
+    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
+    {
+        ApplyTriggeredEffects(pComp->onCompleteEffects, context);
+    }
+}
+
 void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionCompleted_t& rCompleted)
 {
     BaseManager& rBase = rCompleted.rBase;
-    Faction& rFaction = rBase.GetFaction();
     if (const BuildingConfig_t* pBuilding =
             rBase.GetBuildingManager().FindBuilding(rCompleted.itemId))
     {
-        TriggeredEffectContext_t context(rGameState, rBase);
-        context.populationFloor = CompletionPopulationFloor();
-        ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
-        const std::vector<Unit*> occupants =
-            rGameState.GetWorldMap().GetUnitPositions().GetUnitsOnTile(rBase.GetTile());
-        const std::vector<Unit*> holders(occupants.begin(), occupants.end());
-        for (Unit* pUnit : holders)
-        {
-            if (pUnit)
-            {
-                rGameState.ConsiderHoldLink(*pUnit);
-            }
-        }
+        ApplyBuildingCompleteEffects_(rGameState, rBase, *pBuilding);
         return;
     }
-
-    if (const auto* pDesign =
-        dynamic_cast<const UnitDesign*>(rFaction.GetMilitary().GetDesign(rCompleted.itemId)))
+    const IDesign* pDesign = rBase.GetFaction().GetMilitary().GetDesign(rCompleted.itemId);
+    if (const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign))
     {
-        // Only a produced unit pays completion costs; free spawns never come through here.
-        TriggeredEffectContext_t context(rGameState, rBase);
-        context.pUnit = rCompleted.pUnit;
-        context.populationFloor = CompletionPopulationFloor();
-        for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
-        {
-            if (pComp)
-            {
-                ApplyTriggeredEffects(pComp->onCompleteEffects, context);
-            }
-        }
+        ApplyUnitCompleteEffects_(rGameState, rCompleted, *pUnitDesign);
     }
+}
+
+void NoticeAtBase_(GameState& rGameState, const BaseManager& rBase, PauseOnEventId_t eventId,
+                   std::string title, std::string message)
+{
+    const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
+    EnqueueForPlayer(rGameState,
+                     NoticeInteraction_t{eventId, std::move(title), std::move(message), at});
 }
 
 void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
@@ -100,31 +116,17 @@ void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
     rPopulation.OnWillRiot.Connect(
         [&rGameState, &rBase]()
         {
-            const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
-            EnqueueForPlayer(
-                rGameState,
-                NoticeInteraction_t{
-                    PauseOnEventId_t::DroneRiots,
-                    "Drone Riots",
-                    "Drones threaten to riot at " + rBase.GetName()
-                        + ". Adjust specialists or psych before the turn ends.",
-                    at,
-                });
+            NoticeAtBase_(rGameState, rBase, PauseOnEventId_t::DroneRiots, "Drone Riots",
+                          "Drones threaten to riot at " + rBase.GetName()
+                              + ". Adjust specialists or psych before the turn ends.");
         });
     // TODO: should a golden age announce on the verge or only on arrival? Unlike a riot, the player
     // has nothing to avert.
     rPopulation.OnWillGoldenAge.Connect(
         [&rGameState, &rBase]()
         {
-            const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
-            EnqueueForPlayer(
-                rGameState,
-                NoticeInteraction_t{
-                    PauseOnEventId_t::GoldenAgeStarts,
-                    "Golden Age",
-                    rBase.GetName() + " is on the verge of a Golden Age.",
-                    at,
-                });
+            NoticeAtBase_(rGameState, rBase, PauseOnEventId_t::GoldenAgeStarts, "Golden Age",
+                          rBase.GetName() + " is on the verge of a Golden Age.");
         });
 }
 
@@ -162,29 +164,14 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pFirstContact = std::make_unique<FirstContactResolver>(
         *m_pDiplomacy, m_factions);
-    // Visibility stays on Faction; the position index owns position only.
-    m_worldMap->GetUnitPositions().OnUnitMoved.Connect([this](Unit& rMoved)
-    {
-        rMoved.GetFaction().RebuildVisibility();
-        // Stationary factions whose vision already covers the new tile must also meet.
-        m_pFirstContact->ConsiderUnit(rMoved);
-    });
+    m_worldMap->GetUnitPositions().OnUnitMoved.Connect(
+        std::bind_front(&GameState::OnUnitMoved_, this));
     // Safe: the executor only stores the pointer during construction.
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
         *rGameData.moraleCalculator, *rGameData.terrainOperationRegistry, m_rng, this);
     m_pUnitOrderExecutor->SetImprovementVisitHandler(
-        [this](Unit& rMover)
-        {
-            if (rMover.GetFaction().IsPlayerControlled())
-            {
-                EnqueueForPlayer(*this, ImprovementVisitInteraction_t{rMover.GetUnitId()});
-            }
-            else
-            {
-                ApplyVisitEffects(*this, rMover, m_rng);
-            }
-        });
+        std::bind_front(&GameState::OnImprovementVisited_, this));
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(
         *rGameData.moraleCalculator, *rGameData.probeActionsConfig, m_rng);
 }
@@ -370,10 +357,33 @@ void GameState::AttachToSession_(Faction& rFaction)
     rFaction.RebuildVisibility();
     // Contact is symmetric: an incumbent who already sees the newcomer's bases must learn of it
     // too.
+    ConsiderAllObservers_();
+}
+
+void GameState::ConsiderAllObservers_()
+{
     for (Faction& rObserver : Factions())
     {
         m_pFirstContact->ConsiderObserver(rObserver);
     }
+}
+
+// Visibility stays on Faction; the position index owns position only.
+void GameState::OnUnitMoved_(Unit& rMoved)
+{
+    rMoved.GetFaction().RebuildVisibility();
+    // Stationary factions whose vision already covers the new tile must also meet.
+    m_pFirstContact->ConsiderUnit(rMoved);
+}
+
+void GameState::OnImprovementVisited_(Unit& rMover)
+{
+    if (rMover.GetFaction().IsPlayerControlled())
+    {
+        EnqueueForPlayer(*this, ImprovementVisitInteraction_t{rMover.GetUnitId()});
+        return;
+    }
+    ApplyVisitEffects(*this, rMover, m_rng);
 }
 
 void GameState::WireFactionObservers_(Faction& rFaction)
@@ -392,10 +402,7 @@ void GameState::WireFactionObservers_(Faction& rFaction)
     {
         RebuildTerritory();
         // A new base may sit inside another faction's existing vision cone.
-        for (Faction& rObserver : Factions())
-        {
-            m_pFirstContact->ConsiderObserver(rObserver);
-        }
+        ConsiderAllObservers_();
     });
     rFaction.OnVisibilityRebuilt.Connect([this](Faction& rObserver)
     {
@@ -433,25 +440,26 @@ void GameState::WireUnitObservers_(UnitManager& rUnits)
 
 void GameState::WireBaseObservers_(Faction& rFaction)
 {
-    auto wireBaseSession = [this](BaseManager& rBase)
-    {
-        if (!m_sessionWiredBases.insert(&rBase).second)
-        {
-            return;
-        }
-        // on_complete effects before any later UI/mod observers of the same signal.
-        rBase.OnProductionCompleted.Connect(
-            [this](const ProductionCompleted_t& rCompleted)
-            {
-                ApplyProductionCompleteEffects_(*this, rCompleted);
-            });
-        WireMoodNotices_(*this, rBase);
-    };
-    rFaction.OnBaseAdded.Connect(wireBaseSession);
+    rFaction.OnBaseAdded.Connect(std::bind_front(&GameState::WireBaseSession_, this));
     for (BaseManager& rBase : rFaction.Bases())
     {
-        wireBaseSession(rBase);
+        WireBaseSession_(rBase);
     }
+}
+
+void GameState::WireBaseSession_(BaseManager& rBase)
+{
+    if (!m_sessionWiredBases.insert(&rBase).second)
+    {
+        return;
+    }
+    // on_complete effects before any later UI/mod observers of the same signal.
+    rBase.OnProductionCompleted.Connect(
+        [this](const ProductionCompleted_t& rCompleted)
+        {
+            ApplyProductionCompleteEffects_(*this, rCompleted);
+        });
+    WireMoodNotices_(*this, rBase);
 }
 
 int GameState::GetNumFactions() const

@@ -71,6 +71,232 @@ GameDataContext::~GameDataContext() = default;
 GameDataContext::GameDataContext(GameDataContext&&) noexcept = default;
 GameDataContext& GameDataContext::operator=(GameDataContext&&) noexcept = default;
 
+namespace
+{
+
+template <typename TParser>
+auto Parse_(const std::string& rPath)
+{
+    TParser parser;
+    return parser.ParseConfig(rPath);
+}
+
+template <typename TParser>
+auto ParseOwned_(const std::string& rPath)
+{
+    using Config_t = decltype(Parse_<TParser>(rPath));
+    return std::make_unique<Config_t>(Parse_<TParser>(rPath));
+}
+
+template <typename TRegistry>
+std::unique_ptr<TRegistry> LoadRegistry_(const auto& rPath)
+{
+    auto pRegistry = std::make_unique<TRegistry>();
+    pRegistry->Load(rPath);
+    return pRegistry;
+}
+
+void ValidateOverlayChannels_(const GameDataContext& rData)
+{
+    for (const BuildingConfig_t& rBuilding : rData.buildingRegistry->GetAll())
+    {
+        if (rBuilding.mapOverlayChannel.empty())
+        {
+            continue;
+        }
+        if (!rData.mapOverlayChannels->layersByChannel.contains(rBuilding.mapOverlayChannel))
+        {
+            throw std::runtime_error(
+                "Building '" + rBuilding.id + "': unknown map_overlay_channel '"
+                + rBuilding.mapOverlayChannel + "'");
+        }
+    }
+}
+
+void ValidateStageBumpBuildings_(const GameDataContext& rData)
+{
+    for (const std::string& rBumpId : rData.baseSpriteSizes->stageBumpBuildings)
+    {
+        if (!rData.buildingRegistry->Find(rBumpId))
+        {
+            throw std::runtime_error(
+                "base_sprite_sizes: stage_bump_buildings names unknown building '" + rBumpId
+                + "'");
+        }
+    }
+}
+
+// Escape pods are assembled only on a cross-species capture, so their ids are checked at load.
+void ValidateEscapePodComponents_(const GameDataContext& rData)
+{
+    for (const std::string& rComponentId : rData.baseConquestConfig->escapeColonyPod.componentIds)
+    {
+        if (!rData.unitComponentRegistry->Find(rComponentId))
+        {
+            throw std::runtime_error(
+                "base conquest escape_colony_pod component '" + rComponentId
+                + "' is not a known unit component");
+        }
+    }
+}
+
+void ValidateCompositionPopTypes_(const GameDataContext& rData)
+{
+    const PopCompositionConfig_t& rComposition = *rData.popCompositionConfig;
+    if (!rData.popTypeRegistry->Find(rComposition.droneTypeId))
+    {
+        throw std::runtime_error(
+            "pop composition drone_type '" + rComposition.droneTypeId
+            + "' is not a known pop type");
+    }
+    if (!rData.popTypeRegistry->Find(rComposition.talentTypeId))
+    {
+        throw std::runtime_error(
+            "pop composition talent_type '" + rComposition.talentTypeId
+            + "' is not a known pop type");
+    }
+}
+
+// Evaluated once at load, so a broken formula fails here and not at the first promotion.
+void CheckPromotionFormulaEvaluates_(const GameDataContext& rData)
+{
+    const std::unordered_map<std::string, double> kSmokeCases[] = {
+        {{"attack_strength", 1.0}, {"defense_strength", 1.0}},
+        {{"attack_strength", 0.0}, {"defense_strength", 0.0}},
+    };
+    for (const auto& vars : kSmokeCases)
+    {
+        (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionSeedFormula, vars);
+    }
+}
+
+std::vector<LandmarkConfig_t> LoadLandmarks_(const GameDataContext& rData)
+{
+    std::vector<std::string> occupantIds;
+    for (const ImprovementConfig_t& rConfig : rData.improvementRegistry->GetAll())
+    {
+        occupantIds.push_back(rConfig.id);
+    }
+    LandmarkConfigParser landmarkParser;
+    std::vector<LandmarkConfig_t> landmarks =
+        landmarkParser.ParseConfig(rData.paths.worldGenLandmarks, occupantIds);
+    for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
+    {
+        for (const LandmarkConfig_t& rLandmark : landmarks)
+        {
+            LandmarkConfigParser::ValidateSculptAgainstPreset(rLandmark, rPreset);
+        }
+    }
+    return landmarks;
+}
+
+// Cited by later configs and validators, so they load first.
+void LoadReferenceRegistries_(GameDataContext& rData)
+{
+    const GameDataPaths& rPaths = rData.paths;
+    rData.techRegistry = LoadRegistry_<TechRegistry>(rPaths.techs);
+    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
+    rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
+    LoadMapOccupants(rPaths.improvements, rPaths.terrain, *rData.improvementRegistry,
+                     *rData.terrainOperationRegistry);
+    // HasComponent conditions and component required_tech need this before the reference
+    // validators.
+    rData.unitComponentRegistry = LoadRegistry_<UnitComponentRegistry>(rPaths.unitComponents);
+    ValidateComponentChassisRequirements(*rData.unitComponentRegistry);
+    rData.unitSlotRegistry = LoadRegistry_<UnitSlotRegistry>(rPaths.unitSlots);
+    rData.nativeUnitRegistry = LoadRegistry_<NativeUnitRegistry>(rPaths.nativeUnits);
+}
+
+// Registries that declare effects or carry required_tech.
+void LoadEffectRegistries_(GameDataContext& rData)
+{
+    const GameDataPaths& rPaths = rData.paths;
+    rData.popTypeRegistry = LoadRegistry_<PopTypeRegistry>(rPaths.popTypes);
+    rData.popTypeAvailabilityCalculator =
+        std::make_unique<PopTypeAvailabilityCalculator>(*rData.popTypeRegistry);
+    rData.buildingRegistry = LoadRegistry_<BuildingRegistry>(rPaths.buildings);
+    rData.mapOverlayChannels = ParseOwned_<MapOverlayChannelsConfigParser>(rPaths.mapOverlayChannels);
+    ValidateOverlayChannels_(rData);
+    rData.baseSpriteSizes = ParseOwned_<BaseSpriteSizesConfigParser>(rPaths.baseSpriteSizes);
+    ValidateStageBumpBuildings_(rData);
+    rData.stockpileRegistry = LoadRegistry_<StockpileRegistry>(rPaths.stockpiles);
+    rData.socialPolicyRegistry = LoadRegistry_<SocialPolicyRegistry>(rPaths.socialPolicies);
+    rData.socialRatingRegistry = LoadRegistry_<SocialRatingRegistry>(rPaths.socialRatings);
+    rData.factionRegistry = LoadRegistry_<FactionRegistry>(rPaths.factions);
+}
+
+void LoadWorldGenData_(GameDataContext& rData)
+{
+    const GameDataPaths& rPaths = rData.paths;
+    rData.elevationRules = Parse_<ElevationRulesConfigParser>(rPaths.elevationRules);
+    rData.worldGenPresetRegistry = LoadRegistry_<WorldGenPresetRegistry>(rPaths.worldGenPresets);
+    for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
+    {
+        WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.elevationRules);
+    }
+    rData.worldGenDecorationConfig =
+        ParseOwned_<WorldGenDecorationConfigParser>(rPaths.worldGenDecoration);
+    rData.worldGenLandmarks = LoadLandmarks_(rData);
+}
+
+void LoadRuleConfigs_(GameDataContext& rData)
+{
+    const GameDataPaths& rPaths = rData.paths;
+    rData.tileYieldRules = Parse_<TileYieldRulesConfigParser>(rPaths.tileYieldRules);
+    rData.interactionGrids = Parse_<InteractionGridsConfigParser>(rPaths.interactionGrids);
+    rData.policeRules = Parse_<PoliceRulesConfigParser>(rPaths.policeRules);
+    rData.worldRules = Parse_<WorldRulesConfigParser>(rPaths.worldRules);
+    rData.moraleConfig = ParseOwned_<MoraleConfigParser>(rPaths.moraleLevels);
+    rData.probeActionsConfig = ParseOwned_<ProbeActionConfigParser>(rPaths.probeActions);
+    rData.baseConquestConfig = ParseOwned_<BaseConquestConfigParser>(rPaths.baseConquest);
+    ValidateEscapePodComponents_(rData);
+    rData.councilProposalRegistry = LoadRegistry_<CouncilProposalRegistry>(rPaths.councilProposals);
+    rData.councilRules = ParseOwned_<CouncilRulesConfigParser>(rPaths.councilRules);
+    rData.atrocitiesConfig = ParseOwned_<AtrocityConfigParser>(rPaths.atrocities);
+    // Declares effects (prototype starting XP), so it loads before ValidateEffectReferences.
+    rData.productionConfig = ParseOwned_<ProductionConfigParser>(rPaths.production);
+    rData.commerceConfig = ParseOwned_<CommerceConfigParser>(rPaths.commerce);
+    rData.diplomacyConfig = ParseOwned_<DiplomacyConfigParser>(rPaths.diplomacy);
+    rData.difficultyConfig = ParseOwned_<DifficultyConfigParser>(rPaths.difficulty);
+    rData.nativeLifeLevelConfig = ParseOwned_<NativeLifeLevelConfigParser>(rPaths.nativeLifeLevels);
+    rData.worldEventsConfig = ParseOwned_<WorldEventsConfigParser>(rPaths.worldEvents);
+    // Drone clamps and mood thresholds, loaded before the Lua calculators that use them.
+    rData.popCompositionConfig = ParseOwned_<PopCompositionConfigParser>(rPaths.popComposition);
+    ValidateCompositionPopTypes_(rData);
+
+    // Created here so eco_damage.lua loads before ValidateEffectReferences walks eco_damage.json.
+    rData.luaRuntime = std::make_unique<LuaRuntime>();
+    EcoDamageConfigParser ecoDamageParser;
+    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(
+        rPaths.ecoDamage, rPaths.ecoDamageFormula, *rData.luaRuntime));
+}
+
+// Formula configs and calculators, which need the registries and the Lua runtime.
+void LoadFormulasAndCalculators_(GameDataContext& rData)
+{
+    const GameDataPaths& rPaths = rData.paths;
+    LuaRuntime& rLua = *rData.luaRuntime;
+    CheckPromotionFormulaEvaluates_(rData);
+    rData.droneCalculator = std::make_unique<DroneCalculator>(*rData.popCompositionConfig, rLua);
+    rData.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
+        *rData.popCompositionConfig, *rData.popTypeRegistry);
+    rData.growthConfig = ParseOwned_<GrowthConfigParser>(rPaths.popGrowth);
+
+    TechCostConfigParser techCostParser;
+    rData.techCostConfig =
+        std::make_unique<TechCostConfig_t>(techCostParser.ParseConfig(rPaths.techCost, rLua));
+    rData.techCostCalculator = std::make_unique<TechCostCalculator>(*rData.techCostConfig, rLua);
+    rData.ecoDamageCalculator = std::make_unique<EcoDamageCalculator>(*rData.ecoDamageConfig, rLua);
+    rData.hurryProductionCalculator =
+        std::make_unique<HurryProductionCalculator>(*rData.productionConfig, rLua);
+    rData.scrapRefundCalculator =
+        std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, rLua);
+    rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig, rLua);
+    rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
+}
+
+} // namespace
+
 void ThrowIfIncomplete(const GameDataContext& rData)
 {
     // Consumers dereference these without checking. Named one by one, so a modder can act on the
@@ -133,255 +359,17 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 {
     GameDataContext rData;
     rData.paths = rPaths;
-
-    // --- Reference-target registries first (cited by later configs / validators) ---
-    rData.techRegistry = std::make_unique<TechRegistry>();
-    rData.techRegistry->Load(rPaths.techs);
-
-    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
-    rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
-    LoadMapOccupants(rPaths.improvements, rPaths.terrain, *rData.improvementRegistry,
-                     *rData.terrainOperationRegistry);
-
-    // HasComponent conditions and component required_tech need this present before
-    // ValidateEffectReferences / ValidateRequiredTechReferences below.
-    rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
-    rData.unitComponentRegistry->Load(rPaths.unitComponents);
-    ValidateComponentChassisRequirements(*rData.unitComponentRegistry);
-
-    rData.unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
-    rData.unitSlotRegistry->Load(rPaths.unitSlots);
-
-    rData.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
-    rData.nativeUnitRegistry->Load(rPaths.nativeUnits);
-
-    // --- Effect-declaring (and required_tech-bearing) registries ---
-    rData.popTypeRegistry = std::make_unique<PopTypeRegistry>();
-    rData.popTypeRegistry->Load(rPaths.popTypes);
-    rData.popTypeAvailabilityCalculator =
-        std::make_unique<PopTypeAvailabilityCalculator>(*rData.popTypeRegistry);
-
-    rData.buildingRegistry = std::make_unique<BuildingRegistry>();
-    rData.buildingRegistry->Load(rPaths.buildings);
-
-    {
-        MapOverlayChannelsConfigParser channelsParser;
-        rData.mapOverlayChannels = std::make_unique<MapOverlayChannelsConfig_t>(
-            channelsParser.ParseConfig(rPaths.mapOverlayChannels));
-        for (const BuildingConfig_t& rBuilding : rData.buildingRegistry->GetAll())
-        {
-            if (rBuilding.mapOverlayChannel.empty())
-            {
-                continue;
-            }
-            if (!rData.mapOverlayChannels->layersByChannel.contains(rBuilding.mapOverlayChannel))
-            {
-                throw std::runtime_error(
-                    "Building '" + rBuilding.id + "': unknown map_overlay_channel '"
-                    + rBuilding.mapOverlayChannel + "'");
-            }
-        }
-    }
-
-    {
-        BaseSpriteSizesConfigParser sizesParser;
-        rData.baseSpriteSizes = std::make_unique<BaseSpriteSizesConfig_t>(
-            sizesParser.ParseConfig(rPaths.baseSpriteSizes));
-        for (const std::string& rBumpId : rData.baseSpriteSizes->stageBumpBuildings)
-        {
-            if (!rData.buildingRegistry->Find(rBumpId))
-            {
-                throw std::runtime_error(
-                    "base_sprite_sizes: stage_bump_buildings names unknown building '" + rBumpId
-                    + "'");
-            }
-        }
-    }
-
-    rData.stockpileRegistry = std::make_unique<StockpileRegistry>();
-    rData.stockpileRegistry->Load(rPaths.stockpiles);
-
-    rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
-    rData.socialPolicyRegistry->Load(rPaths.socialPolicies);
-
-    rData.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
-    rData.socialRatingRegistry->Load(rPaths.socialRatings);
-
-    rData.factionRegistry = std::make_unique<FactionRegistry>();
-    rData.factionRegistry->Load(rPaths.factions);
-
-    ElevationRulesConfigParser elevationRulesParser;
-    rData.elevationRules = elevationRulesParser.ParseConfig(rPaths.elevationRules);
-
-    rData.worldGenPresetRegistry = std::make_unique<WorldGenPresetRegistry>();
-    rData.worldGenPresetRegistry->Load(rPaths.worldGenPresets);
-    for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
-    {
-        WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.elevationRules);
-    }
-
-    WorldGenDecorationConfigParser decorationParser;
-    rData.worldGenDecorationConfig = std::make_unique<WorldGenDecorationConfig_t>(
-        decorationParser.ParseConfig(rPaths.worldGenDecoration));
-
-    {
-        std::vector<std::string> occupantIds;
-        for (const ImprovementConfig_t& rConfig : rData.improvementRegistry->GetAll())
-        {
-            occupantIds.push_back(rConfig.id);
-        }
-        LandmarkConfigParser landmarkParser;
-        rData.worldGenLandmarks =
-            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, occupantIds);
-        for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
-        {
-            for (const LandmarkConfig_t& rLandmark : rData.worldGenLandmarks)
-            {
-                LandmarkConfigParser::ValidateSculptAgainstPreset(rLandmark, rPreset);
-            }
-        }
-    }
-
-    TileYieldRulesConfigParser tileYieldRulesParser;
-    rData.tileYieldRules = tileYieldRulesParser.ParseConfig(rPaths.tileYieldRules);
-
-    InteractionGridsConfigParser interactionGridsParser;
-    rData.interactionGrids = interactionGridsParser.ParseConfig(rPaths.interactionGrids);
-
-    PoliceRulesConfigParser policeRulesParser;
-    rData.policeRules = policeRulesParser.ParseConfig(rPaths.policeRules);
-
-    WorldRulesConfigParser worldRulesParser;
-    rData.worldRules = worldRulesParser.ParseConfig(rPaths.worldRules);
-
-    MoraleConfigParser moraleParser;
-    rData.moraleConfig =
-        std::make_unique<MoraleConfig_t>(moraleParser.ParseConfig(rPaths.moraleLevels));
-
-    ProbeActionConfigParser probeParser;
-    rData.probeActionsConfig =
-        std::make_unique<ProbeActionsConfig_t>(probeParser.ParseConfig(rPaths.probeActions));
-
-    BaseConquestConfigParser conquestParser;
-    rData.baseConquestConfig =
-        std::make_unique<BaseConquestConfig_t>(conquestParser.ParseConfig(rPaths.baseConquest));
-    // Escape pods are assembled only on a cross-species capture, so their ids are checked at load.
-    for (const std::string& rComponentId : rData.baseConquestConfig->escapeColonyPod.componentIds)
-    {
-        if (!rData.unitComponentRegistry->Find(rComponentId))
-        {
-            throw std::runtime_error(
-                "base conquest escape_colony_pod component '" + rComponentId
-                + "' is not a known unit component");
-        }
-    }
-
-    rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
-    rData.councilProposalRegistry->Load(rPaths.councilProposals);
-
-    CouncilRulesConfigParser councilRulesParser;
-    rData.councilRules =
-        std::make_unique<CouncilRulesConfig_t>(councilRulesParser.ParseConfig(rPaths.councilRules));
-
-    AtrocityConfigParser atrocitiesParser;
-    rData.atrocitiesConfig =
-        std::make_unique<AtrocitiesConfig_t>(atrocitiesParser.ParseConfig(rPaths.atrocities));
-
-    // Declares effects (prototype starting XP), so it loads before ValidateEffectReferences.
-    ProductionConfigParser productionParser;
-    rData.productionConfig =
-        std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
-
-    CommerceConfigParser commerceParser;
-    rData.commerceConfig =
-        std::make_unique<CommerceConfig_t>(commerceParser.ParseConfig(rPaths.commerce));
-
-    DiplomacyConfigParser diplomacyParser;
-    rData.diplomacyConfig =
-        std::make_unique<DiplomacyConfig_t>(diplomacyParser.ParseConfig(rPaths.diplomacy));
-
-    DifficultyConfigParser difficultyParser;
-    rData.difficultyConfig =
-        std::make_unique<DifficultyConfig_t>(difficultyParser.ParseConfig(rPaths.difficulty));
-
-    NativeLifeLevelConfigParser nativeLifeParser;
-    rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>(
-        nativeLifeParser.ParseConfig(rPaths.nativeLifeLevels));
-
-    WorldEventsConfigParser worldEventsParser;
-    rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>(
-        worldEventsParser.ParseConfig(rPaths.worldEvents));
-
-    // Drone clamps and mood thresholds, loaded before the Lua calculators that use them.
-    PopCompositionConfigParser compositionParser;
-    rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
-        compositionParser.ParseConfig(rPaths.popComposition));
-    {
-        const PopCompositionConfig_t& rComposition = *rData.popCompositionConfig;
-        if (!rData.popTypeRegistry->Find(rComposition.droneTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition drone_type '" + rComposition.droneTypeId
-                + "' is not a known pop type");
-        }
-        if (!rData.popTypeRegistry->Find(rComposition.talentTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition talent_type '" + rComposition.talentTypeId
-                + "' is not a known pop type");
-        }
-    }
-
-    // Created here so eco_damage.lua loads before ValidateEffectReferences walks eco_damage.json.
-    rData.luaRuntime = std::make_unique<LuaRuntime>();
-    EcoDamageConfigParser ecoDamageParser;
-    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(
-        rPaths.ecoDamage, rPaths.ecoDamageFormula, *rData.luaRuntime));
+    LoadReferenceRegistries_(rData);
+    LoadEffectRegistries_(rData);
+    LoadWorldGenData_(rData);
+    LoadRuleConfigs_(rData);
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
     ValidateRequiredTechReferences(rData);
 
-    // --- Formula configs / calculators (depend on registries + LuaRuntime) ---
-    {
-        const std::unordered_map<std::string, double> kSmokeCases[] = {
-            {{"attack_strength", 1.0}, {"defense_strength", 1.0}},
-            {{"attack_strength", 0.0}, {"defense_strength", 0.0}},
-        };
-        for (const auto& vars : kSmokeCases)
-        {
-            (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionSeedFormula, vars);
-        }
-    }
-
-    rData.droneCalculator =
-        std::make_unique<DroneCalculator>(*rData.popCompositionConfig, *rData.luaRuntime);
-    rData.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
-        *rData.popCompositionConfig, *rData.popTypeRegistry);
-
-    GrowthConfigParser growthParser;
-    rData.growthConfig =
-        std::make_unique<GrowthConfig_t>(growthParser.ParseConfig(rPaths.popGrowth));
-
-    TechCostConfigParser techCostParser;
-    rData.techCostConfig = std::make_unique<TechCostConfig_t>(
-        techCostParser.ParseConfig(rPaths.techCost, *rData.luaRuntime));
-    rData.techCostCalculator =
-        std::make_unique<TechCostCalculator>(*rData.techCostConfig, *rData.luaRuntime);
-    rData.ecoDamageCalculator =
-        std::make_unique<EcoDamageCalculator>(*rData.ecoDamageConfig, *rData.luaRuntime);
-
-    rData.hurryProductionCalculator = std::make_unique<HurryProductionCalculator>(
-        *rData.productionConfig, *rData.luaRuntime);
-    rData.scrapRefundCalculator =
-        std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, *rData.luaRuntime);
-
-    rData.moraleCalculator =
-        std::make_unique<MoraleCalculator>(*rData.moraleConfig, *rData.luaRuntime);
-    rData.commerceCalculator =
-        std::make_unique<CommerceCalculator>(*rData.commerceConfig, *rData.luaRuntime);
-
+    LoadFormulasAndCalculators_(rData);
     ThrowIfIncomplete(rData);
     return rData;
 }

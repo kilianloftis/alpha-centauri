@@ -65,6 +65,20 @@ void ValidateProjectTech_(const std::string& rId, const FormerProject_t& rProjec
     }
 }
 
+void ValidateProbeActionTech_(const ProbeActionsConfig_t& rProbeActions, const TechRegistry& rTechs)
+{
+    for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
+    {
+        if (!rAction.requiredTech.empty() && !rTechs.Find(rAction.requiredTech))
+        {
+            throw std::runtime_error(
+                std::string("Probe action '") + ProbeActionIdToString(rAction.id)
+                + "' has required_tech '" + rAction.requiredTech
+                + "' which is not a known tech");
+        }
+    }
+}
+
 } // namespace
 
 void ValidateRequiredTechReferences(const GameDataContext& rData)
@@ -107,17 +121,7 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
     ValidateRequiredTech(rSocialPolicies.GetAll(), rTechs, "Social policy");
     ValidateRequiredTech(rPopTypes.GetAll(), rTechs, "Pop type");
     ValidateRequiredTech(rCouncilProposals.GetAll(), rTechs, "Council proposal");
-
-    for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
-    {
-        if (!rAction.requiredTech.empty() && !rTechs.Find(rAction.requiredTech))
-        {
-            throw std::runtime_error(
-                std::string("Probe action '") + ProbeActionIdToString(rAction.id)
-                + "' has required_tech '" + rAction.requiredTech
-                + "' which is not a known tech");
-        }
-    }
+    ValidateProbeActionTech_(rProbeActions, rTechs);
 }
 
 } // namespace ac

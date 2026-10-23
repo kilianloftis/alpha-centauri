@@ -378,78 +378,69 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
     }
 }
 
-void ValidateEffectReferences(const GameDataContext& rData)
+namespace
 {
-    // Registries LoadGameData always installs; a null one would pass every id check vacuously.
-    const BuildingRegistry& rBuildings =
-        RequireRegistry(rData.buildingRegistry, "buildingRegistry");
+
+// Checks one source's effects against the registries LoadGameData always installs; a null one
+// would pass every id check vacuously.
+class EffectSourceChecker_
+{
+public:
+    explicit EffectSourceChecker_(const GameDataContext& rData)
+        : m_rBuildings(RequireRegistry(rData.buildingRegistry, "buildingRegistry"))
+        , m_rImprovements(RequireRegistry(rData.improvementRegistry, "improvementRegistry"))
+        , m_rTechs(RequireRegistry(rData.techRegistry, "techRegistry"))
+        , m_rUnitComponents(RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry"))
+        , m_rSocialRatings(RequireRegistry(rData.socialRatingRegistry, "socialRatingRegistry"))
+        , m_rNativeUnits(RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry"))
+    {
+    }
+
+    void Effects(const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId) const
+    {
+        ValidateEffectReferences(rEffects, rSourceId, &m_rBuildings, &m_rImprovements, &m_rTechs,
+                                 &m_rUnitComponents, &m_rSocialRatings, &m_rNativeUnits);
+    }
+
+    void Triggered(const std::vector<TriggeredEffectConfig_t>& rEffects,
+                   const std::string& rSourceId) const
+    {
+        ValidateTriggeredEffectReferences(rEffects, rSourceId, &m_rBuildings, &m_rTechs,
+                                          &m_rUnitComponents, &m_rImprovements, &m_rNativeUnits);
+    }
+
+private:
+    const BuildingRegistry& m_rBuildings;
+    const ImprovementRegistry& m_rImprovements;
+    const TechRegistry& m_rTechs;
+    const UnitComponentRegistry& m_rUnitComponents;
+    const SocialRatingRegistry& m_rSocialRatings;
+    const NativeUnitRegistry& m_rNativeUnits;
+};
+
+void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)
+{
+    for (const BuildingConfig_t& rConfig : rData.buildingRegistry->GetAll())
+    {
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
+        rCheck.Triggered(rConfig.onUnitProducedEffects, rConfig.id);
+    }
     const StockpileRegistry& rStockpiles =
         RequireRegistry(rData.stockpileRegistry, "stockpileRegistry");
-    const ImprovementRegistry& rImprovements =
-        RequireRegistry(rData.improvementRegistry, "improvementRegistry");
-    const TechRegistry& rTechs = RequireRegistry(rData.techRegistry, "techRegistry");
-    const UnitComponentRegistry& rUnitComponents =
-        RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry");
-    const NativeUnitRegistry& rNativeUnits =
-        RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry");
-
-    // Effect-source registries / configs LoadGameData always populates before calling us.
-    const PopTypeRegistry& rPopTypes =
-        RequireRegistry(rData.popTypeRegistry, "popTypeRegistry");
-    const SocialPolicyRegistry& rSocialPolicies =
-        RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry");
-    const SocialRatingRegistry& rSocialRatings =
-        RequireRegistry(rData.socialRatingRegistry, "socialRatingRegistry");
-    const FactionRegistry& rFactions =
-        RequireRegistry(rData.factionRegistry, "factionRegistry");
-    const CouncilProposalRegistry& rCouncilProposals =
-        RequireRegistry(rData.councilProposalRegistry, "councilProposalRegistry");
-    const CouncilRulesConfig_t& rCouncilRules =
-        RequireRegistry(rData.councilRules, "councilRules");
-    const ProbeActionsConfig_t& rProbeActions =
-        RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
-    const ProductionConfig_t& rProductionConfig =
-        RequireRegistry(rData.productionConfig, "productionConfig");
-    const DifficultyConfig_t& rDifficultyConfig =
-        RequireRegistry(rData.difficultyConfig, "difficultyConfig");
-    const NativeLifeLevelConfig_t& rNativeLifeConfig =
-        RequireRegistry(rData.nativeLifeLevelConfig, "nativeLifeLevelConfig");
-    const WorldEventsConfig_t& rWorldEventsConfig =
-        RequireRegistry(rData.worldEventsConfig, "worldEventsConfig");
-    const EcoDamageConfig_t& rEcoDamageConfig =
-        RequireRegistry(rData.ecoDamageConfig, "ecoDamageConfig");
-
-    auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
-    {
-        ValidateEffectReferences(rEffects, rSourceId, &rBuildings, &rImprovements, &rTechs,
-                                 &rUnitComponents, &rSocialRatings, &rNativeUnits);
-    };
-    auto validateTriggered = [&](const std::vector<TriggeredEffectConfig_t>& rEffects,
-                                 const std::string& rSourceId)
-    {
-        ValidateTriggeredEffectReferences(rEffects, rSourceId, &rBuildings, &rTechs,
-                                          &rUnitComponents, &rImprovements, &rNativeUnits);
-    };
-
-    for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
-    {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onCompleteEffects, rConfig.id);
-        validateTriggered(rConfig.onUnitProducedEffects, rConfig.id);
-    }
     for (const StockpileConfig_t& rConfig : rStockpiles.GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
     }
-    for (const TechConfig_t& rConfig : rTechs.GetAll())
+    for (const TechConfig_t& rConfig : rData.techRegistry->GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onDiscoverEffects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onDiscoverEffects, rConfig.id);
     }
-    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    for (const ImprovementConfig_t& rConfig : rData.improvementRegistry->GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onVisitEffects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onVisitEffects, rConfig.id);
     }
     // A terrain operation is only its effects, so a typo makes it do nothing. Absent in
     // movement-only harnesses.
@@ -457,90 +448,138 @@ void ValidateEffectReferences(const GameDataContext& rData)
     {
         for (const TerrainOperationConfig_t& rConfig : rData.terrainOperationRegistry->GetAll())
         {
-            validateTriggered(rConfig.onCompleteEffects, rConfig.id);
+            rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
         }
     }
+}
+
+void CheckUnitAndPopSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)
+{
+    const PopTypeRegistry& rPopTypes = RequireRegistry(rData.popTypeRegistry, "popTypeRegistry");
     for (const PopTypeConfig_t& rConfig : rPopTypes.GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
     }
-    for (const UnitComponentConfig_t& rConfig : rUnitComponents.GetAll())
+    for (const UnitComponentConfig_t& rConfig : rData.unitComponentRegistry->GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onCompleteEffects, rConfig.id);
-        validateTriggered(rConfig.onHoldEffects, rConfig.id);
-        validateTriggered(rConfig.onDetonateEffects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
+        rCheck.Triggered(rConfig.onHoldEffects, rConfig.id);
+        rCheck.Triggered(rConfig.onDetonateEffects, rConfig.id);
     }
-    for (const NativeUnitConfig_t& rConfig : rNativeUnits.GetAll())
+    for (const NativeUnitConfig_t& rConfig : rData.nativeUnitRegistry->GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onHoldEffects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onHoldEffects, rConfig.id);
     }
+}
+
+void CheckPolicySources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)
+{
+    const SocialPolicyRegistry& rSocialPolicies =
+        RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry");
     for (const SocialPolicyConfig_t& rConfig : rSocialPolicies.GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
     }
-    for (const SocialRatingConfig_t& rConfig : rSocialRatings.GetAll())
+    for (const SocialRatingConfig_t& rConfig : rData.socialRatingRegistry->GetAll())
     {
         for (const auto& [level, rEffects] : rConfig.levelEffects)
         {
-            validate(rEffects, rConfig.id + " level " + std::to_string(level));
+            rCheck.Effects(rEffects, rConfig.id + " level " + std::to_string(level));
         }
     }
+    const FactionRegistry& rFactions = RequireRegistry(rData.factionRegistry, "factionRegistry");
     for (const FactionConfig_t& rConfig : rFactions.GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
     }
+    const CouncilProposalRegistry& rCouncilProposals =
+        RequireRegistry(rData.councilProposalRegistry, "councilProposalRegistry");
     for (const CouncilProposalConfig_t& rConfig : rCouncilProposals.GetAll())
     {
-        validate(rConfig.effects, rConfig.id);
-        validateTriggered(rConfig.onPassedEffects, rConfig.id);
+        rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Triggered(rConfig.onPassedEffects, rConfig.id);
     }
-    validate(rCouncilRules.governorEffects, "council_governor");
-    validateTriggered(rCouncilRules.onElectedEffects, "council_governor");
+    const CouncilRulesConfig_t& rCouncilRules = RequireRegistry(rData.councilRules, "councilRules");
+    rCheck.Effects(rCouncilRules.governorEffects, "council_governor");
+    rCheck.Triggered(rCouncilRules.onElectedEffects, "council_governor");
+    const ProbeActionsConfig_t& rProbeActions =
+        RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
     for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
         const std::string sourceId =
             std::string("probe_action:") + ProbeActionIdToString(rAction.id);
-        validate(rAction.effects, sourceId);
-        validateTriggered(rAction.onPaidEffects, sourceId);
-        validateTriggered(rAction.onSuccessEffects, sourceId);
+        rCheck.Effects(rAction.effects, sourceId);
+        rCheck.Triggered(rAction.onPaidEffects, sourceId);
+        rCheck.Triggered(rAction.onSuccessEffects, sourceId);
     }
-    // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
-    validate(rData.tileYieldRules.effects, "tile_yield_rules");
-    validate(rData.policeRules, "police_rules");
-    validate(rData.worldRules, "world_rules");
+}
+
+void CheckPopCompositionSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)
+{
     const PopCompositionConfig_t& rPopComposition =
         RequireRegistry(rData.popCompositionConfig, "popCompositionConfig");
-    validate(rPopComposition.effects, "pop_composition");
-    validate(rPopComposition.goldenAgeEffects, "pop_composition.golden_age_effects");
+    rCheck.Effects(rPopComposition.effects, "pop_composition");
+    rCheck.Effects(rPopComposition.goldenAgeEffects, "pop_composition.golden_age_effects");
     for (std::size_t tier = 0; tier < rPopComposition.riotTiers.size(); ++tier)
     {
         const std::string sourceId = "pop_composition.riot_tiers[" + std::to_string(tier) + "]";
-        validate(rPopComposition.riotTiers[tier].effects, sourceId);
-        validateTriggered(rPopComposition.riotTiers[tier].onEnterEffects, sourceId);
+        rCheck.Effects(rPopComposition.riotTiers[tier].effects, sourceId);
+        rCheck.Triggered(rPopComposition.riotTiers[tier].onEnterEffects, sourceId);
     }
-    validate(rProductionConfig.effects, "production");
-    validateTriggered(rProductionConfig.onUnitProducedEffects, "production");
-    validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
-             "base_conquest");
+}
+
+void CheckRuleConfigSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)
+{
+    // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
+    rCheck.Effects(rData.tileYieldRules.effects, "tile_yield_rules");
+    rCheck.Effects(rData.policeRules, "police_rules");
+    rCheck.Effects(rData.worldRules, "world_rules");
+    CheckPopCompositionSources_(rData, rCheck);
+    const ProductionConfig_t& rProductionConfig =
+        RequireRegistry(rData.productionConfig, "productionConfig");
+    rCheck.Effects(rProductionConfig.effects, "production");
+    rCheck.Triggered(rProductionConfig.onUnitProducedEffects, "production");
+    const BaseConquestConfig_t& rConquest =
+        RequireRegistry(rData.baseConquestConfig, "baseConquestConfig");
+    rCheck.Effects(rConquest.effects, "base_conquest");
+    const DifficultyConfig_t& rDifficultyConfig =
+        RequireRegistry(rData.difficultyConfig, "difficultyConfig");
     for (const DifficultyLevel_t& rLevel : rDifficultyConfig.levels)
     {
-        validate(rLevel.effects, "difficulty:" + rLevel.id);
+        rCheck.Effects(rLevel.effects, "difficulty:" + rLevel.id);
     }
+    const NativeLifeLevelConfig_t& rNativeLifeConfig =
+        RequireRegistry(rData.nativeLifeLevelConfig, "nativeLifeLevelConfig");
     for (const NativeLifeLevel_t& rLevel : rNativeLifeConfig.levels)
     {
-        validate(rLevel.effects, "native_life_level:" + rLevel.id);
+        rCheck.Effects(rLevel.effects, "native_life_level:" + rLevel.id);
     }
+    const WorldEventsConfig_t& rWorldEventsConfig =
+        RequireRegistry(rData.worldEventsConfig, "worldEventsConfig");
     for (const WorldEventConfig_t& rEvent : rWorldEventsConfig.events)
     {
         const std::string sourceId = "world_event:" + rEvent.id;
-        validate(rEvent.effects, sourceId);
-        validateTriggered(rEvent.onStartEffects, sourceId);
-        validateTriggered(rEvent.onEndEffects, sourceId);
+        rCheck.Effects(rEvent.effects, sourceId);
+        rCheck.Triggered(rEvent.onStartEffects, sourceId);
+        rCheck.Triggered(rEvent.onEndEffects, sourceId);
     }
-    validate(rEcoDamageConfig.effects, "eco_damage");
-    validateTriggered(rEcoDamageConfig.onPopEffects, "eco_damage.fungal_pop");
+    const EcoDamageConfig_t& rEcoDamageConfig =
+        RequireRegistry(rData.ecoDamageConfig, "ecoDamageConfig");
+    rCheck.Effects(rEcoDamageConfig.effects, "eco_damage");
+    rCheck.Triggered(rEcoDamageConfig.onPopEffects, "eco_damage.fungal_pop");
+}
+
+} // namespace
+
+void ValidateEffectReferences(const GameDataContext& rData)
+{
+    const EffectSourceChecker_ check(rData);
+    CheckMapSources_(rData, check);
+    CheckUnitAndPopSources_(rData, check);
+    CheckPolicySources_(rData, check);
+    CheckRuleConfigSources_(rData, check);
 }
 
 } // namespace ac

@@ -179,49 +179,65 @@ DifficultyLevel_t ParseLevel_(const nlohmann::json& rJson)
     return level;
 }
 
+[[noreturn]] void FailDifficulty_(const std::string& rConfigPath, const std::string& rMessage)
+{
+    throw std::runtime_error("Difficulty config '" + rConfigPath + "': " + rMessage);
+}
+
+void RequireTopLevelKeys_(const nlohmann::json& rJson, const std::string& rConfigPath)
+{
+    static const std::vector<std::string> knownKeys = {"default", "levels"};
+    RejectUnknownKeys_(rJson, knownKeys, "Difficulty config '" + rConfigPath + "'");
+    if (!rJson.contains("default") || !rJson.at("default").is_string()
+        || rJson.at("default").get<std::string>().empty())
+    {
+        FailDifficulty_(rConfigPath, "'default' must be a non-empty string");
+    }
+    if (!rJson.contains("levels") || !rJson.at("levels").is_array()
+        || rJson.at("levels").empty())
+    {
+        FailDifficulty_(rConfigPath, "'levels' must be a non-empty array");
+    }
+}
+
+std::vector<DifficultyLevel_t> ParseLevels_(const nlohmann::json& rLevelsJson,
+                                            const std::string& rConfigPath)
+{
+    std::vector<DifficultyLevel_t> levels;
+    std::unordered_set<std::string> seenIds;
+    for (const nlohmann::json& rLevelJson : rLevelsJson)
+    {
+        DifficultyLevel_t level = ParseLevel_(rLevelJson);
+        if (!seenIds.insert(level.id).second)
+        {
+            FailDifficulty_(rConfigPath, "duplicate level id '" + level.id + "'");
+        }
+        levels.push_back(std::move(level));
+    }
+    return levels;
+}
+
+DifficultyConfig_t ParseDifficulty_(const nlohmann::json& rJson, const std::string& rConfigPath)
+{
+    RequireTopLevelKeys_(rJson, rConfigPath);
+    DifficultyConfig_t config;
+    config.defaultId = rJson.at("default").get<std::string>();
+    config.levels = ParseLevels_(rJson.at("levels"), rConfigPath);
+    if (!config.FindById(config.defaultId))
+    {
+        FailDifficulty_(rConfigPath,
+                        "default '" + config.defaultId + "' does not match any level id");
+    }
+    return config;
+}
+
 } // namespace
 
 DifficultyConfig_t DifficultyConfigParser::ParseConfig(const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<DifficultyConfig_t>(
         configPath, "difficulty", [&configPath](const nlohmann::json& rJson) {
-            const auto fail = [&](const std::string& rMessage) {
-                throw std::runtime_error("Difficulty config '" + configPath + "': " + rMessage);
-            };
-
-            static const std::vector<std::string> knownKeys = {"default", "levels"};
-            RejectUnknownKeys_(rJson, knownKeys, "Difficulty config '" + configPath + "'");
-
-            if (!rJson.contains("default") || !rJson.at("default").is_string()
-                || rJson.at("default").get<std::string>().empty())
-            {
-                fail("'default' must be a non-empty string");
-            }
-            if (!rJson.contains("levels") || !rJson.at("levels").is_array()
-                || rJson.at("levels").empty())
-            {
-                fail("'levels' must be a non-empty array");
-            }
-
-            DifficultyConfig_t config;
-            config.defaultId = rJson.at("default").get<std::string>();
-
-            std::unordered_set<std::string> seenIds;
-            for (const nlohmann::json& rLevelJson : rJson.at("levels"))
-            {
-                DifficultyLevel_t level = ParseLevel_(rLevelJson);
-                if (!seenIds.insert(level.id).second)
-                {
-                    fail("duplicate level id '" + level.id + "'");
-                }
-                config.levels.push_back(std::move(level));
-            }
-
-            if (!config.FindById(config.defaultId))
-            {
-                fail("default '" + config.defaultId + "' does not match any level id");
-            }
-            return config;
+            return ParseDifficulty_(rJson, configPath);
         });
 }
 

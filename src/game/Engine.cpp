@@ -198,6 +198,34 @@ void PlacePreviewFactionBases_(GameState& rGameState, Faction& rPlayer,
     }
 }
 
+// One starting base per faction. The player prefers x=0 so wrap is easy to exercise; slots keep
+// k_MinBaseFoundingSeparation and are never reused.
+std::vector<std::pair<int, int>> PreferredStartPositions_(const WorldMap& rMap)
+{
+    const int centerY = rMap.GetHeight() / 2;
+    const int mapWidth = rMap.GetWidth();
+    std::vector<std::pair<int, int>> positions;
+    for (int x = (centerY & 1); x < mapWidth; x += 10)
+    {
+        positions.push_back({x, centerY});
+    }
+    return positions;
+}
+
+void LogPopChange_(const GameEvent& rEvent)
+{
+    if (const auto* pGained = std::get_if<EvBaseGainedPop>(&rEvent))
+    {
+        std::cout << "[EVENT] Base " << pGained->baseId << " (Faction " << pGained->factionId
+                  << ") gained a pop! New size: " << pGained->newSize << "\n";
+    }
+    else if (const auto* pLost = std::get_if<EvBaseLostPop>(&rEvent))
+    {
+        std::cout << "[EVENT] Base " << pLost->baseId << " (Faction " << pLost->factionId
+                  << ") lost a pop! New size: " << pLost->newSize << "\n";
+    }
+}
+
 #ifdef AC_PLACE_TEST_IMPROVEMENTS
 // Temporary test setup: one of each buildable improvement around every starting base, to eyeball
 // sprites, coexistence and auras.
@@ -400,268 +428,21 @@ void Engine::InitializeApp_()
 
 void Engine::StartNewGame_()
 {
-    // One session seed (`seed == 0` picks one); every per-faction random choice derives from it.
-    // TODO: save the resolved seed once saves exist, outside GameSettings.
-    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
-    m_sessionSeed = rWorldConfig.seed != 0 ? rWorldConfig.seed : std::random_device{}();
-    std::cout << "Session seed: " << m_sessionSeed << "\n";
-
-    // Generate world map and build the save-game state around it.
-    WorldGenerator worldGen;
-    const WorldGenPresetConfig_t& rPreset =
-        m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
-    m_pGameState = std::make_unique<GameState>(
-        worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
-                          m_gameDataContext->worldGenLandmarks,
-                          *m_gameDataContext->improvementRegistry,
-                          m_gameDataContext->elevationRules,
-                          m_sessionSeed),
-        *m_gameDataContext,
-        *m_pSettings,
-        // Separate from world generation, so map size does not shift combat rolls.
-        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
-    m_pGameStateScope = std::make_unique<GameStateScope>(*m_pGameState);
-    std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
-
+    PickSessionSeed_();
+    GenerateWorld_();
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());
-    m_pGameState->GetEventBus().Subscribe([](const GameEvent& event) {
-        if (auto* pGained = std::get_if<EvBaseGainedPop>(&event))
-        {
-            std::cout << "[EVENT] Base " << pGained->baseId << " (Faction " << pGained->factionId
-                      << ") gained a pop! New size: " << pGained->newSize << "\n";
-        }
-        else if (auto* pLost = std::get_if<EvBaseLostPop>(&event))
-        {
-            std::cout << "[EVENT] Base " << pLost->baseId << " (Faction " << pLost->factionId
-                      << ") lost a pop! New size: " << pLost->newSize << "\n";
-        }
-    });
+    m_pGameState->GetEventBus().Subscribe(LogPopChange_);
 
-    // One starting base per faction. The player prefers x=0 so wrap is easy to exercise; slots keep
-    // k_MinBaseFoundingSeparation and are never reused.
-    const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
-    const int mapWidth = m_pGameState->GetWorldMap().GetWidth();
-    std::vector<std::pair<int, int>> preferredStartPositions;
-    for (int x = (centerY & 1); x < mapWidth; x += 10)
-    {
-        preferredStartPositions.push_back({x, centerY});
-    }
-
-    std::vector<const BaseManager*> placedBases;
-    size_t positionIndex = 0;
-    for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
-    {
-        // Single-player for now: the first faction is the human player.
-        const bool bNativeLife = IsNativeLifeFaction(rFactionConfig.identity.species);
-        const bool bIsPlayerControlled = (positionIndex == 0) && !bNativeLife;
-        auto pFaction = std::make_unique<Faction>(
-            m_pGameState->AllocateFactionId(),
-            bIsPlayerControlled,
-            rFactionConfig,
-            *m_gameDataContext,
-            m_pGameState->GetWorldMap(),
-            *m_pSettings,
-            // Per faction, so adding a faction does not shift another's picks.
-            static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1)));
-
-        // Every base the faction ever gains (founding, capture, trade) reaches the bridge through
-        // OnBaseAdded.
-        pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
-
-        if (bNativeLife)
-        {
-            Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
-            m_eventBridge->WireFaction(rFaction);
-            ++positionIndex;
-            continue;
-        }
-
-        Tile* pStartTile = PickStartingBaseTile_(
-            m_pGameState->GetWorldMap(), placedBases, preferredStartPositions);
-        if (!pStartTile)
-        {
-            throw std::runtime_error(
-                "Engine setup: no valid land tile for faction '" + rFactionConfig.id
-                + "' starting base");
-        }
-
-        BaseManager* pBase = pFaction->CreateBase(
-            m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
-            m_pGameState->GetTileEffects(),
-            /*initialPopulation=*/3, false);
-        placedBases.push_back(pBase);
-
-        Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
-        // After AddFaction, once the faction's id is final.
-        m_eventBridge->WireFaction(rFaction);
-        rFaction.GetEconomy().AddEnergy(10);
-
-        // Temporary test units so fog-of-war vision and specials are easy to exercise.
-        {
-            const UnitComponentRegistry& rComponents = *m_gameDataContext->unitComponentRegistry;
-            const std::vector<UnitSlotConfig_t>& rSlots = m_gameDataContext->unitSlotRegistry->GetAll();
-
-            auto resolve = [&rComponents](const std::string& rId) -> const UnitComponentConfig_t*
-            {
-                const UnitComponentConfig_t* pComponent = rComponents.Find(rId);
-                if (!pComponent)
-                {
-                    throw std::runtime_error("Engine setup: unknown unit component '" + rId + "'");
-                }
-                return pComponent;
-            };
-
-            auto addDesign = [&rFaction](std::unique_ptr<UnitDesign> pDesign,
-                                         const char* pLabel) -> const UnitDesign&
-            {
-                const UnitDesign& rDesign = *pDesign;
-                if (!rFaction.GetMilitary().AddDesign(std::move(pDesign)))
-                {
-                    throw std::runtime_error(
-                        std::string("Engine setup: failed to add ") + pLabel + " design");
-                }
-                return rDesign;
-            };
-
-            WorldMap& rMap = m_pGameState->GetWorldMap();
-            UnitPositionIndex& rPositions = rMap.GetUnitPositions();
-
-            std::unordered_map<std::string, const UnitComponentConfig_t*> basicParts = {
-                {"chassis", resolve("HoverTank")},
-                {"weapon",  resolve("Missile_Weapons")},
-                {"armour",  resolve("No_Armour")},
-                {"reactor", resolve("Fission_Plant")},
-            };
-            const UnitDesign& rBasicDesign = addDesign(
-                std::make_unique<UnitDesign>(rSlots, basicParts), "basic scout");
-
-            std::unordered_map<std::string, const UnitComponentConfig_t*> probeParts = {
-                {"chassis", resolve("Infantry")},
-                {"weapon",  resolve("Probe_Team")},
-                {"armour",  resolve("No_Armour")},
-                {"reactor", resolve("Fission_Plant")},
-            };
-            const UnitDesign& rProbeDesign = addDesign(
-                std::make_unique<UnitDesign>(rSlots, probeParts), "probe team");
-
-            if (bIsPlayerControlled)
-            {
-                std::unordered_map<std::string, const UnitComponentConfig_t*> colonyParts = {
-                    {"chassis", resolve("Infantry")},
-                    {"weapon",  resolve("Colony_Pod")},
-                    {"armour",  resolve("No_Armour")},
-                    {"reactor", resolve("Fission_Plant")},
-                };
-                const UnitDesign& rColonyDesign = addDesign(
-                    std::make_unique<UnitDesign>(rSlots, colonyParts), "colony pod");
-
-                std::unordered_map<std::string, const UnitComponentConfig_t*> crawlerParts = {
-                    {"chassis", resolve("Infantry")},
-                    {"weapon",  resolve("Supply_Crawler")},
-                    {"armour",  resolve("No_Armour")},
-                    {"reactor", resolve("Fission_Plant")},
-                };
-                const UnitDesign& rCrawlerDesign = addDesign(
-                    std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
-
-                std::unordered_map<std::string, const UnitComponentConfig_t*> needlejetParts = {
-                    {"chassis", resolve("Needlejet")},
-                    {"weapon",  resolve("Missile_Weapons")},
-                    {"armour",  resolve("No_Armour")},
-                    {"reactor", resolve("Fission_Plant")},
-                };
-                const UnitDesign& rNeedlejetDesign = addDesign(
-                    std::make_unique<UnitDesign>(rSlots, needlejetParts), "needlejet");
-
-                std::unordered_map<std::string, const UnitComponentConfig_t*> missileParts = {
-                    {"chassis", resolve("Missile")},
-                    {"weapon",  resolve("Missile_Weapons")},
-                    {"armour",  resolve("No_Armour")},
-                    {"reactor", resolve("Fission_Plant")},
-                };
-                const UnitDesign& rMissileDesign = addDesign(
-                    std::make_unique<UnitDesign>(rSlots, missileParts), "missile");
-
-                // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
-                const Tile& rStart = *pStartTile;
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 1, 0), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 1, 1), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 2, 1), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 1, -1), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rNeedlejetDesign, rPositions,
-                    rStart, pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rMissileDesign, rPositions,
-                    rStart, pBase);
-            }
-            else
-            {
-                // Enemy scout / probe beside the AI base for multi-faction checks.
-                const Tile& rStart = *pStartTile;
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 1, 0), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
-                    *GetTileAtLatticeOffset(rMap, rStart, 1, -1), pBase);
-            }
-        }
-
-        ++positionIndex;
-    }
-
+    std::vector<const BaseManager*> placedBases = AddFactions_();
     // Temporary: extra player bases to eyeball land/water sprites and defense overlays.
     if (Faction* pPlayer = m_pGameState->GetPlayerFaction();
         pPlayer && !pPlayer->Bases().empty())
     {
         PlacePreviewFactionBases_(*m_pGameState, *pPlayer, placedBases);
     }
-
     // Each AddFaction folded in its own territory; this is the whole-world pass.
     m_pGameState->RebuildTerritory();
-
-    // Temporary: give the player commerce partners — first AI Pact, second AI Treaty.
-    {
-        Faction* pPlayer = m_pGameState->GetPlayerFaction();
-        if (pPlayer == nullptr)
-        {
-            throw std::runtime_error("Engine setup: no player faction for starting diplomacy");
-        }
-
-        DiplomacyLedger& rDiplomacy = m_pGameState->GetDiplomacyLedger();
-        const FactionId_t playerId = pPlayer->GetFactionId();
-        int aiIndex = 0;
-        for (Faction& rFaction : m_pGameState->Factions())
-        {
-            if (rFaction.GetFactionId() == playerId
-                || IsNativeLifeFaction(rFaction.GetDefinition().identity.species))
-            {
-                continue;
-            }
-
-            rDiplomacy.SetKnown(playerId, rFaction.GetFactionId(), true);
-            if (aiIndex == 0)
-            {
-                ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
-                                  DiplomaticStatus_t::Pact);
-            }
-            else if (aiIndex == 1)
-            {
-                ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
-                                  DiplomaticStatus_t::Treaty);
-            }
-            ++aiIndex;
-        }
-    }
+    SetUpStartingDiplomacy_();
 
     m_pGameState->CreatePlanetaryCouncil();
     m_pGameState->CreateWorldEvents();
@@ -681,7 +462,239 @@ void Engine::StartNewGame_()
               << m_pGameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
 }
 
+void Engine::PickSessionSeed_()
+{
+    // One session seed (`seed == 0` picks one); every per-faction random choice derives from it.
+    // TODO: save the resolved seed once saves exist, outside GameSettings.
+    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
+    m_sessionSeed = rWorldConfig.seed != 0 ? rWorldConfig.seed : std::random_device{}();
+    std::cout << "Session seed: " << m_sessionSeed << "\n";
+}
+
+void Engine::GenerateWorld_()
+{
+    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
+    const WorldGenPresetConfig_t& rPreset =
+        m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
+    WorldGenerator worldGen;
+    std::unique_ptr<WorldMap> pWorld =
+        worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
+                          m_gameDataContext->worldGenLandmarks,
+                          *m_gameDataContext->improvementRegistry,
+                          m_gameDataContext->elevationRules,
+                          m_sessionSeed);
+    // Separate from world generation, so map size does not shift combat rolls.
+    const auto combatSeed = static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u);
+    m_pGameState = std::make_unique<GameState>(std::move(pWorld), *m_gameDataContext,
+                                               *m_pSettings, combatSeed);
+    m_pGameStateScope = std::make_unique<GameStateScope>(*m_pGameState);
+
+    const WorldMap& rMap = m_pGameState->GetWorldMap();
+    std::cout << "Generated world map: " << rMap.GetWidth() << "x" << rMap.GetHeight() << "\n";
+}
+
+std::vector<const BaseManager*> Engine::AddFactions_()
+{
+    const std::vector<std::pair<int, int>> preferredStartPositions =
+        PreferredStartPositions_(m_pGameState->GetWorldMap());
+    std::vector<const BaseManager*> placedBases;
+    size_t positionIndex = 0;
+    for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
+    {
+        AddFaction_(rFactionConfig, positionIndex, preferredStartPositions, placedBases);
+        ++positionIndex;
+    }
+    return placedBases;
+}
+
+void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionIndex,
+                         const std::vector<std::pair<int, int>>& rPreferredStartPositions,
+                         std::vector<const BaseManager*>& rPlacedBases)
+{
+    // Single-player for now: the first faction is the human player.
+    const bool bNativeLife = IsNativeLifeFaction(rFactionConfig.identity.species);
+    const bool bIsPlayerControlled = (positionIndex == 0) && !bNativeLife;
+    // Per faction, so adding a faction does not shift another's picks.
+    const auto factionSeed = static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1));
+    auto pFaction = std::make_unique<Faction>(
+        m_pGameState->AllocateFactionId(),
+        bIsPlayerControlled,
+        rFactionConfig,
+        *m_gameDataContext,
+        m_pGameState->GetWorldMap(),
+        *m_pSettings,
+        factionSeed);
+
+    // Every base the faction ever gains (founding, capture, trade) reaches the bridge through
+    // OnBaseAdded.
+    pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
+
+    if (bNativeLife)
+    {
+        Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
+        m_eventBridge->WireFaction(rFaction);
+        return;
+    }
+
+    Tile* pStartTile = PickStartingBaseTile_(
+        m_pGameState->GetWorldMap(), rPlacedBases, rPreferredStartPositions);
+    if (!pStartTile)
+    {
+        throw std::runtime_error(
+            "Engine setup: no valid land tile for faction '" + rFactionConfig.id
+            + "' starting base");
+    }
+
+    BaseManager* pBase = pFaction->CreateBase(
+        m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
+        m_pGameState->GetTileEffects(),
+        /*initialPopulation=*/3, false);
+    rPlacedBases.push_back(pBase);
+
+    Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
+    // After AddFaction, once the faction's id is final.
+    m_eventBridge->WireFaction(rFaction);
+    rFaction.GetEconomy().AddEnergy(10);
+    AddTestUnits_(rFaction, *pStartTile, *pBase);
+}
+
+// Temporary test units so fog-of-war vision and specials are easy to exercise.
+void Engine::AddTestUnits_(Faction& rFaction, const Tile& rStart, BaseManager& rBase)
+{
+    const UnitDesign& rScout =
+        AddTestDesign_(rFaction, "HoverTank", "Missile_Weapons", "basic scout");
+    const UnitDesign& rProbe = AddTestDesign_(rFaction, "Infantry", "Probe_Team", "probe team");
+    if (!rFaction.IsPlayerControlled())
+    {
+        // Enemy scout / probe beside the AI base for multi-faction checks.
+        PlaceTestUnit_(rFaction, rScout, rStart, 1, 0, rBase);
+        PlaceTestUnit_(rFaction, rProbe, rStart, 1, -1, rBase);
+        return;
+    }
+
+    const UnitDesign& rColony = AddTestDesign_(rFaction, "Infantry", "Colony_Pod", "colony pod");
+    const UnitDesign& rCrawler =
+        AddTestDesign_(rFaction, "Infantry", "Supply_Crawler", "supply crawler");
+    const UnitDesign& rNeedlejet =
+        AddTestDesign_(rFaction, "Needlejet", "Missile_Weapons", "needlejet");
+    const UnitDesign& rMissile = AddTestDesign_(rFaction, "Missile", "Missile_Weapons", "missile");
+
+    // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
+    PlaceTestUnit_(rFaction, rScout, rStart, 1, 0, rBase);
+    PlaceTestUnit_(rFaction, rColony, rStart, 1, 1, rBase);
+    PlaceTestUnit_(rFaction, rCrawler, rStart, 2, 1, rBase);
+    PlaceTestUnit_(rFaction, rProbe, rStart, 1, -1, rBase);
+    PlaceTestUnit_(rFaction, rNeedlejet, rStart, 0, 0, rBase);
+    PlaceTestUnit_(rFaction, rMissile, rStart, 0, 0, rBase);
+}
+
+// Unarmoured, fission-powered: only the chassis and weapon vary between test designs.
+const UnitDesign& Engine::AddTestDesign_(Faction& rFaction, const std::string& rChassisId,
+                                         const std::string& rWeaponId, const std::string& rLabel)
+{
+    const UnitComponentRegistry& rComponents = *m_gameDataContext->unitComponentRegistry;
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> parts = {
+        {"chassis", &rComponents.Get(rChassisId)},
+        {"weapon",  &rComponents.Get(rWeaponId)},
+        {"armour",  &rComponents.Get("No_Armour")},
+        {"reactor", &rComponents.Get("Fission_Plant")},
+    };
+    const std::vector<UnitSlotConfig_t>& rSlots = m_gameDataContext->unitSlotRegistry->GetAll();
+    auto pDesign = std::make_unique<UnitDesign>(rSlots, parts);
+    const UnitDesign& rDesign = *pDesign;
+    if (!rFaction.GetMilitary().AddDesign(std::move(pDesign)))
+    {
+        throw std::runtime_error("Engine setup: failed to add " + rLabel + " design");
+    }
+    return rDesign;
+}
+
+void Engine::PlaceTestUnit_(Faction& rFaction, const UnitDesign& rDesign, const Tile& rStart,
+                            int p, int q, BaseManager& rBase)
+{
+    WorldMap& rMap = m_pGameState->GetWorldMap();
+    const Tile* pTile = GetTileAtLatticeOffset(rMap, rStart, p, q);
+    rFaction.GetUnitManager().CreateUnit(
+        m_pGameState->AllocateUnitId(), rDesign, rMap.GetUnitPositions(), *pTile, &rBase);
+}
+
+// Temporary: give the player commerce partners — first AI Pact, second AI Treaty.
+void Engine::SetUpStartingDiplomacy_()
+{
+    Faction* pPlayer = m_pGameState->GetPlayerFaction();
+    if (pPlayer == nullptr)
+    {
+        throw std::runtime_error("Engine setup: no player faction for starting diplomacy");
+    }
+
+    DiplomacyLedger& rDiplomacy = m_pGameState->GetDiplomacyLedger();
+    const FactionId_t playerId = pPlayer->GetFactionId();
+    int aiIndex = 0;
+    for (Faction& rFaction : m_pGameState->Factions())
+    {
+        if (rFaction.GetFactionId() == playerId
+            || IsNativeLifeFaction(rFaction.GetDefinition().identity.species))
+        {
+            continue;
+        }
+
+        rDiplomacy.SetKnown(playerId, rFaction.GetFactionId(), true);
+        if (aiIndex == 0)
+        {
+            ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
+                              DiplomaticStatus_t::Pact);
+        }
+        else if (aiIndex == 1)
+        {
+            ApplyStatusChange(*m_pGameState, playerId, rFaction.GetFactionId(),
+                              DiplomaticStatus_t::Treaty);
+        }
+        ++aiIndex;
+    }
+}
+
 void Engine::InitializeUi_()
+{
+    CreateTurnProcessor_();
+    m_pHotkeys = std::make_unique<HotkeyConfig>(HotkeyConfig::Load(
+        m_gameDataContext->paths.hotkeys,
+        *m_gameDataContext->improvementRegistry,
+        *m_gameDataContext->terrainOperationRegistry));
+    m_pMapRenderer = std::make_unique<MapRenderer>(*m_pSprites, *m_pGameState, Style().tileRenderer,
+                                                   Style().mapRenderer);
+    m_viewFactory = std::make_unique<ViewFactory>(
+        *m_pGameState,
+        *m_gameDataContext,
+        *m_pHotkeys,
+        *m_pGraphics,
+        *m_pMapRenderer,
+        *m_pSprites,
+        *m_pSettings);
+
+    const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
+    auto pWorldView = m_viewFactory->CreateWorldView(
+        fullscreen,
+        [this]() { ProcessTurn_(); },
+        [this]() { m_uiManager->RequestExit(); },
+        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); },
+        std::bind_front(&Engine::PushCombatView_, this),
+        std::bind_front(&Engine::PushCommlinksView_, this));
+    WorldView& rWorldView = *pWorldView;
+    BindViewShortcuts_(fullscreen);
+    m_uiManager->SetWorldView(std::move(pWorldView));
+
+    m_interactionPresenter = std::make_unique<InteractionPresenter>(
+        *m_pGameState,
+        *m_uiManager,
+        *m_viewFactory,
+        rWorldView,
+        [this]() { ProcessTurn_(); });
+
+    // Start processing until the first interactive yield.
+    m_turnProcessor->Advance(*m_pGameState);
+}
+
+void Engine::CreateTurnProcessor_()
 {
     m_turnStageFactory = std::make_unique<TurnStageFactory>();
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
@@ -693,63 +706,44 @@ void Engine::InitializeUi_()
     }
     m_turnProcessor = std::make_unique<TurnProcessor>(
         std::move(registries.global), std::move(registries.perFaction), std::move(stageOrder));
+}
 
-    m_pHotkeys = std::make_unique<HotkeyConfig>(HotkeyConfig::Load(
-        m_gameDataContext->paths.hotkeys,
-        *m_gameDataContext->improvementRegistry,
-        *m_gameDataContext->terrainOperationRegistry));
-
-    m_pMapRenderer = std::make_unique<MapRenderer>(*m_pSprites, *m_pGameState, Style().tileRenderer,
-                                                   Style().mapRenderer);
-
-    m_viewFactory = std::make_unique<ViewFactory>(
-        *m_pGameState,
-        *m_gameDataContext,
-        *m_pHotkeys,
-        *m_pGraphics,
-        *m_pMapRenderer,
-        *m_pSprites,
-        *m_pSettings);
-
+void Engine::PushCombatView_(CombatResult_t result,
+                             const Tile& rAttackerTile,
+                             const Tile& rDefenderTile,
+                             std::string attackerName,
+                             std::string defenderName,
+                             WorldDisplay& rWorldDisplay,
+                             WindowLayout_t mapLayout,
+                             std::function<void()> onFinished)
+{
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
-
-    auto pWorldView = m_viewFactory->CreateWorldView(
+    auto pCombatView = m_viewFactory->CreateCombatView(
         fullscreen,
-        [this]() { ProcessTurn_(); },
-        [this]() { m_uiManager->RequestExit(); },
-        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); },
-        [this](CombatResult_t result,
-               const Tile& rAttackerTile,
-               const Tile& rDefenderTile,
-               std::string attackerName,
-               std::string defenderName,
-               WorldDisplay& rWorldDisplay,
-               WindowLayout_t mapLayout,
-               std::function<void()> onFinished) {
-            const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
-            auto pCombatView = m_viewFactory->CreateCombatView(
-                fullscreen,
-                std::move(result),
-                rAttackerTile,
-                rDefenderTile,
-                std::move(attackerName),
-                std::move(defenderName),
-                rWorldDisplay,
-                mapLayout,
-                std::move(onFinished));
-            m_uiManager->PushView(std::move(pCombatView));
-        },
-        [this]() {
-            const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
-            auto pCommlinks = m_viewFactory->CreateCommlinksView(
-                fullscreen,
-                [this, fullscreen]() {
-                    m_uiManager->PushView(m_viewFactory->CreateCouncilVoteView(fullscreen));
-                });
-            m_uiManager->PushView(std::move(pCommlinks));
-        }
-    );
-    WorldView& rWorldView = *pWorldView;
+        std::move(result),
+        rAttackerTile,
+        rDefenderTile,
+        std::move(attackerName),
+        std::move(defenderName),
+        rWorldDisplay,
+        mapLayout,
+        std::move(onFinished));
+    m_uiManager->PushView(std::move(pCombatView));
+}
+
+void Engine::PushCommlinksView_()
+{
+    const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
+    auto pCommlinks = m_viewFactory->CreateCommlinksView(
+        fullscreen,
+        [this, fullscreen]() {
+            m_uiManager->PushView(m_viewFactory->CreateCouncilVoteView(fullscreen));
+        });
+    m_uiManager->PushView(std::move(pCommlinks));
+}
+
+void Engine::BindViewShortcuts_(const WindowLayout_t& rFullscreen)
+{
     const auto bindView = [&](HotkeyAction_t action, auto createView)
     {
         if (const std::optional<HotkeyChord_t> chord = m_pHotkeys->Find(action))
@@ -757,6 +751,7 @@ void Engine::InitializeUi_()
             m_uiManager->RegisterViewShortcut(*chord, createView);
         }
     };
+    const WindowLayout_t fullscreen = rFullscreen;
     bindView(HotkeyAction_t::Research, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);
     });
@@ -772,17 +767,6 @@ void Engine::InitializeUi_()
     bindView(HotkeyAction_t::Satellites, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateSatelliteView(fullscreen);
     });
-    m_uiManager->SetWorldView(std::move(pWorldView));
-
-    m_interactionPresenter = std::make_unique<InteractionPresenter>(
-        *m_pGameState,
-        *m_uiManager,
-        *m_viewFactory,
-        rWorldView,
-        [this]() { ProcessTurn_(); });
-
-    // Start processing until the first interactive yield.
-    m_turnProcessor->Advance(*m_pGameState);
 }
 
 void Engine::PrintWelcome_() const

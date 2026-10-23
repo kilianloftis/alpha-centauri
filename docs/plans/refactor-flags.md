@@ -246,14 +246,6 @@ feature's doc.
 Rule 7. Each parses a whole file or every kind in one function. The plan: one parser per section or
 kind, registered the way the effect types are.
 
-### Startup: `LoadGameData`, `Engine::StartNewGame_`, `ValidateEffectReferences(GameDataContext)`
-- **Where:** `src/game/GameDataContext.cpp` (`LoadGameData`, 203 lines), `src/game/Engine.cpp`
-  (`StartNewGame_`, 234 lines; `InitializeUi_`, 92), `src/game/EffectReferenceValidator.cpp`
-  (the context overload, 156 lines)
-- **Problem:** each runs every phase of startup inline.
-- **Why not local:** over 100 lines; the phases share the context being built, and `Engine` is
-  still the ad hoc test setup, so its split belongs with the composition-root work.
-
 ### `EffectConfigParser` — per-kind parsing in one function each
 - **Where:** `src/game/effects/EffectConfigParser.cpp`: `ParseCondition` (243 lines),
   `ValidateAmountSourceLegality_` (197), `ParseInteractionOverride_` (142),
@@ -311,7 +303,7 @@ screenshots.
 
 ### `WorldView` input and construction
 - **Where:** `src/ui/world/WorldView.cpp`: `HandleKey` (146 lines, nesting 11), `HandleMouse`
-  (111), the constructor (89, eleven parameters), `UpdatePresentation` (69);
+  (111), the constructor (89, eleven parameters);
   `UnitOrderInputController::HandleKey` (91)
 - **Problem:** every key and click case is handled inline.
 - **Why not local:** over 100 lines; a per-action dispatch (the hotkey config already names the
@@ -385,3 +377,9 @@ Found while applying rules 7 and 8. Each needs a closer look before it changes.
 - **Problem:** the landing only ever lowers hit points. That is a decision `AirdropLanding`
   should make, per `code-kinds.mdc`.
 - **Why not now:** it moves the rule into `AirdropLanding` and its tests.
+
+### `PlaceTestImprovementsAroundBases_` — the same nearest-host search twice
+- **Where:** `src/game/Engine.cpp`, under `#ifdef AC_PLACE_TEST_IMPROVEMENTS`
+- **Problem:** the improvement and farm loops each write out the same nearest-tile search with a
+  different filter.
+- **Why not now:** the block is compiled out by default, so a change there is not built or run.

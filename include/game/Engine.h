@@ -2,9 +2,14 @@
 
 #include "input/PlatformEventQueue.h"
 #include "lib/Signal.h"
+#include "ui/UIElement.h"
 
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -25,6 +30,12 @@ class UIManager;
 class InteractionPresenter;
 class GameSettings;
 class Faction;
+class BaseManager;
+class Tile;
+class UnitDesign;
+class WorldDisplay;
+struct CombatResult_t;
+struct FactionConfig_t;
 
 class Engine
 {
@@ -41,8 +52,33 @@ private:
     // Everything a session owns: the resolved seed, the generated world, GameState, factions
     // and their starting assets, and the council. Requires InitializeApp_.
     void StartNewGame_();
+    void PickSessionSeed_();
+    void GenerateWorld_();
+    // Returns the bases placed so far, which later placements keep their distance from.
+    std::vector<const BaseManager*> AddFactions_();
+    void AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionIndex,
+                     const std::vector<std::pair<int, int>>& rPreferredStartPositions,
+                     std::vector<const BaseManager*>& rPlacedBases);
+    void AddTestUnits_(Faction& rFaction, const Tile& rStart, BaseManager& rBase);
+    const UnitDesign& AddTestDesign_(Faction& rFaction, const std::string& rChassisId,
+                                     const std::string& rWeaponId, const std::string& rLabel);
+    // Places a unit at lattice offset (p, q) from rStart.
+    void PlaceTestUnit_(Faction& rFaction, const UnitDesign& rDesign, const Tile& rStart,
+                        int p, int q, BaseManager& rBase);
+    void SetUpStartingDiplomacy_();
     // Turn pipeline and views. Requires a session to bind to, so it runs last.
     void InitializeUi_();
+    void CreateTurnProcessor_();
+    void PushCombatView_(CombatResult_t result,
+                         const Tile& rAttackerTile,
+                         const Tile& rDefenderTile,
+                         std::string attackerName,
+                         std::string defenderName,
+                         WorldDisplay& rWorldDisplay,
+                         WindowLayout_t mapLayout,
+                         std::function<void()> onFinished);
+    void PushCommlinksView_();
+    void BindViewShortcuts_(const WindowLayout_t& rFullscreen);
     void PrintWelcome_() const;
     void GameLoop_();
     void ProcessTurn_();

@@ -226,6 +226,63 @@ void LoadPauseOnEvents_(const nlohmann::json& rJson, PauseOnEventsConfig_t& rCon
     }
 }
 
+nlohmann::json GameRulesToJson_(const GameRulesConfig_t& rRules)
+{
+    return nlohmann::json{
+        {"pause_at_end_of_turn", rRules.pauseAtEndOfTurn},
+        {"auto_return_low_fuel_air", rRules.autoReturnLowFuelAir},
+        {"difficulty", rRules.difficultyId},
+        {"native_life", rRules.nativeLifeLevelId},
+    };
+}
+
+nlohmann::json VisibilityToJson_(const VisibilityConfig_t& rVisibility)
+{
+    return nlohmann::json{
+        {"remove_shroud", rVisibility.removeShroud},
+        {"remove_fog", rVisibility.removeFog},
+    };
+}
+
+nlohmann::json PauseOnEventsToJson_(const PauseOnEventsConfig_t& rPause)
+{
+    return nlohmann::json{
+        {"new_facility_built", rPause.newFacilityBuilt},
+        {"non_combat_unit_built", rPause.nonCombatUnitBuilt},
+        {"combat_unit_built", rPause.combatUnitBuilt},
+        {"prototype_built", rPause.prototypeBuilt},
+        {"drone_riots", rPause.droneRiots},
+        {"end_of_drone_riots", rPause.endOfDroneRiots},
+        {"golden_age_starts", rPause.goldenAgeStarts},
+        {"end_of_golden_age", rPause.endOfGoldenAge},
+        {"nutrient_low", rPause.nutrientLow},
+        {"build_orders_out_of_date", rPause.buildOrdersOutOfDate},
+        {"population_limit_reached", rPause.populationLimitReached},
+        {"delay_in_transcendence", rPause.delayInTranscendence},
+        {"atrocity_committed", rPause.atrocityCommitted},
+        {"fungal_bloom", rPause.fungalBloom},
+    };
+}
+
+nlohmann::json MapDisplayToJson_(const MapDisplayConfig_t& rDisplay)
+{
+    return nlohmann::json{
+        {"relief", ReliefName_(rDisplay.relief)},
+        {"ocean_grid", rDisplay.bOceanGrid},
+    };
+}
+
+nlohmann::json GraphicsToJson_(const GraphicsConfig_t& rGraphics)
+{
+    return nlohmann::json{
+        {"window_width", rGraphics.windowWidth},
+        {"window_height", rGraphics.windowHeight},
+        {"window_title", rGraphics.windowTitle},
+        {"framerate_limit", rGraphics.framerateLimit},
+        {"font_paths", rGraphics.fontPaths},
+    };
+}
+
 nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
 {
     return nlohmann::json{
@@ -344,46 +401,13 @@ void GameSettings::Save() const
 
 void GameSettings::Save(const std::string& path) const
 {
-    // One block per config struct, so a new knob has an obvious home.
     nlohmann::json json;
-    json["game_rules"] = {
-        {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
-        {"auto_return_low_fuel_air", m_gameRules.autoReturnLowFuelAir},
-        {"difficulty", m_gameRules.difficultyId},
-        {"native_life", m_gameRules.nativeLifeLevelId},
-    };
-    json["visibility"] = {
-        {"remove_shroud", m_visibility.removeShroud},
-        {"remove_fog", m_visibility.removeFog},
-    };
-    json["pause_on_events"] = {
-        {"new_facility_built", m_pauseOnEvents.newFacilityBuilt},
-        {"non_combat_unit_built", m_pauseOnEvents.nonCombatUnitBuilt},
-        {"combat_unit_built", m_pauseOnEvents.combatUnitBuilt},
-        {"prototype_built", m_pauseOnEvents.prototypeBuilt},
-        {"drone_riots", m_pauseOnEvents.droneRiots},
-        {"end_of_drone_riots", m_pauseOnEvents.endOfDroneRiots},
-        {"golden_age_starts", m_pauseOnEvents.goldenAgeStarts},
-        {"end_of_golden_age", m_pauseOnEvents.endOfGoldenAge},
-        {"nutrient_low", m_pauseOnEvents.nutrientLow},
-        {"build_orders_out_of_date", m_pauseOnEvents.buildOrdersOutOfDate},
-        {"population_limit_reached", m_pauseOnEvents.populationLimitReached},
-        {"delay_in_transcendence", m_pauseOnEvents.delayInTranscendence},
-        {"atrocity_committed", m_pauseOnEvents.atrocityCommitted},
-        {"fungal_bloom", m_pauseOnEvents.fungalBloom},
-    };
+    json["game_rules"] = GameRulesToJson_(m_gameRules);
+    json["visibility"] = VisibilityToJson_(m_visibility);
+    json["pause_on_events"] = PauseOnEventsToJson_(m_pauseOnEvents);
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
-    json["map_display"] = {
-        {"relief", ReliefName_(m_mapDisplay.relief)},
-        {"ocean_grid", m_mapDisplay.bOceanGrid},
-    };
-    json["graphics"] = {
-        {"window_width", m_graphics.windowWidth},
-        {"window_height", m_graphics.windowHeight},
-        {"window_title", m_graphics.windowTitle},
-        {"framerate_limit", m_graphics.framerateLimit},
-        {"font_paths", m_graphics.fontPaths},
-    };
+    json["map_display"] = MapDisplayToJson_(m_mapDisplay);
+    json["graphics"] = GraphicsToJson_(m_graphics);
 
     std::ofstream file(path);
     if (!file.is_open())
