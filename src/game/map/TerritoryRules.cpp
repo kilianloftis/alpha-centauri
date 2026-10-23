@@ -42,67 +42,69 @@ int LatticeDistSq_(const Tile& rA, const Tile& rB, int mapWidth)
     return d.p * d.p + d.q * d.q;
 }
 
-void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
-                    std::vector<ClaimCandidate_t>& rBest, int width, int height)
+void RequireOnGrid_(const BaseManager& rBase, int width, int height)
 {
-    const Tile& rOrigin = rBase.GetTile();
-
-    const bool bWantWater = rOrigin.IsWater();
-    const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
-    const FactionId_t factionId = rBase.GetFactionId();
-    const BaseId_t baseId = rBase.GetBaseId();
-    const int ox = rOrigin.GetX();
-    const int oy = rOrigin.GetY();
-
+    const int ox = rBase.GetTile().GetX();
+    const int oy = rBase.GetTile().GetY();
     if (oy < 0 || oy >= height || ox < 0 || ox >= width)
     {
-        throw std::out_of_range("TerritoryMap: base " + std::to_string(baseId) + " sits at ("
-                                + std::to_string(ox) + ", " + std::to_string(oy)
+        throw std::out_of_range("TerritoryMap: base " + std::to_string(rBase.GetBaseId())
+                                + " sits at (" + std::to_string(ox) + ", " + std::to_string(oy)
                                 + "), outside the " + std::to_string(width) + "x"
                                 + std::to_string(height) + " territory grid");
     }
+}
 
+// Tiles of the origin's own surface within its territory radius, reached without crossing the
+// other surface.
+std::vector<const Tile*> TerritoryReach_(const Tile& rOrigin, const WorldMap& rWorldMap,
+                                         int width, int height)
+{
+    const bool bWantWater = rOrigin.IsWater();
+    const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
     const size_t tileCount = static_cast<size_t>(width) * static_cast<size_t>(height) / 2;
     std::vector<uint8_t> visited(tileCount, 0);
-
+    std::vector<const Tile*> reached;
     std::queue<const Tile*> queue;
     queue.push(&rOrigin);
-    visited[static_cast<size_t>(TileIndex(ox, oy, width))] = 1;
-
+    visited[static_cast<size_t>(TileIndex(rOrigin.GetX(), rOrigin.GetY(), width))] = 1;
     while (!queue.empty())
     {
         const Tile* pCurrent = queue.front();
         queue.pop();
-
-        const int index = TileIndex(pCurrent->GetX(), pCurrent->GetY(), width);
-        const size_t idx = static_cast<size_t>(index);
-        const ClaimCandidate_t challenger{factionId, LatticeDistSq_(rOrigin, *pCurrent, width),
-                                          baseId};
-        ClaimCandidate_t& rIncumbent = rBest[idx];
-        if (rIncumbent.factionId == k_NoFactionOwner || Beats_(challenger, rIncumbent))
-        {
-            rIncumbent = challenger;
-        }
-
+        reached.push_back(pCurrent);
         ForEachOrthogonalNeighbor(*pCurrent, rWorldMap, [&](const Tile* pNeighbor) {
             const int neighborIndex = TileIndex(pNeighbor->GetX(), pNeighbor->GetY(), width);
             const size_t nIdx = static_cast<size_t>(neighborIndex);
-            if (visited[nIdx])
-            {
-                return;
-            }
             const LatticeDelta_t d = LatticeDelta(rOrigin, *pNeighbor, width);
-            if (!InEuclideanRadius(d.p, d.q, radius))
-            {
-                return;
-            }
-            if (pNeighbor->IsWater() != bWantWater)
+            if (visited[nIdx] || !InEuclideanRadius(d.p, d.q, radius)
+                || pNeighbor->IsWater() != bWantWater)
             {
                 return;
             }
             visited[nIdx] = 1;
             queue.push(pNeighbor);
         });
+    }
+    return reached;
+}
+
+void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
+                    std::vector<ClaimCandidate_t>& rBest, int width, int height)
+{
+    RequireOnGrid_(rBase, width, height);
+    const Tile& rOrigin = rBase.GetTile();
+    for (const Tile* pTile : TerritoryReach_(rOrigin, rWorldMap, width, height))
+    {
+        const ClaimCandidate_t challenger{rBase.GetFactionId(),
+                                          LatticeDistSq_(rOrigin, *pTile, width),
+                                          rBase.GetBaseId()};
+        const int index = TileIndex(pTile->GetX(), pTile->GetY(), width);
+        ClaimCandidate_t& rIncumbent = rBest[static_cast<size_t>(index)];
+        if (rIncumbent.factionId == k_NoFactionOwner || Beats_(challenger, rIncumbent))
+        {
+            rIncumbent = challenger;
+        }
     }
 }
 

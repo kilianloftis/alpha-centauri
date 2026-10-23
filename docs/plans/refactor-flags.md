@@ -254,11 +254,6 @@ kind, registered the way the effect types are.
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
-### `ExpandFeatureTagReferences`
-- **Where:** `src/game/map/ImprovementConfigParser.cpp`, 116 lines
-- **Problem:** expands tags in four different lists inline.
-- **Why not local:** over 100 lines; the per-list expansion shares the tag index being built.
-
 ### `PopCompositionConfigParser::ParseConfig`
 - **Where:** `src/game/population/PopCompositionConfigParser.cpp`, 160 lines
 - **Problem:** parses every section of pop_composition.json inline.

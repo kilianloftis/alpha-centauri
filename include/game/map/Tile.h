@@ -155,6 +155,8 @@ private:
     friend class TileChangeDeferral;
 
     void RefreshTerrainFeatures_();
+    // Rockiness, moisture, water depth band, river and aquifer: what the tile always is.
+    std::vector<std::string_view> IntrinsicFeatureIds_() const;
     void DropWaiversForAbsentOccupants_();
     void NotifyAppearanceChanged_();
     void NotifyTileChanged_(std::string_view keepId);

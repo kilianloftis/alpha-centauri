@@ -25,6 +25,47 @@ int RequireWholeMeters_(const nlohmann::json& rJson, const char* pKey)
     return static_cast<int>(value);
 }
 
+void ValidateElevationRules_(const ElevationRulesConfig_t& rConfig)
+{
+    if (rConfig.oceanShelfMeters >= rConfig.oceanLevelMeters)
+    {
+        throw std::runtime_error(
+            "map_rules 'ocean_shelf_meters' must be < 'ocean_level_meters', got "
+            + std::to_string(rConfig.oceanShelfMeters) + " >= "
+            + std::to_string(rConfig.oceanLevelMeters));
+    }
+    if (rConfig.levelMinMeters <= 0)
+    {
+        throw std::runtime_error("map_rules 'level_min_meters' must be > 0, got "
+                                 + std::to_string(rConfig.levelMinMeters));
+    }
+    if (rConfig.levelMaxMeters < rConfig.levelMinMeters)
+    {
+        throw std::runtime_error(
+            "map_rules 'level_max_meters' must be >= 'level_min_meters', got "
+            + std::to_string(rConfig.levelMaxMeters) + " < "
+            + std::to_string(rConfig.levelMinMeters));
+    }
+    if (rConfig.maxAdjacentDifferenceMeters <= 0)
+    {
+        throw std::runtime_error(
+            "map_rules 'max_adjacent_difference_meters' must be > 0, got "
+            + std::to_string(rConfig.maxAdjacentDifferenceMeters));
+    }
+    if (rConfig.referenceLevelMeters <= 0)
+    {
+        throw std::runtime_error("map_rules 'reference_level_meters' must be > 0, got "
+                                 + std::to_string(rConfig.referenceLevelMeters));
+    }
+    if (rConfig.spreadAltitudeLimitMeters < rConfig.oceanLevelMeters)
+    {
+        throw std::runtime_error(
+            "map_rules 'spread_altitude_limit_meters' must be >= 'ocean_level_meters', got "
+            + std::to_string(rConfig.spreadAltitudeLimitMeters) + " < "
+            + std::to_string(rConfig.oceanLevelMeters));
+    }
+}
+
 } // namespace
 
 ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string& configPath)
@@ -47,43 +88,7 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
     config.spreadAltitudeLimitMeters =
         RequireWholeMeters_(json, "spread_altitude_limit_meters");
 
-    if (config.oceanShelfMeters >= config.oceanLevelMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'ocean_shelf_meters' must be < 'ocean_level_meters', got "
-            + std::to_string(config.oceanShelfMeters) + " >= "
-            + std::to_string(config.oceanLevelMeters));
-    }
-    if (config.levelMinMeters <= 0)
-    {
-        throw std::runtime_error("map_rules 'level_min_meters' must be > 0, got "
-                                 + std::to_string(config.levelMinMeters));
-    }
-    if (config.levelMaxMeters < config.levelMinMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'level_max_meters' must be >= 'level_min_meters', got "
-            + std::to_string(config.levelMaxMeters) + " < "
-            + std::to_string(config.levelMinMeters));
-    }
-    if (config.maxAdjacentDifferenceMeters <= 0)
-    {
-        throw std::runtime_error(
-            "map_rules 'max_adjacent_difference_meters' must be > 0, got "
-            + std::to_string(config.maxAdjacentDifferenceMeters));
-    }
-    if (config.referenceLevelMeters <= 0)
-    {
-        throw std::runtime_error("map_rules 'reference_level_meters' must be > 0, got "
-                                 + std::to_string(config.referenceLevelMeters));
-    }
-    if (config.spreadAltitudeLimitMeters < config.oceanLevelMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'spread_altitude_limit_meters' must be >= 'ocean_level_meters', got "
-            + std::to_string(config.spreadAltitudeLimitMeters) + " < "
-            + std::to_string(config.oceanLevelMeters));
-    }
+    ValidateElevationRules_(config);
     return config;
 }
 

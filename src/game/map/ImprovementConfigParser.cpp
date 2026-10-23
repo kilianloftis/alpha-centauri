@@ -59,6 +59,206 @@ int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std
     }
 }
 
+
+using TagIndex_t = std::unordered_map<std::string, std::vector<std::string>>;
+
+// Derived, not authored, so a rule about "anything a former builds" covers future
+// improvements. Declaring it by hand is rejected.
+TagIndex_t BuildTagIndex_(const std::vector<ImprovementConfig_t>& rConfigs)
+{
+    TagIndex_t tagToIds;
+    for (const ImprovementConfig_t& rConfig : rConfigs)
+    {
+        if (IsBuildable(rConfig))
+        {
+            tagToIds[std::string(k_BuildableTag)].push_back(rConfig.id);
+        }
+        for (const std::string& rTag : rConfig.tags)
+        {
+            if (rTag.empty())
+            {
+                throw std::runtime_error(
+                    "Improvement '" + rConfig.id + "': tags entries must be non-empty");
+            }
+            if (rTag == k_BuildableTag)
+            {
+                throw std::runtime_error("Improvement '" + rConfig.id + "': '"
+                                         + std::string(k_BuildableTag)
+                                         + "' is a reserved tag, set by declaring "
+                                           "'turns_required' rather than by hand");
+            }
+            tagToIds[rTag].push_back(rConfig.id);
+        }
+    }
+    return tagToIds;
+}
+
+// The ids an `@tag` entry names.
+const std::vector<std::string>& TaggedIds_(const TagIndex_t& rTagIndex, const std::string& rEntry,
+                                           std::string_view field, std::string_view id)
+{
+    const std::string tag = rEntry.substr(1);
+    if (tag.empty())
+    {
+        throw std::runtime_error(
+            "Improvement '" + std::string(id) + "' field '" + std::string(field)
+            + "': tag reference '@' is missing a tag name");
+    }
+    const auto it = rTagIndex.find(tag);
+    if (it == rTagIndex.end())
+    {
+        throw std::runtime_error(
+            "Improvement '" + std::string(id) + "' field '" + std::string(field)
+            + "': unknown tag '@" + tag + "'");
+    }
+    return it->second;
+}
+
+// Replaces each `@tag` with the ids carrying it, dropping duplicates.
+std::vector<std::string> ExpandTagRefs_(const TagIndex_t& rTagIndex,
+                                        const std::vector<std::string>& rRaw,
+                                        std::string_view field, std::string_view id)
+{
+    std::vector<std::string> expanded;
+    std::unordered_set<std::string> seen;
+    for (const std::string& rEntry : rRaw)
+    {
+        if (rEntry.empty() || rEntry.front() != '@')
+        {
+            if (seen.insert(rEntry).second)
+            {
+                expanded.push_back(rEntry);
+            }
+            continue;
+        }
+        for (const std::string& rTaggedId : TaggedIds_(rTagIndex, rEntry, field, id))
+        {
+            // Skip self: a feature tagged X that lists @X must not suppress/exclude
+            // its own yields (ThermalBorehole + @land_terraform).
+            if (rTaggedId != id && seen.insert(rTaggedId).second)
+            {
+                expanded.push_back(rTaggedId);
+            }
+        }
+    }
+    return expanded;
+}
+
+void ExpandConfigTagRefs_(const TagIndex_t& rTagIndex, ImprovementConfig_t& rConfig)
+{
+    rConfig.excludes = ExpandTagRefs_(rTagIndex, rConfig.excludes, "excludes", rConfig.id);
+    rConfig.suppressYieldSources = ExpandTagRefs_(rTagIndex, rConfig.suppressYieldSources,
+                                                  "suppress_yield_sources", rConfig.id);
+    rConfig.suppressTerrain =
+        ExpandTagRefs_(rTagIndex, rConfig.suppressTerrain, "suppress_terrain", rConfig.id);
+    if (rConfig.art)
+    {
+        rConfig.art->hides = ExpandTagRefs_(rTagIndex, rConfig.art->hides, "art.hides", rConfig.id);
+    }
+}
+
+void RequireKnownIds_(const std::unordered_set<std::string>& rIds,
+                      const ImprovementConfig_t& rConfig, std::string_view field,
+                      const std::vector<std::string>& rReferenced)
+{
+    for (const std::string& rId : rReferenced)
+    {
+        if (!rId.empty() && !rIds.contains(rId))
+        {
+            throw std::runtime_error("Improvement '" + rConfig.id + "' field '"
+                                     + std::string(field) + "': unknown id '" + rId + "'");
+        }
+    }
+}
+
+void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
+{
+    std::unordered_set<std::string> ids;
+    for (const ImprovementConfig_t& rConfig : rConfigs)
+    {
+        ids.insert(rConfig.id);
+    }
+    for (const ImprovementConfig_t& rConfig : rConfigs)
+    {
+        RequireKnownIds_(ids, rConfig, "suppress_terrain", rConfig.suppressTerrain);
+        if (!rConfig.art)
+        {
+            continue;
+        }
+        RequireKnownIds_(ids, rConfig, "art.hides", rConfig.art->hides);
+        if (const auto* pTiles = std::get_if<OccupantTileSet_t>(&rConfig.art->sprites))
+        {
+            RequireKnownIds_(ids, rConfig, "art.tiles.link_occupants", pTiles->linkOccupants);
+            RequireKnownIds_(ids, rConfig, "art.tiles.replaces_links_of",
+                             {pTiles->replacesLinksOf});
+        }
+    }
+}
+
+void RejectProjectFields_(const nlohmann::json& rJson, const std::string& rId)
+{
+    for (const char* pField : {"turns_required", "energy_cost", "required_tech"})
+    {
+        if (rJson.contains(pField))
+        {
+            throw std::runtime_error(
+                "Terrain feature '" + rId + "': '" + pField
+                + "' belongs on a terrain operation, not on a terrain feature");
+        }
+    }
+}
+
+// Absent when turns_required is 0: nothing a former can build.
+std::optional<FormerProject_t> ParseFormerProject_(const nlohmann::json& rJson,
+                                                   const std::string& rId)
+{
+    FormerProject_t project;
+    project.turnsRequired = rJson.value("turns_required", 0);
+    if (project.turnsRequired < 0)
+    {
+        throw std::runtime_error("Improvement '" + rId + "': 'turns_required' must be >= 0");
+    }
+    project.energyCost = rJson.value("energy_cost", 0);
+    if (project.energyCost < 0)
+    {
+        throw std::runtime_error("Improvement '" + rId + "': 'energy_cost' must be >= 0");
+    }
+    project.requiredTech = ConfigFields::ParseRequiredTech(rJson);
+    if (project.turnsRequired == 0 && (project.energyCost != 0 || !project.requiredTech.empty()))
+    {
+        throw std::runtime_error(
+            "Improvement '" + rId
+            + "': 'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
+              "can ever build it");
+    }
+    if (project.turnsRequired == 0)
+    {
+        return std::nullopt;
+    }
+    return project;
+}
+
+std::optional<ImprovementDomain_t> ParseImprovementDomain_(const nlohmann::json& rJson,
+                                                           const std::string& rId)
+{
+    if (!rJson.contains("domain") || rJson.at("domain").is_null())
+    {
+        return std::nullopt;
+    }
+    if (!rJson.at("domain").is_string())
+    {
+        throw std::runtime_error("Improvement '" + rId + "': 'domain' must be a string");
+    }
+    const std::string domain = rJson.at("domain").get<std::string>();
+    const auto parsed =
+        magic_enum::enum_cast<ImprovementDomain_t>(domain, magic_enum::case_insensitive);
+    if (!parsed)
+    {
+        throw std::runtime_error("Improvement '" + rId + "': unknown domain '" + domain + "'");
+    }
+    return *parsed;
+}
+
 } // namespace
 
 bool IsBuildable(const ImprovementConfig_t& rConfig)
@@ -101,126 +301,12 @@ std::vector<ImprovementConfig_t> LoadTileOccupants(const std::string& rImproveme
 
 void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
 {
-    std::vector<ImprovementConfig_t*> configs;
-    configs.reserve(rConfigs.size());
+    const TagIndex_t tagIndex = BuildTagIndex_(rConfigs);
     for (ImprovementConfig_t& rConfig : rConfigs)
     {
-        configs.push_back(&rConfig);
+        ExpandConfigTagRefs_(tagIndex, rConfig);
     }
-
-    std::unordered_map<std::string, std::vector<std::string>> tagToIds;
-    for (const ImprovementConfig_t* pConfig : configs)
-    {
-        // Derived, not authored, so a rule about "anything a former builds" covers future
-        // improvements. Declaring it by hand is rejected.
-        if (IsBuildable(*pConfig))
-        {
-            tagToIds[std::string(k_BuildableTag)].push_back(pConfig->id);
-        }
-        for (const std::string& rTag : pConfig->tags)
-        {
-            if (rTag.empty())
-            {
-                throw std::runtime_error(
-                    "Improvement '" + pConfig->id + "': tags entries must be non-empty");
-            }
-            if (rTag == k_BuildableTag)
-            {
-                throw std::runtime_error("Improvement '" + pConfig->id + "': '"
-                                         + std::string(k_BuildableTag)
-                                         + "' is a reserved tag, set by declaring "
-                                           "'turns_required' rather than by hand");
-            }
-            tagToIds[rTag].push_back(pConfig->id);
-        }
-    }
-
-    auto expand = [&](const std::vector<std::string>& rRaw, std::string_view field,
-                      std::string_view id) {
-        std::vector<std::string> expanded;
-        std::unordered_set<std::string> seen;
-        for (const std::string& rEntry : rRaw)
-        {
-            if (!rEntry.empty() && rEntry.front() == '@')
-            {
-                const std::string tag = rEntry.substr(1);
-                if (tag.empty())
-                {
-                    throw std::runtime_error(
-                        "Improvement '" + std::string(id) + "' field '" + std::string(field)
-                        + "': tag reference '@' is missing a tag name");
-                }
-                const auto it = tagToIds.find(tag);
-                if (it == tagToIds.end())
-                {
-                    throw std::runtime_error(
-                        "Improvement '" + std::string(id) + "' field '" + std::string(field)
-                        + "': unknown tag '@" + tag + "'");
-                }
-                for (const std::string& rTaggedId : it->second)
-                {
-                    // Skip self: a feature tagged X that lists @X must not suppress/exclude
-                    // its own yields (ThermalBorehole + @land_terraform).
-                    if (rTaggedId == id)
-                    {
-                        continue;
-                    }
-                    if (seen.insert(rTaggedId).second)
-                    {
-                        expanded.push_back(rTaggedId);
-                    }
-                }
-            }
-            else if (seen.insert(rEntry).second)
-            {
-                expanded.push_back(rEntry);
-            }
-        }
-        return expanded;
-    };
-
-    for (ImprovementConfig_t* pConfig : configs)
-    {
-        pConfig->excludes = expand(pConfig->excludes, "excludes", pConfig->id);
-        pConfig->suppressYieldSources =
-            expand(pConfig->suppressYieldSources, "suppress_yield_sources", pConfig->id);
-        pConfig->suppressTerrain =
-            expand(pConfig->suppressTerrain, "suppress_terrain", pConfig->id);
-        if (pConfig->art)
-        {
-            pConfig->art->hides = expand(pConfig->art->hides, "art.hides", pConfig->id);
-        }
-    }
-    std::unordered_set<std::string> ids;
-    for (const ImprovementConfig_t* pConfig : configs)
-    {
-        ids.insert(pConfig->id);
-    }
-    const auto requireKnown = [&ids](const ImprovementConfig_t& rConfig, std::string_view field,
-                                     const std::vector<std::string>& rIds) {
-        for (const std::string& rId : rIds)
-        {
-            if (!rId.empty() && !ids.contains(rId))
-            {
-                throw std::runtime_error("Improvement '" + rConfig.id + "' field '"
-                                         + std::string(field) + "': unknown id '" + rId + "'");
-            }
-        }
-    };
-    for (const ImprovementConfig_t* pConfig : configs)
-    {
-        requireKnown(*pConfig, "suppress_terrain", pConfig->suppressTerrain);
-        if (!pConfig->art)
-        {
-            continue;
-        }
-        requireKnown(*pConfig, "art.hides", pConfig->art->hides);
-        if (const auto* pTiles = std::get_if<OccupantTileSet_t>(&pConfig->art->sprites))
-        {
-            requireKnown(*pConfig, "art.tiles.link_occupants", pTiles->linkOccupants);
-            requireKnown(*pConfig, "art.tiles.replaces_links_of", {pTiles->replacesLinksOf});
-        }
-    }
+    RequireKnownReferences_(rConfigs);
 }
 
 // Sight radius from ThisTile Vision StatModifiers — same amount encoding as unit Vision
@@ -258,72 +344,19 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
     config.name = ConfigFields::ParseName(rImprovementJson, config.id, "name");
     config.description = rImprovementJson.value("description", "");
     config.placement = placement;
-    if (rImprovementJson.contains("mineral_cost") || rImprovementJson.contains("terraform"))
-    {
-        throw std::runtime_error("Improvement '" + config.id + "': unknown field; a former "
-                                 "project is 'turns_required' / 'energy_cost' on the "
-                                 "improvement itself");
-    }
     if (placement == OccupantPlacement_t::Terrain)
     {
-        for (const char* pField : {"turns_required", "energy_cost", "required_tech"})
-        {
-            if (rImprovementJson.contains(pField))
-            {
-                throw std::runtime_error(
-                    "Terrain feature '" + config.id + "': '" + pField
-                    + "' belongs on a terrain operation, not on a terrain feature");
-            }
-        }
+        RejectProjectFields_(rImprovementJson, config.id);
     }
     else
     {
-        FormerProject_t project;
-        project.turnsRequired = rImprovementJson.value("turns_required", 0);
-        if (project.turnsRequired < 0)
-        {
-            throw std::runtime_error("Improvement '" + config.id
-                                     + "': 'turns_required' must be >= 0");
-        }
-        project.energyCost = rImprovementJson.value("energy_cost", 0);
-        if (project.energyCost < 0)
-        {
-            throw std::runtime_error("Improvement '" + config.id
-                                     + "': 'energy_cost' must be >= 0");
-        }
-        project.requiredTech = ConfigFields::ParseRequiredTech(rImprovementJson);
-        if (project.turnsRequired == 0 && (project.energyCost != 0 || !project.requiredTech.empty()))
-        {
-            throw std::runtime_error(
-                "Improvement '" + config.id
-                + "': 'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
-                  "can ever build it");
-        }
-        if (project.turnsRequired > 0)
-        {
-            config.project = std::move(project);
-        }
+        config.project = ParseFormerProject_(rImprovementJson, config.id);
     }
     config.ownedByTerritory = rImprovementJson.value("owned_by_territory", false);
     config.frequency = rImprovementJson.value("frequency", 0);
     config.art = ParseOccupantArt(rImprovementJson, config.id);
     config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
-    if (rImprovementJson.contains("domain") && !rImprovementJson.at("domain").is_null())
-    {
-        if (!rImprovementJson.at("domain").is_string())
-        {
-            throw std::runtime_error("Improvement '" + config.id + "': 'domain' must be a string");
-        }
-        const std::string domain = rImprovementJson.at("domain").get<std::string>();
-        const auto parsed =
-            magic_enum::enum_cast<ImprovementDomain_t>(domain, magic_enum::case_insensitive);
-        if (!parsed)
-        {
-            throw std::runtime_error("Improvement '" + config.id + "': unknown domain '" + domain
-                                     + "'");
-        }
-        config.domain = *parsed;
-    }
+    config.domain = ParseImprovementDomain_(rImprovementJson, config.id);
     config.excludes = ConfigFields::ParseStringArray(rImprovementJson, "excludes");
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(rImprovementJson, "suppress_yield_sources");
@@ -334,17 +367,10 @@ ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
         const Rational_t cost = Rational_t::ParseJson(rImprovementJson.at("move_cost"));
         config.moveCostFragments = ParseMoveCostFragments_(cost, "move_cost", config.id);
     }
-    if (rImprovementJson.contains("move_cost_override"))
-    {
-        throw std::runtime_error(
-            "Improvement '" + config.id
-            + "': 'move_cost_override' is a StatModifier on move_cost with op MaxClamp");
-    }
     config.effects = EffectConfigParser::ParseEffects(rImprovementJson, EffectSourceKind_t::Improvement, config.id);
     config.onVisitEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rImprovementJson, "on_visit_effects", config.id);
     config.visionRadius = ResolveVisionRadius_(config);
-
     return config;
 }
 

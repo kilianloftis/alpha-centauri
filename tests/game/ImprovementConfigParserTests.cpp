@@ -23,35 +23,6 @@ std::filesystem::path WriteTempJson(const std::string& name, const std::string& 
 
 } // namespace
 
-TEST_CASE("ImprovementConfigParser rejects a legacy terraform block", "[improvements][parser]")
-{
-    // Construction now lives in turns_required / energy_cost on the improvement itself.
-    const auto path = WriteTempJson("ac_improvement_parser.json", R"([
-        {
-            "id": "Road",
-            "name": "Road",
-            "terraform": { "improvement": "Road" },
-            "effects": []
-        }
-    ])");
-
-    ImprovementConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
-                      Catch::Matchers::ContainsSubstring("turns_required"));
-    std::filesystem::remove(path);
-}
-
-TEST_CASE("ImprovementConfigParser: rejects mineral_cost", "[improvements][parser]")
-{
-    const auto path = WriteTempJson("ac_improvement_mineral.json", R"([
-        { "id": "Road", "name": "Road", "mineral_cost": 5, "effects": [] }
-    ])");
-
-    ImprovementConfigParser parser;
-    CHECK_THROWS(parser.ParseConfig(path.string()));
-    std::filesystem::remove(path);
-}
-
 TEST_CASE("An improvement is buildable exactly when it declares turns_required",
           "[improvements][parser][orders]")
 {

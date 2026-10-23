@@ -26,6 +26,14 @@ struct DeferredTileChange_t
 int g_tileChangeDeferDepth = 0;
 std::vector<DeferredTileChange_t> g_deferredTileChanges;
 
+bool SuppressedBy_(const std::vector<const ImprovementConfig_t*>& rTerrain,
+                   const ImprovementConfig_t& rFeature)
+{
+    return std::ranges::any_of(rTerrain, [&rFeature](const ImprovementConfig_t* pTerrain) {
+        return std::ranges::contains(pTerrain->suppressTerrain, rFeature.id);
+    });
+}
+
 } // namespace
 
 std::string ToString(Rockiness_t rockiness)
@@ -440,49 +448,45 @@ void Tile::RefreshTerrainFeatures_()
 
     // Get() rather than Find(): ValidateTerrainFeatures has already proven every id below
     // exists in the registry, so a miss here is a broken invariant, not a skippable feature.
-    auto pushFeature = [&](std::string_view id)
+    for (const std::string_view id : IntrinsicFeatureIds_())
     {
         const std::string featureId(id);
         m_terrainFeatures.push_back(&m_pOccupants->Get(featureId));
-    };
-
-    pushFeature(magic_enum::enum_name(m_rockiness));
-    pushFeature(magic_enum::enum_name(m_moisture));
-    if (IsWater())
-    {
-        // General-to-specific: Water carries the rules shared by all sea tiles, then exactly
-        // one depth band layers its own on top.
-        pushFeature(magic_enum::enum_name(TerrainFeature_t::Water));
-        const TerrainFeature_t band = m_elevation >= MapRules().oceanShelfMeters
-                                          ? TerrainFeature_t::OceanShelf
-                                          : TerrainFeature_t::Ocean;
-        pushFeature(magic_enum::enum_name(band));
-    }
-    if (m_bHasRiver)
-    {
-        pushFeature(magic_enum::enum_name(TerrainFeature_t::River));
-    }
-    if (m_bHasAquifer)
-    {
-        pushFeature(magic_enum::enum_name(TerrainFeature_t::Aquifer));
     }
     // Optional terrain the intrinsic terrain suppresses stays stored but dormant.
-    const std::size_t intrinsicCount = m_terrainFeatures.size();
-    const auto dormant = [&](const ImprovementConfig_t& rFeature) {
-        return std::any_of(m_terrainFeatures.begin(),
-                           m_terrainFeatures.begin() + static_cast<std::ptrdiff_t>(intrinsicCount),
-                           [&rFeature](const ImprovementConfig_t* pTerrain) {
-                               return std::ranges::find(pTerrain->suppressTerrain, rFeature.id)
-                                      != pTerrain->suppressTerrain.end();
-                           });
-    };
+    const std::vector<const ImprovementConfig_t*> intrinsic = m_terrainFeatures;
     for (const ImprovementConfig_t* pFeature : m_optionalTerrain)
     {
-        if (pFeature && !dormant(*pFeature))
+        if (pFeature && !SuppressedBy_(intrinsic, *pFeature))
         {
             m_terrainFeatures.push_back(pFeature);
         }
     }
+}
+
+std::vector<std::string_view> Tile::IntrinsicFeatureIds_() const
+{
+    std::vector<std::string_view> ids{magic_enum::enum_name(m_rockiness),
+                                      magic_enum::enum_name(m_moisture)};
+    if (IsWater())
+    {
+        // General-to-specific: Water carries the rules shared by all sea tiles, then exactly
+        // one depth band layers its own on top.
+        ids.push_back(magic_enum::enum_name(TerrainFeature_t::Water));
+        const TerrainFeature_t band = m_elevation >= MapRules().oceanShelfMeters
+                                          ? TerrainFeature_t::OceanShelf
+                                          : TerrainFeature_t::Ocean;
+        ids.push_back(magic_enum::enum_name(band));
+    }
+    if (m_bHasRiver)
+    {
+        ids.push_back(magic_enum::enum_name(TerrainFeature_t::River));
+    }
+    if (m_bHasAquifer)
+    {
+        ids.push_back(magic_enum::enum_name(TerrainFeature_t::Aquifer));
+    }
+    return ids;
 }
 
 TileChangeDeferral::TileChangeDeferral()

@@ -48,6 +48,24 @@ bool TileTerminatesRiver(const Tile& rTile)
     });
 }
 
+namespace
+{
+
+Tile* LowestNeighbor_(const Tile& rTile, WorldMap& rWorld)
+{
+    Tile* pLowest = nullptr;
+    ForEachOrthogonalNeighbor(rTile, rWorld, [&](Tile* pNeighbor)
+    {
+        if (!pLowest || pNeighbor->GetElevation() < pLowest->GetElevation())
+        {
+            pLowest = pNeighbor;
+        }
+    });
+    return pLowest;
+}
+
+} // namespace
+
 void TraceRiverFrom(Tile& rOrigin, WorldMap& rWorld)
 {
     std::unordered_set<int> visited;
@@ -68,22 +86,11 @@ void TraceRiverFrom(Tile& rOrigin, WorldMap& rWorld)
             break;
         }
 
-        Tile* pBest = nullptr;
-        int bestElev = 0;
-        ForEachOrthogonalNeighbor(*pCurrent, rWorld, [&](Tile* pNeighbor)
-        {
-            if (!pBest || pNeighbor->GetElevation() < bestElev)
-            {
-                pBest = pNeighbor;
-                bestElev = pNeighbor->GetElevation();
-            }
-        });
-
-        if (!pBest || bestElev >= pCurrent->GetElevation())
+        Tile* pBest = LowestNeighbor_(*pCurrent, rWorld);
+        if (!pBest || pBest->GetElevation() >= pCurrent->GetElevation())
         {
             break;
         }
-
         pCurrent = pBest;
     }
 }

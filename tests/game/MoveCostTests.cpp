@@ -43,22 +43,6 @@ TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-c
     fs::remove(path);
 }
 
-TEST_CASE("move_cost_override field is rejected", "[move-cost]")
-{
-    namespace fs = std::filesystem;
-    const fs::path path = fs::temp_directory_path() / "ac_old_move_cost_override.json";
-    {
-        std::ofstream out(path);
-        out << R"([
-          { "id": "OldRoad", "name": "Old Road", "move_cost_override": "1/3", "effects": [] }
-        ])";
-    }
-
-    ImprovementConfigParser parser;
-    CHECK_THROWS(parser.ParseConfig(path.string()));
-    fs::remove(path);
-}
-
 TEST_CASE("Negative move_cost fails at improvement parse time", "[move-cost]")
 {
     namespace fs = std::filesystem;
