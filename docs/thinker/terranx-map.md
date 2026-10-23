@@ -161,3 +161,49 @@ Annotations after the word, in order:
 
 Thinker's `mod_say_morale2` also adds HQ +1 to the plus count (`Fix:`). The
 binary does not.
+
+## Sea bases
+
+### `base_init` (`0x4E4B80`)
+
+A base founded on ocean (`MAP.climate & 0xE0 < 0x60`, altitude below 3, at `0x4E5017`) gets
+facility `0x1A` (Pressure Dome). The bit is set inline through `bitmask` (`0x50BA00`) and an
+`or` into `BASE` +0x8C (`0x4E5034`), not through `set_fac`. There is no separate "sea base"
+flag: the Pressure Dome is what lets a base stand on water. Thinker's `mod_base_init` does the
+same with `set_fac`.
+
+### `crop_yield` (`0x4E6E50`), `mine_yield` (`0x4E7310`), `energy_yield` (`0x4E7750`)
+
+On a base square, each tests facility 3 (Recycling Tanks), then facility `0x1A` (Pressure
+Dome), and adds the `recycling_tanks` bonus once if either is built: nutrients `0x945F90`
+(`0x4E6FB1`), minerals `0x945F94` (`0x4E747E`), energy `0x945F98` (`0x4E78F2`). The two do not
+stack. A sea base's free dome therefore yields as Recycling Tanks. Thinker's `mod_crop_yield`
+and its siblings do the same.
+
+### `alt_set` (`0x591290`)
+
+Runs only when the tile crosses the shore line (`(old < 3) != (new < 3)`, `0x5912FB`). Then:
+
+1. Clears the land-only items (`and 0x7E1377A3`, `0x591320`) for every faction's view.
+2. If `base_at` (`0x4E3A50`) finds a base:
+   - Tile became land (`test ebx, ebx` at `0x59138D`): nothing happens to the base, and the unit
+     pass is skipped. A sea base raised onto land keeps its Pressure Dome.
+   - Tile became water and the base has facility `0x1A`: nothing happens, and the unit pass is
+     skipped.
+   - Otherwise the base is flooded. Population drops by `clamp(pop / 2, game_rand() % 3 + 2,
+     10)` (`0x5913D1`–`0x591408`). The base is granted the Pressure Dome (`set_fac(0x1A, base,
+     1)` at `0x591415`). The faction's `player_flags |= 0x80000`, and its submerged count
+     (`0x9B2290`) goes up. An objective base (`is_objective`, `0x5AC060`) keeps at least 1
+     pop.
+   - If pop is still above 0, the base survives and the unit pass is skipped (`jg 0x591852` at `0x591488`).
+   - At 0 pop, the faction's last base (`base_count` `<= 1`, at `0x59148E`) is kept at pop 1
+     with popup `BASESUBMERGED` / `BASESUBMERGED2`. In multiplayer outside the controlling
+     turn, it is kept as well. Any other base is shown with `BASESUBMERGED1` / `BASESUBMERGED3`
+     and killed (`base_kill` `0x4E5250` at `0x5915A6`).
+3. Unit pass (no base, or the base was killed): every unit on the tile that is not air (triad 2),
+   not an objective (`VEH` +0x20 bit `0x20`), and whose `triad == sea` differs from the new
+   surface is killed (`veh_kill` `0x5C08C0` at `0x591639`). The nearest base is recorded first
+   (`base_find_2`, into `0x9B22BC`).
+
+Thinker's `alt_set` clamps the reduced pop at 0 before testing it (`Fix:`, the original can
+store a negative byte). Otherwise it follows the same flow.

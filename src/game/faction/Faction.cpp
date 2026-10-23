@@ -886,6 +886,8 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     {
         pRawBase->GetBuildingManager().AddBuilding("Headquarters");
     }
+    // TODO: a base founded on water gets a free Pressure Dome, which also yields as Recycling
+    // Tanks (docs/thinker/terranx-map.md, "Sea bases"); BaseManager::MayOccupyWater stands in.
 
     return pRawBase;
 }
