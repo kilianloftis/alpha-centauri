@@ -1,5 +1,6 @@
 #include "game/effects/EffectConfigParser.h"
 
+#include "lib/config/EnumNames.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "game/movement/MovementConstants.h"
 #include "lib/Rational.h"
@@ -523,132 +524,71 @@ void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
     rEffect.effect = ruleFlag;
 }
 
-void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+// A required string field of an override effect; pEffect names the effect in the error.
+std::string RequireOverrideString_(const nlohmann::json& parameters, const char* pKey,
+                                   const char* pEffect)
 {
-    if (rEffect.scope != EffectScope_t::ThisUnit
-        && rEffect.scope != EffectScope_t::FactionUnits)
+    const std::string value = parameters.value(pKey, "");
+    if (value.empty())
     {
-        throw std::runtime_error(
-            "InteractionOverride scope must be ThisUnit or FactionUnits");
+        throw std::runtime_error(std::string(pEffect) + " missing required '" + pKey + "'");
     }
+    return value;
+}
 
-    InteractionOverrideEffect_t overrideFx;
-    const std::string gridStr = parameters.value("grid", "");
-    if (gridStr.empty())
+// An optional enumerator-named string field of InteractionOverride.
+template <typename Enum_t>
+std::optional<Enum_t> OptionalOverrideEnum_(const nlohmann::json& parameters, const char* pKey)
+{
+    if (!parameters.contains(pKey))
     {
-        throw std::runtime_error("InteractionOverride missing required 'grid'");
+        return std::nullopt;
     }
-    if (gridStr == "enter")
+    if (!parameters.at(pKey).is_string())
     {
-        overrideFx.grid = InteractionGridId_t::Enter;
+        throw std::runtime_error(std::string("InteractionOverride '") + pKey
+                                 + "' must be a string");
     }
-    else if (gridStr == "attack_tile")
-    {
-        overrideFx.grid = InteractionGridId_t::AttackTile;
-    }
-    else if (gridStr == "attack_unit")
-    {
-        overrideFx.grid = InteractionGridId_t::AttackUnit;
-    }
-    else if (gridStr == "zoc")
-    {
-        overrideFx.grid = InteractionGridId_t::Zoc;
-    }
-    else
-    {
-        throw std::runtime_error("Unknown InteractionOverride grid: '" + gridStr + "'");
-    }
+    return EnumFromName<Enum_t>(parameters.at(pKey).get<std::string>(),
+                                std::string("InteractionOverride ") + pKey);
+}
 
-    // cell is required. Either polarity is legal; resolve skips overrides that restate the
-    // stock cell (non-default only), so first-match order among overrides never matters.
-    const std::string cellStr = parameters.value("cell", "");
-    if (cellStr.empty())
+std::optional<UnitDomain_t> OptionalOverrideDomain_(const nlohmann::json& parameters,
+                                                    const char* pKey)
+{
+    if (!parameters.contains(pKey))
     {
-        throw std::runtime_error("InteractionOverride missing required 'cell'");
+        return std::nullopt;
     }
-    if (cellStr == "allow")
+    if (!parameters.at(pKey).is_string())
     {
-        overrideFx.cell = InteractionCell_t::Allow;
+        throw std::runtime_error(std::string("InteractionOverride '") + pKey
+                                 + "' must be a string");
     }
-    else if (cellStr == "deny")
+    return ParseUnitDomain(parameters.at(pKey).get<std::string>());
+}
+
+InteractionGridId_t ParseOverrideGrid_(const nlohmann::json& parameters)
+{
+    const std::string grid = RequireOverrideString_(parameters, "grid", "InteractionOverride");
+    for (const auto& [rName, id] : k_InteractionGridNames)
     {
-        overrideFx.cell = InteractionCell_t::Deny;
+        if (rName == grid)
+        {
+            return id;
+        }
     }
-    else
-    {
-        throw std::runtime_error("Unknown InteractionOverride cell: '" + cellStr + "'");
-    }
+    throw std::runtime_error("Unknown InteractionOverride grid: '" + grid + "'");
+}
 
-    auto parseDomainOpt = [&](const char* key) -> std::optional<UnitDomain_t> {
-        if (!parameters.contains(key))
-        {
-            return std::nullopt;
-        }
-        if (!parameters.at(key).is_string())
-        {
-            throw std::runtime_error(std::string("InteractionOverride '") + key
-                                     + "' must be a string");
-        }
-        return ParseUnitDomain(parameters.at(key).get<std::string>());
-    };
-
-    auto parseSurfaceOpt = [&]() -> std::optional<InteractionSurface_t> {
-        if (!parameters.contains("surface"))
-        {
-            return std::nullopt;
-        }
-        if (!parameters.at("surface").is_string())
-        {
-            throw std::runtime_error("InteractionOverride 'surface' must be a string");
-        }
-        const std::string surfaceStr = parameters.at("surface").get<std::string>();
-        if (surfaceStr == "land")
-        {
-            return InteractionSurface_t::Land;
-        }
-        if (surfaceStr == "water")
-        {
-            return InteractionSurface_t::Water;
-        }
-        throw std::runtime_error("Unknown InteractionOverride surface: '" + surfaceStr + "'");
-    };
-
-    auto parseFootingOpt = [&]() -> std::optional<InteractionFooting_t> {
-        if (!parameters.contains("footing"))
-        {
-            return std::nullopt;
-        }
-        if (!parameters.at("footing").is_string())
-        {
-            throw std::runtime_error("InteractionOverride 'footing' must be a string");
-        }
-        const std::string footingStr = parameters.at("footing").get<std::string>();
-        if (footingStr == "land")
-        {
-            return InteractionFooting_t::Land;
-        }
-        if (footingStr == "water")
-        {
-            return InteractionFooting_t::Water;
-        }
-        if (footingStr == "embarked")
-        {
-            return InteractionFooting_t::Embarked;
-        }
-        throw std::runtime_error("Unknown InteractionOverride footing: '" + footingStr + "'");
-    };
-
-    overrideFx.actorDomain = parseDomainOpt("actor_domain");
-    overrideFx.surface = parseSurfaceOpt();
-    overrideFx.footing = parseFootingOpt();
-    overrideFx.targetDomain = parseDomainOpt("target_domain");
-
-    // actor_domain is the row on every grid; only a column that belongs to another grid needs
-    // rejecting.
-    const bool bSurface = overrideFx.surface.has_value();
-    const bool bFooting = overrideFx.footing.has_value();
-    const bool bTarget = overrideFx.targetDomain.has_value();
-    switch (overrideFx.grid)
+// actor_domain is the row on every grid; only a column that belongs to another grid needs
+// rejecting.
+void RequireGridAxes_(const InteractionOverrideEffect_t& rOverride)
+{
+    const bool bSurface = rOverride.surface.has_value();
+    const bool bFooting = rOverride.footing.has_value();
+    const bool bTarget = rOverride.targetDomain.has_value();
+    switch (rOverride.grid)
     {
     case InteractionGridId_t::Enter:
         if (bFooting || bTarget)
@@ -674,7 +614,30 @@ void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t&
         }
         break;
     }
+}
 
+void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+{
+    if (rEffect.scope != EffectScope_t::ThisUnit
+        && rEffect.scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "InteractionOverride scope must be ThisUnit or FactionUnits");
+    }
+
+    InteractionOverrideEffect_t overrideFx;
+    overrideFx.grid = ParseOverrideGrid_(parameters);
+    // Either polarity is legal; resolve skips overrides that restate the stock cell (non-default
+    // only), so first-match order among overrides never matters.
+    overrideFx.cell =
+        EnumFromName<InteractionCell_t>(RequireOverrideString_(parameters, "cell",
+                                                               "InteractionOverride"),
+                                        "InteractionOverride cell");
+    overrideFx.actorDomain = OptionalOverrideDomain_(parameters, "actor_domain");
+    overrideFx.surface = OptionalOverrideEnum_<InteractionSurface_t>(parameters, "surface");
+    overrideFx.footing = OptionalOverrideEnum_<InteractionFooting_t>(parameters, "footing");
+    overrideFx.targetDomain = OptionalOverrideDomain_(parameters, "target_domain");
+    RequireGridAxes_(overrideFx);
     rEffect.effect = overrideFx;
 }
 
@@ -846,20 +809,8 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
 
 InteractionCell_t ParseCoexistenceCell_(const nlohmann::json& parameters)
 {
-    const std::string cellStr = parameters.value("cell", "");
-    if (cellStr.empty())
-    {
-        throw std::runtime_error("CoexistenceOverride missing required 'cell'");
-    }
-    if (cellStr == "allow")
-    {
-        return InteractionCell_t::Allow;
-    }
-    if (cellStr == "deny")
-    {
-        return InteractionCell_t::Deny;
-    }
-    throw std::runtime_error("Unknown CoexistenceOverride cell: '" + cellStr + "'");
+    const std::string cell = RequireOverrideString_(parameters, "cell", "CoexistenceOverride");
+    return EnumFromName<InteractionCell_t>(cell, "CoexistenceOverride cell");
 }
 
 // One or two occupant ids. Two names the exact pair; one wild-cards the other side.

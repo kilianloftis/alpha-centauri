@@ -4,6 +4,8 @@
 
 #include <array>
 #include <cstddef>
+#include <string_view>
+#include <utility>
 
 namespace ac
 {
@@ -17,6 +19,13 @@ enum class InteractionGridId_t
     AttackUnit, // actor_domain x target_domain
     Zoc,        // actor_domain x target_domain
 };
+
+// Wire names of the grids, which are not their enumerator names.
+inline constexpr std::array<std::pair<std::string_view, InteractionGridId_t>, 4>
+    k_InteractionGridNames{{{"enter", InteractionGridId_t::Enter},
+                            {"attack_tile", InteractionGridId_t::AttackTile},
+                            {"attack_unit", InteractionGridId_t::AttackUnit},
+                            {"zoc", InteractionGridId_t::Zoc}}};
 
 enum class InteractionCell_t
 {
