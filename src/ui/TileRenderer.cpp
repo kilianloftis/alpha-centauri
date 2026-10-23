@@ -265,6 +265,34 @@ const WaterShadeRange_t& DepthShadeOf_(const Tile& rTile, const std::string& rLa
     return DepthShadeOf_(*pLandform);
 }
 
+
+// The last occupant with a fill colour wins.
+std::optional<Color_t> OccupantFill_(const MapAppearance& rAppearance, const Tile& rTile)
+{
+    std::optional<Color_t> fill;
+    rAppearance.OccupantsOf(rTile).ForEach([&fill](const ImprovementConfig_t& rOccupant) {
+        if (rOccupant.art && rOccupant.art->fillColor)
+        {
+            fill = rOccupant.art->fillColor;
+        }
+        return false;
+    });
+    return fill;
+}
+
+// Ids whose object art another occupant on the tile hides.
+std::vector<std::string> HiddenOccupantIds_(const TileOccupants_t& rOccupants)
+{
+    std::vector<std::string> hidden;
+    rOccupants.ForEach([&hidden](const ImprovementConfig_t& rOccupant) {
+        if (rOccupant.art)
+        {
+            hidden.insert(hidden.end(), rOccupant.art->hides.begin(), rOccupant.art->hides.end());
+        }
+        return false;
+    });
+    return hidden;
+}
 } // namespace
 
 size_t PickSpriteIndex(int tileX, int tileY, std::string_view contentId, size_t count)
@@ -587,52 +615,34 @@ void TileRenderer::DrawObject_(Graphics& rGraphics, const ImprovementConfig_t& r
 
 Color_t TileRenderer::FillColor(const Tile& rTile, const MapAppearance& rAppearance) const
 {
-    const TileRendererStyle_t& s = m_rStyle;
     const TileCover_t cover = rAppearance.CoverOf(rTile);
     if (cover == TileCover_t::Shroud)
     {
-        return s.shroudColor;
+        return m_rStyle.shroudColor;
     }
+    const std::optional<Color_t> occupantFill = OccupantFill_(rAppearance, rTile);
+    const Color_t fill = occupantFill ? *occupantFill : ElevationFill_(rTile);
+    return cover == TileCover_t::Fog ? DimColor_(fill, m_rStyle.fogFillDimRatio) : fill;
+}
+
+Color_t TileRenderer::ElevationFill_(const Tile& rTile) const
+{
+    const TileRendererStyle_t& s = m_rStyle;
     const int elevation = rTile.GetElevation();
-    Color_t fill{};
-
-    std::optional<Color_t> occupantFill;
-    rAppearance.OccupantsOf(rTile).ForEach([&occupantFill](const ImprovementConfig_t& rOccupant) {
-        if (rOccupant.art && rOccupant.art->fillColor)
-        {
-            occupantFill = rOccupant.art->fillColor;
-        }
-        return false;
-    });
-
-    if (occupantFill)
+    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    if (rTile.IsWater())
     {
-        fill = *occupantFill;
-    }
-    else if (rTile.IsWater())
-    {
-        const ElevationRulesConfig_t& rRules = rTile.MapRules();
         // Water: darker at the floor, lighter one meter below ocean level.
         const float t = Remap01_(static_cast<float>(elevation),
                                  static_cast<float>(rRules.minElevationMeters),
                                  static_cast<float>(rRules.oceanLevelMeters - 1));
-        fill = LerpColor_(s.waterLowColor, s.waterHighColor, t);
+        return LerpColor_(s.waterLowColor, s.waterHighColor, t);
     }
-    else
-    {
-        const ElevationRulesConfig_t& rRules = rTile.MapRules();
-        // Land: darker at ocean level, lighter at the map's maximum elevation.
-        const float t = Remap01_(static_cast<float>(elevation),
-                                 static_cast<float>(rRules.oceanLevelMeters),
-                                 static_cast<float>(rRules.maxElevationMeters));
-        fill = LerpColor_(s.landLowColor, s.landHighColor, t);
-    }
-
-    if (cover == TileCover_t::Fog)
-    {
-        fill = DimColor_(fill, s.fogFillDimRatio);
-    }
-    return fill;
+    // Land: darker at ocean level, lighter at the map's maximum elevation.
+    const float t = Remap01_(static_cast<float>(elevation),
+                             static_cast<float>(rRules.oceanLevelMeters),
+                             static_cast<float>(rRules.maxElevationMeters));
+    return LerpColor_(s.landLowColor, s.landHighColor, t);
 }
 
 void TileRenderer::DrawTerrainLayer_(Graphics& rGraphics, const Tile& rTile, ArtLayer_t layer,
@@ -713,14 +723,7 @@ void TileRenderer::RenderObjects(Graphics& rGraphics, const Tile& rTile, const T
         return;
     }
     const TileOccupants_t occupants = rAppearance.OccupantsOf(rTile);
-    std::vector<std::string> hidden;
-    occupants.ForEach([&hidden](const ImprovementConfig_t& rOccupant) {
-        if (rOccupant.art)
-        {
-            hidden.insert(hidden.end(), rOccupant.art->hides.begin(), rOccupant.art->hides.end());
-        }
-        return false;
-    });
+    const std::vector<std::string> hidden = HiddenOccupantIds_(occupants);
 
     // Terrain bonuses and the Monolith come before improvements, as SMAC draws them.
     occupants.ForEach([&](const ImprovementConfig_t& rOccupant) {

@@ -19,6 +19,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 
 namespace ac
@@ -76,6 +77,21 @@ float WidthOf_(const TileShape_t& rShape)
     return rShape.east.x - rShape.west.x;
 }
 
+
+std::unordered_set<const Tile*> PlacedSetOf_(std::span<const PlacedTile_t> tiles)
+{
+    std::unordered_set<const Tile*> placed;
+    placed.reserve(tiles.size());
+    for (const PlacedTile_t& rPlaced : tiles)
+    {
+        if (!rPlaced.pTile)
+        {
+            throw std::invalid_argument("MapRenderer::Render: a placed tile has no tile");
+        }
+        placed.insert(rPlaced.pTile);
+    }
+    return placed;
+}
 } // namespace
 
 MapRenderer::MapRenderer(SpriteLibrary& rSprites, const GameState& rGameState,
@@ -97,17 +113,7 @@ UnitMarkerRects_t MapRenderer::Render(Graphics& rGraphics, std::span<const Place
                                       const MapAppearance& rAppearance,
                                       const MapContent_t& rContent)
 {
-    PlacedSet_t placed;
-    placed.reserve(tiles.size());
-    for (const PlacedTile_t& rPlaced : tiles)
-    {
-        if (!rPlaced.pTile)
-        {
-            throw std::invalid_argument("MapRenderer::Render: a placed tile has no tile");
-        }
-        placed.insert(rPlaced.pTile);
-    }
-
+    const PlacedSet_t placed = PlacedSetOf_(tiles);
     for (const PlacedTile_t& rPlaced : tiles)
     {
         m_tiles.RenderTerrain(rGraphics, *rPlaced.pTile, rPlaced.shape, rAppearance);
@@ -258,13 +264,11 @@ void MapRenderer::DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase,
         originY + tileWidth * s.baseNameOffsetYRatio, fontSize, nameColor);
 }
 
-// One marker per tile: the selected unit if it is here, else the first shown. A drawn base
-// hides other units, but a shrouded base is not drawn.
-void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
-                             const MapAppearance& rAppearance, const MapContent_t& rContent,
-                             UnitMarkerRects_t& rMarkers) const
+// The selected unit if it is here, else the first shown. A drawn base hides other units, but
+// a shrouded base is not drawn.
+const Unit* MapRenderer::ShownUnit_(const Tile& rTile, const MapAppearance& rAppearance,
+                                    const MapContent_t& rContent) const
 {
-    const Tile& rTile = *rPlaced.pTile;
     bool bBaseDrawn = false;
     if (rAppearance.CoverOf(rTile) != TileCover_t::Shroud && rContent.showsBase)
     {
@@ -273,7 +277,6 @@ void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
             bBaseDrawn = rContent.showsBase(*pBase);
         }
     }
-
     const Unit* pShown = nullptr;
     for (const Unit* pUnit : rAppearance.Map().GetAllUnitsOnTile(rTile))
     {
@@ -283,14 +286,22 @@ void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
         }
         if (pUnit == rContent.pSelectedUnit)
         {
-            pShown = pUnit;
-            break;
+            return pUnit;
         }
         if (!pShown && !bBaseDrawn)
         {
             pShown = pUnit;
         }
     }
+    return pShown;
+}
+
+// One marker per tile.
+void MapRenderer::DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
+                             const MapAppearance& rAppearance, const MapContent_t& rContent,
+                             UnitMarkerRects_t& rMarkers) const
+{
+    const Unit* pShown = ShownUnit_(*rPlaced.pTile, rAppearance, rContent);
     if (!pShown)
     {
         return;

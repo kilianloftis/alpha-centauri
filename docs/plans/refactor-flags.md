@@ -254,11 +254,9 @@ kind, registered the way the effect types are.
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
-### `HotkeyConfig::Load` and `TileRenderer::DrawLinkNetworks_`
-- **Where:** `src/ui/HotkeyConfig.cpp` (`Load`, 86 lines, nesting 4), `src/ui/TileRenderer.cpp`
-  (`DrawLinkNetworks_`, 93 lines, complexity 28)
-- **Problem:** each does several passes inline: binding parse and validation; per-neighbour link,
-  replacement and hub drawing.
+### `TileRenderer::DrawLinkNetworks_`
+- **Where:** `src/ui/TileRenderer.cpp` (`DrawLinkNetworks_`, 93 lines, complexity 28)
+- **Problem:** per-neighbour link, replacement and hub drawing all happen inline.
 - **Why not local:** the link drawing shares the neighbour masks across passes, and its art rules
   are SMAC's, so splitting it should be checked against screenshots.
 

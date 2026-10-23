@@ -105,6 +105,107 @@ bool ReadModifier_(const nlohmann::json& rEntry, const char* name, const std::st
     return rEntry.at(name).get<bool>();
 }
 
+[[noreturn]] void FailHotkeys_(const std::string& rConfigPath, const std::string& rMessage)
+{
+    throw std::runtime_error("Hotkeys '" + rConfigPath + "': " + rMessage);
+}
+
+// Returns the binding's action name.
+std::string RequireBindingFields_(const nlohmann::json& rEntry, const std::string& rConfigPath)
+{
+    if (!rEntry.contains("action") || !rEntry.at("action").is_string())
+    {
+        FailHotkeys_(rConfigPath, "a binding is missing string 'action'");
+    }
+    if (!rEntry.contains("key") || !rEntry.at("key").is_string())
+    {
+        FailHotkeys_(rConfigPath, "a binding is missing string 'key'");
+    }
+    return rEntry.at("action").get<std::string>();
+}
+
+HotkeyChord_t ReadChord_(const nlohmann::json& rEntry, const std::string& rActionName,
+                         const std::string& rConfigPath)
+{
+    const auto fail = [&rConfigPath](const std::string& rMessage) {
+        FailHotkeys_(rConfigPath, rMessage);
+    };
+    const std::string keyName = rEntry.at("key").get<std::string>();
+    return HotkeyChord_t{EnumFromName<Key_t>(keyName, "hotkey key"),
+                         ReadModifier_(rEntry, "ctrl", rActionName, fail),
+                         ReadModifier_(rEntry, "alt", rActionName, fail),
+                         ReadModifier_(rEntry, "shift", rActionName, fail)};
+}
+
+// The built-in action, or nullopt for a terraform project; exactly one must match.
+std::optional<HotkeyAction_t> ResolveAction_(const std::string& rActionName,
+                                             const ImprovementRegistry& rImprovements,
+                                             const TerrainOperationRegistry& rOperations,
+                                             const std::string& rConfigPath)
+{
+    const std::optional<HotkeyAction_t> builtin = FindBuiltin(rActionName);
+    const bool bProject =
+        FindTerraformProject(rActionName, rImprovements, rOperations).has_value();
+    if (builtin.has_value() && bProject)
+    {
+        FailHotkeys_(rConfigPath, "action '" + rActionName
+                                      + "' is both a built-in action and a terraform project");
+    }
+    if (!builtin.has_value() && !bProject)
+    {
+        FailHotkeys_(rConfigPath, "unknown action '" + rActionName + "'");
+    }
+    return builtin;
+}
+
+// What one load has bound so far, to reject repeats.
+class BindingLedger_
+{
+public:
+    explicit BindingLedger_(const std::string& rConfigPath)
+        : m_rConfigPath(rConfigPath)
+    {
+    }
+
+    void RequireNewAction(const std::string& rActionName)
+    {
+        for (const std::string& rSeen : m_seenActions)
+        {
+            if (ToLowerAscii(rSeen) == ToLowerAscii(rActionName))
+            {
+                FailHotkeys_(m_rConfigPath, "action '" + rActionName + "' is bound more than once");
+            }
+        }
+        m_seenActions.push_back(rActionName);
+    }
+
+    // Order actions may share a chord. The selected unit decides which one runs.
+    void RequireChordFree(HotkeyAction_t action, const HotkeyChord_t& rChord,
+                          const std::string& rActionName)
+    {
+        const HotkeyStage_t stage = StageFor(action);
+        if (stage == HotkeyStage_t::Order)
+        {
+            return;
+        }
+        std::vector<SeenChord_t>& rStage = m_stageChords[static_cast<std::size_t>(stage)];
+        for (const SeenChord_t& rSeen : rStage)
+        {
+            if (rSeen.chord == rChord)
+            {
+                FailHotkeys_(m_rConfigPath, "actions '" + rActionName + "' and '" + rSeen.action
+                                                + "' share " + DescribeHotkeyChord(rChord));
+            }
+        }
+        rStage.push_back(SeenChord_t{rChord, rActionName});
+    }
+
+private:
+    const std::string& m_rConfigPath;
+    std::vector<std::string> m_seenActions;
+    std::array<std::vector<SeenChord_t>, magic_enum::enum_count<HotkeyStage_t>()> m_stageChords;
+};
+
 } // namespace
 
 std::string DescribeHotkeyChord(const HotkeyChord_t& rChord)
@@ -133,95 +234,50 @@ HotkeyConfig HotkeyConfig::Load(const std::string& rConfigPath,
     return JsonConfigLoader::LoadObjectFile<HotkeyConfig>(
         rConfigPath, "hotkey",
         [&rConfigPath, &rImprovements, &rOperations](const nlohmann::json& rJson) {
-            const auto fail = [&rConfigPath](const std::string& rMessage) {
-                throw std::runtime_error("Hotkeys '" + rConfigPath + "': " + rMessage);
-            };
-
-            if (!rJson.contains("bindings") || !rJson.at("bindings").is_array())
-            {
-                fail("missing required array 'bindings'");
-            }
-
-            HotkeyConfig config;
-            std::vector<SeenChord_t> stageChords[5];
-            std::vector<std::string> seenActions;
-
-            for (const nlohmann::json& rEntry : rJson.at("bindings"))
-            {
-                if (!rEntry.contains("action") || !rEntry.at("action").is_string())
-                {
-                    fail("a binding is missing string 'action'");
-                }
-                if (!rEntry.contains("key") || !rEntry.at("key").is_string())
-                {
-                    fail("a binding is missing string 'key'");
-                }
-
-                const std::string actionName = rEntry.at("action").get<std::string>();
-                const std::string keyName = rEntry.at("key").get<std::string>();
-                const HotkeyChord_t chord{EnumFromName<Key_t>(keyName, "hotkey key"),
-                                          ReadModifier_(rEntry, "ctrl", actionName, fail),
-                                          ReadModifier_(rEntry, "alt", actionName, fail),
-                                          ReadModifier_(rEntry, "shift", actionName, fail)};
-
-                for (const std::string& rSeen : seenActions)
-                {
-                    if (ToLowerAscii(rSeen) == ToLowerAscii(actionName))
-                    {
-                        fail("action '" + actionName + "' is bound more than once");
-                    }
-                }
-                seenActions.push_back(actionName);
-
-                const std::optional<HotkeyAction_t> builtin = FindBuiltin(actionName);
-                const bool bProject = FindTerraformProject(actionName, rImprovements, rOperations)
-                                          .has_value();
-                if (builtin.has_value() && bProject)
-                {
-                    fail("action '" + actionName
-                         + "' is both a built-in action and a terraform project");
-                }
-                if (!builtin.has_value() && !bProject)
-                {
-                    fail("unknown action '" + actionName + "'");
-                }
-
-                if (bProject)
-                {
-                    for (const TerraformHotkey_t& rBound : config.m_terraform)
-                    {
-                        if (rBound.chord == chord)
-                        {
-                            fail("actions '" + actionName + "' and '" + rBound.projectId
-                                 + "' share " + DescribeHotkeyChord(chord));
-                        }
-                    }
-                    config.m_terraform.push_back(TerraformHotkey_t{chord, actionName});
-                    continue;
-                }
-
-                const HotkeyAction_t action = *builtin;
-                const HotkeyStage_t stage = StageFor(action);
-                // Order actions may share a chord. The selected unit decides which one runs.
-                if (stage != HotkeyStage_t::Order)
-                {
-                    std::vector<SeenChord_t>& rStage = stageChords[static_cast<int>(stage)];
-                    for (const SeenChord_t& rSeen : rStage)
-                    {
-                        if (rSeen.chord == chord)
-                        {
-                            fail("actions '" + actionName + "' and '" + rSeen.action + "' share "
-                                 + DescribeHotkeyChord(chord));
-                        }
-                    }
-                    rStage.push_back(SeenChord_t{chord, actionName});
-                }
-
-                config.m_chords[ActionIndex(action)] = chord;
-            }
-
-            return config;
+            return Parse_(rJson, rConfigPath, rImprovements, rOperations);
         });
+}
+
+HotkeyConfig HotkeyConfig::Parse_(const nlohmann::json& rJson, const std::string& rConfigPath,
+                                  const ImprovementRegistry& rImprovements,
+                                  const TerrainOperationRegistry& rOperations)
+{
+    if (!rJson.contains("bindings") || !rJson.at("bindings").is_array())
+    {
+        FailHotkeys_(rConfigPath, "missing required array 'bindings'");
+    }
+    HotkeyConfig config;
+    BindingLedger_ ledger(rConfigPath);
+    for (const nlohmann::json& rEntry : rJson.at("bindings"))
+    {
+        const std::string actionName = RequireBindingFields_(rEntry, rConfigPath);
+        const HotkeyChord_t chord = ReadChord_(rEntry, actionName, rConfigPath);
+        ledger.RequireNewAction(actionName);
+        const std::optional<HotkeyAction_t> builtin =
+            ResolveAction_(actionName, rImprovements, rOperations, rConfigPath);
+        if (!builtin)
+        {
+            config.BindTerraform_(chord, actionName, rConfigPath);
+            continue;
+        }
+        ledger.RequireChordFree(*builtin, chord, actionName);
+        config.m_chords[ActionIndex(*builtin)] = chord;
+    }
+    return config;
+}
+
+void HotkeyConfig::BindTerraform_(const HotkeyChord_t& rChord, const std::string& rProjectId,
+                                  const std::string& rConfigPath)
+{
+    for (const TerraformHotkey_t& rBound : m_terraform)
+    {
+        if (rBound.chord == rChord)
+        {
+            FailHotkeys_(rConfigPath, "actions '" + rProjectId + "' and '" + rBound.projectId
+                                          + "' share " + DescribeHotkeyChord(rChord));
+        }
+    }
+    m_terraform.push_back(TerraformHotkey_t{rChord, rProjectId});
 }
 
 std::optional<HotkeyChord_t> HotkeyConfig::Find(HotkeyAction_t action) const

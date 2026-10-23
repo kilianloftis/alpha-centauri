@@ -3,6 +3,7 @@
 #include "input/Input.h"
 
 #include <magic_enum.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include <array>
 #include <optional>
@@ -101,6 +102,13 @@ public:
 
 private:
     static constexpr std::size_t k_ActionCount = magic_enum::enum_count<HotkeyAction_t>();
+
+    static HotkeyConfig Parse_(const nlohmann::json& rJson, const std::string& rConfigPath,
+                               const ImprovementRegistry& rImprovements,
+                               const TerrainOperationRegistry& rOperations);
+    // Terraform chords must be unique among themselves.
+    void BindTerraform_(const HotkeyChord_t& rChord, const std::string& rProjectId,
+                        const std::string& rConfigPath);
 
     std::array<std::optional<HotkeyChord_t>, k_ActionCount> m_chords{};
     std::vector<TerraformHotkey_t> m_terraform;

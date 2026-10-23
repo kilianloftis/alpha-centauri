@@ -51,6 +51,11 @@ private:
     // past the chrome into space that Contains() does not cover.
     size_t VisibleRowCount_() const;
     void CacheEntryRects_();
+    float Padding_() const;
+    unsigned int EntryFontSize_() const;
+    float LineHeight_() const;
+    void DrawEntries_(Graphics& rGraphics) const;
+    void DrawScrollIndicator_(Graphics& rGraphics) const;
 
     std::string m_title;
     std::string m_emptyMessage;

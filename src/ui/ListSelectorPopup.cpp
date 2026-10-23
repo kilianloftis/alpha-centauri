@@ -42,7 +42,7 @@ ListSelectorPopup::ListSelectorPopup(std::string title,
 
 size_t ListSelectorPopup::VisibleRowCount_() const
 {
-    const float lineHeight = m_layout.height * m_rStyle.lineHeightRatio;
+    const float lineHeight = LineHeight_();
     if (lineHeight <= 0.0f)
     {
         return 0;
@@ -67,7 +67,7 @@ size_t ListSelectorPopup::VisibleRowCount_() const
 
 void ListSelectorPopup::CacheEntryRects_()
 {
-    const float lineHeight = m_layout.height * m_rStyle.lineHeightRatio;
+    const float lineHeight = LineHeight_();
 
     m_entryRects.clear();
     const size_t visible = std::min(VisibleRowCount_(), m_choices.size() - m_scrollOffset);
@@ -86,29 +86,45 @@ void ListSelectorPopup::Render(Graphics& rGraphics)
     {
         return;
     }
-
-    const float padding = m_rStyle.paddingRatio * m_layout.width;
+    const float padding = Padding_();
     const auto headerFontSize =
         static_cast<unsigned int>(m_layout.height * m_rStyle.headerFontSizeRatio);
-    const auto entryFontSize =
-        static_cast<unsigned int>(m_layout.height * m_rStyle.entryFontSizeRatio);
-    const float lineHeight = m_layout.height * m_rStyle.lineHeightRatio;
-    const float iconSize = lineHeight * m_rStyle.iconSizeRatio;
-    const float iconGap = m_layout.width * m_rStyle.iconGapRatio;
-
     DrawPanelChrome(rGraphics, m_pSprites, m_layout, m_rStyle.backgroundColor,
                     m_rStyle.backgroundSprite, m_rStyle.borderColor, m_rStyle.borderWidth);
     rGraphics.DrawText(m_title, m_layout.x + padding, m_layout.y + padding, headerFontSize,
                        m_rStyle.headerColor);
-
     if (m_choices.empty())
     {
         rGraphics.DrawText(m_emptyMessage, m_layout.x + padding,
-                           m_layout.y + lineHeight * m_rStyle.headerLineOffset, entryFontSize,
-                           m_rStyle.hintColor);
+                           m_layout.y + LineHeight_() * m_rStyle.headerLineOffset,
+                           EntryFontSize_(), m_rStyle.hintColor);
         return;
     }
+    DrawEntries_(rGraphics);
+    DrawScrollIndicator_(rGraphics);
+}
 
+float ListSelectorPopup::Padding_() const
+{
+    return m_rStyle.paddingRatio * m_layout.width;
+}
+
+unsigned int ListSelectorPopup::EntryFontSize_() const
+{
+    return static_cast<unsigned int>(m_layout.height * m_rStyle.entryFontSizeRatio);
+}
+
+float ListSelectorPopup::LineHeight_() const
+{
+    return m_layout.height * m_rStyle.lineHeightRatio;
+}
+
+void ListSelectorPopup::DrawEntries_(Graphics& rGraphics) const
+{
+    const float padding = Padding_();
+    const unsigned int entryFontSize = EntryFontSize_();
+    const float iconSize = LineHeight_() * m_rStyle.iconSizeRatio;
+    const float iconGap = m_layout.width * m_rStyle.iconGapRatio;
     for (size_t i = 0; i < m_entryRects.size(); ++i)
     {
         const Rectangle_t& rRect = m_entryRects[i];
@@ -122,18 +138,22 @@ void ListSelectorPopup::Render(Graphics& rGraphics)
         }
         rGraphics.DrawText(rChoice.label, textX, rRect.y, entryFontSize, m_rStyle.entryColor);
     }
+}
 
-    // Named rather than dropped off the bottom edge, which is what an unbounded layout did.
+// Shows which rows are visible when the list is longer than the panel.
+void ListSelectorPopup::DrawScrollIndicator_(Graphics& rGraphics) const
+{
     const size_t shown = m_scrollOffset + m_entryRects.size();
-    if (m_scrollOffset > 0 || shown < m_choices.size())
+    if (m_scrollOffset == 0 && shown >= m_choices.size())
     {
-        const std::string indicator = "[" + std::to_string(m_scrollOffset + 1) + "-"
-                                      + std::to_string(shown) + " of "
-                                      + std::to_string(m_choices.size()) + "]";
-        rGraphics.DrawText(indicator, m_layout.x + padding,
-                           m_layout.y + m_layout.height - lineHeight, entryFontSize,
-                           m_rStyle.hintColor);
+        return;
     }
+    const std::string indicator = "[" + std::to_string(m_scrollOffset + 1) + "-"
+                                  + std::to_string(shown) + " of "
+                                  + std::to_string(m_choices.size()) + "]";
+    rGraphics.DrawText(indicator, m_layout.x + Padding_(),
+                       m_layout.y + m_layout.height - LineHeight_(), EntryFontSize_(),
+                       m_rStyle.hintColor);
 }
 
 bool ListSelectorPopup::HandleKey(const KeyEvent_t& rEvent)

@@ -61,6 +61,8 @@ private:
                    const MapAppearance& rAppearance, const MapContent_t& rContent);
     void DrawBaseArt_(Graphics& rGraphics, const BaseManager& rBase, const TileShape_t& rShape);
     void DrawBaseName_(Graphics& rGraphics, const BaseManager& rBase, const TileShape_t& rShape);
+    const Unit* ShownUnit_(const Tile& rTile, const MapAppearance& rAppearance,
+                           const MapContent_t& rContent) const;
     void DrawUnits_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
                     const MapAppearance& rAppearance, const MapContent_t& rContent,
                     UnitMarkerRects_t& rMarkers) const;

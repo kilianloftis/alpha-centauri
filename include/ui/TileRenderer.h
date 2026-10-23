@@ -71,6 +71,8 @@ private:
     TileShape_t OverlayShape_(const TileShape_t& rShape, const Tile& rTile,
                               TileCover_t cover) const;
     const std::string& CoastSpritePath_(std::size_t part, const CoastCornerArt_t& rArt) const;
+    // The elevation gradient, water and land each between their own colours.
+    Color_t ElevationFill_(const Tile& rTile) const;
     void DrawCoastOverlay_(Graphics& rGraphics, const Tile& rTile, const WorldMap& rMap,
                            const TileShape_t& rShape, float shoreShade) const;
     bool TryDrawOccupantPath_(Graphics& rGraphics, const OccupantArt_t& rArt,
