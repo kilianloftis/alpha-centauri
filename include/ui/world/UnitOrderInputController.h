@@ -6,6 +6,7 @@
 #include "ui/HotkeyConfig.h"
 
 #include <chrono>
+#include <optional>
 #include <vector>
 
 namespace ac
@@ -13,6 +14,30 @@ namespace ac
 
 class Tile;
 class GameState;
+
+// What WorldView carries out for an order input. OrderAssigned means the controller already set
+// the unit's order; the others are WorldView's to perform.
+enum class UnitOrderRequestKind_t
+{
+    OrderAssigned,
+    AttachTransport,  // L: on failure terraform may use L
+    UnloadTransport,  // Shift+U
+    SupplyCrawl,      // O: WorldView opens the resource picker
+    Disband,          // Shift+D: Disband / Self Destruct / Cancel
+    FoundBase,        // B: tile legality is TryFoundBase's
+    Detonate,         // Shift+X on a design with on_detonate_effects
+    ToggleAirdrop,    // I on an airdrop-capable unit that may drop now
+    Probe,            // long-press release where a probe menu is legal
+    Attack,           // long-press release on an adjacent hostile
+    Bombard,          // long-press release inside bombard range
+};
+
+struct UnitOrderRequest_t
+{
+    UnitOrderRequestKind_t kind = UnitOrderRequestKind_t::OrderAssigned;
+    // The tile a Probe, Attack or Bombard acts on; null otherwise.
+    const Tile* pTarget = nullptr;
+};
 
 class UnitOrderInputController
 {
@@ -22,47 +47,9 @@ public:
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
     bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile);
 
-    // True after the most recent HandleKey/HandleMouse call assigned an order.
-    bool WasOrderAssigned() const { return m_bOrderAssigned; }
-
-    // True after a long-press release on an adjacent tile with a non-allied unit.
-    // Target remains valid until the next HandleKey/HandleMouse call.
-    bool WasAttackRequested() const { return m_bAttackRequested; }
-    const Tile* GetAttackTarget() const { return m_pInteractTarget; }
-
-    // True after a long-press release inside bombard range. WorldView calls TryBeginBombard_.
-    bool WasBombardRequested() const { return m_bBombardRequested; }
-    const Tile* GetBombardTarget() const { return m_pInteractTarget; }
-
-    // True after a long-press release when ProbeActionExecutor reports a legal probe menu
-    // against that tile. Target is that tile.
-    bool WasProbeActionRequested() const { return m_bProbeActionRequested; }
-    const Tile* GetProbeTarget() const { return m_pInteractTarget; }
-
-    // True after O on a supply-capable unit with a home base. WorldView opens the resource
-    // picker; the controller does not assign the order itself.
-    bool WasSupplyCrawlRequested() const { return m_bSupplyCrawlRequested; }
-
-    // True after B on a FoundBase-capable unit. WorldView runs
-    // UnitOrderExecutor::TryFoundBase (tile legality is checked there).
-    bool WasFoundBaseRequested() const { return m_bFoundBaseRequested; }
-
-    // True after L. WorldView tries TryAttachToTransport; on failure terraform may use L.
-    bool WasAttachTransportRequested() const { return m_bAttachTransportRequested; }
-
-    // True after Shift+U. WorldView runs TryUnloadTransport.
-    bool WasUnloadTransportRequested() const { return m_bUnloadTransportRequested; }
-
-    // True after Shift+D. WorldView opens Disband / Self Destruct / Cancel.
-    bool WasDisbandRequested() const { return m_bDisbandRequested; }
-
-    // True after I on an airdrop-capable unit on a launch pad with full moves that has not
-    // already airdropped this turn. WorldView toggles airdrop targeting mode.
-    bool WasAirdropModeToggleRequested() const { return m_bAirdropModeToggleRequested; }
-
-    // True after Shift+X on a unit whose design carries on_detonate_effects. WorldView runs
-    // ApplyDetonation.
-    bool WasDetonateRequested() const { return m_bDetonateRequested; }
+    // What the last HandleKey / HandleMouse call asks WorldView to do, if anything. Valid until
+    // the next call.
+    const std::optional<UnitOrderRequest_t>& GetRequest() const { return m_request; }
 
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
@@ -76,7 +63,7 @@ private:
     static void RequireSingleOrder_(const std::vector<HotkeyAction_t>& rValid);
     // Raises the request flag WorldView acts on, or assigns Hold / Skip directly.
     void ApplyOrderAction_(HotkeyAction_t action, Unit& rUnit);
-    void ClearRequestFlags_();
+    void Request_(UnitOrderRequestKind_t kind, const Tile* pTarget);
     bool HasExceededHoldThreshold_() const;
 
     bool HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
@@ -94,18 +81,7 @@ private:
     const HotkeyConfig& m_rHotkeys;
     GameState& m_rGameState;
 
-    bool m_bOrderAssigned = false;
-    bool m_bAttackRequested = false;
-    bool m_bBombardRequested = false;
-    bool m_bProbeActionRequested = false;
-    bool m_bSupplyCrawlRequested = false;
-    bool m_bFoundBaseRequested = false;
-    bool m_bAttachTransportRequested = false;
-    bool m_bUnloadTransportRequested = false;
-    bool m_bDisbandRequested = false;
-    bool m_bAirdropModeToggleRequested = false;
-    bool m_bDetonateRequested = false;
-    const Tile* m_pInteractTarget = nullptr;
+    std::optional<UnitOrderRequest_t> m_request;
 
     // Left-click long-press path preview.
     bool m_bLeftButtonHeld = false;

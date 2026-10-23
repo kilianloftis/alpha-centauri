@@ -45,14 +45,8 @@ public:
         GameSettings& rSettings
     );
 
-    std::unique_ptr<WorldView> CreateWorldView(
-        const WindowLayout_t& layout,
-        std::function<void()> onProcessTurn,
-        std::function<void()> onRequestExit,
-        std::function<void(BaseManager&)> onOpenBase,
-        WorldView::OpenCombatCallback_t onOpenCombat,
-        std::function<void()> onOpenCommlinks
-    ) const;
+    std::unique_ptr<WorldView> CreateWorldView(const WindowLayout_t& layout,
+                                               WorldView::Callbacks_t callbacks) const;
 
     std::unique_ptr<BaseView> CreateBaseView(BaseManager& rBase) const;
 

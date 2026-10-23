@@ -27,7 +27,7 @@ UnitOrderInputController::UnitOrderInputController(const HotkeyConfig& rHotkeys,
 
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
-    ClearRequestFlags_();
+    m_request.reset();
     if (!pSelectedUnit)
     {
         return false;
@@ -88,33 +88,33 @@ void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rU
     switch (action)
     {
     case HotkeyAction_t::UnloadTransport:
-        m_bUnloadTransportRequested = true;
+        Request_(UnitOrderRequestKind_t::UnloadTransport, nullptr);
         break;
     case HotkeyAction_t::Disband:
-        m_bDisbandRequested = true;
+        Request_(UnitOrderRequestKind_t::Disband, nullptr);
         break;
     case HotkeyAction_t::AttachTransport:
-        m_bAttachTransportRequested = true;
+        Request_(UnitOrderRequestKind_t::AttachTransport, nullptr);
         break;
     case HotkeyAction_t::SupplyCrawl:
-        m_bSupplyCrawlRequested = true;
+        Request_(UnitOrderRequestKind_t::SupplyCrawl, nullptr);
         break;
     case HotkeyAction_t::FoundBase:
-        m_bFoundBaseRequested = true;
+        Request_(UnitOrderRequestKind_t::FoundBase, nullptr);
         break;
     case HotkeyAction_t::Detonate:
-        m_bDetonateRequested = true;
+        Request_(UnitOrderRequestKind_t::Detonate, nullptr);
         break;
     case HotkeyAction_t::Airdrop:
-        m_bAirdropModeToggleRequested = true;
+        Request_(UnitOrderRequestKind_t::ToggleAirdrop, nullptr);
         break;
     case HotkeyAction_t::Hold:
         rUnit.SetOrder(HoldOrder_t{});
-        m_bOrderAssigned = true;
+        Request_(UnitOrderRequestKind_t::OrderAssigned, nullptr);
         break;
     case HotkeyAction_t::SkipTurn:
         rUnit.SetOrder(SkipTurnOrder_t{});
-        m_bOrderAssigned = true;
+        Request_(UnitOrderRequestKind_t::OrderAssigned, nullptr);
         break;
     case HotkeyAction_t::Bombard:
     case HotkeyAction_t::PanLeft:
@@ -138,7 +138,7 @@ void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rU
 bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
                                            const Tile* pHoveredTile)
 {
-    ClearRequestFlags_();
+    m_request.reset();
 
     if (rEvent.button == MouseButton_t::Left)
     {
@@ -154,20 +154,9 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
     return false;
 }
 
-void UnitOrderInputController::ClearRequestFlags_()
+void UnitOrderInputController::Request_(UnitOrderRequestKind_t kind, const Tile* pTarget)
 {
-    m_bOrderAssigned = false;
-    m_bAttackRequested = false;
-    m_bBombardRequested = false;
-    m_bSupplyCrawlRequested = false;
-    m_bFoundBaseRequested = false;
-    m_bAttachTransportRequested = false;
-    m_bUnloadTransportRequested = false;
-    m_bDisbandRequested = false;
-    m_bAirdropModeToggleRequested = false;
-    m_bProbeActionRequested = false;
-    m_pInteractTarget = nullptr;
-    m_bDetonateRequested = false;
+    m_request = UnitOrderRequest_t{kind, pTarget};
 }
 
 bool UnitOrderInputController::HasExceededHoldThreshold_() const
@@ -234,8 +223,7 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
     const bool bBombards = ResolveFlag(rMover, RuleFlagId_t::Bombard);
     if (bBombards && IsWithinBombardRange(rMover, rDest))
     {
-        m_bBombardRequested = true;
-        m_pInteractTarget = &rDest;
+        Request_(UnitOrderRequestKind_t::Bombard, &rDest);
         CancelPreview();
         return true;
     }
@@ -259,16 +247,14 @@ bool UnitOrderInputController::TryAdjacentInteract_(Unit& rMover, const Tile& rD
 {
     if (m_rGameState.GetProbeActions().CanOpenProbeActions(rMover, rDest, m_rGameState))
     {
-        m_bProbeActionRequested = true;
-        m_pInteractTarget = &rDest;
+        Request_(UnitOrderRequestKind_t::Probe, &rDest);
         CancelPreview();
         return true;
     }
 
     if (pVisibleHostile)
     {
-        m_bAttackRequested = true;
-        m_pInteractTarget = &rDest;
+        Request_(UnitOrderRequestKind_t::Attack, &rDest);
         CancelPreview();
         return true;
     }
@@ -287,7 +273,7 @@ bool UnitOrderInputController::TryAssignMoveOrder_(Unit& rMover, const Tile& rDe
     }
 
     rMover.SetOrder(MoveOrder_t{&rDest});
-    m_bOrderAssigned = true;
+    Request_(UnitOrderRequestKind_t::OrderAssigned, nullptr);
     CancelPreview();
     return true;
 }

@@ -120,8 +120,8 @@ MouseEvent_t ClickAtDrawnText_(const RecordingGraphics& rGraphics, const std::st
 std::unique_ptr<WorldView> MakeWorldView_(ViewFixture& rFixture)
 {
     return rFixture.pFactory->CreateWorldView(
-        ViewFixture::FullScreen(), [] {}, [] {},
-        [](BaseManager&) {}, [](auto&&...) {}, [] {});
+        ViewFixture::FullScreen(),
+        {[] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {}});
 }
 
 // Auto-select and panel wiring live on UpdatePresentation (Engine's Update path), not Render.
@@ -179,9 +179,9 @@ TEST_CASE("Clicking a garrisoned base opens the base view", "[ui][world]")
 
     BaseManager* pOpened = nullptr;
     auto pView = fixture.pFactory->CreateWorldView(
-        layout, [] {}, [] {},
-        [&](BaseManager& rOpened) { pOpened = &rOpened; },
-        [](auto&&...) {}, [] {});
+        layout,
+        {[] {}, [] {}, [&](BaseManager& rOpened) { pOpened = &rOpened; }, [](auto&&...) {},
+         [] {}});
 
     const auto [x, y] = MapTileClick_(layout, 8, 8);
     pView->HandleMouse(ReleaseAt_(x, y));
@@ -251,9 +251,8 @@ TEST_CASE("Clicking a unit off a base selects it without opening a base", "[ui][
 
     bool bOpenedBase = false;
     auto pView = fixture.pFactory->CreateWorldView(
-        layout, [] {}, [] {},
-        [&](BaseManager&) { bOpenedBase = true; },
-        [](auto&&...) {}, [] {});
+        layout,
+        {[] {}, [] {}, [&](BaseManager&) { bOpenedBase = true; }, [](auto&&...) {}, [] {}});
 
     const auto [x, y] = MapTileClick_(layout, 8, 8);
     pView->HandleMouse(ReleaseAt_(x, y));
@@ -469,8 +468,8 @@ TEST_CASE("F arms bombard when the unit can fire, and the next click shoots", "[
 
     bool bOpened = false;
     auto pView = fixture.pFactory->CreateWorldView(
-        layout, [] {}, [] {}, [](BaseManager&) {},
-        [&](auto&&...) { bOpened = true; }, [] {});
+        layout,
+        {[] {}, [] {}, [](BaseManager&) {}, [&](auto&&...) { bOpened = true; }, [] {}});
     fixture.pPlayer->GetExploredMap().MarkAll();
     const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));
@@ -504,7 +503,7 @@ TEST_CASE("F throws when bombard and Farm are both valid", "[ui][world][bombard]
         fixture, 8, 0, nullptr, {"test_chassis", "test_terraformer", "bombard"}, designs);
 
     auto pView = fixture.pFactory->CreateWorldView(
-        layout, [] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {});
+        layout, {[] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {}});
     fixture.pPlayer->GetExploredMap().MarkAll();
     const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));
@@ -525,8 +524,8 @@ TEST_CASE("F with no moves left does not arm bombard", "[ui][world][bombard]")
 
     bool bOpened = false;
     auto pView = fixture.pFactory->CreateWorldView(
-        layout, [] {}, [] {}, [](BaseManager&) {},
-        [&](auto&&...) { bOpened = true; }, [] {});
+        layout,
+        {[] {}, [] {}, [](BaseManager&) {}, [&](auto&&...) { bOpened = true; }, [] {}});
     fixture.pPlayer->GetExploredMap().MarkAll();
     const auto [unitX, unitY] = MapTileClick_(layout, 8, 0);
     pView->HandleMouse(ReleaseAt_(unitX, unitY));

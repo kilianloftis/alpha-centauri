@@ -669,11 +669,14 @@ void Engine::InitializeUi_()
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
     auto pWorldView = m_viewFactory->CreateWorldView(
         fullscreen,
-        [this]() { ProcessTurn_(); },
-        [this]() { m_uiManager->RequestExit(); },
-        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); },
-        std::bind_front(&Engine::PushCombatView_, this),
-        std::bind_front(&Engine::PushCommlinksView_, this));
+        WorldView::Callbacks_t{
+            .onProcessTurn = [this]() { ProcessTurn_(); },
+            .onRequestExit = [this]() { m_uiManager->RequestExit(); },
+            .onOpenBase = [this](BaseManager& rBase)
+            { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); },
+            .onOpenCombat = std::bind_front(&Engine::PushCombatView_, this),
+            .onOpenCommlinks = std::bind_front(&Engine::PushCommlinksView_, this),
+        });
     WorldView& rWorldView = *pWorldView;
     BindViewShortcuts_(fullscreen);
     m_uiManager->SetWorldView(std::move(pWorldView));

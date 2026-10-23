@@ -67,11 +67,7 @@ WorldView::WorldView(
     MapRenderer& rMapRenderer,
     SpriteLibrary& rSprites,
     WindowLayout_t layout,
-    std::function<void()> onProcessTurn,
-    std::function<void()> onRequestExit,
-    OpenBaseCallback_t onOpenBase,
-    OpenCombatCallback_t onOpenCombat,
-    std::function<void()> onOpenCommlinks
+    Callbacks_t callbacks
 )
 : IWorldView(layout)
 , m_rGameState(rGameState)
@@ -81,11 +77,7 @@ WorldView::WorldView(
 , m_mapLayout(MapBandAbove(
       layout, m_consolePlacement.layout, m_consolePlacement.mapOverlap))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, rMapRenderer, m_mapLayout))
-, m_onProcessTurn(std::move(onProcessTurn))
-, m_onRequestExit(std::move(onRequestExit))
-, m_onOpenBase(std::move(onOpenBase))
-, m_onOpenCombat(std::move(onOpenCombat))
-, m_onOpenCommlinks(std::move(onOpenCommlinks))
+, m_callbacks(std::move(callbacks))
 , m_pCameraInputController(std::make_unique<CameraInputController>(
       *m_pWorldDisplay, rWorldMap, m_mapLayout, rHotkeys))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys, rGameState))
@@ -115,7 +107,7 @@ void WorldView::AddConsolePanels_(MapRenderer& rMapRenderer)
         [this](Unit& rUnit) { PickUnit_(&rUnit); }));
     m_elements.push_back(std::make_unique<CommlinksButton>(
         ResolveLayout(rConsole, console.consoleCommlinks),
-        [this]() { m_onOpenCommlinks(); }));
+        [this]() { m_callbacks.onOpenCommlinks(); }));
 }
 
 void WorldView::AddMinimapAndEndTurn_(MapRenderer& rMapRenderer)
@@ -133,7 +125,7 @@ void WorldView::AddMinimapAndEndTurn_(MapRenderer& rMapRenderer)
     // Nested in rightPanel so End Turn sits on top of the minimap (and receives clicks first).
     m_pEndTurnButton = &Adopt_(std::make_unique<EndTurnButton>(
         ResolveLayout(rightPanel, Style().endTurnButton.layout),
-        [this]() { m_onProcessTurn(); }));
+        [this]() { m_callbacks.onProcessTurn(); }));
 }
 
 // Every faction exists by now and none are added later, so this covers unit death for the
@@ -253,7 +245,7 @@ void WorldView::ProcessPendingAutoEndTurn()
         return;
     }
     m_bPendingAutoEndTurn = false;
-    m_onProcessTurn();
+    m_callbacks.onProcessTurn();
 }
 
 bool WorldView::PlayerUnitsNeedOrders_() const
@@ -457,8 +449,9 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         return true;
     }
     Unit* pControllable = GetControllableSelectedUnit_();
+    // A recognised order key implies a controllable unit.
     if (m_pUnitOrderInputController->HandleKey(rEvent, pControllable)
-        && ApplyOrderInput_(pControllable))
+        && ApplyOrderInput_(*pControllable))
     {
         return true;
     }
@@ -475,55 +468,40 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
 // Acts on what the order controller just recognised. False only when an attach fails, so the
 // same key can still reach the shared chords.
-bool WorldView::ApplyOrderInput_(Unit* pControllable)
+bool WorldView::ApplyOrderInput_(Unit& rControllable)
 {
-    UnitOrderInputController& rInput = *m_pUnitOrderInputController;
-    if (rInput.WasAttachTransportRequested())
+    const UnitOrderRequest_t& rRequest = *m_pUnitOrderInputController->GetRequest();
+    switch (rRequest.kind)
     {
-        // Attach failed — fall through so terraform can use L (LevelTerrain).
-        return pControllable && TryAttachToTransport(*pControllable);
-    }
-    if (rInput.WasUnloadTransportRequested())
-    {
-        if (pControllable)
-        {
-            TryUnloadTransportInPlace(*pControllable);
-        }
+    case UnitOrderRequestKind_t::AttachTransport:
+        // A failed attach falls through so terraform can use L (LevelTerrain).
+        return TryAttachToTransport(rControllable);
+    case UnitOrderRequestKind_t::UnloadTransport:
+        TryUnloadTransportInPlace(rControllable);
         return true;
-    }
-    if (rInput.WasSupplyCrawlRequested() && pControllable)
-    {
-        OpenSupplyCrawlMenu_(*pControllable);
+    case UnitOrderRequestKind_t::SupplyCrawl:
+        OpenSupplyCrawlMenu_(rControllable);
         return true;
-    }
-    if (rInput.WasDisbandRequested() && pControllable)
-    {
-        OpenDisbandMenu_(*pControllable);
+    case UnitOrderRequestKind_t::Disband:
+        OpenDisbandMenu_(rControllable);
         return true;
-    }
-    if (rInput.WasFoundBaseRequested() && pControllable)
-    {
-        FoundBaseWith_(*pControllable);
+    case UnitOrderRequestKind_t::FoundBase:
+        FoundBaseWith_(rControllable);
         return true;
-    }
-    if (rInput.WasDetonateRequested() && pControllable)
-    {
-        Detonate_(*pControllable);
+    case UnitOrderRequestKind_t::Detonate:
+        Detonate_(rControllable);
         return true;
-    }
-    if (rInput.WasAirdropModeToggleRequested() && pControllable)
-    {
+    case UnitOrderRequestKind_t::ToggleAirdrop:
         ToggleAirdropTargeting_();
         return true;
-    }
-    if (rInput.WasProbeActionRequested() && pControllable && rInput.GetProbeTarget())
-    {
-        TryOpenProbeActions_(*pControllable, *rInput.GetProbeTarget());
+    case UnitOrderRequestKind_t::OrderAssigned:
+        OnOrderAssigned_(&rControllable);
         return true;
-    }
-    if (rInput.WasOrderAssigned())
-    {
-        OnOrderAssigned_(pControllable);
+    // Keys never ask for these; they come from a long-press release.
+    case UnitOrderRequestKind_t::Probe:
+    case UnitOrderRequestKind_t::Attack:
+    case UnitOrderRequestKind_t::Bombard:
+        return true;
     }
     return true;
 }
@@ -604,7 +582,7 @@ bool WorldView::HandleChromeKey_(const KeyEvent_t& rEvent)
     }
     if (m_rHotkeys.Matches(HotkeyAction_t::EndTurn, rEvent))
     {
-        m_onProcessTurn();
+        m_callbacks.onProcessTurn();
         return true;
     }
     if (m_rHotkeys.Matches(HotkeyAction_t::NextUnit, rEvent))
@@ -625,7 +603,7 @@ void WorldView::CancelTargetingOrExit_()
         m_bPresentationDirty = true;
         return;
     }
-    m_onRequestExit();
+    m_callbacks.onRequestExit();
 }
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
@@ -713,35 +691,42 @@ bool WorldView::TryTargetingClick_(const MouseEvent_t& rEvent, Unit* pControllab
 void WorldView::ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable,
                                  const Tile* pClickedTile, int worldX, int worldY)
 {
-    UnitOrderInputController& rInput = *m_pUnitOrderInputController;
-    const bool bDidOrderAction = rInput.WasAttackRequested() || rInput.WasBombardRequested()
-                                 || rInput.WasProbeActionRequested() || rInput.WasOrderAssigned();
+    const std::optional<UnitOrderRequest_t>& rRequest = m_pUnitOrderInputController->GetRequest();
     // Move / attack / bombard / probe still focus the location panel on the target tile.
     // An aborted long-press (held past threshold, no order) must not change selection.
-    if (bDidOrderAction && rEvent.button == MouseButton_t::Left && !rEvent.bPressed
-        && pClickedTile && IsExploredByPlayer_(worldX, worldY))
+    if (rRequest && rEvent.button == MouseButton_t::Left && !rEvent.bPressed && pClickedTile
+        && IsExploredByPlayer_(worldX, worldY))
     {
         SetSelectedTile_(pClickedTile);
     }
-    if (rInput.WasBombardRequested() && pControllable && rInput.GetBombardTarget())
+    if (!rRequest || !pControllable)
     {
-        TryBeginBombard_(*pControllable, *rInput.GetBombardTarget());
         return;
     }
-    if (rInput.WasAttackRequested() && pControllable && rInput.GetAttackTarget())
+    switch (rRequest->kind)
     {
-        TryBeginAttack_(*pControllable, *rInput.GetAttackTarget());
+    case UnitOrderRequestKind_t::Bombard:
+        TryBeginBombard_(*pControllable, *rRequest->pTarget);
         return;
-    }
-    if (rInput.WasProbeActionRequested() && pControllable && rInput.GetProbeTarget())
-    {
-        TryOpenProbeActions_(*pControllable, *rInput.GetProbeTarget());
+    case UnitOrderRequestKind_t::Attack:
+        TryBeginAttack_(*pControllable, *rRequest->pTarget);
         return;
-    }
-    if (rInput.WasOrderAssigned() && pControllable)
-    {
+    case UnitOrderRequestKind_t::Probe:
+        TryOpenProbeActions_(*pControllable, *rRequest->pTarget);
+        return;
+    case UnitOrderRequestKind_t::OrderAssigned:
         m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
         SelectNextAvailableUnit_();
+        return;
+    // A click never asks for these; they come from order keys.
+    case UnitOrderRequestKind_t::AttachTransport:
+    case UnitOrderRequestKind_t::UnloadTransport:
+    case UnitOrderRequestKind_t::SupplyCrawl:
+    case UnitOrderRequestKind_t::Disband:
+    case UnitOrderRequestKind_t::FoundBase:
+    case UnitOrderRequestKind_t::Detonate:
+    case UnitOrderRequestKind_t::ToggleAirdrop:
+        return;
     }
 }
 
@@ -768,7 +753,7 @@ void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
     if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
     {
         PickUnit_(nullptr);
-        m_onOpenBase(*pBase);
+        m_callbacks.onOpenBase(*pBase);
         return;
     }
     // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
@@ -795,7 +780,7 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     }
 
     SetSuppressDashboard(true);
-    m_onOpenCombat(
+    m_callbacks.onOpenCombat(
         *result,
         rAttackerTile,
         rTargetTile,
@@ -968,7 +953,7 @@ void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPla
     }
 
     SetSuppressDashboard(true);
-    m_onOpenCombat(
+    m_callbacks.onOpenCombat(
         rCombat,
         *pPlayback->pAttackerTile,
         *pPlayback->pTargetTile,

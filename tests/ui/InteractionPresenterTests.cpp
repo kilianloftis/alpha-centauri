@@ -49,11 +49,7 @@ struct PresenterHarness_
     {
         auto pWorld = fixture.pFactory->CreateWorldView(
             ViewFixture::FullScreen(),
-            [] {},
-            [] {},
-            [](BaseManager&) {},
-            [](auto&&...) {},
-            [] {});
+            {[] {}, [] {}, [](BaseManager&) {}, [](auto&&...) {}, [] {}});
         pWorldView = pWorld.get();
         ui.SetWorldView(std::move(pWorld));
 

@@ -49,6 +49,16 @@ public:
         WindowLayout_t mapLayout,
         std::function<void()> onFinished)>;
 
+    // What the world view asks its host to do.
+    struct Callbacks_t
+    {
+        std::function<void()> onProcessTurn;
+        std::function<void()> onRequestExit;
+        OpenBaseCallback_t onOpenBase;
+        OpenCombatCallback_t onOpenCombat;
+        std::function<void()> onOpenCommlinks;
+    };
+
     WorldView(
         GameState& rGameState,
         const HotkeyConfig& rHotkeys,
@@ -56,11 +66,7 @@ public:
         MapRenderer& rMapRenderer,
         SpriteLibrary& rSprites,
         WindowLayout_t layout,
-        std::function<void()> onProcessTurn,
-        std::function<void()> onRequestExit,
-        OpenBaseCallback_t onOpenBase,
-        OpenCombatCallback_t onOpenCombat,
-        std::function<void()> onOpenCommlinks
+        Callbacks_t callbacks
     );
 
     void Render(Graphics& rGraphics) override;
@@ -152,7 +158,7 @@ private:
     [[noreturn]] static void ThrowAmbiguousChord_(const KeyEvent_t& rEvent, bool bBombard,
                                                   const std::vector<std::string>& rProjects);
     void ToggleBombardTargeting_();
-    bool ApplyOrderInput_(Unit* pControllable);
+    bool ApplyOrderInput_(Unit& rControllable);
     void OpenSupplyCrawlMenu_(Unit& rUnit);
     void FoundBaseWith_(Unit& rUnit);
     void Detonate_(Unit& rUnit);
@@ -205,11 +211,7 @@ private:
     const FixedPlacement_t m_consolePlacement;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
-    std::function<void()> m_onProcessTurn;
-    std::function<void()> m_onRequestExit;
-    OpenBaseCallback_t m_onOpenBase;
-    OpenCombatCallback_t m_onOpenCombat;
-    std::function<void()> m_onOpenCommlinks;
+    Callbacks_t m_callbacks;
 
     Unit* m_pSelectedUnit = nullptr;
     const Tile* m_pSelectedTile = nullptr;
