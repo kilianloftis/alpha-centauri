@@ -75,6 +75,7 @@
 #include "game/world-events/WorldEventConfig.h"
 
 #include <deque>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -501,12 +502,13 @@ struct FactionFixture : BaseFixture
 // between lifeformsMin and lifeformsMax of them.
 inline void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int lifeformsMax)
 {
+    std::ifstream fixture(FixturePath("native_units.json"));
+    nlohmann::json config = nlohmann::json::parse(fixture);
+    config["fungal_bloom_native_lifeforms_min"] = lifeformsMin;
+    config["fungal_bloom_native_lifeforms_max"] = lifeformsMax;
+    const TempConfigFile file("native_units.json", config.dump());
     rData.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
-    rData.nativeUnitRegistry->Load(FixturePath("native_units.json"));
-    ac::NativeLifeConfig_t life;
-    life.fungalBloomNativeLifeformsMin = lifeformsMin;
-    life.fungalBloomNativeLifeformsMax = lifeformsMax;
-    rData.nativeUnitRegistry->SetFungalBloomLifeforms(life);
+    rData.nativeUnitRegistry->Load(file.Path());
 }
 
 // Advances rState's mission year one year at a time, as turns do, until it is year.

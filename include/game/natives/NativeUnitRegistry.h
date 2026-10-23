@@ -15,7 +15,6 @@ public:
     void Load(const std::string& rConfigPath);
 
     const NativeLifeConfig_t& FungalBloomLifeforms() const { return m_lifeforms; }
-    void SetFungalBloomLifeforms(const NativeLifeConfig_t& rLifeforms) { m_lifeforms = rLifeforms; }
 
 private:
     NativeLifeConfig_t m_lifeforms;
