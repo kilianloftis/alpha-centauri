@@ -289,10 +289,10 @@ TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit]
 
     Unit* pTarget = FindAttackableHostileOnTile(attacker, defender.GetTile());
     REQUIRE(pTarget == &defender);
-    CHECK(CanDeclareAttack(attacker, defender.GetTile()));
+    CHECK(FindAttackableHostileOnTile(attacker, defender.GetTile()) != nullptr);
 
     attacker.SetMoveFragmentsRemaining(0);
-    CHECK_FALSE(CanDeclareAttack(attacker, defender.GetTile()));
+    CHECK(FindAttackableHostileOnTile(attacker, defender.GetTile()) == nullptr);
     CHECK(FindVisibleHostileOnTile(attacker, defender.GetTile()) == &defender);
 }
 
@@ -316,7 +316,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         REQUIRE(pTarget == &transport);
         CHECK(pTarget != &cargo);
         // Shore land without enterability onto open water cannot declare the attack.
-        CHECK_FALSE(CanDeclareAttack(attacker, *rMap.GetTile(8, 10)));
+        CHECK(FindAttackableHostileOnTile(attacker, *rMap.GetTile(8, 10)) == nullptr);
     }
 
     SECTION("base: embarked cargo eligible; carrier preferred")
@@ -357,11 +357,11 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
 
     SECTION("land cannot attack air or orbital without the flag")
     {
-        CHECK_FALSE(CanDeclareAttack(land, airDefender.GetTile()));
+        CHECK(FindAttackableHostileOnTile(land, airDefender.GetTile()) == nullptr);
         Unit& landNearMissile =
             game.MakeUnit(*game.pPlayer, 8, 10, {"test_chassis", "test_weapon"});
         rMap.GetTile(8, 10)->SetElevation(100);
-        CHECK_FALSE(CanDeclareAttack(landNearMissile, missileDefender.GetTile()));
+        CHECK(FindAttackableHostileOnTile(landNearMissile, missileDefender.GetTile()) == nullptr);
     }
 
     SECTION("Air Superiority unlocks air and orbital targets")
@@ -370,8 +370,8 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
         Unit& withFlag = game.MakeUnit(*game.pPlayer, 8, 10,
                                        {"test_chassis", "test_weapon", "air_superiority"});
         rMap.GetTile(8, 10)->SetElevation(100);
-        CHECK(CanDeclareAttack(withFlag, airDefender.GetTile()));
-        CHECK(CanDeclareAttack(withFlag, missileDefender.GetTile()));
+        CHECK(FindAttackableHostileOnTile(withFlag, airDefender.GetTile()) != nullptr);
+        CHECK(FindAttackableHostileOnTile(withFlag, missileDefender.GetTile()) != nullptr);
     }
 
     SECTION("air-to-air and missile-to-air still need the flag")
@@ -382,13 +382,13 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
             game.MakeUnit(*game.pPlayer, 8, 10, {"test_orbital_chassis", "test_weapon"});
         rMap.GetTile(7, 9)->SetElevation(100);
         rMap.GetTile(8, 10)->SetElevation(100);
-        CHECK_FALSE(CanDeclareAttack(airAttacker, airDefender.GetTile()));
-        CHECK_FALSE(CanDeclareAttack(missileAttacker, airDefender.GetTile()));
+        CHECK(FindAttackableHostileOnTile(airAttacker, airDefender.GetTile()) == nullptr);
+        CHECK(FindAttackableHostileOnTile(missileAttacker, airDefender.GetTile()) == nullptr);
 
         Unit& flagged = game.MakeUnit(
             *game.pPlayer, 9, 11, {"test_flight_chassis", "test_weapon", "air_superiority"});
         rMap.GetTile(9, 11)->SetElevation(100);
-        CHECK(CanDeclareAttack(flagged, airDefender.GetTile()));
+        CHECK(FindAttackableHostileOnTile(flagged, airDefender.GetTile()) != nullptr);
     }
 
     SECTION("harbored base tile exempts the gate")
@@ -410,8 +410,8 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
         REQUIRE(FindAttackableHostileOnTile(
                     nearMissile, groundedMissile.GetTile())
                 == &groundedMissile);
-        CHECK(CanDeclareAttack(nearAir, groundedAir.GetTile()));
-        CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile()));
+        CHECK(FindAttackableHostileOnTile(nearAir, groundedAir.GetTile()) != nullptr);
+        CHECK(FindAttackableHostileOnTile(nearMissile, groundedMissile.GetTile()) != nullptr);
     }
 
     SECTION("co-located unembarked air over a carrier is not resting")
@@ -430,6 +430,6 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
                 == &airOverDeck);
         CHECK(FindAttackableHostileOnTile(airAttacker, airOverDeck.GetTile())
               == nullptr);
-        CHECK_FALSE(CanDeclareAttack(airAttacker, airOverDeck.GetTile()));
+        CHECK(FindAttackableHostileOnTile(airAttacker, airOverDeck.GetTile()) == nullptr);
     }
 }

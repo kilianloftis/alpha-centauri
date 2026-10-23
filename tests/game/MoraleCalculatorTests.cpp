@@ -443,12 +443,11 @@ TEST_CASE("MoraleCalculator value methods read the configured levels", "[morale]
 
     CHECK(morale.StartingIntrinsicXp() == 1);
 
-    CHECK(morale.LevelEffects(4).size() == 2);
+    CHECK(fixture.dataContext.moraleConfig->FindLevel(4)->effects.size() == 2);
     CHECK(morale.CombatAddPercent(2) == Catch::Approx(0.0));
     CHECK(morale.CombatAddPercent(0) == Catch::Approx(-25.0));
     CHECK(morale.CombatAddPercent(4) == Catch::Approx(25.0));
     CHECK(morale.CombatAddPercent(7) == Catch::Approx(62.5));
-    CHECK_THROWS_WITH(morale.LevelEffects(99), Catch::Matchers::ContainsSubstring("99"));
 
     // Green always promotes; Elite has no level above it.
     CHECK(morale.PromotionChance(1, 100, 100) == Catch::Approx(1.0));

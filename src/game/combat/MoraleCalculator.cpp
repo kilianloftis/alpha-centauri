@@ -49,16 +49,6 @@ int MoraleCalculator::MoraleLevel(int xp, int liveBonus) const
     return std::clamp(xp + liveBonus, m_rConfig.MinLevel(), m_rConfig.MaxLevel());
 }
 
-std::span<const EffectConfig_t> MoraleCalculator::LevelEffects(int level) const
-{
-    const MoraleLevel_t* pLevel = m_rConfig.FindLevel(level);
-    if (!pLevel)
-    {
-        throw std::runtime_error("No morale level found for level " + std::to_string(level));
-    }
-    return pLevel->effects;
-}
-
 double MoraleCalculator::CombatAddPercent(int combatLevel) const
 {
     const double delta = static_cast<double>(combatLevel - m_rConfig.baselineIndex);

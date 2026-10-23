@@ -25,11 +25,6 @@ Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile);
 // attack_unit grid. The hostile, or nullptr.
 Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile);
 
-inline bool CanDeclareAttack(const Unit& rAttacker, const Tile& rTargetTile)
-{
-    return FindAttackableHostileOnTile(rAttacker, rTargetTile) != nullptr;
-}
-
 // Bombard flag and any movement fragments left. The hotkey uses this before a tile is chosen.
 bool CanBombard(const Unit& rAttacker);
 

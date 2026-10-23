@@ -142,7 +142,7 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     REQUIRE(harness.orders.TryAttack(jet, fixture.At(9, 9)).has_value());
     CHECK(jet.GetMoveFragmentsRemaining() == 0);
     CHECK(jet.GetCurrentFuel() == 4);
-    CHECK_FALSE(CanDeclareAttack(jet, fixture.At(9, 9)));
+    CHECK(FindAttackableHostileOnTile(jet, fixture.At(9, 9)) == nullptr);
 }
 
 TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage", "[fuel]")

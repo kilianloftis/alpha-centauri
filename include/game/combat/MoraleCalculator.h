@@ -31,9 +31,6 @@ public:
     // defense level in CombatStrength, not here.
     int MoraleLevel(int xp, int liveBonus) const;
 
-    // Includes promotion_chance modifiers; combat resolve ignores stats it does not query.
-    std::span<const EffectConfig_t> LevelEffects(int level) const;
-
     // (combatLevel - baselineIndex) * percentPerLevel. Unbounded: attack may sit
     // outside the named rows.
     double CombatAddPercent(int combatLevel) const;
