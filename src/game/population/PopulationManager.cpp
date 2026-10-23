@@ -338,9 +338,7 @@ void PopulationManager::EnsureCompositionCurrent()
 
 void PopulationManager::ApplyCompositionResult(const PopCompositionResult_t& rResult)
 {
-    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
     const std::string& rDefaultTypeId = GetDefaultPopType_();
-
     for (Pop& rPop : m_container.Pops())
     {
         if (rPop.ParticipatesInComposition())
@@ -348,49 +346,42 @@ void PopulationManager::ApplyCompositionResult(const PopCompositionResult_t& rRe
             ConvertResolved_(rPop, rDefaultTypeId);
         }
     }
-
     for (const DroneSeat_t& rSeat : rResult.droneSeats)
     {
-        int remaining = rSeat.count;
-        for (Pop& rPop : m_container.Pops())
-        {
-            if (remaining <= 0)
-            {
-                break;
-            }
-            if (rPop.ParticipatesInComposition() && rPop.IsPlainWorker())
-            {
-                ConvertResolved_(rPop, rSeat.typeId);
-                --remaining;
-            }
-        }
-        if (remaining > 0)
+        const int unseated = SeatPlainWorkers_(rSeat.typeId, rSeat.count);
+        if (unseated > 0)
         {
             throw std::runtime_error(
-                "ApplyCompositionResult: could not seat " + std::to_string(remaining)
+                "ApplyCompositionResult: could not seat " + std::to_string(unseated)
                 + " pop(s) of type '" + rSeat.typeId + "' — pool smaller than phase-1 result");
         }
     }
+    const int unseatedTalents =
+        SeatPlainWorkers_(GetCompositionConfig().talentTypeId, rResult.expectedTalents);
+    if (unseatedTalents > 0)
+    {
+        throw std::runtime_error(
+            "ApplyCompositionResult: could not seat " + std::to_string(unseatedTalents)
+            + " talent(s) — pool smaller than phase-1 result");
+    }
+}
 
-    int talentsRemaining = rResult.expectedTalents;
+int PopulationManager::SeatPlainWorkers_(const std::string& rTypeId, int count)
+{
+    int remaining = count;
     for (Pop& rPop : m_container.Pops())
     {
-        if (talentsRemaining <= 0)
+        if (remaining <= 0)
         {
             break;
         }
         if (rPop.ParticipatesInComposition() && rPop.IsPlainWorker())
         {
-            ConvertResolved_(rPop, rConfig.talentTypeId);
-            --talentsRemaining;
+            ConvertResolved_(rPop, rTypeId);
+            --remaining;
         }
     }
-    if (talentsRemaining > 0)
-    {
-        throw std::runtime_error(
-            "ApplyCompositionResult: could not seat " + std::to_string(talentsRemaining)
-            + " talent(s) — pool smaller than phase-1 result");
-    }
+    return std::max(0, remaining);
 }
 
 void PopulationManager::MaybeRecalculateComposition_()

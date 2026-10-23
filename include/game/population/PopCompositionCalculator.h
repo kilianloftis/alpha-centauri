@@ -61,6 +61,7 @@ private:
     };
 
     std::vector<DroneSeat_t> SeatPressure_(int pressure, int bodies, int& rDropped) const;
+    int PsychToEaseWorstDrone_(int pressure, int pool) const;
 
     const PopCompositionConfig_t& m_rConfig;
     const PopTypeRegistry& m_rPopTypes;

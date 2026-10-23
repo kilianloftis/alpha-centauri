@@ -2,6 +2,7 @@
 
 #include "game/population/Pop.h"
 #include "game/population/PopTypeConfigParser.h"
+#include "lib/CycleCheck.h"
 #include "lib/Registry.h"
 #include "lib/config/EnumNames.h"
 #include <algorithm>
@@ -79,6 +80,14 @@ private:
     // misclassify, so it is rejected.
     void ValidatePromotionGraph_() const
     {
+        ValidatePromotionTargets_();
+        const std::unordered_map<std::string, std::string> promotedFrom = RequireNoBranches_();
+        RequireNoPromotionCycle_();
+        RequireOnDefaultChain_(promotedFrom);
+    }
+
+    void ValidatePromotionTargets_() const
+    {
         for (const PopTypeConfig_t& rConfig : this->m_configs)
         {
             if (rConfig.promotesToId.empty())
@@ -95,9 +104,12 @@ private:
                 throw std::runtime_error("Pop type '" + rConfig.id + "': promotes_to itself");
             }
         }
+    }
 
-        // In a chain every type is the target of at most one edge. Two types promoting to the
-        // same target is the branch case.
+    // In a chain every type is the target of at most one edge. Two types promoting to the
+    // same target is the branch case. Returns each target's one source.
+    std::unordered_map<std::string, std::string> RequireNoBranches_() const
+    {
         std::unordered_map<std::string, std::string> promotedFrom;
         for (const PopTypeConfig_t& rConfig : this->m_configs)
         {
@@ -113,9 +125,13 @@ private:
                     + rConfig.promotesToId + "'; the promotion graph must be a single chain");
             }
         }
+        return promotedFrom;
+    }
 
-        // Walking forward from any node must reach a terminal without repeating: a cycle would
-        // hang the psych ladder rather than merely misclassifying.
+    // Walking forward from any node must reach a terminal without repeating: a cycle would
+    // hang the psych ladder rather than merely misclassifying.
+    void RequireNoPromotionCycle_() const
+    {
         for (const PopTypeConfig_t& rConfig : this->m_configs)
         {
             std::vector<std::string> path{rConfig.id};
@@ -136,13 +152,18 @@ private:
                 pAt = &this->Get(rNextId);
             }
         }
+    }
 
-        // Every type in the graph must sit on the default's chain. A second disconnected chain
-        // is not a branch by the check above, but is still unclassifiable.
+    // Every type in the graph must sit on the default's chain. A second disconnected chain
+    // is not a branch by the check above, but is still unclassifiable.
+    void RequireOnDefaultChain_(
+        const std::unordered_map<std::string, std::string>& rPromotedFrom) const
+    {
         const PopTypeConfig_t& rDefault = GetDefault();
         for (const PopTypeConfig_t& rConfig : this->m_configs)
         {
-            const bool bInGraph = !rConfig.promotesToId.empty() || promotedFrom.count(rConfig.id) > 0;
+            const bool bInGraph =
+                !rConfig.promotesToId.empty() || rPromotedFrom.count(rConfig.id) > 0;
             if (!bInGraph || rConfig.bIsDefault)
             {
                 continue;
@@ -201,58 +222,63 @@ private:
     // Graphs without promotion edges need no drone, but reject a stray weight.
     void ValidateDroneWeights_() const
     {
-        bool bAnyPromoteEdge = false;
-        for (const PopTypeConfig_t& rConfig : this->m_configs)
-        {
-            if (!rConfig.promotesToId.empty())
-            {
-                bAnyPromoteEdge = true;
-                break;
-            }
-        }
-
-        std::unordered_map<int, std::string> weightOwners;
-        bool bAnyDrone = false;
-        for (const PopTypeConfig_t& rConfig : this->m_configs)
-        {
-            if (rConfig.derivedClass == PopClass_t::Drone)
-            {
-                bAnyDrone = true;
-                if (rConfig.droneWeight <= 0)
-                {
-                    throw std::runtime_error(
-                        "Pop type '" + rConfig.id
-                        + "': drone-class types must declare a positive drone_weight");
-                }
-                const auto [it, bInserted] =
-                    weightOwners.emplace(rConfig.droneWeight, rConfig.id);
-                if (!bInserted)
-                {
-                    throw std::runtime_error(
-                        "Pop types '" + it->second + "' and '" + rConfig.id
-                        + "' share drone_weight " + std::to_string(rConfig.droneWeight)
-                        + "; each drone-class weight must be unique");
-                }
-            }
-            else if (rConfig.droneWeight != 0)
-            {
-                throw std::runtime_error(
-                    "Pop type '" + rConfig.id
-                    + "': drone_weight is only valid on drone-class types (got "
-                    + std::to_string(rConfig.droneWeight) + ")");
-            }
-        }
+        const bool bAnyDrone = ValidateDroneWeightClasses_();
+        const bool bAnyPromoteEdge =
+            std::ranges::any_of(this->m_configs, [](const PopTypeConfig_t& rConfig) {
+                return !rConfig.promotesToId.empty();
+            });
         if (bAnyPromoteEdge && !bAnyDrone)
         {
             throw std::runtime_error(
                 "pop_types: the promotion graph has no drone-class type, so drone pressure "
                 "could never be seated");
         }
-        if (!bAnyDrone)
+        if (bAnyDrone)
         {
-            return;
+            RequireDroneWeightsFall_();
         }
+    }
 
+    // Each drone has a unique positive weight and nothing else has one. Returns whether any
+    // drone exists.
+    bool ValidateDroneWeightClasses_() const
+    {
+        std::unordered_map<int, std::string> weightOwners;
+        bool bAnyDrone = false;
+        for (const PopTypeConfig_t& rConfig : this->m_configs)
+        {
+            if (rConfig.derivedClass != PopClass_t::Drone)
+            {
+                if (rConfig.droneWeight != 0)
+                {
+                    throw std::runtime_error(
+                        "Pop type '" + rConfig.id
+                        + "': drone_weight is only valid on drone-class types (got "
+                        + std::to_string(rConfig.droneWeight) + ")");
+                }
+                continue;
+            }
+            bAnyDrone = true;
+            if (rConfig.droneWeight <= 0)
+            {
+                throw std::runtime_error(
+                    "Pop type '" + rConfig.id
+                    + "': drone-class types must declare a positive drone_weight");
+            }
+            const auto [it, bInserted] = weightOwners.emplace(rConfig.droneWeight, rConfig.id);
+            if (!bInserted)
+            {
+                throw std::runtime_error(
+                    "Pop types '" + it->second + "' and '" + rConfig.id
+                    + "' share drone_weight " + std::to_string(rConfig.droneWeight)
+                    + "; each drone-class weight must be unique");
+            }
+        }
+        return bAnyDrone;
+    }
+
+    void RequireDroneWeightsFall_() const
+    {
         for (const PopTypeConfig_t& rConfig : this->m_configs)
         {
             if (rConfig.derivedClass != PopClass_t::Drone || rConfig.promotesToId.empty())
@@ -276,67 +302,12 @@ private:
     // A cycle would be walked every turn, so it is reported at load.
     void ValidateNoObsolescenceCycles_() const
     {
-        enum class Mark_t
-        {
-            Unvisited,
-            InProgress,
-            Done
-        };
-        std::unordered_map<std::string, Mark_t> marks;
-        for (const PopTypeConfig_t& rConfig : this->m_configs)
-        {
-            marks[rConfig.id] = Mark_t::Unvisited;
-        }
-
-        std::vector<std::string> path;
-        const auto visit = [&](const std::string& rStartId) {
-            std::vector<std::pair<std::string, size_t>> stack{{rStartId, 0}};
-            while (!stack.empty())
-            {
-                auto& [rId, nextEdge] = stack.back();
-                const PopTypeConfig_t& rConfig = this->Get(rId);
-
-                if (nextEdge == 0)
-                {
-                    marks[rId] = Mark_t::InProgress;
-                    path.push_back(rId);
-                }
-                if (nextEdge >= rConfig.obsoletes.size())
-                {
-                    marks[rId] = Mark_t::Done;
-                    path.pop_back();
-                    stack.pop_back();
-                    continue;
-                }
-
-                const std::string obsoletedId = rConfig.obsoletes[nextEdge];
-                ++nextEdge;
-
-                if (marks[obsoletedId] == Mark_t::InProgress)
-                {
-                    std::string cycle;
-                    const auto start = std::find(path.begin(), path.end(), obsoletedId);
-                    for (auto it = start; it != path.end(); ++it)
-                    {
-                        cycle += *it + " -> ";
-                    }
-                    throw std::runtime_error("Pop type obsolescence cycle: " + cycle
-                                             + obsoletedId);
-                }
-                if (marks[obsoletedId] == Mark_t::Unvisited)
-                {
-                    stack.push_back({obsoletedId, 0});
-                }
-            }
-        };
-
-        for (const PopTypeConfig_t& rConfig : this->m_configs)
-        {
-            if (marks[rConfig.id] == Mark_t::Unvisited)
-            {
-                visit(rConfig.id);
-            }
-        }
+        RequireAcyclic(
+            this->m_configs,
+            [this](const std::string& rId) -> const std::vector<std::string>& {
+                return this->Get(rId).obsoletes;
+            },
+            "Pop type obsolescence cycle");
     }
 };
 

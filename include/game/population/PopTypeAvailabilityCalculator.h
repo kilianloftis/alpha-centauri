@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -28,9 +29,19 @@ public:
                                               const std::vector<std::string>& rDiscoveredTechs) const;
 
 private:
+    // One breadth-first step: the ids that obsolete the frontier, and the earliest available.
+    struct SuccessorLevel_t
+    {
+        std::vector<std::string> ids;
+        std::optional<std::string> bestAvailableId;
+    };
+
     // The one definition of the obsolescence rule, over a discovered set built once.
     std::string ResolveSuccessorId_(const std::string& rTypeId,
                                     const std::unordered_set<std::string>& rDiscovered) const;
+    SuccessorLevel_t NextLevel_(const std::vector<std::string>& rFrontier,
+                                const std::unordered_set<std::string>& rDiscovered,
+                                std::unordered_set<std::string>& rVisited) const;
 
     const PopTypeRegistry& m_rRegistry;
 };

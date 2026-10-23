@@ -16,24 +16,33 @@ std::vector<PopTypeConfig_t> PopTypeConfigParser::ParseConfig(const std::string&
         [this](const nlohmann::json& rJson) { return ParsePopTypeConfig(rJson); });
 }
 
+namespace
+{
+
+char ParseDisplayGlyph_(const nlohmann::json& rJson, const std::string& rId)
+{
+    if (!rJson.contains("display_glyph"))
+    {
+        throw std::runtime_error("Pop type '" + rId + "': missing required field 'display_glyph'");
+    }
+    const std::string glyph = rJson.at("display_glyph").get<std::string>();
+    if (glyph.size() != 1)
+    {
+        throw std::runtime_error("Pop type '" + rId
+                                 + "': display_glyph must be exactly one character, got '" + glyph
+                                 + "'");
+    }
+    return glyph[0];
+}
+
+} // namespace
+
 PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& popJson)
 {
     PopTypeConfig_t config;
     config.id = ConfigFields::ParseId(popJson);
     config.name = ConfigFields::ParseName(popJson, config.id, "name");
-    if (!popJson.contains("display_glyph"))
-    {
-        throw std::runtime_error("Pop type '" + config.id
-                                 + "': missing required field 'display_glyph'");
-    }
-    const std::string glyph = popJson.at("display_glyph").get<std::string>();
-    if (glyph.size() != 1)
-    {
-        throw std::runtime_error("Pop type '" + config.id
-                                 + "': display_glyph must be exactly one character, got '" + glyph
-                                 + "'");
-    }
-    config.displayGlyph = glyph[0];
+    config.displayGlyph = ParseDisplayGlyph_(popJson, config.id);
     config.bIsDefault         = popJson.value("is_default",          false);
     config.bCanWorkTile       = popJson.value("can_work_tile",       false);
     config.bPlayerAssignable  = popJson.value("player_assignable",   false);

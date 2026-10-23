@@ -96,6 +96,20 @@ std::vector<DroneSeat_t> PopCompositionCalculator::SeatPressure_(int pressure, i
     return seats;
 }
 
+// The psych_to_promote of the heaviest seat this pressure produces; 0 when nothing is seated.
+int PopCompositionCalculator::PsychToEaseWorstDrone_(int pressure, int pool) const
+{
+    int ignoredDropped = 0;
+    const std::vector<DroneSeat_t> seats = SeatPressure_(pressure, pool, ignoredDropped);
+    if (seats.empty())
+    {
+        return 0;
+    }
+    const std::string& rWorstId = seats.back().typeId;
+    const auto tier = std::ranges::find(m_droneTiers, rWorstId, &DroneTier_t::typeId);
+    return tier->psychToPromote;
+}
+
 PopCompositionResult_t
 PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs) const
 {
@@ -109,18 +123,7 @@ PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs) const
     // psych_to_promote.
     while (pressure > 0)
     {
-        int ignoredDropped = 0;
-        const std::vector<DroneSeat_t> seats = SeatPressure_(pressure, pool, ignoredDropped);
-        if (seats.empty())
-        {
-            break;
-        }
-        const std::string& rWorstId = seats.back().typeId;
-        const auto tier = std::find_if(m_droneTiers.begin(), m_droneTiers.end(),
-                                       [&](const DroneTier_t& rTier) {
-                                           return rTier.typeId == rWorstId;
-                                       });
-        const int cost = tier->psychToPromote;
+        const int cost = PsychToEaseWorstDrone_(pressure, pool);
         if (cost <= 0 || psych < cost)
         {
             break;

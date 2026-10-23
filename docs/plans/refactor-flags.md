@@ -254,11 +254,6 @@ kind, registered the way the effect types are.
 - **Why not local:** the fix is a per-kind dispatch table like the effect-type one, which
   changes how each kind's parser and validator are registered.
 
-### `PopCompositionConfigParser::ParseConfig`
-- **Where:** `src/game/population/PopCompositionConfigParser.cpp`, 160 lines
-- **Problem:** parses every section of pop_composition.json inline.
-- **Why not local:** over 100 lines; each section's parser would take the config being filled.
-
 ### `ProductionConfigParser::ParseConfig`
 - **Where:** `src/game/production/ProductionConfigParser.cpp`, 158 lines
 - **Problem:** parses every block of production.json inline.

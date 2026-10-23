@@ -30,60 +30,54 @@ std::string PopTypeAvailabilityCalculator::ResolveSuccessorId_(
     const std::unordered_set<std::string>& rDiscovered) const
 {
     // Breadth-first over "who obsoletes this", so ids are reached in distance order and the
-    // deepest available one wins. Within a level the earliest in registry order wins.
+    // deepest available one wins.
     std::string resolvedId = rTypeId;
     std::unordered_set<std::string> visited{rTypeId};
     std::vector<std::string> frontier{rTypeId};
-
     while (!frontier.empty())
     {
-        std::vector<std::string> next;
-        bool bLevelHasAvailable = false;
-        std::string levelBestId;
-        size_t levelBestIndex = 0;
-
-        for (const std::string& rCurrentId : frontier)
+        SuccessorLevel_t level = NextLevel_(frontier, rDiscovered, visited);
+        if (level.bestAvailableId)
         {
-            size_t configIndex = 0;
-            for (const PopTypeConfig_t& rConfig : m_rRegistry.GetAll())
-            {
-                const size_t index = configIndex++;
-                if (std::find(rConfig.obsoletes.begin(), rConfig.obsoletes.end(), rCurrentId)
-                    == rConfig.obsoletes.end())
-                {
-                    continue;
-                }
-                // Visiting each id at most once bounds the walk whatever the graph shape;
-                // PopTypeRegistry rejects actual cycles at load.
-                if (!visited.insert(rConfig.id).second)
-                {
-                    continue;
-                }
-                next.push_back(rConfig.id);
+            resolvedId = *level.bestAvailableId;
+        }
+        frontier = std::move(level.ids);
+    }
+    return resolvedId;
+}
 
-                // Intermediate steps are walked whether or not their own tech is discovered;
-                // only the answer has to be something the player actually has.
-                if (!HasTech_(rConfig, rDiscovered))
-                {
-                    continue;
-                }
-                if (!bLevelHasAvailable || index < levelBestIndex)
-                {
-                    bLevelHasAvailable = true;
-                    levelBestId = rConfig.id;
-                    levelBestIndex = index;
-                }
+// Within a level the earliest in registry order wins.
+PopTypeAvailabilityCalculator::SuccessorLevel_t PopTypeAvailabilityCalculator::NextLevel_(
+    const std::vector<std::string>& rFrontier,
+    const std::unordered_set<std::string>& rDiscovered,
+    std::unordered_set<std::string>& rVisited) const
+{
+    SuccessorLevel_t level;
+    size_t bestIndex = 0;
+    for (const std::string& rCurrentId : rFrontier)
+    {
+        size_t configIndex = 0;
+        for (const PopTypeConfig_t& rConfig : m_rRegistry.GetAll())
+        {
+            const size_t index = configIndex++;
+            // Visiting each id at most once bounds the walk whatever the graph shape;
+            // PopTypeRegistry rejects actual cycles at load.
+            if (!std::ranges::contains(rConfig.obsoletes, rCurrentId)
+                || !rVisited.insert(rConfig.id).second)
+            {
+                continue;
+            }
+            level.ids.push_back(rConfig.id);
+            // Intermediate steps are walked whether or not their own tech is discovered;
+            // only the answer has to be something the player actually has.
+            if (HasTech_(rConfig, rDiscovered) && (!level.bestAvailableId || index < bestIndex))
+            {
+                level.bestAvailableId = rConfig.id;
+                bestIndex = index;
             }
         }
-
-        if (bLevelHasAvailable)
-        {
-            resolvedId = levelBestId;
-        }
-        frontier = std::move(next);
     }
-
-    return resolvedId;
+    return level;
 }
 
 std::vector<const PopTypeConfig_t*> PopTypeAvailabilityCalculator::GetAvailable(
