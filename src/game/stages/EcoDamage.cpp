@@ -47,7 +47,7 @@ StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     return StageResult_t::Continue;
 }
 
-// Rolls the base's fungal pop chance and, on a hit, pops a tile next to it.
+// Rolls the base's fungal pop chance and, on a hit, pops one of its workable tiles.
 void EcoDamage::MaybePopFungus_(GameState& rGameState, BaseManager& rBase, std::mt19937& rRng)
 {
     const int chance = FungalPopChance(rBase);

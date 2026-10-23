@@ -105,7 +105,7 @@ private:
 
     // Recollect the pool, stamp from the pre-rebuild scratch revisions, advance version.
     void Rebuild_() const;
-    // Every source's effects, in the order resolution has always seen them.
+    // Every source's effects, in a fixed order.
     std::vector<ActiveEffect_t> CollectSources_() const;
 
     const Faction& m_rFaction;

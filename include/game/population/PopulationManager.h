@@ -223,7 +223,8 @@ private:
     // ConvertTo without the composition recalculation hook, for callers that are already
     // inside a recalculation.
     void ConvertResolved_(Pop& rPop, const std::string& typeId);
-    // Converts up to count plain participating workers to rTypeId. Returns how many were left.
+    // Converts up to count plain participating workers to rTypeId. Returns how many could not
+    // be seated.
     int SeatPlainWorkers_(const std::string& rTypeId, int count);
 };
 

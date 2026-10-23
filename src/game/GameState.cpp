@@ -55,7 +55,7 @@ void ApplyBuildingCompleteEffects_(GameState& rGameState, BaseManager& rBase,
     TriggeredEffectContext_t context(rGameState, rBase);
     context.populationFloor = CompletionPopulationFloor();
     ApplyTriggeredEffects(rBuilding.onCompleteEffects, context);
-    // A copy, since a hold link can move units off the tile.
+    // A copy: a hold link can consume a unit and so change the tile's list.
     const std::vector<Unit*> holders =
         rGameState.GetWorldMap().GetUnitPositions().GetUnitsOnTile(rBase.GetTile());
     for (Unit* pUnit : holders)

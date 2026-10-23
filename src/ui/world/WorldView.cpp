@@ -753,7 +753,7 @@ void WorldView::ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable
     }
 }
 
-// True before the player's explored map is sized, so early clicks are not swallowed.
+// Without a sized explored map, every tile counts as explored.
 bool WorldView::IsExploredByPlayer_(int worldX, int worldY) const
 {
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
