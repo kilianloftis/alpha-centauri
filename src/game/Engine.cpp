@@ -229,87 +229,88 @@ void LogPopChange_(const GameEvent& rEvent)
 #ifdef AC_PLACE_TEST_IMPROVEMENTS
 // Temporary test setup: one of each buildable improvement around every starting base, to eyeball
 // sprites, coexistence and auras.
+
+// The nearest tile to rBaseTile that is not a base and passes rAccepts. Throws naming rWhat when
+// none does.
+Tile& FindNearestHost_(const Tile& rBaseTile, WorldMap& rMap,
+                       const std::function<bool(const Tile&)>& rAccepts, const std::string& rWhat)
+{
+    const int searchRadius = std::max(rMap.GetWidth(), rMap.GetHeight());
+    Tile* pHost = nullptr;
+    int bestDistance = searchRadius + 1;
+    ForEachNeighborInChebyshevRadius(
+        rBaseTile, rMap, searchRadius,
+        [&](Tile* pTile, int distance) {
+            if (pTile && distance < bestDistance && !pTile->HasImprovement(ImprovementIds::k_Base)
+                && rAccepts(*pTile))
+            {
+                pHost = pTile;
+                bestDistance = distance;
+            }
+        });
+    if (!pHost)
+    {
+        throw std::runtime_error("Engine setup: no tile near base for " + rWhat);
+    }
+    return *pHost;
+}
+
+void PlaceOneOfEachImprovement_(const Tile& rBaseTile, WorldMap& rMap,
+                                TileEffectsContext& rTileEffects,
+                                const ImprovementRegistry& rImprovements, FactionId_t factionId)
+{
+    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    {
+        if (rConfig.placement != OccupantPlacement_t::Improvement
+            || rConfig.id == ImprovementIds::k_Base)
+        {
+            continue;
+        }
+        Tile& rHost = FindNearestHost_(
+            rBaseTile, rMap,
+            [&rConfig](const Tile& rTile) { return CanBuildImprovement(rTile, rConfig, {}, {}); },
+            "improvement '" + rConfig.id + "'");
+        rTileEffects.AddOccupantWithEffects(rHost, rConfig.id);
+        std::cout << "Placed " << rConfig.id << " for faction " << factionId << " at ("
+                  << rHost.GetX() << ", " << rHost.GetY() << ")\n";
+    }
+}
+
+// Extra Farms keyed by moisture so arid/moist/wet ground sprites are all visible.
+void PlaceMoistureFarms_(const Tile& rBaseTile, WorldMap& rMap, TileEffectsContext& rTileEffects,
+                         const ImprovementRegistry& rImprovements, FactionId_t factionId)
+{
+    const ImprovementConfig_t& rFarm = rImprovements.Get(std::string(ImprovementIds::k_Farm));
+    for (const Moisture_t moisture : {Moisture_t::Arid, Moisture_t::Moist, Moisture_t::Wet})
+    {
+        Tile& rHost = FindNearestHost_(
+            rBaseTile, rMap,
+            [&rFarm, moisture](const Tile& rTile) {
+                return !rTile.HasImprovement(ImprovementIds::k_Farm)
+                       && rTile.GetMoisture() == moisture
+                       && CanBuildImprovement(rTile, rFarm, {}, {});
+            },
+            ToString(moisture) + " Farm");
+        rTileEffects.AddOccupantWithEffects(rHost, rFarm.id);
+        std::cout << "Placed Farm (" << ToString(moisture) << ") for faction " << factionId
+                  << " at (" << rHost.GetX() << ", " << rHost.GetY() << ")\n";
+    }
+}
+
 void PlaceTestImprovementsAroundBases_(WorldMap& rMap, TileEffectsContext& rTileEffects,
                                        const ImprovementRegistry& rImprovements,
                                        GameState& rGameState)
 {
-    const int searchRadius =
-        std::max(rMap.GetWidth(), rMap.GetHeight());
-
     for (Faction& rFaction : rGameState.Factions())
     {
+        // One base per faction is enough for the temporary showcase.
         for (BaseManager& rBase : rFaction.Bases())
         {
-            const Tile& rBaseTile = rBase.GetTile();
-            for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
-            {
-                if (rConfig.placement != OccupantPlacement_t::Improvement
-                    || rConfig.id == ImprovementIds::k_Base)
-                {
-                    continue;
-                }
-
-                Tile* pHost = nullptr;
-                int bestDistance = searchRadius + 1;
-                ForEachNeighborInChebyshevRadius(
-                    rBaseTile, rMap, searchRadius,
-                    [&](Tile* pTile, int distance) {
-                        if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
-                            || !CanBuildImprovement(*pTile, rConfig, {}, {})
-                            || distance >= bestDistance)
-                        {
-                            return;
-                        }
-                        pHost = pTile;
-                        bestDistance = distance;
-                    });
-
-                if (!pHost)
-                {
-                    throw std::runtime_error(
-                        "Engine setup: no tile near base for improvement '" + rConfig.id + "'");
-                }
-
-                rTileEffects.AddOccupantWithEffects(*pHost, rConfig.id);
-                std::cout << "Placed " << rConfig.id << " for faction " << rFaction.GetFactionId()
-                          << " at (" << pHost->GetX() << ", " << pHost->GetY() << ")\n";
-            }
-
-            // Extra Farms keyed by moisture so arid/moist/wet ground sprites are all visible.
-            const ImprovementConfig_t& rFarm = rImprovements.Get(std::string(ImprovementIds::k_Farm));
-            for (const Moisture_t moisture :
-                 {Moisture_t::Arid, Moisture_t::Moist, Moisture_t::Wet})
-            {
-                Tile* pHost = nullptr;
-                int bestDistance = searchRadius + 1;
-                ForEachNeighborInChebyshevRadius(
-                    rBaseTile, rMap, searchRadius,
-                    [&](Tile* pTile, int distance) {
-                        if (!pTile || pTile->HasImprovement(ImprovementIds::k_Base)
-                            || pTile->HasImprovement(ImprovementIds::k_Farm)
-                            || pTile->GetMoisture() != moisture
-                            || !CanBuildImprovement(*pTile, rFarm, {}, {})
-                            || distance >= bestDistance)
-                        {
-                            return;
-                        }
-                        pHost = pTile;
-                        bestDistance = distance;
-                    });
-
-                if (!pHost)
-                {
-                    throw std::runtime_error(
-                        "Engine setup: no " + ToString(moisture)
-                        + " tile near base for Farm");
-                }
-
-                rTileEffects.AddOccupantWithEffects(*pHost, rFarm.id);
-                std::cout << "Placed Farm (" << ToString(moisture) << ") for faction "
-                          << rFaction.GetFactionId() << " at (" << pHost->GetX() << ", "
-                          << pHost->GetY() << ")\n";
-            }
-            break; // one base per faction is enough for the temporary showcase
+            PlaceOneOfEachImprovement_(rBase.GetTile(), rMap, rTileEffects, rImprovements,
+                                       rFaction.GetFactionId());
+            PlaceMoistureFarms_(rBase.GetTile(), rMap, rTileEffects, rImprovements,
+                                rFaction.GetFactionId());
+            break;
         }
     }
 
