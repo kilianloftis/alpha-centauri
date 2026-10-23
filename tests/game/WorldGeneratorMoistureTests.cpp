@@ -8,6 +8,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cstdint>
+#include <utility>
+
 using namespace ac;
 using namespace ac::moisture_gen;
 
@@ -261,4 +265,56 @@ TEST_CASE("River tiles re-seed rain belts across otherwise arid flats",
         }
     }
     CHECK(nonArid > 10);
+}
+
+namespace
+{
+
+// A fixed pseudo-random map: elevations across ocean, shore, hills and peaks, with rivers.
+void FillPinnedTerrain_(WorldMap& rWorld)
+{
+    const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+    const int lowest = std::max(rRules.minElevationMeters, -3000);
+    const int span = std::min(rRules.maxElevationMeters, 4500) - lowest;
+    uint32_t state = 12345u;
+    for (auto& pTile : rWorld.GetTiles())
+    {
+        state = state * 1664525u + 1013904223u;
+        const int elevation = lowest + static_cast<int>((state >> 8) % span);
+        pTile->SetElevation(elevation);
+        pTile->SetHasRiver(pTile->IsLand() && (state >> 4) % 7 == 0);
+    }
+}
+
+// FNV-1a over every tile's moisture tier, in tile order.
+uint64_t MoistureHash_(const WorldMap& rWorld)
+{
+    uint64_t hash = 1469598103934665603ull;
+    for (const auto& pTile : rWorld.GetTiles())
+    {
+        hash ^= static_cast<uint64_t>(pTile->GetMoisture());
+        hash *= 1099511628211ull;
+    }
+    return hash;
+}
+
+} // namespace
+
+TEST_CASE("Rainfall on a fixed map reproduces its recorded moisture", "[worldgen][moisture]")
+{
+    // The hashes were recorded from the port as it stood; any change to them is a change to the
+    // rainfall rules, to be checked against Thinker's world_rainfall.
+    const std::pair<Rainfall_t, uint64_t> k_Recorded[] = {
+        {Rainfall_t::Arid, 13426911896976594389ull},
+        {Rainfall_t::Average, 10866242199765098256ull},
+        {Rainfall_t::Wet, 1245999086220807590ull},
+    };
+    for (const auto& [rainfall, expected] : k_Recorded)
+    {
+        WorldMap world(40, 24, actest::TestMapRules());
+        FillPinnedTerrain_(world);
+        GenerateRainfall(world, DefaultMoisture_(), rainfall);
+        INFO("rainfall " << static_cast<int>(rainfall) << " hash " << MoistureHash_(world));
+        CHECK(MoistureHash_(world) == expected);
+    }
 }
