@@ -97,6 +97,71 @@ BuildingMapOverlay_t ParseMapOverlay_(const nlohmann::json& rJson, const Buildin
     return overlay;
 }
 
+void RejectUnknownBuildingKeys_(const nlohmann::json& rJson, const BuildingId_t& rId)
+{
+    const std::vector<std::string>& rKnown = KnownBuildingKeys_();
+    for (const auto& [rKey, rUnused] : rJson.items())
+    {
+        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
+        {
+            throw std::runtime_error("Building '" + rId + "': unknown key '" + rKey + "'");
+        }
+    }
+}
+
+ScrapOverride_t ParseBuildingScrap_(const nlohmann::json& rScrap, const BuildingConfig_t& rConfig)
+{
+    if (rConfig.bIsSecretProject)
+    {
+        throw std::runtime_error("Building '" + rConfig.id
+                                 + "': secret projects cannot declare scrap");
+    }
+    return ScrapConfigParser::ParseOverride(rScrap, "Building '" + rConfig.id + "' scrap");
+}
+
+// map_overlay and the channel, priority and layer that only mean something with it.
+void ParseMapOverlayFields_(const nlohmann::json& rJson, BuildingConfig_t& rConfig)
+{
+    if (rJson.contains("map_overlay"))
+    {
+        rConfig.mapOverlay = ParseMapOverlay_(rJson.at("map_overlay"), rConfig.id);
+    }
+    rConfig.mapOverlayChannel =
+        ParseTyped_<std::string>(rJson, "map_overlay_channel", rConfig.id, std::string{},
+                                 &nlohmann::json::is_string, "a string");
+    rConfig.mapOverlayPriority =
+        ParseTyped_<int>(rJson, "map_overlay_priority", rConfig.id, 0,
+                         &nlohmann::json::is_number_integer, "an integer");
+    if (rJson.contains("map_overlay_layer") && !rJson.at("map_overlay_layer").is_null())
+    {
+        if (!rJson.at("map_overlay_layer").is_number_integer())
+        {
+            throw std::runtime_error("Building '" + rConfig.id
+                                     + "': 'map_overlay_layer' must be an integer");
+        }
+        rConfig.mapOverlayLayer = rJson.at("map_overlay_layer").get<int>();
+    }
+    if (rConfig.mapOverlay)
+    {
+        return;
+    }
+    if (!rConfig.mapOverlayChannel.empty())
+    {
+        throw std::runtime_error("Building '" + rConfig.id
+                                 + "': 'map_overlay_channel' requires 'map_overlay'");
+    }
+    if (rJson.contains("map_overlay_priority"))
+    {
+        throw std::runtime_error("Building '" + rConfig.id
+                                 + "': 'map_overlay_priority' requires 'map_overlay'");
+    }
+    if (rConfig.mapOverlayLayer)
+    {
+        throw std::runtime_error("Building '" + rConfig.id
+                                 + "': 'map_overlay_layer' requires 'map_overlay'");
+    }
+}
+
 } // namespace
 
 BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json& buildingJson)
@@ -105,15 +170,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     config.id = ConfigFields::ParseId(buildingJson);
     config.name = ConfigFields::ParseName(buildingJson, config.id, "name");
 
-    for (const auto& [rKey, rUnused] : buildingJson.items())
-    {
-        const std::vector<std::string>& rKnown = KnownBuildingKeys_();
-        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
-        {
-            throw std::runtime_error("Building '" + config.id + "': unknown key '" + rKey + "'");
-        }
-    }
-
+    RejectUnknownBuildingKeys_(buildingJson, config.id);
     // Optional: nothing reads category yet. Tighten to required when something does.
     if (buildingJson.contains("category") && !buildingJson.at("category").is_null())
     {
@@ -127,12 +184,6 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
                                                 &nlohmann::json::is_boolean, "a boolean");
     config.orbital = ParseTyped_<bool>(buildingJson, "orbital", config.id, false,
                                        &nlohmann::json::is_boolean, "a boolean");
-    if (buildingJson.contains("required_techs"))
-    {
-        throw std::runtime_error(
-            "Building '" + config.id + "': 'required_techs' is no longer supported; "
-            "use singular 'required_tech' (omit or \"\" = always available)");
-    }
     config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
     config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
@@ -145,48 +196,9 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
                                            &nlohmann::json::is_string, "a string");
     if (buildingJson.contains("scrap"))
     {
-        if (config.bIsSecretProject)
-        {
-            throw std::runtime_error("Building '" + config.id
-                                     + "': secret projects cannot declare scrap");
-        }
-        config.scrap = ScrapConfigParser::ParseOverride(buildingJson.at("scrap"),
-                                                "Building '" + config.id + "' scrap");
+        config.scrap = ParseBuildingScrap_(buildingJson.at("scrap"), config);
     }
-    if (buildingJson.contains("map_overlay"))
-    {
-        config.mapOverlay = ParseMapOverlay_(buildingJson.at("map_overlay"), config.id);
-    }
-    config.mapOverlayChannel =
-        ParseTyped_<std::string>(buildingJson, "map_overlay_channel", config.id, std::string{},
-                                 &nlohmann::json::is_string, "a string");
-    config.mapOverlayPriority =
-        ParseTyped_<int>(buildingJson, "map_overlay_priority", config.id, 0,
-                         &nlohmann::json::is_number_integer, "an integer");
-    if (buildingJson.contains("map_overlay_layer") && !buildingJson.at("map_overlay_layer").is_null())
-    {
-        if (!buildingJson.at("map_overlay_layer").is_number_integer())
-        {
-            throw std::runtime_error("Building '" + config.id
-                                     + "': 'map_overlay_layer' must be an integer");
-        }
-        config.mapOverlayLayer = buildingJson.at("map_overlay_layer").get<int>();
-    }
-    if (!config.mapOverlayChannel.empty() && !config.mapOverlay)
-    {
-        throw std::runtime_error("Building '" + config.id
-                                 + "': 'map_overlay_channel' requires 'map_overlay'");
-    }
-    if (buildingJson.contains("map_overlay_priority") && !config.mapOverlay)
-    {
-        throw std::runtime_error("Building '" + config.id
-                                 + "': 'map_overlay_priority' requires 'map_overlay'");
-    }
-    if (config.mapOverlayLayer && !config.mapOverlay)
-    {
-        throw std::runtime_error("Building '" + config.id
-                                 + "': 'map_overlay_layer' requires 'map_overlay'");
-    }
+    ParseMapOverlayFields_(buildingJson, config);
 
     return config;
 }

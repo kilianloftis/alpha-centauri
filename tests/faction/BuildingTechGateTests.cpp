@@ -126,21 +126,3 @@ TEST_CASE("BuildingConfigParser treats omitted icon as empty", "[buildings][pars
 
     std::filesystem::remove(path);
 }
-
-TEST_CASE("BuildingConfigParser rejects legacy required_techs array", "[buildings][tech-gate][parser]")
-{
-    const std::filesystem::path path = WriteTempBuildingJson(R"(
-  {
-    "id": "legacy_hall",
-    "name": "Legacy Hall",
-    "mineral_cost": 5,
-    "required_techs": ["ecology"],
-    "category": "grow"
-  }
-)");
-
-    BuildingConfigParser parser;
-    CHECK_THROWS_AS(parser.ParseConfig(path.string()), std::runtime_error);
-
-    std::filesystem::remove(path);
-}

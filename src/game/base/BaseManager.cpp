@@ -131,18 +131,28 @@ BaseManager::BaseManager(
     , m_ecology(*this, rRules.rEcoDamage)
     , m_bMayOccupyWater(bMayOccupyWater)
 {
-    m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)
-    {
-        m_pFaction->NotifyBuildingDestroyed(m_baseId, rBuilding.id);
-        if (rBuilding.bIsSecretProject)
-        {
-            m_pFaction->OnSecretProjectDestroyed.Emit(rBuilding.id);
-        }
-    });
-
+    m_pBuildings->OnBuildingDestroyed.Connect(
+        std::bind_front(&BaseManager::OnBuildingDestroyed_, this));
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddOccupantWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+    WirePopulation_();
+    // Newly created pops start unassigned; auto-assign once after construction.
+    m_pWorkerAssignments->AutoAssignWorkers();
+    m_pProduction->OnProductionCompleted.Connect(
+        std::bind_front(&BaseManager::OnItemCompleted_, this));
+}
 
+void BaseManager::OnBuildingDestroyed_(const BuildingConfig_t& rBuilding)
+{
+    m_pFaction->NotifyBuildingDestroyed(m_baseId, rBuilding.id);
+    if (rBuilding.bIsSecretProject)
+    {
+        m_pFaction->OnSecretProjectDestroyed.Emit(rBuilding.id);
+    }
+}
+
+void BaseManager::WirePopulation_()
+{
     m_pPopulation->OnGrowth.Connect([this]() {
         m_pPopulation->AddPop();
     });
@@ -153,8 +163,6 @@ BaseManager::BaseManager(
         m_pWorkerAssignments->AutoAssignWorkers();
         OnPopGained.Emit(newSize);
     });
-    // Newly created pops start unassigned; auto-assign once after construction.
-    m_pWorkerAssignments->AutoAssignWorkers();
     m_pPopulation->OnPopLost.Connect([this](int newSize) {
         OnPopLost.Emit(newSize);
         // The one place an empty base is decided gone, whatever emptied it. RazeBase only marks, so
@@ -167,41 +175,45 @@ BaseManager::BaseManager(
     m_pPopulation->OnIsRioting.Connect([this]() {
         OnIsRioting.Emit();
     });
+}
 
-    m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
-        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(itemId))
-        {
-            // A second copy can still reach FinishReady_ in the same pass. Drop it; AddBuilding's
-            // throw stays a programmer-error backstop.
-            if (!m_pBuildings->CanAddBuilding(itemId))
-            {
-                std::cerr << "Base " << m_baseId << " completed '" << itemId
-                          << "' but can no longer hold it (already built here, or the secret project "
-                             "was claimed elsewhere); the item was dropped\n";
-                return;
-            }
-            m_pBuildings->AddBuilding(itemId);
-            OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, nullptr});
-            return;
-        }
+void BaseManager::OnItemCompleted_(const std::string& itemId)
+{
+    if (m_rBuildingRegistry.Find(itemId))
+    {
+        CompleteBuilding_(itemId);
+        return;
+    }
+    if (const IDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
+    {
+        CompleteUnit_(*pDesign, itemId);
+        return;
+    }
+    throw std::runtime_error(
+        "BaseManager: completed production item '" + itemId
+        + "' is neither a known building nor a unit design of this faction");
+}
 
-        if (const IDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
-        {
-            Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
-                m_pFaction->AllocateUnitId(),
-                *pDesign,
-                m_pFaction->GetUnitPositions(),
-                m_tile,
-                this,
-                this);
-            OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, &rUnit});
-            return;
-        }
+void BaseManager::CompleteBuilding_(const std::string& itemId)
+{
+    // A second copy can still reach FinishReady_ in the same pass. Drop it; AddBuilding's
+    // throw stays a programmer-error backstop.
+    if (!m_pBuildings->CanAddBuilding(itemId))
+    {
+        std::cerr << "Base " << m_baseId << " completed '" << itemId
+                  << "' but can no longer hold it (already built here, or the secret project "
+                     "was claimed elsewhere); the item was dropped\n";
+        return;
+    }
+    m_pBuildings->AddBuilding(itemId);
+    OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, nullptr});
+}
 
-        throw std::runtime_error(
-            "BaseManager: completed production item '" + itemId
-            + "' is neither a known building nor a unit design of this faction");
-    });
+void BaseManager::CompleteUnit_(const IDesign& rDesign, const std::string& itemId)
+{
+    Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
+        m_pFaction->AllocateUnitId(), rDesign, m_pFaction->GetUnitPositions(), m_tile, this, this);
+    OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, &rUnit});
 }
 
 BaseManager::~BaseManager()
@@ -677,48 +689,52 @@ void BaseManager::RebindFaction(Faction& rFaction)
     m_pBuildings->RebindResearch(rFaction.GetResearch());
     m_pResources->RebindCommerce(rFaction.GetCommerce());
 
-    // Buildings and stockpiles are shared configs and stay if the new owner has the tech. A unit
-    // design re-homes to the new owner's copy if it can build it, else the slot drops.
-    const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
-    auto rehome = [&](const IConstructable* pItem) -> const IConstructable*
-    {
-        if (!pItem)
-        {
-            return nullptr;
-        }
-        const std::string& rId = pItem->GetId();
-        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(rId))
-        {
-            return pBuilding->IsAvailable(rTechs) ? pBuilding : nullptr;
-        }
-        if (const StockpileConfig_t* pStockpile = m_rStockpileRegistry.Find(rId))
-        {
-            return pStockpile->IsAvailable(rTechs) ? pStockpile : nullptr;
-        }
+    RehomeProduction_(rFaction);
+}
 
-        const Military& rMilitary = rFaction.GetMilitary();
-        const IDesign* pDesign = rMilitary.GetDesign(rId);
-        const auto* pConstructable = dynamic_cast<const IConstructable*>(pDesign);
-        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
-        if (pConstructable && (!pUnitDesign || pUnitDesign->IsAvailable(rTechs)))
-        {
-            return pConstructable;
-        }
-        return nullptr;
-    };
-
-    const IConstructable* pCurrent = m_pProduction->GetCurrentProduction();
-    const IConstructable* pReboundCurrent = rehome(pCurrent);
+void BaseManager::RehomeProduction_(const Faction& rFaction)
+{
+    const IConstructable* pReboundCurrent =
+        RehomeItem_(m_pProduction->GetCurrentProduction(), rFaction);
     std::vector<const IConstructable*> reboundQueue;
     for (const IConstructable* pItem : m_pProduction->GetQueue())
     {
-        if (const IConstructable* pRebound = rehome(pItem))
+        if (const IConstructable* pRebound = RehomeItem_(pItem, rFaction))
         {
             reboundQueue.push_back(pRebound);
         }
     }
     m_pProduction->RebindCurrent(pReboundCurrent);
     m_pProduction->RebindQueue(std::move(reboundQueue));
+}
+
+// Buildings and stockpiles are shared configs and stay if the new owner has the tech. A unit
+// design re-homes to the new owner's copy if it can build it, else the slot drops.
+const IConstructable* BaseManager::RehomeItem_(const IConstructable* pItem,
+                                               const Faction& rFaction) const
+{
+    if (!pItem)
+    {
+        return nullptr;
+    }
+    const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
+    const std::string& rId = pItem->GetId();
+    if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(rId))
+    {
+        return pBuilding->IsAvailable(rTechs) ? pBuilding : nullptr;
+    }
+    if (const StockpileConfig_t* pStockpile = m_rStockpileRegistry.Find(rId))
+    {
+        return pStockpile->IsAvailable(rTechs) ? pStockpile : nullptr;
+    }
+    const IDesign* pDesign = rFaction.GetMilitary().GetDesign(rId);
+    const auto* pConstructable = dynamic_cast<const IConstructable*>(pDesign);
+    const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
+    if (pConstructable && (!pUnitDesign || pUnitDesign->IsAvailable(rTechs)))
+    {
+        return pConstructable;
+    }
+    return nullptr;
 }
 
 int BaseManager::GetBaseId() const

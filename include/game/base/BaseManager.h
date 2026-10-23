@@ -317,6 +317,17 @@ private:
     std::optional<ScrapPayout_t> QuoteScrapBuilding_(const BuildingId_t& buildingId) const;
     int ScrapBuilding_(const BuildingId_t& buildingId);
 
+    void OnBuildingDestroyed_(const BuildingConfig_t& rBuilding);
+    // Growth, starvation and the base's own pop and riot signals.
+    void WirePopulation_();
+    // A finished building joins the base; a finished design becomes a unit here.
+    void OnItemCompleted_(const std::string& itemId);
+    void CompleteBuilding_(const std::string& itemId);
+    void CompleteUnit_(const IDesign& rDesign, const std::string& itemId);
+    // Current production and queue, re-pointed at what the new owner can build.
+    void RehomeProduction_(const Faction& rFaction);
+    const IConstructable* RehomeItem_(const IConstructable* pItem, const Faction& rFaction) const;
+
     // Assembles and memoizes the effect list this base resolves against.
     BaseEffectsCache m_effects;
     BaseEcology m_ecology;

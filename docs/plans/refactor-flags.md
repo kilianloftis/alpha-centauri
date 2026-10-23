@@ -318,10 +318,10 @@ screenshots.
   against the disassembly while splitting.
 
 ### `BaseManager::BaseManager`
-- **Where:** `src/game/base/BaseManager.cpp`, 103 lines, eight parameters
+- **Where:** `src/game/base/BaseManager.cpp`, 52 lines, eight parameters
 - **Problem:** the member initializer list builds every subsystem with nested calls.
-- **Why not local:** over 100 lines; naming the intermediate values needs factory helpers for
-  the subsystems, since an initializer list has no statements.
+- **Why not local:** naming the intermediate values needs factory helpers for the subsystems,
+  since an initializer list has no statements.
 
 ## Duplicated logic
 

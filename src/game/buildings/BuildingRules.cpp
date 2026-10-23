@@ -129,37 +129,52 @@ const OrbitalAttackEffect_t* ReadyOrbitalAttack(const Faction& rAttacker,
     return pEffect;
 }
 
-std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction,
-                                                               int missionYear)
+namespace
 {
-    std::vector<OrbitalAttackerOption_t> options;
+
+// Each building type the faction holds, once, in base order.
+std::vector<const BuildingConfig_t*> DistinctBuildings_(const Faction& rFaction)
+{
+    std::vector<const BuildingConfig_t*> buildings;
     std::unordered_set<BuildingId_t> seen;
     for (const BaseManager& rBase : rFaction.Bases())
     {
         for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
         {
-            if (!pBuilding || !seen.insert(pBuilding->id).second)
+            if (pBuilding && seen.insert(pBuilding->id).second)
             {
-                continue;
+                buildings.push_back(pBuilding);
             }
-            const OrbitalAttackEffect_t* pEffect = FindOrbitalAttackEffect(*pBuilding);
-            if (!pEffect)
-            {
-                continue;
-            }
-            const int ready = rFaction.CountReadyBuildings(pBuilding->id, missionYear);
-            if (ready <= 0)
-            {
-                continue;
-            }
-            OrbitalAttackerOption_t option;
-            option.buildingId = pBuilding->id;
-            option.pConfig = pBuilding;
-            option.readyCount = ready;
-            option.chance = pEffect->chance;
-            option.cooldownTurns = pEffect->cooldownTurns;
-            options.push_back(option);
         }
+    }
+    return buildings;
+}
+
+} // namespace
+
+std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction,
+                                                               int missionYear)
+{
+    std::vector<OrbitalAttackerOption_t> options;
+    for (const BuildingConfig_t* pBuilding : DistinctBuildings_(rFaction))
+    {
+        const OrbitalAttackEffect_t* pEffect = FindOrbitalAttackEffect(*pBuilding);
+        if (!pEffect)
+        {
+            continue;
+        }
+        const int ready = rFaction.CountReadyBuildings(pBuilding->id, missionYear);
+        if (ready <= 0)
+        {
+            continue;
+        }
+        OrbitalAttackerOption_t option;
+        option.buildingId = pBuilding->id;
+        option.pConfig = pBuilding;
+        option.readyCount = ready;
+        option.chance = pEffect->chance;
+        option.cooldownTurns = pEffect->cooldownTurns;
+        options.push_back(option);
     }
     return options;
 }

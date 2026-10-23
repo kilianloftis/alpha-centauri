@@ -14,6 +14,32 @@
 namespace ac
 {
 
+namespace
+{
+
+FactionId_t RollWeightedCandidate_(const std::vector<RebelCandidate_t>& rCandidates,
+                                   std::mt19937& rRng)
+{
+    int totalWeight = 0;
+    for (const RebelCandidate_t& rCand : rCandidates)
+    {
+        totalWeight += rCand.weight;
+    }
+    std::uniform_int_distribution<int> dist(1, totalWeight);
+    int roll = dist(rRng);
+    for (const RebelCandidate_t& rCand : rCandidates)
+    {
+        roll -= rCand.weight;
+        if (roll <= 0)
+        {
+            return rCand.factionId;
+        }
+    }
+    return rCandidates.front().factionId;
+}
+
+} // namespace
+
 std::optional<FactionId_t> PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
                                                        std::mt19937& rRng)
 {
@@ -24,24 +50,7 @@ std::optional<FactionId_t> PickRebelFactionAndTransfer(BaseManager& rBase, GameS
         return std::nullopt;
     }
 
-    int totalWeight = 0;
-    for (const RebelCandidate_t& rCand : candidates)
-    {
-        totalWeight += rCand.weight;
-    }
-
-    std::uniform_int_distribution<int> dist(1, totalWeight);
-    int roll = dist(rRng);
-    FactionId_t chosenId = candidates.front().factionId;
-    for (const RebelCandidate_t& rCand : candidates)
-    {
-        roll -= rCand.weight;
-        if (roll <= 0)
-        {
-            chosenId = rCand.factionId;
-            break;
-        }
-    }
+    const FactionId_t chosenId = RollWeightedCandidate_(candidates, rRng);
     Faction* pChosen = rGameState.FindFaction(chosenId);
     if (!pChosen)
     {

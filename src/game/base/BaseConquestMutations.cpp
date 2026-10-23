@@ -73,6 +73,21 @@ bool NoteIfAlreadyRazed_(BaseManager& rBase, BaseConquestResult_t& rResult)
     return true;
 }
 
+std::vector<Tile*> FreeNeighbours_(const Tile& rOrigin, WorldMap& rMap)
+{
+    const UnitPositionIndex& rPositions = rMap.GetUnitPositions();
+    std::vector<Tile*> free;
+    ForEachNeighborInChebyshevRadius(rOrigin, rMap, 1,
+        [&](Tile* pTile, int /*distance*/)
+        {
+            if (pTile && rPositions.CanPlaceUnit(*pTile))
+            {
+                free.push_back(pTile);
+            }
+        });
+    return free;
+}
+
 int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount,
                      GameState& rGameState, const EscapeColonyPodConfig_t& rPodConfig,
                      std::mt19937& rRng)
@@ -92,15 +107,7 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
 
     WorldMap& rMap = rGameState.GetWorldMap();
     UnitPositionIndex& rPositions = rMap.GetUnitPositions();
-    std::vector<Tile*> candidates;
-    ForEachNeighborInChebyshevRadius(rOrigin, rMap, 1,
-        [&](Tile* pTile, int /*distance*/)
-        {
-            if (pTile && rPositions.CanPlaceUnit(*pTile))
-            {
-                candidates.push_back(pTile);
-            }
-        });
+    std::vector<Tile*> candidates = FreeNeighbours_(rOrigin, rMap);
     if (candidates.empty())
     {
         return 0;
