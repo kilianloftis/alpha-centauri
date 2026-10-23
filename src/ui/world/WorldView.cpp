@@ -88,7 +88,7 @@ WorldView::WorldView(
 , m_onOpenCommlinks(std::move(onOpenCommlinks))
 , m_pCameraInputController(std::make_unique<CameraInputController>(
       *m_pWorldDisplay, rWorldMap, m_mapLayout, rHotkeys))
-, m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys))
+, m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>(rHotkeys, rGameState))
 {
     AddConsolePanels_(rMapRenderer);
     AddMinimapAndEndTurn_(rMapRenderer);
@@ -665,8 +665,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     {
         return;
     }
-    if (m_pUnitOrderInputController->HandleMouse(
-            rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState))
+    if (m_pUnitOrderInputController->HandleMouse(rEvent, pControllable, pClickedTile))
     {
         ApplyOrderClick_(rEvent, pControllable, pClickedTile, worldX, worldY);
         return;

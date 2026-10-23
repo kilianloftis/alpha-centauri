@@ -18,8 +18,10 @@
 namespace ac
 {
 
-UnitOrderInputController::UnitOrderInputController(const HotkeyConfig& rHotkeys)
+UnitOrderInputController::UnitOrderInputController(const HotkeyConfig& rHotkeys,
+                                                   GameState& rGameState)
     : m_rHotkeys(rHotkeys)
+    , m_rGameState(rGameState)
 {
 }
 
@@ -134,20 +136,19 @@ void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rU
 }
 
 bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
-                                           const Tile* pHoveredTile,
-                                           const Pathfinder* pPathfinder, GameState* pGameState)
+                                           const Tile* pHoveredTile)
 {
     ClearRequestFlags_();
 
     if (rEvent.button == MouseButton_t::Left)
     {
-        return HandleLeftButton_(rEvent, pSelectedUnit, pHoveredTile, pPathfinder, pGameState);
+        return HandleLeftButton_(rEvent, pSelectedUnit, pHoveredTile);
     }
 
     // Mouse move: update preview destination while holding.
-    if (rEvent.button == MouseButton_t::None && m_bLeftButtonHeld && pSelectedUnit && pPathfinder)
+    if (rEvent.button == MouseButton_t::None && m_bLeftButtonHeld && pSelectedUnit)
     {
-        return UpdateHoldPreview_(*pSelectedUnit, pHoveredTile, *pPathfinder);
+        return UpdateHoldPreview_(*pSelectedUnit, pHoveredTile);
     }
 
     return false;
@@ -176,16 +177,14 @@ bool UnitOrderInputController::HasExceededHoldThreshold_() const
 }
 
 bool UnitOrderInputController::HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
-                                                 const Tile* pHoveredTile,
-                                                 const Pathfinder* pPathfinder,
-                                                 GameState* pGameState)
+                                                 const Tile* pHoveredTile)
 {
     if (rEvent.bPressed)
     {
         return BeginLeftHold_(pSelectedUnit, pHoveredTile);
     }
 
-    return FinishLeftHold_(pPathfinder, pGameState);
+    return FinishLeftHold_();
 }
 
 bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile)
@@ -204,7 +203,7 @@ bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* p
     return true;
 }
 
-bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState)
+bool UnitOrderInputController::FinishLeftHold_()
 {
     if (!m_bLeftButtonHeld)
     {
@@ -218,8 +217,7 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
     const bool bHeldLongEnough = HasExceededHoldThreshold_() || m_bPreviewActive;
     const bool bOtherTile = pMover && pDest && pDest != &pMover->GetTile();
 
-    if (bOtherTile && pPathfinder && bHeldLongEnough
-        && TryResolveHoldRelease_(*pMover, *pDest, *pPathfinder, pGameState))
+    if (bOtherTile && bHeldLongEnough && TryResolveHoldRelease_(*pMover, *pDest))
     {
         return true;
     }
@@ -230,13 +228,11 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
     return bOtherTile && bHeldLongEnough;
 }
 
-bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& rDest,
-                                                      const Pathfinder& rPathfinder,
-                                                      GameState* pGameState)
+bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& rDest)
 {
-    const WorldMap& rMap = rPathfinder.GetWorldMap();
-    if (ResolveFlag(rMover, RuleFlagId_t::Bombard) && pGameState
-        && IsWithinBombardRange(rMover, rDest))
+    const WorldMap& rMap = m_rGameState.GetWorldMap();
+    const bool bBombards = ResolveFlag(rMover, RuleFlagId_t::Bombard);
+    if (bBombards && IsWithinBombardRange(rMover, rDest))
     {
         m_bBombardRequested = true;
         m_pInteractTarget = &rDest;
@@ -247,16 +243,10 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
     const bool bAdjacent = AreChebyshevAdjacent(rMover.GetTile(), rDest, rMap.GetWidth());
     // Whether to act on the tile is the game layer's question. A visible but non-attackable
     // hostile still steers a move order.
-    const Unit* pVisibleHostile =
-        pGameState ? FindVisibleHostileOnTile(rMover, rDest)
-                   : nullptr;
-    const Unit* pAttackableHostile =
-        (pGameState && !ResolveFlag(rMover, RuleFlagId_t::Bombard))
-            ? FindAttackableHostileOnTile(rMover, rDest)
-            : nullptr;
+    const Unit* pVisibleHostile = FindVisibleHostileOnTile(rMover, rDest);
+    const Unit* pAttackableHostile = bBombards ? nullptr : FindAttackableHostileOnTile(rMover, rDest);
 
-    if (bAdjacent
-        && TryAdjacentInteract_(rMover, rDest, pGameState, pAttackableHostile))
+    if (bAdjacent && TryAdjacentInteract_(rMover, rDest, pAttackableHostile))
     {
         return true;
     }
@@ -265,11 +255,9 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
 }
 
 bool UnitOrderInputController::TryAdjacentInteract_(Unit& rMover, const Tile& rDest,
-                                                    GameState* pGameState,
                                                     const Unit* pVisibleHostile)
 {
-    if (pGameState
-        && pGameState->GetProbeActions().CanOpenProbeActions(rMover, rDest, *pGameState))
+    if (m_rGameState.GetProbeActions().CanOpenProbeActions(rMover, rDest, m_rGameState))
     {
         m_bProbeActionRequested = true;
         m_pInteractTarget = &rDest;
@@ -304,8 +292,7 @@ bool UnitOrderInputController::TryAssignMoveOrder_(Unit& rMover, const Tile& rDe
     return true;
 }
 
-bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile,
-                                                  const Pathfinder& rPathfinder)
+bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile)
 {
     if (!HasExceededHoldThreshold_())
     {
@@ -319,12 +306,12 @@ bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Til
         {
             m_pPreviewDestination = pHoveredTile;
             m_bPreviewSearchDone = false;
-            UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
+            UpdatePreview_(rSelectedUnit, *pHoveredTile);
         }
         else if (!m_bPreviewSearchDone)
         {
             // First search after the hold threshold (destination was set on press).
-            UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
+            UpdatePreview_(rSelectedUnit, *pHoveredTile);
         }
     }
     else
@@ -335,10 +322,9 @@ bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Til
     return false;
 }
 
-void UnitOrderInputController::UpdatePreview_(Unit& rMover, const Tile& rDestination,
-                                              const Pathfinder& rPathfinder)
+void UnitOrderInputController::UpdatePreview_(Unit& rMover, const Tile& rDestination)
 {
-    m_pathPreview = rPathfinder.FindPath(rMover, rDestination);
+    m_pathPreview = m_rGameState.GetPathfinder().FindPath(rMover, rDestination);
     m_bPreviewSearchDone = true;
     m_bPreviewActive = m_pathPreview.bReachable && !m_pathPreview.tiles.empty();
 }

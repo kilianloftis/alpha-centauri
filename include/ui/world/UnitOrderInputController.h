@@ -17,13 +17,10 @@ class GameState;
 class UnitOrderInputController
 {
 public:
-    explicit UnitOrderInputController(const HotkeyConfig& rHotkeys);
+    UnitOrderInputController(const HotkeyConfig& rHotkeys, GameState& rGameState);
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
-    // pGameState is used so probe validity can be deferred to ProbeActionExecutor.
-    // Attack still uses local enemy-unit checks.
-    bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile,
-                     const Pathfinder* pPathfinder, GameState* pGameState);
+    bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile);
 
     // True after the most recent HandleKey/HandleMouse call assigned an order.
     bool WasOrderAssigned() const { return m_bOrderAssigned; }
@@ -83,21 +80,19 @@ private:
     bool HasExceededHoldThreshold_() const;
 
     bool HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
-                           const Tile* pHoveredTile, const Pathfinder* pPathfinder,
-                           GameState* pGameState);
+                           const Tile* pHoveredTile);
     bool BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile);
-    bool FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState);
-    bool TryResolveHoldRelease_(Unit& rMover, const Tile& rDest, const Pathfinder& rPathfinder,
-                                GameState* pGameState);
-    bool TryAdjacentInteract_(Unit& rMover, const Tile& rDest, GameState* pGameState,
-                              const Unit* pVisibleHostile);
+    bool FinishLeftHold_();
+    bool TryResolveHoldRelease_(Unit& rMover, const Tile& rDest);
+    // Probe legality is ProbeActionExecutor's; attack legality is the game layer's.
+    bool TryAdjacentInteract_(Unit& rMover, const Tile& rDest, const Unit* pVisibleHostile);
     bool TryAssignMoveOrder_(Unit& rMover, const Tile& rDest, const Unit* pVisibleHostile);
-    bool UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile,
-                            const Pathfinder& rPathfinder);
+    bool UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile);
 
-    void UpdatePreview_(Unit& rMover, const Tile& rDestination, const Pathfinder& rPathfinder);
+    void UpdatePreview_(Unit& rMover, const Tile& rDestination);
 
     const HotkeyConfig& m_rHotkeys;
+    GameState& m_rGameState;
 
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;
