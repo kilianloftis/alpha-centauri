@@ -209,17 +209,6 @@ void UIManager::PushView(std::unique_ptr<IGameView> pView)
     MarkFrameDirty();
 }
 
-void UIManager::PopView()
-{
-    if (m_overlayStack.empty())
-    {
-        return;
-    }
-    m_overlayStack.back()->OnPopped();
-    m_overlayStack.pop_back();
-    MarkFrameDirty();
-}
-
 bool UIManager::HasOverlayView() const
 {
     return !m_overlayStack.empty();

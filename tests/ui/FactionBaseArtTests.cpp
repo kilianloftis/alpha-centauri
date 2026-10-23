@@ -58,11 +58,9 @@ TEST_CASE("Bare base sprite paths are land or water size stages only", "[ui][fac
           == "assets/factions/gaian/bases/base_size5.png");
 }
 
-TEST_CASE("Map overlay path templates substitute faction and size", "[ui][faction-art]")
+TEST_CASE("Map overlay path templates substitute the faction and keep the size token",
+          "[ui][faction-art]")
 {
-    CHECK(ResolveMapOverlayPathTemplate(
-              "assets/factions/{faction}/bases/overlays/perimeter_size{size}.png", "gaian", 2)
-          == "assets/factions/gaian/bases/overlays/perimeter_size2.png");
     CHECK(SubstituteMapOverlayFaction(
               "assets/factions/{faction}/bases/overlays/perimeter_size{size}.png", "gaian")
           == "assets/factions/gaian/bases/overlays/perimeter_size{size}.png");

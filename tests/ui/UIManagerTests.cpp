@@ -187,10 +187,11 @@ TEST_CASE("The turn gate closes for an overlay and for an in-view modal", "[ui][
     FakeWorldView_* pWorld = fixture.AddWorldView();
     CHECK(fixture.manager.CanAdvanceTurn());
 
-    fixture.PushOverlay();
+    FakeOverlay_* pOverlay = fixture.PushOverlay();
     CHECK_FALSE(fixture.manager.CanAdvanceTurn());
 
-    fixture.manager.PopView();
+    pOverlay->Close();
+    fixture.manager.ProcessInput();
     CHECK(fixture.manager.CanAdvanceTurn());
 
     pWorld->bBlocksTurn = true;
@@ -239,11 +240,12 @@ TEST_CASE("A queued auto end-turn survives an overlay instead of being dropped",
     ManagerFixture_ fixture;
     FakeWorldView_* pWorld = fixture.AddWorldView();
 
-    fixture.PushOverlay();
+    FakeOverlay_* pOverlay = fixture.PushOverlay();
     fixture.manager.Update();
     CHECK(pWorld->autoEndTurnCount == 0);
 
-    fixture.manager.PopView();
+    pOverlay->Close();
+    fixture.manager.ProcessInput();
     fixture.manager.Update();
     CHECK(pWorld->autoEndTurnCount == 1);
 }

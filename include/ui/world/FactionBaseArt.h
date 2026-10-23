@@ -51,10 +51,6 @@ int BaseSpriteSizeStage(int population, int bumpCount, const BaseSpriteSizesConf
 // Bare land/water base sprite path (no defense row). sizeStage is 1-based and uncapped.
 std::string BareBaseSpritePath(const std::string& rSheetStem, bool bWater, int sizeStage);
 
-// Substitute {faction} and {size} in a building map_overlay path template.
-std::string ResolveMapOverlayPathTemplate(const std::string& rTemplate,
-                                          const std::string& rSheetStem, int sizeStage);
-
 // Substitute {faction} only, leaving {size} for ResolveSizedSpritePath.
 std::string SubstituteMapOverlayFaction(const std::string& rTemplate,
                                         const std::string& rSheetStem);

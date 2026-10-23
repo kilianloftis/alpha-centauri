@@ -40,8 +40,6 @@ public:
     int VisibleCols() const { return m_visibleCols; }
     int VisibleRows() const { return m_visibleRows; }
     float TileSize() const { return m_tileWidth; }
-    float TileWidth() const { return m_tileWidth; }
-    float TileHeight() const { return m_tileHeight; }
     const WorldMap& GetWorldMap() const { return m_rWorldMap; }
 
     // Approximate visible Y range for the minimap camera rectangle (Y does not wrap).

@@ -33,7 +33,6 @@ public:
     void RegisterViewShortcut(HotkeyChord_t chord, ViewFactory_t factory);
     void SetWorldView(std::unique_ptr<IWorldView> pWorldView);
     void PushView(std::unique_ptr<IGameView> pView);
-    void PopView();
     bool HasOverlayView() const;
 
     // False while an overlay is open or the world view has a blocking modal.

@@ -101,7 +101,7 @@ TEST_CASE("Grid lines run through the raised corners", "[ui][world][grid][relief
     const WorldDisplay display(fixture.state, *fixture.pMapRenderer,
                                ViewFixture::FullScreen());
     // Inland corners all sit two levels up.
-    const float lift = 2.0f * s.relief.liftPerLevelRatio * display.GetViewport().TileWidth();
+    const float lift = 2.0f * s.relief.liftPerLevelRatio * display.GetViewport().TileSize();
 
     const auto shiftedUp = [lift](const RecordingGraphics::LineDraw_t& rFlat,
                                   const RecordingGraphics::LineDraw_t& rRaised) {

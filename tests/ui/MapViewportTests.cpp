@@ -20,8 +20,7 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
     const WindowLayout_t layout{0.0f, 0.0f, 400.0f, 300.0f};
     MapViewport viewport(world.map, layout, /*tileSize*/ 40.0f);
 
-    REQUIRE(viewport.TileWidth() == 40.0f);
-    REQUIRE(viewport.TileHeight() == 20.0f);
+    REQUIRE(viewport.TileSize() == 40.0f);
 
     SECTION("layout size is counted in half-tile map units")
     {
@@ -149,8 +148,8 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
             for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
             {
                 const auto [originX, originY] = FootprintOrigin(rPlaced.shape);
-                const std::pair<float, float> center{originX + viewport.TileWidth() * 0.5f,
-                                                     originY + viewport.TileHeight() * 0.5f};
+                const std::pair<float, float> center{originX + viewport.TileSize() * 0.5f,
+                                                     originY + viewport.TileSize() * 0.25f};
                 const bool bInLayout = center.first >= layout.x
                     && center.first < layout.x + layout.width && center.second >= layout.y
                     && center.second < layout.y + layout.height;
@@ -171,7 +170,7 @@ TEST_CASE("MapViewport projects SMAC tiles as a rectangular brick", "[ui][viewpo
     SECTION("VisibleTiles lists rows north to south")
     {
         std::vector<float> depthKeys;
-        const float halfH = viewport.TileHeight() * 0.5f;
+        const float halfH = viewport.TileSize() * 0.25f;
         for (const PlacedTile_t& rPlaced : viewport.VisibleTiles())
         {
             depthKeys.push_back((rPlaced.shape.north.y - layout.y) / halfH);

@@ -222,14 +222,6 @@ std::string SubstituteMapOverlayFaction(const std::string& rTemplate,
     return ReplaceToken_(rTemplate, "faction", rSheetStem);
 }
 
-std::string ResolveMapOverlayPathTemplate(const std::string& rTemplate,
-                                          const std::string& rSheetStem, int sizeStage)
-{
-    const int stage = std::max(1, sizeStage);
-    std::string path = SubstituteMapOverlayFaction(rTemplate, rSheetStem);
-    return ReplaceToken_(path, "size", std::to_string(stage));
-}
-
 std::optional<std::string> ResolveSizedSpritePath(
     int wantedStage, const std::function<std::string(int)>& pathForStage,
     const std::function<bool(const std::string&)>& pathExists, std::string_view assetLabel)
