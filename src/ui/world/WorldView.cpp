@@ -922,7 +922,9 @@ std::shared_ptr<WorldView::BombardPlayback_t> WorldView::SnapshotBombardTargets_
     pPlayback->attackerName = rAttacker.GetDesign().GetName();
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
     const WorldMap& rMap = m_rGameState.GetWorldMap();
-    for (const auto* pUnits : {&rMap.GetUnitsOnTile(rTargetTile), &rMap.GetCargoOnTile(rTargetTile)})
+    const std::vector<Unit*>& rOccupants = rMap.GetUnitsOnTile(rTargetTile);
+    const std::vector<Unit*>& rCargo = rMap.GetCargoOnTile(rTargetTile);
+    for (const std::vector<Unit*>* pUnits : {&rOccupants, &rCargo})
     {
         for (Unit* pUnit : *pUnits)
         {

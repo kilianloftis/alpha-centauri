@@ -25,11 +25,11 @@ namespace ac
 namespace
 {
 
-// A unit at 0 HP is destroyed unless it got away first.
 void RecordOutcome_(const Unit& rAttacker, const Unit& rDefender, CombatResult_t& rResult)
 {
-    rResult.bAttackerDestroyed = rAttacker.GetCurrentHp() <= 0 && !rResult.bAttackerDisengaged;
-    rResult.bDefenderDestroyed = rDefender.GetCurrentHp() <= 0 && !rResult.bDefenderDisengaged;
+    rResult.bAttackerDestroyed = rAttacker.GetCurrentHp() <= 0;
+    rResult.bDefenderDestroyed = rDefender.GetCurrentHp() <= 0;
+    // Disengaging concedes the fight.
     const bool bAttackerLost = rResult.bAttackerDestroyed || rResult.bAttackerDisengaged;
     rResult.victor = bAttackerLost ? CombatSide_t::Defender : CombatSide_t::Attacker;
 }
