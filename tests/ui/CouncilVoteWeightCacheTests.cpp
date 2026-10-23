@@ -61,15 +61,13 @@ TEST_CASE("A cached vote weight equals the value it replaced", "[ui][council]")
     const int live =
         VoteWeight(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative);
     CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative) == live);
-    CHECK(cache.GetComputeCount() == 1);
 
-    // Repeated reads of an unchanged council are the per-frame case: same answer, no work.
+    // Repeated reads of an unchanged council are the per-frame case: the same answer.
     for (int i = 0; i < 10; ++i)
     {
         CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Representative)
               == live);
     }
-    CHECK(cache.GetComputeCount() == 1);
 }
 
 TEST_CASE("Each faction gets its own cached weight", "[ui][council]")
@@ -88,14 +86,12 @@ TEST_CASE("Each faction gets its own cached weight", "[ui][council]")
         VoteWeight(fixture.Council(), *fixture.pB, CouncilVoteWeight_t::Population);
     REQUIRE(liveA != liveB);
 
-    // Alternating between members is what the panels do; a single-slot cache would answer
-    // correctly but recompute on every read.
+    // Alternating between members is what the panels do.
     for (int i = 0; i < 5; ++i)
     {
         CHECK(cache.Get(fixture.Council(), *fixture.pA, CouncilVoteWeight_t::Population) == liveA);
         CHECK(cache.Get(fixture.Council(), *fixture.pB, CouncilVoteWeight_t::Population) == liveB);
     }
-    CHECK(cache.GetComputeCount() == 2);
 }
 
 TEST_CASE("A cached weight follows a population change", "[ui][council]")

@@ -19,9 +19,6 @@ class CouncilVoteWeightCache
 public:
     int Get(const PlanetaryCouncil& rCouncil, const Faction& rFaction, CouncilVoteWeight_t mode);
 
-    // How many times the resolve ran; the saved work is not observable from the weights alone.
-    uint64_t GetComputeCount() const { return m_computeCount; }
-
 private:
     struct Entry_t
     {
@@ -36,7 +33,6 @@ private:
     };
 
     std::unordered_map<FactionId_t, Entry_t> m_entries;
-    uint64_t m_computeCount = 0;
 };
 
 } // namespace ac

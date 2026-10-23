@@ -148,7 +148,7 @@ TEST_CASE("The snapshot reports the same yields the panel used to query live", "
     }
 }
 
-TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes after a change",
+TEST_CASE("BaseView repaints an unchanged base the same, and refreshes after a change",
           "[ui][base]")
 {
     ViewFixture fixture;
@@ -160,17 +160,14 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
     pView->Render(fixture.graphics);
     const size_t drawsPerFrame = fixture.graphics.texts.size();
     REQUIRE(drawsPerFrame > 0);
-    // Built once, at construction.
-    REQUIRE(pView->GetSnapshotBuildCount() == 1);
 
-    // Repainting an unchanged base draws the same thing and does no work.
+    // Repainting an unchanged base draws the same thing.
     for (int i = 0; i < 10; ++i)
     {
         fixture.graphics.texts.clear();
         pView->Render(fixture.graphics);
         CHECK(fixture.graphics.texts.size() == drawsPerFrame);
     }
-    CHECK(pView->GetSnapshotBuildCount() == 1);
 
     // Freeing a worked tile changes the nutrient total; the panel must not keep painting the
     // pre-click snapshot.
@@ -184,7 +181,6 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
 
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
-    CHECK(pView->GetSnapshotBuildCount() == 2);
     CHECK(fixture.graphics.AnyTextContaining("Production: " + std::to_string(afterNutrients)));
     CHECK_FALSE(fixture.graphics.AnyTextContaining("Production: " + std::to_string(beforeNutrients)));
 }

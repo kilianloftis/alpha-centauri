@@ -27,7 +27,6 @@ int CouncilVoteWeightCache::Get(const PlanetaryCouncil& rCouncil, const Faction&
         return rEntry.weight;
     }
 
-    ++m_computeCount;
     candidate.weight = VoteWeight(rCouncil, rFaction, mode);
     rEntry = candidate;
     return rEntry.weight;

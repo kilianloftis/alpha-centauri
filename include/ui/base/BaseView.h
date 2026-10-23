@@ -40,10 +40,6 @@ public:
     void Render(Graphics& rGraphics) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
 
-    // How many times the snapshot was actually rebuilt. The avoided work is the point of the
-    // key, and it is not observable from what the panels draw.
-    uint64_t GetSnapshotBuildCount() const { return m_snapshotBuildCount; }
-
 private:
     void BuildTopPanel_(MapRenderer& rMapRenderer);
     void BuildLeftPanel_();
@@ -69,7 +65,6 @@ private:
     // Rebuilt only when one of its key inputs moves; panels hold a reference to it, so it must
     // be declared before m_elements (IGameView) is populated and must never be reallocated.
     BaseDisplaySnapshot_t m_snapshot;
-    uint64_t m_snapshotBuildCount = 1;
     // The owner when opened; Render closes the view once the base has changed hands.
     Faction* m_pOwnerAtOpen;
     bool m_bEditable;

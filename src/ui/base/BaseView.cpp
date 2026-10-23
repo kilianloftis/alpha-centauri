@@ -202,7 +202,6 @@ void BaseView::RefreshSnapshot_()
         return;
     }
     m_snapshot = BuildBaseDisplaySnapshot(m_rBase);
-    ++m_snapshotBuildCount;
 }
 
 void BaseView::RefreshUnitStack_()
