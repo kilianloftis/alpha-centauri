@@ -112,7 +112,7 @@ void WorldView::AddConsolePanels_(MapRenderer& rMapRenderer)
         ResolveLayout(rConsole, console.consoleInfo), m_rSprites));
     m_pUnitStackPanel = &Adopt_(std::make_unique<UnitStackPanel>(
         ResolveLayout(rConsole, console.consoleStack), m_rSprites,
-        [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); }));
+        [this](Unit& rUnit) { PickUnit_(&rUnit); }));
     m_elements.push_back(std::make_unique<CommlinksButton>(
         ResolveLayout(rConsole, console.consoleCommlinks),
         [this]() { m_onOpenCommlinks(); }));
@@ -153,7 +153,7 @@ void WorldView::DeselectIfSelected_(Unit& rUnit)
 {
     if (m_pSelectedUnit == &rUnit)
     {
-        SetSelectedUnit_(nullptr, false);
+        CycleToUnit_(nullptr);
     }
 }
 
@@ -276,35 +276,44 @@ void WorldView::PushModal(std::unique_ptr<UIElement> pElement)
     m_elements.push_back(std::move(pElement));
 }
 
-void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
+void WorldView::PickUnit_(Unit* pUnit)
+{
+    m_bManualSelection = true;
+    ChangeSelectedUnit_(pUnit);
+    // The player picked it, so skip-turn gives way to a real order.
+    if (pUnit && pUnit->GetOrder().has_value()
+        && std::holds_alternative<SkipTurnOrder_t>(*pUnit->GetOrder()))
+    {
+        pUnit->ClearOrder();
+    }
+}
+
+void WorldView::CycleToUnit_(Unit* pUnit)
+{
+    m_bManualSelection = false;
+    const bool bSelectionChanged = ChangeSelectedUnit_(pUnit);
+    if (bSelectionChanged && pUnit)
+    {
+        const Tile& rTile = pUnit->GetTile();
+        m_pCameraInputController->CenterOnTile(rTile.GetX(), rTile.GetY());
+    }
+}
+
+bool WorldView::ChangeSelectedUnit_(Unit* pUnit)
 {
     const bool bSelectionChanged = m_pSelectedUnit != pUnit;
     m_pSelectedUnit = pUnit;
-    m_bManualSelection = bManualSelection;
-
     if (bSelectionChanged)
     {
         ClearAirdropTargeting_();
         ClearBombardTargeting_();
     }
-
     // Keep location / stack panels on the selected unit's tile when cycling or picking.
     if (pUnit)
     {
         m_pSelectedTile = &pUnit->GetTile();
-        // Manual pick cancels skip-turn so the player can issue a real order.
-        if (bManualSelection && pUnit->GetOrder().has_value()
-            && std::holds_alternative<SkipTurnOrder_t>(*pUnit->GetOrder()))
-        {
-            pUnit->ClearOrder();
-        }
     }
-
-    if (bSelectionChanged && pUnit && !bManualSelection)
-    {
-        const Tile& rTile = pUnit->GetTile();
-        m_pCameraInputController->CenterOnTile(rTile.GetX(), rTile.GetY());
-    }
+    return bSelectionChanged;
 }
 
 void WorldView::SetSelectedTile_(const Tile* pTile)
@@ -326,7 +335,7 @@ void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
     const OrderProgress_t progress = m_rGameState.GetUnitOrderExecutor().Execute(rUnit);
     if (progress == OrderProgress_t::UnitDestroyed)
     {
-        SetSelectedUnit_(nullptr, false);
+        CycleToUnit_(nullptr);
     }
     SelectNextAvailableUnit_();
 }
@@ -336,13 +345,13 @@ void WorldView::SelectNextAvailableUnit_()
     // A short move leaves moves, so stay on this unit rather than jump to the next one.
     if (m_pSelectedUnit && m_pSelectedUnit->RequiresOrders())
     {
-        SetSelectedUnit_(m_pSelectedUnit, m_bManualSelection);
+        SetSelectedTile_(&m_pSelectedUnit->GetTile());
         return;
     }
 
     const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     Unit* pNext = rPlayer.GetUnitManager().GetNextAvailableUnit(nullptr);
-    SetSelectedUnit_(pNext, false);
+    CycleToUnit_(pNext);
     if (pNext)
     {
         TryAutoReturnLowFuel_(*pNext);
@@ -367,7 +376,7 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     const Faction& rPlayer = m_rGameState.GetPlayerFaction();
     if (Unit* pNext = rPlayer.GetUnitManager().GetNextAvailableUnit(nullptr))
     {
-        SetSelectedUnit_(pNext, false);
+        CycleToUnit_(pNext);
         TryAutoReturnLowFuel_(*pNext);
     }
 }
@@ -601,7 +610,7 @@ bool WorldView::HandleChromeKey_(const KeyEvent_t& rEvent)
     if (m_rHotkeys.Matches(HotkeyAction_t::NextUnit, rEvent))
     {
         const Faction& rPlayer = m_rGameState.GetPlayerFaction();
-        SetSelectedUnit_(rPlayer.GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit), false);
+        CycleToUnit_(rPlayer.GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit));
         return true;
     }
     return false;
@@ -758,7 +767,7 @@ void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
     // for picking units on the tile. Matches docs/architecture/ui-system.md.
     if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
     {
-        SetSelectedUnit_(nullptr, true);
+        PickUnit_(nullptr);
         m_onOpenBase(*pBase);
         return;
     }
@@ -1032,14 +1041,14 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     const Tile* pTile = rWorldMap.GetTile(tileX, tileY);
     if (!pTile)
     {
-        SetSelectedUnit_(nullptr, true);
+        PickUnit_(nullptr);
         return;
     }
 
     const std::vector<Unit*> units = rWorldMap.GetAllUnitsOnTile(*pTile);
     if (units.empty())
     {
-        SetSelectedUnit_(nullptr, true);
+        PickUnit_(nullptr);
         return;
     }
 
@@ -1054,11 +1063,11 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         {
             continue;
         }
-        SetSelectedUnit_(pUnit, true);
+        PickUnit_(pUnit);
         return;
     }
 
-    SetSelectedUnit_(nullptr, true);
+    PickUnit_(nullptr);
 }
 
 Unit* WorldView::GetControllableSelectedUnit_() const

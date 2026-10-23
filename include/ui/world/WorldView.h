@@ -122,7 +122,12 @@ private:
     // The End Turn highlight, and the auto end-turn latch when pause-at-end is off.
     void RefreshEndTurnState_();
     PresentationSnapshot_t CapturePresentationSnapshot_() const;
-    void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
+    // The player chose pUnit (or an empty tile): browsing, and skip-turn gives way.
+    void PickUnit_(Unit* pUnit);
+    // The view moved on to pUnit by itself, and the camera follows.
+    void CycleToUnit_(Unit* pUnit);
+    // Returns whether the selection changed.
+    bool ChangeSelectedUnit_(Unit* pUnit);
     void SetSelectedTile_(const Tile* pTile);
     void SelectUnitAtTile_(int tileX, int tileY);
     // Fills an empty selection, or moves past a unit that no longer needs orders; never overrides
