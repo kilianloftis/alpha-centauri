@@ -244,15 +244,25 @@ bool ProposalPasses(const PlanetaryCouncil& rCouncil, const PendingProposal_t& r
     return yea > nay;
 }
 
-Faction* ElectionWinner(const PlanetaryCouncil& rCouncil, const PendingProposal_t& rPending)
+namespace
 {
-    const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(rPending.proposalId);
-    std::map<FactionId_t, int> tallies;
+
+struct ElectionTally_t
+{
+    // Keyed in ascending faction id, so the first strictly larger count keeps the lowest id on
+    // a tie.
+    std::map<FactionId_t, int> votes;
     int totalWeight = 0;
+};
+
+ElectionTally_t TallyElection_(const PlanetaryCouncil& rCouncil, const PendingProposal_t& rPending,
+                               const CouncilProposalConfig_t& rConfig)
+{
+    ElectionTally_t tally;
     for (Faction* pMember : rCouncil.Members())
     {
         const int weight = VoteWeight(rCouncil, *pMember, rConfig.voteWeight);
-        totalWeight += weight;
+        tally.totalWeight += weight;
         const auto it = rPending.electionVotes.find(pMember->GetFactionId());
         if (it == rPending.electionVotes.end() || !it->second)
         {
@@ -264,34 +274,34 @@ Faction* ElectionWinner(const PlanetaryCouncil& rCouncil, const PendingProposal_
         {
             continue;
         }
-        tallies[*it->second] += weight;
+        tally.votes[*it->second] += weight;
     }
+    return tally;
+}
 
-    // Keyed in ascending faction id, so a strict > keeps the lowest id on a tie.
-    FactionId_t bestId = 0;
-    int bestVotes = -1;
-    for (const auto& [id, votes] : tallies)
-    {
-        if (votes > bestVotes)
-        {
-            bestVotes = votes;
-            bestId = id;
-        }
-    }
-    if (bestVotes <= 0)
+} // namespace
+
+Faction* ElectionWinner(const PlanetaryCouncil& rCouncil, const PendingProposal_t& rPending)
+{
+    const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(rPending.proposalId);
+    const ElectionTally_t tally = TallyElection_(rCouncil, rPending, rConfig);
+    const auto leader = std::ranges::max_element(
+        tally.votes, [](const auto& a, const auto& b) { return a.second < b.second; });
+    if (leader == tally.votes.end() || leader->second <= 0)
     {
         return nullptr;
     }
     if (rConfig.voteThreshold > 0.0)
     {
-        const double share =
-            totalWeight > 0 ? static_cast<double>(bestVotes) / totalWeight : 0.0;
+        const double share = tally.totalWeight > 0
+                                 ? static_cast<double>(leader->second) / tally.totalWeight
+                                 : 0.0;
         if (share < rConfig.voteThreshold)
         {
             return nullptr;
         }
     }
-    return FindMember_(rCouncil, bestId);
+    return FindMember_(rCouncil, leader->first);
 }
 
 bool CanVeto(const PlanetaryCouncil& rCouncil, const Faction& rFaction,

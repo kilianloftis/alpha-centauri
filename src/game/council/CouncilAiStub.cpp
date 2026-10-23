@@ -9,6 +9,39 @@
 namespace ac
 {
 
+namespace
+{
+
+// The proposer if eligible, else the first eligible candidate; null abstains when nobody is.
+// CastElectionVote rejects an ineligible candidate, and a throw here would unwind out of
+// Propose's OnProposalOpened emission.
+const Faction* StubElectionChoice_(const PlanetaryCouncil& rCouncil,
+                                   const CouncilProposalConfig_t& rConfig,
+                                   FactionId_t proposerId)
+{
+    const std::vector<Faction*> eligible = EligibleCandidates(rCouncil, rConfig);
+    for (Faction* pCandidate : eligible)
+    {
+        if (pCandidate && pCandidate->GetFactionId() == proposerId)
+        {
+            return pCandidate;
+        }
+    }
+    return eligible.empty() ? nullptr : eligible.front();
+}
+
+bool HasVoted_(const PendingProposal_t& rPending, const CouncilProposalConfig_t& rConfig,
+               FactionId_t voterId)
+{
+    if (rConfig.kind == CouncilProposalKind_t::Election)
+    {
+        return rPending.electionVotes.contains(voterId);
+    }
+    return rPending.ballots.contains(voterId);
+}
+
+} // namespace
+
 void CastStubCouncilVotes(CouncilVoteExecutor& rVotes, const PlanetaryCouncil& rCouncil)
 {
     const PendingProposal_t* pPending = rVotes.GetPending();
@@ -16,52 +49,23 @@ void CastStubCouncilVotes(CouncilVoteExecutor& rVotes, const PlanetaryCouncil& r
     {
         return;
     }
-
     const CouncilProposalConfig_t& rConfig = rCouncil.GetRegistry().Get(pPending->proposalId);
-
-    const Faction* pElectionChoice = nullptr;
-    if (rConfig.kind == CouncilProposalKind_t::Election)
-    {
-        // The proposer need not be eligible, and CastElectionVote rejects an ineligible
-        // candidate; a throw here would unwind out of Propose's OnProposalOpened emission.
-        const std::vector<Faction*> eligible = EligibleCandidates(rCouncil, rConfig);
-        for (Faction* pCandidate : eligible)
-        {
-            if (pCandidate && pCandidate->GetFactionId() == pPending->proposerId)
-            {
-                pElectionChoice = pCandidate;
-                break;
-            }
-        }
-        if (!pElectionChoice && !eligible.empty())
-        {
-            pElectionChoice = eligible.front();
-        }
-        // Leaving pElectionChoice null is a valid abstention if nobody is eligible.
-    }
-
+    const bool bElection = rConfig.kind == CouncilProposalKind_t::Election;
+    const Faction* pElectionChoice =
+        bElection ? StubElectionChoice_(rCouncil, rConfig, pPending->proposerId) : nullptr;
     for (Faction* pMember : rCouncil.Members())
     {
-        if (!pMember || pMember->IsPlayerControlled())
+        if (!pMember || pMember->IsPlayerControlled()
+            || HasVoted_(*pPending, rConfig, pMember->GetFactionId()))
         {
             continue;
         }
-
-        const FactionId_t id = pMember->GetFactionId();
-        if (rConfig.kind == CouncilProposalKind_t::Election)
+        if (bElection)
         {
-            if (pPending->electionVotes.find(id) != pPending->electionVotes.end())
-            {
-                continue;
-            }
             rVotes.CastElectionVote(*pMember, pElectionChoice);
         }
         else
         {
-            if (pPending->ballots.find(id) != pPending->ballots.end())
-            {
-                continue;
-            }
             rVotes.CastVote(*pMember, CouncilBallot_t::Yea);
         }
     }

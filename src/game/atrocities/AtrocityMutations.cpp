@@ -55,6 +55,41 @@ void AnnounceToPlayer_(GameState& rGameState, const Faction& rPerpetrator, const
                                  });
 }
 
+AtrocityRecord_t MakeRecord_(FactionId_t perpetratorId, const AtrocityOutcome_t& rOutcome,
+                             int missionYear)
+{
+    AtrocityRecord_t record;
+    record.perpetrator = perpetratorId;
+    record.victim = rOutcome.victimId;
+    record.severity = rOutcome.severity;
+    record.missionYear = missionYear;
+    record.bCharterInForce = rOutcome.bCharterInForce;
+    record.bCounted = rOutcome.bCounted;
+    return record;
+}
+
+// Joining, not declaring: the world defends the victim, so nobody is obliged to defend the
+// perpetrator, and its AI Pact partners' Pacts end as they join.
+void RallyWorldAgainst_(GameState& rGameState, Faction& rPerpetrator,
+                        const AtrocityOutcome_t& rOutcome)
+{
+    const FactionId_t perpetratorId = rPerpetrator.GetFactionId();
+    if (rOutcome.bUniversalVendetta)
+    {
+        for (const FactionId_t joiner : UniversalVendettaJoiners(perpetratorId, rOutcome.victimId))
+        {
+            JoinVendetta(rGameState, joiner, perpetratorId);
+        }
+    }
+    if (rOutcome.bExpelFromCouncil)
+    {
+        if (CouncilVoteExecutor* pVotes = rGameState.GetCouncilVotes())
+        {
+            pVotes->Expel(rPerpetrator);
+        }
+    }
+}
+
 } // namespace
 
 AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
@@ -68,13 +103,8 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     AtrocityLedger& rLedger = rGameState.GetAtrocityLedger();
     const FactionId_t perpetratorId = rPerpetrator.GetFactionId();
 
-    AtrocityRecord_t record;
-    record.perpetrator = perpetratorId;
-    record.victim = outcome.victimId;
-    record.severity = outcome.severity;
-    record.missionYear = rGameState.GetMissionYear();
-    record.bCharterInForce = outcome.bCharterInForce;
-    record.bCounted = outcome.bCounted;
+    const AtrocityRecord_t record =
+        MakeRecord_(perpetratorId, outcome, rGameState.GetMissionYear());
     rLedger.Record(record);
     if (outcome.victimId)
     {
@@ -91,22 +121,7 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
         result.sanctionUntilYear =
             rLedger.ExtendSanction(perpetratorId, record.missionYear, *outcome.sanctionYears);
     }
-    // Joining, not declaring: the world defends the victim, so nobody is obliged to defend the
-    // perpetrator, and its AI Pact partners' Pacts end as they join.
-    if (outcome.bUniversalVendetta)
-    {
-        for (const FactionId_t joiner : UniversalVendettaJoiners(perpetratorId, outcome.victimId))
-        {
-            JoinVendetta(rGameState, joiner, perpetratorId);
-        }
-    }
-    if (outcome.bExpelFromCouncil)
-    {
-        if (CouncilVoteExecutor* pVotes = rGameState.GetCouncilVotes())
-        {
-            pVotes->Expel(rPerpetrator);
-        }
-    }
+    RallyWorldAgainst_(rGameState, rPerpetrator, outcome);
 
     AnnounceToPlayer_(rGameState, rPerpetrator, pVictim, result);
     return result;

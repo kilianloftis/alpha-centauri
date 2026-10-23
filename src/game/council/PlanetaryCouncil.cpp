@@ -20,20 +20,14 @@ bool HasContinuousWorldEffects_(const CouncilProposalConfig_t& rConfig)
                        IsContinuousWorldEffect);
 }
 
-} // namespace
-
-PlanetaryCouncil::PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
-                                   const CouncilRulesConfig_t& rRules,
-                                   std::vector<Faction*> members)
-    : m_rRegistry(rRegistry)
-    , m_rRules(rRules)
-    , m_members(std::move(members))
+// At least one, each a council participant, none twice.
+void RequireValidMembers_(const std::vector<Faction*>& rMembers)
 {
-    if (m_members.empty())
+    if (rMembers.empty())
     {
         throw std::invalid_argument("PlanetaryCouncil: members must not be empty");
     }
-    for (Faction* pMember : m_members)
+    for (Faction* pMember : rMembers)
     {
         if (!pMember)
         {
@@ -45,16 +39,28 @@ PlanetaryCouncil::PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
                 "PlanetaryCouncil: faction does not participate in the council");
         }
     }
-    for (size_t i = 0; i < m_members.size(); ++i)
+    for (size_t i = 0; i < rMembers.size(); ++i)
     {
-        for (size_t j = i + 1; j < m_members.size(); ++j)
+        for (size_t j = i + 1; j < rMembers.size(); ++j)
         {
-            if (m_members[i]->GetFactionId() == m_members[j]->GetFactionId())
+            if (rMembers[i]->GetFactionId() == rMembers[j]->GetFactionId())
             {
                 throw std::invalid_argument("PlanetaryCouncil: duplicate member faction");
             }
         }
     }
+}
+
+} // namespace
+
+PlanetaryCouncil::PlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
+                                   const CouncilRulesConfig_t& rRules,
+                                   std::vector<Faction*> members)
+    : m_rRegistry(rRegistry)
+    , m_rRules(rRules)
+    , m_members(std::move(members))
+{
+    RequireValidMembers_(m_members);
     for (const CouncilProposalConfig_t& rConfig : m_rRegistry.GetAll())
     {
         if (rConfig.initiallyActive)

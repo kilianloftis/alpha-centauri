@@ -31,6 +31,21 @@ void ValidateGovernorEffectHonored_(const EffectConfig_t& rEffect, std::size_t i
           "FactionGlobal; a one-shot perk belongs in 'on_elected_effects')");
 }
 
+std::vector<EffectConfig_t> ParseGovernorEffects_(const nlohmann::json& rEffects,
+                                                  const std::string& rConfigPath)
+{
+    // ParseEffects expects a container with an "effects" array; wrap the field.
+    nlohmann::json wrapper = nlohmann::json::object();
+    wrapper["effects"] = rEffects;
+    std::vector<EffectConfig_t> effects = EffectConfigParser::ParseEffects(
+        wrapper, EffectSourceKind_t::CouncilRules, "council_governor");
+    for (std::size_t index = 0; index < effects.size(); ++index)
+    {
+        ValidateGovernorEffectHonored_(effects[index], index, rConfigPath);
+    }
+    return effects;
+}
+
 } // namespace
 
 CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& configPath)
@@ -67,15 +82,7 @@ CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& co
 
     if (json.contains("governor_effects"))
     {
-        // ParseEffects expects a container with an "effects" array; wrap the field.
-        nlohmann::json wrapper = nlohmann::json::object();
-        wrapper["effects"] = json.at("governor_effects");
-        config.governorEffects = EffectConfigParser::ParseEffects(
-            wrapper, EffectSourceKind_t::CouncilRules, "council_governor");
-        for (std::size_t index = 0; index < config.governorEffects.size(); ++index)
-        {
-            ValidateGovernorEffectHonored_(config.governorEffects[index], index, configPath);
-        }
+        config.governorEffects = ParseGovernorEffects_(json.at("governor_effects"), configPath);
     }
     config.onElectedEffects = TriggeredEffectParser::ParseTriggeredEffects(
         json, "on_elected_effects", "council_governor");

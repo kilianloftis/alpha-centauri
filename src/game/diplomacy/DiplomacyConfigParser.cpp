@@ -133,6 +133,35 @@ DefensiveObligationMode_t RequireObligationMode_(const nlohmann::json& rJson,
                                                    "defensive obligation mode");
 }
 
+// Every status exactly once.
+decltype(DiplomacyConfig_t::statuses) ParseStatuses_(const nlohmann::json& rStatuses,
+                                                     const std::string& rContext)
+{
+    decltype(DiplomacyConfig_t::statuses) statuses{};
+    std::array<bool, k_DiplomaticStatusCount> seen{};
+    for (const auto& [rName, rEntry] : rStatuses.items())
+    {
+        const DiplomaticStatus_t status =
+            EnumFromName<DiplomaticStatus_t>(rName, "diplomatic status");
+        const std::size_t index = static_cast<std::size_t>(status);
+        if (seen[index])
+        {
+            throw std::runtime_error(rContext + " repeats status '" + rName + "'");
+        }
+        seen[index] = true;
+        statuses[index] = ParseStatus_(rEntry, status, "statuses." + rName);
+    }
+    for (const DiplomaticStatus_t status : magic_enum::enum_values<DiplomaticStatus_t>())
+    {
+        if (!seen[static_cast<std::size_t>(status)])
+        {
+            throw std::runtime_error(rContext + " is missing status '"
+                                     + std::string(magic_enum::enum_name(status)) + "'");
+        }
+    }
+    return statuses;
+}
+
 } // namespace
 
 DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPath)
@@ -158,26 +187,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
 
     DiplomacyConfig_t config;
     config.defensiveObligationMode = RequireObligationMode_(json, context);
-    std::array<bool, k_DiplomaticStatusCount> seen{};
-    for (const auto& [rName, rEntry] : rStatuses.items())
-    {
-        const DiplomaticStatus_t status = EnumFromName<DiplomaticStatus_t>(rName, "diplomatic status");
-        const std::size_t index = static_cast<std::size_t>(status);
-        if (seen[index])
-        {
-            throw std::runtime_error(context + " repeats status '" + rName + "'");
-        }
-        seen[index] = true;
-        config.statuses[index] = ParseStatus_(rEntry, status, "statuses." + rName);
-    }
-    for (const DiplomaticStatus_t status : magic_enum::enum_values<DiplomaticStatus_t>())
-    {
-        if (!seen[static_cast<std::size_t>(status)])
-        {
-            throw std::runtime_error(context + " is missing status '"
-                                     + std::string(magic_enum::enum_name(status)) + "'");
-        }
-    }
+    config.statuses = ParseStatuses_(rStatuses, context);
     return config;
 }
 

@@ -371,8 +371,9 @@ Found while applying rules 7 and 8. Each needs a closer look before it changes.
 
 ### Level-set parsers and `RejectUnknownKeys_` — the same parse in several files
 - **Where:** `src/game/DifficultyConfigParser.cpp`, `src/game/natives/NativeLifeLevelConfig.cpp`
-  (`default` plus a list of uniquely-id'd levels); `RejectUnknownKeys_` is copied into eight
-  parsers (`grep -rl 'void RejectUnknownKeys_' src`)
+  (`default` plus a list of uniquely-id'd levels); `ParseSeverities_` and `ParseStatuses_` in
+  the atrocity and diplomacy parsers (every enum value exactly once); `RejectUnknownKeys_` is
+  copied into eight parsers (`grep -rl 'void RejectUnknownKeys_' src`)
 - **Problem:** each file writes out the same default-and-levels check and its own key whitelist,
   so their messages and rules can drift apart.
 - **Why not now:** the shared form belongs in `lib/config` as a template over the level type,

@@ -60,6 +60,9 @@ public:
     Signal<const std::string&, ResolveProposalResult_t> OnResolved;
 
 private:
+    // Every council member, made known to each other when a proposal opens.
+    std::vector<FactionId_t> MemberIds_() const;
+    PendingProposal_t MakePending_(const Faction& rProposer, const std::string& rProposalId) const;
     void RequireMemberAndPending_(const Faction& rVoter, const char* pCaller) const;
     ResolveProposalResult_t ResolveOutcome_(GameState& rGameState);
     ResolveProposalResult_t ApplyPassed_(GameState& rGameState, Faction* pElectionWinner,

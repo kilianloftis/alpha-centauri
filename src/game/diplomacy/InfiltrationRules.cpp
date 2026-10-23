@@ -97,6 +97,19 @@ bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
     return FilterSelects_(*rConfig.factionFilter, candidate, actionTarget);
 }
 
+namespace
+{
+
+bool AnyGrantsInfiltration_(const std::vector<ActiveEffect_t>& rEffects, FactionId_t infiltrator,
+                            FactionId_t target)
+{
+    return std::ranges::any_of(rEffects, [&](const ActiveEffect_t& rEffect) {
+        return ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target);
+    });
+}
+
+} // namespace
+
 bool HasInfiltration(FactionId_t infiltrator, FactionId_t target)
 {
     const GameState& rState = CurrentGameState();
@@ -115,26 +128,14 @@ bool HasInfiltration(FactionId_t infiltrator, FactionId_t target)
         return false;
     }
 
-    for (const ActiveEffect_t& rEffect : pInfiltrator->GetActiveEffects().effects)
+    if (AnyGrantsInfiltration_(pInfiltrator->GetActiveEffects().effects, infiltrator, target))
     {
-        if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target))
-        {
-            return true;
-        }
+        return true;
     }
-
-    if (const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil())
-    {
-        for (const ActiveEffect_t& rEffect : pCouncil->CollectFactionEffects(*pInfiltrator))
-        {
-            if (ContinuousEffectGrantsInfiltration_(rEffect, infiltrator, target))
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil();
+    return pCouncil
+        && AnyGrantsInfiltration_(pCouncil->CollectFactionEffects(*pInfiltrator), infiltrator,
+                                  target);
 }
 
 } // namespace ac

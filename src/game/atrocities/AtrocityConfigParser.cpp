@@ -70,6 +70,37 @@ AtrocitySeverityConfig_t ParseSeverity_(const nlohmann::json& rJson, const std::
     return config;
 }
 
+// Every severity exactly once.
+decltype(AtrocitiesConfig_t::severities) ParseSeverities_(const nlohmann::json& rSeverities,
+                                                          const std::string& rConfigPath)
+{
+    decltype(AtrocitiesConfig_t::severities) severities{};
+    std::array<bool, k_AtrocitySeverityCount> seen{};
+    for (const auto& [rName, rEntry] : rSeverities.items())
+    {
+        const AtrocitySeverityId_t id =
+            EnumFromName<AtrocitySeverityId_t>(rName, "atrocity severity");
+        const auto index = magic_enum::enum_index(id);
+        if (!index || seen[*index])
+        {
+            throw std::runtime_error("Atrocities config '" + rConfigPath
+                                     + "' repeats severity '" + rName + "'");
+        }
+        seen[*index] = true;
+        severities[*index] = ParseSeverity_(rEntry, "severities." + rName);
+    }
+    for (const AtrocitySeverityId_t id : magic_enum::enum_values<AtrocitySeverityId_t>())
+    {
+        const auto index = magic_enum::enum_index(id);
+        if (!index || !seen[*index])
+        {
+            throw std::runtime_error("Atrocities config '" + rConfigPath + "' is missing severity '"
+                                     + std::string(magic_enum::enum_name(id)) + "'");
+        }
+    }
+    return severities;
+}
+
 } // namespace
 
 AtrocitiesConfig_t AtrocityConfigParser::ParseConfig(const std::string& configPath)
@@ -98,28 +129,7 @@ AtrocitiesConfig_t AtrocityConfigParser::ParseConfig(const std::string& configPa
     }
 
     AtrocitiesConfig_t config;
-    std::array<bool, k_AtrocitySeverityCount> seen{};
-    for (const auto& [rName, rEntry] : json.at("severities").items())
-    {
-        const AtrocitySeverityId_t id = EnumFromName<AtrocitySeverityId_t>(rName, "atrocity severity");
-        const auto index = magic_enum::enum_index(id);
-        if (!index || seen[*index])
-        {
-            throw std::runtime_error("Atrocities config '" + configPath
-                                     + "' repeats severity '" + rName + "'");
-        }
-        seen[*index] = true;
-        config.severities[*index] = ParseSeverity_(rEntry, "severities." + rName);
-    }
-    for (const AtrocitySeverityId_t id : magic_enum::enum_values<AtrocitySeverityId_t>())
-    {
-        const auto index = magic_enum::enum_index(id);
-        if (!index || !seen[*index])
-        {
-            throw std::runtime_error("Atrocities config '" + configPath + "' is missing severity '"
-                                     + std::string(magic_enum::enum_name(id)) + "'");
-        }
-    }
+    config.severities = ParseSeverities_(json.at("severities"), configPath);
 
     config.sanctionYearsPerAtrocity =
         RequireInt_(json, "sanction_years_per_atrocity", "atrocities config");

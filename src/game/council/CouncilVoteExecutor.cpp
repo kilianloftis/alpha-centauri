@@ -43,26 +43,8 @@ void CouncilVoteExecutor::Propose(GameState& rGameState, Faction& rProposer,
         throw std::invalid_argument("CouncilVoteExecutor::Propose: on cooldown");
     }
 
-    std::vector<FactionId_t> memberIds;
-    memberIds.reserve(m_rCouncil.Members().size());
-    for (const Faction* pMember : m_rCouncil.Members())
-    {
-        memberIds.push_back(pMember->GetFactionId());
-    }
-    rGameState.GetDiplomacyLedger().SetKnown(memberIds);
-
-    PendingProposal_t pending;
-    pending.proposalId = rProposalId;
-    pending.proposerId = rProposer.GetFactionId();
-    const CouncilProposalConfig_t& rConfig = m_rCouncil.GetRegistry().Get(rProposalId);
-    if (rConfig.kind == CouncilProposalKind_t::Election)
-    {
-        for (const Faction* pCandidate : EligibleCandidates(m_rCouncil, rConfig))
-        {
-            pending.eligibleCandidateIds.push_back(pCandidate->GetFactionId());
-        }
-    }
-    m_pending = std::move(pending);
+    rGameState.GetDiplomacyLedger().SetKnown(MemberIds_());
+    m_pending = MakePending_(rProposer, rProposalId);
     m_rCouncil.RecordProposal(rProposer.GetFactionId(), rGameState.GetMissionYear());
 
     // An observer that throws must not strand the pending slot, which only Resolve clears.
@@ -75,6 +57,35 @@ void CouncilVoteExecutor::Propose(GameState& rGameState, Faction& rProposer,
         m_pending.reset();
         throw;
     }
+}
+
+std::vector<FactionId_t> CouncilVoteExecutor::MemberIds_() const
+{
+    std::vector<FactionId_t> memberIds;
+    memberIds.reserve(m_rCouncil.Members().size());
+    for (const Faction* pMember : m_rCouncil.Members())
+    {
+        memberIds.push_back(pMember->GetFactionId());
+    }
+    return memberIds;
+}
+
+// An election also fixes who may be voted for, as of the proposal.
+PendingProposal_t CouncilVoteExecutor::MakePending_(const Faction& rProposer,
+                                                    const std::string& rProposalId) const
+{
+    PendingProposal_t pending;
+    pending.proposalId = rProposalId;
+    pending.proposerId = rProposer.GetFactionId();
+    const CouncilProposalConfig_t& rConfig = m_rCouncil.GetRegistry().Get(rProposalId);
+    if (rConfig.kind == CouncilProposalKind_t::Election)
+    {
+        for (const Faction* pCandidate : EligibleCandidates(m_rCouncil, rConfig))
+        {
+            pending.eligibleCandidateIds.push_back(pCandidate->GetFactionId());
+        }
+    }
+    return pending;
 }
 
 void CouncilVoteExecutor::RequireMemberAndPending_(const Faction& rVoter,
