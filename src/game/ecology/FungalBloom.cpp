@@ -39,43 +39,54 @@ Faction* FindNativeLifeFaction_(GameState& rGameState)
     return nullptr;
 }
 
-int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
-                    const std::vector<Tile*>& rNewTiles, int lifeformCount, std::mt19937& rRng,
-                    GameState& rGameState)
+std::vector<Tile*> HabitableTiles_(const std::vector<Tile*>& rTiles,
+                                   const NativeUnitRegistry& rNatives)
 {
     std::vector<Tile*> habitable;
-    for (Tile* pTile : rNewTiles)
+    for (Tile* pTile : rTiles)
     {
         if (!EligibleLifeforms(*pTile, rNatives).empty())
         {
             habitable.push_back(pTile);
         }
     }
+    return habitable;
+}
+
+// One lifeform drawn from those the tile can host.
+void SpawnRandomLifeform_(Faction& rPlanet, const NativeUnitRegistry& rNatives, Tile& rTile,
+                          std::mt19937& rRng, GameState& rGameState)
+{
+    const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
+    std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
+    const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
+    const IDesign* pDesign = rPlanet.GetMilitary().GetDesign(rConfig.id);
+    if (!pDesign)
+    {
+        throw std::logic_error("ApplyFungalBloom: native design '" + rConfig.id
+                               + "' is not registered on the native-life faction");
+    }
+    rPlanet.GetUnitManager().CreateUnit(
+        rGameState.AllocateUnitId(), *pDesign, rGameState.GetWorldMap().GetUnitPositions(),
+        rTile, /*pHomeBase=*/nullptr, std::optional<BaseManager*>{nullptr});
+}
+
+int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
+                    const std::vector<Tile*>& rNewTiles, int lifeformCount, std::mt19937& rRng,
+                    GameState& rGameState)
+{
+    const std::vector<Tile*> habitable = HabitableTiles_(rNewTiles, rNatives);
     if (habitable.empty())
     {
         return 0;
     }
-
-    int spawned = 0;
     std::uniform_int_distribution<size_t> tileDist(0, habitable.size() - 1);
     for (int n = 0; n < lifeformCount; ++n)
     {
         Tile& rTile = *habitable[tileDist(rRng)];
-        const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
-        std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
-        const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
-        const IDesign* pDesign = rPlanet.GetMilitary().GetDesign(rConfig.id);
-        if (!pDesign)
-        {
-            throw std::logic_error("ApplyFungalBloom: native design '" + rConfig.id
-                                   + "' is not registered on the native-life faction");
-        }
-        rPlanet.GetUnitManager().CreateUnit(
-            rGameState.AllocateUnitId(), *pDesign, rGameState.GetWorldMap().GetUnitPositions(),
-            rTile, /*pHomeBase=*/nullptr, std::optional<BaseManager*>{nullptr});
-        ++spawned;
+        SpawnRandomLifeform_(rPlanet, rNatives, rTile, rRng, rGameState);
     }
-    return spawned;
+    return lifeformCount;
 }
 
 int SpawnLifeforms_(const NativeUnitRegistry& rNatives, const std::vector<Tile*>& rNewTiles,

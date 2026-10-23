@@ -68,6 +68,34 @@ const ImprovementConfig_t* PickWeightedBonus_(
     return eligible.back();
 }
 
+// Optional terrain with a placement weight.
+std::vector<const ImprovementConfig_t*> TerrainBonuses_(const ImprovementRegistry& rOccupants)
+{
+    std::vector<const ImprovementConfig_t*> bonuses;
+    for (const ImprovementConfig_t& rConfig : rOccupants.GetAll())
+    {
+        if (rConfig.placement == OccupantPlacement_t::Terrain && rConfig.frequency > 0)
+        {
+            bonuses.push_back(&rConfig);
+        }
+    }
+    return bonuses;
+}
+
+std::vector<Tile*> BonusCandidates_(WorldMap& rWorld,
+                                    const std::vector<const ImprovementConfig_t*>& rBonuses)
+{
+    std::vector<Tile*> candidates;
+    for (auto& pTile : rWorld.GetTiles())
+    {
+        if (pTile && TileAcceptsBonus_(*pTile, rBonuses))
+        {
+            candidates.push_back(pTile.get());
+        }
+    }
+    return candidates;
+}
+
 } // namespace
 
 int PlaceTileBonuses(WorldMap& rWorld,
@@ -80,27 +108,12 @@ int PlaceTileBonuses(WorldMap& rWorld,
         return 0;
     }
 
-    std::vector<const ImprovementConfig_t*> bonuses;
-    for (const ImprovementConfig_t& rConfigEntry : rOccupants.GetAll())
-    {
-        if (rConfigEntry.placement == OccupantPlacement_t::Terrain && rConfigEntry.frequency > 0)
-        {
-            bonuses.push_back(&rConfigEntry);
-        }
-    }
+    const std::vector<const ImprovementConfig_t*> bonuses = TerrainBonuses_(rOccupants);
     if (bonuses.empty())
     {
         return 0;
     }
-
-    std::vector<Tile*> candidates;
-    for (auto& pTile : rWorld.GetTiles())
-    {
-        if (pTile && TileAcceptsBonus_(*pTile, bonuses))
-        {
-            candidates.push_back(pTile.get());
-        }
-    }
+    std::vector<Tile*> candidates = BonusCandidates_(rWorld, bonuses);
     if (candidates.empty())
     {
         return 0;

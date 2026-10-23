@@ -29,17 +29,10 @@ Tile& MutableTile_(WorldMap& rWorldMap, const Tile& rTile)
     return *pTile;
 }
 
-// Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
-// recomputes rivers. Returns false when there was nothing to write.
-bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMap& rWorldMap,
-                           TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
+// Each written tile's surface before its first write.
+std::vector<SurfaceFlip_t> WriteElevations_(const std::vector<ElevationWrite_t>& rWrites,
+                                            WorldMap& rWorldMap)
 {
-    if (rWrites.empty())
-    {
-        return false;
-    }
-
-    TileChangeDeferral defer;
     std::vector<SurfaceFlip_t> before;
     std::unordered_set<const Tile*> seen;
     for (const ElevationWrite_t& rWrite : rWrites)
@@ -51,18 +44,37 @@ bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMa
         }
         rTile.SetElevation(rWrite.elevation);
     }
+    return before;
+}
 
+std::vector<SurfaceFlip_t> FlippedSurfaces_(const std::vector<SurfaceFlip_t>& rBefore)
+{
+    std::vector<SurfaceFlip_t> flips;
+    for (const SurfaceFlip_t& rTileBefore : rBefore)
+    {
+        if (rTileBefore.pTile->IsWater() != rTileBefore.bNowWater)
+        {
+            flips.push_back(SurfaceFlip_t{rTileBefore.pTile, rTileBefore.pTile->IsWater()});
+        }
+    }
+    return flips;
+}
+
+// Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
+// recomputes rivers. Returns false when there was nothing to write.
+bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, WorldMap& rWorldMap,
+                           TileEffectsContext* pTileEffects, IUnitOrderWorld* pWorld)
+{
+    if (rWrites.empty())
+    {
+        return false;
+    }
+
+    TileChangeDeferral defer;
+    const std::vector<SurfaceFlip_t> before = WriteElevations_(rWrites, rWorldMap);
     if (pTileEffects)
     {
-        std::vector<SurfaceFlip_t> flips;
-        for (const SurfaceFlip_t& rBefore : before)
-        {
-            if (rBefore.pTile->IsWater() != rBefore.bNowWater)
-            {
-                flips.push_back(SurfaceFlip_t{rBefore.pTile, rBefore.pTile->IsWater()});
-            }
-        }
-        ReconcileSurfaceFlips(*pTileEffects, pWorld, flips);
+        ReconcileSurfaceFlips(*pTileEffects, pWorld, FlippedSurfaces_(before));
     }
 
     RecomputeRivers(rWorldMap);

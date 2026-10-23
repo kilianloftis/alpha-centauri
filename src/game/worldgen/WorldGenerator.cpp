@@ -34,6 +34,44 @@ float Remap_(float value, float inMin, float inMax, float outMin, float outMax)
     return outMin + t * (outMax - outMin);
 }
 
+struct ElevationScale_t
+{
+    float minValue;
+    float threshold;
+    float maxValue;
+};
+
+// The field value below which the requested share of tiles is water.
+float WaterThreshold_(const std::vector<float>& rField, float requestedCoverage)
+{
+    const float oceanCoverage = std::clamp(requestedCoverage, 0.0f, 1.0f);
+    const size_t tileCount = rField.size();
+    size_t waterCount = static_cast<size_t>(oceanCoverage * static_cast<float>(tileCount));
+    if (waterCount >= tileCount)
+    {
+        waterCount = tileCount - 1;
+    }
+    std::vector<float> sorted = rField;
+    std::nth_element(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(waterCount),
+                     sorted.end());
+    return sorted[waterCount];
+}
+
+int ElevationFor_(float value, const ElevationScale_t& rScale,
+                  const WorldGenPresetConfig_t& rPreset)
+{
+    if (value < rScale.threshold)
+    {
+        const float belowWaterline = Remap_(value, rScale.minValue, rScale.threshold, 1.0f, 0.0f);
+        const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
+        const float deepest = static_cast<float>(rPreset.minElevation + 1);
+        return static_cast<int>(std::lround(-1.0f + depth * deepest));
+    }
+    const float highest = static_cast<float>(rPreset.maxElevation);
+    const float raised = Remap_(value, rScale.threshold, rScale.maxValue, 0.0f, highest);
+    return static_cast<int>(std::lround(raised));
+}
+
 } // namespace
 
 WorldGenerator::WorldGenerator() = default;
@@ -79,15 +117,28 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
                                         const MapGenerationConfig_t& rConfig,
                                         const WorldGenPresetConfig_t& rPreset)
 {
-    const int width = rWorld.GetWidth();
-    const int height = rWorld.GetHeight();
-    const int tileCount = static_cast<int>(rWorld.GetTiles().size());
-
     // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
     // session seed, never of rConfig.seed (the request, where 0 means "pick one").
     const int noiseSeed = static_cast<int>(m_rng());
-    FbmNoise noise(noiseSeed, rPreset);
+    const FbmNoise noise(noiseSeed, rPreset);
+    const std::vector<float> field = SampleElevationField_(rWorld, noise, rPreset);
+    const auto [minIt, maxIt] = std::ranges::minmax_element(field);
+    const ElevationScale_t scale{*minIt, WaterThreshold_(field, rConfig.oceanCoverage), *maxIt};
+    const int width = rWorld.GetWidth();
+    for (const auto& pTile : rWorld.GetTiles())
+    {
+        const int tileIndex = TileIndex(pTile->GetX(), pTile->GetY(), width);
+        const float value = field[static_cast<size_t>(tileIndex)];
+        pTile->SetElevation(ElevationFor_(value, scale, rPreset));
+    }
+}
 
+std::vector<float> WorldGenerator::SampleElevationField_(const WorldMap& rWorld,
+                                                         const FbmNoise& rNoise,
+                                                         const WorldGenPresetConfig_t& rPreset) const
+{
+    const int width = rWorld.GetWidth();
+    const int height = rWorld.GetHeight();
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
     const float scale = std::max(rPreset.continentScale, 0.001f);
@@ -97,10 +148,7 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     const float cylinderRadius =
         (static_cast<float>(width) * kSqrtHalf * scale) / kTwoPi;
 
-    std::vector<float> field(static_cast<size_t>(tileCount));
-    float minValue = 0.0f;
-    float maxValue = 0.0f;
-
+    std::vector<float> field(rWorld.GetTiles().size());
     for (const auto& pTile : rWorld.GetTiles())
     {
         const int x = pTile->GetX();
@@ -111,55 +159,11 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
         const float sampleX = std::cos(angle) * cylinderRadius;
         const float sampleZ = std::sin(angle) * cylinderRadius;
         const float sampleY = static_cast<float>(y) * kSqrtHalf * scale;
-        const float masked =
-            ApplyLandmassMask_(noise.Sample(sampleX, sampleY, sampleZ), nx, ny, rPreset);
-
+        const float sample = rNoise.Sample(sampleX, sampleY, sampleZ);
         const size_t index = static_cast<size_t>(TileIndex(x, y, width));
-        field[index] = masked;
-        if (index == 0 || masked < minValue)
-        {
-            minValue = masked;
-        }
-        if (index == 0 || masked > maxValue)
-        {
-            maxValue = masked;
-        }
+        field[index] = ApplyLandmassMask_(sample, nx, ny, rPreset);
     }
-
-    float oceanCoverage = std::clamp(rConfig.oceanCoverage, 0.0f, 1.0f);
-    size_t waterCount = static_cast<size_t>(oceanCoverage * static_cast<float>(tileCount));
-    if (waterCount >= static_cast<size_t>(tileCount))
-    {
-        waterCount = static_cast<size_t>(tileCount) - 1;
-    }
-
-    std::vector<float> sorted = field;
-    std::nth_element(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(waterCount),
-                     sorted.end());
-    const float threshold = sorted[waterCount];
-
-    for (const auto& pTile : rWorld.GetTiles())
-    {
-        const int tileIndex = TileIndex(pTile->GetX(), pTile->GetY(), width);
-        const size_t index = static_cast<size_t>(tileIndex);
-        const float value = field[index];
-        int elevation = 0;
-        if (value < threshold)
-        {
-            const float belowWaterline =
-                Remap_(value, minValue, threshold, 1.0f, 0.0f);
-            const float depth = std::pow(belowWaterline, rPreset.oceanDepthExponent);
-            const float deepest = static_cast<float>(rPreset.minElevation + 1);
-            elevation = static_cast<int>(std::lround(-1.0f + depth * deepest));
-        }
-        else
-        {
-            const float highest = static_cast<float>(rPreset.maxElevation);
-            const float raised = Remap_(value, threshold, maxValue, 0.0f, highest);
-            elevation = static_cast<int>(std::lround(raised));
-        }
-        pTile->SetElevation(elevation);
-    }
+    return field;
 }
 
 float WorldGenerator::ApplyLandmassMask_(float noiseValue,

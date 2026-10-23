@@ -198,6 +198,16 @@ TileBonusDecorationConfig_t ParseTileBonuses_(const nlohmann::json& rJson)
     return config;
 }
 
+const nlohmann::json& RequireSection_(const nlohmann::json& rJson, const char* pKey)
+{
+    if (!rJson.contains(pKey) || !rJson.at(pKey).is_object())
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration config missing required object '") + pKey + "'");
+    }
+    return rJson.at(pKey);
+}
+
 } // namespace
 
 WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
@@ -212,36 +222,11 @@ WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
 
     const nlohmann::json json = nlohmann::json::parse(file);
     WorldGenDecorationConfig_t config;
-    if (!json.contains("moisture") || !json.at("moisture").is_object())
-    {
-        throw std::runtime_error(
-            "world gen decoration config missing required object 'moisture'");
-    }
-    config.moisture = ParseMoisture_(json.at("moisture"));
-    if (!json.contains("rockiness") || !json.at("rockiness").is_object())
-    {
-        throw std::runtime_error(
-            "world gen decoration config missing required object 'rockiness'");
-    }
-    config.rockiness = ParseRockiness_(json.at("rockiness"));
-    if (!json.contains("aquifers") || !json.at("aquifers").is_object())
-    {
-        throw std::runtime_error(
-            "world gen decoration config missing required object 'aquifers'");
-    }
-    config.aquifers = ParseAquifers_(json.at("aquifers"));
-    if (!json.contains("fungus") || !json.at("fungus").is_object())
-    {
-        throw std::runtime_error(
-            "world gen decoration config missing required object 'fungus'");
-    }
-    config.fungus = ParseFungus_(json.at("fungus"));
-    if (!json.contains("tile_bonuses") || !json.at("tile_bonuses").is_object())
-    {
-        throw std::runtime_error(
-            "world gen decoration config missing required object 'tile_bonuses'");
-    }
-    config.tileBonuses = ParseTileBonuses_(json.at("tile_bonuses"));
+    config.moisture = ParseMoisture_(RequireSection_(json, "moisture"));
+    config.rockiness = ParseRockiness_(RequireSection_(json, "rockiness"));
+    config.aquifers = ParseAquifers_(RequireSection_(json, "aquifers"));
+    config.fungus = ParseFungus_(RequireSection_(json, "fungus"));
+    config.tileBonuses = ParseTileBonuses_(RequireSection_(json, "tile_bonuses"));
     return config;
 }
 

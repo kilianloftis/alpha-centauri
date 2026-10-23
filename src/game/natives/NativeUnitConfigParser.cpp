@@ -24,6 +24,30 @@ int RequireWholeCount_(const nlohmann::json& rJson, const char* pKey)
     return static_cast<int>(value);
 }
 
+NativeLifeConfig_t ParseNativeLife_(const nlohmann::json& rJson)
+{
+    NativeLifeConfig_t life;
+    life.fungalBloomNativeLifeformsMin =
+        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_min");
+    life.fungalBloomNativeLifeformsMax =
+        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_max");
+    if (life.fungalBloomNativeLifeformsMin < 0)
+    {
+        throw std::runtime_error(
+            "native_units 'fungal_bloom_native_lifeforms_min' must be >= 0, got "
+            + std::to_string(life.fungalBloomNativeLifeformsMin));
+    }
+    if (life.fungalBloomNativeLifeformsMax < life.fungalBloomNativeLifeformsMin)
+    {
+        throw std::runtime_error(
+            "native_units 'fungal_bloom_native_lifeforms_max' must be >= "
+            "'fungal_bloom_native_lifeforms_min', got "
+            + std::to_string(life.fungalBloomNativeLifeformsMax) + " < "
+            + std::to_string(life.fungalBloomNativeLifeformsMin));
+    }
+    return life;
+}
+
 } // namespace
 
 std::vector<NativeUnitConfig_t> NativeUnitConfigParser::ParseConfig(const std::string& rConfigPath)
@@ -39,24 +63,7 @@ std::vector<NativeUnitConfig_t> NativeUnitConfigParser::ParseConfig(const std::s
         throw std::runtime_error("native_units root must be an object");
     }
 
-    m_life.fungalBloomNativeLifeformsMin =
-        RequireWholeCount_(json, "fungal_bloom_native_lifeforms_min");
-    m_life.fungalBloomNativeLifeformsMax =
-        RequireWholeCount_(json, "fungal_bloom_native_lifeforms_max");
-    if (m_life.fungalBloomNativeLifeformsMin < 0)
-    {
-        throw std::runtime_error(
-            "native_units 'fungal_bloom_native_lifeforms_min' must be >= 0, got "
-            + std::to_string(m_life.fungalBloomNativeLifeformsMin));
-    }
-    if (m_life.fungalBloomNativeLifeformsMax < m_life.fungalBloomNativeLifeformsMin)
-    {
-        throw std::runtime_error(
-            "native_units 'fungal_bloom_native_lifeforms_max' must be >= "
-            "'fungal_bloom_native_lifeforms_min', got "
-            + std::to_string(m_life.fungalBloomNativeLifeformsMax) + " < "
-            + std::to_string(m_life.fungalBloomNativeLifeformsMin));
-    }
+    m_life = ParseNativeLife_(json);
 
     if (!json.contains("units") || !json.at("units").is_array())
     {

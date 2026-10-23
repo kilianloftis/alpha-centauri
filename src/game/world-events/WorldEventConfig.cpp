@@ -115,31 +115,35 @@ WorldEventConfig_t ParseEvent_(const nlohmann::json& rJson, const std::string& r
     return event;
 }
 
+WorldEventsConfig_t ParseWorldEvents_(const nlohmann::json& rJson, const std::string& rCtx)
+{
+    RejectUnknownKeys_(rJson, {"events"}, rCtx);
+    const nlohmann::json& rEvents = RequireKey_(rJson, "events", rCtx);
+    if (!rEvents.is_array())
+    {
+        throw std::runtime_error(rCtx + ": 'events' must be an array");
+    }
+    WorldEventsConfig_t config;
+    std::unordered_set<std::string> seenIds;
+    for (const nlohmann::json& rEventJson : rEvents)
+    {
+        WorldEventConfig_t event = ParseEvent_(rEventJson, rCtx);
+        if (!seenIds.insert(event.id).second)
+        {
+            throw std::runtime_error(rCtx + ": duplicate event id '" + event.id + "'");
+        }
+        config.events.push_back(std::move(event));
+    }
+    return config;
+}
+
 } // namespace
 
 WorldEventsConfig_t WorldEventsConfigParser::ParseConfig(const std::string& rConfigPath)
 {
     return JsonConfigLoader::LoadObjectFile<WorldEventsConfig_t>(
         rConfigPath, "world events", [&rConfigPath](const nlohmann::json& rJson) {
-            const std::string ctx = "World events config '" + rConfigPath + "'";
-            RejectUnknownKeys_(rJson, {"events"}, ctx);
-            const nlohmann::json& rEvents = RequireKey_(rJson, "events", ctx);
-            if (!rEvents.is_array())
-            {
-                throw std::runtime_error(ctx + ": 'events' must be an array");
-            }
-            WorldEventsConfig_t config;
-            std::unordered_set<std::string> seenIds;
-            for (const nlohmann::json& rEventJson : rEvents)
-            {
-                WorldEventConfig_t event = ParseEvent_(rEventJson, ctx);
-                if (!seenIds.insert(event.id).second)
-                {
-                    throw std::runtime_error(ctx + ": duplicate event id '" + event.id + "'");
-                }
-                config.events.push_back(std::move(event));
-            }
-            return config;
+            return ParseWorldEvents_(rJson, "World events config '" + rConfigPath + "'");
         });
 }
 

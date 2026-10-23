@@ -14,6 +14,7 @@ namespace ac
 {
 
 class ImprovementRegistry;
+class FbmNoise;
 
 class WorldGenerator
 {
@@ -43,6 +44,9 @@ private:
     void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers,
                            const ImprovementRegistry& rOccupants);
 
+    // Masked noise per tile, indexed by TileIndex.
+    std::vector<float> SampleElevationField_(const WorldMap& rWorld, const FbmNoise& rNoise,
+                                             const WorldGenPresetConfig_t& rPreset) const;
     float ApplyLandmassMask_(float noiseValue,
                              float nx,
                              float ny,

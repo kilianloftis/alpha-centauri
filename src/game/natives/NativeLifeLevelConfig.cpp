@@ -56,6 +56,47 @@ NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
     return level;
 }
 
+std::vector<NativeLifeLevel_t> ParseUniqueLevels_(const nlohmann::json& rLevelsJson,
+                                                  const std::string& rCtx)
+{
+    std::vector<NativeLifeLevel_t> levels;
+    std::unordered_set<std::string> seenIds;
+    for (const nlohmann::json& rLevelJson : rLevelsJson)
+    {
+        NativeLifeLevel_t level = ParseLevel_(rLevelJson);
+        if (!seenIds.insert(level.id).second)
+        {
+            throw std::runtime_error(rCtx + ": duplicate level id '" + level.id + "'");
+        }
+        levels.push_back(std::move(level));
+    }
+    return levels;
+}
+
+NativeLifeLevelConfig_t ParseNativeLifeLevels_(const nlohmann::json& rJson, const std::string& rCtx)
+{
+    RejectUnknownKeys_(rJson, {"default", "levels"}, rCtx);
+    if (!rJson.contains("default") || !rJson.at("default").is_string()
+        || rJson.at("default").get<std::string>().empty())
+    {
+        throw std::runtime_error(rCtx + ": 'default' must be a non-empty string");
+    }
+    if (!rJson.contains("levels") || !rJson.at("levels").is_array()
+        || rJson.at("levels").empty())
+    {
+        throw std::runtime_error(rCtx + ": 'levels' must be a non-empty array");
+    }
+    NativeLifeLevelConfig_t config;
+    config.defaultId = rJson.at("default").get<std::string>();
+    config.levels = ParseUniqueLevels_(rJson.at("levels"), rCtx);
+    if (!config.FindById(config.defaultId))
+    {
+        throw std::runtime_error(rCtx + ": default '" + config.defaultId
+                                 + "' does not match any level id");
+    }
+    return config;
+}
+
 } // namespace
 
 const NativeLifeLevel_t* NativeLifeLevelConfig_t::FindById(const std::string& rId) const
@@ -85,37 +126,8 @@ NativeLifeLevelConfig_t NativeLifeLevelConfigParser::ParseConfig(const std::stri
 {
     return JsonConfigLoader::LoadObjectFile<NativeLifeLevelConfig_t>(
         rConfigPath, "native life levels", [&rConfigPath](const nlohmann::json& rJson) {
-            const std::string ctx = "Native life level config '" + rConfigPath + "'";
-            RejectUnknownKeys_(rJson, {"default", "levels"}, ctx);
-            if (!rJson.contains("default") || !rJson.at("default").is_string()
-                || rJson.at("default").get<std::string>().empty())
-            {
-                throw std::runtime_error(ctx + ": 'default' must be a non-empty string");
-            }
-            if (!rJson.contains("levels") || !rJson.at("levels").is_array()
-                || rJson.at("levels").empty())
-            {
-                throw std::runtime_error(ctx + ": 'levels' must be a non-empty array");
-            }
-
-            NativeLifeLevelConfig_t config;
-            config.defaultId = rJson.at("default").get<std::string>();
-            std::unordered_set<std::string> seenIds;
-            for (const nlohmann::json& rLevelJson : rJson.at("levels"))
-            {
-                NativeLifeLevel_t level = ParseLevel_(rLevelJson);
-                if (!seenIds.insert(level.id).second)
-                {
-                    throw std::runtime_error(ctx + ": duplicate level id '" + level.id + "'");
-                }
-                config.levels.push_back(std::move(level));
-            }
-            if (!config.FindById(config.defaultId))
-            {
-                throw std::runtime_error(ctx + ": default '" + config.defaultId
-                                         + "' does not match any level id");
-            }
-            return config;
+            return ParseNativeLifeLevels_(rJson,
+                                          "Native life level config '" + rConfigPath + "'");
         });
 }
 

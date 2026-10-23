@@ -60,6 +60,48 @@ std::string LoadFormula_(const std::string& rFormulaPath, LuaRuntime& rLua)
     return formula;
 }
 
+void ParseFungalPop_(const nlohmann::json& rPop, const std::string& rCtx,
+                     EcoDamageConfig_t& rParsed)
+{
+    if (!rPop.is_object())
+    {
+        throw std::runtime_error(rCtx + " must be an object");
+    }
+    RejectUnknownKeys_(rPop, {"max_chance_percent", "on_pop_effects"}, rCtx);
+
+    const nlohmann::json& rMax = RequireKey_(rPop, "max_chance_percent", rCtx);
+    if (!rMax.is_number_integer())
+    {
+        throw std::runtime_error(rCtx + ": 'max_chance_percent' must be an integer");
+    }
+    rParsed.maxChancePercent = rMax.get<int>();
+    if (rParsed.maxChancePercent < 0 || rParsed.maxChancePercent > 100)
+    {
+        throw std::runtime_error(rCtx + ": 'max_chance_percent' must be 0..100");
+    }
+
+    if (!RequireKey_(rPop, "on_pop_effects", rCtx).is_array())
+    {
+        throw std::runtime_error(rCtx + ": 'on_pop_effects' must be an array");
+    }
+    rParsed.onPopEffects =
+        TriggeredEffectParser::ParseTriggeredEffects(rPop, "on_pop_effects", "eco_damage");
+}
+
+EcoDamageConfig_t ParseEcoDamage_(const nlohmann::json& rJson, const std::string& rCtx)
+{
+    RejectUnknownKeys_(rJson, {"effects", "fungal_pop"}, rCtx);
+    EcoDamageConfig_t parsed;
+    if (!RequireKey_(rJson, "effects", rCtx).is_array())
+    {
+        throw std::runtime_error(rCtx + ": 'effects' must be an array");
+    }
+    parsed.effects =
+        EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::EcoDamage, "eco_damage");
+    ParseFungalPop_(RequireKey_(rJson, "fungal_pop", rCtx), rCtx + " fungal_pop", parsed);
+    return parsed;
+}
+
 } // namespace
 
 EcoDamageConfig_t EcoDamageConfigParser::ParseConfig(const std::string& rConfigPath,
@@ -68,43 +110,7 @@ EcoDamageConfig_t EcoDamageConfigParser::ParseConfig(const std::string& rConfigP
 {
     EcoDamageConfig_t config = JsonConfigLoader::LoadObjectFile<EcoDamageConfig_t>(
         rConfigPath, "eco damage", [&rConfigPath](const nlohmann::json& rJson) {
-            const std::string ctx = "Eco damage config '" + rConfigPath + "'";
-            RejectUnknownKeys_(rJson, {"effects", "fungal_pop"}, ctx);
-
-            EcoDamageConfig_t parsed;
-            if (!RequireKey_(rJson, "effects", ctx).is_array())
-            {
-                throw std::runtime_error(ctx + ": 'effects' must be an array");
-            }
-            parsed.effects =
-                EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::EcoDamage, "eco_damage");
-
-            const nlohmann::json& rPop = RequireKey_(rJson, "fungal_pop", ctx);
-            const std::string popCtx = ctx + " fungal_pop";
-            if (!rPop.is_object())
-            {
-                throw std::runtime_error(popCtx + " must be an object");
-            }
-            RejectUnknownKeys_(rPop, {"max_chance_percent", "on_pop_effects"}, popCtx);
-
-            const nlohmann::json& rMax = RequireKey_(rPop, "max_chance_percent", popCtx);
-            if (!rMax.is_number_integer())
-            {
-                throw std::runtime_error(popCtx + ": 'max_chance_percent' must be an integer");
-            }
-            parsed.maxChancePercent = rMax.get<int>();
-            if (parsed.maxChancePercent < 0 || parsed.maxChancePercent > 100)
-            {
-                throw std::runtime_error(popCtx + ": 'max_chance_percent' must be 0..100");
-            }
-
-            if (!RequireKey_(rPop, "on_pop_effects", popCtx).is_array())
-            {
-                throw std::runtime_error(popCtx + ": 'on_pop_effects' must be an array");
-            }
-            parsed.onPopEffects = TriggeredEffectParser::ParseTriggeredEffects(
-                rPop, "on_pop_effects", "eco_damage");
-            return parsed;
+            return ParseEcoDamage_(rJson, "Eco damage config '" + rConfigPath + "'");
         });
     config.damageFormula = LoadFormula_(rFormulaPath, rLua);
     return config;

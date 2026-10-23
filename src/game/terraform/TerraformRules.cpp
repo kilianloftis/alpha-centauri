@@ -440,6 +440,25 @@ void RelaxAdjacentSlopes_(const std::vector<const Tile*>& rSeeds, const WorldMap
     }
 }
 
+// The seeded tiles whose clamped elevation actually changed.
+std::vector<const Tile*> ApplySeeds_(std::span<const ElevationSeed_t> seeds,
+                                     const ElevationBand_t& rBand, WorkingElevations_& rWorking)
+{
+    std::vector<const Tile*> moved;
+    for (const ElevationSeed_t& rSeed : seeds)
+    {
+        const int current = rWorking.Get(*rSeed.pTile);
+        const int next = ClampElevation_(current + rSeed.deltaMeters, rBand.floor, rBand.ceiling);
+        if (next == current)
+        {
+            continue;
+        }
+        rWorking.Set(*rSeed.pTile, next);
+        moved.push_back(rSeed.pTile);
+    }
+    return moved;
+}
+
 } // namespace
 
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
@@ -449,19 +468,7 @@ std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_
     const ElevationBand_t band = RequireLegalEdit_(floorMeters, ceilingMeters, rRules);
     const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     WorkingElevations_ working;
-    std::vector<const Tile*> moved;
-    for (const ElevationSeed_t& rSeed : seeds)
-    {
-        const int current = working.Get(*rSeed.pTile);
-        const int next =
-            ClampElevation_(current + rSeed.deltaMeters, band.floor, band.ceiling);
-        if (next == current)
-        {
-            continue;
-        }
-        working.Set(*rSeed.pTile, next);
-        moved.push_back(rSeed.pTile);
-    }
+    const std::vector<const Tile*> moved = ApplySeeds_(seeds, band, working);
     if (!moved.empty())
     {
         RelaxAdjacentSlopes_(moved, rWorldMap, rRules, working);

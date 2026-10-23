@@ -60,6 +60,17 @@ bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
     return touches;
 }
 
+// Swap-removes so the draw stays O(1); frontier order carries no meaning.
+Tile* TakeRandom_(std::vector<Tile*>& rFrontier, std::mt19937& rRng)
+{
+    std::uniform_int_distribution<size_t> pick(0, rFrontier.size() - 1);
+    const size_t index = pick(rRng);
+    Tile* pTaken = rFrontier[index];
+    rFrontier[index] = rFrontier.back();
+    rFrontier.pop_back();
+    return pTaken;
+}
+
 int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize,
                const ImprovementConfig_t& rFungus, std::mt19937& rRng)
 {
@@ -95,12 +106,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize,
 
     while (placed < targetSize && !frontier.empty())
     {
-        std::uniform_int_distribution<size_t> pick(0, frontier.size() - 1);
-        const size_t index = pick(rRng);
-        Tile* pNext = frontier[index];
-        frontier[index] = frontier.back();
-        frontier.pop_back();
-
+        Tile* pNext = TakeRandom_(frontier, rRng);
         if (!pNext || !IsEligible_(*pNext, rFungus)
             || TouchesForeignFungus_(*pNext, rWorld, patch, rFungus.id))
         {
@@ -117,6 +123,19 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize,
     return placed;
 }
 
+std::vector<Tile*> EligibleTiles_(WorldMap& rWorld, const ImprovementConfig_t& rFungus)
+{
+    std::vector<Tile*> candidates;
+    for (auto& pTile : rWorld.GetTiles())
+    {
+        if (pTile && IsEligible_(*pTile, rFungus))
+        {
+            candidates.push_back(pTile.get());
+        }
+    }
+    return candidates;
+}
+
 void PlacePatches_(WorldMap& rWorld,
                    float fraction,
                    int minPatch,
@@ -130,14 +149,7 @@ void PlacePatches_(WorldMap& rWorld,
         return;
     }
 
-    std::vector<Tile*> candidates;
-    for (auto& pTile : rWorld.GetTiles())
-    {
-        if (pTile && IsEligible_(*pTile, rFungus))
-        {
-            candidates.push_back(pTile.get());
-        }
-    }
+    std::vector<Tile*> candidates = EligibleTiles_(rWorld, rFungus);
     if (candidates.empty())
     {
         return;

@@ -45,80 +45,101 @@ LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::strin
     return sculpt;
 }
 
+LandmarkShape_t ParseDiskShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+{
+    LandmarkShape_t shape;
+    shape.kind = LandmarkShapeKind_t::Disk;
+    shape.radius = rJson.at("radius").get<int>();
+    if (shape.radius < 0)
+    {
+        throw std::runtime_error("Landmark '" + landmarkId + "' disk radius must be >= 0");
+    }
+    return shape;
+}
+
+LandmarkShape_t ParseRingShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+{
+    LandmarkShape_t shape;
+    shape.kind = LandmarkShapeKind_t::Ring;
+    shape.outerRadius = rJson.at("outer_radius").get<int>();
+    shape.innerRadius = rJson.value("inner_radius", 0);
+    if (shape.outerRadius < 1 || shape.innerRadius < 0
+        || shape.innerRadius >= shape.outerRadius)
+    {
+        throw std::runtime_error(
+            "Landmark '" + landmarkId
+            + "' ring requires 0 <= inner_radius < outer_radius and outer_radius >= 1");
+    }
+    return shape;
+}
+
+LandmarkShape_t ParseMaskShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+{
+    LandmarkShape_t shape;
+    shape.kind = LandmarkShapeKind_t::Mask;
+    if (!rJson.contains("rows") || !rJson.at("rows").is_array() || rJson.at("rows").empty())
+    {
+        throw std::runtime_error("Landmark '" + landmarkId + "' mask requires non-empty 'rows'");
+    }
+    for (const auto& row : rJson.at("rows"))
+    {
+        shape.maskRows.push_back(row.get<std::string>());
+    }
+    // All-blank rows expand to no footprint, which placement can only skip in silence.
+    const bool bHasCell = std::any_of(
+        shape.maskRows.begin(), shape.maskRows.end(), [](const std::string& rRow) {
+            return rRow.find_first_of("Xx") != std::string::npos;
+        });
+    if (!bHasCell)
+    {
+        throw std::runtime_error("Landmark '" + landmarkId
+                                 + "' mask rows contain no 'X' footprint cell");
+    }
+    return shape;
+}
+
+LandmarkShape_t ParseSculptorShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+{
+    LandmarkShape_t shape;
+    shape.kind = LandmarkShapeKind_t::Sculptor;
+    shape.sculptorId = rJson.at("id").get<std::string>();
+    shape.radius = rJson.value("radius", 4);
+    if (shape.sculptorId.empty())
+    {
+        throw std::runtime_error("Landmark '" + landmarkId + "' sculptor requires 'id'");
+    }
+    if (shape.radius < 1)
+    {
+        throw std::runtime_error("Landmark '" + landmarkId + "' sculptor radius must be >= 1");
+    }
+    shape.sculpt = ParseSculpt_(rJson, landmarkId);
+    return shape;
+}
+
 LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId)
 {
     if (!rJson.is_object() || !rJson.contains("kind"))
     {
         throw std::runtime_error("Landmark '" + landmarkId + "' shape requires 'kind'");
     }
-
-    LandmarkShape_t shape;
     const std::string kind = ToLowerAscii(rJson.at("kind").get<std::string>());
     if (kind == "disk")
     {
-        shape.kind = LandmarkShapeKind_t::Disk;
-        shape.radius = rJson.at("radius").get<int>();
-        if (shape.radius < 0)
-        {
-            throw std::runtime_error("Landmark '" + landmarkId + "' disk radius must be >= 0");
-        }
+        return ParseDiskShape_(rJson, landmarkId);
     }
-    else if (kind == "ring")
+    if (kind == "ring")
     {
-        shape.kind = LandmarkShapeKind_t::Ring;
-        shape.outerRadius = rJson.at("outer_radius").get<int>();
-        shape.innerRadius = rJson.value("inner_radius", 0);
-        if (shape.outerRadius < 1 || shape.innerRadius < 0
-            || shape.innerRadius >= shape.outerRadius)
-        {
-            throw std::runtime_error(
-                "Landmark '" + landmarkId
-                + "' ring requires 0 <= inner_radius < outer_radius and outer_radius >= 1");
-        }
+        return ParseRingShape_(rJson, landmarkId);
     }
-    else if (kind == "mask")
+    if (kind == "mask")
     {
-        shape.kind = LandmarkShapeKind_t::Mask;
-        if (!rJson.contains("rows") || !rJson.at("rows").is_array() || rJson.at("rows").empty())
-        {
-            throw std::runtime_error("Landmark '" + landmarkId + "' mask requires non-empty 'rows'");
-        }
-        for (const auto& row : rJson.at("rows"))
-        {
-            shape.maskRows.push_back(row.get<std::string>());
-        }
-        // All-blank rows expand to no footprint, which placement can only skip in silence.
-        const bool bHasCell = std::any_of(
-            shape.maskRows.begin(), shape.maskRows.end(), [](const std::string& rRow) {
-                return rRow.find_first_of("Xx") != std::string::npos;
-            });
-        if (!bHasCell)
-        {
-            throw std::runtime_error("Landmark '" + landmarkId
-                                     + "' mask rows contain no 'X' footprint cell");
-        }
+        return ParseMaskShape_(rJson, landmarkId);
     }
-    else if (kind == "sculptor")
+    if (kind == "sculptor")
     {
-        shape.kind = LandmarkShapeKind_t::Sculptor;
-        shape.sculptorId = rJson.at("id").get<std::string>();
-        shape.radius = rJson.value("radius", 4);
-        if (shape.sculptorId.empty())
-        {
-            throw std::runtime_error("Landmark '" + landmarkId + "' sculptor requires 'id'");
-        }
-        if (shape.radius < 1)
-        {
-            throw std::runtime_error(
-                "Landmark '" + landmarkId + "' sculptor radius must be >= 1");
-        }
-        shape.sculpt = ParseSculpt_(rJson, landmarkId);
+        return ParseSculptorShape_(rJson, landmarkId);
     }
-    else
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' unknown shape kind '" + kind + "'");
-    }
-    return shape;
+    throw std::runtime_error("Landmark '" + landmarkId + "' unknown shape kind '" + kind + "'");
 }
 
 LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)

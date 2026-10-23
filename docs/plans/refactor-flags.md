@@ -378,3 +378,12 @@ Found while applying rules 7 and 8. Each needs a closer look before it changes.
 - **Problem:** the improvement and farm loops each write out the same nearest-tile search with a
   different filter.
 - **Why not now:** the block is compiled out by default, so a change there is not built or run.
+
+### Level-set parsers and `RejectUnknownKeys_` — the same parse in several files
+- **Where:** `src/game/DifficultyConfigParser.cpp`, `src/game/natives/NativeLifeLevelConfig.cpp`
+  (`default` plus a list of uniquely-id'd levels); `RejectUnknownKeys_` is copied into eight
+  parsers (`grep -rl 'void RejectUnknownKeys_' src`)
+- **Problem:** each file writes out the same default-and-levels check and its own key whitelist,
+  so their messages and rules can drift apart.
+- **Why not now:** the shared form belongs in `lib/config` as a template over the level type,
+  which changes every caller's error text.
