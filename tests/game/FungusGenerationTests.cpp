@@ -1,3 +1,5 @@
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "TestHelpers.h"
 #include "game/worldgen/FungusGeneration.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -28,11 +30,12 @@ std::filesystem::path TempPath_(const char* name)
 const ImprovementConfig_t& TestFungus_()
 {
     static ImprovementRegistry registry;
+    static TerrainOperationRegistry operations;
     static bool bLoaded = false;
     if (!bLoaded)
     {
-        registry.LoadOccupants(actest::FixturePath("improvements.json"),
-                               actest::FixturePath("terrain.json"));
+        LoadMapOccupants(actest::FixturePath("improvements.json"),
+                         actest::FixturePath("terrain.json"), registry, operations);
         bLoaded = true;
     }
     return registry.Get("Fungus");

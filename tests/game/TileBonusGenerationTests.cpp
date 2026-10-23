@@ -1,3 +1,5 @@
+#include "game/map/MapOccupantLoad.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "TestHelpers.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
@@ -26,8 +28,9 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable til
           "[worldgen][tile-bonus]")
 {
     ImprovementRegistry terrain;
-    terrain.LoadOccupants(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json",
-                          std::string(AC_TEST_FIXTURES_DIR) + "/terrain.json");
+    TerrainOperationRegistry operations;
+    LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
+                     terrain, operations);
 
     WorldMap world(24, 24, actest::TestMapRules());
     FillLand_(world);
@@ -75,8 +78,9 @@ TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",
           "[worldgen][tile-bonus]")
 {
     ImprovementRegistry terrain;
-    terrain.LoadOccupants(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json",
-                          std::string(AC_TEST_FIXTURES_DIR) + "/terrain.json");
+    TerrainOperationRegistry operations;
+    LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
+                     terrain, operations);
 
     WorldMap world(16, 16, actest::TestMapRules());
     for (auto& pTile : world.GetTiles())

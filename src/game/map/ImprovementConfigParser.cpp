@@ -293,12 +293,6 @@ std::vector<ImprovementConfig_t> LoadTileOccupants(
     return occupants;
 }
 
-std::vector<ImprovementConfig_t> LoadTileOccupants(const std::string& rImprovementsPath,
-                                                   const std::string& rTerrainPath)
-{
-    return LoadTileOccupants(rImprovementsPath, ParseTerrainFile(rTerrainPath).features);
-}
-
 void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
 {
     const TagIndex_t tagIndex = BuildTagIndex_(rConfigs);

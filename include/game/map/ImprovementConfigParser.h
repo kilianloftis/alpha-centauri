@@ -91,12 +91,8 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);
 ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
                                          OccupantPlacement_t placement);
 
-// Parse improvements and terrain occupants into one list, tags expanded across both.
-std::vector<ImprovementConfig_t> LoadTileOccupants(const std::string& rImprovementsPath,
-                                                   const std::string& rTerrainPath);
-
-// The same, for a caller that already parsed the terrain half (see ParseTerrainFile) and
-// should not open that file a second time.
+// Parse improvements and the already-parsed terrain occupants (see ParseTerrainFile) into one
+// list, tags expanded across both.
 std::vector<ImprovementConfig_t> LoadTileOccupants(
     const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures);
 
