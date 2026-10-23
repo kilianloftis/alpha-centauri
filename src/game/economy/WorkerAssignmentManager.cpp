@@ -243,38 +243,63 @@ bool WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
         return false;
     }
 
-    // Reverse order: prefer the most recently added pop when several are eligible.
+    if (Pop* pIdle = FindIdleWorker_())
+    {
+        return UserAssignWorker(*pIdle, pTile);
+    }
+    if (Pop* pSpecialist = FindSpecialist_())
+    {
+        return ConvertAndAssign_(*pSpecialist, pTile);
+    }
+    if (Pop* pWorker = FindLowestYieldAssignedWorker_())
+    {
+        return MoveWorker_(*pWorker, pTile);
+    }
+    return false;
+}
+
+// Reverse order: prefer the most recently added pop when several are eligible.
+Pop* WorkerAssignmentManager::FindIdleWorker_() const
+{
     for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
         if (rPop.IsWorker() && rPop.GetTile() == nullptr)
         {
-            return UserAssignWorker(rPop, pTile);
+            return &rPop;
         }
     }
+    return nullptr;
+}
 
+Pop* WorkerAssignmentManager::FindSpecialist_() const
+{
     for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
         if (!rPop.IsWorker())
         {
-            m_rPops.ConvertToDefaultPopType(rPop);
-            if (UserAssignWorker(rPop, pTile))
-            {
-                return true;
-            }
-            // The conversion already happened; auto-assignment gives the now-plain worker a
-            // tile rather than leaving it idle.
-            AutoAssignWorkers();
-            return false;
+            return &rPop;
         }
     }
+    return nullptr;
+}
 
-    Pop* pWorker = FindLowestYieldAssignedWorker_();
-    if (!pWorker)
+bool WorkerAssignmentManager::ConvertAndAssign_(Pop& rSpecialist, const Tile* pTile)
+{
+    m_rPops.ConvertToDefaultPopType(rSpecialist);
+    if (UserAssignWorker(rSpecialist, pTile))
     {
-        return false;
+        return true;
     }
-    UnassignWorker(*pWorker);
-    if (UserAssignWorker(*pWorker, pTile))
+    // The conversion already happened; auto-assignment gives the now-plain worker a
+    // tile rather than leaving it idle.
+    AutoAssignWorkers();
+    return false;
+}
+
+bool WorkerAssignmentManager::MoveWorker_(Pop& rWorker, const Tile* pTile)
+{
+    UnassignWorker(rWorker);
+    if (UserAssignWorker(rWorker, pTile))
     {
         return true;
     }

@@ -63,6 +63,8 @@ private:
     // Finish price for `remaining` minerals with `stockpile` already banked. 0 when nothing
     // remains, without consulting Lua.
     int FinishCost_(const HurryKindConfig_t& rKind, int remaining, int stockpile) const;
+    int MostAffordableMinerals_(const HurryKindConfig_t& rKind, int remaining, int stockpile,
+                                int credits) const;
 
     const ProductionConfig_t* m_pConfig;
     // Not const: EvalInt mutates interpreter globals, and Quote is a query.

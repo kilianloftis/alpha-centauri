@@ -38,6 +38,25 @@ int ResolveFreeUnitSupport_(const BaseManager& rBase)
     return std::max(0, raw);
 }
 
+// A crawler carries only the one resource its order names.
+void AddCrawledResource_(TileResources_t& rTotal, StatId_t resource, const TileResources_t& rYield)
+{
+    switch (resource)
+    {
+        case StatId_t::Nutrients:
+            rTotal.nutrients += rYield.nutrients;
+            break;
+        case StatId_t::Minerals:
+            rTotal.minerals += rYield.minerals;
+            break;
+        case StatId_t::Energy:
+            rTotal.energy += rYield.energy;
+            break;
+        default:
+            break;
+    }
+}
+
 TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
                                          const TileEffectsContext& rTileEffects,
                                          const BaseEffects_t& rBaseEffects)
@@ -59,20 +78,7 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
         const auto& rOrder = std::get<SupplyCrawlOrder_t>(*pUnit->GetOrder());
         const TileResources_t yield =
             rTileEffects.ResolveTileYield(*pTile, /*bIsBaseTile*/false, rBaseEffects).effective;
-        switch (rOrder.resource)
-        {
-            case StatId_t::Nutrients:
-                total.nutrients += yield.nutrients;
-                break;
-            case StatId_t::Minerals:
-                total.minerals += yield.minerals;
-                break;
-            case StatId_t::Energy:
-                total.energy += yield.energy;
-                break;
-            default:
-                break;
-        }
+        AddCrawledResource_(total, rOrder.resource, yield);
     }
     return total;
 }

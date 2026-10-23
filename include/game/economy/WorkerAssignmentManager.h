@@ -85,6 +85,11 @@ private:
 
     void UnassignFromTile_(Pop& rPop);
     void ConvertToFallback_(Pop& rPop);
+    // The steps UserAssignBestAvailableWorker tries in order.
+    Pop* FindIdleWorker_() const;
+    Pop* FindSpecialist_() const;
+    bool ConvertAndAssign_(Pop& rSpecialist, const Tile* pTile);
+    bool MoveWorker_(Pop& rWorker, const Tile* pTile);
     Pop* FindLowestYieldAssignedWorker_() const;
 
     std::vector<const Tile*> m_workableTiles;

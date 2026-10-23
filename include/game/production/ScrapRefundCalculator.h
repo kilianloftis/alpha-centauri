@@ -37,6 +37,11 @@ public:
 
 private:
     const ScrapKindConfig_t* FindKind_(ConstructableKind_t kind) const;
+    // The kind's or override's formula at this cost; throws on a negative result.
+    int FormulaRefund_(const std::string& rFormula, int mineralCost) const;
+    // ScrapRefund modifiers on top of the formula; throws on a negative result.
+    static int WithRefundBonus_(int formulaAmount,
+                                const std::vector<ActiveEffect_t>& rBonusEffects);
 
     const ProductionConfig_t* m_pConfig;
     LuaRuntime* m_pLua;

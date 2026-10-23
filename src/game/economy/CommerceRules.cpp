@@ -27,6 +27,31 @@ namespace ac
 namespace
 {
 
+// The denominator is planet-wide, so only a plain, unconditional commerce_rating Add the
+// faction still holds counts. Null for anything else.
+const StatModifierEffect_t* PlanetWideCommerceAdd_(const EffectConfig_t& rEffect,
+                                                   const Faction& rFaction)
+{
+    const auto* pStat = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+    if (pStat == nullptr || pStat->stat != StatId_t::CommerceRating
+        || pStat->op != ModifierOp_t::Add)
+    {
+        return nullptr;
+    }
+    if (rEffect.condition.has_value() || rEffect.buildingFilter.has_value()
+        || rEffect.factionFilter.has_value()
+        || pStat->amountSource.has_value() || pStat->selector.has_value())
+    {
+        return nullptr;
+    }
+    if (!rEffect.removedByTech.empty()
+        && rFaction.GetResearch().HasDiscoveredTech(rEffect.removedByTech))
+    {
+        return nullptr;
+    }
+    return pStat;
+}
+
 // Sum of commerce_rating Add amounts on a faction's discovered techs only (no SE / faction
 // bonuses). Used for totalCommerceTech across the planet.
 int TechCommerceRatingContribution_(const Faction& rFaction, const TechRegistry& rTechs)
@@ -41,26 +66,10 @@ int TechCommerceRatingContribution_(const Faction& rFaction, const TechRegistry&
         }
         for (const EffectConfig_t& rEffect : pTech->effects)
         {
-            const auto* pStat = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-            if (pStat == nullptr || pStat->stat != StatId_t::CommerceRating
-                || pStat->op != ModifierOp_t::Add)
+            if (const StatModifierEffect_t* pStat = PlanetWideCommerceAdd_(rEffect, rFaction))
             {
-                continue;
+                total += FinalizeResolvedStat(pStat->amount);
             }
-            // The denominator is planet-wide, so only entries that resolve the
-            // same for everyone count.
-            if (rEffect.condition.has_value() || rEffect.buildingFilter.has_value()
-                || rEffect.factionFilter.has_value()
-                || pStat->amountSource.has_value() || pStat->selector.has_value())
-            {
-                continue;
-            }
-            if (!rEffect.removedByTech.empty()
-                && rFaction.GetResearch().HasDiscoveredTech(rEffect.removedByTech))
-            {
-                continue;
-            }
-            total += FinalizeResolvedStat(pStat->amount);
         }
     }
     return total;
@@ -140,6 +149,21 @@ int CommercePairValue_(const Faction& rBeneficiary,
     return FinalizeResolvedStat(rated) + FinalizeResolvedStat(bonus);
 }
 
+bool TradesWith_(const Faction& rOwner, const Faction& rPartner, const GameState& rGameState)
+{
+    if (rPartner.GetFactionId() == rOwner.GetFactionId())
+    {
+        return false;
+    }
+    // A rate of zero (the diplomatic status's own factor) means the pair does not trade.
+    if (CommerceRateToward_(rOwner, rPartner, 1.0) <= 0.0)
+    {
+        return false;
+    }
+    const AtrocityLedger& rAtrocities = rGameState.GetAtrocityLedger();
+    return !rAtrocities.IsSanctioned(rPartner.GetFactionId(), rGameState.GetMissionYear());
+}
+
 } // namespace
 
 std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeCommerceLines(
@@ -167,17 +191,7 @@ std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeCommerce
 
     for (const Faction& rPartner : rGameState.Factions())
     {
-        if (rPartner.GetFactionId() == ownerId)
-        {
-            continue;
-        }
-
-        // A rate of zero (the diplomatic status's own factor) means the pair does not trade.
-        if (CommerceRateToward_(rOwner, rPartner, 1.0) <= 0.0)
-        {
-            continue;
-        }
-        if (rAtrocities.IsSanctioned(rPartner.GetFactionId(), rGameState.GetMissionYear()))
+        if (!TradesWith_(rOwner, rPartner, rGameState))
         {
             continue;
         }

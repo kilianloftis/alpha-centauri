@@ -6,6 +6,7 @@
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -13,173 +14,212 @@
 namespace ac
 {
 
+namespace
+{
+
+[[noreturn]] void FailProduction_(const std::string& rConfigPath, const std::string& rMessage)
+{
+    throw std::runtime_error("Production config '" + rConfigPath + "': " + rMessage);
+}
+
+// rPrefix names where the keys sit: "" at the top level, "kinds.<kind> " inside a kind.
+void RejectUnknownKeys_(const nlohmann::json& rJson, const std::vector<std::string>& rKnown,
+                        const std::string& rPrefix, const std::string& rConfigPath)
+{
+    for (const auto& [rKey, rUnused] : rJson.items())
+    {
+        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
+        {
+            FailProduction_(rConfigPath, rPrefix + "unknown key '" + rKey + "'");
+        }
+    }
+}
+
+int ReadInRange_(const nlohmann::json& rJson, const char* pKey, int minimum,
+                 std::optional<int> maximum, const std::string& rConfigPath)
+{
+    const std::string key = "'" + std::string(pKey) + "'";
+    if (!rJson.contains(pKey))
+    {
+        FailProduction_(rConfigPath, key + " is required");
+    }
+    if (!rJson.at(pKey).is_number_integer())
+    {
+        FailProduction_(rConfigPath, key + " must be an integer");
+    }
+    const int value = rJson.at(pKey).get<int>();
+    if (value < minimum)
+    {
+        FailProduction_(rConfigPath, key + " must be >= " + std::to_string(minimum) + ", got "
+                                         + std::to_string(value));
+    }
+    if (maximum && value > *maximum)
+    {
+        FailProduction_(rConfigPath, key + " must be <= " + std::to_string(*maximum) + ", got "
+                                         + std::to_string(value));
+    }
+    return value;
+}
+
+int ReadHurryInt_(const nlohmann::json& rHurry, const char* pKey, int minimum,
+                  const std::string& rHurryPath, const std::string& rConfigPath)
+{
+    if (!rHurry.contains(pKey) || !rHurry.at(pKey).is_number_integer())
+    {
+        FailProduction_(rConfigPath, rHurryPath + std::string(pKey) + " must be an integer");
+    }
+    const int value = rHurry.at(pKey).get<int>();
+    if (value < minimum)
+    {
+        FailProduction_(rConfigPath, rHurryPath + std::string(pKey) + " must be >= "
+                                         + std::to_string(minimum) + ", got "
+                                         + std::to_string(value));
+    }
+    return value;
+}
+
+HurryKindConfig_t ParseHurry_(const nlohmann::json& rValue, const std::string& rKindPath,
+                              const std::string& rConfigPath)
+{
+    const std::string hurryPath = rKindPath + ".hurry ";
+    if (!rValue.is_object())
+    {
+        FailProduction_(rConfigPath, hurryPath + "must be an object with formula, "
+                                     "mineral_threshold, and below_threshold_multiplier");
+    }
+    RejectUnknownKeys_(rValue, {"formula", "mineral_threshold", "below_threshold_multiplier"},
+                       hurryPath, rConfigPath);
+    if (!rValue.contains("formula") || !rValue.at("formula").is_string()
+        || rValue.at("formula").get<std::string>().empty())
+    {
+        FailProduction_(rConfigPath, hurryPath + "formula must be a non-empty string");
+    }
+    HurryKindConfig_t kind;
+    kind.formula = rValue.at("formula").get<std::string>();
+    kind.mineralThreshold = ReadHurryInt_(rValue, "mineral_threshold", 0, hurryPath, rConfigPath);
+    kind.belowThresholdMultiplier =
+        ReadHurryInt_(rValue, "below_threshold_multiplier", 1, hurryPath, rConfigPath);
+    return kind;
+}
+
+// Stockpile is rejected, since it never completes.
+ConstructableKind_t ParseKindId_(const std::string& rKind, const std::string& rKindPath,
+                                 const std::string& rConfigPath)
+{
+    if (rKind.empty())
+    {
+        FailProduction_(rConfigPath, "kinds: kind must be a non-empty string");
+    }
+    ConstructableKind_t kindId = ConstructableKind_t::Building;
+    try
+    {
+        kindId = ParseConstructableKind(rKind);
+    }
+    catch (const std::runtime_error&)
+    {
+        FailProduction_(rConfigPath, rKindPath + " is not a known constructable kind");
+    }
+    if (kindId == ConstructableKind_t::Stockpile)
+    {
+        FailProduction_(rConfigPath,
+                        rKindPath + " cannot be hurried or scrapped; omit it from kinds");
+    }
+    return kindId;
+}
+
+ScrapKindConfig_t ParseDefaultScrap_(ConstructableKind_t kindId, const nlohmann::json& rValue,
+                                     const std::string& rKindPath, const std::string& rConfigPath)
+{
+    if (kindId == ConstructableKind_t::SecretProject)
+    {
+        FailProduction_(rConfigPath, rKindPath + ".default_scrap cannot be configured; secret "
+                                                 "projects cannot be scrapped");
+    }
+    try
+    {
+        return ScrapConfigParser::ParseKindConfig(rValue, rKindPath + ".default_scrap");
+    }
+    catch (const std::runtime_error& rError)
+    {
+        FailProduction_(rConfigPath, rError.what());
+    }
+}
+
+ProductionKindConfig_t ParseKind_(ConstructableKind_t kindId, const nlohmann::json& rValue,
+                                  const std::string& rKindPath, const std::string& rConfigPath)
+{
+    if (!rValue.is_object())
+    {
+        FailProduction_(rConfigPath,
+                        rKindPath + " must be an object with hurry and/or default_scrap");
+    }
+    RejectUnknownKeys_(rValue, {"hurry", "default_scrap"}, rKindPath + " ", rConfigPath);
+    ProductionKindConfig_t kindConfig;
+    if (rValue.contains("hurry"))
+    {
+        kindConfig.hurry = ParseHurry_(rValue.at("hurry"), rKindPath, rConfigPath);
+    }
+    if (rValue.contains("default_scrap"))
+    {
+        kindConfig.defaultScrap =
+            ParseDefaultScrap_(kindId, rValue.at("default_scrap"), rKindPath, rConfigPath);
+    }
+    if (!kindConfig.hurry && !kindConfig.defaultScrap)
+    {
+        FailProduction_(rConfigPath, rKindPath + " must include hurry or default_scrap");
+    }
+    return kindConfig;
+}
+
+// An empty object turns hurry and scrap off.
+decltype(ProductionConfig_t::kinds) ParseKinds_(const nlohmann::json& rJson,
+                                                const std::string& rConfigPath)
+{
+    if (!rJson.contains("kinds") || !rJson.at("kinds").is_object())
+    {
+        FailProduction_(rConfigPath, "'kinds' object is required");
+    }
+    decltype(ProductionConfig_t::kinds) kinds;
+    for (const auto& [rKind, rValue] : rJson.at("kinds").items())
+    {
+        const std::string kindPath = "kinds." + rKind;
+        const ConstructableKind_t kindId = ParseKindId_(rKind, kindPath, rConfigPath);
+        kinds.emplace(kindId, ParseKind_(kindId, rValue, kindPath, rConfigPath));
+    }
+    return kinds;
+}
+
+ProductionConfig_t ParseProduction_(const nlohmann::json& rJson, const std::string& rConfigPath)
+{
+    RejectUnknownKeys_(rJson,
+                       {"retool_penalty_threshold", "retool_penalty_percent",
+                        "prototype_surcharge_percent", "kinds", "effects",
+                        "on_unit_produced_effects"},
+                       "", rConfigPath);
+    ProductionConfig_t config;
+    config.retoolPenaltyThreshold =
+        ReadInRange_(rJson, "retool_penalty_threshold", 0, std::nullopt, rConfigPath);
+    config.retoolPenaltyPercent =
+        ReadInRange_(rJson, "retool_penalty_percent", 0, 100, rConfigPath);
+    // No upper bound: a prototype that costs triple is a coherent mod
+    // choice, unlike a retool penalty over 100%.
+    config.prototypeSurchargePercent =
+        ReadInRange_(rJson, "prototype_surcharge_percent", 0, std::nullopt, rConfigPath);
+    config.kinds = ParseKinds_(rJson, rConfigPath);
+    config.effects = EffectConfigParser::ParseEffects(
+        rJson, EffectSourceKind_t::Production, "production");
+    config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rJson, "on_unit_produced_effects", "production");
+    return config;
+}
+
+} // namespace
+
 ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<ProductionConfig_t>(
         configPath, "production", [&configPath](const nlohmann::json& rJson) {
-            const auto fail = [&](const std::string& rMessage) {
-                throw std::runtime_error("Production config '" + configPath + "': " + rMessage);
-            };
-
-            static const std::vector<std::string> knownKeys = {
-                "retool_penalty_threshold", "retool_penalty_percent",
-                "prototype_surcharge_percent", "kinds", "effects",
-                "on_unit_produced_effects",
-            };
-            for (const auto& [rKey, rUnused] : rJson.items())
-            {
-                if (std::find(knownKeys.begin(), knownKeys.end(), rKey) == knownKeys.end())
-                {
-                    fail("unknown key '" + rKey + "'");
-                }
-            }
-
-            const auto read = [&](const char* key, int minimum, int maximum = -1) {
-                if (!rJson.contains(key))
-                {
-                    fail("'" + std::string(key) + "' is required");
-                }
-                if (!rJson.at(key).is_number_integer())
-                {
-                    fail("'" + std::string(key) + "' must be an integer");
-                }
-                const int value = rJson.at(key).get<int>();
-                if (value < minimum)
-                {
-                    fail("'" + std::string(key) + "' must be >= " + std::to_string(minimum)
-                         + ", got " + std::to_string(value));
-                }
-                if (maximum >= 0 && value > maximum)
-                {
-                    fail("'" + std::string(key) + "' must be <= " + std::to_string(maximum)
-                         + ", got " + std::to_string(value));
-                }
-                return value;
-            };
-
-            ProductionConfig_t config;
-            config.retoolPenaltyThreshold = read("retool_penalty_threshold", 0);
-            config.retoolPenaltyPercent = read("retool_penalty_percent", 0, 100);
-            // No upper bound: a prototype that costs triple is a coherent mod
-            // choice, unlike a retool penalty over 100%.
-            config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0);
-
-            if (!rJson.contains("kinds") || !rJson.at("kinds").is_object())
-            {
-                fail("'kinds' object is required");
-            }
-
-            const auto parseHurry = [&](const std::string& rKindPath, const nlohmann::json& rValue)
-                -> HurryKindConfig_t {
-                const auto failHurry = [&](const std::string& rMessage) {
-                    fail(rKindPath + ".hurry " + rMessage);
-                };
-                if (!rValue.is_object())
-                {
-                    failHurry("must be an object with formula, mineral_threshold, and "
-                              "below_threshold_multiplier");
-                }
-                for (const auto& [rKey, rUnused] : rValue.items())
-                {
-                    if (rKey != "formula" && rKey != "mineral_threshold"
-                        && rKey != "below_threshold_multiplier")
-                    {
-                        failHurry("unknown key '" + rKey + "'");
-                    }
-                }
-                const auto readKindInt = [&](const char* key, int minimum) {
-                    if (!rValue.contains(key) || !rValue.at(key).is_number_integer())
-                    {
-                        failHurry(std::string(key) + " must be an integer");
-                    }
-                    const int value = rValue.at(key).get<int>();
-                    if (value < minimum)
-                    {
-                        failHurry(std::string(key) + " must be >= " + std::to_string(minimum)
-                                  + ", got " + std::to_string(value));
-                    }
-                    return value;
-                };
-                if (!rValue.contains("formula") || !rValue.at("formula").is_string()
-                    || rValue.at("formula").get<std::string>().empty())
-                {
-                    failHurry("formula must be a non-empty string");
-                }
-                HurryKindConfig_t kind;
-                kind.formula = rValue.at("formula").get<std::string>();
-                kind.mineralThreshold = readKindInt("mineral_threshold", 0);
-                kind.belowThresholdMultiplier = readKindInt("below_threshold_multiplier", 1);
-                return kind;
-            };
-
-            // An empty object turns hurry and scrap off; stockpile is rejected,
-            // since it never completes.
-            for (const auto& [rKind, rValue] : rJson.at("kinds").items())
-            {
-                const std::string kindPath = "kinds." + rKind;
-                if (rKind.empty())
-                {
-                    fail("kinds: kind must be a non-empty string");
-                }
-                ConstructableKind_t kindId = ConstructableKind_t::Building;
-                try
-                {
-                    kindId = ParseConstructableKind(rKind);
-                }
-                catch (const std::runtime_error&)
-                {
-                    fail(kindPath + " is not a known constructable kind");
-                }
-                if (kindId == ConstructableKind_t::Stockpile)
-                {
-                    fail(kindPath + " cannot be hurried or scrapped; omit it from kinds");
-                }
-                if (!rValue.is_object())
-                {
-                    fail(kindPath + " must be an object with hurry and/or default_scrap");
-                }
-                for (const auto& [rKey, rUnused] : rValue.items())
-                {
-                    if (rKey != "hurry" && rKey != "default_scrap")
-                    {
-                        fail(kindPath + " unknown key '" + rKey + "'");
-                    }
-                }
-                ProductionKindConfig_t kindConfig;
-                if (rValue.contains("hurry"))
-                {
-                    kindConfig.hurry = parseHurry(kindPath, rValue.at("hurry"));
-                }
-                if (rValue.contains("default_scrap"))
-                {
-                    if (kindId == ConstructableKind_t::SecretProject)
-                    {
-                        fail(kindPath
-                             + ".default_scrap cannot be configured; secret projects cannot be "
-                               "scrapped");
-                    }
-                    try
-                    {
-                        kindConfig.defaultScrap = ScrapConfigParser::ParseKindConfig(
-                            rValue.at("default_scrap"), kindPath + ".default_scrap");
-                    }
-                    catch (const std::runtime_error& rError)
-                    {
-                        fail(rError.what());
-                    }
-                }
-                if (!kindConfig.hurry && !kindConfig.defaultScrap)
-                {
-                    fail(kindPath + " must include hurry or default_scrap");
-                }
-                config.kinds.emplace(kindId, std::move(kindConfig));
-            }
-
-            config.effects = EffectConfigParser::ParseEffects(
-                rJson, EffectSourceKind_t::Production, "production");
-            config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(
-                rJson, "on_unit_produced_effects", "production");
-            return config;
+            return ParseProduction_(rJson, configPath);
         });
 }
 

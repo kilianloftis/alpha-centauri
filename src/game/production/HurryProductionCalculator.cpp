@@ -68,14 +68,28 @@ HurrySpend_t HurryProductionCalculator::ApplyCredits(const HurryInputs_t& rInput
         return HurrySpend_t{finish, remaining};
     }
 
-    // lo is always affordable (0 minerals cost nothing), hi never is (the branch above ruled
-    // out the full buy), so this closes on the largest affordable count.
+    const int minerals = MostAffordableMinerals_(rKind, remaining, stockpile, requestedCredits);
+    if (minerals == 0)
+    {
+        return {};
+    }
+    return HurrySpend_t{finish - FinishCost_(rKind, remaining - minerals, stockpile + minerals),
+                        minerals};
+}
+
+// Short of a full buy: lo is always affordable (0 minerals cost nothing), hi never is, so the
+// search closes on the largest affordable count.
+int HurryProductionCalculator::MostAffordableMinerals_(const HurryKindConfig_t& rKind,
+                                                       int remaining, int stockpile,
+                                                       int credits) const
+{
+    const int finish = FinishCost_(rKind, remaining, stockpile);
     int lo = 0;
     int hi = remaining;
     while (hi - lo > 1)
     {
         const int mid = lo + (hi - lo) / 2;
-        if (finish - FinishCost_(rKind, remaining - mid, stockpile + mid) <= requestedCredits)
+        if (finish - FinishCost_(rKind, remaining - mid, stockpile + mid) <= credits)
         {
             lo = mid;
         }
@@ -84,11 +98,7 @@ HurrySpend_t HurryProductionCalculator::ApplyCredits(const HurryInputs_t& rInput
             hi = mid;
         }
     }
-    if (lo == 0)
-    {
-        return {};
-    }
-    return HurrySpend_t{finish - FinishCost_(rKind, remaining - lo, stockpile + lo), lo};
+    return lo;
 }
 
 const HurryKindConfig_t* HurryProductionCalculator::FindKind_(ConstructableKind_t kind) const

@@ -37,27 +37,8 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
     }
 
     const std::string& rFormula = rOverride.formula ? *rOverride.formula : pKind->formula;
-    const std::unordered_map<std::string, double> vars = {
-        {"minerals", static_cast<double>(mineralCost)}};
-    const int formulaAmount = m_pLua->EvalInt(rFormula, vars);
-    if (formulaAmount < 0)
-    {
-        throw std::runtime_error("Scrap formula '" + rFormula + "' produced "
-                                 + std::to_string(formulaAmount)
-                                 + "; refund must not be negative");
-    }
-
-    const double seed = static_cast<double>(formulaAmount);
-    const double bonusTotal =
-        ResolveStatModifiers(FilterByStatId(rBonusEffects, StatId_t::ScrapRefund), seed, nullptr)
-            .total;
-    const int bonusAmount = FinalizeResolvedStat(bonusTotal);
-    if (bonusAmount < 0)
-    {
-        throw std::runtime_error("ScrapRefund modifiers produced "
-                                 + std::to_string(bonusAmount) + "; refund must not be negative");
-    }
-
+    const int formulaAmount = FormulaRefund_(rFormula, mineralCost);
+    const int bonusAmount = WithRefundBonus_(formulaAmount, rBonusEffects);
     const int ceiling = mineralCost * pKind->refundCeilingPercent / 100;
     const int amount = std::min(bonusAmount, ceiling);
 
@@ -66,6 +47,35 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
     quote.amount = amount;
     quote.refundType = rOverride.refundType ? *rOverride.refundType : pKind->refundType;
     return quote;
+}
+
+int ScrapRefundCalculator::FormulaRefund_(const std::string& rFormula, int mineralCost) const
+{
+    const std::unordered_map<std::string, double> vars = {
+        {"minerals", static_cast<double>(mineralCost)}};
+    const int amount = m_pLua->EvalInt(rFormula, vars);
+    if (amount < 0)
+    {
+        throw std::runtime_error("Scrap formula '" + rFormula + "' produced "
+                                 + std::to_string(amount) + "; refund must not be negative");
+    }
+    return amount;
+}
+
+int ScrapRefundCalculator::WithRefundBonus_(int formulaAmount,
+                                            const std::vector<ActiveEffect_t>& rBonusEffects)
+{
+    const double seed = static_cast<double>(formulaAmount);
+    const double bonusTotal =
+        ResolveStatModifiers(FilterByStatId(rBonusEffects, StatId_t::ScrapRefund), seed, nullptr)
+            .total;
+    const int amount = FinalizeResolvedStat(bonusTotal);
+    if (amount < 0)
+    {
+        throw std::runtime_error("ScrapRefund modifiers produced " + std::to_string(amount)
+                                 + "; refund must not be negative");
+    }
+    return amount;
 }
 
 const ScrapKindConfig_t* ScrapRefundCalculator::FindKind_(ConstructableKind_t kind) const
