@@ -1368,131 +1368,174 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     return effect;
 }
 
-void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
-                             const std::string& rSourceId)
+namespace
 {
-    const EffectScope_t scope = rEffect.scope;
 
+[[noreturn]] void FailSourceRule_(const std::string& rSourceId, const std::string& rRule)
+{
+    throw std::runtime_error("Effect on '" + rSourceId + "': " + rRule);
+}
+
+void RequireFactionPairOnlyOnDiplomacy_(EffectScope_t scope, EffectSourceKind_t sourceKind,
+                                        const std::string& rSourceId)
+{
     if ((scope == EffectScope_t::FactionPair) != (sourceKind == EffectSourceKind_t::DiplomaticStatus))
     {
-        throw std::runtime_error(
-            "Effect on '" + rSourceId
-            + "': scope FactionPair is used by, and only by, diplomatic status effects");
+        FailSourceRule_(rSourceId,
+                        "scope FactionPair is used by, and only by, diplomatic status effects");
     }
+}
 
-    const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+void RequireMineralsConvertedOnStockpile_(const StatModifierEffect_t* pStatModifier,
+                                          EffectSourceKind_t sourceKind,
+                                          const std::string& rSourceId)
+{
     if (pStatModifier
         && pStatModifier->HasAmountSource(StatModifierEffect_t::AmountSource_t::MineralsConverted)
         && sourceKind != EffectSourceKind_t::Stockpile)
     {
-        throw std::runtime_error(
-            "Effect on '" + rSourceId
-            + "': amount_source MineralsConverted is only valid on a stockpile config — nothing "
-              "else converts minerals, so it would never resolve");
+        FailSourceRule_(rSourceId,
+                        "amount_source MineralsConverted is only valid on a stockpile config — "
+                        "nothing else converts minerals, so it would never resolve");
     }
+}
 
+void RequireThisPopOnPopType_(EffectScope_t scope, EffectSourceKind_t sourceKind,
+                              const std::string& rSourceId)
+{
     if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind_t::PopType)
     {
-        throw std::runtime_error("Effect on '" + rSourceId
-            + "': scope ThisPop is only meaningful on a pop type config");
+        FailSourceRule_(rSourceId, "scope ThisPop is only meaningful on a pop type config");
     }
+}
 
-    // Mood weights are summed by walking the seated pops, never resolved through
-    // ResolveBaseStat — a weight emitted anywhere but a pop type would silently never apply.
-    if (pStatModifier
+// Mood weights are summed by walking the seated pops, never resolved through
+// ResolveBaseStat — a weight emitted anywhere but a pop type would silently never apply.
+void RequireMoodWeightsPerPop_(const StatModifierEffect_t* pStatModifier, EffectScope_t scope,
+                               EffectSourceKind_t sourceKind, const std::string& rSourceId)
+{
+    const bool bMoodWeight = pStatModifier
         && (pStatModifier->stat == StatId_t::RiotWeight
-            || pStatModifier->stat == StatId_t::GoldenAgeWeight)
+            || pStatModifier->stat == StatId_t::GoldenAgeWeight);
+    if (bMoodWeight
         && (sourceKind != EffectSourceKind_t::PopType || scope != EffectScope_t::ThisPop))
     {
-        throw std::runtime_error(
-            "Effect on '" + rSourceId
-            + "': riot_weight / golden_age_weight are per-pop and must be ThisPop on a pop type "
-              "config");
+        FailSourceRule_(rSourceId, "riot_weight / golden_age_weight are per-pop and must be "
+                                   "ThisPop on a pop type config");
     }
+}
+
+void RequireThisUnitOnUnitSource_(EffectScope_t scope, EffectSourceKind_t sourceKind,
+                                  const std::string& rSourceId)
+{
     if (scope == EffectScope_t::ThisUnit
         && sourceKind != EffectSourceKind_t::UnitComponent
         && sourceKind != EffectSourceKind_t::MoraleLevel
         && sourceKind != EffectSourceKind_t::NativeUnit)
     {
-        throw std::runtime_error("Effect on '" + rSourceId
-            + "': scope ThisUnit is only meaningful on a unit component, morale level, "
-              "or native unit config");
+        FailSourceRule_(rSourceId, "scope ThisUnit is only meaningful on a unit component, "
+                                   "morale level, or native unit config");
     }
-    if (scope == EffectScope_t::ThisTech)
+}
+
+void RequireThisTechOnTechCost_(EffectScope_t scope, const StatModifierEffect_t* pStatModifier,
+                                EffectSourceKind_t sourceKind, const std::string& rSourceId)
+{
+    if (scope != EffectScope_t::ThisTech)
     {
-        if (sourceKind != EffectSourceKind_t::Tech)
-        {
-            throw std::runtime_error("Effect on '" + rSourceId
-                + "': scope ThisTech is only meaningful on a tech config");
-        }
-        if (pStatModifier == nullptr || pStatModifier->stat != StatId_t::TechCost)
-        {
-            throw std::runtime_error(
-                "Effect on '" + rSourceId
-                + "': scope ThisTech only accepts StatModifier tech_cost (research cost "
-                  "modifiers for this tech as a research target)");
-        }
+        return;
     }
-    if (scope == EffectScope_t::ThisBase || scope == EffectScope_t::ProducedAtThisBase)
+    if (sourceKind != EffectSourceKind_t::Tech)
     {
-        // Listed exhaustively (no default:) so adding an EffectSourceKind_t forces a decision
-        // here rather than silently inheriting the rejection.
-        bool bCanSupplyOriginBase = false;
-        switch (sourceKind)
-        {
-        case EffectSourceKind_t::Building:
-        case EffectSourceKind_t::PopType:
-        case EffectSourceKind_t::SocialPolicy:
-        case EffectSourceKind_t::SocialRating:
-        // Stockpile effects are stamped with the converting base at conversion time.
-        case EffectSourceKind_t::Stockpile:
-            bCanSupplyOriginBase = true;
-            break;
-        case EffectSourceKind_t::UnitComponent:
-        case EffectSourceKind_t::ProbeAction:
-            // No origin base to stamp a continuous ThisBase effect
-            // with; it belongs in a triggered list.
-            bCanSupplyOriginBase = false;
-            break;
-        case EffectSourceKind_t::PopCompositionBaseLocal:
-            // Mood arrays are collected per base, so ThisBase is stamped with the rioting base
-            // by the effects pool / base cache. ProducedAtThisBase is not collected here.
-            bCanSupplyOriginBase = scope == EffectScope_t::ThisBase;
-            break;
-        case EffectSourceKind_t::PopComposition:
-        case EffectSourceKind_t::Improvement:
-        case EffectSourceKind_t::Faction:
-        case EffectSourceKind_t::CouncilProposal:
-        case EffectSourceKind_t::CouncilRules:
-        case EffectSourceKind_t::TileYieldRules:
-        case EffectSourceKind_t::Tech:
-        case EffectSourceKind_t::Production:
-        case EffectSourceKind_t::Difficulty:
-        case EffectSourceKind_t::Growth:
-        case EffectSourceKind_t::BaseConquest:
-        case EffectSourceKind_t::PoliceRules:
-        case EffectSourceKind_t::WorldRules:
-        case EffectSourceKind_t::EcoDamage:
-        case EffectSourceKind_t::NativeLifeLevel:
-        case EffectSourceKind_t::WorldEvent:
-        case EffectSourceKind_t::DiplomaticStatus:
-        case EffectSourceKind_t::MoraleLevel:
-        case EffectSourceKind_t::NativeUnit:
-            bCanSupplyOriginBase = false;
-            break;
-        }
-        if (!bCanSupplyOriginBase)
-        {
-            const char* pScopeName =
-                scope == EffectScope_t::ThisBase ? "ThisBase" : "ProducedAtThisBase";
-            throw std::runtime_error(
-                "Effect on '" + rSourceId + "': scope " + pScopeName
-                + " requires a source that can supply an origin base "
-                  "(Building, PopType, SocialPolicy, SocialRating, or "
-                  "PopCompositionBaseLocal). A unit component or probe action that should act "
-                  "on the base at production / mission time wants a triggered list instead.");
-        }
+        FailSourceRule_(rSourceId, "scope ThisTech is only meaningful on a tech config");
     }
+    if (pStatModifier == nullptr || pStatModifier->stat != StatId_t::TechCost)
+    {
+        FailSourceRule_(rSourceId, "scope ThisTech only accepts StatModifier tech_cost (research "
+                                   "cost modifiers for this tech as a research target)");
+    }
+}
+
+// Listed exhaustively (no default:) so adding an EffectSourceKind_t forces a decision here
+// rather than silently inheriting the rejection.
+bool CanSupplyOriginBase_(EffectSourceKind_t sourceKind, EffectScope_t scope)
+{
+    switch (sourceKind)
+    {
+    case EffectSourceKind_t::Building:
+    case EffectSourceKind_t::PopType:
+    case EffectSourceKind_t::SocialPolicy:
+    case EffectSourceKind_t::SocialRating:
+    // Stockpile effects are stamped with the converting base at conversion time.
+    case EffectSourceKind_t::Stockpile:
+        return true;
+    // No origin base to stamp a continuous ThisBase effect with; it belongs in a triggered list.
+    case EffectSourceKind_t::UnitComponent:
+    case EffectSourceKind_t::ProbeAction:
+        return false;
+    // Mood arrays are collected per base, so ThisBase is stamped with the rioting base by the
+    // effects pool / base cache. ProducedAtThisBase is not collected here.
+    case EffectSourceKind_t::PopCompositionBaseLocal:
+        return scope == EffectScope_t::ThisBase;
+    case EffectSourceKind_t::PopComposition:
+    case EffectSourceKind_t::Improvement:
+    case EffectSourceKind_t::Faction:
+    case EffectSourceKind_t::CouncilProposal:
+    case EffectSourceKind_t::CouncilRules:
+    case EffectSourceKind_t::TileYieldRules:
+    case EffectSourceKind_t::Tech:
+    case EffectSourceKind_t::Production:
+    case EffectSourceKind_t::Difficulty:
+    case EffectSourceKind_t::Growth:
+    case EffectSourceKind_t::BaseConquest:
+    case EffectSourceKind_t::PoliceRules:
+    case EffectSourceKind_t::WorldRules:
+    case EffectSourceKind_t::EcoDamage:
+    case EffectSourceKind_t::NativeLifeLevel:
+    case EffectSourceKind_t::WorldEvent:
+    case EffectSourceKind_t::DiplomaticStatus:
+    case EffectSourceKind_t::MoraleLevel:
+    case EffectSourceKind_t::NativeUnit:
+        return false;
+    }
+    return false;
+}
+
+void RequireOriginBaseSource_(EffectScope_t scope, EffectSourceKind_t sourceKind,
+                              const std::string& rSourceId)
+{
+    if (scope != EffectScope_t::ThisBase && scope != EffectScope_t::ProducedAtThisBase)
+    {
+        return;
+    }
+    if (!CanSupplyOriginBase_(sourceKind, scope))
+    {
+        const char* pScopeName =
+            scope == EffectScope_t::ThisBase ? "ThisBase" : "ProducedAtThisBase";
+        FailSourceRule_(rSourceId,
+                        std::string("scope ") + pScopeName
+                            + " requires a source that can supply an origin base "
+                              "(Building, PopType, SocialPolicy, SocialRating, or "
+                              "PopCompositionBaseLocal). A unit component or probe action that "
+                              "should act on the base at production / mission time wants a "
+                              "triggered list instead.");
+    }
+}
+
+} // namespace
+
+void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
+                             const std::string& rSourceId)
+{
+    const EffectScope_t scope = rEffect.scope;
+    const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+    RequireFactionPairOnlyOnDiplomacy_(scope, sourceKind, rSourceId);
+    RequireMineralsConvertedOnStockpile_(pStatModifier, sourceKind, rSourceId);
+    RequireThisPopOnPopType_(scope, sourceKind, rSourceId);
+    RequireMoodWeightsPerPop_(pStatModifier, scope, sourceKind, rSourceId);
+    RequireThisUnitOnUnitSource_(scope, sourceKind, rSourceId);
+    RequireThisTechOnTechCost_(scope, pStatModifier, sourceKind, rSourceId);
+    RequireOriginBaseSource_(scope, sourceKind, rSourceId);
 }
 
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson)
