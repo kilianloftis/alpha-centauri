@@ -31,7 +31,6 @@ UnitSlotConfig_t MakeSlot_(std::string id, std::string componentType, bool requi
 
 TEST_CASE("UnitComponentConfigParser reads unit_name", "[unit][naming][parser]")
 {
-    UnitComponentConfigParser parser;
     const json j = {
         {"id", "Hand_Weapons"},
         {"name", "Hand Weapons"},
@@ -41,7 +40,7 @@ TEST_CASE("UnitComponentConfigParser reads unit_name", "[unit][naming][parser]")
         {"effects", json::array()}
     };
 
-    const UnitComponentConfig_t config = parser.ParseComponentConfig(j);
+    const UnitComponentConfig_t config = actest::ParseOneComponent(j);
     CHECK(config.unitName == "Scout");
     CHECK(config.name == "Hand Weapons");
 }

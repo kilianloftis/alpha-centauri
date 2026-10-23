@@ -249,7 +249,6 @@ TEST_CASE("Crediting a scrap refund to a base the faction does not hold throws",
 
 TEST_CASE("Unit component scrap parses formula and refund_type overrides", "[unit][scrap][config]")
 {
-    UnitComponentConfigParser parser;
     const nlohmann::json j = nlohmann::json::parse(R"json({
         "id": "scrap_crawler",
         "name": "Scrap Crawler",
@@ -257,7 +256,7 @@ TEST_CASE("Unit component scrap parses formula and refund_type overrides", "[uni
         "mineral_cost": 0,
         "scrap": { "formula": "minerals", "refund_type": "energy_credits" }
     })json");
-    const UnitComponentConfig_t config = parser.ParseComponentConfig(j);
+    const UnitComponentConfig_t config = actest::ParseOneComponent(j);
     REQUIRE(config.scrap.has_value());
     CHECK(config.scrap->formula == "minerals");
     CHECK(config.scrap->refundType == StatId_t::EnergyCredits);

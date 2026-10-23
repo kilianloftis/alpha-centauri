@@ -131,10 +131,10 @@ std::vector<UnitComponentConfig_t> UnitComponentConfigParser::ParseConfig(const 
 {
     return JsonConfigLoader::LoadPath<UnitComponentConfig_t>(
         rConfigPath, "unit component",
-        [this](const nlohmann::json& rJson) { return ParseComponentConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseComponentConfig_(rJson); });
 }
 
-UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nlohmann::json& rComponentJson)
+UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig_(const nlohmann::json& rComponentJson)
 {
     UnitComponentConfig_t config;
     config.id = ConfigFields::ParseId(rComponentJson);

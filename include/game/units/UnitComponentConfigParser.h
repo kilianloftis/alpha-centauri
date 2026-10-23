@@ -18,8 +18,8 @@ class UnitComponentConfigParser
 public:
     std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
 
-    // Public for unit tests of a single component entry.
-    UnitComponentConfig_t ParseComponentConfig(const nlohmann::json& rComponentJson);
+private:
+    UnitComponentConfig_t ParseComponentConfig_(const nlohmann::json& rComponentJson);
 };
 
 } // namespace ac

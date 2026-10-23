@@ -33,7 +33,6 @@ UnitSlotConfig_t MakeSlot_(std::string id, std::string componentType, bool requi
 TEST_CASE("UnitComponentConfigParser reads combat rating modifiers and labels",
           "[unit][combat-rating][parser]")
 {
-    UnitComponentConfigParser parser;
     const json j = {
         {"id", "AAA_Tracking"},
         {"name", "AAA Tracking"},
@@ -46,7 +45,7 @@ TEST_CASE("UnitComponentConfigParser reads combat rating modifiers and labels",
         {"combat_rating_labels", json::array({"ECM"})}
     };
 
-    const UnitComponentConfig_t config = parser.ParseComponentConfig(j);
+    const UnitComponentConfig_t config = actest::ParseOneComponent(j);
     REQUIRE(config.combatRatingModifiers.size() == 1);
     CHECK(config.combatRatingModifiers[0].target == CombatRatingTarget_t::Defense);
     CHECK(config.combatRatingModifiers[0].prefix == "<");
@@ -58,7 +57,6 @@ TEST_CASE("UnitComponentConfigParser reads combat rating modifiers and labels",
 TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
           "[unit][combat-rating][parser]")
 {
-    UnitComponentConfigParser parser;
 
     SECTION("unknown target")
     {
@@ -72,7 +70,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
                 {{"target", "hp"}, {"suffix", "!"}}
             })}
         };
-        CHECK_THROWS_AS(parser.ParseComponentConfig(j), std::runtime_error);
+        CHECK_THROWS_AS(actest::ParseOneComponent(j), std::runtime_error);
     }
 
     SECTION("empty modifier")
@@ -87,7 +85,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
                 {{"target", "attack"}}
             })}
         };
-        CHECK_THROWS_AS(parser.ParseComponentConfig(j), std::runtime_error);
+        CHECK_THROWS_AS(actest::ParseOneComponent(j), std::runtime_error);
     }
 
     SECTION("empty label")
@@ -100,7 +98,7 @@ TEST_CASE("UnitComponentConfigParser rejects invalid combat rating annotations",
             {"effects", json::array()},
             {"combat_rating_labels", json::array({""})}
         };
-        CHECK_THROWS_AS(parser.ParseComponentConfig(j), std::runtime_error);
+        CHECK_THROWS_AS(actest::ParseOneComponent(j), std::runtime_error);
     }
 }
 

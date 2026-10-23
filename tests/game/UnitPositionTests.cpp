@@ -125,7 +125,6 @@ TEST_CASE("Deferred destruction keeps unit iteration safe", "[unit][lifetime]")
             // Logical removal is immediate, while the deferred object remains safe to
             // inspect until the traversal reaches its scope boundary.
             CHECK(fixture.map.GetUnitsOnTile(rTile).empty());
-            CHECK(rUnits.IsPendingDestruction(rUnit));
             CHECK(rUnit.GetUnitId() == visitedIds.back());
 
             // Queries must tolerate the null slots the deferral leaves in the unit list

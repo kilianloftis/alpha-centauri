@@ -56,7 +56,6 @@ public:
     // Until the scope ends, destroyed units leave the map and Units() but are not freed, so a
     // pass may destroy the unit it is on. Scopes nest.
     [[nodiscard]] DeferredDestructionScope DeferDestruction();
-    bool IsPendingDestruction(const Unit& rUnit) const;
 
     // Live units, skipping the slots deferred destruction leaves empty.
     auto Units()

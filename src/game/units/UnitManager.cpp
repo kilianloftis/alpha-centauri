@@ -146,14 +146,6 @@ UnitManager::OwnedUnits_t::iterator UnitManager::FindOwned_(const Unit& rUnit)
     return it;
 }
 
-bool UnitManager::IsPendingDestruction(const Unit& rUnit) const
-{
-    return std::ranges::any_of(m_pendingDestructions,
-        [&rUnit](const std::unique_ptr<Unit>& pUnit) {
-            return pUnit.get() == &rUnit;
-        });
-}
-
 void UnitManager::NoteRosterChanged_()
 {
     m_revision.Bump();

@@ -7,6 +7,8 @@
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/population/GrowthConfigParser.h"
+#include "game/units/UnitComponentConfigParser.h"
+#include "TempConfigFile.h"
 
 #include <stdexcept>
 
@@ -238,6 +240,13 @@ inline void SetMaxBaseSize(ac::GrowthConfig_t& rConfig, double maxSize)
 inline void SetStartingSize(ac::GrowthConfig_t& rConfig, double startingSize)
 {
     SetGrowthBaseline(rConfig, ac::StatId_t::StartingSize, startingSize);
+}
+
+// One component entry through the file parser, as a config holding only it loads.
+inline ac::UnitComponentConfig_t ParseOneComponent(const nlohmann::json& rEntry)
+{
+    const TempConfigFile file("one_component.json", nlohmann::json::array({rEntry}).dump());
+    return ac::UnitComponentConfigParser{}.ParseConfig(file.Path()).at(0);
 }
 
 } // namespace actest
