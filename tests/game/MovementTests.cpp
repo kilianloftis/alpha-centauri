@@ -214,14 +214,11 @@ TEST_CASE("Enter ZOC allowed; ZOC to ZOC blocked; leave ZOC allowed", "[movement
     // Enter ZOC: (3,4) -> (4,4)
     MoveOrder_t enterZoc{&fixture.At(8, 8)};
     REQUIRE(move.orders.TryStep(mover, fixture.At(8, 8), enterZoc).bEntered);
-    CHECK(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
 
     // ZOC -> ZOC: (4,4) -> (4,5) both in ZOC of enemy at (5,4)
-    CHECK(move.steps.IsTileInHostileZoc(mover, fixture.At(7, 9)));
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(7, 9)));
 
     // Leave ZOC: (4,4) -> (3,3) — (3,3) is Chebyshev 2 from enemy, outside ZOC
-    CHECK_FALSE(move.steps.IsTileInHostileZoc(mover, fixture.At(8, 6)));
     CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(8, 6)));
 }
 
@@ -240,29 +237,23 @@ TEST_CASE("ZOC to ZOC allowed onto friendly unit or base", "[movement][zoc]")
     {
         fixture.MakeUnit(player, 7, 9, {"test_chassis"});
         Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(7, 9)));
         CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(7, 9)));
-        CHECK_FALSE(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(7, 9)));
+        CHECK(move.steps.EvaluateStep(mover, mover.GetTile(), fixture.At(7, 9)).outcome != StepOutcome_t::BlockedByZoc);
     }
 
     SECTION("friendly base on destination")
     {
         fixture.MakeFactionBase(player, 7, 9);
         Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(7, 9)));
         CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(7, 9)));
-        CHECK_FALSE(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(7, 9)));
+        CHECK(move.steps.EvaluateStep(mover, mover.GetTile(), fixture.At(7, 9)).outcome != StepOutcome_t::BlockedByZoc);
     }
 
     SECTION("enemy base alone does not exempt")
     {
         fixture.MakeFactionBase(enemy, 7, 9);
         Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
-        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(7, 9)));
-        CHECK(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(7, 9)));
+        CHECK(move.steps.EvaluateStep(mover, mover.GetTile(), fixture.At(7, 9)).outcome == StepOutcome_t::BlockedByZoc);
         CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(7, 9)));
     }
 }
@@ -279,7 +270,6 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     mover.SetOrder(MoveOrder_t{&fixture.At(9, 9)});
 
-    REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(9, 9)));
     MoveOrder_t bumpHostile{&fixture.At(9, 9)};
     CHECK_FALSE(move.orders.TryStep(mover, fixture.At(9, 9), bumpHostile).bEntered);
@@ -457,7 +447,6 @@ TEST_CASE("Land ignores sea ZOC; sea ignores land ZOC", "[movement][zoc][domain]
     {
         fixture.MakeUnit(enemy, 9, 9, {"test_sea_chassis"});
         Unit& land = fixture.MakeUnit(player, 10, 10, {"test_chassis"});
-        CHECK_FALSE(move.steps.IsTileInHostileZoc(land, land.GetTile()));
         // Adjacent tiles that would be ZOC-to-ZOC if sea affected land remain legal.
         CHECK(move.steps.CanStep(land, land.GetTile(), fixture.At(11, 9)));
         CHECK(move.steps.CanStep(land, land.GetTile(), fixture.At(11, 11)));
@@ -467,7 +456,6 @@ TEST_CASE("Land ignores sea ZOC; sea ignores land ZOC", "[movement][zoc][domain]
     {
         fixture.MakeUnit(enemy, 8, 8, {"test_chassis"});
         Unit& sea = fixture.MakeUnit(player, 7, 9, {"test_sea_chassis"});
-        CHECK_FALSE(move.steps.IsTileInHostileZoc(sea, sea.GetTile()));
         CHECK(move.steps.CanStep(sea, sea.GetTile(), fixture.At(8, 10)));
     }
 }
@@ -482,12 +470,10 @@ TEST_CASE("Air ignores ZOC but exerts on land", "[movement][zoc]")
 
     fixture.MakeUnit(enemy, 9, 9, {"test_flight_chassis"});
     Unit& land = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
-    CHECK(move.steps.IsTileInHostileZoc(land, land.GetTile()));
     CHECK_FALSE(move.steps.CanStep(land, land.GetTile(), fixture.At(7, 9))); // ZOC -> ZOC
 
     fixture.MakeUnit(enemy, 7, 11, {"test_chassis"});
     Unit& flyer = fixture.MakeUnit(player, 6, 10, {"test_flight_chassis"});
-    CHECK_FALSE(move.steps.IsTileInHostileZoc(flyer, flyer.GetTile()));
     CHECK(move.steps.CanStep(flyer, flyer.GetTile(), fixture.At(7, 9))); // would be ZOC->ZOC for land
 }
 
@@ -501,12 +487,11 @@ TEST_CASE("A zoc deny override on the held unit bypasses ZOC", "[movement][zoc]"
 
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     Unit& probe = fixture.MakeUnit(player, 8, 8, {"test_chassis", "ignore_zoc"});
-    CHECK_FALSE(move.steps.IsTileInHostileZoc(probe, probe.GetTile()));
     CHECK(move.steps.CanStep(probe, probe.GetTile(), fixture.At(7, 9)));
 
     // The override is the unit's own, so an identical neighbour without it is still held.
     Unit& plain = fixture.MakeUnit(player, 9, 7, {"test_chassis"});
-    CHECK(move.steps.IsTileInHostileZoc(plain, plain.GetTile()));
+    CHECK_FALSE(move.steps.CanStep(plain, plain.GetTile(), fixture.At(10, 8)));
 }
 
 TEST_CASE("UnitOrderExecutor advances until moves run out", "[movement][orders]")
@@ -760,11 +745,9 @@ TEST_CASE("Hostile ZOC wraps horizontally across the map seam", "[movement][zoc]
     fixture.MakeUnit(enemy, 0, 4, {"test_chassis"});
     Unit& mover = fixture.MakeUnit(player, width - 2, 4, {"test_chassis"});
 
-    REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
     // ZOC-to-ZOC along the seam is blocked.
     CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(width - 1, 5)));
     // Leaving to Chebyshev 2 from the enemy (across the wrap) is allowed.
-    CHECK_FALSE(move.steps.IsTileInHostileZoc(mover, fixture.At(width - 4, 4)));
     CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(width - 4, 4)));
 }
 

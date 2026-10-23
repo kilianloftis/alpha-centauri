@@ -123,11 +123,6 @@ bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,
     return bInZoc;
 }
 
-bool StepEvaluator::IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const
-{
-    return IsTileInHostileZoc_(rMover, rTile, Knowledge_t::Objective);
-}
-
 bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                                     Knowledge_t knowledge) const
 {
@@ -141,11 +136,6 @@ bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const
         return false;
     }
     return IsTileInHostileZoc_(rMover, rTo, knowledge);
-}
-
-bool StepEvaluator::IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
-{
-    return IsZocViolation_(rMover, rFrom, rTo, Knowledge_t::Objective);
 }
 
 StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rFrom,

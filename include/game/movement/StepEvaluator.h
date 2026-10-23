@@ -38,12 +38,6 @@ class StepEvaluator
 public:
     StepEvaluator(WorldMap& rWorldMap, const TileEffectsContext& rTileEffects);
 
-    // True if rTile is in hostile ZOC for rMover (Chebyshev-1 around a qualifying foreign unit).
-    bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const;
-
-    // Moving ZOC to ZOC, unless rTo holds a friendly unit or base (SMAC). Attacking is not a move.
-    bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
-
 
 
     // Whether the edge rFrom → rTo is legal for rMover over objective world state.
@@ -79,7 +73,9 @@ private:
     StepEvaluation_t EvaluateStep_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                                    Knowledge_t knowledge) const;
 
+    // Chebyshev-1 around a foreign unit that projects ZOC on rMover.
     bool IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile, Knowledge_t knowledge) const;
+    // Moving ZOC to ZOC, unless rTo holds a friendly unit or base (SMAC). Attacking is not a move.
     bool IsZocViolation_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                          Knowledge_t knowledge) const;
     bool CanEnterTerrain_(const Unit& rMover, const Tile& rTile, Knowledge_t knowledge) const;
