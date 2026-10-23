@@ -148,8 +148,8 @@ TEST_CASE("on_unit_produced GrantXp: Aerospace Complex only boosts air starting 
     base.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
     // Explicit producedAt: prototypes are "first one you built", not free fieldings.
-    Unit& land = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base, &base);
-    Unit& air = fixture.MakeUnit(faction, 9, 9, {"test_flight_chassis"}, &base, &base);
+    Unit& land = fixture.MakeBuiltUnit(faction, 8, 8, {"test_chassis"}, base);
+    Unit& air = fixture.MakeBuiltUnit(faction, 9, 9, {"test_flight_chassis"}, base);
 
     // Both are the first built of their components, so both are prototypes.
     CHECK(land.GetXp() == 2); // starting_intrinsic + prototype GrantXp
@@ -166,13 +166,12 @@ TEST_CASE("on_unit_produced GrantXp applies at the production base only",
     withComplex.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
     Unit& airBuiltThere =
-        fixture.MakeUnit(faction, 8, 6, {"test_flight_chassis"}, &withComplex, &withComplex);
+        fixture.MakeBuiltUnit(faction, 8, 6, {"test_flight_chassis"}, withComplex);
     Unit& airBuiltElsewhere =
-        fixture.MakeUnit(faction, 8, 10, {"test_flight_chassis"}, &otherBase, &otherBase);
+        fixture.MakeBuiltUnit(faction, 8, 10, {"test_flight_chassis"}, otherBase);
     Unit& airNoBase = fixture.MakeUnit(faction, 8, 8, {"test_flight_chassis"});
     // Home reassigned away from the production base must not strip train XP already granted.
-    Unit& airRehomed = fixture.MakeUnit(faction, 8, 14, {"test_flight_chassis"}, &withComplex,
-                                        &withComplex);
+    Unit& airRehomed = fixture.MakeBuiltUnit(faction, 8, 14, {"test_flight_chassis"}, withComplex);
     airRehomed.SetHomeBase(&otherBase);
 
     CHECK(airBuiltThere.GetXp() == 4); // intrinsic + prototype + Aerospace

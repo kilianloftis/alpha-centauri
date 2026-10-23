@@ -220,8 +220,8 @@ int SpawnGrantedUnits_(GameState& rGameState, Faction& rFaction, const UnitDesig
         // Homed at the anchor so it pays support, but explicitly produced nowhere: a gift is
         // not a build, so it receives no on_unit_produced train bonuses and no prototype latch.
         rFaction.GetUnitManager().CreateUnit(rGameState.AllocateUnitId(), rDesign,
-                                             rMap.GetUnitPositions(), *pTile, &rAnchor,
-                                             /*pProducedAt=*/nullptr);
+                                             rMap.GetUnitPositions(), *pTile,
+                                             UnitOrigin::Gift(&rAnchor));
         ++spawned;
     }
     return spawned;

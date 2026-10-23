@@ -55,10 +55,9 @@ Unit::Unit(UnitId_t unitId,
            const IDesign& rDesign,
            UnitPositionIndex& rPositions,
            const Tile& rTile,
-           BaseManager* pHomeBase,
+           const UnitOrigin& rOrigin,
            Faction& rFaction,
-           const MoraleCalculator& rMorale,
-           std::optional<BaseManager*> pProducedAt)
+           const MoraleCalculator& rMorale)
     : m_unitId(unitId)
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
@@ -70,17 +69,16 @@ Unit::Unit(UnitId_t unitId,
     , m_moveFragmentsRemaining(0)
     , m_xp(0)
     // Latch before RecordBuiltComponents so later IsPrototype() agrees with construction.
-    , m_bPrototype(pProducedAt.value_or(nullptr) != nullptr
-                   && ac::IsPrototype(rFaction, rDesign))
+    , m_bPrototype(rOrigin.MayBePrototype() && ac::IsPrototype(rFaction, rDesign))
     , m_bRegistered(false)
 {
-    if (pHomeBase)
+    if (BaseManager* pHome = rOrigin.HomeBase())
     {
-        m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
+        m_homeBaseClaim = pHome->GetHomeUnits().Claim(*this);
     }
-    if (BaseManager* pBuiltAt = pProducedAt.value_or(pHomeBase))
+    if (BaseManager* pGrantsFrom = rOrigin.GrantsFrom())
     {
-        m_productionGrants = ProductionGrants_(*this, rFaction, *pBuiltAt);
+        m_productionGrants = ProductionGrants_(*this, rFaction, *pGrantsFrom);
     }
 
     // Here, once ResolveStat can read the members, so a new unit starts at its live maxima,

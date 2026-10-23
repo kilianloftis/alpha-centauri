@@ -96,8 +96,7 @@ struct TerraformGame_
         Tile* pTile = fixtures.state.GetWorldMap().GetTile(x, y);
         REQUIRE(pTile);
         return pPlayer->GetUnitManager().CreateUnit(
-            fixtures.state.AllocateUnitId(), rDesign, fixtures.state.GetWorldMap().GetUnitPositions(), *pTile,
-            pHome);
+            fixtures.state.AllocateUnitId(), rDesign, fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHome));
     }
 
     void FinishTerraform(Unit& rUnit)
@@ -152,8 +151,7 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
     Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(10, 10);
     Unit& scout = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.fixtures.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile,
-        &home);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Issued(home));
 
     CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(scout, "Farm", game.fixtures.state));
 

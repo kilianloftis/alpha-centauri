@@ -467,16 +467,25 @@ struct FactionFixture : BaseFixture
         return designs.emplace_back(slots, assigned);
     }
 
-    // Creates a live unit at (x, y), registered on the world map for aura/position queries.
+    // A live unit at (x, y), homed at pHomeBase but built nowhere, so it carries no production
+    // grants. It registers itself in the map's position index for its lifetime.
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
                        const std::vector<std::string>& rComponentIds = {"test_chassis"},
-                       ac::BaseManager* pHomeBase = nullptr,
-                       ac::BaseManager* pProducedAt = nullptr)
+                       ac::BaseManager* pHomeBase = nullptr)
     {
-        // The unit registers itself in the map's position index for its lifetime.
         return rFaction.GetUnitManager().CreateUnit(state.AllocateUnitId(), MakeDesign(rComponentIds),
                                                     map.GetUnitPositions(), At(x, y),
-                                                    pHomeBase, pProducedAt);
+                                                    ac::UnitOrigin::Gift(pHomeBase));
+    }
+
+    // A unit rBuiltAt produced: homed there, with its production grants and prototype status.
+    ac::Unit& MakeBuiltUnit(ac::Faction& rFaction, int x, int y,
+                            const std::vector<std::string>& rComponentIds,
+                            ac::BaseManager& rBuiltAt)
+    {
+        return rFaction.GetUnitManager().CreateUnit(state.AllocateUnitId(), MakeDesign(rComponentIds),
+                                                    map.GetUnitPositions(), At(x, y),
+                                                    ac::UnitOrigin::Built(rBuiltAt));
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)

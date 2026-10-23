@@ -69,7 +69,7 @@ Unit& MakeUnit_(ViewFixture& rFixture, Faction& rOwner, int x, int y, BaseManage
     REQUIRE(pTile);
     return rOwner.GetUnitManager().CreateUnit(
         rFixture.state.AllocateUnitId(), rDesigns.back(),
-        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, pHome);
+        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHome));
 }
 
 Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, BaseManager* pHome,

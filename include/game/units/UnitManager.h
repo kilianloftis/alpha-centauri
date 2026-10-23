@@ -42,11 +42,9 @@ public:
     // Every unit this manager creates borrows rMorale.
     UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
 
-    // Throws when rTile already holds a unit. pProducedAt is as in Unit's constructor.
+    // Throws when rTile already holds a unit.
     Unit& CreateUnit(UnitId_t unitId, const IDesign& rDesign, UnitPositionIndex& rPositions,
-                     const Tile& rTile,
-                     BaseManager* pHomeBase = nullptr,
-                     std::optional<BaseManager*> pProducedAt = std::nullopt);
+                     const Tile& rTile, const UnitOrigin& rOrigin);
     void DestroyUnit(Unit& rUnit);
 
     // Giver side of an ownership transfer: removes rUnit without destroying it, so no carrier

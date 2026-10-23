@@ -565,7 +565,7 @@ TEST_CASE("CreateUnit without production does not apply on-complete component ef
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     game.pFaction->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), rPod, game.fixtures.state.GetWorldMap().GetUnitPositions(),
-        base.GetTile(), &base, &base);
+        base.GetTile(), ac::UnitOrigin::Built(base));
 
     CHECK(base.GetPopulation().GetSize() == 3);
 }
@@ -938,7 +938,7 @@ TEST_CASE("Probe Team GrantXp applies on production complete, not on CreateUnit"
         Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
             game.fixtures.state.AllocateUnitId(), rDesign,
             game.fixtures.state.GetWorldMap().GetUnitPositions(),
-            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Built(base));
         CHECK(spawned.GetXp() == 2);
     }
     {
@@ -948,7 +948,7 @@ TEST_CASE("Probe Team GrantXp applies on production complete, not on CreateUnit"
         Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
             game.fixtures.state.AllocateUnitId(), rDesign,
             game.fixtures.state.GetWorldMap().GetUnitPositions(),
-            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Issued(base));
         CHECK(gifted.GetXp() == 1);
     }
 }
@@ -978,7 +978,7 @@ TEST_CASE("High Morale GrantXp applies on production complete, not on CreateUnit
         Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
             game.fixtures.state.AllocateUnitId(), rDesign,
             game.fixtures.state.GetWorldMap().GetUnitPositions(),
-            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Built(base));
         CHECK(spawned.GetXp() == 2);
     }
     {
@@ -989,7 +989,7 @@ TEST_CASE("High Morale GrantXp applies on production complete, not on CreateUnit
         Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
             game.fixtures.state.AllocateUnitId(), rDesign,
             game.fixtures.state.GetWorldMap().GetUnitPositions(),
-            *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
+            *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Issued(base));
         CHECK(gifted.GetXp() == 1);
     }
 }
@@ -1117,7 +1117,7 @@ TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
 
     Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), rDesign, game.fixtures.state.GetWorldMap().GetUnitPositions(),
-        *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base, &base);
+        *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Built(base));
     CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));
@@ -1139,7 +1139,7 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
     // Home only — Engine starting units / gift path. Not "built".
     Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), rDesign, game.fixtures.state.GetWorldMap().GetUnitPositions(),
-        *game.fixtures.state.GetWorldMap().GetTile(8, 0), &base);
+        *game.fixtures.state.GetWorldMap().GetTile(8, 0), ac::UnitOrigin::Issued(base));
     CHECK_FALSE(gifted.IsPrototype());
     CHECK(gifted.GetXp() == 1);
     CHECK_FALSE(IsPrototype(*game.pFaction, rDesign));

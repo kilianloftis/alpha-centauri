@@ -115,7 +115,7 @@ struct BlastGame_
         designs.emplace_back(slots, assigned);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), designs.back(), fixtures.state.GetWorldMap().GetUnitPositions(),
-            At_(x, y), /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+            At_(x, y), ac::UnitOrigin::Gift(nullptr));
     }
 
     Unit& MakePlanetBuster_(int x, int y)
@@ -148,8 +148,7 @@ struct BlastGame_
         designs.emplace_back(slots, assigned);
         return pPlayer->GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), At_(x, y),
-            /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+            fixtures.state.GetWorldMap().GetUnitPositions(), At_(x, y), ac::UnitOrigin::Gift(nullptr));
     }
 };
 
@@ -271,8 +270,7 @@ TEST_CASE("Detonating a planet buster spends the missile after the blast",
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
-        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8), ac::UnitOrigin::Gift(nullptr));
     Unit& rOutsider = game.MakeChassisUnit_(10, 10);
     game.MakeChassisUnit_(7, 7);
 
@@ -380,8 +378,7 @@ TEST_CASE("A warhead that authors no atrocity records none", "[map][explosion][d
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
-        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8), ac::UnitOrigin::Gift(nullptr));
 
     REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
     CHECK(game.fixtures.state.GetAtrocityLedger().Records().empty());
@@ -413,8 +410,7 @@ TEST_CASE("A warhead's eco charge lands before DestroyUnit spends it",
     game.designs.emplace_back(slots, assigned);
     Unit& rMissile = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8),
-        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), game.At_(8, 8), ac::UnitOrigin::Gift(nullptr));
 
     REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));
     CHECK(game.fixtures.state.GetEcologyLedger().VirtualMinerals(game.pPlayer->GetFactionId()) == 5);

@@ -68,7 +68,7 @@ void SpawnRandomLifeform_(Faction& rPlanet, const NativeUnitRegistry& rNatives, 
     }
     rPlanet.GetUnitManager().CreateUnit(
         rGameState.AllocateUnitId(), *pDesign, rGameState.GetWorldMap().GetUnitPositions(),
-        rTile, /*pHomeBase=*/nullptr, std::optional<BaseManager*>{nullptr});
+        rTile, UnitOrigin::Gift(nullptr));
 }
 
 int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,

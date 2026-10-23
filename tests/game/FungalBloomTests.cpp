@@ -258,8 +258,7 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     session.designs.emplace_back(slots, assigned);
     Unit& rMissile = rPlayer.GetUnitManager().CreateUnit(
         session.fixtures.state.AllocateUnitId(), session.designs.back(),
-        session.fixtures.state.GetWorldMap().GetUnitPositions(), session.At_(8, 8),
-        /*pHomeBase=*/nullptr, /*pProducedAt=*/nullptr);
+        session.fixtures.state.GetWorldMap().GetUnitPositions(), session.At_(8, 8), ac::UnitOrigin::Gift(nullptr));
 
     REQUIRE(ResolveStat(rMissile, StatId_t::FungalBloomTiles) == 5);
     REQUIRE(ApplyDetonation(session.fixtures.state, rMissile));

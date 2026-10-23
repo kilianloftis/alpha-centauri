@@ -614,7 +614,8 @@ void Engine::PlaceTestUnit_(Faction& rFaction, const UnitDesign& rDesign, const 
     WorldMap& rMap = m_pGameState->GetWorldMap();
     const Tile* pTile = GetTileAtLatticeOffset(rMap, rStart, p, q);
     rFaction.GetUnitManager().CreateUnit(
-        m_pGameState->AllocateUnitId(), rDesign, rMap.GetUnitPositions(), *pTile, &rBase);
+        m_pGameState->AllocateUnitId(), rDesign, rMap.GetUnitPositions(), *pTile,
+        UnitOrigin::Issued(rBase));
 }
 
 // Temporary: give the player commerce partners — first AI Pact, second AI Treaty.

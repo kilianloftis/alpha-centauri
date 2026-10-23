@@ -73,7 +73,7 @@ Unit& MakeUnit_(ViewFixture& rFixture, int x, int y, std::deque<UnitDesign>& rDe
     REQUIRE(pTile);
     return rFixture.pPlayer->GetUnitManager().CreateUnit(
         rFixture.state.AllocateUnitId(), rDesigns.back(),
-        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, nullptr);
+        rFixture.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(nullptr));
 }
 
 // Every coast overlay extract_terrain.py writes, so a coast that is drawn shows up.

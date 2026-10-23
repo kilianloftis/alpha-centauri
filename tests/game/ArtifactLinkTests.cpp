@@ -74,8 +74,7 @@ struct LinkGame_
         const auto* pDesign = dynamic_cast<const NativeDesign*>(pLookedUp);
         REQUIRE(pDesign);
         return rFaction.GetUnitManager().CreateUnit(
-            fixtures.state.AllocateUnitId(), *pDesign, fixtures.state.GetWorldMap().GetUnitPositions(), rTile,
-            pHome, /*pProducedAt=*/nullptr);
+            fixtures.state.AllocateUnitId(), *pDesign, fixtures.state.GetWorldMap().GetUnitPositions(), rTile, ac::UnitOrigin::Gift(pHome));
     }
 
     Unit& MakeScout(Faction& rFaction, const Tile& rTile)
@@ -91,7 +90,7 @@ struct LinkGame_
         designs.emplace_back(std::vector<UnitSlotConfig_t>{slot}, assigned);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), designs.back(), fixtures.state.GetWorldMap().GetUnitPositions(),
-            rTile, nullptr, /*pProducedAt=*/nullptr);
+            rTile, ac::UnitOrigin::Gift(nullptr));
     }
 };
 
@@ -328,8 +327,7 @@ TEST_CASE("A GrantTech hold entry prompts and leaves the unit alive",
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& holder = game.pFaction->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), base.GetTile(), &base,
-        /*pProducedAt=*/nullptr);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), base.GetTile(), ac::UnitOrigin::Gift(&base));
     holder.SetOrder(HoldOrder_t{});
     game.fixtures.state.ConsiderHoldLink(holder);
     REQUIRE(game.fixtures.state.GetPlayerInteractions().Size() == 1);

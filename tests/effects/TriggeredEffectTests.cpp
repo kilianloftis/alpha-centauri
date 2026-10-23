@@ -137,7 +137,7 @@ Unit& MakeUnitOn_(TriggerGame_& rGame, Faction& rFaction, int x, int y,
     REQUIRE(pTile);
     return rFaction.GetUnitManager().CreateUnit(
         rGame.fixtures.state.AllocateUnitId(), rGame.fixtures.designs.back(),
-        rGame.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile);
+        rGame.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(nullptr));
 }
 
 Unit& MakeUnitOn_(TriggerGame_& rGame, int x, int y,

@@ -211,7 +211,8 @@ void BaseManager::CompleteBuilding_(const std::string& itemId)
 void BaseManager::CompleteUnit_(const IDesign& rDesign, const std::string& itemId)
 {
     Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
-        m_pFaction->AllocateUnitId(), rDesign, m_pFaction->GetUnitPositions(), m_tile, this, this);
+        m_pFaction->AllocateUnitId(), rDesign, m_pFaction->GetUnitPositions(), m_tile,
+        UnitOrigin::Built(*this));
     OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, &rUnit});
 }
 

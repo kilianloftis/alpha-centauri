@@ -93,7 +93,7 @@ struct OrbitalGame_
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), fixtures.designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, pHomeBase);
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHomeBase));
     }
 };
 

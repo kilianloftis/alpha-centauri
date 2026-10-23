@@ -391,7 +391,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     fixture.designs.emplace_back(slots, assigned);
     Unit& attacker = player.GetUnitManager().CreateUnit(
         fixture.state.AllocateUnitId(), fixture.designs.back(), fixture.map.GetUnitPositions(),
-        fixture.At(8, 8));
+        fixture.At(8, 8), ac::UnitOrigin::Gift(nullptr));
 
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const int targetElevation = fixture.At(9, 9).GetElevation();
@@ -457,8 +457,7 @@ struct DetonateGame_
         REQUIRE(pTile);
         return pFaction->GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, /*pHome=*/nullptr,
-            /*pProducedAt=*/nullptr);
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(nullptr));
     }
 };
 
@@ -520,7 +519,7 @@ TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation]
                    {"chassis", pChassis}});
     Unit& plain = game.pFaction->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), game.designs.back(),
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(nullptr));
     const int before = pTile->GetElevation();
 
     CHECK_FALSE(UnitCanDetonate(plain));

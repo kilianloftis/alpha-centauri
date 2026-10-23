@@ -66,7 +66,7 @@ struct PlayerActionsGame_
         REQUIRE(pTile);
         return pPlayer->GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), fixtures.designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile);
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(nullptr));
     }
 };
 

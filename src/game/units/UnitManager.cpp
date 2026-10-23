@@ -51,8 +51,7 @@ UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
 
 Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
-                              BaseManager* pHomeBase,
-                              std::optional<BaseManager*> pProducedAt)
+                              const UnitOrigin& rOrigin)
 {
     if (!rPositions.CanPlaceUnit(rTile))
     {
@@ -61,14 +60,14 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                                  + ") already holds a unit (single-unit-per-tile rule)");
     }
 
-    auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction,
-                                        m_rMorale, pProducedAt);
+    auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, rOrigin, m_rFaction,
+                                        m_rMorale);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
     // After construction, so the unit has already latched IsPrototype.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
     NoteRosterChanged_();
-    OnUnitCreated.Emit(rUnit, pProducedAt.value_or(pHomeBase));
+    OnUnitCreated.Emit(rUnit, rOrigin.GrantsFrom());
     return rUnit;
 }
 

@@ -119,7 +119,8 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     for (int i = 0; i < spawnCount; ++i)
     {
         rFleeingFaction.GetUnitManager().CreateUnit(
-            rGameState.AllocateUnitId(), *pDesign, rPositions, *candidates[static_cast<size_t>(i)]);
+            rGameState.AllocateUnitId(), *pDesign, rPositions, *candidates[static_cast<size_t>(i)],
+            UnitOrigin::Gift(nullptr));
     }
     return spawnCount;
 }

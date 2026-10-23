@@ -118,8 +118,7 @@ struct ProbeGame_
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), fixtures.designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile,
-            pHomeBase);
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHomeBase));
     }
 };
 
@@ -858,8 +857,7 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
     const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
     Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
         game.fixtures.state.AllocateUnitId(), rEnhancedDesign,
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9),
-        &home);
+        game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9), ac::UnitOrigin::Issued(home));
     enhanced.SetXp(2);
 
     const auto successAgainstEnemy = [&](const Unit& rProbe)

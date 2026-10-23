@@ -111,7 +111,7 @@ TEST_CASE("TransferUnitTo keeps train XP; home claim is cleared",
     BaseManager& giverBase = fixture.MakeFactionBase(giver, 8, 4);
     giverBase.GetBuildingManager().AddBuilding("Aerospace_Complex");
     Unit& unit =
-        fixture.MakeUnit(giver, 9, 5, {"test_flight_chassis"}, &giverBase, &giverBase);
+        fixture.MakeBuiltUnit(giver, 9, 5, {"test_flight_chassis"}, giverBase);
     Unit* pAddress = &unit;
     REQUIRE(unit.GetHomeBase() == &giverBase);
     const int xpAtSpawn = unit.GetXp();
@@ -139,7 +139,7 @@ TEST_CASE("ProducedAtThisBase stamp survives rehome and ownership transfer",
     giverBase.GetBuildingManager().AddBuilding("test_train_attack");
 
     Unit& unit =
-        fixture.MakeUnit(giver, 9, 5, {"test_chassis", "test_weapon"}, &giverBase, &giverBase);
+        fixture.MakeBuiltUnit(giver, 9, 5, {"test_chassis", "test_weapon"}, giverBase);
     Unit* pAddress = &unit;
     // test_weapon Attack 4 + stamped +1 from production base.
     REQUIRE(ResolveStat(unit, StatId_t::Attack) == 5);

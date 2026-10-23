@@ -8,6 +8,7 @@
 #include "game/combat/MoraleCalculator.h"
 #include "game/units/IDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitOrigin.h"
 #include <array>
 #include <optional>
 #include <string>
@@ -41,12 +42,9 @@ public:
          const IDesign& rDesign,
          UnitPositionIndex& rPositions,
          const Tile& rTile,
-         BaseManager* pHomeBase,
+         const UnitOrigin& rOrigin,
          Faction& rFaction,
-         const MoraleCalculator& rMorale,
-         // nullopt: built at pHomeBase. A base: built there, the only way to be a prototype.
-         // nullptr: a gift, built nowhere, so it gets no production grants.
-         std::optional<BaseManager*> pProducedAt = std::nullopt);
+         const MoraleCalculator& rMorale);
     ~Unit();
 
     UnitId_t GetUnitId() const;
@@ -58,8 +56,8 @@ public:
     const Tile& GetTile() const;
     // Home base from the held HomeBaseClaim (nullptr when unset or the base was destroyed).
     BaseManager* GetHomeBase() const;
-    // Permanent ProducedAtThisBase grants stamped at construction (empty for gifts / free spawns
-    // with an explicit null production base). Survives rehome and ownership transfer.
+    // Permanent ProducedAtThisBase grants stamped at construction (empty for a gift). Survives
+    // rehome and ownership transfer.
     const std::vector<ActiveEffect_t>& GetProductionGrants() const;
     Faction& GetFaction();
     const Faction& GetFaction() const;
