@@ -417,7 +417,7 @@ TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui]
     enemyDefinition.identity.name = "Enemy";
     Faction& enemy = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
-        fixture.state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
+        fixture.state.GetWorldMap(), fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed + 1));
     Unit& shrouded = MakeUnit_(fixture, enemy, 10, 2, nullptr, {"test_chassis"}, designs);
     fixture.pPlayer->RebuildVisibility();
     CHECK_FALSE(IsUnitVisibleTo(*fixture.pPlayer, shrouded));

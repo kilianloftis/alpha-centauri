@@ -362,8 +362,6 @@ void GameState::AttachToSession_(Faction& rFaction)
         m_pCouncil->Seat(rFaction);
     }
     // The session wiring that has to close over this GameState.
-    rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
-                                   GetWorldMap().GetUnitPositions());
     WireFactionObservers_(rFaction);
     WireUnitObservers_(rFaction.GetUnitManager());
     WireBaseObservers_(rFaction);

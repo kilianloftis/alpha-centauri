@@ -264,7 +264,7 @@ TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[v
 
     auto pFaction = std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition,
-        fixture.dataContext, fixture.map, fixture.settings, actest::k_TestFactionSeed);
+        fixture.dataContext, fixture.map, fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     Faction& player = fixture.state.AddFaction(std::move(pFaction));
     player.RebuildVisibility();
     REQUIRE_FALSE(player.GetVisibleMap().IsVisible(8, 0));

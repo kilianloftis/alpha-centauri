@@ -54,7 +54,7 @@ struct LinkGame_
         FillLand(fixtures.map);
         pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
@@ -223,7 +223,7 @@ TEST_CASE("An artifact Holding at a foreign base is not offered a link",
     aiDef.id = "ai";
     Faction& ai = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed + 1));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed + 1));
     BaseManager& aiBase = game.MakeBase(ai, 8, 6);
     aiBase.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(*game.pFaction, aiBase.GetTile(), nullptr);
@@ -278,7 +278,7 @@ TEST_CASE("An AI artifact Holding at a Network Node is linked without a prompt",
     aiDef.id = "ai";
     Faction& ai = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed + 1));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed + 1));
     BaseManager& base = game.MakeBase(ai, 8, 10);
     base.GetBuildingManager().AddBuilding("Network_Node");
     Unit& artifact = game.MakeArtifact(ai, base.GetTile(), &base);

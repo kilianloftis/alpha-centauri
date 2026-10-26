@@ -50,13 +50,13 @@ struct CouncilGame_
 
         auto pFactionA = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
         auto pFactionC = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
 
         pA = &fixtures.state.AddFaction(std::move(pFactionA));
         pB = &fixtures.state.AddFaction(std::move(pFactionB));
@@ -336,7 +336,7 @@ TEST_CASE("Non-participating factions are excluded from the council", "[council]
 
     auto pAlien = std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed);
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     Faction& rAlien = game.fixtures.state.AddFaction(std::move(pAlien));
 
     PlanetaryCouncil& rCouncil = game.fixtures.state.GetPlanetaryCouncil();
@@ -371,7 +371,7 @@ TEST_CASE("Non-members cannot cast council votes", "[council]")
     game.alienDefinition.identity.participatesInCouncil = false;
     auto pAlien = std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed);
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     Faction& rAlien = game.fixtures.state.AddFaction(std::move(pAlien));
 
     game.GiveAllCommlinksTo(*game.pA);
@@ -507,7 +507,7 @@ TEST_CASE("A faction joining the session takes a council seat only if it partici
     lateDef.id = "late_joiner";
     Faction& rLate = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, lateDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     CHECK(rCouncil.IsCouncilMember(rLate));
 
     FactionConfig_t outsiderDef = game.fixtures.factionDefinition;
@@ -515,7 +515,7 @@ TEST_CASE("A faction joining the session takes a council seat only if it partici
     outsiderDef.identity.participatesInCouncil = false;
     Faction& rOutsider = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, outsiderDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     CHECK_FALSE(rCouncil.IsCouncilMember(rOutsider));
     CHECK(rCouncil.Members().size() == 4);
 }

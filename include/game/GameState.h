@@ -130,6 +130,7 @@ public:
     FactionId_t AllocateFactionId();
     BaseId_t AllocateBaseId();
     UnitId_t AllocateUnitId();
+    IdAllocator& GetUnitIdAllocator() { return m_unitIdAllocator; }
 
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;

@@ -123,8 +123,10 @@ its `FactionConfig_t` (out of `GameDataContext::factionRegistry`) and hands it t
 
 A `Faction` is **valid when its constructor returns**. It takes, as required arguments:
 `FactionId_t`, `bIsPlayerControlled`, `const FactionConfig_t&`, `const GameDataContext&`,
-`WorldMap&`, `const GameSettings&`, and a `uint32_t seed`. The constructor sizes the
-explored/visible maps from the world map and takes a first visibility reading.
+`WorldMap&`, `const GameSettings&`, `IdAllocator&` (the session unit-id allocator), and a
+`uint32_t seed`. The constructor sizes the explored/visible maps from the world map and
+takes a first visibility reading. Production completes units through that allocator and
+the map's `UnitPositionIndex`.
 
 - The **world map and settings** are constructor dependencies rather than post-construction
   `Bind`/`Set` calls: a faction without a map used to make `RebuildVisibility` a silent no-op,
@@ -159,11 +161,11 @@ explored/visible maps from the world map and takes a first visibility reading.
   seed and derives a sub-stream per faction.
 
 `GameState::AddFaction` is **registration, not construction**. It pushes the faction into
-`m_factions` *first*, then calls `AttachToSession_` to install the unit spawn services and the
-observers (which necessarily close over `GameState`), and finishes with a territory/visibility
-catch-up sweep plus a full first-contact pass. The order is load-bearing: the observers iterate
-`Factions()`, so wiring before the push meant a faction arriving with bases already on the map
-— load-game, or any future runtime creation — was never scanned.
+`m_factions` *first*, then calls `AttachToSession_` to install the observers (which necessarily
+close over `GameState`), and finishes with a territory/visibility catch-up sweep plus a full
+first-contact pass. The order is load-bearing: the observers iterate `Factions()`, so wiring
+before the push meant a faction arriving with bases already on the map — load-game, or any
+future runtime creation — was never scanned.
 
 Caller contract: the faction must have been constructed against the session's `WorldMap`.
 `AddFaction` throws `std::invalid_argument` when the faction was built against another map.

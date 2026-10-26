@@ -81,7 +81,7 @@ struct ViewFixture : WorldFixture
 
         pPlayer = &state.AddFaction(std::make_unique<ac::Faction>(
             state.AllocateFactionId(), /*bIsPlayerControlled*/ true, factionDefinition,
-            dataContext, map, settings, k_TestFactionSeed));
+            dataContext, map, settings, state.GetUnitIdAllocator(), k_TestFactionSeed));
 
         // WorldView reads player hotkeys from this path; relative defaults break under ctest's
         // build-dir cwd.

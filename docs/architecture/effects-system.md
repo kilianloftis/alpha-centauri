@@ -670,11 +670,12 @@ then silently never fired.
   and riot tiers can name what rioting destroyed.
 - **`pRng`** overrides the session generator so a caller driving its own sequence (a probe
   mission, a seeded test) stays reproducible.
-- **Production completion**: `GameState::AttachToSession_` injects unit-id allocation and
-  `UnitPositionIndex` into the faction, and subscribes each base's
-  `OnProductionCompleted` so `on_complete_effects` run in the session (not inside
-  `BaseManager`). Unit completion without spawn services throws; building-only completion
-  can run unbound (effects simply do not fire without a subscriber).
+- **Production completion**: the faction constructor takes the session's unit-id allocator
+  and already holds the map (so `GetUnitPositions()` is the map's index).
+  `GameState::AttachToSession_` subscribes each base's `OnProductionCompleted` so
+  `on_complete_effects` run in the session (not inside `BaseManager`). Completion
+  outside a session still builds the facility or unit; effects simply do not fire
+  without a subscriber.
 - `WorldParameter` remains a TODO stub pending the WorldEvents trigger API.
 
 ### oncePer

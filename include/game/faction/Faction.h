@@ -2,7 +2,6 @@
 
 #include <set>
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -52,7 +51,7 @@ struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
 class GameSettings;
-class GameState;
+class IdAllocator;
 
 // Free rather than a member, so both Bases() overloads can deduce their return type from it.
 template <typename Vec>
@@ -65,14 +64,16 @@ auto LiveBasesView(Vec& rBases)
 class Faction : public IEffectsProvider
 {
 public:
-    // rDataContext must outlive the faction. rWorldMap sizes the fog maps; GameState::AddFaction
-    // adds the session wiring. seed drives every per-faction random choice.
+    // rDataContext must outlive the faction. rWorldMap sizes the fog maps; rUnitIds is the
+    // session's unit-id allocator. GameState::AddFaction adds the session wiring. seed drives
+    // every per-faction random choice.
     Faction(FactionId_t factionId,
              bool bIsPlayerControlled,
              const FactionConfig_t& rDefinition,
              const GameDataContext& rDataContext,
              WorldMap& rWorldMap,
              const GameSettings& rSettings,
+             IdAllocator& rUnitIds,
              uint32_t seed);
     ~Faction();
 
@@ -293,11 +294,8 @@ public:
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
     const GameSettings& GetSettings() const { return m_rSettings; }
 
-    // Required to complete unit production.
-    // TODO: the faction's last link to its GameState; allocate unit ids through WorldMap instead?
-    void BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
-                               UnitPositionIndex& rPositions);
-    UnitId_t AllocateUnitId() const;
+    // Session unit-id allocator and the map's position index; both required to complete a unit.
+    UnitId_t AllocateUnitId();
     UnitPositionIndex& GetUnitPositions();
 
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
@@ -350,8 +348,7 @@ private:
     FactionRevealedUnits m_revealedUnits;
     WorldMap& m_rWorldMap; // constructor-injected; RebuildVisibility can never be a no-op
     const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected
-    std::function<UnitId_t()> m_allocateUnitId;
-    UnitPositionIndex* m_pUnitPositions = nullptr;
+    IdAllocator& m_rUnitIds;
     int m_visibilityDeferralDepth = 0;
     bool m_bVisibilityDirty = false;
 

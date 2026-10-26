@@ -350,7 +350,6 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
 5. **Writes.** Code that changes state outside its own object takes `GameState&`. A `GameState&` parameter means the function may write.
 6. **Game objects never hold a `GameState`.** That covers factions, bases, units and their parts.
    - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator` and the executors.
-   - One exception stays for now: the unit-id allocator callback that `GameState` binds into each faction (`BindUnitSpawnServices`).
 7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
 8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
 

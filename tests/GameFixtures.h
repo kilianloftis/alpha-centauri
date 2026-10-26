@@ -389,7 +389,7 @@ struct BaseFixture : WorldFixture
         // Distinct per faction so two fixture factions do not make identical picks.
         const uint32_t seed = k_TestFactionSeed + static_cast<uint32_t>(id);
         return state.AddFaction(std::make_unique<ac::Faction>(
-            id, bIsPlayerControlled, rDefinition, dataContext, map, settings, seed));
+            id, bIsPlayerControlled, rDefinition, dataContext, map, settings, state.GetUnitIdAllocator(), seed));
     }
 
     ac::Faction& BaseOwner()
@@ -541,7 +541,7 @@ inline ac::Faction& AddSessionFaction(FactionFixture& rFixtures,
 {
     return rFixtures.state.AddFaction(std::make_unique<ac::Faction>(
         rFixtures.state.AllocateFactionId(), bIsPlayerControlled, rDefinition,
-        rFixtures.dataContext, rFixtures.map, rFixtures.settings, k_TestFactionSeed));
+        rFixtures.dataContext, rFixtures.map, rFixtures.settings, rFixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
 }
 
 // The native-life faction a fungal bloom spawns lifeforms for.

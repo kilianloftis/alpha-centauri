@@ -54,6 +54,7 @@
 #include "game/combat/MoraleCalculator.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/ActiveEffect.h"
+#include "lib/IdAllocator.h"
 
 namespace ac
 {
@@ -63,6 +64,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                  const GameDataContext& rDataContext,
                  WorldMap& rWorldMap,
                  const GameSettings& rSettings,
+                 IdAllocator& rUnitIds,
                  uint32_t seed)
     : m_factionId(factionId)
     , m_bIsPlayerControlled(bIsPlayerControlled)
@@ -94,6 +96,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     *rDataContext.diplomacyConfig)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
+    , m_rUnitIds(rUnitIds)
     , m_composedEffects(*this)
 {
     m_pResearchSelector->EnsureResearchTarget();
@@ -984,31 +987,14 @@ void Faction::EnsureResearchTarget()
     m_pResearchSelector->EnsureResearchTarget();
 }
 
-void Faction::BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
-                                    UnitPositionIndex& rPositions)
+UnitId_t Faction::AllocateUnitId()
 {
-    m_allocateUnitId = std::move(allocateUnitId);
-    m_pUnitPositions = &rPositions;
-}
-
-UnitId_t Faction::AllocateUnitId() const
-{
-    if (!m_allocateUnitId)
-    {
-        throw std::runtime_error(
-            "Faction::AllocateUnitId: unit spawn services are not bound (no session)");
-    }
-    return m_allocateUnitId();
+    return m_rUnitIds.Allocate();
 }
 
 UnitPositionIndex& Faction::GetUnitPositions()
 {
-    if (!m_pUnitPositions)
-    {
-        throw std::runtime_error(
-            "Faction::GetUnitPositions: unit spawn services are not bound (no session)");
-    }
-    return *m_pUnitPositions;
+    return m_rWorldMap.GetUnitPositions();
 }
 
 SocialEngineeringManager& Faction::GetSocialEngineering()

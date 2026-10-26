@@ -321,7 +321,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
     FillLand(fixtures.map);
     Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
         fixtures.ctx, std::nullopt);
@@ -620,7 +620,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
     FillLand(fixtures.map);
     Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
         fixtures.ctx, std::nullopt);
@@ -657,7 +657,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     FillLand(fixtures.map);
     Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
         fixtures.ctx, std::nullopt);

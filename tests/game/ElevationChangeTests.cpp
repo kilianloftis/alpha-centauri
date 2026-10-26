@@ -443,7 +443,7 @@ struct DetonateGame_
         FillLand(fixtures.map);
         pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     }
 
     // A missile-shaped design: the warhead detonates for levelsStat and spends the carrier.

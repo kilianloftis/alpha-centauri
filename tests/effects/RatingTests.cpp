@@ -598,9 +598,11 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
     // Keep factions out of the session so destruction order is factions → defs.
     auto pFactionA = std::make_unique<Faction>(1, true, defA, fixture.dataContext,
                                                fixture.map, fixture.settings,
+                                               fixture.state.GetUnitIdAllocator(),
                                                actest::k_TestFactionSeed + 1);
     auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext,
                                                fixture.map, fixture.settings,
+                                               fixture.state.GetUnitIdAllocator(),
                                                actest::k_TestFactionSeed + 2);
     BaseManager& baseA = fixture.MakeFactionBase(*pFactionA, 8, 4);
     BaseManager& baseB = fixture.MakeFactionBase(*pFactionB, 8, 8);

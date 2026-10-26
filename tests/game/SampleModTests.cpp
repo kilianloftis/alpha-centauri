@@ -74,7 +74,7 @@ struct ModHarness_
         FillLand(fixtures.map);
         pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.map, fixtures.settings, k_TestFactionSeed));
+            fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(int x, int y)

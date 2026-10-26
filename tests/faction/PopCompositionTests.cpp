@@ -852,7 +852,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
     actest::FillLand(fixtures.map);
     ac::Faction& rFaction = fixtures.state.AddFaction(std::make_unique<ac::Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rFaction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
         fixtures.ctx,

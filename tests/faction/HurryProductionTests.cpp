@@ -414,7 +414,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     FillLand(fixtures.map);
     Faction& rFaction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     BaseManager* pBase = rFaction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 8),
         fixtures.ctx, std::nullopt);

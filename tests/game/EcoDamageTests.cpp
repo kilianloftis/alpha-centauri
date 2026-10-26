@@ -20,6 +20,7 @@
 #include "game/map/Tile.h"
 #include "game/units/SupplyCrawlMutations.h"
 #include "game/units/Unit.h"
+#include "lib/IdAllocator.h"
 #include "lib/LuaRuntime.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -336,8 +337,9 @@ TEST_CASE("The score needs the faction bound to a session", "[ecology]")
                            inputs.dataContext.tileYieldRules,
                            inputs.dataContext.interactionGrids);
     inputs.ownerDefinition.id = "test_base_owner";
+    IdAllocator unitIds;
     Faction owner(/*factionId*/ 1, /*bIsPlayerControlled*/ true, inputs.ownerDefinition,
-                  inputs.dataContext, map, inputs.settings, k_TestFactionSeed);
+                  inputs.dataContext, map, inputs.settings, unitIds, k_TestFactionSeed);
     Tile& rTile = *map.GetTile(8, 8);
     BaseManager base(owner, /*baseId*/ 1, "TestBase", rTile, MakeBaseRuleset(inputs.dataContext),
                      ctx, /*initialPopulation*/ 3);

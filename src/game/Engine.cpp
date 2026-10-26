@@ -523,6 +523,7 @@ void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionI
         *m_gameDataContext,
         m_pGameState->GetWorldMap(),
         *m_pSettings,
+        m_pGameState->GetUnitIdAllocator(),
         factionSeed);
 
     // Every base the faction ever gains (founding, capture, trade) reaches the bridge through

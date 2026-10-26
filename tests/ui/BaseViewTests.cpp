@@ -716,6 +716,7 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
     Faction& rPartner = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false, partnerDef,
         fixture.dataContext, fixture.state.GetWorldMap(), fixture.settings,
+        fixture.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
 
     BaseManager& rBase = fixture.MakeBase(8, 4);

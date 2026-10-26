@@ -393,10 +393,10 @@ TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id o
 
     auto pA = std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     auto pB = std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     fixtures.state.AddFaction(std::move(pA));
     fixtures.state.AddFaction(std::move(pB));
 

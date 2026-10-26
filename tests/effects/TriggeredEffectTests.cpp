@@ -57,7 +57,7 @@ struct TriggerGame_
         FillLand(fixtures.map);
         pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     }
 
     BaseManager& MakeBase(int x, int y)
@@ -203,6 +203,7 @@ TEST_CASE("A multi-faction context repeats faction-subject effects only",
     Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
     BaseManager& base = game.MakeBase(8, 8);
 
@@ -487,7 +488,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     aiDef.id = "ai";
     Faction* pAi = &game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
 
     Tile& rMono2 = *game.fixtures.state.GetWorldMap().GetTile(7, 7);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMono2, "Monolith");
@@ -519,7 +520,7 @@ TEST_CASE("First discoverer of Secrets gets Available GrantTech; second does not
     aiDef.id = "ai";
     Faction* pAi = &game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
-        game.fixtures.state.GetWorldMap(), game.fixtures.settings, actest::k_TestFactionSeed));
+        game.fixtures.state.GetWorldMap(), game.fixtures.settings, game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     const std::size_t aiBefore = pAi->GetResearch().GetDiscoveredTechs().size();
     pAi->GetResearch().AddDiscoveredTech("secrets_of_the_human_brain");
     CHECK(pAi->GetResearch().GetDiscoveredTechs().size() == aiBefore + 1);
@@ -587,6 +588,7 @@ TEST_CASE("A multi-faction context records mind control for each faction once",
     Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(RecordMindControlEffect_t{3}),
@@ -609,6 +611,7 @@ TEST_CASE("In a probe mission context RecordMindControl credits the actor, not t
     Faction& victim = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
     Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);
@@ -689,6 +692,7 @@ TEST_CASE("Ecology ledger effects credit each faction in a multi-faction context
     Faction& second = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
     const std::vector<TriggeredEffectConfig_t> effects = {
         Effect_(AddVirtualMineralsEffect_t{5}),
@@ -713,6 +717,7 @@ TEST_CASE("In a probe mission context AddVirtualMinerals charges the actor, not 
     Faction& victim = game.fixtures.state.AddFaction(std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed));
     Tile* pTile = game.fixtures.state.GetWorldMap().GetTile(8, 8);
     REQUIRE(pTile);

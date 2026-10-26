@@ -97,7 +97,7 @@ Faction& AddAiFaction_(ViewFixture& rFixture)
     return rFixture.state.AddFaction(std::make_unique<Faction>(
         rFixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false,
         rFixture.factionDefinition, rFixture.dataContext, rFixture.state.GetWorldMap(),
-        rFixture.settings, actest::k_TestFactionSeed));
+        rFixture.settings, rFixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
 }
 
 } // namespace

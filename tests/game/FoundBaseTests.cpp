@@ -82,10 +82,12 @@ struct FoundBaseGame_
         auto pFactionA = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition,
             fixtures.dataContext, fixtures.state.GetWorldMap(), fixtures.settings,
+            fixtures.state.GetUnitIdAllocator(),
             actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition,
             fixtures.dataContext, fixtures.state.GetWorldMap(), fixtures.settings,
+            fixtures.state.GetUnitIdAllocator(),
             actest::k_TestFactionSeed);
 
         pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));

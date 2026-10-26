@@ -134,7 +134,7 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
     actest::FactionFixture fixture;
     Faction& faction = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        fixture.map, fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
@@ -170,10 +170,10 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
     actest::FactionFixture fixture;
     Faction& beneficiary = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        fixture.map, fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     Faction& other = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        fixture.map, fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(beneficiary, 8, 8);
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
@@ -193,13 +193,13 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
 
 // on_complete effects only run when a session subscriber is wired (GameState::AttachToSession_).
 // A faction built against the fixture map but never added has no such subscriber.
-TEST_CASE("Building production without spawn services completes without on_complete effects",
+TEST_CASE("Building production outside a session completes without on_complete effects",
           "[effects][base][triggered]")
 {
     actest::FactionFixture fixture;
     Faction unaffiliated(/*factionId*/ 99, /*bIsPlayerControlled*/ false,
                          fixture.factionDefinition, fixture.dataContext, fixture.map,
-                         fixture.settings, actest::k_TestFactionSeed);
+                         fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     auto pBase = std::make_unique<BaseManager>(
         unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
         MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
@@ -229,15 +229,15 @@ TEST_CASE("Building production without spawn services completes without on_compl
     CHECK_FALSE(hasGranted);
 }
 
-// Spawn services only bind in AttachToSession_. A faction built against the fixture map
-// but never added has none, so unit completion must throw before CreateUnit.
-TEST_CASE("Unit production without spawn services throws before spawning",
+// Unit ids come from the constructor-injected allocator, so a faction that was never
+// added to the session can still complete a unit. on_complete effects stay unwired.
+TEST_CASE("Unit production outside a session still spawns the unit",
           "[effects][base][triggered]")
 {
     actest::FactionFixture fixture;
     Faction unaffiliated(/*factionId*/ 99, /*bIsPlayerControlled*/ false,
                          fixture.factionDefinition, fixture.dataContext, fixture.map,
-                         fixture.settings, actest::k_TestFactionSeed);
+                         fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
     auto pBase = std::make_unique<BaseManager>(
         unaffiliated, /*baseId*/ 1, "TestBase", fixture.At(8, 8),
         MakeBaseRuleset(fixture.dataContext), fixture.ctx, /*initialPopulation*/ 3);
@@ -271,8 +271,8 @@ TEST_CASE("Unit production without spawn services throws before spawning",
 
     base.GetProduction().SetProduction(pQueued, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
-    CHECK(unaffiliated.GetUnitManager().Units().empty());
+    REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
+    REQUIRE_FALSE(unaffiliated.GetUnitManager().Units().empty());
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

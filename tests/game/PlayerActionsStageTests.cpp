@@ -44,7 +44,7 @@ struct PlayerActionsGame_
     {
         auto pFaction = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
         pPlayer = &fixtures.state.AddFaction(std::move(pFaction));
     }
 
@@ -193,6 +193,7 @@ TEST_CASE("PlayerActions resets interaction phase when active faction changes",
     auto pOther = std::make_unique<Faction>(
         game.fixtures.state.AllocateFactionId(), true, game.fixtures.factionDefinition,
         game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(),
         actest::k_TestFactionSeed);
     Faction& rOther = game.fixtures.state.AddFaction(std::move(pOther));
 

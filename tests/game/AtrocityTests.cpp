@@ -65,7 +65,7 @@ struct AtrocityGame_
     {
         auto pFaction = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), bPlayer, rDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
         return fixtures.state.AddFaction(std::move(pFaction));
     }
 

@@ -115,7 +115,7 @@ TEST_CASE("A shrouded tile shows only the shroud and land-coloured edges", "[ui]
     enemyDefinition.identity.name = "Enemy";
     Faction& enemy = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), false, enemyDefinition, fixture.dataContext,
-        fixture.state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed + 1));
+        fixture.state.GetWorldMap(), fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed + 1));
 
     WorldMap& rMap = fixture.state.GetWorldMap();
     Tile& rTile = *rMap.GetTile(8, 8);

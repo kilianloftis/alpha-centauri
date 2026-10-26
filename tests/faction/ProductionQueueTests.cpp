@@ -40,7 +40,7 @@ struct QueueGame_
         FillLand(fixtures.map);
         pFaction = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, k_TestFactionSeed));
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     }
 
     BaseManager& MakeBase()

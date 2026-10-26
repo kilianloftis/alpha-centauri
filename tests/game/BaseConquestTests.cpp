@@ -88,10 +88,10 @@ struct ConquestGame_
 
         auto pFactionA = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
-            fixtures.state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed);
+            fixtures.state.GetWorldMap(), fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
 
         pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
         pAi = &fixtures.state.AddFaction(std::move(pFactionB));

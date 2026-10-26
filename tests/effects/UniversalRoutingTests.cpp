@@ -207,11 +207,13 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
                                                fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ true, fixture.factionDefinition,
                                                fixture.dataContext,
                                                fixture.map, fixture.settings,
+                                               fixture.state.GetUnitIdAllocator(),
                                                actest::k_TestFactionSeed));
     Faction& factionB = fixture.state.AddFaction(std::make_unique<Faction>(
                                                fixture.state.AllocateFactionId(), /*bIsPlayerControlled*/ false, fixture.factionDefinition,
                                                fixture.dataContext,
                                                fixture.map, fixture.settings,
+                                               fixture.state.GetUnitIdAllocator(),
                                                actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
@@ -263,10 +265,10 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
 
     Faction& factionA = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext, fixture.map,
-        fixture.settings, actest::k_TestFactionSeed));
+        fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     Faction& factionB = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext, fixture.map,
-        fixture.settings, actest::k_TestFactionSeed));
+        fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
     Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_weapon"});
@@ -286,7 +288,7 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
 
     Faction& factionA = fixture.state.AddFaction(std::make_unique<Faction>(
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext, fixture.map,
-        fixture.settings, actest::k_TestFactionSeed));
+        fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
 
     Tile& tile = *fixture.map.GetTile(8, 8);

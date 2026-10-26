@@ -37,10 +37,10 @@ struct CouncilFixture_
 
         pA = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.map, fixtures.settings, k_TestFactionSeed));
+            fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
         pB = &fixtures.state.AddFaction(std::make_unique<Faction>(
             fixtures.state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
-            fixtures.map, fixtures.settings, k_TestFactionSeed));
+            fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
 
         fixtures.MakeFactionBase(*pA, 8, 4);
         fixtures.MakeFactionBase(*pB, 12, 8);

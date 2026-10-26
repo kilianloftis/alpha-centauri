@@ -193,7 +193,7 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
     actest::FactionFixture fixtures;
     Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, actest::k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
 
     ResearchManager& research = faction.GetResearch();
     // Faction construction auto-picks a target; clear to exercise the idle-grant path.

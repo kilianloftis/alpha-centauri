@@ -240,7 +240,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
     FillLand(fixtures.map);
     Faction& faction = fixtures.state.AddFaction(std::make_unique<Faction>(
         fixtures.state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
-        fixtures.map, fixtures.settings, k_TestFactionSeed));
+        fixtures.map, fixtures.settings, fixtures.state.GetUnitIdAllocator(), k_TestFactionSeed));
     BaseManager* pBase = faction.CreateBase(
         fixtures.state.AllocateBaseId(), "TestBase", fixtures.map.GetTile(8, 4),
         fixtures.ctx, std::nullopt);

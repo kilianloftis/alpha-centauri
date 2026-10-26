@@ -108,7 +108,7 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     definition.id = "already_populated";
     auto pFaction = std::make_unique<Faction>(
         state.AllocateFactionId(), true, definition, fixture.dataContext,
-        state.GetWorldMap(), settings, k_TestFactionSeed);
+        state.GetWorldMap(), settings, state.GetUnitIdAllocator(), k_TestFactionSeed);
 
     // Found the base BEFORE the faction is known to the session — the case that used to be
     // skipped entirely.
@@ -145,7 +145,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     incumbentDef.id = "incumbent";
     Faction& rIncumbent = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, incumbentDef, fixture.dataContext,
-        state.GetWorldMap(), settings, k_TestFactionSeed));
+        state.GetWorldMap(), settings, state.GetUnitIdAllocator(), k_TestFactionSeed));
     rIncumbent.CreateBase(state.AllocateBaseId(), "Incumbent", state.GetWorldMap().GetTile(6, 6),
                           state.GetTileEffects(), std::nullopt);
     state.GetTileEffects().AddOccupantWithEffects(*state.GetWorldMap().GetTile(8, 8), "Sensor");
@@ -155,7 +155,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     arrivalDef.id = "arrival";
     auto pArrival = std::make_unique<Faction>(
         state.AllocateFactionId(), false, arrivalDef, fixture.dataContext,
-        state.GetWorldMap(), settings, k_TestFactionSeed + 1);
+        state.GetWorldMap(), settings, state.GetUnitIdAllocator(), k_TestFactionSeed + 1);
     pArrival->CreateBase(state.AllocateBaseId(), "Arrival", state.GetWorldMap().GetTile(10, 10),
                          state.GetTileEffects(), std::nullopt);
 
@@ -180,7 +180,7 @@ TEST_CASE("Faction random choices are reproducible from the seed", "[composition
 
     auto make = [&](uint32_t seed) {
         return std::make_unique<Faction>(99, false, definition, fixture.dataContext,
-                                         fixture.map, fixture.settings, seed);
+                                         fixture.map, fixture.settings, fixture.state.GetUnitIdAllocator(), seed);
     };
 
     auto pA = make(4242u);

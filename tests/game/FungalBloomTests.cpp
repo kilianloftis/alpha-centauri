@@ -232,6 +232,7 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     Faction& rPlayer = session.fixtures.state.AddFaction(std::make_unique<Faction>(
         session.fixtures.state.AllocateFactionId(), true, session.fixtures.factionDefinition,
         session.fixtures.dataContext, session.fixtures.state.GetWorldMap(), session.fixtures.settings,
+        session.fixtures.state.GetUnitIdAllocator(),
         k_TestFactionSeed));
 
     session.warhead.id = "fungal_warhead";
