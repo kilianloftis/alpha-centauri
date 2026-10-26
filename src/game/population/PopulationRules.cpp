@@ -8,6 +8,7 @@
 #include "game/population/PopulationManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 
@@ -74,6 +75,36 @@ int DecayTurnsOf_(const AssimilationState& rWindow, int fallbackDecay)
     return std::max(1, rWindow.durationTurns / rWindow.peakDrones);
 }
 
+int RemainingTurns_(const AssimilationState& rOccupier)
+{
+    if (!rOccupier.IsActive())
+    {
+        return 0;
+    }
+    return rOccupier.durationTurns - rOccupier.turnsElapsed;
+}
+
+int SizeCapTurns_(int baseSize, double capFactor)
+{
+    const double raw = capFactor * static_cast<double>(baseSize);
+    return static_cast<int>(std::floor(raw));
+}
+
+// The occupation formula then yields ceil(turnsLeft / decay) drones, SMAC's (assim + 9) / 10.
+AssimilationState WindowWithTurnsLeft_(FactionId_t formerOwner, int turnsLeft, int decayTurns)
+{
+    AssimilationState state;
+    if (turnsLeft <= 0)
+    {
+        return state;
+    }
+    state.formerOwner = formerOwner;
+    state.peakDrones = (turnsLeft + decayTurns - 1) / decayTurns;
+    state.durationTurns = state.peakDrones * decayTurns;
+    state.turnsElapsed = state.durationTurns - turnsLeft;
+    return state;
+}
+
 } // namespace
 
 const Pop& SelectPopToRemove(const BaseManager& rBase)
@@ -98,18 +129,13 @@ const Pop& SelectPopToRemove(const BaseManager& rBase)
 
 bool RiotConditionMet(const RiotConditionInputs_t& rInputs, const PopCompositionConfig_t& rConfig)
 {
-    return rInputs.riotSum >= rConfig.riotThreshold || rInputs.forcedTurnsRemaining > 0;
+    return rInputs.riotSum >= rConfig.riotThreshold;
 }
 
 bool GoldenAgeConditionMet(const GoldenAgeConditionInputs_t& rInputs,
                            const PopCompositionConfig_t& rConfig)
 {
     return rInputs.droneCount == 0 && rInputs.goldenAgeSum >= rConfig.goldenAgeThreshold;
-}
-
-int ForcedRiotTurns(int remaining, int added)
-{
-    return std::max(remaining, std::max(0, added));
 }
 
 AssimilationOnCapture_t AssimilationOnCapture(const AssimilationTracker& rTracker,
@@ -135,6 +161,29 @@ AssimilationOnCapture_t AssimilationOnCapture(const AssimilationTracker& rTracke
         outcome.previousOwnerClaim = FreshWindow_(previousOwner, peakDrones, decayTurns);
     }
     return outcome;
+}
+
+AssimilationState AssimilationOnIncite(const AssimilationState& rOccupier, int baseSize,
+                                       int decayTurns, int turnsAdded, double capFactor)
+{
+    const int turnsLeft = RemainingTurns_(rOccupier);
+    const int cap = std::max(turnsLeft, SizeCapTurns_(baseSize, capFactor));
+    const int bumped = std::clamp(turnsLeft + turnsAdded, 0, cap);
+    if (bumped == turnsLeft)
+    {
+        return rOccupier;
+    }
+    const int decay = DecayTurnsOf_(rOccupier, decayTurns);
+    return WindowWithTurnsLeft_(rOccupier.formerOwner, bumped, decay);
+}
+
+int OccupierDecayTicks(const AssimilationState& rOccupier, FactionId_t currentOwner)
+{
+    if (rOccupier.IsAssimilatingConquest(currentOwner))
+    {
+        return 1;
+    }
+    return 2;
 }
 
 } // namespace ac

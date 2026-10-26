@@ -323,6 +323,12 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
     return true;
 }
 
+bool ProbeNoticeReachesPlayer(FactionId_t actorId, FactionId_t targetId)
+{
+    const FactionId_t playerId = CurrentGameState().GetPlayerFaction().GetFactionId();
+    return playerId == actorId || playerId == targetId;
+}
+
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
                                         const Faction& rActor, const ProbeTarget_t& rTarget)
 {

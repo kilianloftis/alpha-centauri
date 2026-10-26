@@ -97,9 +97,9 @@ struct ProbeActionConfig_t
     std::string requiredTech;
     bool bHqOnly = false;
     bool bNotHq = false;
-    // Incite Drone Riots only: end-of-turn passes the forced riot survives.
-    // TODO: SMAC's duration is unknown; config/probe_actions.json uses 1.
-    int riotTurns = 0;
+    // Incite Drone Riots only: remaining assimilation turns added, and the per-citizen cap.
+    int assimilationTurnsAdded = 0;
+    double assimilationTurnsCapFactor = 0.0;
     std::optional<ProbeCostConfig_t> cost;
     // Continuous effects the action declares. Probe actions have no pool origin, so this is
     // effectively unused today; the mission's real work is in onSuccessEffects.

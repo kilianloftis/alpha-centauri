@@ -35,7 +35,6 @@ struct MoodState_t
 {
     bool bRioting = false;
     bool bPendingRiot = false;
-    int forcedRiotTurnsRemaining = 0;
     int consecutiveRiotTurns = 0;
     bool bInGoldenAge = false;
     bool bPendingGoldenAge = false;

@@ -283,6 +283,42 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
 }
 
+TEST_CASE("Incite notice presents a modal for a known base",
+          "[ui][InteractionPresenter][PlayerInteraction][probe]")
+{
+    PresenterHarness_ harness;
+    BaseManager& rBase = harness.fixture.MakeBase(8, 8);
+    ProbeNoticeInteraction_t notice;
+    notice.targetFactionId = rBase.GetFactionId();
+    notice.subjectName = rBase.GetName();
+    notice.cameraTile = TileCoord_t{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
+    notice.actionId = ProbeActionId_t::InciteDroneRiots;
+    notice.result.detail = ProbeActionStatus_t::Riot;
+    harness.Enqueue(notice);
+
+    harness.pPresenter->Update();
+
+    CHECK(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 0);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
+}
+
+TEST_CASE("A probe notice without copy completes without a modal",
+          "[ui][InteractionPresenter][PlayerInteraction][probe]")
+{
+    PresenterHarness_ harness;
+    ProbeNoticeInteraction_t notice;
+    notice.actionId = ProbeActionId_t::Infiltrate;
+    notice.result.detail = ProbeActionStatus_t::Infiltrated;
+    harness.Enqueue(notice);
+
+    harness.pPresenter->Update();
+
+    CHECK_FALSE(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 1);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 0);
+}
+
 TEST_CASE("A Pact obligation the player no longer owes completes without a prompt",
           "[ui][InteractionPresenter][PlayerInteraction][diplomacy]")
 {

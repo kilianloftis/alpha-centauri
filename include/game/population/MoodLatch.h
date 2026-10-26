@@ -19,6 +19,10 @@ public:
     // active latch clears stale pending and waits for Commit to decide.
     void Forecast(bool bCondition);
 
+    // For a mid-turn source (probe Incite) that SMAC latches at once. Leaves consecutive counts
+    // to Commit, so the next Mood commit is still the first.
+    void LatchNow();
+
 protected:
     MoodLatch(Signal<>& rWill, Signal<>& rStarted, Signal<>& rEnded)
         : m_rWill(rWill)

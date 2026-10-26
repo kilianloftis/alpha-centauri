@@ -64,4 +64,15 @@ void MoodLatch::SetPendingAndWarn_()
     m_rWill.Emit();
 }
 
+void MoodLatch::LatchNow()
+{
+    if (m_bActive)
+    {
+        return;
+    }
+    m_bPending = false;
+    m_bActive = true;
+    m_rStarted.Emit();
+}
+
 } // namespace ac

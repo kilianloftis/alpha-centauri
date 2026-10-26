@@ -471,8 +471,10 @@ TEST_CASE("A rioting base banks, completes and hurries nothing", "[production][r
     Faction& faction = fixture.MakeFaction();
     BaseManager& rioting = fixture.MakeFactionBase(faction, 8, 8);
     BaseManager& calm = fixture.MakeFactionBase(faction, 8, 12);
-    rioting.GetPopulation().ForceRiot(/*turns=*/1);
-    rioting.GetPopulation().CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    rioting.GetPopulation().RestoreMoodState(riot);
     REQUIRE(rioting.GetPopulation().IsRioting());
 
     CHECK_FALSE(CanBankProduction(rioting));

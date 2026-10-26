@@ -111,8 +111,8 @@ public:
     int GetConsecutiveRiotTurns() const;
     bool IsInGoldenAge() const;
 
-    // Probe Incite Drone Riots: force a riot for the next `turns` Mood commits.
-    void ForceRiot(int turns);
+    // Probe Incite Drone Riots: extend the occupier window and latch if drones outweigh talents.
+    void ApplyIncite(int turnsAdded, double capFactor);
 
     // Save / load and base transfer. Restoring emits no signals.
     MoodState_t CaptureMoodState() const;

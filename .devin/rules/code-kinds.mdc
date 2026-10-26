@@ -17,6 +17,7 @@ Full text: "Code kinds" in `docs/architecture/high-level.md`.
 - **Caches** (`*Cache`) memoise a view of state and own no save data.
 - **Coordinators** are the turn stages. **Definitions** are `*Config_t`, `*ConfigParser`, `*Registry` and the validators.
 - The effects system follows the same split: resolving effects is rules, dispatching triggered effects is mutations.
+- Player-facing text is UI, not a game kind. Mutations enqueue ids and enums; the presenter formats them.
 
 ## Names
 

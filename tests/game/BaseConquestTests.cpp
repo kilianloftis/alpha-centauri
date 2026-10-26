@@ -651,6 +651,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
     PopulationManager& rPops = rBase.GetPopulation();
 
     rPops.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
+    game.pAi->TransferBaseTo(rBase.GetBaseId(), *game.pPlayer);
     for (int i = 0; i < 12; ++i)
     {
         rPops.AdvanceAssimilation();
@@ -658,6 +659,7 @@ TEST_CASE("Recapture by the former owner reverses remaining assimilation",
     CHECK(rPops.GetAssimilation().OccupierWindow().turnsElapsed == 12);
 
     rPops.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    game.pPlayer->TransferBaseTo(rBase.GetBaseId(), *game.pAi);
     const AssimilationTracker& rAssim = rPops.GetAssimilation();
     CHECK(rAssim.OccupierWindow().IsActive());
     CHECK(rAssim.OccupierWindow().formerOwner == game.pPlayer->GetFactionId());

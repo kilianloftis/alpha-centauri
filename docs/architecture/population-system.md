@@ -147,7 +147,9 @@ The split exists so the warning lands *before* the player acts and the latch clo
 `OnWill*` edge-emits when pending first latches (and again on `RestoreState` if load-mid-pending);
 session attach wires player notices — the Population stage does not poll. Pending state
 carries no gameplay effect — only `IsRioting()` / `IsInGoldenAge()` do. A riot
-additionally ages a probe-forced timer and counts consecutive commits.
+counts consecutive commits for `riot_tiers`. Incite extends the occupier assimilation
+window and latches immediately if the extra drones tip the weights; until the next commit
+that riot counts as its first turn, so tier 1 effects apply at once.
 
 `PopulationManager` owns both calculators privately and exposes only `ForecastMood` /
 `CommitMood` / the query pair: the phase ordering is a turn-stage contract, not something an

@@ -80,19 +80,43 @@ bool RunsOnSuccessEffects_(ProbeActionId_t id)
     throw std::logic_error("RunsOnSuccessEffects_: unhandled enumerator");
 }
 
-int ParseRiotTurns_(const json& rActionJson, const std::string& rName)
+void ParseInciteAssimilation_(const json& rActionJson, ProbeActionConfig_t& rAction)
 {
-    if (!rActionJson.contains("riot_turns"))
+    if (!rActionJson.contains("assimilation_turns_added")
+        || !rActionJson.at("assimilation_turns_added").is_number_integer())
+    {
+        throw std::runtime_error("Probe action '" + rAction.name
+                                 + "': missing required integer 'assimilation_turns_added'");
+    }
+    rAction.assimilationTurnsAdded = rActionJson.at("assimilation_turns_added").get<int>();
+    if (rAction.assimilationTurnsAdded < 1)
+    {
+        throw std::runtime_error("Probe action '" + rAction.name
+                                 + "': assimilation_turns_added must be >= 1");
+    }
+    if (!rActionJson.contains("assimilation_turns_cap_factor")
+        || !rActionJson.at("assimilation_turns_cap_factor").is_number())
+    {
+        throw std::runtime_error("Probe action '" + rAction.name
+                                 + "': missing required number 'assimilation_turns_cap_factor'");
+    }
+    rAction.assimilationTurnsCapFactor =
+        rActionJson.at("assimilation_turns_cap_factor").get<double>();
+    if (rAction.assimilationTurnsCapFactor <= 0.0)
+    {
+        throw std::runtime_error("Probe action '" + rAction.name
+                                 + "': assimilation_turns_cap_factor must be > 0");
+    }
+}
+
+void RejectInciteKeys_(const json& rActionJson, const std::string& rName)
+{
+    if (rActionJson.contains("assimilation_turns_added")
+        || rActionJson.contains("assimilation_turns_cap_factor"))
     {
         throw std::runtime_error("Probe action '" + rName
-                                 + "': missing required field 'riot_turns'");
+                                 + "': assimilation_turns_* applies only to incite_drone_riots");
     }
-    const int riotTurns = rActionJson.at("riot_turns").get<int>();
-    if (riotTurns < 1)
-    {
-        throw std::runtime_error("Probe action '" + rName + "': riot_turns must be >= 1");
-    }
-    return riotTurns;
 }
 
 std::vector<EffectConfig_t> ParseActionEffects_(const json& rActionJson, ProbeActionId_t id)
@@ -123,14 +147,11 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     action.bNotHq = rActionJson.value("not_hq", false);
     if (action.id == ProbeActionId_t::InciteDroneRiots)
     {
-        action.riotTurns = ParseRiotTurns_(rActionJson, action.name);
+        ParseInciteAssimilation_(rActionJson, action);
     }
-    else if (rActionJson.contains("riot_turns"))
+    else
     {
-        // Only the riot action has a riot duration; accepting the key elsewhere would silently
-        // ignore it.
-        throw std::runtime_error("Probe action '" + action.name
-                                 + "': riot_turns applies only to incite_drone_riots");
+        RejectInciteKeys_(rActionJson, action.name);
     }
     if (rActionJson.contains("cost") && !rActionJson.at("cost").is_null())
     {

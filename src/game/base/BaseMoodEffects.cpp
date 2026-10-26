@@ -4,6 +4,8 @@
 #include "game/population/PopulationManager.h"
 #include "game/population/PopCompositionConfigParser.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -45,8 +47,10 @@ const RiotTier_t* ActiveRiotTierFor(const BaseManager& rBase)
     {
         return nullptr;
     }
-    return FindActiveRiotTier(rPopulation.GetCompositionConfig(),
-                              rPopulation.GetConsecutiveRiotTurns());
+    // Incite latches before the first Mood commit, and SMAC's flag already blocks that turn's
+    // production (terranx-map "Probe: Incite Drone Riots").
+    const int turns = std::max(1, rPopulation.GetConsecutiveRiotTurns());
+    return FindActiveRiotTier(rPopulation.GetCompositionConfig(), turns);
 }
 
 } // namespace ac

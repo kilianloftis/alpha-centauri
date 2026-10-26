@@ -1,7 +1,5 @@
 #include "game/population/RiotLatch.h"
 
-#include "game/population/PopulationRules.h"
-
 #include <algorithm>
 
 namespace ac
@@ -22,13 +20,6 @@ void RiotLatch::NotifyPopGrown(bool bRiotCondition)
 
 void RiotLatch::Commit(bool bRiotCondition)
 {
-    // The condition was read before this pass consumes a forced turn, so ForceRiot(1)
-    // survives exactly the next Commit.
-    if (m_forcedTurnsRemaining > 0)
-    {
-        --m_forcedTurnsRemaining;
-    }
-
     if (MoodLatch::Commit(bRiotCondition) == Transition_t::Ended)
     {
         m_consecutiveTurns = 0;
@@ -41,20 +32,9 @@ void RiotLatch::Commit(bool bRiotCondition)
     }
 }
 
-void RiotLatch::ForceRiot(int turns)
-{
-    m_forcedTurnsRemaining = ForcedRiotTurns(m_forcedTurnsRemaining, turns);
-    if (m_forcedTurnsRemaining > 0)
-    {
-        SetPendingAndWarn_();
-    }
-}
-
-void RiotLatch::RestoreState(bool bActive, bool bPending, int forcedTurnsRemaining,
-                                  int consecutiveTurns)
+void RiotLatch::RestoreState(bool bActive, bool bPending, int consecutiveTurns)
 {
     MoodLatch::RestoreState(bActive, bPending);
-    m_forcedTurnsRemaining = std::max(0, forcedTurnsRemaining);
     m_consecutiveTurns = bActive ? std::max(0, consecutiveTurns) : 0;
 }
 

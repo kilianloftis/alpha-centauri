@@ -99,6 +99,19 @@ value-line per array, not one element per line). Do not rewrite them with
   it belongs in. A class can be described in one sentence without "and".
 - Derived classes are substitutable for their base. Interfaces stay narrow.
 - Depend on an interface only when it has two implementations, or a test double needs one.
+- **Display copy lives in the UI layer.** Titles, bodies, captions, button labels, and other
+  player-facing strings are formatted by views and `InteractionPresenter`. The game layer
+  reports outcomes (ids, enums, amounts). It does not build a sentence for the player.
+  ```cpp
+  // No — game mutation
+  EnqueueForPlayer(rGameState, NoticeInteraction_t{
+      std::nullopt, "Operations Director",
+      "Drone riots incited at " + rBase.GetName() + "!", at});
+
+  // Yes — game reports the outcome; UI writes the sentence
+  EnqueueForPlayer(rGameState, ProbeNoticeInteraction_t{
+      actorId, targetId, rBase.GetBaseId(), std::nullopt, actionId, result});
+  ```
 
 ## Moddability
 - Numbers, ids and switches a modder would change live in config, not C++. Calculator

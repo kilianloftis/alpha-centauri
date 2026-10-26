@@ -2,6 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/combat/MoraleRules.h"
+#include "game/PlayerInteractionQueue.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeRules.h"
 #include "game/effects/ActiveEffect.h"
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <variant>
 
 namespace ac
 {
@@ -32,6 +34,35 @@ bool AreOnOrAdjacent_(const Tile& rA, const Tile& rB, const WorldMap& rMap)
         return true;
     }
     return AreChebyshevAdjacent(rA, rB, rMap.GetWidth());
+}
+
+std::string ProbeSubjectName_(const ProbeTarget_t& rTarget)
+{
+    if (const BaseManager* pBase = AsBase(rTarget))
+    {
+        return pBase->GetName();
+    }
+    const Unit& rUnit = std::get<ProbeUnitTarget_t>(rTarget.ref).rUnit;
+    return rUnit.GetDesign().GetName();
+}
+
+void AnnounceProbe_(GameState& rGameState, FactionId_t actorId, ProbeActionId_t actionId,
+                    const ProbeTarget_t& rTarget, const ProbeActionResult_t& rResult)
+{
+    const FactionId_t targetId = rTarget.rFaction.GetFactionId();
+    if (!ProbeNoticeReachesPlayer(actorId, targetId))
+    {
+        return;
+    }
+    const Tile& rTile = rTarget.rTile;
+    ProbeNoticeInteraction_t notice;
+    notice.actorId = actorId;
+    notice.targetFactionId = targetId;
+    notice.subjectName = ProbeSubjectName_(rTarget);
+    notice.cameraTile = TileCoord_t{rTile.GetX(), rTile.GetY()};
+    notice.actionId = actionId;
+    notice.result = rResult;
+    EnqueueForPlayer(rGameState, notice);
 }
 
 } // namespace
@@ -174,9 +205,12 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
 {
     ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
 
+    const FactionId_t actorId = rUnit.GetFaction().GetFactionId();
     if (!roll.missionSucceeded)
     {
-        return FailMission_(rUnit, result);
+        ProbeActionResult_t failed = FailMission_(rUnit, result);
+        AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, failed);
+        return failed;
     }
 
     if (!ApplyProbeActionEffect(rUnit, rAction, rTarget, rGameState, facilityId, result,
@@ -189,10 +223,13 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
 
     if (!roll.escaped)
     {
-        return CaptureProbe_(rUnit, result);
+        ProbeActionResult_t captured = CaptureProbe_(rUnit, result);
+        AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, captured);
+        return captured;
     }
 
     FinalizeProbeSuccess_(rUnit, result);
+    AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, result);
     return result;
 }
 

@@ -60,7 +60,8 @@
       "name": "Incite Drone Riots",
       "target": "base",
       "risk": 0,
-      "riot_turns": 1
+      "assimilation_turns_added": 10,
+      "assimilation_turns_cap_factor": 2.5
     },
     {
       "id": "assassinate",

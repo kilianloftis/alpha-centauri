@@ -154,6 +154,7 @@ add_executable(effects-tests
     ui/FactionBaseArtTests.cpp
     ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
+    ui/ProbeNoticesTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp

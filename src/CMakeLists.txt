@@ -373,6 +373,7 @@ add_library(ac-ui STATIC
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp
+    ui/ProbeNotices.cpp
     ui/style/UiStyle.cpp
     ui/style/DrawPanelChrome.cpp
     ui/world/WorldView.cpp

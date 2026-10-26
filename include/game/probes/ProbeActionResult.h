@@ -24,6 +24,7 @@ enum class ProbeActionStatus_t
     NoTech,
     ProductionWiped,
     Riot,
+    IncreasedActivity,
     ResearchWiped,
     BaseCaptured,
     UnitSubverted,

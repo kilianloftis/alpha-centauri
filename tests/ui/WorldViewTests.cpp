@@ -7,6 +7,7 @@
 #include "game/units/UnitManager.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseTypes.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
@@ -213,8 +214,10 @@ TEST_CASE("FormatMoraleDisplay is say_morale: word, pluses, home-riot suffix", "
     BaseManager& home = fixture.MakeBase(8, 12);
     Unit& homed = MakeUnit_(fixture, 8, 12, &home, {"test_chassis"}, designs);
     homed.SetXp(3);
-    home.GetPopulation().ForceRiot(/*turns=*/1);
-    home.GetPopulation().CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    home.GetPopulation().RestoreMoodState(riot);
     REQUIRE(home.GetPopulation().IsRioting());
     CHECK(FormatMoraleDisplay(homed, morale) == "Hardened (-)");
 

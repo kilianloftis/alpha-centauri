@@ -16,6 +16,9 @@
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseMoodEffects.h"
+#include "game/population/PopCompositionConfigParser.h"
+#include "game/map/Tile.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
@@ -23,6 +26,8 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeActionResult.h"
 #include "game/probes/ProbeRules.h"
@@ -153,6 +158,29 @@ DiplomaticStatus_t PlayerStatusWithAi_(ProbeGame_& rGame)
                                                         rGame.pAi->GetFactionId());
 }
 
+// The default fixture occupation formula is 0 so capture tests stay drone-free. Incite
+// seats occupation drones; this term is 1 while an occupier window is active.
+void UseActiveWindowOccupationDrone_(SessionInputs& rInputs)
+{
+    rInputs.dataContext.popCompositionConfig->occupationDroneFormula =
+        "((assimilation_peak > 0 and assimilation_duration > 0 and "
+        "turns_since_conquered < assimilation_duration) and 1 or 0)";
+}
+
+const ProbeNoticeInteraction_t& RequireProbeNotice_(GameState& rState, const BaseManager& rBase)
+{
+    const QueuedInteraction_t* pFront = rState.GetPlayerInteractions().Front();
+    REQUIRE(pFront);
+    const auto* pNotice = std::get_if<ProbeNoticeInteraction_t>(&pFront->payload);
+    REQUIRE(pNotice);
+    CHECK(pNotice->subjectName == rBase.GetName());
+    REQUIRE(pNotice->cameraTile.has_value());
+    CHECK(*pNotice->cameraTile == TileCoord_t{rBase.GetTile().GetX(), rBase.GetTile().GetY()});
+    CHECK(pNotice->targetFactionId == rBase.GetFactionId());
+    CHECK(pNotice->actionId == ProbeActionId_t::InciteDroneRiots);
+    return *pNotice;
+}
+
 // Signed before any probe is placed, since a Treaty moves each side out of the other's
 // territory.
 void SignTreaty_(ProbeGame_& rGame)
@@ -180,22 +208,142 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
              || result.outcome == ProbeActionOutcome_t::Captured));
     CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
         game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
+    const QueuedInteraction_t* pQueued = game.fixtures.state.GetPlayerInteractions().Front();
+    REQUIRE(pQueued);
+    const auto* pNotice = std::get_if<ProbeNoticeInteraction_t>(&pQueued->payload);
+    REQUIRE(pNotice);
+    CHECK(pNotice->actionId == ProbeActionId_t::Infiltrate);
+    CHECK(std::get<ProbeActionStatus_t>(pNotice->result.detail)
+          == ProbeActionStatus_t::Infiltrated);
     if (result.outcome == ProbeActionOutcome_t::Succeeded)
     {
         CHECK(probe.GetXp() >= xpBefore);
     }
 }
 
-TEST_CASE("ForceRiot sets pending riot until CommitRiot", "[probe][riot]")
+TEST_CASE("TryProbeAction incite riots when the extra drone tips the base", "[probe][riot]")
 {
-    BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(8, 8);
-    CHECK_FALSE(base.GetPopulation().IsRioting());
-    base.GetPopulation().ForceRiot(/*turns=*/1);
-    CHECK(base.GetPopulation().IsPendingRiot());
-    CHECK_FALSE(base.GetPopulation().IsRioting());
-    base.GetPopulation().CommitMood();
-    CHECK(base.GetPopulation().IsRioting());
+    ProbeGame_ game;
+    UseActiveWindowOccupationDrone_(game.fixtures);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result =
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{});
+
+    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
+             || result.outcome == ProbeActionOutcome_t::Captured));
+    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
+    REQUIRE(pStatus);
+    CHECK(*pStatus == ProbeActionStatus_t::Riot);
+    CHECK(enemy.GetPopulation().IsRioting());
+    // Riot effects apply before the first Mood commit, as SMAC's flag blocks the next production.
+    const RiotTier_t* pTier = ActiveRiotTierFor(enemy);
+    REQUIRE(pTier);
+    CHECK(pTier->minTurns == 1);
+    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
+          == ProbeActionStatus_t::Riot);
+}
+
+TEST_CASE("TryProbeAction incite reports increased activity when talents still outnumber drones",
+          "[probe][riot]")
+{
+    ProbeGame_ game;
+    UseActiveWindowOccupationDrone_(game.fixtures);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    enemy.GetPopulation().AddPop();
+    enemy.GetBuildingManager().AddBuilding("talent_academy");
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result =
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{});
+
+    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
+             || result.outcome == ProbeActionOutcome_t::Captured));
+    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
+    REQUIRE(pStatus);
+    CHECK(*pStatus == ProbeActionStatus_t::IncreasedActivity);
+    CHECK_FALSE(enemy.GetPopulation().IsRioting());
+    CHECK(enemy.GetPopulation().GetDroneCount() >= 1);
+    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
+          == ProbeActionStatus_t::IncreasedActivity);
+}
+
+TEST_CASE("TryProbeAction incite on an already-rioting base stays Riot", "[probe][riot]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    enemy.GetPopulation().RestoreMoodState(riot);
+    REQUIRE(enemy.GetPopulation().IsRioting());
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result =
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{});
+
+    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
+             || result.outcome == ProbeActionOutcome_t::Captured));
+    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
+    REQUIRE(pStatus);
+    CHECK(*pStatus == ProbeActionStatus_t::Riot);
+    CHECK(enemy.GetPopulation().IsRioting());
+    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
+          == ProbeActionStatus_t::Riot);
+}
+
+TEST_CASE("TryProbeAction incite notifies the player when their base is the target",
+          "[probe][riot]")
+{
+    ProbeGame_ game;
+    UseActiveWindowOccupationDrone_(game.fixtures);
+    BaseManager& home = game.MakeBase(*game.pAi, 8, 14);
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pAi, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result =
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::InciteDroneRiots, playerBase.GetTile(), game.fixtures.state,
+            BuildingId_t{});
+
+    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
+             || result.outcome == ProbeActionOutcome_t::Captured));
+    CHECK(std::get<ProbeActionStatus_t>(
+              RequireProbeNotice_(game.fixtures.state, playerBase).result.detail)
+          == ProbeActionStatus_t::Riot);
+}
+
+TEST_CASE("TryProbeAction incite does not notify when neither side is the player",
+          "[probe][riot]")
+{
+    ProbeGame_ game;
+    auto pOther = std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
+    Faction& other = game.fixtures.state.AddFaction(std::move(pOther));
+    BaseManager& home = game.MakeBase(*game.pAi, 8, 14);
+    BaseManager& target = game.MakeBase(other, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pAi, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result =
+        game.fixtures.state.GetProbeActions().TryProbeAction(
+            probe, ProbeActionId_t::InciteDroneRiots, target.GetTile(), game.fixtures.state,
+            BuildingId_t{});
+
+    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
+             || result.outcome == ProbeActionOutcome_t::Captured));
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
 }
 
 TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")

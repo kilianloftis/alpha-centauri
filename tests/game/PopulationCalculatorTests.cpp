@@ -60,81 +60,52 @@ struct RiotSignals_
     }
 };
 
-// The condition PopulationManager passes: the composition plus the latch's forced turns, at
-// the shipping threshold of 1.
-bool RiotCondition_(const RiotLatch& rRiot, int riotSum)
+// The condition PopulationManager passes, at the shipping threshold of 1.
+bool RiotCondition_(int riotSum)
 {
     RiotConditionInputs_t inputs;
     inputs.riotSum = riotSum;
-    inputs.forcedTurnsRemaining = rRiot.GetForcedTurnsRemaining();
     return RiotConditionMet(inputs, PopCompositionConfig_t{});
 }
 
-bool Calm_(const RiotLatch& rRiot)
+bool Calm_()
 {
-    return RiotCondition_(rRiot, 0);
+    return RiotCondition_(0);
 }
 
-bool Unrest_(const RiotLatch& rRiot)
+bool Unrest_()
 {
-    return RiotCondition_(rRiot, 2);
+    return RiotCondition_(2);
 }
 
 } // namespace
 
-TEST_CASE("An incited riot survives the Mood commit that follows it", "[population][riot]")
+TEST_CASE("LatchNow latches immediately without a Mood consecutive increment",
+          "[population][riot]")
 {
-    // ForceRiot is pending until Mood Commit; the forced counter keeps it alive even when
-    // the composition is calm.
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    REQUIRE_FALSE(riot.IsActive());
-    riot.ForceRiot(/*turns=*/1);
-    CHECK(riot.IsPending());
-    CHECK_FALSE(riot.IsActive());
-    CHECK(signals.isRiotingCount == 0);
-
-    // Mood commit after the probe: activates, consuming the one forced turn.
-    riot.Commit(Calm_(riot));
+    riot.LatchNow();
     CHECK(riot.IsActive());
+    CHECK_FALSE(riot.IsPending());
     CHECK(signals.isRiotingCount == 1);
+    CHECK(riot.GetConsecutiveTurns() == 0);
 
-    // ...and it expires on the next Mood pass.
-    riot.Commit(Calm_(riot));
-    CHECK_FALSE(riot.IsActive());
-    CHECK(signals.riotEndedCount == 1);
+    riot.Commit(Unrest_());
+    CHECK(riot.IsActive());
+    CHECK(riot.GetConsecutiveTurns() == 1);
 }
 
-TEST_CASE("A forced riot lasts its configured number of Mood commits", "[population][riot]")
+TEST_CASE("LatchNow leaves an already-active latch alone", "[population][riot]")
 {
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    riot.ForceRiot(/*turns=*/3);
-    for (int turn = 0; turn < 3; ++turn)
-    {
-        riot.Commit(Calm_(riot));
-        CHECK(riot.IsActive());
-    }
-    riot.Commit(Calm_(riot));
-    CHECK_FALSE(riot.IsActive());
-}
-
-TEST_CASE("Forcing a riot extends but never shortens one already running", "[population][riot]")
-{
-    RiotSignals_ signals;
-    RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
-
-    riot.ForceRiot(/*turns=*/5);
-    riot.ForceRiot(/*turns=*/1);
-    for (int turn = 0; turn < 5; ++turn)
-    {
-        riot.Commit(Calm_(riot));
-        CHECK(riot.IsActive());
-    }
-    riot.Commit(Calm_(riot));
-    CHECK_FALSE(riot.IsActive());
+    riot.Commit(Unrest_());
+    REQUIRE(riot.IsActive());
+    riot.LatchNow();
+    CHECK(signals.isRiotingCount == 1);
 }
 
 TEST_CASE("The natural riot condition still drives itself", "[population][riot]")
@@ -142,21 +113,19 @@ TEST_CASE("The natural riot condition still drives itself", "[population][riot]"
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    riot.Forecast(Unrest_(riot));
+    riot.Forecast(Unrest_());
     CHECK(riot.IsPending());
     CHECK_FALSE(riot.IsActive());
 
-    riot.Commit(Unrest_(riot));
+    riot.Commit(Unrest_());
     CHECK(riot.IsActive());
 
-    riot.Commit(Calm_(riot));
+    riot.Commit(Calm_());
     CHECK_FALSE(riot.IsActive());
     CHECK(signals.riotEndedCount == 1);
 
-    // A natural riot outlives an expired forced one.
-    riot.ForceRiot(/*turns=*/1);
-    riot.Commit(Unrest_(riot));
-    riot.Commit(Unrest_(riot));
+    riot.Commit(Unrest_());
+    riot.Commit(Unrest_());
     CHECK(riot.IsActive());
 }
 
@@ -165,14 +134,14 @@ TEST_CASE("NotifyPopGrown warns only when a riot is not already running", "[popu
     RiotSignals_ signals;
     RiotLatch riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
-    riot.NotifyPopGrown(Calm_(riot));
+    riot.NotifyPopGrown(Calm_());
     CHECK(signals.willRiotCount == 0);
 
-    riot.NotifyPopGrown(Unrest_(riot));
+    riot.NotifyPopGrown(Unrest_());
     CHECK(signals.willRiotCount == 1);
 
-    riot.Commit(Unrest_(riot));
-    riot.NotifyPopGrown(Unrest_(riot));
+    riot.Commit(Unrest_());
+    riot.NotifyPopGrown(Unrest_());
     CHECK(signals.willRiotCount == 1);
 }
 
@@ -195,20 +164,6 @@ TEST_CASE("The riot threshold moves what counts as unrest", "[population][riot]"
     riot.Forecast(RiotConditionMet(inputs, config));
     riot.Commit(RiotConditionMet(inputs, config));
     CHECK(riot.IsActive());
-}
-
-TEST_CASE("A forced riot meets the riot condition through a calm composition",
-          "[population][riot]")
-{
-    const PopCompositionConfig_t config;
-    RiotConditionInputs_t inputs;
-    CHECK_FALSE(RiotConditionMet(inputs, config));
-    inputs.forcedTurnsRemaining = 1;
-    CHECK(RiotConditionMet(inputs, config));
-
-    CHECK(ForcedRiotTurns(5, 1) == 5);
-    CHECK(ForcedRiotTurns(1, 5) == 5);
-    CHECK(ForcedRiotTurns(0, -2) == 0);
 }
 
 TEST_CASE("GoldenAgeLatch starts and ends on its condition", "[population][golden-age]")

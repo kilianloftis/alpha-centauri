@@ -273,7 +273,7 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     pBase->GetPopulation().OnGoldenAgeEnded.Connect([&]() { ++goldenAgeCallbacks; });
 
     const std::size_t queueBefore = game.fixtures.state.GetPlayerInteractions().Size();
-    pBase->GetPopulation().ForceRiot(/*turns=*/1);
+    pBase->GetPopulation().AddPop("Drone");
     REQUIRE(pBase->GetPopulation().IsPendingRiot());
     REQUIRE_FALSE(pBase->GetPopulation().IsRioting());
     // OnWillRiot (session-wired) enqueues once; Population stage must not poll-reenqueue.
@@ -294,15 +294,19 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
 
     CHECK(game.fixtures.state.GetPlayerInteractions().Size() == queueBefore + 1);
 
-    // Mood committed the forced riot. The fixture base is not drone-majority, so only the
-    // forced counter keeps this true through the commit that consumes ForceRiot(1).
+    // Population reseats the extra drone, so the pending warning does not become a riot.
+    CHECK_FALSE(pBase->GetPopulation().IsRioting());
+
+    game.fixtures.dataContext.popCompositionConfig->occupationDroneFormula =
+        "((assimilation_peak > 0 and assimilation_duration > 0 and "
+        "turns_since_conquered < assimilation_duration) and 1 or 0)";
+    pBase->GetPopulation().ApplyIncite(/*turnsAdded=*/10, /*capFactor=*/2.5);
     CHECK(pBase->GetPopulation().IsRioting());
 
     (void)goldenAgeCallbacks;
-    // TurnProcessor is parked on Stop (always Yield); drive Mood directly for the expiry pass.
     Mood mood(HookContext{});
     CHECK(mood.Execute(game.fixtures.state, *game.pPlayer) == StageResult_t::Continue);
-    CHECK_FALSE(pBase->GetPopulation().IsRioting());
+    CHECK(pBase->GetPopulation().IsRioting());
 }
 
 TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")

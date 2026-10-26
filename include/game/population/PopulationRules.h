@@ -17,7 +17,6 @@ struct PopCompositionConfig_t;
 struct RiotConditionInputs_t
 {
     int riotSum = 0;
-    int forcedTurnsRemaining = 0;
 };
 
 struct GoldenAgeConditionInputs_t
@@ -30,16 +29,11 @@ struct GoldenAgeConditionInputs_t
 // Ties keep the earliest, so the choice does not depend on allocation order.
 const Pop& SelectPopToRemove(const BaseManager& rBase);
 
-// A forced riot (probe Incite Drone Riots) holds even when the composition is calm, since the
-// action does not change composition.
 bool RiotConditionMet(const RiotConditionInputs_t& rInputs, const PopCompositionConfig_t& rConfig);
 
 // Talents weigh +1, plain workers and drones -1, specialists nothing, and any drone rules it out.
 bool GoldenAgeConditionMet(const GoldenAgeConditionInputs_t& rInputs,
                            const PopCompositionConfig_t& rConfig);
-
-// Forcing a riot extends one already running but never shortens it.
-int ForcedRiotTurns(int remaining, int added);
 
 struct AssimilationOnCapture_t
 {
@@ -55,5 +49,14 @@ struct AssimilationOnCapture_t
 AssimilationOnCapture_t AssimilationOnCapture(const AssimilationTracker& rTracker,
                                               FactionId_t previousOwner, FactionId_t newOwner,
                                               int peakDrones, int decayTurns);
+
+// SMAC lengthens one turns-left counter (terranx-map "Probe: Incite Drone Riots"), so the
+// window is rebuilt from turns left at its own decay rate; formerOwner carries over.
+AssimilationState AssimilationOnIncite(const AssimilationState& rOccupier, int baseSize,
+                                       int decayTurns, int turnsAdded, double capFactor);
+
+// SMAC decays the shared counter twice unless it is absorbing a conquest (terranx-map
+// "Counter decay").
+int OccupierDecayTicks(const AssimilationState& rOccupier, FactionId_t currentOwner);
 
 } // namespace ac

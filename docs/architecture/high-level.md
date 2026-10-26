@@ -384,6 +384,9 @@ Every file and class is one kind. The kind says what the code may read, change a
 - **Coordinators** are the turn stages.
 - **Definitions** are `*Config_t`, `*ConfigParser`, `*Registry` and the validators.
 - **The effects system** (`effects/`) follows the same split: resolving effects is rules, and dispatching triggered effects is mutations.
+- **UI copy** is not a game kind. Titles, bodies and labels are formatted in `src/ui/`. The game
+  reports what happened (ids, enums, amounts) on `PlayerInteraction_t` arms; `InteractionPresenter`
+  turns those into sentences.
 
 **Names.**
 

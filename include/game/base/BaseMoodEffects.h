@@ -21,7 +21,8 @@ void AppendBaseMoodBaseLaneEffects(const BaseManager& rBase, std::vector<ActiveE
 void AppendBaseMoodFactionLaneEffects(const BaseManager& rBase,
                                       std::vector<ActiveEffect_t>& rOut);
 
-// The riot tier in force at rBase, or nullptr when it is not rioting or no tier matches.
+// The riot tier in force at rBase, or nullptr when it is not rioting or no tier matches. A riot
+// with no Mood commit yet is in its first turn.
 const RiotTier_t* ActiveRiotTierFor(const BaseManager& rBase);
 
 } // namespace ac

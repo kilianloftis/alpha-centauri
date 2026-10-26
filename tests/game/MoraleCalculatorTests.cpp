@@ -497,8 +497,10 @@ TEST_CASE("A committed riot costs morale only for units homed at the rioting bas
     const int levelBefore = EffectiveMoraleLevel(homedAtRiot, riotCtx, fixture.morale());
     REQUIRE(ResolveStat(homedAtRiot, StatId_t::MoraleRank, riotCtx) == 0);
 
-    rioting.GetPopulation().ForceRiot(/*turns=*/1);
-    rioting.GetPopulation().CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    rioting.GetPopulation().RestoreMoodState(riot);
     REQUIRE(rioting.GetPopulation().IsRioting());
     REQUIRE_FALSE(calm.GetPopulation().IsRioting());
 

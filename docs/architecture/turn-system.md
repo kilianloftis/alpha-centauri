@@ -246,9 +246,9 @@ about a pending riot without being a yielding stage.
 - **`Mood`**: `CommitMood` per base — the second half of the split `Population` began.
   Forecast warns *before* `PlayerActions` so the player can still avert a riot by moving
   specialists or psych; commit re-evaluates *after* they had that chance and latches the
-  result, ages a probe-forced riot, and advances the consecutive-riot count that selects the
-  escalation tier. The active tier's `on_enter_effects` (facility destruction, rebellion)
-  fire here. See `docs/architecture/population-system.md` for the mood lifecycle itself.
+  result, and advances the consecutive-riot count that selects the escalation tier. The
+  active tier's `on_enter_effects` (facility destruction, rebellion) fire here. See
+  `docs/architecture/population-system.md` for the mood lifecycle itself.
 
   The stage keeps pass-local state (`m_committedBaseIds`, cleared in `OnEnterImpl`) because a
   rebelling base changes owner mid-pass: without it the receiving faction's turn through the

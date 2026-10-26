@@ -891,8 +891,10 @@ TEST_CASE("Committed riot applies disable_production and resource clamps", "[rio
     REQUIRE(cost > 0);
     base.GetProduction().SetMineralStockpile(cost);
 
-    pops.ForceRiot(/*turns=*/3);
-    pops.CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    pops.RestoreMoodState(riot);
     REQUIRE(pops.IsRioting());
     REQUIRE(pops.GetConsecutiveRiotTurns() == 1);
     REQUIRE(ResolveFlag(base, RuleFlagId_t::DisableProduction));
@@ -927,12 +929,12 @@ TEST_CASE("Riot mood state survives snapshot restore", "[riot][save]")
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(8, 8, /*initialPopulation*/ 3);
-    base.GetPopulation().ForceRiot(2);
-    base.GetPopulation().CommitMood();
-    base.GetPopulation().CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 2;
+    base.GetPopulation().RestoreMoodState(riot);
     REQUIRE(base.GetPopulation().IsRioting());
     REQUIRE(base.GetPopulation().GetConsecutiveRiotTurns() == 2);
-    REQUIRE(base.GetPopulation().CaptureMoodState().forcedRiotTurnsRemaining == 0);
 
     const BaseSnapshot_t snapshot = base.CaptureSnapshot();
     CHECK(snapshot.mood.bRioting);
@@ -954,10 +956,10 @@ TEST_CASE("Ownership transfer restarts the riot escalation ladder", "[riot][tran
     Faction& receiver = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
 
-    base.GetPopulation().ForceRiot(/*turns=*/3);
-    base.GetPopulation().CommitMood();
-    base.GetPopulation().CommitMood();
-    base.GetPopulation().CommitMood();
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 3;
+    base.GetPopulation().RestoreMoodState(riot);
     REQUIRE(base.GetPopulation().IsRioting());
     REQUIRE(base.GetPopulation().GetConsecutiveRiotTurns() == 3);
 
@@ -970,5 +972,4 @@ TEST_CASE("Ownership transfer restarts the riot escalation ladder", "[riot][tran
     REQUIRE(pMoved != nullptr);
     CHECK_FALSE(pMoved->GetPopulation().IsRioting());
     CHECK(pMoved->GetPopulation().GetConsecutiveRiotTurns() == 0);
-    CHECK(pMoved->GetPopulation().CaptureMoodState().forcedRiotTurnsRemaining == 0);
 }

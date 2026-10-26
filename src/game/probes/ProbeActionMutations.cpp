@@ -160,8 +160,10 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
 bool ApplyInciteDroneRiots_(BaseManager& rBase, const ProbeActionConfig_t& rConfig,
                             ProbeActionResult_t& rResult)
 {
-    rBase.GetPopulation().ForceRiot(rConfig.riotTurns);
-    rResult.detail = ProbeActionStatus_t::Riot;
+    PopulationManager& rPopulation = rBase.GetPopulation();
+    rPopulation.ApplyIncite(rConfig.assimilationTurnsAdded, rConfig.assimilationTurnsCapFactor);
+    rResult.detail = rPopulation.IsRioting() ? ProbeActionStatus_t::Riot
+                                             : ProbeActionStatus_t::IncreasedActivity;
     return true;
 }
 

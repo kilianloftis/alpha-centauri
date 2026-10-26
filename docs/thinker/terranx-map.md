@@ -30,7 +30,14 @@ disassembly for its address.
 | `0x96C9E0` | `Factions`; `diff_level` at +0x8 |
 | `0x97D040` | `Bases` |
 | `0x9AB868` | `Units` (designs), stride `0x34`; `plan` at +0x2A, `PLAN_COLONY` = 8 |
+| `BASE` +0x4 | `faction_id` (byte) |
+| `BASE` +0x5 | `faction_id_former` (byte) |
 | `BASE` +0x6 | `pop_size` (byte) |
+| `BASE` +0x7 | `assimilation_turns_left` (byte) |
+| `BASE` +0x8 | `nerve_staple_turns_left` (byte) |
+| `BASE` +0x30 | `state_flags`; bit 1 (`0x2`) is drone riot |
+| `BASE` +0x118 | `talent_total` |
+| `BASE` +0x11C | `drone_total` |
 | `BASE` +0x3C | `nutrients_accumulated` |
 
 ## Base turn
@@ -379,3 +386,64 @@ level.
 
 Thinker's `mod_base_research` (`refs/thinker/src/base.cpp`) uses the same scale.
 `conf.early_research_start` skips both start delays.
+
+## Probe: Incite Drone Riots
+
+Action id 4 in `probe` (`0x59F120`). Success at `0x5A38C5`–`0x5A3A36` does **not**
+force a riot for N turns. It lengthens the same `assimilation_turns_left` counter
+conquest uses, recomputes psych, and sets the riot flag only if that recompute
+already has more drones than talents.
+
+**Assimilation bump** (`0x5A38DD`–`0x5A3912`):
+`cap = max(current, 10 * pop_size / 4)` (signed `/4`), then
+`assimilation_turns_left = range(current + 10, 0, cap)` via `range` (`0x422F00`).
+Typical +10, hard-capped at `2.5 × size`. Already above the cap: no change.
+Does not write `faction_id_former`. Then `set_base` (`0x4E39D0`) and
+`base_compute(1)` (`0x4EC3B0`).
+
+**Riot flag** (`0x5A3939`–`0x5A395D`): `CurrentBase` `drone_total` (`+0x11C`) vs
+`talent_total` (`+0x118`). `jg` (drones > talents) ORs `state_flags` bit 1 and
+`draw_tile`. `jle` leaves the flag alone. Script: `DRONEINCITE0` / "Drone riots
+incited at $BASENAME0!" vs `DRONEINCITE1` / "Drone activity increased at
+$BASENAME0!" (`NetMsg_pop_2` `0x50B9E0`). Same text for actor and target;
+shown only if `MapWin->cOwner` is the probe faction or the base owner
+(`0x5A398E`–`0x5A3A2E`, `CurrentPlayer` `0x939284`). Art is `drone_sm.pcx`
+or `ALdrone_sm.pcx` (alien bit `0x80` on the probe faction). Does **not**
+call `drone_riot` (`0x4F4FB0`), so no facility destruction or revolt on
+the probe turn. After the popup the common success path (`0x5A36EE`) does
+not add another message.
+
+Thinker's `probe` case `PRB_INCITE_DRONE_RIOTS` matches this path (no `Fix:`).
+
+### Extra drones (`base_psych` `0x4EA540`)
+
+At `0x4EA62E`–`0x4EA6AF`, capture drones are
+`max(0, min((pop + (human ? Factions.diff_level : 3) − 2) / 4, (assim + 9) / 10))`
+and add into the drone accumulator. Human vs AI is `FactionStatus` (`0x9A64E8`).
++10 assim turns is one extra drone (`19 / 10`), then the size/difficulty cap.
+
+### Counter decay (`base_upkeep` `0x4F7F58`–`0x4F7F8E`)
+
+If `assimilation_turns_left != 0`: decrement. If `faction_id_former == faction_id`
+and still nonzero: decrement again. Hitting 0 copies current owner into former.
+`base_init` (`0x4E4C65`–`0x4E4C78`) founds with former = current and assim = 0, so
+an incite on a never-captured (or fully assimilated) base lasts **5** upkeeps.
+A still-assimilating captured base (former ≠ current) decays one per upkeep.
+
+Thinker's `mod_base_upkeep` decrement matches. `mod_base_init` also sets former =
+current; its `memset` of the whole `BASE` is marked `Fix:`.
+
+### Flag lifetime (`base_drones` `0x4F5CE0`)
+
+At `0x4F5DCC`: if drones > talents, no nerve staple (`+0x8`), and no Telepathic
+Matrix (`SecretProjects` `0x9A658C` owned by this faction), `jmp drone_riot`.
+Otherwise, if bit 1 is set, clear it (`and 0xFD` at `0x4F5E18`) and popup
+`DRONERIOTSOVER`. The probe-set flag is the same bit: it ends when drones no
+longer exceed talents (or staple / Matrix), not after a fixed turn count.
+
+The flag still costs the target one turn of minerals. `base_upkeep` calls
+`base_production` (`0x4F7A2F`) before `base_drones` (`0x4F7B3D`), and
+`base_production` adds `mineral_surplus` (`+0xD4`) to `minerals_accumulated`
+(`+0x40`) only when bit 1 is clear (`0x4F08EC`–`0x4F0907`; also skipped for a
+negative surplus or a Stockpile Energy queue head, `-0x45`). Thinker's
+`mod_base_production` keeps the same test.

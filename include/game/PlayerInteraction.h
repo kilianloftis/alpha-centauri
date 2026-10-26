@@ -3,6 +3,7 @@
 #include "game/diplomacy/DiplomaticStatus.h"
 #include "game/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
+#include "game/probes/ProbeActionResult.h"
 #include "game/units/Unit.h"
 #include "lib/GameEvent.h"
 
@@ -99,6 +100,18 @@ struct TerritoryEntryInteraction_t
     FactionId_t ownerId = 0;
 };
 
+// A probe mission finished. `subjectName` and `cameraTile` are snapshotted at enqueue so
+// the presenter does not look the target up again.
+struct ProbeNoticeInteraction_t
+{
+    FactionId_t actorId = 0;
+    FactionId_t targetFactionId = 0;
+    std::string subjectName;
+    std::optional<TileCoord_t> cameraTile;
+    ProbeActionId_t actionId = ProbeActionId_t::Infiltrate;
+    ProbeActionResult_t result;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -108,7 +121,8 @@ using PlayerInteraction_t = std::variant<
     ImprovementVisitInteraction_t,
     ArtifactLinkInteraction_t,
     PactObligationInteraction_t,
-    TerritoryEntryInteraction_t
+    TerritoryEntryInteraction_t,
+    ProbeNoticeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

@@ -233,7 +233,6 @@ bool PopulationManager::RiotConditionMet_() const
 {
     RiotConditionInputs_t inputs;
     inputs.riotSum = m_container.GetMoodWeightSums().riot;
-    inputs.forcedTurnsRemaining = m_riot.GetForcedTurnsRemaining();
     return RiotConditionMet(inputs, GetCompositionConfig());
 }
 
@@ -271,9 +270,15 @@ bool PopulationManager::IsInGoldenAge() const
     return m_goldenAge.IsActive();
 }
 
-void PopulationManager::ForceRiot(int turns)
+void PopulationManager::ApplyIncite(int turnsAdded, double capFactor)
 {
-    m_riot.ForceRiot(turns);
+    const int decayTurns = GetCompositionConfig().assimilationDecayTurns;
+    m_assimilation.NotifyIncited(GetSize(), decayTurns, turnsAdded, capFactor);
+    RecalculateComposition();
+    if (RiotConditionMet_())
+    {
+        m_riot.LatchNow();
+    }
     m_moodRevision.Bump();
 }
 
@@ -282,7 +287,6 @@ MoodState_t PopulationManager::CaptureMoodState() const
     MoodState_t state;
     state.bRioting = m_riot.IsActive();
     state.bPendingRiot = m_riot.IsPending();
-    state.forcedRiotTurnsRemaining = m_riot.GetForcedTurnsRemaining();
     state.consecutiveRiotTurns = m_riot.GetConsecutiveTurns();
     state.bInGoldenAge = m_goldenAge.IsActive();
     state.bPendingGoldenAge = m_goldenAge.IsPending();
@@ -291,15 +295,14 @@ MoodState_t PopulationManager::CaptureMoodState() const
 
 void PopulationManager::RestoreMoodState(const MoodState_t& rState)
 {
-    m_riot.RestoreState(rState.bRioting, rState.bPendingRiot, rState.forcedRiotTurnsRemaining,
-                        rState.consecutiveRiotTurns);
+    m_riot.RestoreState(rState.bRioting, rState.bPendingRiot, rState.consecutiveRiotTurns);
     m_goldenAge.RestoreState(rState.bInGoldenAge, rState.bPendingGoldenAge);
     m_moodRevision.Bump();
 }
 
 void PopulationManager::ResetMoodEscalation()
 {
-    m_riot.RestoreState(false, false, 0, 0);
+    m_riot.RestoreState(false, false, 0);
     m_goldenAge.RestoreState(false, false);
     m_moodRevision.Bump();
 }
@@ -418,7 +421,7 @@ void PopulationManager::NotifyCaptured(FactionId_t previousOwner, FactionId_t ne
 
 void PopulationManager::AdvanceAssimilation()
 {
-    m_assimilation.Advance();
+    m_assimilation.Advance(m_rBase.GetFactionId());
 }
 
 bool PopulationManager::GoldenAgeConditionMet_() const

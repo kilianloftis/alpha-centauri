@@ -3,6 +3,7 @@
 #include "game/probes/ProbeActionConfig.h"
 #include "game/probes/ProbeTarget.h"
 
+#include "game/base/BaseTypes.h"
 #include "game/effects/EffectEnums.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 
@@ -89,6 +90,9 @@ bool IsHeadquarters(const BaseManager& rBase);
 // are ProbeActionExecutor's.
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                     const ProbeTarget_t& rTarget);
+
+// SMAC popups when the current player is the probe owner or the target owner.
+bool ProbeNoticeReachesPlayer(FactionId_t actorId, FactionId_t targetId);
 
 // The energy cost quoted to rActor, 0 when free; empty when the formula has no answer.
 std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,

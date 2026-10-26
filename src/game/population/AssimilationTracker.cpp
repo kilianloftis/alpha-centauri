@@ -37,9 +37,19 @@ void AssimilationTracker::NotifyCaptured(FactionId_t previousOwner, FactionId_t 
     }
 }
 
-void AssimilationTracker::Advance()
+void AssimilationTracker::NotifyIncited(int baseSize, int decayTurns, int turnsAdded,
+                                        double capFactor)
 {
-    Tick_(m_occupier);
+    m_occupier = AssimilationOnIncite(m_occupier, baseSize, decayTurns, turnsAdded, capFactor);
+}
+
+void AssimilationTracker::Advance(FactionId_t currentOwner)
+{
+    const int ticks = OccupierDecayTicks(m_occupier, currentOwner);
+    for (int i = 0; i < ticks; ++i)
+    {
+        Tick_(m_occupier);
+    }
     for (auto it = m_claims.begin(); it != m_claims.end();)
     {
         Tick_(it->second);

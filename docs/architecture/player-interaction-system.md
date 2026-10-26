@@ -68,6 +68,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
 | `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `HonorDefensiveObligation` / `DeclineDefensiveObligation` → Complete. Completes without asking when the obligation no longer stands (`IsObligedToDefend`) |
 | `TerritoryEntryInteraction_t` | Break the agreement → `BreakAgreementAndContinue` (`movement/TerritoryEntryMutations.h`) / Cancel the order → `Unit::ClearOrder` → Complete |
+| `ProbeNoticeInteraction_t` | `NoticePopup` from `ProbeNoticeCopy`; completes without a modal when copy is unset |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -85,6 +86,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
 - A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct` and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)
+- Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome
 
 **Follow-on PRs on the same spine**
 

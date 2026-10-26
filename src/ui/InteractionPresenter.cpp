@@ -21,12 +21,14 @@
 #include "game/units/Unit.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
+#include "ui/ProbeNotices.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/WorldView.h"
 
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -122,6 +124,7 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
                 PresentPactObligation_(rObligation);
             },
             [this](const TerritoryEntryInteraction_t& rEntry) { PresentTerritoryEntry_(rEntry); },
+            [this](const ProbeNoticeInteraction_t& rNotice) { PresentProbeNotice_(rNotice); },
         },
         rPayload);
 }
@@ -451,6 +454,17 @@ void InteractionPresenter::PresentTerritoryEntry_(const TerritoryEntryInteractio
          }});
     PushChoice_("Our " + status + " with the " + rOwnerName + " forbids entering their territory.",
                 std::move(choices));
+}
+
+void InteractionPresenter::PresentProbeNotice_(const ProbeNoticeInteraction_t& rNotice)
+{
+    const std::optional<ProbeNoticeCopy_t> copy = ProbeNoticeCopy(rNotice);
+    if (!copy.has_value())
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+    PresentNotice_(NoticeInteraction_t{std::nullopt, copy->title, copy->body, rNotice.cameraTile});
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)
