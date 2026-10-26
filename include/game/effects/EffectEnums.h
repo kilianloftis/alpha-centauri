@@ -142,12 +142,21 @@ enum class StatId_t
     // Hab Complex Adds further; Hab Dome Adds a large amount (classic hard cap ~127).
     MaxBaseSize,
 
-    // Research tech cost percentage modifier (Add, base = 0; negative = cheaper)
+    // Research cost scale (PureMultiplier, seed 1). Faction / ThisTech / custom-game
+    // stagnation MultiplyGeometric; applied after tech_cost.lua returns.
     TechCost,
 
     // Difficulty ordinal fed to tech_cost.lua as `diff` (Additive; shipping 1=Citizen … 5=
     // Transcend). Difficulty-only; not a percentage and not stacked with TechCost.
     TechCostDiff,
+    // Catch-up ordinal fed to tech_cost.lua as `catch_up_diff` (Additive; shipping 0=Citizen
+    // … 5=Transcend). Talent and Librarian share TechCostDiff but not this.
+    TechCostCatchUp,
+    // Slower tech_rate turn lag (Additive; nonzero is on).
+    TechCostTurnLag,
+    // Inherent SOCIAL RESEARCH index fed to tech_cost.lua as `research` (Additive).
+    // Subtracted from the local tech factor. Not the live Research SE rating.
+    TechCostResearch,
 
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
     MoistureTier,
@@ -278,7 +287,6 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
         case StatId_t::ProbeDefense:
-        case StatId_t::TechCost:
         case StatId_t::LastDefenderPopLoss:
         case StatId_t::CapturePopLoss:
         case StatId_t::ConqueredDroneCap:
@@ -286,6 +294,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
         case StatId_t::BombardMinHpPercent:
         case StatId_t::TechCostDiff:
+        case StatId_t::TechCostCatchUp:
+        case StatId_t::TechCostTurnLag:
+        case StatId_t::TechCostResearch:
         case StatId_t::SizeFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
@@ -303,6 +314,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
+        case StatId_t::TechCost:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:
@@ -392,6 +404,9 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
 
         case StatId_t::TechCost:
         case StatId_t::TechCostDiff:
+        case StatId_t::TechCostCatchUp:
+        case StatId_t::TechCostTurnLag:
+        case StatId_t::TechCostResearch:
         case StatId_t::CommerceRate:
         case StatId_t::CouncilVotes:
         case StatId_t::EcoCleanMinerals:
@@ -494,6 +509,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "max_base_size")           return StatId_t::MaxBaseSize;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
+    if (rStat == "tech_cost_catch_up")      return StatId_t::TechCostCatchUp;
+    if (rStat == "tech_cost_turn_lag")      return StatId_t::TechCostTurnLag;
+    if (rStat == "tech_cost_research")      return StatId_t::TechCostResearch;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
     if (rStat == "commerce_rating")         return StatId_t::CommerceRating;
@@ -857,7 +875,8 @@ enum class EffectSourceKind_t
     // pop_growth.json continuous baselines (starting_size / max_base_size). No origin base —
     // AllOwnerBases only, like Difficulty.
     Growth,
-    // config/world_rules.json: standing WorldGlobal effects appended once per session.
+    // config/world_rules.json: standing WorldGlobal effects appended once per session
+    // (collateral, bombard floor, tech stagnation cost and turn lag).
     WorldRules,
     // config/eco_damage.json's continuous `effects` (the clean-minerals baseline). No origin
     // base — FactionGlobal / AllOwnerBases only, like Difficulty.

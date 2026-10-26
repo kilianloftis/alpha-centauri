@@ -3,8 +3,11 @@
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
 
 #include <algorithm>
+#include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 

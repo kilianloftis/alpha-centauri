@@ -34,10 +34,9 @@ public:
     void AddResearchPoints(int points);
     void SetAccumulatedPoints(int points);
 
-    // Revalidated against the effects version and research revision, so a TechCost change or a
-    // new tech shows on the next read.
+    // 0 without a target. The formula part is live until the first breakthrough and then fixed
+    // until the next one, as terranx caches Faction.tech_cost; TechCost scales stay live.
     int GetPointsNeededForCurrentTech() const;
-    void RecalculatePointsNeeded();
 
     // Turns remaining until the current target is discovered at researchPerTurn.
     // Empty when there is no target or researchPerTurn <= 0.
@@ -67,19 +66,11 @@ private:
     std::vector<TechId> m_discoveredTechs;
     const TechConfig_t* m_pCurrentResearchTarget;
     int m_accumulatedPoints;
-    mutable int m_pointsNeededForCurrentTech;
-    // Provider effects version the cost was computed against (0 = no provider involved).
-    mutable uint64_t m_costEffectsVersion = 0;
-    // Research revision (discovered-tech count) the cost was computed against.
-    mutable uint64_t m_costResearchRevision = 0;
+    // ResearchFormulaCost at the last breakthrough; empty before the first.
+    std::optional<int> m_breakthroughFormulaCost;
     Revision m_revision;
 
-
-    // Compute the cost of the current target and record the provider / research revisions.
-    void ComputePointsNeeded_() const;
-
-    // Recomputes when the effect pool or research revision changed; tech count is a cost input.
-    void RevalidatePointsNeeded_() const;
+    int FormulaCost_() const;
 };
 
 } // namespace ac

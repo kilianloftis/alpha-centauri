@@ -69,6 +69,8 @@ public:
     void IncrementMissionYear();
     // Years since k_FirstPlayableMissionYear (0 on the first playable year); never negative.
     int GetYearsSinceFirstPlayableYear() const;
+    // terranx CurrentTurn: 0 during setup, 1 on the first playable year.
+    int GetTurnNumber() const;
 
     // Shared combat / probe / world-event roll stream for this session.
     std::mt19937& GetRng();

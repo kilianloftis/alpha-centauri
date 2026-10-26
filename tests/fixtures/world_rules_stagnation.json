@@ -1,0 +1,22 @@
+{
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
+        "stat": "tech_cost",
+        "amount": 1.5,
+        "op": "MultiplyGeometric"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
+        "stat": "tech_cost_turn_lag",
+        "amount": 1,
+        "op": "Add"
+      }
+    }
+  ]
+}

@@ -10,18 +10,18 @@ class LuaRuntime;
 // All runtime inputs required to calculate the research cost for a tech.
 struct TechCostInputs_t
 {
-    int techs = 0;                   // TECHS: discovered techs (excl. starting) + varA - varB
-    int mostTechs = 0;               // MOSTTECHS: max techs by any faction + varA
+    int techs = 0;                   // max(1, discovered count)
+    int mostTechs = 0;               // max discovered count across every session faction
     // From StatId_t::TechCostDiff (difficulty Add). Shipping: 1=Citizen … 5=Transcend.
     int diff = 1;
-    int turns = 0;                   // Number of turns elapsed
+    // From StatId_t::TechCostCatchUp (difficulty Add). Shipping: 0=Citizen … 5=Transcend.
+    int catchUpDiff = 0;
+    int turns = 0;                   // GameState::GetTurnNumber (terranx CurrentTurn)
     bool bIsAI = false;
-    bool bTechStagnation = false;
-    int researchModifier = 0;        // -1=natural bonus, 0=neutral, +1=natural penalty
-    int worldSizeModifier = 0;       // Percentage modifier from world size (0 = no change)
-    int factionTechCostModifier = 0; // Percentage modifier from faction TechCost effects
-    int techTechCostModifier = 0;    // Percentage modifier from ThisTech TechCost on the target
-    int alphaxTechCostModifier = 0;  // Percentage modifier from alpha(x).txt
+    bool bTurnLag = false;           // TechCostTurnLag (nonzero is on)
+    // From StatId_t::TechCostResearch (inherent SOCIAL RESEARCH Add).
+    int research = 0;
+    int mapAreaSqRoot = 56;          // WorldMap::GetAreaSqRoot; 56 is identity vs the divisor
 };
 
 struct TechCostConfig_t

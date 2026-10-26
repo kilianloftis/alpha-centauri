@@ -106,8 +106,6 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
     // An empty or broken formula evaluated to 0, which std::max(1, cost) turned into a
     // plausible research cost of 1 - a broken mod looked like a cheap tech.
     LuaRuntime lua;
-    TechConfig_t tech;
-    tech.id = "test_tech";
     const TechCostInputs_t inputs;
 
     SECTION("an empty formula throws rather than costing 1")
@@ -115,7 +113,7 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
         const TechCostConfig_t config;
         REQUIRE(config.costFormula.empty());
         const TechCostCalculator calculator(config, lua);
-        CHECK_THROWS_WITH(calculator.CalculateCost(tech, inputs),
+        CHECK_THROWS_WITH(calculator.CalculateCost(inputs),
                           Catch::Matchers::ContainsSubstring("empty"));
     }
 
@@ -123,24 +121,15 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
     {
         const TechCostConfig_t config{"0"};
         const TechCostCalculator calculator(config, lua);
-        CHECK_THROWS_WITH(calculator.CalculateCost(tech, inputs),
-                          Catch::Matchers::ContainsSubstring("test_tech"));
+        CHECK_THROWS_WITH(calculator.CalculateCost(inputs),
+                          Catch::Matchers::ContainsSubstring("must be positive"));
     }
 
     SECTION("a working formula is returned as-is")
     {
         const TechCostConfig_t config{"40 * 2"};
         const TechCostCalculator calculator(config, lua);
-        CHECK(calculator.CalculateCost(tech, inputs) == 80);
-    }
-
-    SECTION("tech_modifier is bound for the formula")
-    {
-        const TechCostConfig_t config{"100 + tech_modifier"};
-        const TechCostCalculator calculator(config, lua);
-        TechCostInputs_t scaled = inputs;
-        scaled.techTechCostModifier = 50;
-        CHECK(calculator.CalculateCost(tech, scaled) == 150);
+        CHECK(calculator.CalculateCost(inputs) == 80);
     }
 }
 

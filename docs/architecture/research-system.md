@@ -79,32 +79,35 @@ graph TB
 ### TechCostCalculator
 - **Purpose**: Calculate research points needed for a technology
 - **Responsibilities**:
-  - Evaluate the `cost_formula` from `config/tech_cost.lua` with the runtime inputs in `TechCostInputs_t` (discovered-tech count, difficulty, faction and per-tech `TechCost` percent modifiers, and other Lua vars)
+  - Evaluate the `cost_formula` from `config/tech_cost.lua` with the runtime inputs in `TechCostInputs_t` (TECHS / MOSTTECHS, `TechCostDiff` / `TechCostCatchUp`, `GameState::GetTurnNumber`, AI, `WorldMap::GetAreaSqRoot`, `TechCostResearch` inherent SOCIAL RESEARCH index, `TechCostTurnLag`). That is `ResearchFormulaCost`, the same for every tech. `ScaledTechCost` then multiplies it by `TechCost` (faction emitters, optional `ThisTech`, and `config/world_rules.json` 1.5×)
   - Reject a non-positive result
 - **No C++ formula and no minimum-cost floor**: both live in the Lua config. The floor used to be `std::max(1, cost)` in C++, which turned an empty or broken formula — `LuaRuntime::EvalInt` returned 0 for both — into a valid-looking research cost of 1. `EvalInt` now throws, the parser requires a non-empty `cost_formula`, and the calculator rejects a non-positive result, so a broken mod formula fails loudly instead of making every tech cost 1.
 - **Pattern**: Thin Lua bridge, same shape as `PopCompositionCalculator`
-- **Per-tech modifiers**: optional `ThisTech` `tech_cost` StatModifiers on the tech config are resolved by `ResearchManager` into `tech_modifier` (same percent step as `faction_modifier`). There is no per-tech base cost field.
+- **Per-tech modifiers**: optional `ThisTech` `tech_cost` StatModifiers on the tech config join the post-Lua `TechCost` product. There is no per-tech base cost field.
+- **Thinker sidecar**: [`config/research/manual/tech_cost_thinker.lua`](../../config/research/manual/tech_cost_thinker.lua) records Thinker's per-tech `tech_alt_cost` for a future profile; it is not on `GameDataPaths`.
+- **World rules**: [`config/world_rules.json`](../../config/world_rules.json) is the session `WorldRules` source. Shipping emits `TechCost` 1.5× and `TechCostTurnLag` beside the combat WorldGlobal rules. `GameState` appends it once onto every faction's composed effects.
 
 ## Usage Flow
 
 ### Setting Research Target
 1. Faction calls `ResearchManager::SetResearchTarget(techId)`
 2. ResearchManager validates tech exists in TechRegistry
-3. ResearchManager calls `TechCostCalculator::CalculateCost()`
-4. Points needed is stored for progress tracking
+3. `GetPointsNeededForCurrentTech()` is `ScaledTechCost` of the formula cost for that target. Changing target does not reprice the formula part.
+
+### When the cost is priced
+terranx caches the cost in `Faction.tech_cost` and only `tech_research` writes it, right after a breakthrough. Until a faction's first breakthrough the formula follows the live inputs (turn, MOSTTECHS, known techs). `DiscoverTech` then fixes `ResearchFormulaCost` until the next breakthrough, so a traded, stolen or granted tech does not reprice the current research. The `TechCost` scale stays live.
 
 ### Accumulating Research Points
-1. TurnProcessor calls `ResearchManager::AddResearchPoints(points)` during ResearchAccumulation stage
-2. Points are added to `m_accumulatedPoints`
-3. UI can query `GetPointsNeededForCurrentTech()` for progress bar
+1. The ResearchAccumulation stage calls `Faction::CollectResearch()`
+2. Each base's labs are added in base order, as terranx `base_research` calls `tech_research` per base
+3. After each base, `Faction::DiscoverCurrentResearch()` discovers the target if the points cover its cost
+4. UI can query `GetPointsNeededForCurrentTech()` for progress bar
 
 ### Tech Discovery
-1. TurnProcessor checks `ResearchManager::CanDiscoverTech()`
-2. If true, calls `ResearchManager::DiscoverTech()`
-3. Tech ID added to `m_discoveredTechs`
-4. Accumulated points reset
-5. Research target cleared
-6. `EvTechDiscovered` event emitted via EventBus
+1. `ResearchManager::DiscoverTech()` adds the target to `m_discoveredTechs`
+2. Accumulated points are set to 0: the completing base's surplus is lost, later bases start the next tech
+3. Research target cleared and the formula cost fixed (see above)
+4. `EvTechDiscovered` event emitted via EventBus
 
 ## Design Decisions
 

@@ -207,3 +207,131 @@ Runs only when the tile crosses the shore line (`(old < 3) != (new < 3)`, `0x591
 
 Thinker's `alt_set` clamps the reduced pop at 0 before testing it (`Fix:`, the original can
 store a negative byte). Otherwise it follows the same flow.
+
+## Research
+
+### `tech_rate` (`0x5BE6B0`)
+
+Faction-wide research cost for the current tech (same number for every tech at that moment).
+`tech_research` follows at `0x5BE940`. If the cached `Faction.tech_cost` (`+0x3D0` / `0x96CDB0`)
+is ≥ 0, that value is returned. If `Rules.tech_discovery_rate` (`0x949758`) is 0, the cost is
+`999999999`.
+
+`tech_rate` never writes the cache. The only writers are `setup_player` (`0x5B13FB`, −1) and
+`tech_research` straight after a breakthrough (`0x5BEABD` −1, then `0x5BEACF` stores a fresh
+`tech_rate`). So a faction's first tech is priced live (turn, MOSTTECHS, TECHS); after that the
+cost is fixed at each breakthrough, and techs gained by trade or probe do not reprice it.
+The same block zeroes `tech_accumulated` (`+0x3C8`): surplus research is lost.
+
+**TECHS** (`0x5BE6F1`–`0x5BE774`):
+`clamp(tech_ranking + 2 * earned_techs_saved − unk_27, 2, 9999) / 2`.
+`tech_ranking` (`+0x35C`) is twice the discovered-tech count, but `tech_achieved`
+(`0x5BB000`; guard `0x5BB482`–`0x5BB49D`) skips it while `CurrentTurn` is 0 or `SkipTechScreenA` (`0x945F40`) is set, so
+starting techs and the turn-1 free techs (`rule_tech_selected`) are not counted.
+`earned_techs_saved` (`+0x3D4`)
+is the wiki's varA (deferred MP / PBEM discoveries). `unk_27` (`+0x360`) is the wiki's varB,
+in half-tech units.
+
+**MOSTTECHS** (`0x5BE72C`–`0x5BE75E`): max of `tech_ranking + 2 * earned_techs_saved` over
+`Factions[1]`…`Factions[7]` (loop `0x96EE08`–`0x97D39C`, stride `0x20CC`), then `/ 2`.
+Faction 0 is skipped. `unk_27` is not subtracted.
+
+**Difficulty** (`0x5BE761`–`0x5BE7B7`). Human bit is `1 << faction_id` against
+`FactionStatus` (`0x9A64E8`). Raw `DiffLevel` (`0x9A64C4`) is 0–5 (Citizen…Transcend).
+`diff_adj = DiffLevel + (DiffLevel < 3)` (Talent and Librarian both become 3). Humans read
+`Faction.diff_level` (`+0x8`); AIs read the game `DiffLevel`. Factor is
+`4 * diff_adj + 8` (human) or `29 − 3 * diff_adj` (AI), then
+`clamp(factor, 12 − TECHS, 12 + TECHS)` (`0x5BE7B9`–`0x5BE7D5`) — not ±12.
+
+**Turn lag** (`0x5BE7D5`–`0x5BE80D`): `TECHS − CurrentTurn / (stagnation ? 12 : 8)`.
+`CurrentTurn` (`0x9A64D4`) is 0 during setup and 1 on the first playable turn; `turn_upkeep`
+increments it (`0x525ADC`). Then
+clamped to `[0, factor * (stagnation ? 3 : 2) / 2]`. Stagnation is `GameRules` (`0x9A649C`)
+bit `0x20`. Added onto the factor.
+
+**Catch-up** (`0x5BE80F`–`0x5BE855`). Uses raw `DiffLevel` for AIs, **hardcoded 3** for
+humans — not `diff_adj`:
+
+| | divisor | max deduction |
+|---|---|---|
+| Human | 5 | `3 * factor / 10 + 1` (30% + 1) |
+| AI Citizen…Transcend (`DiffLevel` 0–5) | `8 − DiffLevel` (8, 7, 6, 5, 4, 3) | `DiffLevel * factor / 10 + 1` (0, 10, 20, 30, 40, 50% + 1) |
+
+Amount is `ceil((MOSTTECHS − TECHS) / divisor)` via
+`(MOSTTECHS − diff_val − TECHS + 7) / (8 − diff_val)`, then clamped to `[0, max]`.
+
+**Tech count factor** (`0x5BE857`–`0x5BE88F`):
+`SE_research_base` (`+0x96CCD8` on the faction pointer) is sign-clamped
+(`> 0` → 1, `< 0` → −1, else 0). Then
+`clamp(TECHS − that, 1, 99999)` (`0x1869F`) and `imul` by `(factor − catch_up)`.
+Not a percent of cost. Ratings past ±1 do not change this term.
+
+**Modifiers**, in this order (`0x5BE892`–`0x5BE907`): `* 100 / tech_discovery_rate` when
+rate ≠ 100; `* rule_techcost / 100` when ≠ 100 (`MFactions` `0x946F48`);
+`* MapAreaSqRoot / 56` (`0x949888`, magic `0x92492493` then `sar 5`). `MapAreaSqRoot` is
+`quick_root(MapAreaY * (MapAreaX / 2))` (`0x590F4F`–`0x590F62`; `quick_root` `0x6290E0` is a
+floor integer square root), the root of the real tile count: 56 on a standard map.
+`psych_check` (`0x4EA4A0`) scales the bureaucracy limit by the same `/ 56`;
+`+ cost / 2` if stagnation. Final clamp `[1, 99999999]`. No per-tech cost term.
+
+Thinker's `mod_tech_rate` (`refs/thinker/src/tech.cpp`) can replace the whole function
+(`revised_tech_cost`). Its reconstruction of this path includes faction 0 in MOSTTECHS
+and uses `int64_t` to avoid overflow; the original is 32-bit. Shipping
+`config/tech_cost.lua` matches this function through the map step
+(`WorldMap::GetAreaSqRoot`, turn from `GameState::GetTurnNumber`), takes MOSTTECHS
+over every faction in the current session, and uses `max(1, discovered)` for TECHS
+(no 9999 ranking cap). The discovery rate, `rule_techcost` and ThisTech are the
+`TechCost` product after the formula. Stagnation's 1.5× and turn lag are `TechCost` /
+`TechCostTurnLag` from `config/world_rules.json`. Inherent `SOCIAL RESEARCH`
+is `TechCostResearch` (shipping ±1; Lua subtracts it and floors the local
+tech factor at 1). Live Research SE scales labs.
+Thinker's per-tech replacement is `tech_alt_cost`, recorded in
+`config/research/manual/tech_cost_thinker.lua` (not on `GameDataPaths`).
+
+University (`UNIV.TXT`) and Cybernetic Consciousness (`cyborg.txt`) do not set
+`TECHCOST` / `rule_techcost`. Both are `SOCIAL, ++RESEARCH`.
+`compute_faction_modifiers` (`0x5B0D70`) zeros the 11 `SE_*_base` dwords
+(`0x96CCB0`) and, for each `RULE_SOCIAL` (id 3) bonus, adds the signed value
+into that vector. Research is index 10, so `++RESEARCH` lands on
+`SE_research_base` (`0x96CCD8`). `social_calc` (`0x5B4210`) then adds the
+whole `SE_*_base` block into the live rating. That is the labs-scale in
+`base_research` plus the sign-clamped ±1 TECHS term above — not an 80% cost
+multiplier.
+
+### `base_energy` labs (`0x4EB560`)
+
+`labs_total` (`BASE +0x108`) is this base's labs output. Facilities never enter
+`tech_rate`. After the energy-slider split (`0x4EBA54`) and specialists:
+
+- `MFaction.rule_research` (`0x946F2C`, "free labs per base") is added (`0x4EBC37`).
+- Biology Lab (facility 9) adds **+2** (`0x4EBC85`). Thinker uses
+  `conf.biology_lab_bonus`.
+- Facility coefficients start at 4 (`0x4EBC99`). Each labs building adds +2
+  (so +50% after `(coeff * labs + 3) / 4` at `0x4EBFA5`): Network Node (8),
+  Research Hospital (17, also +1 psych), Nanohospital (18, also +1 psych),
+  Fusion Lab (15, also +2 econ), Quantum Lab (16, also +2 econ).
+- Super Collider (`SecretProjects` `0x9A6544`) and Theory of Everything
+  (`0x9A655C`) each `shl` labs (`*2`) if this is the host base (`0x4EBFC0`,
+  `0x4EBFE7`). They stack.
+- Network Backbone (`0x9A6568`): +1 lab per Network Node in the game, plus
+  commerce or (aliens) energy-grid (`0x4EC09C`–`0x4EC16B`).
+
+Punishment Sphere is not here; it halves in `base_research`.
+
+### `base_research` (`0x4F4E80`)
+
+Per-base labs contributed this turn, then `tech_research` (`0x5BE940`). Skipped when
+`GameRules` (`0x9A649C`) bit `0x4000000` (scenario no tech). Punishment Sphere halves
+`labs_total` (`BASE +0x108`). Two start delays zero labs: `CurrentTurn`
+(`0x9A64D4`) `< −5 * SE_research_pending` (`+0x96CC54`), and `CurrentTurn < 5` when
+`diff_level` (`+0x96C9E8`) `< 2`.
+
+Research SE then scales the contribution (`0x4F4F37`–`0x4F4F9C`), not the energy split
+and not tech cost: clamp `SE_research_pending` to `[−5, 5]`,
+`10 * labs * (SE + 10) / 100` (integer), remainder carried on `net_random_event`
+(`+0x96CDB8`); if that remainder reaches 100, add 100 to the numerator and wrap.
+Call is `tech_research(faction, that / 100)`. That is ±10% labs income per Research
+level.
+
+Thinker's `mod_base_research` (`refs/thinker/src/base.cpp`) uses the same scale.
+`conf.early_research_start` skips both start delays.

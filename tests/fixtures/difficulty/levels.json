@@ -105,6 +105,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
+            "amount": 0,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "factionFilter": {
             "kind": "PlayerType",
@@ -225,6 +234,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "factionFilter": {
             "kind": "PlayerType",
@@ -323,6 +341,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "factionFilter": {
             "kind": "PlayerType",
@@ -415,6 +442,15 @@
             "amount": 3,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -487,6 +523,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "factionFilter": {
             "kind": "PlayerType",
@@ -550,6 +595,15 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "tech_cost_diff",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_catch_up",
             "amount": 5,
             "op": "Add"
           }

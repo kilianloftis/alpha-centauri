@@ -11,9 +11,14 @@
       }
     },
     {
+      "type": "SocialRatingModifier",
+      "scope": "FactionGlobal",
+      "parameters": { "rating": "research", "amount": 2 }
+    },
+    {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "parameters": { "stat": "tech_cost", "amount": -20, "op": "Add" }
+      "parameters": { "stat": "tech_cost_research", "amount": 1, "op": "Add" }
     }
   ]
 }

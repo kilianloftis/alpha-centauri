@@ -176,8 +176,9 @@ public:
     // Returns the amount collected this call.
     int CollectIncome();
 
-    // Consume every base's accumulated labs stockpile into research points.
-    // Returns the amount collected this call.
+    // Consume each base's labs stockpile into research points in base order, as terranx
+    // base_research does: the base that completes a tech loses its surplus and later bases
+    // start the next one. Returns the amount collected this call.
     int CollectResearch();
 
     // Projected per-turn outputs summed across all bases.

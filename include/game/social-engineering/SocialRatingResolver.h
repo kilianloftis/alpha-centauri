@@ -37,7 +37,7 @@ std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings);
 
 // Appends the FactionUnits effects of FactionWide rating modifiers, so SE Morale reaches
-// units. Base-lane modifiers stay on the base path.
+// units. Base-lane modifiers and AllOwnerBases gameplay effects stay on the base path.
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings);
 

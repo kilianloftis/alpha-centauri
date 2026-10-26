@@ -5,6 +5,8 @@
 #include "game/GameCategory.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/faction/Faction.h"
 #include "game/map/WorldMap.h"
 #include "game/research/TechCostCalculator.h"
@@ -20,6 +22,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
+#include <cmath>
 #include <unordered_set>
 
 using namespace ac;
@@ -209,10 +212,29 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
     CHECK(research.GetResearchTarget() == afterIdle);
 }
 
-TEST_CASE("Surplus research carries over to the next tech", "[research]")
+TEST_CASE("Each base's labs land in base order and a breakthrough drops its surplus",
+          "[research]")
 {
-    CHECK(ResearchCarriedOver(30, 25) == 5);
-    CHECK(ResearchCarriedOver(25, 25) == 0);
+    actest::FactionFixture fixtures;
+    Faction& faction = fixtures.MakeFaction();
+    BaseManager& rFirst = fixtures.MakeFactionBase(faction, 8, 8);
+    BaseManager& rSecond = fixtures.MakeFactionBase(faction, 20, 8);
+    rFirst.GetBuildingManager().AddBuilding("Headquarters");
+    rFirst.GetBuildingManager().AddBuilding("energy_tap");
+    rSecond.GetBuildingManager().AddBuilding("energy_tap");
+    faction.ProduceBaseResources();
+    const int secondLabs = rSecond.GetLabsProduction();
+    REQUIRE(rFirst.GetLabsProduction() > 1);
+    REQUIRE(secondLabs > 0);
+
+    ResearchManager& research = faction.GetResearch();
+    REQUIRE(research.HasResearchTarget());
+    const TechId target = research.GetResearchTarget();
+    research.SetAccumulatedPoints(research.GetPointsNeededForCurrentTech() - 1);
+
+    faction.CollectResearch();
+    CHECK(research.HasDiscoveredTech(target));
+    CHECK(research.GetAccumulatedPoints() == secondLabs);
 }
 
 TEST_CASE("A policy is available once its tech is known", "[research][social-engineering]")
@@ -245,13 +267,18 @@ TEST_CASE("Tech cost reads the known-tech count and the tech's own TechCost",
     ownCost.scope = EffectScope_t::ThisTech;
     StatModifierEffect_t modifier;
     modifier.stat = StatId_t::TechCost;
-    modifier.amount = 25;
-    modifier.op = ModifierOp_t::Add;
+    modifier.amount = 1.25;
+    modifier.op = ModifierOp_t::MultiplyGeometric;
     ownCost.effect = modifier;
     tech.effects.push_back(ownCost);
 
-    const TechCostInputs_t inputs = TechCostInputs(research, &faction, tech);
+    const TechCostInputs_t inputs = TechCostInputs(research, &faction);
     CHECK(inputs.techs == 2);
-    CHECK(inputs.techTechCostModifier == 25);
-    CHECK(inputs.factionTechCostModifier == 0);
+    const int formula =
+        ResearchFormulaCost(research, &faction, *fixtures.dataContext.techCostCalculator);
+    const int scaled = ScaledTechCost(formula, &faction, tech);
+    TechConfig_t plain = tech;
+    plain.effects.clear();
+    const int unscaled = ScaledTechCost(formula, &faction, plain);
+    CHECK(scaled == static_cast<int>(std::trunc(static_cast<double>(unscaled) * 1.25)));
 }

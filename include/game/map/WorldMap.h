@@ -29,6 +29,9 @@ public:
 
     int GetWidth() const;
     int GetHeight() const;
+    // Integer square root of the tile count, terranx MapAreaSqRoot (0x949888). 56 on a standard
+    // map; tech cost and the bureaucracy limit scale by it over 56.
+    int GetAreaSqRoot() const;
 
     // Tile access in SMAC coordinates (x+y even). X wraps horizontally (cylinder);
     // Y out of bounds returns nullptr. Odd parity throws.

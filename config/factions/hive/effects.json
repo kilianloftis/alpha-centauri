@@ -4,11 +4,6 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "parameters": { "stat": "psych", "amount": 1, "op": "Add" }
-    },
-    {
-      "type": "StatModifier",
-      "scope": "FactionGlobal",
-      "parameters": { "stat": "tech_cost", "amount": 5, "op": "Add" }
     }
   ]
 }

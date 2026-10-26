@@ -1,71 +1,61 @@
--- Tech cost formula for Alpha Centauri research.
+-- Tech cost formula matching terranx tech_rate (0x5BE6B0) through the map step.
+-- Discovery rate, faction TECHCOST, ThisTech and stagnation are the TechCost product after this
+-- function returns.
 --
 -- Variables set by the engine before evaluating cost_formula:
---   techs                : TECHS (discovered techs excl. starting + varA - varB)
---   most_techs           : MOSTTECHS (max discovered by any faction + varA)
---   diff                 : TechCostDiff from difficulty (1=Citizen, 2=Specialist,
---                          3=Talent/Librarian, 4=Thinker, 5=Transcend)
---   turns                : number of turns elapsed
+--   techs                : max(1, discovered count)
+--   most_techs           : max discovered count across every session faction
+--   diff                 : TechCostDiff (1=Citizen … 5=Transcend; Talent and Librarian are 3)
+--   catch_up_diff        : TechCostCatchUp (0=Citizen … 5=Transcend); humans ignore this
+--   turns                : terranx CurrentTurn (1 on the first playable year)
 --   is_ai                : 1 if AI faction, 0 if human
---   tech_stagnation      : 1 if tech stagnation is active, 0 otherwise
---   research_modifier    : -1=natural bonus, 0=neutral, +1=natural penalty
---   world_size_modifier  : percentage modifier from world size (0 = no change)
---   faction_modifier     : percentage modifier from faction TechCost bonus effects
---   tech_modifier        : percentage modifier from ThisTech TechCost on the target tech
---   alphax_modifier      : percentage modifier from alpha(x).txt
+--   turn_lag             : 1 if TechCostTurnLag is on
+--   research             : TechCostResearch (inherent SOCIAL RESEARCH); subtracted from techs
+--   map_area_sq_root     : integer sqrt of the map's tile count (56 on a standard map)
 
-function tech_cost_formula()
-    -- Step 1: Difficulty-based base value, clamped to [-12, 12].
-    local step1
-    if is_ai ~= 0 then
-        step1 = 29 - (diff * 3)
-    else
-        step1 = (diff * 4) + 8
-    end
-    step1 = math.max(-12, math.min(12, step1))
+local map_area_divisor = 56
+local human_catch_up_diff = 3
 
-    -- Step 2: Clamp (TECHS - TURNS/divisor) to [0, step1 * max_multiplier].
-    local turns_divisor   = tech_stagnation ~= 0 and 12  or 8
-    local max_multiplier  = tech_stagnation ~= 0 and 1.5 or 1.0
-    local turns_adj = techs - turns / turns_divisor
-    local step2 = math.max(0, math.min(turns_adj, step1 * max_multiplier))
-
-    -- Step 3: base + tech-lag adjustment.
-    local step3 = step1 + step2
-
-    -- Step 4: Subtract catch-up bonus, bounded by a max deduction.
-    local catch_up
-    if is_ai ~= 0 then
-        -- TODO: Exact intermediate values for AI divisor and max % need verification.
-        -- Divisor ranges from 8 (Citizen/diff=1) down to 3 (Transcend/diff=5).
-        local ai_divisor = math.max(1, 8 - math.floor((diff - 1) * 5 / 4))
-        -- Max deduction % ranges from 0 (Citizen) to 50 (Transcend).
-        local ai_max_pct = math.floor((diff - 1) * 50 / 4)
-        catch_up = math.ceil((most_techs - techs) / ai_divisor)
-        local ai_max_deduction = math.floor(step3 * ai_max_pct / 100) + 1
-        catch_up = math.min(catch_up, ai_max_deduction)
-    else
-        catch_up = math.ceil((most_techs - techs) / 5)
-        local max_deduction = math.floor(step3 * 0.3) + 1
-        catch_up = math.min(catch_up, max_deduction)
-    end
-    local step4 = step3 - catch_up
-
-    -- Step 5: Multiply by tech count factor with research modifier applied.
-    local tech_factor = math.max(1, techs + research_modifier)
-    local step5 = tech_factor * step4
-
-    -- Step 6: Apply world size, faction, per-tech, and alpha(x).txt cost modifiers.
-    local step6 = step5
-    step6 = step6 + math.floor(step6 * world_size_modifier / 100)
-    step6 = step6 + math.floor(step6 * faction_modifier     / 100)
-    step6 = step6 + math.floor(step6 * tech_modifier        / 100)
-    step6 = step6 + math.floor(step6 * alphax_modifier      / 100)
-    if tech_stagnation ~= 0 then
-        step6 = math.floor(step6 * 1.5)
-    end
-
-    return math.max(1, math.floor(step6))
+-- Toward-zero division (terranx idiv).
+local function truncdiv(a, b)
+    local ipart = math.modf(a / b)
+    return math.tointeger(ipart)
 end
 
-return { cost_formula = "tech_cost_formula()" }
+function tech_cost_formula()
+    local factor
+    if is_ai ~= 0 then
+        factor = 29 - (diff * 3)
+    else
+        factor = (diff * 4) + 8
+    end
+    factor = math.max(12 - techs, math.min(12 + techs, factor))
+
+    local turns_divisor = turn_lag ~= 0 and 12 or 8
+    local lag_scale = turn_lag ~= 0 and 3 or 2
+    local turn_lag_amount = techs - turns // turns_divisor
+    local lag_cap = factor * lag_scale // 2
+    turn_lag_amount = math.max(0, math.min(turn_lag_amount, lag_cap))
+    factor = factor + turn_lag_amount
+
+    local used_catch_up = is_ai ~= 0 and catch_up_diff or human_catch_up_diff
+    local reduction = (most_techs - used_catch_up - techs + 7) // (8 - used_catch_up)
+    local max_reduction = used_catch_up * factor // 10 + 1
+    if reduction < 0 or max_reduction < 0 then
+        reduction = 0
+    elseif reduction > max_reduction then
+        reduction = max_reduction
+    end
+    factor = factor - reduction
+
+    local tech_factor = math.max(1, techs - research)
+    local cost = factor * tech_factor
+
+    cost = truncdiv(cost * map_area_sq_root, map_area_divisor)
+
+    return math.max(1, cost)
+end
+
+return {
+    cost_formula = "tech_cost_formula()",
+}

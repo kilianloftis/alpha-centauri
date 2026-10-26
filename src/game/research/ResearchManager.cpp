@@ -21,7 +21,6 @@ ResearchManager::ResearchManager(const TechRegistry& rTechRegistry,
     , m_discoveredTechs()
     , m_pCurrentResearchTarget(nullptr)
     , m_accumulatedPoints(0)
-    , m_pointsNeededForCurrentTech(0)
 {
 }
 
@@ -37,7 +36,6 @@ void ResearchManager::SetResearchTarget(TechId techId)
         throw std::runtime_error("Unknown tech id '" + techId + "'");
     }
     m_pCurrentResearchTarget = pTarget;
-    RecalculatePointsNeeded();
 }
 
 TechId ResearchManager::GetResearchTarget() const
@@ -78,8 +76,20 @@ void ResearchManager::SetAccumulatedPoints(int points)
 
 int ResearchManager::GetPointsNeededForCurrentTech() const
 {
-    RevalidatePointsNeeded_();
-    return m_pointsNeededForCurrentTech;
+    if (!m_pCurrentResearchTarget)
+    {
+        return 0;
+    }
+    return ScaledTechCost(FormulaCost_(), m_pEffectsProvider, *m_pCurrentResearchTarget);
+}
+
+int ResearchManager::FormulaCost_() const
+{
+    if (m_breakthroughFormulaCost)
+    {
+        return *m_breakthroughFormulaCost;
+    }
+    return ResearchFormulaCost(*this, m_pEffectsProvider, m_rTechCostCalculator);
 }
 
 std::optional<int> ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
@@ -89,49 +99,13 @@ std::optional<int> ResearchManager::GetTurnsUntilBreakthrough(int researchPerTur
         return std::nullopt;
     }
 
-    RevalidatePointsNeeded_();
-    const int remainingPoints = std::max(0, m_pointsNeededForCurrentTech - m_accumulatedPoints);
+    const int remainingPoints = std::max(0, GetPointsNeededForCurrentTech() - m_accumulatedPoints);
     if (remainingPoints == 0)
     {
         return 0;
     }
 
     return (remainingPoints + researchPerTurn - 1) / researchPerTurn;
-}
-
-void ResearchManager::RecalculatePointsNeeded()
-{
-    if (!m_pCurrentResearchTarget)
-    {
-        throw std::runtime_error(
-            "ResearchManager::RecalculatePointsNeeded: no current research target");
-    }
-    ComputePointsNeeded_();
-}
-
-void ResearchManager::ComputePointsNeeded_() const
-{
-    const TechCostInputs_t inputs =
-        TechCostInputs(*this, m_pEffectsProvider, *m_pCurrentResearchTarget);
-    m_costEffectsVersion = m_pEffectsProvider ? m_pEffectsProvider->GetEffectsVersion() : 0;
-    m_costResearchRevision = GetRevision();
-    m_pointsNeededForCurrentTech =
-        m_rTechCostCalculator.CalculateCost(*m_pCurrentResearchTarget, inputs);
-}
-
-void ResearchManager::RevalidatePointsNeeded_() const
-{
-    if (!m_pCurrentResearchTarget)
-    {
-        return;
-    }
-    const bool bResearchChanged = GetRevision() != m_costResearchRevision;
-    const bool bEffectsChanged = m_pEffectsProvider
-        && m_pEffectsProvider->GetEffectsVersion() != m_costEffectsVersion;
-    if (bResearchChanged || bEffectsChanged)
-    {
-        ComputePointsNeeded_();
-    }
 }
 
 bool ResearchManager::CanDiscoverTech() const
@@ -142,8 +116,7 @@ bool ResearchManager::CanDiscoverTech() const
     {
         return false;
     }
-    RevalidatePointsNeeded_();
-    return m_accumulatedPoints >= m_pointsNeededForCurrentTech;
+    return m_accumulatedPoints >= GetPointsNeededForCurrentTech();
 }
 
 bool ResearchManager::DiscoverTech()
@@ -153,9 +126,11 @@ bool ResearchManager::DiscoverTech()
         return false;
     }
 
+    // terranx tech_research zeroes the surplus and prices the next tech now.
     AddDiscoveredTech(m_pCurrentResearchTarget->id);
-    m_accumulatedPoints = ResearchCarriedOver(m_accumulatedPoints, m_pointsNeededForCurrentTech);
+    m_accumulatedPoints = 0;
     ClearResearchTarget();
+    m_breakthroughFormulaCost = ResearchFormulaCost(*this, m_pEffectsProvider, m_rTechCostCalculator);
 
     return true;
 }

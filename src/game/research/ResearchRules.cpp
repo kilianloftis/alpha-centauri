@@ -1,34 +1,50 @@
 #include "game/research/ResearchRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/map/WorldMap.h"
 #include "game/effects/IEffectsProvider.h"
+#include "game/faction/Faction.h"
 #include "game/research/ResearchManager.h"
+#include "game/research/TechCostCalculator.h"
 #include "game/research/TechRegistry.h"
-
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <string>
 
 namespace ac
 {
-
-TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
-                                const IEffectsProvider* pEffectsProvider,
-                                const TechConfig_t& rTech)
+namespace
 {
-    const std::vector<TechId>& rDiscovered = rResearch.GetDiscoveredTechs();
-    TechCostInputs_t inputs;
-    inputs.techs      = static_cast<int>(rDiscovered.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
-    inputs.mostTechs  = inputs.techs;                         // TODO: max across all factions + unknownVarA
-    if (pEffectsProvider)
-    {
-        const FactionEffects_t& rFactionEffects = pEffectsProvider->GetActiveEffects();
-        const double techCost = ResolveFactionStat(rFactionEffects, StatId_t::TechCost,
-                                                   SeedFor(StatId_t::TechCost), nullptr);
-        const double techCostDiff = ResolveFactionStat(rFactionEffects, StatId_t::TechCostDiff,
-                                                       SeedFor(StatId_t::TechCostDiff), nullptr);
-        inputs.factionTechCostModifier = FinalizeResolvedStat(techCost);
-        inputs.diff = FinalizeResolvedStat(techCostDiff);
-    }
 
+int MostTechsAcrossFactions_(const GameState& rGame)
+{
+    int most = 0;
+    for (const Faction& rFaction : rGame.Factions())
+    {
+        const std::size_t count = rFaction.GetResearch().GetDiscoveredTechs().size();
+        const int discovered = static_cast<int>(count);
+        most = std::max(most, discovered);
+    }
+    return most;
+}
+
+const Faction* FindResearchOwner_(const GameState& rGame, const ResearchManager& rResearch)
+{
+    for (const Faction& rFaction : rGame.Factions())
+    {
+        if (&rFaction.GetResearch() == &rResearch)
+        {
+            return &rFaction;
+        }
+    }
+    return nullptr;
+}
+
+double ThisTechCostScale_(const TechConfig_t& rTech)
+{
     std::vector<ActiveEffect_t> thisTechEffects;
     for (const EffectConfig_t& rEffect : rTech.effects)
     {
@@ -38,16 +54,95 @@ TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
         }
     }
     auto techCostEffects = FilterByStatId(thisTechEffects, StatId_t::TechCost);
-    const double techModifier =
-        ResolveStatModifiersTotal(techCostEffects, SeedFor(StatId_t::TechCost), nullptr);
-    inputs.techTechCostModifier = FinalizeResolvedStat(techModifier);
-    // Remaining fields are placeholder defaults (turns=0, bIsAI=false, etc.)
+    return ResolveStatModifiersTotal(techCostEffects, SeedFor(StatId_t::TechCost), nullptr);
+}
+
+void FillFactionEffectInputs_(TechCostInputs_t& rInputs, const IEffectsProvider* pEffectsProvider)
+{
+    if (pEffectsProvider == nullptr)
+    {
+        return;
+    }
+    const FactionEffects_t& rFactionEffects = pEffectsProvider->GetActiveEffects();
+    const double techCostDiff = ResolveFactionStat(rFactionEffects, StatId_t::TechCostDiff,
+                                                   SeedFor(StatId_t::TechCostDiff), nullptr);
+    const double catchUp = ResolveFactionStat(rFactionEffects, StatId_t::TechCostCatchUp,
+                                              SeedFor(StatId_t::TechCostCatchUp), nullptr);
+    const double turnLag = ResolveFactionStat(rFactionEffects, StatId_t::TechCostTurnLag,
+                                              SeedFor(StatId_t::TechCostTurnLag), nullptr);
+    const double research = ResolveFactionStat(rFactionEffects, StatId_t::TechCostResearch,
+                                               SeedFor(StatId_t::TechCostResearch), nullptr);
+    rInputs.diff = FinalizeResolvedStat(techCostDiff);
+    rInputs.catchUpDiff = FinalizeResolvedStat(catchUp);
+    rInputs.bTurnLag = FinalizeResolvedStat(turnLag) != 0;
+    rInputs.research = FinalizeResolvedStat(research);
+}
+
+double FactionTechCostScale_(const IEffectsProvider* pEffectsProvider)
+{
+    if (pEffectsProvider == nullptr)
+    {
+        return SeedFor(StatId_t::TechCost);
+    }
+    const FactionEffects_t& rEffects = pEffectsProvider->GetActiveEffects();
+    return ResolveFactionStat(rEffects, StatId_t::TechCost, SeedFor(StatId_t::TechCost), nullptr);
+}
+
+double TechCostScale_(const IEffectsProvider* pEffectsProvider, const TechConfig_t& rTech)
+{
+    return FactionTechCostScale_(pEffectsProvider) * ThisTechCostScale_(rTech);
+}
+
+} // namespace
+
+TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
+                                const IEffectsProvider* pEffectsProvider)
+{
+    // TODO: terranx leaves techs granted during setup (faction TECH, CurrentTurn 0) and with
+    // SkipTechScreenA set out of TECHS and MOSTTECHS. Exclude them once factions start with techs.
+    const std::size_t discoveredCount = rResearch.GetDiscoveredTechs().size();
+    const int discovered = static_cast<int>(discoveredCount);
+
+    TechCostInputs_t inputs;
+    inputs.techs = std::max(1, discovered);
+    inputs.mostTechs = inputs.techs;
+    FillFactionEffectInputs_(inputs, pEffectsProvider);
+
+    const GameState* pGame = FindCurrentGameState();
+    if (pGame == nullptr)
+    {
+        return inputs;
+    }
+
+    inputs.mostTechs = MostTechsAcrossFactions_(*pGame);
+    inputs.turns = pGame->GetTurnNumber();
+    inputs.mapAreaSqRoot = pGame->GetWorldMap().GetAreaSqRoot();
+    const Faction* pOwner = FindResearchOwner_(*pGame, rResearch);
+    if (pOwner != nullptr)
+    {
+        inputs.bIsAI = !pOwner->IsPlayerControlled();
+    }
     return inputs;
 }
 
-int ResearchCarriedOver(int accumulated, int cost)
+int ResearchFormulaCost(const ResearchManager& rResearch,
+                        const IEffectsProvider* pEffectsProvider,
+                        const TechCostCalculator& rCalculator)
 {
-    return accumulated - cost;
+    return rCalculator.CalculateCost(TechCostInputs(rResearch, pEffectsProvider));
+}
+
+int ScaledTechCost(int formulaCost, const IEffectsProvider* pEffectsProvider,
+                   const TechConfig_t& rTech)
+{
+    const double scaled = static_cast<double>(formulaCost) * TechCostScale_(pEffectsProvider, rTech);
+    const int cost = static_cast<int>(std::trunc(scaled));
+    if (cost <= 0)
+    {
+        throw std::runtime_error("Tech cost scale produced " + std::to_string(cost)
+                                 + " for tech '" + rTech.id + "'; costs must be positive");
+    }
+    return cost;
 }
 
 std::vector<const TechConfig_t*> AvailableTechs(const ResearchManager& rResearch)

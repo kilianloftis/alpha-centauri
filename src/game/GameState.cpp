@@ -227,6 +227,11 @@ int GameState::GetYearsSinceFirstPlayableYear() const
     return std::max(0, m_missionYear - k_FirstPlayableMissionYear);
 }
 
+int GameState::GetTurnNumber() const
+{
+    return m_missionYear - k_StartingMissionYear;
+}
+
 std::mt19937& GameState::GetRng()
 {
     return m_rng;

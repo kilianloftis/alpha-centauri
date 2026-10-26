@@ -19,6 +19,8 @@
 #include "lib/LuaRuntime.h"
 #include "game/effects/ActiveEffect.h"
 
+#include <cmath>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -131,10 +133,10 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     research.SetResearchTarget("build_tech");
     const int baseCost = research.GetPointsNeededForCurrentTech();
 
-    // A +50% TechCost modifier appears mid-research (e.g. from a newly built project).
+    // A 1.5x TechCost modifier appears mid-research (e.g. from a newly built project).
     actest::EffectPool effectPool;
     provider.pool.effects.push_back(actest::Active(
-        effectPool.StatMod(StatId_t::TechCost, 50.0, ModifierOp_t::Add), "tech_tax"));
+        effectPool.StatMod(StatId_t::TechCost, 1.5, ModifierOp_t::MultiplyGeometric), "tech_tax"));
     ++provider.version;
 
     const int raisedCost = research.GetPointsNeededForCurrentTech();
@@ -148,7 +150,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     CHECK(research.CanDiscoverTech());
 }
 
-TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effects provider",
+TEST_CASE("ResearchManager: before the first breakthrough, cost follows the live tech count",
           "[research][cache]")
 {
     TechRegistry techRegistry;
@@ -160,20 +162,17 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effec
     TechCostCalculator calculator(config, lua);
 
     ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
+    research.AddDiscoveredTech("build_tech");
     research.SetResearchTarget("advanced_build");
     const int costBefore = research.GetPointsNeededForCurrentTech();
 
-    // Tech count is a direct cost input; discovery must bump cost even without a provider.
     research.AddDiscoveredTech("grow_tech");
-    const int costAfter = research.GetPointsNeededForCurrentTech();
-    CHECK(costAfter != costBefore);
+    CHECK(research.GetPointsNeededForCurrentTech() != costBefore);
 }
 
-TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider version is frozen",
+TEST_CASE("ResearchManager: a breakthrough fixes the formula cost until the next one",
           "[research][cache]")
 {
-    actest::FactionFixture fixture;
-    Faction& faction = fixture.MakeFaction();
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
@@ -182,16 +181,22 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider ver
         parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
-    FakeEffectsProvider provider(faction);
-    ResearchManager research(techRegistry, calculator, &provider);
-    research.SetResearchTarget("advanced_build");
-    const int costBefore = research.GetPointsNeededForCurrentTech();
-    const uint64_t frozenVersion = provider.version;
+    ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
+    research.SetResearchTarget("build_tech");
+    research.SetAccumulatedPoints(research.GetPointsNeededForCurrentTech() + 7);
+    REQUIRE(research.DiscoverTech());
+    CHECK(research.GetAccumulatedPoints() == 0);
 
+    research.SetResearchTarget("advanced_build");
+    const int frozenCost = research.GetPointsNeededForCurrentTech();
+    // A traded or stolen tech is not a breakthrough: terranx keeps the cached cost.
     research.AddDiscoveredTech("grow_tech");
-    REQUIRE(provider.version == frozenVersion);
-    const int costAfter = research.GetPointsNeededForCurrentTech();
-    CHECK(costAfter != costBefore);
+    CHECK(research.GetPointsNeededForCurrentTech() == frozenCost);
+
+    research.SetAccumulatedPoints(frozenCost);
+    REQUIRE(research.DiscoverTech());
+    research.SetResearchTarget("discover_tech");
+    CHECK(research.GetPointsNeededForCurrentTech() != frozenCost);
 }
 
 TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without entering the pool",
@@ -207,7 +212,7 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
             {
               "type": "StatModifier",
               "scope": "ThisTech",
-              "parameters": { "stat": "tech_cost", "amount": 50, "op": "Add" }
+              "parameters": { "stat": "tech_cost", "amount": 1.5, "op": "MultiplyGeometric" }
             }
           ]
         }
@@ -232,8 +237,7 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
     research.SetResearchTarget("pricey");
     const int priceyCost = research.GetPointsNeededForCurrentTech();
     CHECK(priceyCost > plainCost);
-    // Shipping step 6: +50% → floor(plain + plain*50/100) when other modifiers are 0.
-    CHECK(priceyCost == plainCost + plainCost / 2);
+    CHECK(priceyCost == static_cast<int>(std::trunc(static_cast<double>(plainCost) * 1.5)));
 
     const int factionTechCostBefore = FinalizeResolvedStat(
         ResolveFactionStat(provider.pool, StatId_t::TechCost, SeedFor(StatId_t::TechCost), nullptr));

@@ -196,6 +196,24 @@ TEST_CASE("TechCostDiff follows difficulty banding", "[difficulty][effects]")
     CHECK(resolveDiff("transcend") == Approx(5.0));
 }
 
+TEST_CASE("TechCostCatchUp follows difficulty banding", "[difficulty][effects]")
+{
+    const auto resolveCatchUp = [](const char* difficultyId) {
+        FactionFixture fixtures;
+        UseFixtureDifficulty_(fixtures, difficultyId);
+        Faction& rFaction = fixtures.MakeFaction();
+        return ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::TechCostCatchUp,
+                                  SeedFor(StatId_t::TechCostCatchUp), nullptr);
+    };
+
+    CHECK(resolveCatchUp("citizen") == Approx(0.0));
+    CHECK(resolveCatchUp("specialist") == Approx(1.0));
+    CHECK(resolveCatchUp("talent") == Approx(2.0));
+    CHECK(resolveCatchUp("librarian") == Approx(3.0));
+    CHECK(resolveCatchUp("thinker") == Approx(4.0));
+    CHECK(resolveCatchUp("transcend") == Approx(5.0));
+}
+
 TEST_CASE("Bureaucracy PureMultiplier multiplies difficulty and Efficiency",
           "[difficulty][effects][bureaucracy]")
 {

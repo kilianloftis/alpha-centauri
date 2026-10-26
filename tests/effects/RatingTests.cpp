@@ -14,6 +14,10 @@
 #include "game/population/Pop.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/research/ResearchRules.h"
+#include "game/research/TechCostCalculator.h"
+
+#include <cmath>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -383,7 +387,7 @@ TEST_CASE("Base-level Labs AddPercent seeds from the energy split, not zero",
     CHECK(base.GetResources().ConsumeLabs() == expected);
 }
 
-TEST_CASE("Research rating AddPercent scales labs from the energy split",
+TEST_CASE("Research rating AddPercent scales labs, not tech cost",
           "[effects][rating][research]")
 {
     actest::FactionFixture fixture;
@@ -395,20 +399,26 @@ TEST_CASE("Research rating AddPercent scales labs from the energy split",
     const int labsBefore = base.GetLabsProduction();
     REQUIRE(labsBefore == 5);
 
+    TechConfig_t tech;
+    tech.id = "priced";
+    const TechCostCalculator& rCalculator = *fixture.dataContext.techCostCalculator;
+    const int costBefore = ScaledTechCost(
+        ResearchFormulaCost(faction.GetResearch(), &faction, rCalculator), &faction, tech);
+
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("research_policy"));
     CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Research) == 2);
-
-    // Level 2: +20% labs → 5 * 1.2 = 6.
-    const int expected = FinalizeResolvedStat(static_cast<double>(labsBefore) * 1.2);
-    CHECK(expected == 6);
-    CHECK(base.GetLabsProduction() == expected);
+    CHECK(base.GetLabsProduction() == 6);
+    CHECK(ScaledTechCost(ResearchFormulaCost(faction.GetResearch(), &faction, rCalculator),
+                         &faction, tech)
+          == costBefore);
 
     faction.GetSocialEngineering().SetActivePolicy(
         fixture.socialPolicies().Get("low_research_policy"));
     CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Research) == -2);
-    // Level -2: -20% labs → 5 * 0.8 = 4.
-    CHECK(base.GetLabsProduction()
-          == FinalizeResolvedStat(static_cast<double>(labsBefore) * 0.8));
+    CHECK(base.GetLabsProduction() == 4);
+    CHECK(ScaledTechCost(ResearchFormulaCost(faction.GetResearch(), &faction, rCalculator),
+                         &faction, tech)
+          == costBefore);
 }
 
 TEST_CASE("Faction-lane rating expand ignores ThisBase modifiers across multiple bases",

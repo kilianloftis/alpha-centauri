@@ -93,6 +93,9 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("eco_damage_reduction") == StatId_t::EcoDamageReduction);
     CHECK(ParseStatId("eco_mineral_offset") == StatId_t::EcoMineralOffset);
     CHECK(ParseStatId("tech_cost_diff") == StatId_t::TechCostDiff);
+    CHECK(ParseStatId("tech_cost_catch_up") == StatId_t::TechCostCatchUp);
+    CHECK(ParseStatId("tech_cost_turn_lag") == StatId_t::TechCostTurnLag);
+    CHECK(ParseStatId("tech_cost_research") == StatId_t::TechCostResearch);
     CHECK(ParseStatId("bureaucracy") == StatId_t::Bureaucracy);
 
     CHECK_THROWS(ParseStatId("not_a_stat"));

@@ -7,7 +7,8 @@
 namespace ac
 {
 
-// Loads config/world_rules.json — standing WorldGlobal effects appended once per session.
+// Loads config/world_rules.json — standing WorldGlobal effects appended once per session
+// (collateral, bombard floor, tech stagnation).
 class WorldRulesConfigParser
 {
 public:

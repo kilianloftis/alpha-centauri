@@ -255,7 +255,8 @@ struct SessionInputs
         dataContext.techRegistry->Load(FixturePath("techs.json"));
         // Trivial formula; tests that care about tech cost supply their own.
         dataContext.techCostConfig =
-            std::make_unique<ac::TechCostConfig_t>(ac::TechCostConfig_t{k_TestTechCostFormula});
+            std::make_unique<ac::TechCostConfig_t>(
+                ac::TechCostConfig_t{k_TestTechCostFormula});
         dataContext.techCostCalculator = std::make_unique<ac::TechCostCalculator>(
             *dataContext.techCostConfig, *dataContext.luaRuntime);
         dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();

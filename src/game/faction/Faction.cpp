@@ -162,9 +162,11 @@ int Faction::CollectResearch()
     int total = 0;
     for (BaseManager& rBase : Bases())
     {
-        total += rBase.GetResources().ConsumeLabs();
+        const int labs = rBase.GetResources().ConsumeLabs();
+        total += labs;
+        m_pResearch->AddResearchPoints(labs);
+        DiscoverCurrentResearch();
     }
-    m_pResearch->AddResearchPoints(total);
     return total;
 }
 

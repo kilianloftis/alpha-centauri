@@ -19,21 +19,16 @@ StageResult_t ResearchAccumulation::ExecuteImpl(GameState& /*rGameState*/, Facti
 {
     std::cout << "Executing ResearchAccumulation stage for faction\n";
 
+    const ResearchManager& rResearch = rFaction.GetResearch();
+    const std::size_t knownBefore = rResearch.GetDiscoveredTechs().size();
     const int totalLabs = rFaction.CollectResearch();
-
-    ResearchManager& rResearch = rFaction.GetResearch();
     std::cout << "  Faction labs collected: " << totalLabs
               << ", total research points: " << rResearch.GetAccumulatedPoints() << "\n";
 
-    while (rResearch.CanDiscoverTech())
+    const std::vector<TechId>& rKnown = rResearch.GetDiscoveredTechs();
+    for (std::size_t i = knownBefore; i < rKnown.size(); ++i)
     {
-        const TechId techId = rResearch.GetResearchTarget();
-        if (!rFaction.DiscoverCurrentResearch())
-        {
-            break;
-        }
-
-        std::cout << "  Discovered tech: '" << techId << "'\n";
+        std::cout << "  Discovered tech: '" << rKnown[i] << "'\n";
     }
     return StageResult_t::Continue;
 }

@@ -2,6 +2,7 @@
 #include "game/map/MapUtils.h"
 #include "game/units/Unit.h"
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -49,6 +50,12 @@ int WorldMap::GetWidth() const
 int WorldMap::GetHeight() const
 {
     return m_height;
+}
+
+int WorldMap::GetAreaSqRoot() const
+{
+    const double tileCount = static_cast<double>(m_tiles.size());
+    return static_cast<int>(std::sqrt(tileCount));
 }
 
 Tile& WorldMap::MutableTile(const Tile& rTile)
