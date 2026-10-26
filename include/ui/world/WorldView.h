@@ -147,6 +147,7 @@ private:
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
+    void ExecuteAttack_(Unit& rAttacker, const Tile& rTargetTile);
     // False when the shot is illegal. True after playback has been opened.
     bool TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
     // Bombard and former projects bound to this chord. Runs the one that is valid and

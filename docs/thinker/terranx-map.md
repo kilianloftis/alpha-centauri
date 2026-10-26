@@ -162,6 +162,50 @@ Annotations after the word, in order:
 Thinker's `mod_say_morale2` also adds HQ +1 to the plus count (`Fix:`). The
 binary does not.
 
+### Combat odds (`battle_fight_2` `0x506AF0`)
+
+Player confirm lives inside `battle_fight_2`, not `compute_odds` (`0x565F20`).
+`compute_odds` is the vanilla air/land AI heuristic (unit cost, `stack_check`,
+triad). Thinker does not replace it.
+
+**Firepower** (`0x506F6D`–`0x507007`). After `battle_compute` (`0x501DA0`)
+writes 8.8 `offense_out` / `defense_out`:
+
+- Conventional (attacker weapon at `UNIT+0x9ab88d` ≥ 0 **and** defender armor
+  at `+0x9ab88e` ≥ 0): 1 damage per lost round (`0x506FBA` / `0x506FF8`).
+- Psi (either signed byte `< 0`, `jl` at `0x506F90` / `0x506FB8` /
+  `0x506FF6`): the **receiver's** `reactor_id` (`UNIT+0x9ab88f`).
+
+Thinker's `ignore_reactor_power` (default on) `short_jump`s `0x506F90` and
+`0x506FF6` (`refs/thinker/src/patch.cpp`), so conventional fights use reactor
+firepower too.
+
+**Dialog** (`0x508034`–`0x5082DB`). Artifact (`UNIT.plan == 0xC` at
+`0x9ab892`): HP = 1. Else `clamp(reactor_id, 1, 100) * 10 − damage_taken`
+(`VEH+0x952838`), clamped `[0, 9999]`. Then `esi = HP_atk * offense_out`
+(`0x508093`), `edi = HP_def * defense_out` (`0x5080F3`). Trial divisor from 2
+while both divide evenly (`0x5080F7`–`0x508135`), then magic divides when both
+exceed 20000 / 10000 / 2000 / 1000 / 200 / 100. `parse_num` (`0x625E30`) at
+`0x5082AF` / `0x5082B7`. `#GOODIDEA` if both `damage_taken == 0`, else
+`#GOODIDEA2` (`0x5082BC`–`0x5082DB`).
+
+That `HP × strength` ratio matches 1-damage conventional rounds and is wrong
+when firepower is the receiver's reactor: fusion (20 HP, takes 2) looks twice
+as tough as fission (10 HP, takes 1). Thinker's `combat_odds_fix`
+(`refs/thinker/src/veh_combat.cpp`) rewrites conventional +
+`ignore_reactor_power` as strength × hits-to-kill
+(`ceil(HP / own reactor)`). It skips psi (natives are fission; mixed
+fusion-vs-worm still shows the HP lie). This repo applies the same
+hits-to-kill correction whenever a lost round costs `psi_damage`.
+
+**When the dialog appears** (`0x507CA4`–`0x507D42`): `VehAttackFlags & 1`, not
+an intercept, local human, `combat_type == 0`, not a missile (`Chassis.missile`
+at `0x94a37d`), attacker state not `VSTATE_EXPLORE | VSTATE_ON_ALERT`
+(`test ch, 0x42` at `0x507D21`). `#BADIDEA` always if
+`2 * offense * def_fp * atk_hp < defense * atk_fp * def_hp` (`shl edx, 1`
+then `jge` skip at `0x507D3E`). `#GOODIDEA` only if
+`GameMorePreferences & 0x8000`.
+
 ## Sea bases
 
 ### `base_init` (`0x4E4B80`)

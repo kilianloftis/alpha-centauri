@@ -230,7 +230,10 @@ allow with the `footing` axis omitted ("assault from anywhere"). Declare-attack 
 domain, or embarked on a same-faction carrier that carries it — is attackable by any domain.
 Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`, which
 hands the visible hostiles to `SelectDefender`: the best `DefenderWinChance` defends, ties in
-tile order. Combat odds are not implemented yet, so every pair ties and the first defends.
+tile order. `ComputeCombatOdds` is the reduced attacker:defender ratio of
+`ResolveCombatStrength` × hits-to-kill (`ceil(current HP / damage per lost round)`).
+Conventional damage is `k_CombatRoundDamage`; psi uses the receiver's `psi_damage`.
+`DefenderWinChance` is the defender's share of that ratio.
 When the attacker has fewer than one movement point of fragments left, `ResolveCombatStrength`
 multiplies the resolved attack rating by that leftover fraction of a point; a full point
 or more leaves attack strength unchanged. The post-combat spend is `AttackMoveFragments`: one

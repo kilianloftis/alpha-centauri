@@ -226,7 +226,6 @@ enum class StatId_t
     // Weight toward receiving a rebelling base (Additive, Faction domain). RebelCandidateWeights
     // seeds it with rebel_selection's base join weight, so factions without modifiers take part.
     RebelJoinWeight
-    // TODO: add more stats as they are defined
 };
 
 // How a stat's modifier stack is seeded. KindFor's switch is exhaustive, so a new stat must

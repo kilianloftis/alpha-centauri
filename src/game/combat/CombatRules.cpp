@@ -1,7 +1,10 @@
 #include "game/combat/CombatRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/combat/CombatStrength.h"
+#include "game/combat/MoraleCalculator.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
@@ -12,6 +15,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <vector>
 
 namespace ac
@@ -82,6 +86,28 @@ bool IsImmune_(const Unit* pUnit, const std::vector<CollateralHit_t>& rPlan)
                        { return rHit.pOccupant == pUnit && rHit.bImmune; });
 }
 
+int HitsToKill_(int hp, int damagePerHit)
+{
+    if (hp <= 0)
+    {
+        return 0;
+    }
+    return (hp + damagePerHit - 1) / damagePerHit;
+}
+
+CombatOdds_t ReduceOdds_(int attackerProduct, int defenderProduct)
+{
+    if (attackerProduct == 0 && defenderProduct == 0)
+    {
+        return {};
+    }
+    const int divisor = std::gcd(attackerProduct, defenderProduct);
+    CombatOdds_t odds;
+    odds.attackerOdds = attackerProduct / divisor;
+    odds.defenderOdds = defenderProduct / divisor;
+    return odds;
+}
+
 } // namespace
 
 CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
@@ -111,9 +137,28 @@ CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefe
     return outcome;
 }
 
-double DefenderWinChance(const Unit&, const Unit&)
+CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
+                               CombatEngagement_t engagement)
 {
-    return 0.5;
+    const GameState& rGame = CurrentGameState();
+    const MoraleCalculator& rMorale = *rGame.GetGameData().moraleCalculator;
+    const CombatStrength_t strength = ResolveCombatStrength(
+        rAttacker, rDefender, rGame.GetTileEffects(), rMorale, engagement);
+    const int attackerHits =
+        HitsToKill_(rAttacker.GetCurrentHp(), RoundDamage_(rAttacker, strength.bPsiCombat));
+    const int defenderHits =
+        HitsToKill_(rDefender.GetCurrentHp(), RoundDamage_(rDefender, strength.bPsiCombat));
+    const int attackerProduct = strength.attackStrength * attackerHits;
+    const int defenderProduct = strength.defenseStrength * defenderHits;
+    return ReduceOdds_(attackerProduct, defenderProduct);
+}
+
+double DefenderWinChance(const Unit& rAttacker, const Unit& rDefender)
+{
+    const CombatOdds_t odds =
+        ComputeCombatOdds(rAttacker, rDefender, CombatEngagement_t::Standard);
+    const int total = odds.attackerOdds + odds.defenderOdds;
+    return static_cast<double>(odds.defenderOdds) / static_cast<double>(total);
 }
 
 bool PastDisengageThreshold(const Unit& rUnit, int startHp)

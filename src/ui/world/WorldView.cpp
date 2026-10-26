@@ -33,6 +33,7 @@
 #include "game/movement/FuelMutations.h"
 #include "game/movement/AirdropRules.h"
 #include "game/combat/AttackRules.h"
+#include "game/combat/CombatRules.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/SpriteLibrary.h"
 #include "ui/world/AirdropFailMessages.h"
@@ -763,6 +764,34 @@ void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
 }
 
 void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
+{
+    Unit* pDefender = FindAttackableHostileOnTile(rAttacker, rTargetTile);
+    if (!pDefender)
+    {
+        return;
+    }
+    const CombatOdds_t odds =
+        ComputeCombatOdds(rAttacker, *pDefender, CombatEngagement_t::Standard);
+    Unit* pAttacker = &rAttacker;
+    const Tile* pTile = &rTargetTile;
+    DismissOpenModals_();
+    auto pConfirm = MakeConfirmPopup(
+        "Their odds are " + std::to_string(odds.attackerOdds) + " to "
+            + std::to_string(odds.defenderOdds) + ". Proceed?",
+        GetPopupLayout(),
+        [this, pAttacker, pTile]
+        {
+            if (m_pSelectedUnit != pAttacker)
+            {
+                return;
+            }
+            ExecuteAttack_(*pAttacker, *pTile);
+        },
+        Style().listSelectorPopup);
+    m_elements.push_back(std::move(pConfirm));
+}
+
+void WorldView::ExecuteAttack_(Unit& rAttacker, const Tile& rTargetTile)
 {
     // Capture identity / tiles before Resolve mutates positions / destroys units.
     const Tile& rAttackerTile = rAttacker.GetTile();

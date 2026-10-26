@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/combat/AttackRules.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
 #include "game/combat/MoraleRules.h"
@@ -178,6 +179,98 @@ TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotecte
 
     const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, defender);
     CHECK(NonCombatantsLeftUnprotected(attacker, defender, plan).empty());
+}
+
+TEST_CASE("Equal conventional units reduce combat odds to 1 to 1", "[combat][odds]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+
+    const CombatOdds_t odds =
+        ComputeCombatOdds(attacker, defender, CombatEngagement_t::Standard);
+    CHECK(odds.attackerOdds == 1);
+    CHECK(odds.defenderOdds == 1);
+}
+
+TEST_CASE("A 4-attack unit is 4 to 1 against 1-defense at full HP", "[combat][odds]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weak_armor"});
+
+    const CombatOdds_t odds =
+        ComputeCombatOdds(attacker, defender, CombatEngagement_t::Standard);
+    CHECK(odds.attackerOdds == 4);
+    CHECK(odds.defenderOdds == 1);
+}
+
+TEST_CASE("A damaged defender changes only its own hits in the odds", "[combat][odds]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker =
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weak_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weak_armor"});
+    defender.SetCurrentHp(5);
+
+    const CombatOdds_t odds =
+        ComputeCombatOdds(attacker, defender, CombatEngagement_t::Standard);
+    CHECK(odds.attackerOdds == 2);
+    CHECK(odds.defenderOdds == 1);
+}
+
+TEST_CASE("Psi odds use hits-to-kill so a double-HP double-firepower attacker is 1 to 1",
+          "[combat][odds][psi]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(
+        player, 8, 8, {"test_chassis", "test_weapon", "test_psi", "test_psi_tier_2",
+                       "test_extra_hp_10"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+
+    REQUIRE(attacker.GetCurrentHp() == 20);
+    REQUIRE(defender.GetCurrentHp() == 10);
+    const CombatOdds_t odds =
+        ComputeCombatOdds(attacker, defender, CombatEngagement_t::Standard);
+    CHECK(odds.attackerOdds == 1);
+    CHECK(odds.defenderOdds == 1);
+}
+
+TEST_CASE("SelectDefender picks the candidate with the better chance, ties keep order",
+          "[combat][odds]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& unarmored = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& armored = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+    Unit& fullHp = fixture.MakeUnit(enemy, 10, 10, {"test_chassis", "test_armor"});
+    Unit& hurt = fixture.MakeUnit(enemy, 11, 11, {"test_chassis", "test_armor"});
+    hurt.SetCurrentHp(5);
+    Unit& first = fixture.MakeUnit(enemy, 12, 12, {"test_chassis"});
+    Unit& second = fixture.MakeUnit(enemy, 13, 13, {"test_chassis"});
+
+    CHECK(SelectDefender(attacker, {&unarmored, &armored}) == &armored);
+    CHECK(SelectDefender(attacker, {&armored, &unarmored}) == &armored);
+    CHECK(SelectDefender(attacker, {&hurt, &fullHp}) == &fullHp);
+    CHECK(SelectDefender(attacker, {&first, &second}) == &first);
+    CHECK(SelectDefender(attacker, {&second, &first}) == &second);
+    CHECK(SelectDefender(attacker, {}) == nullptr);
 }
 
 TEST_CASE("A native is wild only while a native-life faction owns it", "[natives]")

@@ -509,7 +509,7 @@ TEST_CASE("Equally matched defenders keep the order they stand in", "[combat][de
     Faction& enemy = fixture.MakeFaction();
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& first = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
-    Unit& second = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+    Unit& second = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
     CHECK(SelectDefender(attacker, {&first, &second}) == &first);
     CHECK(SelectDefender(attacker, {&second, &first}) == &second);

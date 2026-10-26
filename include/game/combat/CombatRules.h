@@ -43,8 +43,18 @@ CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefe
                                         int attackRoll, int defenseRoll,
                                         CombatEngagement_t engagement, int hpFloor);
 
-// TODO: combat odds are not implemented. Every pair scores alike, so candidate order picks
-// the defender.
+// Reduced attacker:defender ratio of strength × hits-to-kill (Thinker combat_odds_fix).
+// docs/thinker/terranx-map.md.
+struct CombatOdds_t
+{
+    int attackerOdds = 1;
+    int defenderOdds = 1;
+};
+
+CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
+                               CombatEngagement_t engagement);
+
+// Defender share of ComputeCombatOdds(..., Standard). SelectDefender ranks by this.
 double DefenderWinChance(const Unit& rAttacker, const Unit& rDefender);
 
 // A unit may withdraw once it has lost half the HP it started the fight with.

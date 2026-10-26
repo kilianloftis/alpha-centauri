@@ -405,6 +405,23 @@
     ]
   },
   {
+    "id": "test_weak_armor",
+    "name": "Test Weak Armor",
+    "unit_name": "Synthmetal",
+    "type": "armor",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  {
     "id": "test_psi",
     "name": "Test Psi Combat",
     "type": "ability",
@@ -483,6 +500,23 @@
         "parameters": {
           "stat": "psi_damage",
           "amount": 2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_extra_hp_10",
+    "name": "Test Extra HP 10",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10,
           "op": "Add"
         }
       }
