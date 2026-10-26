@@ -14,7 +14,8 @@ struct ProbeNoticeCopy_t
     std::string body;
 };
 
-// Unset when this outcome has no copy yet.
-std::optional<ProbeNoticeCopy_t> ProbeNoticeCopy(const ProbeNoticeInteraction_t& rNotice);
+// Unset when this audience has no script for the outcome.
+std::optional<ProbeNoticeCopy_t> ProbeNoticeCopy(const ProbeNoticeInteraction_t& rNotice,
+                                                FactionId_t audienceId);
 
 } // namespace ac

@@ -415,6 +415,33 @@ not add another message.
 
 Thinker's `probe` case `PRB_INCITE_DRONE_RIOTS` matches this path (no `Fix:`).
 
+## Probe: success / fail popups (`probe` `0x59F120`)
+
+`NetMsg_pop_2` (`0x50B9E0`) unless noted. Shown when `MapWin->cOwner` (`0x939284`)
+is the probe faction (actor) and/or the target, as listed. Suffix `0` is actor,
+`1` is target (`says` `0x500130` after `clear` `0x500120`). Art is
+`infil_sm.pcx` / `al_infil_sm.pcx` unless noted.
+
+| Script | Who | When |
+|---|---|---|
+| `DETECTINFILTRATE` (`0x59FBC1`–`0x59FC78`, `NetMsg_pop` `0x47A890`) | target | Infiltrate set the infiltrator bit |
+| `DECIPHERED0` / `DECIPHERED1` (`0x5A3361`) | actor / target | Steal tech |
+| `STOLENOTHING` (`0x5A029A`, `NetMsg_pop`) | actor | Pre-mission abort when nothing to steal and the map is already known |
+| `GOTENERGY` / `GOTNOENERGY` (`0x5A3826`) | actor | Drain; `GOTNOENERGY` when the stolen amount is 0 |
+| `TOOKENERGY` / `TOOKNOENERGY` (`0x5A38AA`) | target | Drain |
+| `PRODVIRUS0` / `PRODVIRUS1` (`0x5A3425`) | actor / target | Sabotage wiped production |
+| `FACVIRUS0` / `FACVIRUS1` (`0x5A363D`) | actor / target | Sabotage destroyed a facility. Thinker's `mod_probe` inverts this suffix (`==` vs `!=`) |
+| `DRONEINCITE0` / `DRONEINCITE1` | both | Incite; see above |
+| `ASSASSINATED` (`0x5A3ACF`) | both | Assassinate; `$NUM0` is the points actually subtracted |
+| `MINDCONTROL0` / `MINDCONTROL1` / `MINDCONTROL2` (`0x5A48B6`) | actor / target / observer | Mind-control base (`popp_2` `0x50B970`) |
+| `GENETICWARFARE0` / `GENETICWARFARE1` (`0x5A40B4`) | actor / target | Plague (`popp_2`) |
+| `SUBVERTED` (`0x5A42A6`) | target | Mind-control unit |
+| `BUSTED` (`0x5A31F0`) | actor | Mission failed (probe eliminated). `BUSTED1`–`7` are excuse-dialog labels, not this popup |
+| `PROBECAUGHT` / `PROBESUCCUMB` (`0x5A4AE6`) | actor | Mission succeeded, probe died; `PROBESUCCUMB` when the action was mind-control city |
+
+Infiltrate has no actor success script (the actor gets `PROBESURVIVAL` on the
+return-home path). Unit subvert has no actor script.
+
 ### Extra drones (`base_psych` `0x4EA540`)
 
 At `0x4EA62E`–`0x4EA6AF`, capture drones are

@@ -293,7 +293,7 @@ TEST_CASE("Incite notice presents a modal for a known base",
     notice.subjectName = rBase.GetName();
     notice.cameraTile = TileCoord_t{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
     notice.actionId = ProbeActionId_t::InciteDroneRiots;
-    notice.result.detail = ProbeActionStatus_t::Riot;
+    notice.result.detail = ProbeRiot_t{};
     harness.Enqueue(notice);
 
     harness.pPresenter->Update();
@@ -309,7 +309,7 @@ TEST_CASE("A probe notice without copy completes without a modal",
     PresenterHarness_ harness;
     ProbeNoticeInteraction_t notice;
     notice.actionId = ProbeActionId_t::Infiltrate;
-    notice.result.detail = ProbeActionStatus_t::Infiltrated;
+    notice.result.detail = ProbeNoTarget_t{};
     harness.Enqueue(notice);
 
     harness.pPresenter->Update();

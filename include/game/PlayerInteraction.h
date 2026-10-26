@@ -100,13 +100,27 @@ struct TerritoryEntryInteraction_t
     FactionId_t ownerId = 0;
 };
 
-// A probe mission finished. `subjectName` and `cameraTile` are snapshotted at enqueue so
+// Faction nouns the formatter needs. Snapshotted at enqueue from each side's definition.
+struct ProbeNoticeFaction_t
+{
+    std::string title;
+    std::string leader;
+    std::string name;
+    std::string noun;
+    std::string adjective;
+};
+
+// A probe mission finished. Names and the camera tile are snapshotted at enqueue so
 // the presenter does not look the target up again.
 struct ProbeNoticeInteraction_t
 {
     FactionId_t actorId = 0;
     FactionId_t targetFactionId = 0;
+    ProbeNoticeFaction_t actor;
+    ProbeNoticeFaction_t target;
     std::string subjectName;
+    std::string techName;
+    std::string facilityName;
     std::optional<TileCoord_t> cameraTile;
     ProbeActionId_t actionId = ProbeActionId_t::Infiltrate;
     ProbeActionResult_t result;

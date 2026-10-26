@@ -4,6 +4,7 @@
 #include "game/research/TechConfigParser.h"
 #include "game/probes/ProbeRules.h"
 
+#include <string>
 #include <variant>
 
 namespace ac
@@ -17,20 +18,34 @@ enum class ProbeActionOutcome_t
     Succeeded,      // mission + escape
 };
 
-// Status-only outcomes with no payload.
-enum class ProbeActionStatus_t
+struct ProbeInfiltrated_t
 {
-    Infiltrated,
-    NoTech,
-    ProductionWiped,
-    Riot,
-    IncreasedActivity,
-    ResearchWiped,
-    BaseCaptured,
-    UnitSubverted,
-    // Targeted sabotage named a facility the base does not have (or named none). Distinct from
-    // the random-sabotage lane, which falls back to wiping production.
-    NoTarget,
+};
+
+struct ProbeNoTech_t
+{
+};
+
+struct ProbeRiot_t
+{
+};
+
+struct ProbeIncreasedActivity_t
+{
+};
+
+struct ProbeBaseCaptured_t
+{
+};
+
+struct ProbeUnitSubverted_t
+{
+};
+
+// Targeted sabotage named a facility the base does not have (or named none). Distinct from
+// the random-sabotage lane, which falls back to wiping production.
+struct ProbeNoTarget_t
+{
 };
 
 struct ProbeStolenTech_t
@@ -53,13 +68,31 @@ struct ProbePopulationKilled_t
     int count = 0;
 };
 
+struct ProbeProductionWiped_t
+{
+    std::string itemName;
+};
+
+struct ProbeResearchWiped_t
+{
+    int points = 0;
+};
+
 using ProbeActionDetail_t = std::variant<
     std::monostate,
-    ProbeActionStatus_t,
+    ProbeInfiltrated_t,
+    ProbeNoTech_t,
+    ProbeRiot_t,
+    ProbeIncreasedActivity_t,
+    ProbeBaseCaptured_t,
+    ProbeUnitSubverted_t,
+    ProbeNoTarget_t,
     ProbeStolenTech_t,
     ProbeDestroyedFacility_t,
     ProbeEnergyStolen_t,
-    ProbePopulationKilled_t>;
+    ProbePopulationKilled_t,
+    ProbeProductionWiped_t,
+    ProbeResearchWiped_t>;
 
 struct ProbeActionResult_t
 {

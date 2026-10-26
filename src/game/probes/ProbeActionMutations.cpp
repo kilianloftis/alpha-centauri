@@ -14,6 +14,7 @@
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
+#include "game/production/IConstructable.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
 #include "game/research/TechConfigParser.h"
@@ -75,7 +76,7 @@ bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState
 {
     TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
     ApplyTriggeredEffects(rAction.onSuccessEffects, context);
-    rResult.detail = ProbeActionStatus_t::Infiltrated;
+    rResult.detail = ProbeInfiltrated_t{};
     return true;
 }
 
@@ -85,7 +86,7 @@ bool ApplyStealTech_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& r
     const std::vector<TechId> candidates = StealableTechs(rActor, rBase.GetFaction());
     if (candidates.empty())
     {
-        rResult.detail = ProbeActionStatus_t::NoTech;
+        rResult.detail = ProbeNoTech_t{};
         return true; // mission succeeds but nothing to steal
     }
     std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
@@ -119,7 +120,7 @@ bool ApplyTargetedSabotage_(BaseManager& rBase, const BuildingId_t& facilityId,
         facilityId.empty() ? nullptr : rBase.GetBuildingManager().FindBuilding(facilityId);
     if (!pTarget)
     {
-        rResult.detail = ProbeActionStatus_t::NoTarget;
+        rResult.detail = ProbeNoTarget_t{};
         return false;
     }
     // TODO: whether sabotage should permanently delete a secret project is unconfirmed.
@@ -151,9 +152,11 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
         }
     }
 
+    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
+    const std::string itemName = pItem ? pItem->GetName() : std::string{};
     rBase.GetProduction().SetProduction(nullptr, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(0);
-    rResult.detail = ProbeActionStatus_t::ProductionWiped;
+    rResult.detail = ProbeProductionWiped_t{itemName};
     return true;
 }
 
@@ -162,15 +165,23 @@ bool ApplyInciteDroneRiots_(BaseManager& rBase, const ProbeActionConfig_t& rConf
 {
     PopulationManager& rPopulation = rBase.GetPopulation();
     rPopulation.ApplyIncite(rConfig.assimilationTurnsAdded, rConfig.assimilationTurnsCapFactor);
-    rResult.detail = rPopulation.IsRioting() ? ProbeActionStatus_t::Riot
-                                             : ProbeActionStatus_t::IncreasedActivity;
+    if (rPopulation.IsRioting())
+    {
+        rResult.detail = ProbeRiot_t{};
+    }
+    else
+    {
+        rResult.detail = ProbeIncreasedActivity_t{};
+    }
     return true;
 }
 
 bool ApplyAssassinate_(BaseManager& rBase, ProbeActionResult_t& rResult)
 {
-    rBase.GetFaction().GetResearch().SetAccumulatedPoints(0);
-    rResult.detail = ProbeActionStatus_t::ResearchWiped;
+    ResearchManager& rResearch = rBase.GetFaction().GetResearch();
+    const int points = rResearch.GetAccumulatedPoints();
+    rResearch.SetAccumulatedPoints(0);
+    rResult.detail = ProbeResearchWiped_t{points};
     return true;
 }
 
@@ -180,7 +191,7 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResul
     const BaseId_t baseId = rBase.GetBaseId();
     rBase.GetPopulation().NotifyCaptured(rTarget.GetFactionId(), rActor.GetFactionId());
     rTarget.TransferBaseTo(baseId, rActor);
-    rResult.detail = ProbeActionStatus_t::BaseCaptured;
+    rResult.detail = ProbeBaseCaptured_t{};
     return true;
 }
 
@@ -209,7 +220,7 @@ bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, GameState& rGameState
     TriggeredEffectContext_t context = UnitMissionContext_(rActor, rTargetUnit, rGameState, rRng);
     ApplyTriggeredEffects(rAction.onSuccessEffects, context);
     rTargetUnit.GetFaction().TransferUnitTo(rTargetUnit.GetUnitId(), rActor);
-    rResult.detail = ProbeActionStatus_t::UnitSubverted;
+    rResult.detail = ProbeUnitSubverted_t{};
     return true;
 }
 

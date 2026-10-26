@@ -458,7 +458,8 @@ void InteractionPresenter::PresentTerritoryEntry_(const TerritoryEntryInteractio
 
 void InteractionPresenter::PresentProbeNotice_(const ProbeNoticeInteraction_t& rNotice)
 {
-    const std::optional<ProbeNoticeCopy_t> copy = ProbeNoticeCopy(rNotice);
+    const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
+    const std::optional<ProbeNoticeCopy_t> copy = ProbeNoticeCopy(rNotice, audienceId);
     if (!copy.has_value())
     {
         CompleteAndAdvance_();

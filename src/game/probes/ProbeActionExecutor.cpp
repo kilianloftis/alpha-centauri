@@ -3,8 +3,11 @@
 #include "game/CurrentGameState.h"
 #include "game/combat/MoraleRules.h"
 #include "game/PlayerInteractionQueue.h"
+#include "game/GameDataContext.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeRules.h"
+#include "game/research/TechRegistry.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
@@ -19,6 +22,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <string>
 #include <variant>
 
 namespace ac
@@ -46,9 +50,55 @@ std::string ProbeSubjectName_(const ProbeTarget_t& rTarget)
     return rUnit.GetDesign().GetName();
 }
 
-void AnnounceProbe_(GameState& rGameState, FactionId_t actorId, ProbeActionId_t actionId,
+ProbeNoticeFaction_t FactionCopy_(const Faction& rFaction)
+{
+    const FactionConfig_t& rDef = rFaction.GetDefinition();
+    ProbeNoticeFaction_t copy;
+    copy.title = rDef.leader.title;
+    copy.leader = rDef.leader.name;
+    copy.name = rDef.identity.name;
+    copy.noun = rDef.identity.noun;
+    copy.adjective = rDef.identity.adjective;
+    return copy;
+}
+
+std::string TechName_(const GameState& rGameState, const TechId& rTechId)
+{
+    const TechConfig_t* pTech = rGameState.GetGameData().techRegistry->Find(rTechId);
+    if (!pTech)
+    {
+        return {};
+    }
+    return pTech->name;
+}
+
+std::string FacilityName_(const GameState& rGameState, const BuildingId_t& rBuildingId)
+{
+    const BuildingConfig_t* pBuilding =
+        rGameState.GetGameData().buildingRegistry->Find(rBuildingId);
+    if (!pBuilding)
+    {
+        return {};
+    }
+    return pBuilding->name;
+}
+
+void FillNoticeNames_(const GameState& rGameState, ProbeNoticeInteraction_t& rNotice)
+{
+    if (const auto* pTech = std::get_if<ProbeStolenTech_t>(&rNotice.result.detail))
+    {
+        rNotice.techName = TechName_(rGameState, pTech->techId);
+    }
+    if (const auto* pFacility = std::get_if<ProbeDestroyedFacility_t>(&rNotice.result.detail))
+    {
+        rNotice.facilityName = FacilityName_(rGameState, pFacility->buildingId);
+    }
+}
+
+void AnnounceProbe_(GameState& rGameState, const Faction& rActor, ProbeActionId_t actionId,
                     const ProbeTarget_t& rTarget, const ProbeActionResult_t& rResult)
 {
+    const FactionId_t actorId = rActor.GetFactionId();
     const FactionId_t targetId = rTarget.rFaction.GetFactionId();
     if (!ProbeNoticeReachesPlayer(actorId, targetId))
     {
@@ -58,10 +108,13 @@ void AnnounceProbe_(GameState& rGameState, FactionId_t actorId, ProbeActionId_t 
     ProbeNoticeInteraction_t notice;
     notice.actorId = actorId;
     notice.targetFactionId = targetId;
+    notice.actor = FactionCopy_(rActor);
+    notice.target = FactionCopy_(rTarget.rFaction);
     notice.subjectName = ProbeSubjectName_(rTarget);
     notice.cameraTile = TileCoord_t{rTile.GetX(), rTile.GetY()};
     notice.actionId = actionId;
     notice.result = rResult;
+    FillNoticeNames_(rGameState, notice);
     EnqueueForPlayer(rGameState, notice);
 }
 
@@ -205,11 +258,11 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
 {
     ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
 
-    const FactionId_t actorId = rUnit.GetFaction().GetFactionId();
+    const Faction& rActor = rUnit.GetFaction();
     if (!roll.missionSucceeded)
     {
         ProbeActionResult_t failed = FailMission_(rUnit, result);
-        AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, failed);
+        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, failed);
         return failed;
     }
 
@@ -224,12 +277,12 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     if (!roll.escaped)
     {
         ProbeActionResult_t captured = CaptureProbe_(rUnit, result);
-        AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, captured);
+        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, captured);
         return captured;
     }
 
     FinalizeProbeSuccess_(rUnit, result);
-    AnnounceProbe_(rGameState, actorId, rAction.id, rTarget, result);
+    AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, result);
     return result;
 }
 

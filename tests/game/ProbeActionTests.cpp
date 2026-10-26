@@ -213,8 +213,7 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     const auto* pNotice = std::get_if<ProbeNoticeInteraction_t>(&pQueued->payload);
     REQUIRE(pNotice);
     CHECK(pNotice->actionId == ProbeActionId_t::Infiltrate);
-    CHECK(std::get<ProbeActionStatus_t>(pNotice->result.detail)
-          == ProbeActionStatus_t::Infiltrated);
+    CHECK(std::holds_alternative<ProbeInfiltrated_t>(pNotice->result.detail));
     if (result.outcome == ProbeActionOutcome_t::Succeeded)
     {
         CHECK(probe.GetXp() >= xpBefore);
@@ -236,16 +235,14 @@ TEST_CASE("TryProbeAction incite riots when the extra drone tips the base", "[pr
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
-    REQUIRE(pStatus);
-    CHECK(*pStatus == ProbeActionStatus_t::Riot);
+    CHECK(std::holds_alternative<ProbeRiot_t>(result.detail));
     CHECK(enemy.GetPopulation().IsRioting());
     // Riot effects apply before the first Mood commit, as SMAC's flag blocks the next production.
     const RiotTier_t* pTier = ActiveRiotTierFor(enemy);
     REQUIRE(pTier);
     CHECK(pTier->minTurns == 1);
-    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
-          == ProbeActionStatus_t::Riot);
+    CHECK(std::holds_alternative<ProbeRiot_t>(
+        RequireProbeNotice_(game.fixtures.state, enemy).result.detail));
 }
 
 TEST_CASE("TryProbeAction incite reports increased activity when talents still outnumber drones",
@@ -266,13 +263,11 @@ TEST_CASE("TryProbeAction incite reports increased activity when talents still o
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
-    REQUIRE(pStatus);
-    CHECK(*pStatus == ProbeActionStatus_t::IncreasedActivity);
+    CHECK(std::holds_alternative<ProbeIncreasedActivity_t>(result.detail));
     CHECK_FALSE(enemy.GetPopulation().IsRioting());
     CHECK(enemy.GetPopulation().GetDroneCount() >= 1);
-    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
-          == ProbeActionStatus_t::IncreasedActivity);
+    CHECK(std::holds_alternative<ProbeIncreasedActivity_t>(
+        RequireProbeNotice_(game.fixtures.state, enemy).result.detail));
 }
 
 TEST_CASE("TryProbeAction incite on an already-rioting base stays Riot", "[probe][riot]")
@@ -294,12 +289,10 @@ TEST_CASE("TryProbeAction incite on an already-rioting base stays Riot", "[probe
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
-    REQUIRE(pStatus);
-    CHECK(*pStatus == ProbeActionStatus_t::Riot);
+    CHECK(std::holds_alternative<ProbeRiot_t>(result.detail));
     CHECK(enemy.GetPopulation().IsRioting());
-    CHECK(std::get<ProbeActionStatus_t>(RequireProbeNotice_(game.fixtures.state, enemy).result.detail)
-          == ProbeActionStatus_t::Riot);
+    CHECK(std::holds_alternative<ProbeRiot_t>(
+        RequireProbeNotice_(game.fixtures.state, enemy).result.detail));
 }
 
 TEST_CASE("TryProbeAction incite notifies the player when their base is the target",
@@ -318,9 +311,8 @@ TEST_CASE("TryProbeAction incite notifies the player when their base is the targ
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    CHECK(std::get<ProbeActionStatus_t>(
-              RequireProbeNotice_(game.fixtures.state, playerBase).result.detail)
-          == ProbeActionStatus_t::Riot);
+    CHECK(std::holds_alternative<ProbeRiot_t>(
+        RequireProbeNotice_(game.fixtures.state, playerBase).result.detail));
 }
 
 TEST_CASE("TryProbeAction incite does not notify when neither side is the player",
@@ -410,9 +402,7 @@ TEST_CASE("TryProbeAction steal_tech skips techs whose prerequisites the actor l
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    const auto* pStatus = std::get_if<ProbeActionStatus_t>(&result.detail);
-    REQUIRE(pStatus);
-    CHECK(*pStatus == ProbeActionStatus_t::NoTech);
+    CHECK(std::holds_alternative<ProbeNoTech_t>(result.detail));
     CHECK_FALSE(game.pPlayer->GetResearch().HasDiscoveredTech("advanced_build"));
 }
 
@@ -537,7 +527,7 @@ TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][actio
     // Naming a facility this base does not have fails outright...
     CHECK_FALSE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                        {"flat_nutrient"}, result, rng));
-    CHECK(std::get_if<ProbeActionStatus_t>(&result.detail) != nullptr);
+    CHECK(std::holds_alternative<ProbeNoTarget_t>(result.detail));
     // ...and does not quietly destroy the building it *does* have instead.
     CHECK(game.pAi->CountBuildings("Command_Center") == 1);
 

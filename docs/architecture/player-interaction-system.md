@@ -68,7 +68,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
 | `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `HonorDefensiveObligation` / `DeclineDefensiveObligation` → Complete. Completes without asking when the obligation no longer stands (`IsObligedToDefend`) |
 | `TerritoryEntryInteraction_t` | Break the agreement → `BreakAgreementAndContinue` (`movement/TerritoryEntryMutations.h`) / Cancel the order → `Unit::ClearOrder` → Complete |
-| `ProbeNoticeInteraction_t` | `NoticePopup` from `ProbeNoticeCopy`; completes without a modal when copy is unset |
+| `ProbeNoticeInteraction_t` | `NoticePopup` from `ProbeNoticeCopy` (actor vs target script); completes without a modal when that audience has no script |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
