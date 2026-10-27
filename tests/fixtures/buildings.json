@@ -1015,6 +1015,13 @@
           "amount": 0,
           "op": "MaxClamp"
         }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "high_risk_sabotage"
+        }
       }
     ],
     "category": "conquer",
@@ -1030,6 +1037,15 @@
     "name": "Tachyon Field",
     "mineral_cost": 12,
     "category": "conquer",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "high_risk_sabotage"
+        }
+      }
+    ],
     "map_overlay": {
       "land": "assets/factions/{faction}/bases/overlays/tachyon_size{size}.png",
       "sea": "assets/factions/{faction}/bases/overlays/water_tachyon_size{size}.png"

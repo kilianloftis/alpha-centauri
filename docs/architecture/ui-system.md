@@ -338,8 +338,9 @@ Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time fla
 ### ListSelectorPopup — the one list picker
 
 Every "pick one of these" modal is a `ListSelectorPopup`: production, pop types, probe actions,
-supply-crawl resources, unit components, council proposals, council ballots, scrap and disband
-menus. It takes a title, an empty-list message, and a vector of `PopupChoice_t` — a label and the
+targeted facility sabotage (a second list after choosing `sabotage_facility`, plus a wipe-
+production row), supply-crawl resources, unit components, council proposals, council ballots,
+scrap and disband menus. It takes a title, an empty-list message, and a vector of `PopupChoice_t` — a label and the
 `std::function<void()>` that row runs. There is one constructor and one dispatch path.
 
 A row carrying its own action is what keeps the arity open and the call sites short. Callers

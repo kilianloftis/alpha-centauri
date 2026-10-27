@@ -235,8 +235,8 @@ improvement occupant lists from the last `Record(const Tile&)`. `Occupants(const
 those spans as `TileOccupants_t`; `GetRevision()` bumps when any tile is recorded.
 
 Recording runs at the end of `FactionVisibleMap::RebuildFromSources` for every visible tile, in
-`VisibilityMutations` when the explored map is fully marked, and in `DiplomaticProposalMutations` after
-map merge. UI builds `MapAppearance::Fogged(world, faction)` or `MapAppearance::Clear(world,
+`VisibilityMutations` when the explored map is fully marked, and in `CopyExploredMap` (map trade
+and probe steal-tech). UI builds `MapAppearance::Fogged(world, faction)` or `MapAppearance::Clear(world,
 faction)` so tiles in sight use live occupants and explored tiles out of sight use memory; a null
 faction means live everywhere. `CoverOf` gives each tile its cover: shroud where the faction never
 explored, fog on remembered tiles in a `Fogged` appearance, else none. Coast, water depth, relief,

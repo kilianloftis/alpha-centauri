@@ -8,6 +8,17 @@
 namespace ac
 {
 
+// SMAC game_randv(n): a draw in [0, exclusiveMax) when exclusiveMax > 1, else 0.
+inline int RollExclusiveMax(int exclusiveMax, std::mt19937& rRng)
+{
+    if (exclusiveMax <= 1)
+    {
+        return 0;
+    }
+    std::uniform_int_distribution<int> dist(0, exclusiveMax - 1);
+    return dist(rRng);
+}
+
 // True with a chancePercent-in-100 probability (50 = 50%).
 // Certainties are resolved without touching rRng: <= 0 never fires, >= 100 always fires.
 inline bool RollPercent(int chancePercent, std::mt19937& rRng)

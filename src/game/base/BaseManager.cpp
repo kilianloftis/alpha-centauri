@@ -291,6 +291,8 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
     snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
     snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
     snapshot.mood = m_pPopulation->CaptureMoodState();
+    snapshot.bStolenResearch = m_bStolenResearch;
+    snapshot.bPlagueIntroduced = m_bPlagueIntroduced;
     return snapshot;
 }
 

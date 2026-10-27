@@ -6,6 +6,7 @@
 #include "game/social-engineering/SocialRatingConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TriggeredEffect.h"
 
 #include "GameFixtures.h"
 #include "TempConfigFile.h"
@@ -89,18 +90,19 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
 
     REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
     const auto& rPlagueEffects = config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects;
-    REQUIRE(rPlagueEffects.size() == 2);
-    const auto* pPlague = std::get_if<ModifyPopulationEffect_t>(&rPlagueEffects.front().effect);
-    REQUIRE(pPlague);
-    CHECK(pPlague->amount == -50);
-    CHECK(pPlague->op == ModifierOp_t::AddPercent);
-    CHECK(pPlague->minSize == 1);
-
+    REQUIRE(rPlagueEffects.size() == 1);
     // Genetic warfare is a Simple atrocity; the mission answers for it through the effects list
-    // rather than a flag of its own.
-    const auto* pAtrocity = std::get_if<CommitAtrocityEffect_t>(&rPlagueEffects.back().effect);
+    // rather than a flag of its own. Pop killed is ProbeRules::GeneticPlagueKilled.
+    const auto* pAtrocity = std::get_if<CommitAtrocityEffect_t>(&rPlagueEffects.front().effect);
     REQUIRE(pAtrocity);
     CHECK(pAtrocity->severity == AtrocitySeverityId_t::Simple);
+
+    const auto& rRandomSabotage = config.Find(ProbeActionId_t::SabotageRandom)->onSuccessEffects;
+    REQUIRE(rRandomSabotage.size() == 1);
+    const auto* pDestroy =
+        std::get_if<DestroyFacilityEffect_t>(&rRandomSabotage.front().effect);
+    REQUIRE(pDestroy);
+    CHECK(pDestroy->exclusions.excludeSecretProjects);
 }
 
 TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules would ignore",
@@ -207,16 +209,56 @@ TEST_CASE("Algo enhancement halves failure; HSA halves success", "[probe][rules]
     CHECK(hsa.successRate == static_cast<int>(std::lround((100 - (200 / 3)) * 0.5)));
 }
 
-TEST_CASE("RollProbeAction RISK 0 always succeeds mission", "[probe][rules]")
+TEST_CASE("RollProbeAction RISK 0 always succeeds mission without an HSA coin", "[probe][rules]")
 {
     ProbeSuccessFormula_t formula;
     const ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
+    REQUIRE_FALSE(chances.bHsaCoin);
     std::mt19937 rng(1);
     for (int i = 0; i < 20; ++i)
     {
         const ProbeRollResult_t roll = RollProbeAction(chances, rng);
         CHECK(roll.missionSucceeded);
     }
+}
+
+TEST_CASE("RollProbeAction HSA coin can bust a risk-0 mission", "[probe][rules]")
+{
+    ProbeSuccessFormula_t formula;
+    ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
+    chances.bHsaCoin = true;
+    std::mt19937 rng(1);
+    bool bAnyFail = false;
+    for (int i = 0; i < 200; ++i)
+    {
+        if (!RollProbeAction(chances, rng).missionSucceeded)
+        {
+            bAnyFail = true;
+            break;
+        }
+    }
+    CHECK(bAnyFail);
+}
+
+TEST_CASE("RollProbeAction Algo save can recover a failed mission without HSA", "[probe][rules]")
+{
+    ProbeChance_t chances;
+    chances.risk = 100;
+    chances.probeStrength = 1;
+    chances.escapeStrength = 1;
+    chances.bAlgoSave = true;
+    chances.bHsaCoin = false;
+    std::mt19937 rng(1);
+    bool bAnySuccess = false;
+    for (int i = 0; i < 200; ++i)
+    {
+        if (RollProbeAction(chances, rng).missionSucceeded)
+        {
+            bAnySuccess = true;
+            break;
+        }
+    }
+    CHECK(bAnySuccess);
 }
 
 TEST_CASE("TryPromoteProbeMission bumps XP up to max", "[probe][morale]")

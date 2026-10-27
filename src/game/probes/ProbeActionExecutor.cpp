@@ -16,6 +16,7 @@
 #include "game/base/BaseManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
@@ -172,7 +173,32 @@ bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rT
                                               GameState& rGameState) const
 {
     RequireCurrentGameState(rGameState);
+    if (WouldHunterSeekerDestroy(rProbe, rTile, rGameState))
+    {
+        return true;
+    }
     return !ListAvailableProbeActions(rProbe, rTile, rGameState).empty();
+}
+
+bool ProbeActionExecutor::WouldHunterSeekerDestroy(const Unit& rProbe, const Tile& rTile,
+                                                   GameState& rGameState) const
+{
+    RequireCurrentGameState(rGameState);
+    if (rProbe.GetMoveFragmentsRemaining() <= 0)
+    {
+        return false;
+    }
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
+    if (!AreOnOrAdjacent_(rProbe.GetTile(), rTile, rWorldMap))
+    {
+        return false;
+    }
+    const std::optional<ProbeTarget_t> target = ResolveContactTarget_(rProbe, rTile, rGameState);
+    if (!target.has_value())
+    {
+        return false;
+    }
+    return HunterSeekerDestroys(rProbe, *target);
 }
 
 ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
@@ -187,6 +213,13 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
         return result;
     }
 
+    const std::optional<ProbeTarget_t> contact =
+        ResolveContactTarget_(rUnit, rTile, rGameState);
+    if (contact.has_value() && WouldHunterSeekerDestroy(rUnit, rTile, rGameState))
+    {
+        return DestroyOnHunterSeeker_(rUnit, *contact, rGameState);
+    }
+
     const std::optional<ProbeTarget_t> target =
         ResolveEligibleTarget_(rUnit, rTile, *pAction, rGameState);
     if (!target.has_value() || !TryPayProbeCost_(rUnit, *pAction, *target))
@@ -195,25 +228,40 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     }
     ApplyProbePaidEffects(rUnit, *pAction, *target, rGameState, m_rRng);
 
-    // From session history, recorded before the roll so a failed attempt still tips the base off.
-    bool bRepeatAtBase = false;
-    if (const BaseManager* pTargetBase = AsBase(*target))
+    if (pAction->id == ProbeActionId_t::Infiltrate)
     {
-        bRepeatAtBase = NoteAndCheckRepeatAtBase_(rUnit.GetFaction().GetFactionId(),
-                                                  pTargetBase->GetBaseId());
+        ApplyProbeActionEffect(rUnit, *pAction, *target, rGameState, facilityId, result, m_rRng);
     }
 
-    const int risk = MissionRisk(*pAction, *target, facilityId, bRepeatAtBase);
+    const int risk = MissionRisk(*pAction, *target, facilityId);
     result.chances = ProbeChancesFor(rUnit, *target, risk);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
     return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, result, roll);
 }
 
-bool ProbeActionExecutor::NoteAndCheckRepeatAtBase_(FactionId_t actorFactionId,
-                                                    BaseId_t targetBaseId)
+std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveContactTarget_(
+    const Unit& rUnit, const Tile& rTile, GameState& rGameState) const
 {
-    // insert().second is false when the pair was already present — i.e. this is a repeat.
-    return !m_probedBases.emplace(actorFactionId, targetBaseId).second;
+    std::optional<ProbeTarget_t> target =
+        ResolveProbeTarget(rUnit, rTile, ProbeTargetKind_t::Base, rGameState);
+    if (target.has_value())
+    {
+        return target;
+    }
+    return ResolveProbeTarget(rUnit, rTile, ProbeTargetKind_t::Unit, rGameState);
+}
+
+ProbeActionResult_t ProbeActionExecutor::DestroyOnHunterSeeker_(Unit& rUnit,
+                                                               const ProbeTarget_t& rTarget,
+                                                               GameState& rGameState) const
+{
+    ProbeActionResult_t result;
+    result.outcome = ProbeActionOutcome_t::MissionFailed;
+    result.detail = ProbeHunterSeeker_t{};
+    Faction& rActor = rUnit.GetFaction();
+    rActor.GetUnitManager().DestroyUnit(rUnit);
+    AnnounceProbe_(rGameState, rActor, ProbeActionId_t::Infiltrate, rTarget, result);
+    return result;
 }
 
 std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveEligibleTarget_(
@@ -256,7 +304,10 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     GameState& rGameState, const BuildingId_t& facilityId, ProbeActionResult_t result,
     const ProbeRollResult_t& roll)
 {
-    ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
+    if (ProbeDeclaresHostileAct(rAction))
+    {
+        ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
+    }
 
     const Faction& rActor = rUnit.GetFaction();
     if (!roll.missionSucceeded)
@@ -266,15 +317,17 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
         return failed;
     }
 
-    if (!ApplyProbeActionEffect(rUnit, rAction, rTarget, rGameState, facilityId, result,
-                                m_rRng))
+    // Infiltrate's on_success_effects already ran before the roll.
+    if (rAction.id != ProbeActionId_t::Infiltrate
+        && !ApplyProbeActionEffect(rUnit, rAction, rTarget, rGameState, facilityId, result,
+                                   m_rRng))
     {
         // Handler failed after paying cost — treat as rejected but keep energy spent.
         result.outcome = ProbeActionOutcome_t::Rejected;
         return result;
     }
 
-    if (!roll.escaped)
+    if (!roll.escaped || !ReturnProbeHome_(rUnit, rGameState))
     {
         ProbeActionResult_t captured = CaptureProbe_(rUnit, result);
         AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, captured);
@@ -300,6 +353,17 @@ ProbeActionResult_t ProbeActionExecutor::CaptureProbe_(Unit& rUnit,
     result.outcome = ProbeActionOutcome_t::Captured;
     rUnit.GetFaction().GetUnitManager().DestroyUnit(rUnit);
     return result;
+}
+
+bool ProbeActionExecutor::ReturnProbeHome_(Unit& rUnit, GameState& rGameState) const
+{
+    const BaseManager* pHome = ProbeReturnBase(rUnit);
+    if (!pHome)
+    {
+        return false;
+    }
+    rGameState.GetWorldMap().GetUnitPositions().MoveUnit(rUnit, pHome->GetTile());
+    return true;
 }
 
 void ProbeActionExecutor::FinalizeProbeSuccess_(Unit& rUnit,

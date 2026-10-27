@@ -69,6 +69,17 @@ TEST_CASE("Infiltrate copy is target-only DETECTINFILTRATE", "[ui][probe]")
                  "Sister Miriam of the Believers has infiltrated our data networks!");
 }
 
+TEST_CASE("Hunter-Seeker copy names the Algorithm for both sides", "[ui][probe]")
+{
+    ProbeNoticeInteraction_t notice = BaseNotice_(ProbeActionId_t::Infiltrate);
+    notice.result.outcome = ProbeActionOutcome_t::MissionFailed;
+    notice.result.detail = ProbeHunterSeeker_t{};
+    RequireCopy_(notice, k_ActorId,
+                 "The Hunter-Seeker Algorithm of the Peacekeeper has destroyed our probe team!");
+    RequireCopy_(notice, k_TargetId,
+                 "A Believer probe team has been destroyed by our Hunter-Seeker Algorithm!");
+}
+
 TEST_CASE("Steal-tech copy uses DECIPHERED0 or DECIPHERED1", "[ui][probe]")
 {
     ProbeNoticeInteraction_t notice = BaseNotice_(ProbeActionId_t::StealTech);
@@ -87,6 +98,16 @@ TEST_CASE("No-tech copy is actor-only STOLENOTHING", "[ui][probe]")
     notice.result.detail = ProbeNoTech_t{};
     RequireCopy_(notice, k_ActorId, "Our probe team found nothing of interest.");
     RequireNoCopy_(notice, k_TargetId);
+}
+
+TEST_CASE("Stolen-map copy uses STOLEMAP", "[ui][probe]")
+{
+    ProbeNoticeInteraction_t notice = BaseNotice_(ProbeActionId_t::StealTech);
+    notice.result.detail = ProbeStolenMap_t{};
+    RequireCopy_(notice, k_ActorId,
+                 "Our probe team has stolen a copy of the Peacekeeper map files!");
+    RequireCopy_(notice, k_TargetId,
+                 "The Believer probe team has stolen a copy of our map files!");
 }
 
 TEST_CASE("Drain-energy copy uses GOTENERGY or TOOKENERGY", "[ui][probe]")

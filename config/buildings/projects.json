@@ -392,7 +392,18 @@
     "secret_project": true,
     "category": "conquer",
     "required_tech": "self_aware_machines",
-    "icon": "assets/sprites/projects/proj034.png"
+    "icon": "assets/sprites/projects/proj034.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "probe_action_cost",
+          "amount": -25,
+          "op": "AddPercent"
+        }
+      }
+    ]
   },
   {
     "id": "Cloudbase_Academy",

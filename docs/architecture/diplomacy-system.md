@@ -72,7 +72,7 @@ graph TB
     subgraph "Affected faction state"
         EconomyManager[EconomyManager<br/>SpendEnergy / AddEnergy]
         ResearchManager[ResearchManager<br/>AddDiscoveredTech]
-        FactionExploredMap[FactionExploredMap<br/>MergeFrom]
+        FactionExploredMap[FactionExploredMap<br/>CopyExploredMap]
         Bases[Faction::TransferBaseTo]
     end
 
@@ -448,8 +448,9 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate
   transfers and a status change; the only timer is a status's own `duration_turns`.
-- **Detection.** `IsOwnerKnownTo` never identifies a covert unit and `ProbeDetected` never
-  detects, so covert units, shipping probe teams included, never cause Vendetta.
+- **Detection.** `IsOwnerKnownTo` never identifies a covert unit on the map. A completed
+  probe mission (other than infiltrate or Total Thought Control) is attributed even for a
+  Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
 - **Integrity, grievances, and blemishes.** The Datalinks name six integrity levels
   (Noble → Treacherous) and directed grievances. None of that is wired yet.

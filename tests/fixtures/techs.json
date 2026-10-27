@@ -12,12 +12,30 @@
   {
     "id": "discover_tech",
     "name": "Discover Tech",
-    "category": "discover"
+    "category": "discover",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
+    ]
   },
   {
     "id": "conquer_tech",
     "name": "Conquer Tech",
-    "category": "conquer"
+    "category": "conquer",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
+    ]
   },
   {
     "id": "advanced_build",

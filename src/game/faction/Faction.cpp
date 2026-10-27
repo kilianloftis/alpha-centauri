@@ -487,6 +487,14 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     pBase->GetPopulation().SetNutrientStockpile(rSnapshot.nutrientStockpile);
     pBase->GetPopulation().RestoreMoodState(rSnapshot.mood);
+    if (rSnapshot.bStolenResearch)
+    {
+        pBase->SetStolenResearch();
+    }
+    if (rSnapshot.bPlagueIntroduced)
+    {
+        pBase->SetPlagueIntroduced();
+    }
 
     RestoreProductionQueue_(pBase->GetProduction(), pBase->GetBaseEffects(),
                             ResolveProductionItems_(rSnapshot.productionItemIds));

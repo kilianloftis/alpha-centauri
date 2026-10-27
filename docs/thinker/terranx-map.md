@@ -337,7 +337,7 @@ over every faction in the current session, and uses `max(1, discovered)` for TEC
 is `TechCostResearch` (shipping ±1; Lua subtracts it and floors the local
 tech factor at 1). Live Research SE scales labs.
 Thinker's per-tech replacement is `tech_alt_cost`, recorded in
-`config/research/manual/tech_cost_thinker.lua` (not on `GameDataPaths`).
+`config/deviations/tech_cost_thinker.lua` (not on `GameDataPaths`).
 
 University (`UNIV.TXT`) and Cybernetic Consciousness (`cyborg.txt`) do not set
 `TECHCOST` / `rule_techcost`. Both are `SOCIAL, ++RESEARCH`.
@@ -414,6 +414,125 @@ the probe turn. After the popup the common success path (`0x5A36EE`) does
 not add another message.
 
 Thinker's `probe` case `PRB_INCITE_DRONE_RIOTS` matches this path (no `Fix:`).
+
+## Probe: action ids, HSA, odds, and the roll (`probe` `0x59F120`)
+
+Action ids in `probe` match Thinker's `ProbeAction`: infiltrate 0, steal tech 1,
+sabotage 2, drain 3, incite 4, assassinate 5, mind-control city 6, genetic plague
+7, free captured leader 8, mind-control unit −1. Total Thought Control is not a
+separate id: it is mind-control city with `prb_diff = 1` from the THOUGHTMENU
+choice.
+
+**Hunter-Seeker** (`0x59F3A4`–`0x59F6EA`): `has_abil` of `ABL_ALGO_ENHANCEMENT`
+(`0x10000000`) at `0x5BF1F0`. Without it, an HSA owner (`0x59F5D7`) that is
+actually executing (`VehAttackFlags` bit 2 and `toggle`) pops `HUNTERSEEKER` /
+`HUNTERSEEKER2` and `veh_kill` (`0x5C0B00` at `0x59F6EA`). With Algo,
+`ProbeHasAlgoEnhancement` (`0x945B30`) is 1 and the mission may continue with
+`ProbeTargetHasHSA` (`0x945B38`) set.
+
+**Displayed odds** (`success_rates` `0x59EEE0`): morale floored at 1. Risk &lt; 0
+prints `100%` and returns the negative modifier. Covert Ops Center (facility
+`0x22`) adds +2, then `SE_probe + that` is clamped to `[−2, 0]`. Failure
+`(risk * 100) / ((morale / 2) − defense + 1)`. Algo and not HSA: signed `/2` of
+failure. Success `100 − failure`; HSA signed `/2` of success. Loss
+`((risk + 1) * 100) / (morale − defense)`; Algo and not HSA: `/2` of loss
+(`0x59F09A`–`0x59F0AB`, same gate as failure); survival
+`100 − loss`. HSA then halves **success again** (`edi`) instead of survival
+(`esi`) at `0x59F0B4`–`0x59F0BF`. Thinker's `mod_success_rates` applies the
+second HSA `/2` to survival (`Fix:`).
+
+**Actual mission roll** (`0x5A311C`–`0x5A3238`): `game_randv(morale/2 − defense + 1)`
+compared to risk (`jge` at `0x5A31A0` = success). On failure: busted unless Algo
+and not HSA and `random() & 1` is clear (`0x5A31A6`–`0x5A31BF`). On success: HSA
+still busts when `random() & 1` (`0x5A3228`–`0x5A3238`). Risk 0 therefore always
+passes the strength check; only HSA's coin can still eliminate the probe.
+`BUSTED` is `0x5A31F0`. Thinker's `probe` rewrite matches this two-step roll.
+
+**Escape roll** (base targets, `0x5A42CA`–`0x5A4466`): `game_randv(morale − defense)`;
+`jle` risk at `0x5A4306` = lost. A lost probe is saved (returns home) only when Algo
+and not HSA and `random() & 1` is set (`0x5A4454`–`0x5A446D`). On escape, HSA's
+`random() & 1` coin (`0x5A4427`–`0x5A443B`) is reached only for a sea-triad probe
+whose return base is not a port; every other escape skips it. Thinker matches.
+
+**Infiltrate bit** is set on commit, before the roll: `set_treaty` (`0x55BB30`)
+with `DIPLO_HAVE_INFILTRATOR` (`0x1000`) at `0x59FBA0`. `DETECTINFILTRATE` follows
+at `0x59FBC1`. A busted infiltrate still leaves the bit.
+
+**Steal tech** success ORs `BSTATE_RESEARCH_DATA_STOLEN` (`0x40`) at `0x5A33C2`.
+A later attempt at that base tests the same bit (`0x59FE2B`) and uses risk 1.
+
+**Drain energy**: `steal_energy` (`0x50C4B0`) is `energy_credits * pop_size /
+(pop_total + 1)` when energy &gt; 0. The success path (`0x5A371B`–`0x5A3783`)
+then `floor = share * morale / 6` (magic `0x2AAAAAAB` at `0x5A3739`), adds
+`game_randv(share − floor) / 2`, clamps to the treasury (`range` `0x422F00`),
+and stores 0 if the result is 1. Thinker's `steal_energy` multiplies by
+`conf.steal_energy_rate` (not original). `probe` **tests**
+`BSTATE_ENERGY_RESERVES_DRAINED` (`0x400000` at `0x5A033A`) for a risk-1 repeat
+but never ORs that bit — the drain-repeat bump looks dead.
+
+**Mind-control cost** (`mind_control` `0x59EA80`, `vulnerable` `0x59E980`): no HQ
+→ distance 12; HQ tile → −1 (refused) unless corner-market. Then Genejack ×2
+dist, Creche /2, Punishment Sphere /2, nerve staple /2. Cost
+`(combat+offense garrison × (poly-encryption + 1) + actor mind_control_total/4 + pop)
+* (corner_market_cost + energy + 1200) / (dist + 4)`, then pact ×2, former owner
+/2, drone riot /2, golden age ×2, atrocity victim ×2 else revenge ×1.5. Probe()
+then applies `RULE_PROBECOST`, Nethack ×3/4, and the SE Probe table. SE ≥ 3 is
+immune even with Algo in this binary; Thinker's Fix 1 & 15 lets Algo through at
+×2.
+
+The garrison term is three `stack_check` (`0x5B9580`) calls on the stack at the base
+tile (`0x59EC57`–`0x59ECB8`): mode 2 plan `PLAN_COMBAT` (1) plus mode 2 plan
+`PLAN_OFFENSE` (0), times (mode 6 count of units with `ABL_POLY_ENCRYPTION` + 1).
+The faction argument is −1, so every unit in the stack counts, an allied unit
+included. `PLAN_DEFENSE` and every non-combat plan count 0. Poly is a stack
+multiplier, not a per-unit weight: three offense units with one Poly unit among
+them count 6, and a Poly defender still raises the multiplier. Thinker's
+`mind_control` matches.
+
+Distance is `vector_dist` (`0x4F8090`, inlined in `vulnerable` at `0x59EA0A`–`0x59EA6B`):
+`max(dx, dy) − ((dx + dy)/2 − min(dx, dy) + 1)/2` in map coordinates, x wrapping on
+round maps. On every same-parity offset it equals `TabletopDiagonalDistance` on the
+lattice. The HQ-tile refusal tests that raw distance, before the facility halvings; a
+halved distance of 0 is quoted at `/ (0 + 4)`. The halvings are sequential integer
+`/2`, after Genejack's `×2`. After the formula, an AI actor (`FactionStatus`
+`0x9A64E8` bit clear) against a human target whose `diff_level` > 3 pays
+`cost * 3 / diff_level` (`0x59ED0C`–`0x59ED3C`): ×3/4 on Thinker, ×3/5 on Transcend.
+Thinker's `mod_mind_control` matches.
+
+**Unit subversion cost** (`0x5A14BF`–`0x5A15A2`): HQ distance as above (`vector_dist`
+at `0x5A16EA`, 12 with no HQ); no HQ-tile refusal. A target whose home base
+(`VEH` +0x2E, `≥ 0`) has the Punishment Sphere (facility 23 via `bitmask` at
+`0x5A14E0`) halves the distance; no Crèche, Genejack or nerve-staple term. Cost
+`unit_cost * ((energy + 800) / (dist + 2))`, dividing first (`idiv` at `0x5A1546`,
+`imul` by `UNIT` +0x29 at `0x5A1565`). Then the same AI-vs-human `× 3 / diff_level`
+(`0x5A1552`–`0x5A15A2`), `RULE_PROBECOST`, Nethack ×3/4, the SE Probe table, Poly
+and plan below. Thinker's `probe` matches.
+
+**Unit subversion and Poly Encryption**: after the SE Probe table, a target unit
+with `ABL_POLY_ENCRYPTION` (`0x1000`) doubles the subversion cost (`has_abil` at
+`0x5A17C6`, `add esi,esi` at `0x5A17D2`). Then a target whose `UNIT.plan`
+(`0x9AB892`) is neither `PLAN_COLONY` (8) nor `PLAN_TERRAFORM` (9) halves it
+(`0x5A17D7`–`0x5A17FC`): colony pods and formers cost full price, everything else
+half. Thinker `probe.cpp` matches.
+
+### Unit plan (`make_proto` `0x5A5D40`)
+
+`UNIT.plan` (`+0x2A`, `0x9AB892`) is the design's AI role, set when a design is made.
+Predefined units take it from `alpha.txt` instead. Thinker's `mod_make_proto` matches:
+
+- Missile chassis (`0x94A37D`): offense ≥ 99 → `PLAN_PLANET_BUSTER` (5); Tectonic
+  Payload (`0x18`) → 13; Fungal Payload (`0x19`) → 14; else `PLAN_OFFENSE` (0)
+  (`0x5A5F63`–`0x5A5FC1`).
+- Weapon mode ≥ 7 (non-combat): plan = mode, so transport 7, colony 8, terraform 9,
+  supply 10, probe 11, artifact 12 (`0x5A5FC6`–`0x5A5FDE`).
+- Sea triad: `PLAN_NAVAL_SUPERIORITY` (6) (`0x5A5FF7`).
+- Air triad: `PLAN_AIR_SUPERIORITY` (4) with ability `0x20`, else `PLAN_OFFENSE`
+  (`0x5A6012`–`0x5A6045`).
+- Land: `PLAN_OFFENSE`; armor defense > 1 → `PLAN_DEFENSE`; then weapon offense ≥
+  armor defense while `PLAN_DEFENSE` → `PLAN_COMBAT`; speed > 1 and offense > defense
+  → `PLAN_OFFENSE`; Amphibious, Drop Pods or Artillery (`0x8018`) → `PLAN_OFFENSE`
+  (`0x5A604A`–`0x5A60E9`). Offense 1 and defense 1: speed > 1 → `PLAN_RECON` (3);
+  Police 2× (`0x400000`) → `PLAN_DEFENSE` (`0x5A618D`–`0x5A61EF`).
 
 ## Probe: success / fail popups (`probe` `0x59F120`)
 

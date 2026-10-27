@@ -2,6 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/atrocities/AtrocityLedger.h"
+#include "game/atrocities/AtrocityConfig.h"
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -28,6 +29,9 @@
 #include "game/research/TechRegistry.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/production/IConstructable.h"
+#include "game/production/ProductionManager.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeActionResult.h"
 #include "game/probes/ProbeRules.h"
@@ -142,6 +146,31 @@ void ForceMissionFailure_(ProbeGame_& rGame, ProbeActionId_t actionId)
     FAIL("fixture has no such probe action");
 }
 
+void ForceSureThing_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    for (ProbeActionConfig_t& rAction : rGame.fixtures.dataContext.probeActionsConfig->actions)
+    {
+        if (rAction.id == actionId)
+        {
+            rAction.risk = -1;
+            return;
+        }
+    }
+    FAIL("fixture has no such probe action");
+}
+
+bool UnitAlive_(const Faction& rFaction, UnitId_t unitId)
+{
+    for (const Unit& rUnit : rFaction.GetUnitManager().Units())
+    {
+        if (rUnit.GetUnitId() == unitId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // A paid base mission needs a target that is not the owner's HQ, so the owner founds its HQ
 // first, away from the target.
 BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
@@ -218,6 +247,23 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     {
         CHECK(probe.GetXp() >= xpBefore);
     }
+}
+
+TEST_CASE("A busted infiltrate still sets the infiltration bit", "[probe][action]")
+{
+    ProbeGame_ game;
+    ForceMissionFailure_(game, ProbeActionId_t::Infiltrate);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+    CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
+        game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
+    CHECK(std::holds_alternative<ProbeInfiltrated_t>(result.detail));
 }
 
 TEST_CASE("TryProbeAction incite riots when the extra drone tips the base", "[probe][riot]")
@@ -359,7 +405,7 @@ TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")
     CHECK(game.pAi->GetEconomy().GetEnergy() <= aiBefore);
 }
 
-TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
+TEST_CASE("TryProbeAction steal_tech grants any tech the target knows that the actor does not",
           "[probe][action][steal]")
 {
     ProbeGame_ game(/*bWithTechs=*/true);
@@ -367,8 +413,6 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    // Target knows a root tech and a gated tech; actor has neither.
-    game.pAi->GetResearch().AddDiscoveredTech("build_tech");
     game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
 
     const ProbeActionResult_t result =
@@ -377,33 +421,11 @@ TEST_CASE("TryProbeAction steal_tech grants a prereq-met tech the target knows",
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
-    // Only build_tech is in the actor's AvailableTechs ∩ target discoveries.
     const auto* pStolen = std::get_if<ProbeStolenTech_t>(&result.detail);
     REQUIRE(pStolen);
-    CHECK(pStolen->techId == "build_tech");
-    CHECK(game.pPlayer->GetResearch().HasDiscoveredTech("build_tech"));
-    CHECK_FALSE(game.pPlayer->GetResearch().HasDiscoveredTech("advanced_build"));
-}
-
-TEST_CASE("TryProbeAction steal_tech skips techs whose prerequisites the actor lacks",
-          "[probe][action][steal]")
-{
-    ProbeGame_ game(/*bWithTechs=*/true);
-    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
-
-    // Target only has the gated tech; actor lacks build_tech so nothing is stealable.
-    game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
-
-    const ProbeActionResult_t result =
-        game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
-
-    REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
-             || result.outcome == ProbeActionOutcome_t::Captured));
-    CHECK(std::holds_alternative<ProbeNoTech_t>(result.detail));
-    CHECK_FALSE(game.pPlayer->GetResearch().HasDiscoveredTech("advanced_build"));
+    CHECK(pStolen->techId == "advanced_build");
+    CHECK(game.pPlayer->GetResearch().HasDiscoveredTech("advanced_build"));
+    CHECK(enemy.HasStolenResearch());
 }
 
 TEST_CASE("steal_tech effect picks randomly among eligible techs", "[probe][action][steal]")
@@ -439,26 +461,122 @@ TEST_CASE("steal_tech effect picks randomly among eligible techs", "[probe][acti
     CHECK(seen.size() == 2);
 }
 
-TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][action][risk]")
+TEST_CASE("Steal-tech with an empty pool copies the target's explored tiles",
+          "[probe][action][steal]")
 {
-    // risk_repeat was parsed and stored but unreachable: TryProbeAction took a bRepeatAtBase
-    // flag defaulting to false that no caller ever set. The executor owns the history now.
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Tile& rSecret = game.fixtures.At(8, 6);
+    Tile& rUnknown = game.fixtures.At(14, 14);
+
+    FactionExploredMap& rActorMap = game.pPlayer->GetExploredMap();
+    FactionExploredMap& rTargetMap = game.pAi->GetExploredMap();
+    rActorMap.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
+    rTargetMap.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
+    rActorMap.Mark(enemy.GetTile());
+    rTargetMap.Mark(enemy.GetTile());
+    rTargetMap.Mark(rSecret);
+    REQUIRE_FALSE(rActorMap.IsExplored(rSecret));
+    REQUIRE_FALSE(rTargetMap.IsExplored(rUnknown));
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::StealTech);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state, {}, result,
+                                   rng));
+    CHECK(std::holds_alternative<ProbeStolenMap_t>(result.detail));
+    CHECK(rActorMap.IsExplored(rSecret));
+    CHECK_FALSE(rActorMap.IsExplored(rUnknown));
+    CHECK_FALSE(rActorMap.IsFullyExplored());
+    CHECK(enemy.HasStolenResearch());
+}
+
+TEST_CASE("Steal-tech with an empty pool reports nothing when the actor already has the "
+          "target's map",
+          "[probe][action][steal]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    FactionExploredMap& rActorMap = game.pPlayer->GetExploredMap();
+    FactionExploredMap& rTargetMap = game.pAi->GetExploredMap();
+    rActorMap.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
+    rTargetMap.Reset(actest::k_TestMapWidth, actest::k_TestMapHeight);
+    rActorMap.Mark(enemy.GetTile());
+    rTargetMap.Mark(enemy.GetTile());
+    REQUIRE_FALSE(rActorMap.IsFullyExplored());
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::StealTech);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state, {}, result,
+                                   rng));
+    CHECK(std::holds_alternative<ProbeNoTech_t>(result.detail));
+}
+
+TEST_CASE("Assassinate subtracts a random labs amount, not the whole stock",
+          "[probe][action][assassinate]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    game.pAi->GetResearch().SetAccumulatedPoints(20);
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::Assassinate);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state, {}, result,
+                                   rng));
+    const auto* pWiped = std::get_if<ProbeResearchWiped_t>(&result.detail);
+    REQUIRE(pWiped);
+    CHECK(pWiped->points >= 0);
+    CHECK(pWiped->points < 20);
+    CHECK(game.pAi->GetResearch().GetAccumulatedPoints() == 20 - pWiped->points);
+}
+
+TEST_CASE("A successful steal-tech sets the base stolen-research flag for risk_repeat",
+          "[probe][action][risk]")
+{
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
 
-    // steal_tech is the fixture action that declares risk_repeat (1) distinct from risk (0).
     const ProbeActionConfig_t* pAction =
         game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::StealTech);
     REQUIRE(pAction);
     REQUIRE(pAction->riskRepeat.has_value());
     REQUIRE(*pAction->riskRepeat != pAction->risk);
 
-    // Two probes, so whether the first survives does not decide the second attempt.
     Unit& first = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t firstResult = game.fixtures.state.GetProbeActions().TryProbeAction(
         first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
     CHECK(firstResult.chances.risk == pAction->risk);
+    REQUIRE((firstResult.outcome == ProbeActionOutcome_t::Succeeded
+             || firstResult.outcome == ProbeActionOutcome_t::Captured));
+    CHECK(enemy.HasStolenResearch());
 
     Unit& second = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t secondResult = game.fixtures.state.GetProbeActions().TryProbeAction(
@@ -505,9 +623,9 @@ TEST_CASE("Sabotage retires the destroyed copy's deploy record", "[probe][action
 
 TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][action][sabotage]")
 {
-    // An empty or unknown facility id used to fall through to the random branch, and a
-    // non-empty missing id still reported ProbeDestroyedFacility_t after DestroyBuilding's
-    // documented no-op — claiming a kill that never happened.
+    // An unknown facility id used to fall through to the random branch, and a missing id
+    // still reported ProbeDestroyedFacility_t after DestroyBuilding's documented no-op —
+    // claiming a kill that never happened.
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
@@ -598,10 +716,10 @@ TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
     std::mt19937 rng(actest::k_TestRngSeed);
     REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
                                    {}, result, rng));
-    CHECK(enemy.GetPopulation().GetSize() == 3);
+    CHECK(enemy.GetPopulation().GetSize() == 2);
     const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
     REQUIRE(pKilled);
-    CHECK(pKilled->count == 2);
+    CHECK(pKilled->count == 3);
 
     // Genetic warfare is a Simple atrocity, recorded against the target base's owner.
     const AtrocityLedger& rLedger = game.fixtures.state.GetAtrocityLedger();
@@ -640,6 +758,81 @@ TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][p
     const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
     REQUIRE(pKilled);
     CHECK(pKilled->count == 0);
+}
+
+TEST_CASE("genetic_plague wipes nutrients, damages the garrison, and halves a repeat",
+          "[probe][action][plague]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    while (enemy.GetPopulation().GetSize() < 5)
+    {
+        enemy.GetPopulation().AddPop();
+    }
+    enemy.GetPopulation().SetNutrientStockpile(40);
+    Unit& garrison = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
+    const int hpBefore = garrison.GetCurrentHp();
+    REQUIRE(hpBefore > 0);
+
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::GeneticPlague);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t first;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
+                                   {}, first, rng));
+    CHECK(enemy.GetPopulation().GetNutrientStockpile() == 0);
+    CHECK(enemy.HasPlagueIntroduced());
+    CHECK(garrison.GetCurrentHp() < hpBefore);
+    const int sizeAfterFirst = enemy.GetPopulation().GetSize();
+    REQUIRE(sizeAfterFirst == 2);
+
+    enemy.GetPopulation().SetNutrientStockpile(20);
+    ProbeActionResult_t second;
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
+                                   {}, second, rng));
+    const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&second.detail);
+    REQUIRE(pKilled);
+    CHECK(pKilled->count == 1);
+    CHECK(enemy.GetPopulation().GetSize() == 1);
+    CHECK(enemy.GetPopulation().GetNutrientStockpile() == 0);
+}
+
+TEST_CASE("genetic_plague kill count follows defense techs and hospital scale",
+          "[probe][action][plague]")
+{
+    EffectPool pool;
+    ProbeGame_ game(/*bWithTechs=*/true);
+
+    BuildingConfig_t hospital;
+    hospital.id = "test_hospital";
+    hospital.name = "Test Hospital";
+    hospital.effects = {pool.StatMod(StatId_t::PlagueDamageScale, -50, ModifierOp_t::AddPercent,
+                                     EffectScope_t::ThisBase)};
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(hospital);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    while (enemy.GetPopulation().GetSize() < 5)
+    {
+        enemy.GetPopulation().AddPop();
+    }
+    CHECK(GeneticPlagueKilled(enemy) == 3);
+
+    enemy.GetBuildingManager().AddBuilding("test_hospital");
+    CHECK(GeneticPlagueKilled(enemy) == 2);
+
+    game.pAi->GetResearch().AddDiscoveredTech("discover_tech");
+    game.pAi->GetResearch().AddDiscoveredTech("conquer_tech");
+    CHECK(GeneticPlagueKilled(enemy) == 1);
 }
 
 // Ordering contract: a probe may only act on something its faction can actually see, so a
@@ -845,8 +1038,88 @@ TEST_CASE("The subvert quote ignores the actor's mind-control total", "[probe][c
     CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == before);
 }
 
-TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta",
-          "[probe][action][diplomacy][covert]")
+TEST_CASE("Mind-control quote doubles against a Pact partner", "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+    const std::optional<int> before = QuoteProbeActionCost(*pAction, *game.pPlayer, *target);
+    REQUIRE(before.has_value());
+    ApplyStatusChange(game.fixtures.state, game.pPlayer->GetFactionId(), game.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Pact);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == *before * 2);
+}
+
+TEST_CASE("Mind-control quote halves when the actor is the former owner",
+          "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+    const std::optional<int> fullCost = QuoteProbeActionCost(*pAction, *game.pPlayer, *target);
+    REQUIRE(fullCost.has_value());
+    targetBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(),
+                                              game.pAi->GetFactionId());
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == *fullCost / 2);
+}
+
+TEST_CASE("Mind-control quote doubles when the actor has victimized the target",
+          "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, targetBase.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+    const std::optional<int> before = QuoteProbeActionCost(*pAction, *game.pPlayer, *target);
+    REQUIRE(before.has_value());
+
+    AtrocityRecord_t record;
+    record.perpetrator = game.pPlayer->GetFactionId();
+    record.victim = game.pAi->GetFactionId();
+    record.severity = AtrocitySeverityId_t::Simple;
+    game.fixtures.state.GetAtrocityLedger().Record(record);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == *before * 2);
+}
+
+TEST_CASE("Mind Control transfers the tile garrison to the actor",
+          "[probe][action][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& target = MakeMindControlTarget_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    Unit& garrison = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
+    Unit& neighbor = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"});
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state,
+        BuildingId_t{});
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(&garrison.GetFaction() == game.pPlayer);
+    CHECK(&neighbor.GetFaction() == game.pPlayer);
+}
+
+TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",
+          "[probe][action][diplomacy]")
 {
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
@@ -858,10 +1131,27 @@ TEST_CASE("An ordinary probe's action against a Treaty partner declares Vendetta
         probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+}
+
+TEST_CASE("A completed steal-tech against a Treaty partner declares Vendetta",
+          "[probe][action][diplomacy]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    SignTreaty_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
 }
 
-TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy][covert]")
+TEST_CASE("A covert probe's steal-tech still declares Vendetta",
+          "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
@@ -871,13 +1161,32 @@ TEST_CASE("A covert probe's action keeps the Treaty", "[probe][action][diplomacy
         game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+}
+
+TEST_CASE("Total Thought Control against a Treaty partner does not declare Vendetta",
+          "[probe][action][diplomacy]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& target = MakeMindControlTarget_(game);
+    SignTreaty_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state,
+        BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
 }
 
-TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomacy][covert]")
+TEST_CASE("Subverting a covert unit against a Treaty partner declares Vendetta",
+          "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
@@ -890,7 +1199,7 @@ TEST_CASE("Subverting a covert unit keeps the Treaty", "[probe][action][diplomac
         probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
-    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
 }
 
 TEST_CASE("A drain never takes more than the treasury, and a better probe takes more",
@@ -899,18 +1208,26 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
     ProbeGame_ game;
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     game.pAi->GetEconomy().SpendEnergy(game.pAi->GetEconomy().GetEnergy());
-    CHECK(StealEnergyAmount(enemy, *game.pAi, 3) == 0);
+    CHECK(QuoteStealEnergy(enemy, *game.pAi, 3).treasury == 0);
+    CHECK(StealEnergyAmount(QuoteStealEnergy(enemy, *game.pAi, 3), 0) == 0);
 
     game.pAi->GetEconomy().AddEnergy(1000);
     const int treasury = game.pAi->GetEconomy().GetEnergy();
-    const int green = StealEnergyAmount(enemy, *game.pAi, 1);
-    const int elite = StealEnergyAmount(enemy, *game.pAi, 6);
-    CHECK(green > 0);
-    CHECK(elite > green);
-    CHECK(elite <= treasury);
+    const StealEnergyQuote_t green = QuoteStealEnergy(enemy, *game.pAi, 1);
+    const StealEnergyQuote_t elite = QuoteStealEnergy(enemy, *game.pAi, 6);
+    CHECK(green.floor > 0);
+    CHECK(elite.floor > green.floor);
+    CHECK(StealEnergyAmount(elite, 0) <= treasury);
+    CHECK(StealEnergyAmount(green, green.remainderBound) <= treasury);
 }
 
-TEST_CASE("Mission risk is the repeat risk at a probed base, and at least 2 at an HQ facility",
+TEST_CASE("A drain of 1 energy stores 0", "[probe][action]")
+{
+    const StealEnergyQuote_t quote{.floor = 1, .remainderBound = 0, .treasury = 1};
+    CHECK(StealEnergyAmount(quote, 0) == 0);
+}
+
+TEST_CASE("Mission risk uses stolen-research on the base, and at least 2 at an HQ facility",
           "[probe][risk]")
 {
     ProbeGame_ game;
@@ -928,23 +1245,28 @@ TEST_CASE("Mission risk is the repeat risk at a probed base, and at least 2 at a
         *ResolveProbeTarget(atColony, colony.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
 
     const ProbeActionsConfig_t& rActions = *game.fixtures.dataContext.probeActionsConfig;
-    // Fixture risks: steal_tech 0, repeated 1; sabotage_facility 1.
     const ProbeActionConfig_t& rSteal = *rActions.Find(ProbeActionId_t::StealTech);
     const ProbeActionConfig_t& rSabotage = *rActions.Find(ProbeActionId_t::SabotageFacility);
-    CHECK(MissionRisk(rSteal, colonyTarget, "", false) == 0);
-    CHECK(MissionRisk(rSteal, colonyTarget, "", true) == 1);
-    CHECK(MissionRisk(rSabotage, colonyTarget, "Command_Center", false) == 1);
-    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center", false) == 2);
+    CHECK(MissionRisk(rSteal, colonyTarget, "") == 0);
+    colony.SetStolenResearch();
+    CHECK(MissionRisk(rSteal, colonyTarget, "") == 1);
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Command_Center") == 1);
+    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center") == 2);
+    colony.GetBuildingManager().AddBuilding("Perimeter_Defense");
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Perimeter_Defense") == 2);
+    colony.GetBuildingManager().AddBuilding("Tachyon_Field");
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Tachyon_Field") == 2);
 }
 
-TEST_CASE("A probe may steal what the target knows and the actor could research now",
+TEST_CASE("A probe may steal any tech the target knows that the actor does not",
           "[probe][tech]")
 {
     ProbeGame_ game(/*bWithTechs=*/true);
     game.pAi->GetResearch().AddDiscoveredTech("build_tech");
     game.pAi->GetResearch().AddDiscoveredTech("advanced_build");
 
-    CHECK(StealableTechs(*game.pPlayer, *game.pAi) == std::vector<std::string>{"build_tech"});
+    CHECK(StealableTechs(*game.pPlayer, *game.pAi)
+          == std::vector<std::string>{"build_tech", "advanced_build"});
     game.pPlayer->GetResearch().AddDiscoveredTech("build_tech");
     CHECK(StealableTechs(*game.pPlayer, *game.pAi)
           == std::vector<std::string>{"advanced_build"});
@@ -1012,4 +1334,176 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
     const int plainBlocked = successAgainstEnemy(plain);
     CHECK(plainBlocked < plainOpen);
     CHECK(successAgainstEnemy(enhanced) == plainBlocked);
+}
+
+TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without paying",
+          "[probe][action][hsa]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+
+    BuildingConfig_t hunterSeeker;
+    hunterSeeker.id = "test_hunter_seeker";
+    hunterSeeker.name = "Test Hunter-Seeker";
+    hunterSeeker.effects = {pool.RuleFlag(RuleFlagId_t::BlocksProbeTeams)};
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(hunterSeeker);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    enemy.GetBuildingManager().AddBuilding("test_hunter_seeker");
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    const int energyBefore = game.pPlayer->GetEconomy().GetEnergy();
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const Tile& rEnemyTile = enemy.GetTile();
+
+    CHECK(game.fixtures.state.GetProbeActions().WouldHunterSeekerDestroy(
+        probe, rEnemyTile, game.fixtures.state));
+    CHECK(game.fixtures.state.GetProbeActions().CanOpenProbeActions(
+        probe, rEnemyTile, game.fixtures.state));
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::MindControlBase, rEnemyTile, game.fixtures.state, BuildingId_t{});
+
+    CHECK(result.outcome == ProbeActionOutcome_t::MissionFailed);
+    CHECK(std::holds_alternative<ProbeHunterSeeker_t>(result.detail));
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == energyBefore);
+    CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
+    CHECK(&enemy.GetFaction() == game.pAi);
+}
+
+TEST_CASE("SE Probe +3 is immune to paid actions even with Algorithmic Enhancement",
+          "[probe][action][se]")
+{
+    EffectPool pool;
+    UnitComponentConfig_t enhancement;
+    ProbeGame_ game;
+
+    BuildingConfig_t immunity;
+    immunity.id = "test_probe_immune";
+    immunity.name = "Test Probe Immune";
+    immunity.effects = {pool.RuleFlag(RuleFlagId_t::ProbeSubversionImmune)};
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(immunity);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    enemy.GetBuildingManager().AddBuilding("test_probe_immune");
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+
+    enhancement.id = "test_algo";
+    enhancement.type = "ability";
+    enhancement.effects = {pool.RuleFlag(RuleFlagId_t::IgnoresProbeBlock)};
+    std::vector<UnitSlotConfig_t> slots;
+    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
+    for (const UnitComponentConfig_t* pComponent :
+         {game.fixtures.unitComponents.Find("test_chassis"),
+          game.fixtures.unitComponents.Find("Probe_Team"),
+          static_cast<const UnitComponentConfig_t*>(&enhancement)})
+    {
+        const std::string slotId = "slot_" + pComponent->id;
+        slots.push_back({.id = slotId, .displayName = slotId,
+                         .componentType = pComponent->type, .required = true});
+        assigned[slotId] = pComponent;
+    }
+    const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
+    Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
+        game.fixtures.state.AllocateUnitId(), rEnhancedDesign,
+        game.fixtures.state.GetWorldMap().GetUnitPositions(),
+        *game.fixtures.state.GetWorldMap().GetTile(7, 9), ac::UnitOrigin::Issued(home));
+
+    const ProbeActionConfig_t* pMindControl =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::MindControlBase);
+    REQUIRE(pMindControl);
+    CHECK_FALSE(game.fixtures.state.GetProbeActions().CanTryProbeAction(
+        enhanced, *pMindControl, enemy.GetTile(), game.fixtures.state));
+
+    const ProbeActionConfig_t* pInfiltrate =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::Infiltrate);
+    REQUIRE(pInfiltrate);
+    CHECK(game.fixtures.state.GetProbeActions().CanTryProbeAction(
+        enhanced, *pInfiltrate, enemy.GetTile(), game.fixtures.state));
+}
+
+TEST_CASE("A surviving probe returns to the nearest occupiable own base",
+          "[probe][action][return]")
+{
+    ProbeGame_ game;
+    ForceSureThing_(game, ProbeActionId_t::Infiltrate);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& nearer = game.MakeBase(*game.pPlayer, 8, 10);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    REQUIRE(result.outcome == ProbeActionOutcome_t::Succeeded);
+    CHECK(&probe.GetTile() == &nearer.GetTile());
+}
+
+TEST_CASE("A surviving probe with no legal return base is captured",
+          "[probe][action][return]")
+{
+    ProbeGame_ game;
+    ForceSureThing_(game, ProbeActionId_t::Infiltrate);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const UnitId_t probeId = probe.GetUnitId();
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    CHECK(result.outcome == ProbeActionOutcome_t::Captured);
+    CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
+        game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
+    CHECK_FALSE(UnitAlive_(*game.pPlayer, probeId));
+}
+
+TEST_CASE("A sea probe cannot return to a land base and is captured",
+          "[probe][action][return]")
+{
+    ProbeGame_ game;
+    ForceSureThing_(game, ProbeActionId_t::Infiltrate);
+    game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_sea_chassis", "Probe_Team"});
+    const UnitId_t probeId = probe.GetUnitId();
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+
+    CHECK(result.outcome == ProbeActionOutcome_t::Captured);
+    CHECK_FALSE(UnitAlive_(*game.pPlayer, probeId));
+}
+
+TEST_CASE("Sabotage facility is offered and an empty id wipes production",
+          "[probe][action][sabotage]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageFacility);
+    REQUIRE(pAction);
+    CHECK(game.fixtures.state.GetProbeActions().CanTryProbeAction(
+        probe, *pAction, enemy.GetTile(), game.fixtures.state));
+
+    const BuildingConfig_t& rItem = game.fixtures.buildings().Get("test_facility_a");
+    enemy.GetProduction().SetProduction(&rItem, enemy.GetBaseEffects());
+    REQUIRE(enemy.GetProduction().GetCurrentProduction() != nullptr);
+
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+    ProbeActionResult_t result;
+    std::mt19937 rng(7);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
+                                   {}, result, rng));
+    CHECK(std::holds_alternative<ProbeProductionWiped_t>(result.detail));
+    CHECK(enemy.GetProduction().GetCurrentProduction() != &rItem);
 }

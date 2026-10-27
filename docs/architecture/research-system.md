@@ -84,7 +84,7 @@ graph TB
 - **No C++ formula and no minimum-cost floor**: both live in the Lua config. The floor used to be `std::max(1, cost)` in C++, which turned an empty or broken formula — `LuaRuntime::EvalInt` returned 0 for both — into a valid-looking research cost of 1. `EvalInt` now throws, the parser requires a non-empty `cost_formula`, and the calculator rejects a non-positive result, so a broken mod formula fails loudly instead of making every tech cost 1.
 - **Pattern**: Thin Lua bridge, same shape as `PopCompositionCalculator`
 - **Per-tech modifiers**: optional `ThisTech` `tech_cost` StatModifiers on the tech config join the post-Lua `TechCost` product. There is no per-tech base cost field.
-- **Thinker sidecar**: [`config/research/manual/tech_cost_thinker.lua`](../../config/research/manual/tech_cost_thinker.lua) records Thinker's per-tech `tech_alt_cost` for a future profile; it is not on `GameDataPaths`.
+- **Thinker sidecar**: [`config/deviations/tech_cost_thinker.lua`](../../config/deviations/tech_cost_thinker.lua) records Thinker's per-tech `tech_alt_cost` for a future profile; it is not on `GameDataPaths`.
 - **World rules**: [`config/world_rules.json`](../../config/world_rules.json) is the session `WorldRules` source. Shipping emits `TechCost` 1.5× and `TechCostTurnLag` beside the combat WorldGlobal rules. `GameState` appends it once onto every faction's composed effects.
 
 ## Usage Flow

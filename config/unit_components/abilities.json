@@ -387,5 +387,21 @@
         }
       }
     ]
+  },
+  {
+    "id": "Poly_Encryption",
+    "name": "Polymorphic Encryption",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "poly_encryption"
+        }
+      }
+    ]
   }
 ]

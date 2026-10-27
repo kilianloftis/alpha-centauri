@@ -28,6 +28,8 @@ public:
     bool IsSized() const { return m_width > 0 && m_height > 0; }
     int GetWidth() const { return m_width; }
     int GetHeight() const { return m_height; }
+    // True when every stored cell is set. False when unsized.
+    bool AllSet() const;
 
     bool Test(int x, int y) const;
     bool Test(const Tile& rTile) const;

@@ -119,6 +119,11 @@ enum class StatId_t
     // Scales mission/escape success rates against this target (PureMultiplier). Hunter-Seeker
     // Algorithm emits AddPercent -50.
     ProbeSuccessScale,
+    // PureMultiplier on Chebyshev distance-to-HQ in the mind-control quote. Genejack ×2,
+    // Children's Creche ×0.5, Punishment Sphere ×0.5.
+    MindControlDistanceScale,
+    // PureMultiplier on genetic-plague pop and garrison damage. Hospitals emit ×0.5.
+    PlagueDamageScale,
     // Minerals credited to a newly founded base's production stockpile (resolved once at
     // founding from the new base's effect list plus the founding unit). Not a live yield.
     StartingMinerals,
@@ -313,6 +318,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
+        case StatId_t::MindControlDistanceScale:
+        case StatId_t::PlagueDamageScale:
         case StatId_t::TechCost:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
@@ -382,6 +389,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeDefense:
         case StatId_t::ProbeSuccessScale:
+        case StatId_t::MindControlDistanceScale:
+        case StatId_t::PlagueDamageScale:
         case StatId_t::StartingMinerals:
         case StatId_t::GrowthRate:
         case StatId_t::StartingSize:
@@ -499,6 +508,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
+    if (rStat == "mind_control_distance_scale") return StatId_t::MindControlDistanceScale;
+    if (rStat == "plague_damage_scale")     return StatId_t::PlagueDamageScale;
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_rank")             return StatId_t::MoraleRank;
     if (rStat == "morale_extra")            return StatId_t::MoraleExtra;
@@ -625,10 +636,18 @@ enum class RuleFlagId_t
     Headquarters,
     // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
     ProbeSubversionImmune,
-    // Target blocks probe actions unless the probe IgnoresProbeBlock (Hunter-Seeker, etc.).
+    // Target destroys unenhanced probe teams on contact (Hunter-Seeker).
     BlocksProbeTeams,
-    // Probe may attempt actions against BlocksProbeTeams / ProbeSubversionImmune targets.
+    // Probe is not destroyed on contact by BlocksProbeTeams. Does not pierce ProbeSubversionImmune.
     IgnoresProbeBlock,
+    // Combat unit counts as two garrison for mind-control cost.
+    PolyEncryption,
+    // Targeted sabotage of this facility is at least risk 2 (Perimeter Defense, Tachyon Field).
+    HighRiskSabotage,
+    // Tech that unlocks genetic plague (TFLAG_ALLOW_GENE_WARFARE).
+    AllowGeneWarfare,
+    // Tech that improves gene-warfare defense (TFLAG_INC_GENE_WARFARE_DEFENSE).
+    IncGeneWarfareDefense,
     // Faction may airdrop anywhere on the map (ignores AirdropRange). Graviton Theory /
     // Space Elevator.
     OrbitalInsertion,
@@ -683,6 +702,10 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
+    if (rFlag == "poly_encryption")             return RuleFlagId_t::PolyEncryption;
+    if (rFlag == "high_risk_sabotage")          return RuleFlagId_t::HighRiskSabotage;
+    if (rFlag == "allow_gene_warfare")          return RuleFlagId_t::AllowGeneWarfare;
+    if (rFlag == "inc_gene_warfare_defense")    return RuleFlagId_t::IncGeneWarfareDefense;
     if (rFlag == "orbital_insertion")           return RuleFlagId_t::OrbitalInsertion;
     if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
     if (rFlag == "non_combatants_destroyed_without_combatant")

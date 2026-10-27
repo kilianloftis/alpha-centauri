@@ -44,7 +44,7 @@
           "parameters": {
             "count": 1,
             "exclude_hq": true,
-            "exclude_secret_projects": false
+            "exclude_secret_projects": true
           }
         }
       ]
@@ -117,14 +117,6 @@
       "risk": 0,
       "required_tech": "gene_splicing",
       "on_success_effects": [
-        {
-          "type": "ModifyPopulation",
-          "parameters": {
-            "amount": -50,
-            "op": "AddPercent",
-            "min_size": 1
-          }
-        },
         {
           "type": "CommitAtrocity",
           "parameters": {

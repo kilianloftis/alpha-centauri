@@ -22,6 +22,7 @@
 #include "game/visibility/FactionExploredMap.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/base/BaseManager.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/production/ProductionManager.h"
 #include "game/production/IConstructable.h"
 #include "game/economy/EconomyManager.h"
@@ -41,6 +42,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/probes/ProbeActionConfig.h"
 #include "game/probes/ProbeActionResult.h"
 #include "game/effects/EffectEnums.h"
 #include "ui/style/UiStyle.h"
@@ -997,6 +999,18 @@ void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPla
 
 void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
 {
+    if (m_rGameState.GetProbeActions().WouldHunterSeekerDestroy(rProbe, rTargetTile,
+                                                               m_rGameState))
+    {
+        const ProbeActionResult_t result = m_rGameState.GetProbeActions().TryProbeAction(
+            rProbe, ProbeActionId_t::Infiltrate, rTargetTile, m_rGameState, BuildingId_t{});
+        if (result.outcome != ProbeActionOutcome_t::Rejected)
+        {
+            SelectNextAvailableUnit_();
+        }
+        return;
+    }
+
     std::vector<std::pair<ProbeActionId_t, std::string>> actions =
         m_rGameState.GetProbeActions().ListAvailableProbeActions(rProbe, rTargetTile,
                                                                  m_rGameState);
@@ -1021,6 +1035,11 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
                                {
                                    return;
                                }
+                               if (id == ProbeActionId_t::SabotageFacility)
+                               {
+                                   OpenSabotageFacilityPicker_(*pProbe, *pTargetTile);
+                                   return;
+                               }
                                const ProbeActionResult_t result =
                                    m_rGameState.GetProbeActions().TryProbeAction(
                                        *pProbe, id, *pTargetTile, m_rGameState, BuildingId_t{});
@@ -1034,6 +1053,72 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     DismissOpenModals_();
     auto pPopup = std::make_unique<ListSelectorPopup>(
         "Probe Actions", "No actions available", std::move(choices),
+        GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
+}
+
+void WorldView::OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTile)
+{
+    const BaseManager* pBase = m_rGameState.FindBaseAt(rTargetTile.GetX(), rTargetTile.GetY());
+    if (!pBase)
+    {
+        return;
+    }
+
+    FacilityExclusions_t exclusions;
+    exclusions.excludeHq = true;
+    exclusions.excludeSecretProjects = true;
+    const std::vector<const BuildingConfig_t*> facilities =
+        CollectDestroyableFacilities(*pBase, exclusions);
+
+    Unit* pProbe = &rProbe;
+    const Tile* pTargetTile = &rTargetTile;
+    std::vector<PopupChoice_t> choices;
+    choices.reserve(facilities.size() + 1);
+    for (const BuildingConfig_t* pFacility : facilities)
+    {
+        if (!pFacility)
+        {
+            continue;
+        }
+        const BuildingId_t facilityId = pFacility->id;
+        choices.push_back({pFacility->GetName(),
+                           [this, pProbe, pTargetTile, facilityId]
+                           {
+                               if (m_pSelectedUnit != pProbe)
+                               {
+                                   return;
+                               }
+                               const ProbeActionResult_t result =
+                                   m_rGameState.GetProbeActions().TryProbeAction(
+                                       *pProbe, ProbeActionId_t::SabotageFacility, *pTargetTile,
+                                       m_rGameState, facilityId);
+                               if (result.outcome != ProbeActionOutcome_t::Rejected)
+                               {
+                                   SelectNextAvailableUnit_();
+                               }
+                           }});
+    }
+    choices.push_back({"Wipe production",
+                       [this, pProbe, pTargetTile]
+                       {
+                           if (m_pSelectedUnit != pProbe)
+                           {
+                               return;
+                           }
+                           const ProbeActionResult_t result =
+                               m_rGameState.GetProbeActions().TryProbeAction(
+                                   *pProbe, ProbeActionId_t::SabotageFacility, *pTargetTile,
+                                   m_rGameState, BuildingId_t{});
+                           if (result.outcome != ProbeActionOutcome_t::Rejected)
+                           {
+                               SelectNextAvailableUnit_();
+                           }
+                       }});
+
+    DismissOpenModals_();
+    auto pPopup = std::make_unique<ListSelectorPopup>(
+        "Sabotage Facility", "No facilities available", std::move(choices),
         GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
     m_elements.push_back(std::move(pPopup));
 }

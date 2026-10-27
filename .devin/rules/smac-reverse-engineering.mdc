@@ -1,5 +1,5 @@
 ---
-description: How to answer "what does the original game do" from terranx.exe, using Thinker as the address map
+description: How to answer "what does the original game do" from terranx.exe, using Thinker as the address map, and where to record deviations from it
 alwaysApply: true
 ---
 
@@ -41,3 +41,32 @@ When a question is "what does SMAC do", answer it from the binary, not from the 
   extreme inputs should pick and confirm it from the art and an in-game screenshot.
 - **Art palette values are shifted.** SMAC loads PCX art 10 slots up, so a byte the code writes
   is `palette.pcx` index + 10 (see `docs/thinker/smac-palette-lighting.md`).
+
+## Deviations
+
+[`config/deviations/README.md`](config/deviations/README.md) lists every way this game differs
+from the binary. The map says what the binary and Thinker do; the deviations file says what we
+do about it.
+
+- **Record a deviation when it is found or decided**, not when it ships:
+  - a binary bug (code that contradicts its own display, text or evident intent);
+  - a Thinker `Fix:` or config option you add to the map;
+  - a manual or wiki rule the binary does not implement;
+  - a rule of our own that the binary does not have, from a plan, a review or the user.
+- Follow the file's entry format. Every entry starts under **TODO**, with **Missing** naming
+  what is absent. It moves to **Completed** only when every version (original, Thinker where it
+  differs, ours) is playable:
+  - code: each version implemented and selected by a config switch (`code-kinds.mdc`
+    "Switches");
+  - effects, config or Lua: each version implemented as a file, the non-default ones stored
+    in `config/deviations/`. Swapping the file is the switch until variant profiles exist;
+    engine work a file still needs (a missing Lua binding) is its own TODO entry.
+  Shipping our version alone does not complete an entry. A Thinker change we play the binary's
+  version of, with Thinker's unimplemented, goes under **Thinker changes not adopted**. No
+  per-item status markers.
+- **A plan that changes behaviour away from the binary** lists the deviations-file entry in its
+  touch list.
+- **Unshipped variant rule sets** (alternative effect lists, Lua formulas) live in
+  `config/deviations/` and get a row in its Variant files table.
+- Never ship a deviation silently. If the binary's behaviour is unknown, leave a TODO in the
+  code and an entry under TODO here rather than inventing a rule.

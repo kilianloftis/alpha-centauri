@@ -20,12 +20,16 @@ class BaseManager;
 
 struct ProbeChance_t
 {
-    // 0..100 style rates matching Thinker display.
+    // 0..100 style rates matching Thinker display. The integer mission/escape rolls use
+    // probeStrength / escapeStrength and the Algo/HSA coins, not these percents.
     int successRate = 100;
     int survivalRate = 100;
     int risk = 0;
     int probeStrength = 1;
+    int escapeStrength = 1;
     int targetProbeEffect = 0;
+    bool bAlgoSave = false;
+    bool bHsaCoin = false;
 };
 
 struct ProbeRollResult_t
@@ -58,33 +62,55 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   double failureScale,
                                   double successScale);
 
-// The action's risk, or its repeat risk at a base this faction has probed before. Sabotaging a
-// chosen facility at a headquarters is at least risk 2.
+// The action's risk, or steal-tech's repeat risk when the base already has stolen research.
+// Targeted sabotage at a headquarters, or at Perimeter Defense / Tachyon Field, is at least
+// risk 2.
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-                const std::string& facilityId, bool bRepeatAtBase);
+                const std::string& facilityId);
 
 // ComputeProbeChances for this probe and target: its effective morale, the target's probe
 // defense, the failure scale unless the target BlocksProbeTeams, and the target's success scale.
+// Sets bAlgoSave from IgnoresProbeBlock and bHsaCoin from BlocksProbeTeams.
 ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk);
 
-// A drain takes the base's share of the target treasury, at least a morale-tenth of it, plus
-// half of what is left of the share, never more than the treasury holds.
-int StealEnergyAmount(const BaseManager& rBase, const Faction& rTarget, int morale);
+// True when the target's Hunter-Seeker would destroy this probe on contact (no Algo).
+bool HunterSeekerDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
 
-// Techs the actor could research now that the target already knows.
+// Floor, exclusive remainder bound (share − floor), and the target treasury for a drain.
+struct StealEnergyQuote_t
+{
+    int floor = 0;
+    int remainderBound = 0;
+    int treasury = 0;
+};
+
+StealEnergyQuote_t QuoteStealEnergy(const BaseManager& rBase, const Faction& rTarget, int morale);
+
+// floor + remainderDraw/2, clamped to the treasury; a result of 1 becomes 0.
+int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw);
+
+// Every tech the target has discovered that the actor has not.
 std::vector<std::string> StealableTechs(const Faction& rActor, const Faction& rTarget);
 
-// Whether the target faction detects the probe and so learns who sent a covert one.
-// TODO: the detection roll ("getting away cleanly") is not implemented; nothing is detected.
+// A completed probe mission is attributed; Covert still hides the unit on the map.
 bool ProbeDetected(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                    const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
 
+// False for infiltrate (bit set before the roll) and Total Thought Control.
+bool ProbeDeclaresHostileAct(const ProbeActionConfig_t& rAction);
+
 // The action as a hostile act against the target's faction: HostileActAgainst the targeted unit
-// or base faction, and attributed as well when ProbeDetected.
+// or base faction, attributed when ProbeDetected.
 HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                              const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
 
 bool IsHeadquarters(const BaseManager& rBase);
+
+// Pop removed by a genetic plague at rBase (capped at size − 1).
+int GeneticPlagueKilled(const BaseManager& rBase);
+
+// Nearest own base whose tile the probe's domain can occupy. Null when none is legal.
+const BaseManager* ProbeReturnBase(const Unit& rProbe);
 
 // Probe eligibility, including that a paid action's cost can be quoted. Moves and adjacency
 // are ProbeActionExecutor's.

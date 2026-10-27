@@ -5,10 +5,8 @@
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/economy/EconomyManager.h"
-#include "game/visibility/FactionExploredMap.h"
+#include "game/visibility/VisibilityMutations.h"
 #include "game/research/ResearchManager.h"
-#include "game/map/Tile.h"
-#include "game/map/WorldMap.h"
 
 #include <variant>
 #include <vector>
@@ -49,23 +47,7 @@ struct Deliver_
 
     void operator()(const TradeWorldMap_t& /*rMap*/) const
     {
-        const FactionExploredMap& rGiverExplored = rGiver.GetExploredMap();
-        FactionExploredMap& rReceiverExplored = rReceiver.GetExploredMap();
-        std::vector<const Tile*> traded;
-        for (const auto& pOwnedTile : rReceiver.GetWorldMap().GetTiles())
-        {
-            if (pOwnedTile && rGiverExplored.IsExplored(*pOwnedTile)
-                && !rReceiverExplored.IsExplored(*pOwnedTile))
-            {
-                traded.push_back(pOwnedTile.get());
-            }
-        }
-        rReceiverExplored.MergeFrom(rGiverExplored);
-        // TODO: confirm in terranx.exe what a faction sees on tiles explored by map trade or shroud removal
-        for (const Tile* pTile : traded)
-        {
-            rReceiver.GetTileMemory().Record(*pTile);
-        }
+        CopyExploredMap(rReceiver, rGiver);
     }
 
     void operator()(const TradeDeclareVendetta_t& rVendetta) const

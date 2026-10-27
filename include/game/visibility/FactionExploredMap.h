@@ -22,6 +22,9 @@ public:
     bool IsExplored(int x, int y) const { return m_flags.Test(x, y); }
     bool IsExplored(const Tile& rTile) const { return m_flags.Test(rTile); }
 
+    // Unsized maps count as fully explored (no shroud). A sized map is full after MarkAll.
+    bool IsFullyExplored() const { return !IsSized() || m_flags.AllSet(); }
+
     void Mark(const Tile& rTile) { m_flags.Set(rTile); }
 
     // Mark every tile explored (e.g. orbital satellite / RemoveShroud game rule).

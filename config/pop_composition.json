@@ -48,6 +48,15 @@
         "amount": 2,
         "op": "AddPercent"
       }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "ThisBase",
+      "parameters": {
+        "stat": "probe_action_cost",
+        "amount": 100,
+        "op": "AddPercent"
+      }
     }
   ],
   "riot_tiers": [

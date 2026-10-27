@@ -67,6 +67,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
+    CHECK(ParseStatId("mind_control_distance_scale") == StatId_t::MindControlDistanceScale);
+    CHECK(ParseStatId("plague_damage_scale") == StatId_t::PlagueDamageScale);
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
     CHECK(ParseStatId("morale_rank") == StatId_t::MoraleRank);
     CHECK(ParseStatId("morale_extra") == StatId_t::MoraleExtra);
@@ -166,6 +168,11 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::BlocksProbeTeams);
     CHECK(ParseRuleFlagId("ignores_probe_block")
           == RuleFlagId_t::IgnoresProbeBlock);
+    CHECK(ParseRuleFlagId("poly_encryption") == RuleFlagId_t::PolyEncryption);
+    CHECK(ParseRuleFlagId("high_risk_sabotage") == RuleFlagId_t::HighRiskSabotage);
+    CHECK(ParseRuleFlagId("allow_gene_warfare") == RuleFlagId_t::AllowGeneWarfare);
+    CHECK(ParseRuleFlagId("inc_gene_warfare_defense")
+          == RuleFlagId_t::IncGeneWarfareDefense);
     CHECK(ParseRuleFlagId("airdrop_launch") == RuleFlagId_t::AirdropLaunch);
     CHECK(ParseRuleFlagId("airdrop_interdiction") == RuleFlagId_t::AirdropInterdiction);
     CHECK(ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);

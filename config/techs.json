@@ -3,7 +3,16 @@
     "id": "biogenetics",
     "name": "Biogenetics",
     "category": "discover",
-    "icon": "assets/sprites/techs/tech000.png"
+    "icon": "assets/sprites/techs/tech000.png",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
+    ]
   },
   {
     "id": "industrial_base",
@@ -528,6 +537,15 @@
     "prerequisites": [
       "biogenetics",
       "ethical_calculus"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
     ]
   },
   {
@@ -538,6 +556,15 @@
     "prerequisites": [
       "gene_splicing",
       "neural_grafting"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
     ]
   },
   {
@@ -548,6 +575,15 @@
     "prerequisites": [
       "mind_machine_interface",
       "retroviral_engineering"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
     ]
   },
   {
@@ -760,6 +796,15 @@
     "prerequisites": [
       "self_aware_machines",
       "super_tensile_solids"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
     ]
   },
   {
@@ -832,6 +877,22 @@
     "prerequisites": [
       "bio_engineering",
       "advanced_military_algorithms"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "allow_gene_warfare"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "inc_gene_warfare_defense"
+        }
+      }
     ]
   },
   {

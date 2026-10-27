@@ -30,6 +30,22 @@ void TileFlagMap::ClearAll()
     m_revision.Bump();
 }
 
+bool TileFlagMap::AllSet() const
+{
+    if (!IsSized() || m_flags.empty())
+    {
+        return false;
+    }
+    for (uint8_t flag : m_flags)
+    {
+        if (!flag)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 void TileFlagMap::SetAll()
 {
     if (!IsSized())

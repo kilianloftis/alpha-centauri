@@ -26,7 +26,7 @@ void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
                            const ProbeTarget_t& rTarget, GameState& rGameState,
                            std::mt19937& rRng);
 
-// Roll mission then escape. RISK 0 missions are always successful (100%).
+// Integer mission then escape rolls (terranx probe 0x59F120), plus Algo save / HSA extra coins.
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng);
 
 // Intrinsic XP bump after a fully successful probe mission (caps at max).

@@ -6,6 +6,7 @@
 #include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
@@ -13,6 +14,10 @@
 #include "game/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/probes/MindControlLedger.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStatus.h"
+#include "game/atrocities/AtrocityLedger.h"
+#include "game/population/AssimilationTracker.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -21,6 +26,12 @@
 #include "game/combat/MoraleRules.h"
 #include "game/research/ResearchRules.h"
 #include "game/research/TechConfigParser.h"
+#include "game/research/TechRegistry.h"
+#include "game/buildings/BuildingRules.h"
+#include "game/buildings/FacilityExclusions.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/production/ProductionManager.h"
+#include "game/units/UnitDomain.h"
 
 #include <algorithm>
 #include <cmath>
@@ -54,6 +65,51 @@ double ResolveProbeActionCostMultiplier_(const BaseManager& rBase)
                            SeedFor(StatId_t::ProbeActionCost), nullptr);
 }
 
+double ResolveMindControlDistanceScale_(const BaseManager& rBase)
+{
+    return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::MindControlDistanceScale,
+                           SeedFor(StatId_t::MindControlDistanceScale), nullptr);
+}
+
+double ResolveActorProbeActionCostMultiplier_(const Faction& rActor)
+{
+    if (const BaseManager* pHq = rActor.GetHeadquarters())
+    {
+        return ResolveProbeActionCostMultiplier_(*pHq);
+    }
+    for (const BaseManager& rBase : rActor.Bases())
+    {
+        return ResolveProbeActionCostMultiplier_(rBase);
+    }
+    return 1.0;
+}
+
+int ApplyDiplomaticCostMods_(int cost, const Faction& rActor, const ProbeTarget_t& rTarget)
+{
+    const GameState& rGame = CurrentGameState();
+    if (rGame.GetDiplomacyLedger().GetStatus(rActor.GetFactionId(),
+                                            rTarget.rFaction.GetFactionId())
+        == DiplomaticStatus_t::Pact)
+    {
+        cost *= 2;
+    }
+    if (const BaseManager* pBase = AsBase(rTarget))
+    {
+        const AssimilationState& rWindow =
+            pBase->GetPopulation().GetAssimilation().OccupierWindow();
+        if (rWindow.IsActive() && rWindow.formerOwner == rActor.GetFactionId())
+        {
+            cost /= 2;
+        }
+    }
+    if (rGame.GetAtrocityLedger().HasVictimized(rActor.GetFactionId(),
+                                               rTarget.rFaction.GetFactionId()))
+    {
+        cost *= 2;
+    }
+    return std::max(1, cost);
+}
+
 int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t ownerId)
 {
     int count = 0;
@@ -65,7 +121,7 @@ int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t
         }
         if (ResolveStat(*pUnit, StatId_t::Attack) > 0 || ResolveStat(*pUnit, StatId_t::Defense) > 0)
         {
-            ++count;
+            count += ResolveFlag(*pUnit, RuleFlagId_t::PolyEncryption) ? 2 : 1;
         }
     }
     return count;
@@ -124,7 +180,11 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int acto
 {
     const int garrison =
         CountCombatUnitsOnTile_(rBase.GetTile(), rMap, rTargetFaction.GetFactionId());
-    const int distance = DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
+    const int rawDistance =
+        DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
+    const double distScale = ResolveMindControlDistanceScale_(rBase);
+    const int distance =
+        static_cast<int>(std::lround(static_cast<double>(rawDistance) * distScale));
     return QuoteMindControlBaseCost_(rCost, garrison, actorMindControlTotal,
                                      rBase.GetPopulation().GetSize(),
                                      rTargetFaction.GetEconomy().GetEnergy(), distance,
@@ -150,6 +210,46 @@ bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAc
     }
     return MeetsTechRequirement(rAction.requiredTech,
                                 rProbe.GetFaction().GetResearch().GetDiscoveredTechs());
+}
+
+bool ConfigHasFlag_(const std::vector<EffectConfig_t>& rEffects, RuleFlagId_t flag)
+{
+    for (const EffectConfig_t& rEffect : rEffects)
+    {
+        const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
+        if (pFlag && pFlag->flag == flag)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SabotageFacilityOffered_(const BaseManager& rBase)
+{
+    FacilityExclusions_t exclusions;
+    exclusions.excludeHq = true;
+    exclusions.excludeSecretProjects = true;
+    if (!CollectDestroyableFacilities(rBase, exclusions).empty())
+    {
+        return true;
+    }
+    return rBase.GetProduction().GetCurrentProduction() != nullptr;
+}
+
+bool ProbeCanOccupyBase_(const Unit& rProbe, const BaseManager& rBase)
+{
+    switch (rProbe.GetDomain())
+    {
+        case UnitDomain_t::Sea:
+            return rBase.MayOccupyWater();
+        case UnitDomain_t::Land:
+            return !rBase.GetTile().IsWater();
+        case UnitDomain_t::Air:
+        case UnitDomain_t::Orbital:
+            return true;
+    }
+    return false;
 }
 
 } // namespace
@@ -206,6 +306,7 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffe
     chances.targetProbeEffect = targetProbeEffect;
 
     const int morale = std::max(1, moraleLevel);
+    chances.escapeStrength = std::max(1, morale - targetProbeEffect);
     if (risk < 0)
     {
         chances.successRate = 100;
@@ -225,8 +326,7 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffe
     const double scaledSuccess = static_cast<double>(successRate) * successScale;
     successRate = static_cast<int>(std::lround(scaledSuccess));
 
-    const int escapeStrength = std::max(1, morale - targetProbeEffect);
-    int lossRate = ((risk + 1) * 100) / escapeStrength;
+    int lossRate = ((risk + 1) * 100) / chances.escapeStrength;
     const double scaledLoss = static_cast<double>(lossRate) * failureScale;
     lossRate = static_cast<int>(std::lround(scaledLoss));
     int survivalRate = 100 - lossRate;
@@ -241,7 +341,13 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffe
 bool ProbeDetected(const Unit& /*rProbe*/, const ProbeActionConfig_t& /*rAction*/,
                    const ProbeTarget_t& /*rTarget*/, const ProbeRollResult_t& /*rRoll*/)
 {
-    return false;
+    return true;
+}
+
+bool ProbeDeclaresHostileAct(const ProbeActionConfig_t& rAction)
+{
+    return rAction.id != ProbeActionId_t::Infiltrate
+        && rAction.id != ProbeActionId_t::TotalThoughtControl;
 }
 
 HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAction,
@@ -260,6 +366,69 @@ bool IsHeadquarters(const BaseManager& rBase)
     return ResolveFlag(rBase, RuleFlagId_t::Headquarters);
 }
 
+int GeneticPlagueKilled(const BaseManager& rBase)
+{
+    const int size = rBase.GetPopulation().GetSize();
+    const int cap = std::max(0, size - 1);
+    if (cap == 0)
+    {
+        return 0;
+    }
+
+    int defenseTechs = 0;
+    int known = 0;
+    const TechRegistry* pTechs = CurrentGameState().GetGameData().techRegistry.get();
+    if (pTechs)
+    {
+        const ResearchManager& rResearch = rBase.GetFaction().GetResearch();
+        for (const TechConfig_t& rTech : pTechs->GetAll())
+        {
+            if (!ConfigHasFlag_(rTech.effects, RuleFlagId_t::IncGeneWarfareDefense))
+            {
+                continue;
+            }
+            ++defenseTechs;
+            if (rResearch.HasDiscoveredTech(rTech.id))
+            {
+                ++known;
+            }
+        }
+    }
+    const int defenseCap = std::max(1, defenseTechs);
+    const int knownClamped = std::clamp(known, 1, defenseCap);
+    int killed = size * (defenseCap - knownClamped) / defenseCap;
+    killed += 1;
+    if (rBase.HasPlagueIntroduced())
+    {
+        killed /= 2;
+    }
+    const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
+                                         SeedFor(StatId_t::PlagueDamageScale), nullptr);
+    killed = static_cast<int>(std::lround(static_cast<double>(killed) * scale));
+    return std::clamp(killed, 0, cap);
+}
+
+const BaseManager* ProbeReturnBase(const Unit& rProbe)
+{
+    const WorldMap& rMap = CurrentGameState().GetWorldMap();
+    const BaseManager* pBest = nullptr;
+    int bestDist = 0;
+    for (const BaseManager& rBase : rProbe.GetFaction().Bases())
+    {
+        if (!ProbeCanOccupyBase_(rProbe, rBase))
+        {
+            continue;
+        }
+        const int dist = ChebyshevDistance(rProbe.GetTile(), rBase.GetTile(), rMap.GetWidth());
+        if (!pBest || dist < bestDist)
+        {
+            pBest = &rBase;
+            bestDist = dist;
+        }
+    }
+    return pBest;
+}
+
 namespace
 {
 
@@ -276,6 +445,12 @@ bool HqAllowsAction_(const ProbeActionConfig_t& rAction, const BaseManager& rBas
 
 } // namespace
 
+bool HunterSeekerDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget)
+{
+    return TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams)
+        && !ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
+}
+
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                     const ProbeTarget_t& rTarget)
 {
@@ -288,27 +463,20 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
         return false;
     }
 
-    const bool bIgnoresBlock = ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
-    if (!bIgnoresBlock && TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
-    {
-        return false;
-    }
-
     const BaseManager* pBase = AsBase(rTarget);
     if (pBase && !HqAllowsAction_(rAction, *pBase))
     {
         return false;
     }
 
-    if (rAction.cost.has_value() && !bIgnoresBlock
+    if (rAction.cost.has_value()
         && TargetHasFlag(rTarget, RuleFlagId_t::ProbeSubversionImmune))
     {
         return false;
     }
 
-    // TODO: no facility picker exists, so sabotage_facility could only fail; offer it once one
-    // does.
-    if (rAction.id == ProbeActionId_t::SabotageFacility)
+    if (rAction.id == ProbeActionId_t::SabotageFacility
+        && (!pBase || !SabotageFacilityOffered_(*pBase)))
     {
         return false;
     }
@@ -342,11 +510,12 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
     {
         costMultiplier = ResolveProbeActionCostMultiplier_(*pSource);
     }
+    costMultiplier *= ResolveActorProbeActionCostMultiplier_(rActor);
 
     const GameState& rGame = CurrentGameState();
     const WorldMap& rMap = rGame.GetWorldMap();
     const MindControlLedger& rMindControl = rGame.GetMindControlLedger();
-    return std::visit(
+    const std::optional<int> quoted = std::visit(
         [&](const auto& rConcrete) -> std::optional<int>
         {
             using T = std::decay_t<decltype(rConcrete)>;
@@ -363,22 +532,39 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             }
         },
         rTarget.ref);
+    if (!quoted.has_value())
+    {
+        return std::nullopt;
+    }
+    return ApplyDiplomaticCostMods_(*quoted, rActor, rTarget);
 }
 
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-                const std::string& facilityId, bool bRepeatAtBase)
+                const std::string& facilityId)
 {
     int risk = rAction.risk;
-    if (bRepeatAtBase && rAction.riskRepeat.has_value())
+    if (rAction.id == ProbeActionId_t::StealTech && rAction.riskRepeat.has_value())
     {
-        risk = *rAction.riskRepeat;
+        const BaseManager* pBase = AsBase(rTarget);
+        if (pBase && pBase->HasStolenResearch())
+        {
+            risk = *rAction.riskRepeat;
+        }
     }
     if (rAction.id == ProbeActionId_t::SabotageFacility && !facilityId.empty())
     {
         const BaseManager* pBase = AsBase(rTarget);
-        if (pBase && IsHeadquarters(*pBase))
+        if (pBase)
         {
-            risk = std::max(risk, 2);
+            if (IsHeadquarters(*pBase))
+            {
+                risk = std::max(risk, 2);
+            }
+            const BuildingConfig_t* pFacility = pBase->GetBuildingManager().FindBuilding(facilityId);
+            if (pFacility && ConfigHasFlag_(pFacility->effects, RuleFlagId_t::HighRiskSabotage))
+            {
+                risk = std::max(risk, 2);
+            }
         }
     }
     return risk;
@@ -399,32 +585,48 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
         EffectContext_t{});
     }
     const double successScale = ResolveTargetSuccessScale(rTarget);
-    return ComputeProbeChances(morale, risk, targetProbeEffect, rFormula, failureScale,
-                               successScale);
+    ProbeChance_t chances =
+        ComputeProbeChances(morale, risk, targetProbeEffect, rFormula, failureScale, successScale);
+    chances.bAlgoSave = ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
+    chances.bHsaCoin = TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams);
+    return chances;
 }
 
-int StealEnergyAmount(const BaseManager& rBase, const Faction& rTarget, int morale)
+StealEnergyQuote_t QuoteStealEnergy(const BaseManager& rBase, const Faction& rTarget, int morale)
 {
-    const int energy = rTarget.GetEconomy().GetEnergy();
-    if (energy <= 0)
+    StealEnergyQuote_t quote;
+    quote.treasury = rTarget.GetEconomy().GetEnergy();
+    if (quote.treasury <= 0)
     {
-        return 0;
+        return quote;
     }
     const int pop = rBase.GetPopulation().GetSize();
     const int factionPop = rTarget.TotalPopulation();
-    const int share = energy * pop / (factionPop + 1);
-    const int minSteal = std::max(0, (share * std::max(1, morale)) / 10);
-    return std::clamp(minSteal + std::max(0, (share - minSteal) / 2), 0, energy);
+    const int share = quote.treasury * pop / (factionPop + 1);
+    quote.floor = share * std::max(1, morale) / 6;
+    quote.remainderBound = std::max(0, share - quote.floor);
+    return quote;
+}
+
+int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw)
+{
+    const int remainder = std::max(0, remainderDraw) / 2;
+    int stolen = std::clamp(rQuote.floor + remainder, 0, rQuote.treasury);
+    if (stolen == 1)
+    {
+        stolen = 0;
+    }
+    return stolen;
 }
 
 std::vector<std::string> StealableTechs(const Faction& rActor, const Faction& rTarget)
 {
     std::vector<std::string> techs;
-    for (const TechConfig_t* pTech : AvailableTechs(rActor.GetResearch()))
+    for (const TechId& rTechId : rTarget.GetResearch().GetDiscoveredTechs())
     {
-        if (rTarget.GetResearch().HasDiscoveredTech(pTech->id))
+        if (!rActor.GetResearch().HasDiscoveredTech(rTechId))
         {
-            techs.push_back(pTech->id);
+            techs.push_back(rTechId);
         }
     }
     return techs;

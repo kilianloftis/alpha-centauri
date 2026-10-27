@@ -536,9 +536,11 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 `on_paid_effects` fire once a paid probe action's cost is paid, before the success roll, so a
 failed attempt still fires them; an action without `cost` rejects the list. `on_success_effects`
 fire from the mission handler, and only the handlers that run them (`infiltrate`,
-`sabotage_random`, `genetic_plague`, `subvert_unit`) accept the list. Both use the probe mission
-context: the actor is the subject faction, the target base or unit is the subject, and its
-owner is `actionTarget`.
+`sabotage_random`, `genetic_plague`, `subvert_unit`) accept the list. Genetic plague's
+population math lives in `ProbeRules::GeneticPlagueKilled` (defense techs, hospitals'
+`plague_damage_scale`, prior-plague flag); the effects list records the atrocity. Both use the
+probe mission context: the actor is the subject faction, the target base or unit is the subject,
+and its owner is `actionTarget`.
 
 `on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
 unit arrives. `UnitMoveExecutor` reports the arrival through `IUnitOrderWorld::OnImprovementVisited`,
@@ -1093,7 +1095,9 @@ units, pops, or tiles according to each entry's `scope`.
 **A new rule flag**: add the `RuleFlagId_t` enumerator and its `ParseRuleFlagId` string, then
 check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
 `Unit::ResolveFlag_` for the pattern. Context-free `ResolveFlag` overloads skip effects
-that carry a `condition` (same rule as `FilterByStatId`).
+that carry a `condition` (same rule as `FilterByStatId`). Probe gene-warfare techs carry
+`inc_gene_warfare_defense` (and Retroviral Engineering also `allow_gene_warfare`); Perimeter
+Defense and Tachyon Field carry `high_risk_sabotage`; Poly Encryption carries `poly_encryption`.
 
 **Interaction grids** (`config/interaction_grids.json`) hold the stock matrices. Every grid is
 the acting unit's domain (the row) against one other thing (the column): `enter` uses

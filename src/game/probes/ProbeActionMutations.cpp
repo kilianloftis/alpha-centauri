@@ -17,13 +17,19 @@
 #include "game/production/IConstructable.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
+#include "game/map/MapUtils.h"
+#include "game/map/UnitPositionIndex.h"
 #include "game/research/TechConfigParser.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
 #include "game/units/Unit.h"
+#include "game/visibility/VisibilityMutations.h"
 #include "lib/RandomRoll.h"
 
+#include "game/effects/EffectEnums.h"
+
 #include <algorithm>
+#include <cmath>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -80,50 +86,82 @@ bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState
     return true;
 }
 
-bool ApplyStealTech_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& rResult,
-                     std::mt19937& rRng)
+bool StealMapOrNothing_(Faction& rActor, const Faction& rTarget, ProbeActionResult_t& rResult)
 {
-    const std::vector<TechId> candidates = StealableTechs(rActor, rBase.GetFaction());
-    if (candidates.empty())
+    if (CopyExploredMap(rActor, rTarget))
     {
-        rResult.detail = ProbeNoTech_t{};
-        return true; // mission succeeds but nothing to steal
+        rResult.detail = ProbeStolenMap_t{};
+        return true;
     }
-    std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
-    const TechId techId = candidates[dist(rRng)];
+    rResult.detail = ProbeNoTech_t{};
+    return true;
+}
+
+bool StealRandomTech_(Faction& rActor, const std::vector<TechId>& rCandidates,
+                      ProbeActionResult_t& rResult, std::mt19937& rRng)
+{
+    const int bound = static_cast<int>(rCandidates.size());
+    const int index = RollExclusiveMax(bound, rRng);
+    const size_t chosen = static_cast<size_t>(index);
+    const TechId techId = rCandidates[chosen];
     rActor.GetResearch().AddDiscoveredTech(techId);
     rResult.detail = ProbeStolenTech_t{techId};
     return true;
 }
 
+bool ApplyStealTech_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& rResult,
+                     std::mt19937& rRng)
+{
+    rBase.SetStolenResearch();
+    const std::vector<TechId> candidates = StealableTechs(rActor, rBase.GetFaction());
+    if (candidates.empty())
+    {
+        return StealMapOrNothing_(rActor, rBase.GetFaction(), rResult);
+    }
+    return StealRandomTech_(rActor, candidates, rResult, rRng);
+}
+
 bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
-                       ProbeActionResult_t& rResult)
+                       ProbeActionResult_t& rResult, std::mt19937& rRng)
 {
     Faction& rTarget = rBase.GetFaction();
     Faction& rActor = rProbe.GetFaction();
     EffectContext_t ctx;
     const MoraleCalculator& rMorale = *rGameState.GetGameData().moraleCalculator;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
-    const int stolen = StealEnergyAmount(rBase, rTarget, morale);
-    // StealEnergyAmount clamps to the target's treasury, so this can never overdraw.
+    const StealEnergyQuote_t quote = QuoteStealEnergy(rBase, rTarget, morale);
+    const int remainderDraw = RollExclusiveMax(quote.remainderBound, rRng);
+    const int stolen = StealEnergyAmount(quote, remainderDraw);
     rTarget.GetEconomy().SpendEnergy(stolen);
     rActor.GetEconomy().AddEnergy(stolen);
     rResult.detail = ProbeEnergyStolen_t{stolen};
     return true;
 }
 
-// Targeted sabotage with an empty or unknown facility id fails; it is not random sabotage.
+bool WipeProduction_(BaseManager& rBase, ProbeActionResult_t& rResult)
+{
+    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
+    const std::string itemName = pItem ? pItem->GetName() : std::string{};
+    rBase.GetProduction().SetProduction(nullptr, rBase.GetBaseEffects());
+    rBase.GetProduction().SetMineralStockpile(0);
+    rResult.detail = ProbeProductionWiped_t{itemName};
+    return true;
+}
+
+// Targeted sabotage with an unknown facility id fails; an empty id wipes production.
 bool ApplyTargetedSabotage_(BaseManager& rBase, const BuildingId_t& facilityId,
                             ProbeActionResult_t& rResult)
 {
-    const BuildingConfig_t* pTarget =
-        facilityId.empty() ? nullptr : rBase.GetBuildingManager().FindBuilding(facilityId);
+    if (facilityId.empty())
+    {
+        return WipeProduction_(rBase, rResult);
+    }
+    const BuildingConfig_t* pTarget = rBase.GetBuildingManager().FindBuilding(facilityId);
     if (!pTarget)
     {
         rResult.detail = ProbeNoTarget_t{};
         return false;
     }
-    // TODO: whether sabotage should permanently delete a secret project is unconfirmed.
     rBase.GetBuildingManager().DestroyBuilding(pTarget->id);
     rResult.detail = ProbeDestroyedFacility_t{facilityId};
     return true;
@@ -152,12 +190,7 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
         }
     }
 
-    const IConstructable* pItem = rBase.GetProduction().GetCurrentProduction();
-    const std::string itemName = pItem ? pItem->GetName() : std::string{};
-    rBase.GetProduction().SetProduction(nullptr, rBase.GetBaseEffects());
-    rBase.GetProduction().SetMineralStockpile(0);
-    rResult.detail = ProbeProductionWiped_t{itemName};
-    return true;
+    return WipeProduction_(rBase, rResult);
 }
 
 bool ApplyInciteDroneRiots_(BaseManager& rBase, const ProbeActionConfig_t& rConfig,
@@ -176,39 +209,101 @@ bool ApplyInciteDroneRiots_(BaseManager& rBase, const ProbeActionConfig_t& rConf
     return true;
 }
 
-bool ApplyAssassinate_(BaseManager& rBase, ProbeActionResult_t& rResult)
+bool ApplyAssassinate_(BaseManager& rBase, ProbeActionResult_t& rResult, std::mt19937& rRng)
 {
     ResearchManager& rResearch = rBase.GetFaction().GetResearch();
-    const int points = rResearch.GetAccumulatedPoints();
-    rResearch.SetAccumulatedPoints(0);
-    rResult.detail = ProbeResearchWiped_t{points};
+    const int stock = rResearch.GetAccumulatedPoints();
+    const int lost = RollExclusiveMax(stock, rRng);
+    rResearch.SetAccumulatedPoints(stock - lost);
+    rResult.detail = ProbeResearchWiped_t{lost};
     return true;
 }
 
-bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& rResult)
+void TransferCapturedGarrison_(BaseManager& rCaptured, Faction& rOldOwner, Faction& rActor,
+                               GameState& rGameState)
+{
+    WorldMap& rMap = rGameState.GetWorldMap();
+    const FactionId_t oldOwnerId = rOldOwner.GetFactionId();
+    std::vector<UnitId_t> unitIds;
+    ForEachTileInChebyshevRadius(rCaptured.GetTile(), rMap, 1,
+        [&](Tile* pTile, int distance)
+        {
+            if (!pTile)
+            {
+                return;
+            }
+            if (distance == 1 && rGameState.FindBaseAt(pTile->GetX(), pTile->GetY()) != nullptr)
+            {
+                return;
+            }
+            for (Unit* pUnit : rMap.GetUnitPositions().GetUnitsOnTile(*pTile))
+            {
+                if (pUnit && pUnit->GetFaction().GetFactionId() == oldOwnerId)
+                {
+                    unitIds.push_back(pUnit->GetUnitId());
+                }
+            }
+        });
+    for (const UnitId_t unitId : unitIds)
+    {
+        rOldOwner.TransferUnitTo(unitId, rActor);
+    }
+}
+
+bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
+                           ProbeActionResult_t& rResult)
 {
     Faction& rTarget = rBase.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
     rBase.GetPopulation().NotifyCaptured(rTarget.GetFactionId(), rActor.GetFactionId());
     rTarget.TransferBaseTo(baseId, rActor);
+    TransferCapturedGarrison_(rBase, rTarget, rActor, rGameState);
     rResult.detail = ProbeBaseCaptured_t{};
     return true;
+}
+
+void DamagePlagueGarrison_(BaseManager& rBase, GameState& rGameState, std::mt19937& rRng)
+{
+    const bool bPrior = rBase.HasPlagueIntroduced();
+    const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
+                                         SeedFor(StatId_t::PlagueDamageScale), nullptr);
+    for (Unit* pUnit : rGameState.GetWorldMap().GetAllUnitsOnTile(rBase.GetTile()))
+    {
+        if (!pUnit)
+        {
+            continue;
+        }
+        const int hp = pUnit->GetCurrentHp();
+        const int half = hp / 2;
+        int damage = half + RollExclusiveMax(std::max(1, half), rRng);
+        if (bPrior)
+        {
+            damage /= 2;
+        }
+        damage = static_cast<int>(std::lround(static_cast<double>(damage) * scale));
+        pUnit->SetCurrentHp(hp - damage);
+    }
+}
+
+void ApplyPlagueKills_(BaseManager& rBase, int killed)
+{
+    for (int i = 0; i < killed; ++i)
+    {
+        rBase.GetPopulation().RemovePop();
+    }
 }
 
 bool ApplyGeneticPlague_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
                          const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
                          std::mt19937& rRng)
 {
+    const int killed = GeneticPlagueKilled(rBase);
+    DamagePlagueGarrison_(rBase, rGameState, rRng);
+    ApplyPlagueKills_(rBase, killed);
+    rBase.GetPopulation().SetNutrientStockpile(0);
+    rBase.SetPlagueIntroduced();
     TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
-    int killed = 0;
-    for (const TriggeredEffectResult_t& rResultEntry :
-         ApplyTriggeredEffects(rAction.onSuccessEffects, context))
-    {
-        if (const auto* pChanged = std::get_if<PopulationChanged_t>(&rResultEntry))
-        {
-            killed += std::max(0, -pChanged->delta);
-        }
-    }
+    ApplyTriggeredEffects(rAction.onSuccessEffects, context);
     rResult.detail = ProbePopulationKilled_t{killed};
     return true;
 }
@@ -237,17 +332,17 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
         case ProbeActionId_t::StealTech:
             return ApplyStealTech_(rActor, rBase, rResult, rRng);
         case ProbeActionId_t::DrainEnergy:
-            return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult);
+            return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult, rRng);
         case ProbeActionId_t::SabotageRandom:
         case ProbeActionId_t::SabotageFacility:
             return ApplySabotage_(rActor, rGameState, rBase, rAction, facilityId, rResult, rRng);
         case ProbeActionId_t::InciteDroneRiots:
             return ApplyInciteDroneRiots_(rBase, rAction, rResult);
         case ProbeActionId_t::Assassinate:
-            return ApplyAssassinate_(rBase, rResult);
+            return ApplyAssassinate_(rBase, rResult, rRng);
         case ProbeActionId_t::MindControlBase:
         case ProbeActionId_t::TotalThoughtControl:
-            return ApplyMindControlBase_(rActor, rBase, rResult);
+            return ApplyMindControlBase_(rActor, rBase, rGameState, rResult);
         case ProbeActionId_t::GeneticPlague:
             return ApplyGeneticPlague_(rActor, rBase, rGameState, rAction, rResult, rRng);
         case ProbeActionId_t::SubvertUnit:
@@ -314,21 +409,61 @@ void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
     ApplyTriggeredEffects(rAction.onPaidEffects, context);
 }
 
+namespace
+{
+
+bool RollHalf_(std::mt19937& rRng)
+{
+    return RollExclusiveMax(2, rRng) == 0;
+}
+
+bool ApplyAlgoSaveAndHsaBust_(bool bSucceeded, const ProbeChance_t& rChances, std::mt19937& rRng)
+{
+    if (!bSucceeded)
+    {
+        if (rChances.bAlgoSave && !rChances.bHsaCoin)
+        {
+            return RollHalf_(rRng);
+        }
+        return false;
+    }
+    if (rChances.bHsaCoin)
+    {
+        return !RollHalf_(rRng);
+    }
+    return true;
+}
+
+bool MissionDrawSucceeded_(const ProbeChance_t& rChances, std::mt19937& rRng)
+{
+    const int bound = std::max(1, rChances.probeStrength);
+    const int draw = RollExclusiveMax(bound, rRng);
+    return draw >= rChances.risk;
+}
+
+bool EscapeDrawSucceeded_(const ProbeChance_t& rChances, std::mt19937& rRng)
+{
+    const int bound = std::max(1, rChances.escapeStrength);
+    const int draw = RollExclusiveMax(bound, rRng);
+    return draw > rChances.risk;
+}
+
+} // namespace
+
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng)
 {
     ProbeRollResult_t result;
     result.chances = rChances;
 
-    if (rChances.risk <= 0 || RollPercent(rChances.successRate, rRng))
-    {
-        result.missionSucceeded = true;
-    }
-    else
+    const bool bMissionDraw = MissionDrawSucceeded_(rChances, rRng);
+    result.missionSucceeded = ApplyAlgoSaveAndHsaBust_(bMissionDraw, rChances, rRng);
+    if (!result.missionSucceeded)
     {
         return result;
     }
 
-    result.escaped = RollPercent(rChances.survivalRate, rRng);
+    const bool bEscapeDraw = EscapeDrawSucceeded_(rChances, rRng);
+    result.escaped = ApplyAlgoSaveAndHsaBust_(bEscapeDraw, rChances, rRng);
     return result;
 }
 

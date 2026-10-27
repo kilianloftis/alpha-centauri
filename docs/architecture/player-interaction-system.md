@@ -86,7 +86,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
 - A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct` and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)
-- Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome
+- Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome. Hunter-Seeker contact-kill uses `ProbeHunterSeeker_t` and skips the action menu. Steal-tech with an empty pool copies the target's explored tiles (`CopyExploredMap`) and uses `ProbeStolenMap_t` (`STOLEMAP`) when the actor learned any tile.
 
 **Follow-on PRs on the same spine**
 

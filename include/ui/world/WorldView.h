@@ -194,6 +194,7 @@ private:
     static std::vector<CombatResult_t> AsBombardPlayback_(std::vector<CombatResult_t> combats);
     void ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback, size_t index);
     void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
+    void OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTile);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
     void OpenDisbandMenu_(Unit& rUnit);
     void HandleDisbandChoice_(Unit& rUnit);

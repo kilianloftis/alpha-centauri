@@ -136,6 +136,15 @@
             }
           }
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "mind_control_distance_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
       }
     ]
   },
@@ -177,6 +186,13 @@
           "amount": 0,
           "op": "MaxClamp"
         }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "high_risk_sabotage"
+        }
       }
     ],
     "map_overlay": {
@@ -195,6 +211,15 @@
     "category": "conquer",
     "required_tech": "probability_mechanics",
     "icon": "assets/sprites/facilities/fac004.png",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "high_risk_sabotage"
+        }
+      }
+    ],
     "map_overlay": {
       "land": "assets/factions/{faction}/bases/overlays/tachyon_size{size}.png",
       "sea": "assets/factions/{faction}/bases/overlays/water_tachyon_size{size}.png"
@@ -351,7 +376,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "gene_splicing",
-    "icon": "assets/sprites/facilities/fac016.png"
+    "icon": "assets/sprites/facilities/fac016.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "plague_damage_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
+      }
+    ]
   },
   {
     "id": "Nanohospital",
@@ -361,7 +397,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "homo_superior",
-    "icon": "assets/sprites/facilities/fac017.png"
+    "icon": "assets/sprites/facilities/fac017.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "plague_damage_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
+      }
+    ]
   },
   {
     "id": "Robotic_Assembly_Plant",
@@ -401,7 +448,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "retroviral_engineering",
-    "icon": "assets/sprites/facilities/fac021.png"
+    "icon": "assets/sprites/facilities/fac021.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "mind_control_distance_scale",
+          "amount": 100,
+          "op": "AddPercent"
+        }
+      }
+    ]
   },
   {
     "id": "Punishment_Sphere",
@@ -411,7 +469,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "advanced_military_algorithms",
-    "icon": "assets/sprites/facilities/fac022.png"
+    "icon": "assets/sprites/facilities/fac022.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "mind_control_distance_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
+      }
+    ]
   },
   {
     "id": "Hab_Complex",

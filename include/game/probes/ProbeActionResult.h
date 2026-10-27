@@ -22,7 +22,15 @@ struct ProbeInfiltrated_t
 {
 };
 
+struct ProbeHunterSeeker_t
+{
+};
+
 struct ProbeNoTech_t
+{
+};
+
+struct ProbeStolenMap_t
 {
 };
 
@@ -81,7 +89,9 @@ struct ProbeResearchWiped_t
 using ProbeActionDetail_t = std::variant<
     std::monostate,
     ProbeInfiltrated_t,
+    ProbeHunterSeeker_t,
     ProbeNoTech_t,
+    ProbeStolenMap_t,
     ProbeRiot_t,
     ProbeIncreasedActivity_t,
     ProbeBaseCaptured_t,

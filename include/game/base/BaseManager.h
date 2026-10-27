@@ -69,6 +69,8 @@ struct BaseSnapshot_t
     int nutrientStockpile = 0; // growth bank
     // Mood state (riot / golden age).
     MoodState_t mood;
+    bool bStolenResearch = false;
+    bool bPlagueIntroduced = false;
 };
 
 // Outcome published after BaseManager mutates inventory / spawns a unit for a completed
@@ -149,6 +151,14 @@ public:
     // True when this base may sit on water: it was built on water, or it has Pressure_Dome.
     // Checked when the tile becomes water.
     bool MayOccupyWater() const;
+
+    // SMAC BSTATE_RESEARCH_DATA_STOLEN: a successful steal-tech at this base.
+    bool HasStolenResearch() const { return m_bStolenResearch; }
+    void SetStolenResearch() { m_bStolenResearch = true; }
+
+    // SMAC BSTATE_GENETIC_PLAGUE: a genetic plague has already hit this base.
+    bool HasPlagueIntroduced() const { return m_bPlagueIntroduced; }
+    void SetPlagueIntroduced() { m_bPlagueIntroduced = true; }
 
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
@@ -329,6 +339,8 @@ private:
     bool m_bRazed = false;
     // Sea colony pod founded this base on water. Pressure Dome is checked live, not stored here.
     bool m_bMayOccupyWater = false;
+    bool m_bStolenResearch = false;
+    bool m_bPlagueIntroduced = false;
 };
 
 } // namespace ac
