@@ -57,6 +57,11 @@ double ResolveProbeSuccessScale_(const BaseManager& rBase)
                            SeedFor(StatId_t::ProbeSuccessScale), nullptr);
 }
 
+const ProbeCalculator& Calculator_()
+{
+    return *CurrentGameState().GetGameData().probeCalculator;
+}
+
 // A target-side probe cost stat on a base target, with the actor as partner.
 double ResolveOnTargetBase_(const BaseManager& rBase, StatId_t stat, const Faction& rActor)
 {
@@ -183,7 +188,7 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
     inputs.population = rBase.GetPopulation().GetSize();
     inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
     inputs.distance = ScaleTruncating_(rawDistance, distScale);
-    const int formula = rGame.GetGameData().probeCalculator->MindControlCost(rCost, inputs);
+    const int formula = Calculator_().MindControlCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartner = &rTargetFaction;
     actorCtx.pBase = &rBase;
@@ -205,8 +210,7 @@ int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
     inputs.mineralCost = mineralCost;
     inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
     inputs.distance = ScaleTruncating_(rawDistance, distScale);
-    const ProbeCalculator& rCalculator = *CurrentGameState().GetGameData().probeCalculator;
-    const int formula = rCalculator.SubvertCost(rCost, inputs);
+    const int formula = Calculator_().SubvertCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartner = &rTargetFaction;
     const double targetScale =
@@ -407,36 +411,32 @@ int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& r
             }
         }
     }
-    const int defenseCap = std::max(1, defenseTechs);
-    const int knownClamped = std::clamp(known, 1, defenseCap);
-    int killed = size * (defenseCap - knownClamped) / defenseCap;
-    killed += 1;
-    if (rBase.HasPlagueIntroduced())
-    {
-        killed /= rAction.repeatDivisor;
-    }
+    PlagueKillInputs_t inputs;
+    inputs.population = size;
+    inputs.defenseTechs = defenseTechs;
+    inputs.knownDefenseTechs = known;
+    inputs.bRepeated = rBase.HasPlagueIntroduced();
+    const int formula = Calculator_().PlagueKills(*rAction.plague, inputs);
     const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
                                          SeedFor(StatId_t::PlagueDamageScale), nullptr);
-    killed = static_cast<int>(std::lround(static_cast<double>(killed) * scale));
+    const double scaled = static_cast<double>(formula) * scale;
+    const int killed = static_cast<int>(std::lround(scaled));
     return std::clamp(killed, 0, cap);
 }
 
 int PlagueGarrisonDrawBound(const ProbeActionConfig_t& rAction, int hp)
 {
-    return std::max(1, hp / rAction.garrisonDamageDivisor);
+    return Calculator_().PlagueGarrisonDamageBound(*rAction.plague, hp);
 }
 
 int PlagueGarrisonDamage(const ProbeActionConfig_t& rAction, const BaseManager& rBase, int hp,
                          int draw)
 {
-    int damage = hp / rAction.garrisonDamageDivisor + draw;
-    if (rBase.HasPlagueIntroduced())
-    {
-        damage /= rAction.repeatDivisor;
-    }
+    const int formula = Calculator_().PlagueGarrisonDamage(*rAction.plague, hp, draw,
+                                                                rBase.HasPlagueIntroduced());
     const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
                                          SeedFor(StatId_t::PlagueDamageScale), nullptr);
-    const double scaled = static_cast<double>(damage) * scale;
+    const double scaled = static_cast<double>(formula) * scale;
     return static_cast<int>(std::lround(scaled));
 }
 
@@ -636,24 +636,29 @@ StealEnergyQuote_t QuoteStealEnergy(const ProbeActionConfig_t& rAction, const Ba
                                     const Faction& rTarget, int morale)
 {
     StealEnergyQuote_t quote;
-    quote.remainderDivisor = rAction.remainderDivisor;
     quote.treasury = rTarget.GetEconomy().GetEnergy();
     if (quote.treasury <= 0)
     {
         return quote;
     }
-    const int pop = rBase.GetPopulation().GetSize();
-    const int factionPop = rTarget.TotalPopulation();
-    const int share = quote.treasury * pop / (factionPop + 1);
-    quote.floor = share * std::max(1, morale) / rAction.floorMoraleDivisor;
+    const ProbeCalculator& rCalculator = Calculator_();
+    DrainShareInputs_t inputs;
+    inputs.treasury = quote.treasury;
+    inputs.population = rBase.GetPopulation().GetSize();
+    inputs.factionPopulation = rTarget.TotalPopulation();
+    const int share = rCalculator.DrainShare(*rAction.drain, inputs);
+    quote.floor = rCalculator.DrainFloor(*rAction.drain, share, morale);
+    // The binary's game_randv(share - floor).
     quote.remainderBound = std::max(0, share - quote.floor);
     return quote;
 }
 
-int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw)
+int StealEnergyAmount(const ProbeActionConfig_t& rAction, const StealEnergyQuote_t& rQuote,
+                      int remainderDraw)
 {
-    const int remainder = std::max(0, remainderDraw) / rQuote.remainderDivisor;
-    int stolen = std::clamp(rQuote.floor + remainder, 0, rQuote.treasury);
+    const int amount =
+        Calculator_().DrainAmount(*rAction.drain, rQuote.floor, std::max(0, remainderDraw));
+    int stolen = std::clamp(amount, 0, rQuote.treasury);
     if (stolen == 1)
     {
         stolen = 0;

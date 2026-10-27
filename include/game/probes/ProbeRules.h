@@ -84,22 +84,21 @@ bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
 // meaningful once ProbeContactDestroys holds; throws when nothing contributes.
 std::string ProbeHunterSource(const ProbeTarget_t& rTarget);
 
-// Floor, exclusive remainder bound (share − floor), the target treasury, and the divisor the
-// remainder draw takes, for a drain.
+// Floor, exclusive remainder bound (share − floor), and the target treasury for a drain.
 struct StealEnergyQuote_t
 {
     int floor = 0;
     int remainderBound = 0;
     int treasury = 0;
-    int remainderDivisor = 1;
 };
 
-// The floor is share * morale / the action's floor_morale_divisor.
+// The share and floor come from the action's share_formula and floor_formula.
 StealEnergyQuote_t QuoteStealEnergy(const ProbeActionConfig_t& rAction, const BaseManager& rBase,
                                     const Faction& rTarget, int morale);
 
-// floor + remainderDraw / remainderDivisor, clamped to the treasury; a result of 1 becomes 0.
-int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw);
+// The action's amount_formula for this draw, clamped to the treasury; a result of 1 becomes 0.
+int StealEnergyAmount(const ProbeActionConfig_t& rAction, const StealEnergyQuote_t& rQuote,
+                      int remainderDraw);
 
 // Every tech the target has discovered that the actor has not.
 std::vector<std::string> StealableTechs(const Faction& rActor, const Faction& rTarget);
@@ -118,16 +117,15 @@ HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAct
 
 bool IsHeadquarters(const BaseManager& rBase);
 
-// Pop removed by a genetic plague at rBase (capped at size − 1); a repeat plague divides it by
-// the action's repeat_divisor.
+// Pop removed by a genetic plague at rBase: the action's kill_formula times the base's
+// plague_damage_scale, capped at size − 1.
 int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& rBase);
 
-// The exclusive bound of the draw a plague adds to a garrison unit's damage: hp over the
-// action's garrison_damage_divisor, at least 1.
+// The exclusive bound of the draw a plague adds to a garrison unit's damage (the action's
+// garrison_damage_bound_formula).
 int PlagueGarrisonDrawBound(const ProbeActionConfig_t& rAction, int hp);
 
-// hp / garrison_damage_divisor plus the draw, divided by repeat_divisor on a repeat plague,
-// times the base's plague_damage_scale.
+// The action's garrison_damage_formula for this draw, times the base's plague_damage_scale.
 int PlagueGarrisonDamage(const ProbeActionConfig_t& rAction, const BaseManager& rBase, int hp,
                          int draw);
 

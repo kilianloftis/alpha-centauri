@@ -5,8 +5,10 @@
 
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -77,18 +79,58 @@ int ParseActionInt_(const json& rActionJson, const ProbeActionConfig_t& rAction,
     return value;
 }
 
+// Formulas one action's rules read: rejected on any other, which would ignore them.
+bool OwnsKeys_(const json& rActionJson, const ProbeActionConfig_t& rAction, ProbeActionId_t owner,
+               const std::vector<std::string>& rKeys)
+{
+    if (rAction.id == owner)
+    {
+        return true;
+    }
+    for (const std::string& rKey : rKeys)
+    {
+        if (rActionJson.contains(rKey))
+        {
+            throw std::runtime_error("Probe action '" + rAction.name + "': " + rKey
+                                     + " applies only to " + ProbeActionIdToString(owner));
+        }
+    }
+    return false;
+}
+
+std::optional<DrainFormulas_t> ParseDrainFormulas_(const json& rActionJson,
+                                                   const ProbeActionConfig_t& rAction)
+{
+    if (!OwnsKeys_(rActionJson, rAction, ProbeActionId_t::DrainEnergy,
+                   {"share_formula", "floor_formula", "amount_formula"}))
+    {
+        return std::nullopt;
+    }
+    return DrainFormulas_t{RequireFormula_(rActionJson, "share_formula", rAction.name),
+                           RequireFormula_(rActionJson, "floor_formula", rAction.name),
+                           RequireFormula_(rActionJson, "amount_formula", rAction.name)};
+}
+
+std::optional<PlagueFormulas_t> ParsePlagueFormulas_(const json& rActionJson,
+                                                     const ProbeActionConfig_t& rAction)
+{
+    if (!OwnsKeys_(rActionJson, rAction, ProbeActionId_t::GeneticPlague,
+                   {"kill_formula", "garrison_damage_bound_formula", "garrison_damage_formula"}))
+    {
+        return std::nullopt;
+    }
+    return PlagueFormulas_t{
+        RequireFormula_(rActionJson, "kill_formula", rAction.name),
+        RequireFormula_(rActionJson, "garrison_damage_bound_formula", rAction.name),
+        RequireFormula_(rActionJson, "garrison_damage_formula", rAction.name)};
+}
+
 void ParseActionNumbers_(const json& rActionJson, ProbeActionConfig_t& rAction)
 {
     rAction.protectedRisk = ParseActionInt_(rActionJson, rAction,
                                             ProbeActionId_t::SabotageFacility, "protected_risk", 0);
-    rAction.floorMoraleDivisor = ParseActionInt_(
-        rActionJson, rAction, ProbeActionId_t::DrainEnergy, "floor_morale_divisor", 1);
-    rAction.remainderDivisor = ParseActionInt_(rActionJson, rAction,
-                                               ProbeActionId_t::DrainEnergy, "remainder_divisor", 1);
-    rAction.repeatDivisor = ParseActionInt_(rActionJson, rAction, ProbeActionId_t::GeneticPlague,
-                                            "repeat_divisor", 1);
-    rAction.garrisonDamageDivisor = ParseActionInt_(
-        rActionJson, rAction, ProbeActionId_t::GeneticPlague, "garrison_damage_divisor", 1);
+    rAction.drain = ParseDrainFormulas_(rActionJson, rAction);
+    rAction.plague = ParsePlagueFormulas_(rActionJson, rAction);
 }
 
 bool RunsOnSuccessEffects_(ProbeActionId_t id)

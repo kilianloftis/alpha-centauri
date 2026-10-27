@@ -67,3 +67,42 @@ TEST_CASE("A cost formula naming an unknown variable throws", "[probe][calculato
     const ProbeCostConfig_t cost{.formula = "upkeep * 2"};
     CHECK_THROWS(calculator.SubvertCost(cost, SubvertCostInputs_t{}));
 }
+
+TEST_CASE("The fixture's drain formulas are the binary's", "[probe][calculator]")
+{
+    const ProbeActionsConfig_t config =
+        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+    const DrainFormulas_t& rDrain = *config.Find(ProbeActionId_t::DrainEnergy)->drain;
+    LuaRuntime lua;
+    const ProbeCalculator calculator(lua);
+
+    // 1000 * 3 / (5 + 1); then 500 * 4 / 6; then 333 + 9 / 2.
+    CHECK(calculator.DrainShare(rDrain, {.treasury = 1000, .population = 3,
+                                         .factionPopulation = 5}) == 500);
+    CHECK(calculator.DrainFloor(rDrain, 500, 4) == 333);
+    CHECK(calculator.DrainFloor(rDrain, 500, 0) == 83);
+    CHECK(calculator.DrainAmount(rDrain, 333, 9) == 337);
+}
+
+TEST_CASE("The fixture's plague formulas are the binary's", "[probe][calculator]")
+{
+    const ProbeActionsConfig_t config =
+        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+    const PlagueFormulas_t& rPlague = *config.Find(ProbeActionId_t::GeneticPlague)->plague;
+    LuaRuntime lua;
+    const ProbeCalculator calculator(lua);
+
+    // 5 * (3 - 1) / 3 + 1 with known clamped up to 1; halved on a repeat.
+    PlagueKillInputs_t kills{.population = 5, .defenseTechs = 3, .knownDefenseTechs = 0};
+    CHECK(calculator.PlagueKills(rPlague, kills) == 4);
+    kills.bRepeated = true;
+    CHECK(calculator.PlagueKills(rPlague, kills) == 2);
+    // No defense techs at all: the cap of 1 kills only the + 1.
+    CHECK(calculator.PlagueKills(rPlague, {.population = 5, .defenseTechs = 0,
+                                           .knownDefenseTechs = 0}) == 1);
+
+    CHECK(calculator.PlagueGarrisonDamageBound(rPlague, 1) == 1);
+    CHECK(calculator.PlagueGarrisonDamageBound(rPlague, 10) == 5);
+    CHECK(calculator.PlagueGarrisonDamage(rPlague, 10, 3, false) == 8);
+    CHECK(calculator.PlagueGarrisonDamage(rPlague, 10, 3, true) == 4);
+}

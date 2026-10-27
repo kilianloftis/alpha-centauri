@@ -84,6 +84,23 @@ struct ProbeCostConfig_t
     std::string formula;
 };
 
+// Drain Energy's formulas, Lua expressions ProbeCalculator evaluates: the target base's share of
+// the treasury, the floor a probe of this morale takes of it, and the amount for a remainder draw.
+struct DrainFormulas_t
+{
+    std::string share;
+    std::string floor;
+    std::string amount;
+};
+
+// Genetic Plague's formulas: pop killed, and each garrison unit's damage and its draw bound.
+struct PlagueFormulas_t
+{
+    std::string kills;
+    std::string garrisonDamageBound;
+    std::string garrisonDamage;
+};
+
 struct ProbeActionConfig_t
 {
     ProbeActionId_t id = ProbeActionId_t::Infiltrate;
@@ -100,14 +117,10 @@ struct ProbeActionConfig_t
     double assimilationTurnsCapFactor = 0.0;
     // Sabotage Facility only: the least risk against an HQ or a high_risk_sabotage facility.
     int protectedRisk = 0;
-    // Drain Energy only: the floor is share * morale / floorMoraleDivisor, and the remainder
-    // draw is divided by remainderDivisor.
-    int floorMoraleDivisor = 0;
-    int remainderDivisor = 0;
-    // Genetic Plague only: a repeat plague divides kills and garrison damage by repeatDivisor;
-    // a garrison unit takes hp / garrisonDamageDivisor plus a draw below that.
-    int repeatDivisor = 0;
-    int garrisonDamageDivisor = 0;
+    // Drain Energy only.
+    std::optional<DrainFormulas_t> drain;
+    // Genetic Plague only.
+    std::optional<PlagueFormulas_t> plague;
     std::optional<ProbeCostConfig_t> cost;
     // Continuous effects the action declares. Probe actions have no pool origin, so this is
     // effectively unused today; the mission's real work is in onSuccessEffects.

@@ -69,10 +69,9 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase)->cost.has_value());
     CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->cost->formula.empty());
     CHECK(config.Find(ProbeActionId_t::SabotageFacility)->protectedRisk == 2);
-    CHECK(config.Find(ProbeActionId_t::DrainEnergy)->floorMoraleDivisor == 6);
-    CHECK(config.Find(ProbeActionId_t::DrainEnergy)->remainderDivisor == 2);
-    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->repeatDivisor == 2);
-    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->garrisonDamageDivisor == 2);
+    CHECK(config.Find(ProbeActionId_t::DrainEnergy)->drain.has_value());
+    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->plague.has_value());
+    CHECK_FALSE(config.Find(ProbeActionId_t::Infiltrate)->drain.has_value());
     CHECK(config.effects.size() == 4);
     const auto& rMindControlPaid = config.Find(ProbeActionId_t::MindControlBase)->onPaidEffects;
     REQUIRE(rMindControlPaid.size() == 1);
@@ -136,13 +135,17 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
                                        "cost": { "formula": "" } })"),
                       ContainsSubstring("formula"));
 
-    // Each action's own numbers: required on it, rejected on any other.
+    // Each action's own numbers and formulas: required on it, rejected on any other.
     CHECK_THROWS_WITH(parseAction(R"({ "id": "drain_energy", "target": "base",
-                                       "remainder_divisor": 2 })"),
-                      ContainsSubstring("floor_morale_divisor"));
+                                       "share_formula": "treasury", "amount_formula": "draw" })"),
+                      ContainsSubstring("floor_formula"));
     CHECK_THROWS_WITH(parseAction(R"({ "id": "genetic_plague", "target": "base",
-                                       "repeat_divisor": 0, "garrison_damage_divisor": 2 })"),
-                      ContainsSubstring("repeat_divisor"));
+                                       "kill_formula": "", "garrison_damage_bound_formula": "1",
+                                       "garrison_damage_formula": "hp" })"),
+                      ContainsSubstring("kill_formula"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
+                                       "share_formula": "treasury" })"),
+                      ContainsSubstring("share_formula"));
     CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
                                        "protected_risk": 2 })"),
                       ContainsSubstring("protected_risk"));

@@ -86,8 +86,9 @@
     },
     {
       "id": "drain_energy",
-      "floor_morale_divisor": 6,
-      "remainder_divisor": 2,
+      "share_formula": "floor(treasury * population / (faction_population + 1))",
+      "floor_formula": "floor(share * max(1, morale) / 6)",
+      "amount_formula": "floor_amount + floor(draw / 2)",
       "name": "Drain Energy Reserves",
       "target": "base",
       "risk": 0
@@ -168,8 +169,9 @@
     },
     {
       "id": "genetic_plague",
-      "repeat_divisor": 2,
-      "garrison_damage_divisor": 2,
+      "kill_formula": "floor((floor(population * (max(1, defense_techs) - min(max(known_defense_techs, 1), max(1, defense_techs))) / max(1, defense_techs)) + 1) / (repeated + 1))",
+      "garrison_damage_bound_formula": "max(1, floor(hp / 2))",
+      "garrison_damage_formula": "floor((floor(hp / 2) + draw) / (repeated + 1))",
       "name": "Introduce Genetic Plague",
       "target": "base",
       "risk": 0,

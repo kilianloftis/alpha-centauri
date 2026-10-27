@@ -651,7 +651,7 @@ Some consequences have no condition, no choice and no amount: a transferred base
 ### [D][N] PRB-2 Energy theft amount
 `ProbeActionEffects.cpp:115`.
 - **Already in the plan:** `ProbeRules::StealEnergyAmount`. Now in commit 12.
-- **Outside the plan:** the formula's constants, in the config package. Now `drain_energy`'s `floor_morale_divisor` and `remainder_divisor`.
+- **Outside the plan:** the formula's constants, in the config package. Now `drain_energy`'s `share_formula`, `floor_formula` and `amount_formula`.
 
 ### [D] PRB-3 Which techs can be stolen
 `ProbeActionEffects.cpp:82` (`PickStealableTech_`).

@@ -1531,8 +1531,7 @@ TEST_CASE("Subverting a unit ignores Pact, atrocities and its home base's mood, 
     CHECK(QuoteSubvert_(game, probe, victim) == before);
 }
 
-TEST_CASE("Sabotage's protected risk, the drain's divisors and the plague's divisors come from "
-          "their actions",
+TEST_CASE("Sabotage's protected risk and the drain and plague formulas come from their actions",
           "[probe][config]")
 {
     ProbeGame_ game;
@@ -1551,21 +1550,21 @@ TEST_CASE("Sabotage's protected risk, the drain's divisors and the plague's divi
     const StealEnergyQuote_t bySix = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
     const int share = bySix.floor + bySix.remainderBound;
     CHECK(bySix.floor == share * 5 / 6);
-    CHECK(bySix.remainderDivisor == 2);
-    rDrain.floorMoraleDivisor = 4;
-    rDrain.remainderDivisor = 3;
-    const StealEnergyQuote_t byFour = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
-    CHECK(byFour.floor == share * 5 / 4);
-    CHECK(StealEnergyAmount(byFour, 9) == byFour.floor + 3);
+    CHECK(StealEnergyAmount(rDrain, bySix, 9) == bySix.floor + 4);
+    rDrain.drain->floor = "floor(share * max(1, morale) / 10)";
+    rDrain.drain->amount = "floor_amount + floor(draw / 3)";
+    const StealEnergyQuote_t byTen = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
+    CHECK(byTen.floor == share * 5 / 10);
+    CHECK(StealEnergyAmount(rDrain, byTen, 9) == byTen.floor + 3);
 
     ProbeActionConfig_t& rPlague = MutableAction_(game, ProbeActionId_t::GeneticPlague);
     CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 5);
     CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 6);
-    rPlague.garrisonDamageDivisor = 5;
+    rPlague.plague->garrisonDamageBound = "max(1, floor(hp / 5))";
+    rPlague.plague->garrisonDamage = "floor((floor(hp / 5) + draw) / (repeated * 2 + 1))";
     CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 2);
     CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 3);
     hq.SetPlagueIntroduced();
-    rPlague.repeatDivisor = 3;
     CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 7) == 3);
 }
 
@@ -1759,7 +1758,8 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     game.pAi->GetEconomy().SpendEnergy(game.pAi->GetEconomy().GetEnergy());
     CHECK(QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 3).treasury == 0);
-    CHECK(StealEnergyAmount(QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 3), 0) == 0);
+    const ProbeActionConfig_t& rDrain = RequireAction_(game, ProbeActionId_t::DrainEnergy);
+    CHECK(StealEnergyAmount(rDrain, QuoteStealEnergy(rDrain, enemy, *game.pAi, 3), 0) == 0);
 
     game.pAi->GetEconomy().AddEnergy(1000);
     const int treasury = game.pAi->GetEconomy().GetEnergy();
@@ -1767,15 +1767,15 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
     const StealEnergyQuote_t elite = QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 6);
     CHECK(green.floor > 0);
     CHECK(elite.floor > green.floor);
-    CHECK(StealEnergyAmount(elite, 0) <= treasury);
-    CHECK(StealEnergyAmount(green, green.remainderBound) <= treasury);
+    CHECK(StealEnergyAmount(rDrain, elite, 0) <= treasury);
+    CHECK(StealEnergyAmount(rDrain, green, green.remainderBound) <= treasury);
 }
 
 TEST_CASE("A drain of 1 energy stores 0", "[probe][action]")
 {
-    const StealEnergyQuote_t quote{.floor = 1, .remainderBound = 0, .treasury = 1,
-                                   .remainderDivisor = 2};
-    CHECK(StealEnergyAmount(quote, 0) == 0);
+    ProbeGame_ game;
+    const StealEnergyQuote_t quote{.floor = 1, .remainderBound = 0, .treasury = 1};
+    CHECK(StealEnergyAmount(RequireAction_(game, ProbeActionId_t::DrainEnergy), quote, 0) == 0);
 }
 
 TEST_CASE("Mission risk uses stolen-research on the base, and at least 2 at an HQ facility",

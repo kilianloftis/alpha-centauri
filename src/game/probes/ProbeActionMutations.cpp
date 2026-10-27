@@ -132,7 +132,7 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
     const StealEnergyQuote_t quote = QuoteStealEnergy(rAction, rBase, rTarget, morale);
     const int remainderDraw = RollExclusiveMax(quote.remainderBound, rRng);
-    const int stolen = StealEnergyAmount(quote, remainderDraw);
+    const int stolen = StealEnergyAmount(rAction, quote, remainderDraw);
     rTarget.GetEconomy().SpendEnergy(stolen);
     rActor.GetEconomy().AddEnergy(stolen);
     rResult.detail = ProbeEnergyStolen_t{stolen};

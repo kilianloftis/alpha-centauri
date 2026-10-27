@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: drain-plague-formulas
     content: drain_energy share/floor/amount formulas; genetic_plague kill and garrison damage formulas; the four divisor fields go
-    status: pending
+    status: completed
   - id: odds-formulas
     content: success_formula becomes defense, mission_strength and escape_strength formulas; shown rates follow from the draw rules
     status: pending
@@ -88,7 +88,8 @@ config so it can evaluate `amount_formula`.
 | `garrison_damage_bound_formula` | `max(1, floor(hp / 2))` | `hp` |
 | `garrison_damage_formula` | `floor((floor(hp / 2) + draw) / (repeated + 1))` | `hp`, `draw`, `repeated` |
 
-`repeated` is 1 once the base has had a plague; Lua reserves `repeat`. The rules keep the
+`repeated` is 1 once the base has had a plague; Lua reserves `repeat`. The action holds them as
+`std::optional<DrainFormulas_t> drain` and `std::optional<PlagueFormulas_t> plague`. The rules keep the
 `plague_damage_scale` multiplier and the kill cap of size − 1. `repeat_divisor`,
 `garrison_damage_divisor`, `floor_morale_divisor` and `remainder_divisor` go.
 
