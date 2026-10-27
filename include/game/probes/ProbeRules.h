@@ -80,6 +80,10 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
 // contact, before any menu, cost or roll.
 bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
 
+// The source id of the largest probe_hunter contribution on the target's effect source. Only
+// meaningful once ProbeContactDestroys holds; throws when nothing contributes.
+std::string ProbeHunterSource(const ProbeTarget_t& rTarget);
+
 // Floor, exclusive remainder bound (share − floor), and the target treasury for a drain.
 struct StealEnergyQuote_t
 {

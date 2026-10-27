@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <type_traits>
 
 namespace ac
@@ -515,6 +516,27 @@ bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget)
 {
     const int hunter = ResolveTargetAdditive_(rTarget, StatId_t::ProbeHunter);
     return hunter > ResolveStat(rProbe, StatId_t::ProbeIntrusion);
+}
+
+std::string ProbeHunterSource(const ProbeTarget_t& rTarget)
+{
+    const BaseManager* pSource = EffectSourceBase(rTarget);
+    if (!pSource)
+    {
+        throw std::logic_error("ProbeHunterSource: the target has no effect source");
+    }
+    EffectContext_t ctx;
+    ctx.pBase = pSource;
+    const StatBreakdown_t breakdown = ResolveStatModifiers(
+        FilterBaseLevelByStatId(pSource->GetBaseEffects(), StatId_t::ProbeHunter, &ctx),
+        SeedFor(StatId_t::ProbeHunter), &ctx);
+    const auto strongest = std::ranges::max_element(
+        breakdown.contributions, {}, &StatBreakdown_t::Contribution_t::amount);
+    if (strongest == breakdown.contributions.end() || strongest->amount <= 0.0)
+    {
+        throw std::logic_error("ProbeHunterSource: nothing contributes probe_hunter");
+    }
+    return strongest->sourceId;
 }
 
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,

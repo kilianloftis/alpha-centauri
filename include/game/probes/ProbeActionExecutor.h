@@ -32,12 +32,12 @@ public:
                            const Tile& rTile, GameState& rGameState) const;
 
     // True when the probe may open the action menu against rTile (at least one legal action,
-    // or Hunter-Seeker would destroy the probe on contact).
+    // or contact with the target would destroy the probe).
     bool CanOpenProbeActions(const Unit& rProbe, const Tile& rTile, GameState& rGameState) const;
 
-    // True when an adjacent probe with moves remaining would be destroyed by Hunter-Seeker
-    // on this tile (no pay, no roll, no menu).
-    bool WouldHunterSeekerDestroy(const Unit& rProbe, const Tile& rTile,
+    // True when an adjacent probe with moves remaining would die on contact with rTile's target
+    // (ProbeContactDestroys): no pay, no roll, no menu.
+    bool WouldContactDestroyProbe(const Unit& rProbe, const Tile& rTile,
                                   GameState& rGameState) const;
 
     // Legal (id, display name) pairs for the probe against rTile.
@@ -55,7 +55,7 @@ private:
 
     std::optional<ProbeTarget_t> ResolveContactTarget_(const Unit& rUnit, const Tile& rTile,
                                                        GameState& rGameState) const;
-    ProbeActionResult_t DestroyOnHunterSeeker_(Unit& rUnit, const ProbeTarget_t& rTarget,
+    ProbeActionResult_t DestroyOnProbeContact_(Unit& rUnit, const ProbeTarget_t& rTarget,
                                                GameState& rGameState) const;
 
     std::optional<ProbeTarget_t> ResolveEligibleTarget_(

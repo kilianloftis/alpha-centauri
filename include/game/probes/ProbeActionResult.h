@@ -22,8 +22,11 @@ struct ProbeInfiltrated_t
 {
 };
 
-struct ProbeHunterSeeker_t
+// The probe died on contact with the target's hunter. hunterSourceId is the building or project
+// that contributes the most probe_hunter.
+struct ProbeContactDestroyed_t
 {
+    BuildingId_t hunterSourceId;
 };
 
 struct ProbeNoTech_t
@@ -89,7 +92,7 @@ struct ProbeResearchWiped_t
 using ProbeActionDetail_t = std::variant<
     std::monostate,
     ProbeInfiltrated_t,
-    ProbeHunterSeeker_t,
+    ProbeContactDestroyed_t,
     ProbeNoTech_t,
     ProbeStolenMap_t,
     ProbeRiot_t,

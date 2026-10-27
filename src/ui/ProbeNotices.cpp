@@ -38,16 +38,16 @@ std::optional<std::string> InfiltrateBody_(const ProbeNoticeInteraction_t& rNoti
         + " has infiltrated our data networks!";
 }
 
-std::optional<std::string> HunterSeekerBody_(const ProbeNoticeInteraction_t& rNotice,
-                                             FactionId_t audienceId)
+std::optional<std::string> ContactDestroyedBody_(const ProbeNoticeInteraction_t& rNotice,
+                                                 FactionId_t audienceId)
 {
     if (AudienceIsActor_(rNotice, audienceId))
     {
-        return "The Hunter-Seeker Algorithm of the " + rNotice.target.adjective
+        return "The " + rNotice.facilityName + " of the " + rNotice.target.adjective
             + " has destroyed our probe team!";
     }
-    return "A " + rNotice.actor.adjective
-        + " probe team has been destroyed by our Hunter-Seeker Algorithm!";
+    return "A " + rNotice.actor.adjective + " probe team has been destroyed by our "
+        + rNotice.facilityName + "!";
 }
 
 std::optional<std::string> NoTechBody_(const ProbeNoticeInteraction_t& rNotice,
@@ -190,9 +190,9 @@ std::optional<std::string> BodyFromDetail_(const ProbeNoticeInteraction_t& rNoti
             {
                 return InfiltrateBody_(rNotice, audienceId);
             }
-            else if constexpr (std::is_same_v<T, ProbeHunterSeeker_t>)
+            else if constexpr (std::is_same_v<T, ProbeContactDestroyed_t>)
             {
-                return HunterSeekerBody_(rNotice, audienceId);
+                return ContactDestroyedBody_(rNotice, audienceId);
             }
             else if constexpr (std::is_same_v<T, ProbeNoTech_t>)
             {

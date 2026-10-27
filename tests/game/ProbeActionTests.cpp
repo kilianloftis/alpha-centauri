@@ -1674,7 +1674,8 @@ TEST_CASE("A hunter that matches a probe's intrusion voids its failure scale and
     CHECK_FALSE(contactDestroys(strongerProbe));
 }
 
-TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without paying",
+TEST_CASE("A probe the target's hunter out-ranks dies on contact without paying, naming the "
+          "hunter's facility",
           "[probe][action][hsa]")
 {
     EffectPool pool;
@@ -1696,7 +1697,7 @@ TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without pay
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const Tile& rEnemyTile = enemy.GetTile();
 
-    CHECK(game.fixtures.state.GetProbeActions().WouldHunterSeekerDestroy(
+    CHECK(game.fixtures.state.GetProbeActions().WouldContactDestroyProbe(
         probe, rEnemyTile, game.fixtures.state));
     CHECK(game.fixtures.state.GetProbeActions().CanOpenProbeActions(
         probe, rEnemyTile, game.fixtures.state));
@@ -1705,7 +1706,14 @@ TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without pay
         probe, ProbeActionId_t::MindControlBase, rEnemyTile, game.fixtures.state, BuildingId_t{});
 
     CHECK(result.outcome == ProbeActionOutcome_t::MissionFailed);
-    CHECK(std::holds_alternative<ProbeHunterSeeker_t>(result.detail));
+    const auto* pContact = std::get_if<ProbeContactDestroyed_t>(&result.detail);
+    REQUIRE(pContact);
+    CHECK(pContact->hunterSourceId == "test_hunter_seeker");
+    const QueuedInteraction_t* pFront = game.fixtures.state.GetPlayerInteractions().Front();
+    REQUIRE(pFront);
+    const auto* pNotice = std::get_if<ProbeNoticeInteraction_t>(&pFront->payload);
+    REQUIRE(pNotice);
+    CHECK(pNotice->facilityName == "Test Hunter-Seeker");
     CHECK(game.pPlayer->GetEconomy().GetEnergy() == energyBefore);
     CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
     CHECK(&enemy.GetFaction() == game.pAi);

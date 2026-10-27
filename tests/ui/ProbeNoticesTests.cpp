@@ -69,11 +69,12 @@ TEST_CASE("Infiltrate copy is target-only DETECTINFILTRATE", "[ui][probe]")
                  "Sister Miriam of the Believers has infiltrated our data networks!");
 }
 
-TEST_CASE("Hunter-Seeker copy names the Algorithm for both sides", "[ui][probe]")
+TEST_CASE("Contact-destroyed copy names the hunter's facility for both sides", "[ui][probe]")
 {
     ProbeNoticeInteraction_t notice = BaseNotice_(ProbeActionId_t::Infiltrate);
     notice.result.outcome = ProbeActionOutcome_t::MissionFailed;
-    notice.result.detail = ProbeHunterSeeker_t{};
+    notice.result.detail = ProbeContactDestroyed_t{"Hunter_Seeker_Algorithm"};
+    notice.facilityName = "Hunter-Seeker Algorithm";
     RequireCopy_(notice, k_ActorId,
                  "The Hunter-Seeker Algorithm of the Peacekeeper has destroyed our probe team!");
     RequireCopy_(notice, k_TargetId,

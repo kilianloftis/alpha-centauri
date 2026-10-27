@@ -94,6 +94,10 @@ void FillNoticeNames_(const GameState& rGameState, ProbeNoticeInteraction_t& rNo
     {
         rNotice.facilityName = FacilityName_(rGameState, pFacility->buildingId);
     }
+    if (const auto* pContact = std::get_if<ProbeContactDestroyed_t>(&rNotice.result.detail))
+    {
+        rNotice.facilityName = FacilityName_(rGameState, pContact->hunterSourceId);
+    }
 }
 
 void AnnounceProbe_(GameState& rGameState, const Faction& rActor, ProbeActionId_t actionId,
@@ -173,14 +177,14 @@ bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rT
                                               GameState& rGameState) const
 {
     RequireCurrentGameState(rGameState);
-    if (WouldHunterSeekerDestroy(rProbe, rTile, rGameState))
+    if (WouldContactDestroyProbe(rProbe, rTile, rGameState))
     {
         return true;
     }
     return !ListAvailableProbeActions(rProbe, rTile, rGameState).empty();
 }
 
-bool ProbeActionExecutor::WouldHunterSeekerDestroy(const Unit& rProbe, const Tile& rTile,
+bool ProbeActionExecutor::WouldContactDestroyProbe(const Unit& rProbe, const Tile& rTile,
                                                    GameState& rGameState) const
 {
     RequireCurrentGameState(rGameState);
@@ -215,9 +219,9 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
 
     const std::optional<ProbeTarget_t> contact =
         ResolveContactTarget_(rUnit, rTile, rGameState);
-    if (contact.has_value() && WouldHunterSeekerDestroy(rUnit, rTile, rGameState))
+    if (contact.has_value() && WouldContactDestroyProbe(rUnit, rTile, rGameState))
     {
-        return DestroyOnHunterSeeker_(rUnit, *contact, rGameState);
+        return DestroyOnProbeContact_(rUnit, *contact, rGameState);
     }
 
     const std::optional<ProbeTarget_t> target =
@@ -251,13 +255,13 @@ std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveContactTarget_(
     return ResolveProbeTarget(rUnit, rTile, ProbeTargetKind_t::Unit, rGameState);
 }
 
-ProbeActionResult_t ProbeActionExecutor::DestroyOnHunterSeeker_(Unit& rUnit,
+ProbeActionResult_t ProbeActionExecutor::DestroyOnProbeContact_(Unit& rUnit,
                                                                const ProbeTarget_t& rTarget,
                                                                GameState& rGameState) const
 {
     ProbeActionResult_t result;
     result.outcome = ProbeActionOutcome_t::MissionFailed;
-    result.detail = ProbeHunterSeeker_t{};
+    result.detail = ProbeContactDestroyed_t{ProbeHunterSource(rTarget)};
     Faction& rActor = rUnit.GetFaction();
     rActor.GetUnitManager().DestroyUnit(rUnit);
     AnnounceProbe_(rGameState, rActor, ProbeActionId_t::Infiltrate, rTarget, result);

@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: rules-contest
     content: ProbeContactDestroys / ProbeChancesFor as the hunter vs intrusion contest; chance fields replace bAlgoSave/bHsaCoin; ProbeHunterSource; mind-control garrison by plan with the Poly stack multiplier; subversion_cost_scale in QuoteUnitActionCost_
-    status: pending
+    status: completed
   - id: quote-fixes
     content: Mind-control and subversion quotes match the binary - tabletop HQ distance, raw-distance HQ refusal, truncated MultiplyGeometric distance scales, unit divide-first and Punishment Sphere distance, AI-vs-human difficulty discount
     status: completed
@@ -22,13 +22,13 @@ todos:
     status: completed
   - id: executor-notices
     content: Rename contact-destroy path in executor/WorldView; ProbeContactDestroyed_t carries the hunter source id; FillNoticeNames_ fills facilityName; generic notice copy
-    status: pending
+    status: completed
   - id: config
     content: Rewrite HSA, Algo, Poly shipping and fixture effects
     status: completed
   - id: tests-docs
     content: Update ProbeAction/ProbeRules/Parser/Validation/ProbeNotices tests and effects/player-interaction/ui/unit-designer docs; ./bd build and ./bd test
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -240,7 +240,6 @@ One helper per outcome serves both draws: failed draw → save roll, successful 
 - [effects-system.md](docs/architecture/effects-system.md): new stats; Poly; `DesignPlan` condition; `probe_actions.json` top-level `effects` in the baseline list and trigger-slot table; `probe_success_bust` applies on mission and escape success.
 - [config/deviations/README.md](config/deviations/README.md): update the TODO "HSA bust coin on every escape" entry's **Where** to `probe_success_bust`.
 - [player-interaction-system.md](docs/architecture/player-interaction-system.md): `ProbeContactDestroyed_t`.
-- [ui-system.md](docs/architecture/ui-system.md).
 - [unit-designer-system.md](docs/architecture/unit-designer-system.md): `UnitPlanRules`, component `plan`.
 
 `./bd build` then `./bd test`.

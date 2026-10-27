@@ -999,7 +999,7 @@ void WorldView::ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPla
 
 void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
 {
-    if (m_rGameState.GetProbeActions().WouldHunterSeekerDestroy(rProbe, rTargetTile,
+    if (m_rGameState.GetProbeActions().WouldContactDestroyProbe(rProbe, rTargetTile,
                                                                m_rGameState))
     {
         const ProbeActionResult_t result = m_rGameState.GetProbeActions().TryProbeAction(
