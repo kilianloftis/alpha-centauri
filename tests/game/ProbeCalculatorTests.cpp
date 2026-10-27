@@ -106,3 +106,40 @@ TEST_CASE("The fixture's plague formulas are the binary's", "[probe][calculator]
     CHECK(calculator.PlagueGarrisonDamage(rPlague, 10, 3, false) == 8);
     CHECK(calculator.PlagueGarrisonDamage(rPlague, 10, 3, true) == 4);
 }
+
+TEST_CASE("The fixture's odds formulas give the wiki's strengths", "[probe][calculator]")
+{
+    const ProbeActionsConfig_t config =
+        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+    const ProbeSuccessFormula_t& rOdds = config.successFormula;
+    LuaRuntime lua;
+    const ProbeCalculator calculator(lua);
+
+    // The target's probe_defense counts only from -2 to 0.
+    CHECK(calculator.ProbeDefense(rOdds, -3) == -2);
+    CHECK(calculator.ProbeDefense(rOdds, -1) == -1);
+    CHECK(calculator.ProbeDefense(rOdds, 2) == 0);
+
+    // Elite (6) against defense 0: 6 / 2 + 1 and 6.
+    CHECK(calculator.MissionStrength(rOdds, 6, 0) == 4);
+    CHECK(calculator.EscapeStrength(rOdds, 6, 0) == 6);
+    // Hardened (3) against defense -2: 3 / 2 + 2 + 1 and 3 + 2.
+    CHECK(calculator.MissionStrength(rOdds, 3, -2) == 4);
+    CHECK(calculator.EscapeStrength(rOdds, 3, -2) == 5);
+    // Morale counts from 1.
+    CHECK(calculator.MissionStrength(rOdds, 0, 0) == 1);
+    CHECK(calculator.EscapeStrength(rOdds, 0, 0) == 1);
+}
+
+TEST_CASE("A draw strength formula below 1 throws", "[probe][calculator]")
+{
+    ProbeSuccessFormula_t odds;
+    odds.missionStrength = "morale - 1";
+    odds.escapeStrength = "defense";
+    LuaRuntime lua;
+    const ProbeCalculator calculator(lua);
+
+    CHECK(calculator.MissionStrength(odds, 2, 0) == 1);
+    CHECK_THROWS(calculator.MissionStrength(odds, 1, 0));
+    CHECK_THROWS(calculator.EscapeStrength(odds, 4, 0));
+}

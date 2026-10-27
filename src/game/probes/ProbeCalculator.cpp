@@ -3,11 +3,27 @@
 #include "game/probes/ProbeActionConfig.h"
 #include "lib/LuaRuntime.h"
 
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 namespace ac
 {
+
+namespace
+{
+
+int RequireStrength_(int strength, const char* pFormula)
+{
+    if (strength < 1)
+    {
+        throw std::runtime_error(std::string("probe_actions.json success_formula ") + pFormula
+                                 + " must be at least 1, got " + std::to_string(strength));
+    }
+    return strength;
+}
+
+} // namespace
 
 ProbeCalculator::ProbeCalculator(LuaRuntime& rLua)
     : m_rLua(rLua)
@@ -96,6 +112,36 @@ int ProbeCalculator::PlagueGarrisonDamage(const PlagueFormulas_t& rPlague, int h
         {"repeated", bRepeated ? 1.0 : 0.0},
     };
     return m_rLua.EvalInt(rPlague.garrisonDamage, vars);
+}
+
+int ProbeCalculator::ProbeDefense(const ProbeSuccessFormula_t& rOdds, int probeDefense) const
+{
+    const std::unordered_map<std::string, double> vars = {
+        {"probe_defense", static_cast<double>(probeDefense)},
+    };
+    return m_rLua.EvalInt(rOdds.defense, vars);
+}
+
+int ProbeCalculator::MissionStrength(const ProbeSuccessFormula_t& rOdds, int morale,
+                                     int defense) const
+{
+    const std::unordered_map<std::string, double> vars = {
+        {"morale", static_cast<double>(morale)},
+        {"defense", static_cast<double>(defense)},
+    };
+    const int strength = m_rLua.EvalInt(rOdds.missionStrength, vars);
+    return RequireStrength_(strength, "mission_strength");
+}
+
+int ProbeCalculator::EscapeStrength(const ProbeSuccessFormula_t& rOdds, int morale,
+                                    int defense) const
+{
+    const std::unordered_map<std::string, double> vars = {
+        {"morale", static_cast<double>(morale)},
+        {"defense", static_cast<double>(defense)},
+    };
+    const int strength = m_rLua.EvalInt(rOdds.escapeStrength, vars);
+    return RequireStrength_(strength, "escape_strength");
 }
 
 } // namespace ac

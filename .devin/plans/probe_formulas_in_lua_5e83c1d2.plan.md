@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: odds-formulas
     content: success_formula becomes defense, mission_strength and escape_strength formulas; shown rates follow from the draw rules
-    status: pending
+    status: completed
   - id: tests-docs
     content: Calculator tests on fixture formulas; rule tests keep their expectations; effects/probe docs; ./bd build and ./bd test after each step
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -99,9 +99,13 @@ config so it can evaluate `amount_formula`.
 
 | Field | Shipping formula | Variables |
 | --- | --- | --- |
-| `defense_formula` | `min(0, max(-2, probe_defense))` | `probe_defense` (the target's `probe_defense` stat: SE Probe plus Covert Ops) |
-| `mission_strength_formula` | `max(1, floor(morale / 2) - defense + 1)` | `morale` (at least 1), `defense` |
-| `escape_strength_formula` | `max(1, morale - defense)` | `morale`, `defense` |
+| `defense` | `min(0, max(-2, probe_defense))` | `probe_defense` (the target's `probe_defense` stat: SE Probe plus Covert Ops) |
+| `mission_strength` | `max(1, floor(max(1, morale) / 2) - defense + 1)` | `morale`, `defense` |
+| `escape_strength` | `max(1, max(1, morale) - defense)` | `morale`, `defense` |
+
+`morale` is the probe's effective morale level as the rules resolve it; the formulas floor it at
+1, as `ComputeProbeChances` did. A strength formula that returns less than 1 throws: the
+strengths are exclusive draw bounds and the rates' divisors.
 
 The shown rates are the draws' own probabilities, so they follow from the strengths and the draw
 rules instead of separate formulas. The mission fails when its draw in `[0, mission_strength)` is
@@ -113,7 +117,9 @@ describe. Negative risk still shows 100%.
 `ProbeSuccessFormula_t`'s four numbers (`morale_divisor`, `strength_offset`, `defense_clamp_min`,
 `defense_clamp_max`) go. `ComputeProbeChances` takes the two strengths instead of morale,
 defense and the formula struct; `ProbeChancesFor` gets them from the calculator.
-`TargetProbeDefenseEffect` returns the evaluated `defense_formula`.
+`TargetProbeDefenseEffect` returns the evaluated `defense`. `ProbeChance_t::targetProbeEffect`,
+which nothing read, goes. A negative risk now draws from the mission strength rather than the
+raw morale; no shipping action has one.
 
 ## Config
 

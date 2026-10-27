@@ -68,12 +68,14 @@ inline ProbeActionId_t ParseProbeActionId(const std::string& rId)
     throw std::runtime_error("probe_actions.json: unknown action id '" + rId + "'");
 }
 
+// The odds' formulas, Lua expressions ProbeCalculator evaluates: the target's probe defense from
+// its probe_defense stat, and the mission and escape draw strengths from the probe's morale and
+// that defense. The shown rates are the draws' probabilities, so they need no formulas.
 struct ProbeSuccessFormula_t
 {
-    int moraleDivisor = 2;
-    int strengthOffset = 1;
-    int defenseClampMin = -2;
-    int defenseClampMax = 0;
+    std::string defense;
+    std::string missionStrength;
+    std::string escapeStrength;
 };
 
 // A paid action's cost before the effect multipliers: a Lua expression ProbeCalculator

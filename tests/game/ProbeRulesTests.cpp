@@ -28,6 +28,9 @@ using Catch::Matchers::ContainsSubstring;
 namespace
 {
 
+const std::string k_SuccessFormula = R"("success_formula": {
+    "defense": "probe_defense", "mission_strength": "morale", "escape_strength": "morale" })";
+
 const StatModifierEffect_t* FindProbeDefenseAtLevel_(const SocialRatingConfig_t& rConfig, int level)
 {
     const auto it = rConfig.levelEffects.find(level);
@@ -53,8 +56,9 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     const ProbeActionsConfig_t config =
         ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
 
-    CHECK(config.successFormula.moraleDivisor == 2);
-    CHECK(config.successFormula.strengthOffset == 1);
+    CHECK_FALSE(config.successFormula.defense.empty());
+    CHECK_FALSE(config.successFormula.missionStrength.empty());
+    CHECK_FALSE(config.successFormula.escapeStrength.empty());
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate) != nullptr);
     CHECK(config.Find(ProbeActionId_t::Infiltrate)->risk == 0);
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.size() == 1);
@@ -113,8 +117,8 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
 {
     const auto parseAction = [](const std::string& rActionJson)
     {
-        const TempConfigFile file("probe_actions.json",
-                                  R"({ "effects": [], "actions": [ )" + rActionJson + " ] }");
+        const TempConfigFile file("probe_actions.json", "{ " + k_SuccessFormula
+                                  + R"(, "effects": [], "actions": [ )" + rActionJson + " ] }");
         return ProbeActionConfigParser{}.ParseConfig(file.Path());
     };
     const std::string recordEntry =
@@ -154,9 +158,32 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
 TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[probe][config]")
 {
     const TempConfigFile file("probe_actions.json",
-                              R"({ "actions": [ { "id": "infiltrate", "target": "base" } ] })");
+                              "{ " + k_SuccessFormula
+                                  + R"(, "actions": [ { "id": "infiltrate", "target": "base" } ] })");
     CHECK_THROWS_WITH(ProbeActionConfigParser{}.ParseConfig(file.Path()),
                       ContainsSubstring("effects"));
+}
+
+TEST_CASE("ProbeActionConfigParser requires success_formula's three formulas", "[probe][config]")
+{
+    const auto parseOdds = [](const std::string& rOddsJson)
+    {
+        const TempConfigFile file("probe_actions.json",
+                                  R"({ "success_formula": )" + rOddsJson
+                                      + R"(, "effects": [],
+                                         "actions": [ { "id": "infiltrate", "target": "base" } ] })");
+        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+    };
+
+    CHECK_NOTHROW(parseOdds(R"({ "defense": "probe_defense", "mission_strength": "morale",
+                                 "escape_strength": "morale" })"));
+    CHECK_THROWS_WITH(parseOdds(R"({ "mission_strength": "morale", "escape_strength": "morale" })"),
+                      ContainsSubstring("defense"));
+    CHECK_THROWS_WITH(parseOdds(R"({ "defense": "probe_defense", "mission_strength": "",
+                                     "escape_strength": "morale" })"),
+                      ContainsSubstring("mission_strength"));
+    CHECK_THROWS_WITH(parseOdds(R"({ "defense": "probe_defense", "mission_strength": "morale" })"),
+                      ContainsSubstring("escape_strength"));
 }
 
 TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[probe][config][se]")
@@ -192,25 +219,25 @@ TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[prob
 
 TEST_CASE("ComputeProbeChances matches wiki tables for RISK 0-2", "[probe][rules]")
 {
-    ProbeSuccessFormula_t formula;
-    // Elite (6), target Probe 0 → strength = 6/2 - 0 + 1 = 4
+    // The strengths are the fixture formulas' (ProbeCalculatorTests).
+    // Elite (6), target Probe 0: mission strength 4, escape strength 6.
     {
-        const ProbeChance_t c = ComputeProbeChances(6, 0, 0, formula, 1.0, 1.0);
+        const ProbeChance_t c = ComputeProbeChances(4, 6, 0, 1.0, 1.0);
         CHECK(c.successRate == 100);
-        // escape failure = 1/6 → survival 100 - 16 = 84? (1*100)/6 = 16
+        // Escape loss (0 + 1) * 100 / 6 = 16.
         CHECK(c.survivalRate == 100 - (100 / 6));
     }
-    // Disciplined (2), RISK 1, target 0 → strength = 1 - 0 + 1 = 2; failure = 50%
+    // Disciplined (2), RISK 1, target 0: strengths 2 and 2; failure 50%.
     {
-        const ProbeChance_t c = ComputeProbeChances(2, 1, 0, formula, 1.0, 1.0);
+        const ProbeChance_t c = ComputeProbeChances(2, 2, 1, 1.0, 1.0);
         CHECK(c.probeStrength == 2);
         CHECK(c.successRate == 50);
-        // escape: (1+1)/2 = 100% loss → survival 0
+        // Escape loss (1 + 1) * 100 / 2 = 100%.
         CHECK(c.survivalRate == 0);
     }
-    // Hardened (3), RISK 2, target -2 → strength = 1 - (-2) + 1 = 4; failure = 50%
+    // Hardened (3), RISK 2, target -2: strengths 4 and 5; failure 50%.
     {
-        const ProbeChance_t c = ComputeProbeChances(3, 2, -2, formula, 1.0, 1.0);
+        const ProbeChance_t c = ComputeProbeChances(4, 5, 2, 1.0, 1.0);
         CHECK(c.probeStrength == 4);
         CHECK(c.successRate == 50);
     }
@@ -218,14 +245,14 @@ TEST_CASE("ComputeProbeChances matches wiki tables for RISK 0-2", "[probe][rules
 
 TEST_CASE("Algo enhancement halves failure; HSA halves success", "[probe][rules]")
 {
-    ProbeSuccessFormula_t formula;
-    const ProbeChance_t normal = ComputeProbeChances(4, 2, 0, formula, 1.0, 1.0);
+    // Morale 4, target 0: mission strength 3, escape strength 4.
+    const ProbeChance_t normal = ComputeProbeChances(3, 4, 2, 1.0, 1.0);
     // Algo vs non-HSA: failure scale 0.5
-    const ProbeChance_t algo = ComputeProbeChances(4, 2, 0, formula, 0.5, 1.0);
+    const ProbeChance_t algo = ComputeProbeChances(3, 4, 2, 0.5, 1.0);
     // Algo vs HSA: failure scale stays 1.0, success scale 0.5
-    const ProbeChance_t hsa = ComputeProbeChances(4, 2, 0, formula, 1.0, 0.5);
+    const ProbeChance_t hsa = ComputeProbeChances(3, 4, 2, 1.0, 0.5);
 
-    // strength = 4/2 + 1 = 3; failure = 200/3 = 66 → success 34
+    // Failure 200 / 3 = 66, success 34.
     CHECK(normal.successRate == 100 - (200 / 3));
     CHECK(algo.successRate == 100 - static_cast<int>(std::lround((200 / 3) * 0.5)));
     CHECK(hsa.successRate == static_cast<int>(std::lround((100 - (200 / 3)) * 0.5)));
@@ -243,8 +270,7 @@ TEST_CASE("A mission draw at the risk succeeds; an escape draw must exceed it", 
 
 TEST_CASE("RollProbeAction RISK 0 always succeeds mission without a bust chance", "[probe][rules]")
 {
-    ProbeSuccessFormula_t formula;
-    const ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
+    const ProbeChance_t chances = ComputeProbeChances(2, 2, 0, 1.0, 1.0);
     REQUIRE(chances.successBustChance == 0);
     std::mt19937 rng(1);
     for (int i = 0; i < 20; ++i)
@@ -273,8 +299,7 @@ TEST_CASE("RollProbeAction leaves the RNG alone when there is no draw, save or b
 
 TEST_CASE("RollProbeAction bust chance can bust a risk-0 mission", "[probe][rules]")
 {
-    ProbeSuccessFormula_t formula;
-    ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
+    ProbeChance_t chances = ComputeProbeChances(2, 2, 0, 1.0, 1.0);
     chances.successBustChance = 50;
     std::mt19937 rng(1);
     bool bAnyFail = false;

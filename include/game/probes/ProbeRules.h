@@ -27,7 +27,6 @@ struct ProbeChance_t
     int risk = 0;
     int probeStrength = 1;
     int escapeStrength = 1;
-    int targetProbeEffect = 0;
     // Percent chance a failed mission or escape draw is saved.
     int failureSaveChance = 0;
     // Percent chance a successful mission or escape draw is busted anyway.
@@ -48,7 +47,7 @@ struct ProbeRollResult_t
 // appear only on base effect lists.
 bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag);
 
-// Wiki "target base PROBE effect": the target's probe_defense, clamped to the defence range.
+// Wiki "target base PROBE effect": success_formula's defense over the target's probe_defense.
 // Positive Probe raises own-probe morale instead.
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
                              const ProbeSuccessFormula_t& rFormula);
@@ -57,12 +56,10 @@ int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
 // whatever the hunter/intrusion contest decides.
 double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget);
 
-// PureMultiplier scales; ProbeChancesFor decides which apply.
-ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
-                                  int targetProbeEffect,
-                                  const ProbeSuccessFormula_t& rFormula,
-                                  double failureScale,
-                                  double successScale);
+// The shown rates are the draws' own odds (MissionDrawSucceeds, EscapeDrawSucceeds), then the
+// PureMultiplier scales; ProbeChancesFor decides which apply. Negative risk shows 100%.
+ProbeChance_t ComputeProbeChances(int probeStrength, int escapeStrength, int risk,
+                                  double failureScale, double successScale);
 
 // The action's risk, or steal-tech's repeat risk when the base already has stolen research.
 // Targeted sabotage at a headquarters, or at a high_risk_sabotage facility, is at least the
@@ -70,8 +67,8 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
                 const std::string& facilityId);
 
-// ComputeProbeChances for this probe and target: its effective morale, the target's probe
-// defense and success scale, and the target's bust chance. The probe's failure scale and save
+// ComputeProbeChances for this probe and target: success_formula's strengths from its effective
+// morale and the target's defense, the target's success scale, and the target's bust chance. The probe's failure scale and save
 // chance apply unless the target's probe_hunter neutralises it: hunter > 0 and hunter >= the
 // probe's probe_intrusion.
 ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk);

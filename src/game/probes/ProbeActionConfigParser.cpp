@@ -31,23 +31,27 @@ ProbeTargetKind_t ParseTarget_(const std::string& rTarget)
     throw std::runtime_error("probe_actions.json: unknown target '" + rTarget + "'");
 }
 
-// A required Lua expression that ProbeCalculator evaluates.
+// A required Lua expression that ProbeCalculator evaluates; rContext names its owner in errors.
 std::string RequireFormula_(const json& rJson, const std::string& rKey,
-                            const std::string& rActionName)
+                            const std::string& rContext)
 {
     if (!rJson.contains(rKey) || !rJson.at(rKey).is_string()
         || rJson.at(rKey).get<std::string>().empty())
     {
-        throw std::runtime_error("Probe action '" + rActionName
-                                 + "': requires a formula string '" + rKey + "'");
+        throw std::runtime_error(rContext + ": requires a formula string '" + rKey + "'");
     }
     return rJson.at(rKey).get<std::string>();
+}
+
+std::string ActionContext_(const std::string& rActionName)
+{
+    return "Probe action '" + rActionName + "'";
 }
 
 ProbeCostConfig_t ParseCost_(const json& rCostJson, const std::string& rActionName)
 {
     ProbeCostConfig_t cost;
-    cost.formula = RequireFormula_(rCostJson, "formula", rActionName);
+    cost.formula = RequireFormula_(rCostJson, "formula", ActionContext_(rActionName));
     return cost;
 }
 
@@ -106,9 +110,10 @@ std::optional<DrainFormulas_t> ParseDrainFormulas_(const json& rActionJson,
     {
         return std::nullopt;
     }
-    return DrainFormulas_t{RequireFormula_(rActionJson, "share_formula", rAction.name),
-                           RequireFormula_(rActionJson, "floor_formula", rAction.name),
-                           RequireFormula_(rActionJson, "amount_formula", rAction.name)};
+    const std::string context = ActionContext_(rAction.name);
+    return DrainFormulas_t{RequireFormula_(rActionJson, "share_formula", context),
+                           RequireFormula_(rActionJson, "floor_formula", context),
+                           RequireFormula_(rActionJson, "amount_formula", context)};
 }
 
 std::optional<PlagueFormulas_t> ParsePlagueFormulas_(const json& rActionJson,
@@ -119,10 +124,10 @@ std::optional<PlagueFormulas_t> ParsePlagueFormulas_(const json& rActionJson,
     {
         return std::nullopt;
     }
-    return PlagueFormulas_t{
-        RequireFormula_(rActionJson, "kill_formula", rAction.name),
-        RequireFormula_(rActionJson, "garrison_damage_bound_formula", rAction.name),
-        RequireFormula_(rActionJson, "garrison_damage_formula", rAction.name)};
+    const std::string context = ActionContext_(rAction.name);
+    return PlagueFormulas_t{RequireFormula_(rActionJson, "kill_formula", context),
+                            RequireFormula_(rActionJson, "garrison_damage_bound_formula", context),
+                            RequireFormula_(rActionJson, "garrison_damage_formula", context)};
 }
 
 void ParseActionNumbers_(const json& rActionJson, ProbeActionConfig_t& rAction)
@@ -276,14 +281,16 @@ ProbeActionsConfig_t ProbeActionConfigParser::ParseConfig(const std::string& con
     configFile >> root;
 
     ProbeActionsConfig_t config;
-    if (root.contains("success_formula"))
+    if (!root.contains("success_formula") || !root.at("success_formula").is_object())
     {
-        const json& rFormula = root.at("success_formula");
-        config.successFormula.moraleDivisor = rFormula.value("morale_divisor", 2);
-        config.successFormula.strengthOffset = rFormula.value("strength_offset", 1);
-        config.successFormula.defenseClampMin = rFormula.value("defense_clamp_min", -2);
-        config.successFormula.defenseClampMax = rFormula.value("defense_clamp_max", 0);
+        throw std::runtime_error("probe_actions.json: missing required 'success_formula' object");
     }
+    const json& rOdds = root.at("success_formula");
+    const std::string oddsContext = "probe_actions.json success_formula";
+    config.successFormula.defense = RequireFormula_(rOdds, "defense", oddsContext);
+    config.successFormula.missionStrength =
+        RequireFormula_(rOdds, "mission_strength", oddsContext);
+    config.successFormula.escapeStrength = RequireFormula_(rOdds, "escape_strength", oddsContext);
 
     if (!root.contains("effects"))
     {

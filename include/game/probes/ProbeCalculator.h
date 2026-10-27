@@ -4,6 +4,7 @@ namespace ac
 {
 
 struct ProbeCostConfig_t;
+struct ProbeSuccessFormula_t;
 struct DrainFormulas_t;
 struct PlagueFormulas_t;
 class LuaRuntime;
@@ -67,6 +68,12 @@ public:
     int PlagueGarrisonDamageBound(const PlagueFormulas_t& rPlague, int hp) const;
     int PlagueGarrisonDamage(const PlagueFormulas_t& rPlague, int hp, int draw,
                              bool bRepeated) const;
+
+    int ProbeDefense(const ProbeSuccessFormula_t& rOdds, int probeDefense) const;
+    // Draw strengths are exclusive bounds and divisors of the shown rates: a formula that
+    // returns less than 1 throws.
+    int MissionStrength(const ProbeSuccessFormula_t& rOdds, int morale, int defense) const;
+    int EscapeStrength(const ProbeSuccessFormula_t& rOdds, int morale, int defense) const;
 
 private:
     // Not const: EvalInt mutates interpreter globals.

@@ -297,12 +297,12 @@ bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag)
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
                              const ProbeSuccessFormula_t& rFormula)
 {
-    int effect = 0;
+    int probeDefense = 0;
     if (const BaseManager* pSource = EffectSourceBase(rTarget))
     {
-        effect = ResolveProbeDefenseBonus_(*pSource);
+        probeDefense = ResolveProbeDefenseBonus_(*pSource);
     }
-    return std::clamp(effect, rFormula.defenseClampMin, rFormula.defenseClampMax);
+    return Calculator_().ProbeDefense(rFormula, probeDefense);
 }
 
 double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget)
@@ -314,28 +314,20 @@ double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget)
     return 1.0;
 }
 
-ProbeChance_t ComputeProbeChances(int moraleLevel, int risk, int targetProbeEffect,
-                                  const ProbeSuccessFormula_t& rFormula,
+ProbeChance_t ComputeProbeChances(int probeStrength, int escapeStrength, int risk,
                                   double failureScale, double successScale)
 {
     ProbeChance_t chances;
     chances.risk = risk;
-    chances.targetProbeEffect = targetProbeEffect;
-
-    const int morale = std::max(1, moraleLevel);
-    chances.escapeStrength = std::max(1, morale - targetProbeEffect);
+    chances.probeStrength = probeStrength;
+    chances.escapeStrength = escapeStrength;
     if (risk < 0)
     {
         chances.successRate = 100;
         chances.survivalRate = 100;
-        chances.probeStrength = morale;
         return chances;
     }
 
-    const int missionStrength =
-        (morale / std::max(1, rFormula.moraleDivisor)) - targetProbeEffect
-        + rFormula.strengthOffset;
-    chances.probeStrength = std::max(1, missionStrength);
     int failureRate = (risk * 100) / chances.probeStrength;
     const double scaledFailure = static_cast<double>(failureRate) * failureScale;
     failureRate = static_cast<int>(std::lround(scaledFailure));
@@ -619,13 +611,16 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
 {
     const GameDataContext& rData = CurrentGameState().GetGameData();
     const MoraleCalculator& rMorale = *rData.moraleCalculator;
+    const ProbeCalculator& rCalculator = *rData.probeCalculator;
     const ProbeSuccessFormula_t& rFormula = rData.probeActionsConfig->successFormula;
     EffectContext_t ctx;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
-    const int targetProbeEffect = TargetProbeDefenseEffect(rTarget, rFormula);
+    const int defense = TargetProbeDefenseEffect(rTarget, rFormula);
+    const int probeStrength = rCalculator.MissionStrength(rFormula, morale, defense);
+    const int escapeStrength = rCalculator.EscapeStrength(rFormula, morale, defense);
     const IntrusionBonuses_t bonuses = IntrusionBonuses_(rProbe, rTarget);
     const double successScale = ResolveTargetSuccessScale(rTarget);
-    ProbeChance_t chances = ComputeProbeChances(morale, risk, targetProbeEffect, rFormula,
+    ProbeChance_t chances = ComputeProbeChances(probeStrength, escapeStrength, risk,
                                                 bonuses.failureScale, successScale);
     chances.failureSaveChance = bonuses.failureSaveChance;
     chances.successBustChance = ResolveTargetAdditive_(rTarget, StatId_t::ProbeSuccessBust);

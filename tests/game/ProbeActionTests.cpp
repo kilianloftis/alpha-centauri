@@ -1620,6 +1620,28 @@ TEST_CASE("A quote follows its action's cost formula", "[probe][cost][config]")
     CHECK(QuoteSubvert_(game, probe, pod) == std::max(1, pod.GetDesign().GetBaseCost()) * 10);
 }
 
+TEST_CASE("A probe's draw strengths follow success_formula", "[probe][config]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    probe.SetXp(2);
+    const ProbeTarget_t target =
+        *ResolveProbeTarget(probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    ProbeSuccessFormula_t& rOdds = game.fixtures.dataContext.probeActionsConfig->successFormula;
+    // With no defense, the escape strength is the probe's morale.
+    REQUIRE(TargetProbeDefenseEffect(target, rOdds) == 0);
+    const ProbeChance_t before = ProbeChancesFor(probe, target, /*risk=*/1);
+
+    rOdds.missionStrength = "max(1, morale) + 5";
+    rOdds.escapeStrength = "max(1, morale) * 3";
+    const ProbeChance_t after = ProbeChancesFor(probe, target, /*risk=*/1);
+    CHECK(after.probeStrength == before.escapeStrength + 5);
+    CHECK(after.escapeStrength == before.escapeStrength * 3);
+    CHECK(after.successRate == 100 - 100 / after.probeStrength);
+}
+
 TEST_CASE("A unit's subversion cost ignores its home base's mood, former owner and base-only "
           "distance facilities",
           "[probe][cost][subvert]")
