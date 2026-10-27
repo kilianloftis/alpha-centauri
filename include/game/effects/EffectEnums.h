@@ -114,11 +114,22 @@ enum class StatId_t
     // the success/escape clamp.
     ProbeDefense,
     // Scales mission/escape failure rates for the acting probe (PureMultiplier). Algorithmic
-    // Enhancement emits AddPercent -50. Not applied against a target with BlocksProbeTeams.
+    // Enhancement emits AddPercent -50. Void while the target's hunter neutralises the probe.
     ProbeFailureScale,
     // Scales mission/escape success rates against this target (PureMultiplier). Hunter-Seeker
     // Algorithm emits AddPercent -50.
     ProbeSuccessScale,
+    // The target's side of the probe contest (Additive). A probe whose intrusion it exceeds dies
+    // on contact; one it matches loses its intrusion bonuses. Hunter-Seeker Algorithm Adds 1.
+    ProbeHunter,
+    // The probe's side of the contest (Additive). Algorithmic Enhancement Adds 1.
+    ProbeIntrusion,
+    // Percent chance a successful mission or escape draw against this target is busted anyway
+    // (Additive). Hunter-Seeker Algorithm Adds 50.
+    ProbeSuccessBust,
+    // Percent chance the probe's failed mission or escape draw is saved (Additive). Void while the
+    // target's hunter neutralises the probe. Algorithmic Enhancement Adds 50.
+    ProbeFailureSave,
     // PureMultiplier on the HQ distance in the base mind-control quote, truncated. Genejack ×2,
     // Children's Crèche ×0.5, Punishment Sphere ×0.5.
     MindControlDistanceScale,
@@ -306,6 +317,10 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
         case StatId_t::ProbeDefense:
+        case StatId_t::ProbeHunter:
+        case StatId_t::ProbeIntrusion:
+        case StatId_t::ProbeSuccessBust:
+        case StatId_t::ProbeFailureSave:
         case StatId_t::GarrisonProbeWeight:
         case StatId_t::GarrisonProbeMultiplier:
         case StatId_t::LastDefenderPopLoss:
@@ -409,6 +424,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeDefense:
         case StatId_t::ProbeSuccessScale:
+        case StatId_t::ProbeHunter:
+        case StatId_t::ProbeSuccessBust:
         case StatId_t::MindControlDistanceScale:
         case StatId_t::SubversionDistanceScale:
         case StatId_t::AiProbeCostScale:
@@ -466,6 +483,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PoliceEffectiveness:
         case StatId_t::AwayFromHomeDrones:
         case StatId_t::ProbeFailureScale:
+        case StatId_t::ProbeIntrusion:
+        case StatId_t::ProbeFailureSave:
         case StatId_t::GarrisonProbeWeight:
         case StatId_t::GarrisonProbeMultiplier:
         case StatId_t::SubversionCostScale:
@@ -533,6 +552,10 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
+    if (rStat == "probe_hunter")            return StatId_t::ProbeHunter;
+    if (rStat == "probe_intrusion")         return StatId_t::ProbeIntrusion;
+    if (rStat == "probe_success_bust")      return StatId_t::ProbeSuccessBust;
+    if (rStat == "probe_failure_save")      return StatId_t::ProbeFailureSave;
     if (rStat == "mind_control_distance_scale") return StatId_t::MindControlDistanceScale;
     if (rStat == "subversion_distance_scale") return StatId_t::SubversionDistanceScale;
     if (rStat == "garrison_probe_weight")   return StatId_t::GarrisonProbeWeight;
@@ -666,10 +689,6 @@ enum class RuleFlagId_t
     Headquarters,
     // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
     ProbeSubversionImmune,
-    // Target destroys unenhanced probe teams on contact (Hunter-Seeker).
-    BlocksProbeTeams,
-    // Probe is not destroyed on contact by BlocksProbeTeams. Does not pierce ProbeSubversionImmune.
-    IgnoresProbeBlock,
     // Targeted sabotage of this facility is at least risk 2 (Perimeter Defense, Tachyon Field).
     HighRiskSabotage,
     // Tech that unlocks genetic plague (TFLAG_ALLOW_GENE_WARFARE).
@@ -728,8 +747,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "airdrop_interdiction")        return RuleFlagId_t::AirdropInterdiction;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
-    if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
-    if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
     if (rFlag == "high_risk_sabotage")          return RuleFlagId_t::HighRiskSabotage;
     if (rFlag == "allow_gene_warfare")          return RuleFlagId_t::AllowGeneWarfare;
     if (rFlag == "inc_gene_warfare_defense")    return RuleFlagId_t::IncGeneWarfareDefense;

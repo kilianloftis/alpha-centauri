@@ -21,15 +21,17 @@ class BaseManager;
 struct ProbeChance_t
 {
     // 0..100 style rates matching Thinker display. The integer mission/escape rolls use
-    // probeStrength / escapeStrength and the Algo/HSA coins, not these percents.
+    // probeStrength / escapeStrength and the save and bust chances, not these percents.
     int successRate = 100;
     int survivalRate = 100;
     int risk = 0;
     int probeStrength = 1;
     int escapeStrength = 1;
     int targetProbeEffect = 0;
-    bool bAlgoSave = false;
-    bool bHsaCoin = false;
+    // Percent chance a failed mission or escape draw is saved.
+    int failureSaveChance = 0;
+    // Percent chance a successful mission or escape draw is busted anyway.
+    int successBustChance = 0;
 };
 
 struct ProbeRollResult_t
@@ -51,11 +53,11 @@ bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag);
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
                              const ProbeSuccessFormula_t& rFormula);
 
-// PureMultiplier resolve of probe_success_scale from the target (1.0 default). HSA halves
-// success for enhanced probes.
+// PureMultiplier resolve of probe_success_scale from the target (1.0 default). It applies
+// whatever the hunter/intrusion contest decides.
 double ResolveTargetSuccessScale(const ProbeTarget_t& rTarget);
 
-// PureMultiplier scales. Thinker applies failure scale only without BlocksProbeTeams.
+// PureMultiplier scales; ProbeChancesFor decides which apply.
 ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   int targetProbeEffect,
                                   const ProbeSuccessFormula_t& rFormula,
@@ -69,12 +71,14 @@ int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget
                 const std::string& facilityId);
 
 // ComputeProbeChances for this probe and target: its effective morale, the target's probe
-// defense, the failure scale unless the target BlocksProbeTeams, and the target's success scale.
-// Sets bAlgoSave from IgnoresProbeBlock and bHsaCoin from BlocksProbeTeams.
+// defense and success scale, and the target's bust chance. The probe's failure scale and save
+// chance apply unless the target's probe_hunter neutralises it: hunter > 0 and hunter >= the
+// probe's probe_intrusion.
 ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, int risk);
 
-// True when the target's Hunter-Seeker would destroy this probe on contact (no Algo).
-bool HunterSeekerDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
+// True when the target's probe_hunter exceeds the probe's probe_intrusion: the probe dies on
+// contact, before any menu, cost or roll.
+bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
 
 // Floor, exclusive remainder bound (share − floor), and the target treasury for a drain.
 struct StealEnergyQuote_t

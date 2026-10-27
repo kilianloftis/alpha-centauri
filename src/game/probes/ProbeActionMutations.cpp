@@ -412,26 +412,15 @@ void ApplyProbePaidEffects(Unit& rProbe, const ProbeActionConfig_t& rAction,
 namespace
 {
 
-bool RollHalf_(std::mt19937& rRng)
+// A failed draw may still be saved and a successful one busted. RollPercent leaves the RNG alone
+// at 0 and 100, so a probe with neither chance draws only what the binary draws.
+bool ApplySaveAndBust_(bool bDrawSucceeded, const ProbeChance_t& rChances, std::mt19937& rRng)
 {
-    return RollExclusiveMax(2, rRng) == 0;
-}
-
-bool ApplyAlgoSaveAndHsaBust_(bool bSucceeded, const ProbeChance_t& rChances, std::mt19937& rRng)
-{
-    if (!bSucceeded)
+    if (!bDrawSucceeded)
     {
-        if (rChances.bAlgoSave && !rChances.bHsaCoin)
-        {
-            return RollHalf_(rRng);
-        }
-        return false;
+        return RollPercent(rChances.failureSaveChance, rRng);
     }
-    if (rChances.bHsaCoin)
-    {
-        return !RollHalf_(rRng);
-    }
-    return true;
+    return !RollPercent(rChances.successBustChance, rRng);
 }
 
 bool MissionDrawSucceeded_(const ProbeChance_t& rChances, std::mt19937& rRng)
@@ -456,14 +445,14 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
     result.chances = rChances;
 
     const bool bMissionDraw = MissionDrawSucceeded_(rChances, rRng);
-    result.missionSucceeded = ApplyAlgoSaveAndHsaBust_(bMissionDraw, rChances, rRng);
+    result.missionSucceeded = ApplySaveAndBust_(bMissionDraw, rChances, rRng);
     if (!result.missionSucceeded)
     {
         return result;
     }
 
     const bool bEscapeDraw = EscapeDrawSucceeded_(rChances, rRng);
-    result.escaped = ApplyAlgoSaveAndHsaBust_(bEscapeDraw, rChances, rRng);
+    result.escaped = ApplySaveAndBust_(bEscapeDraw, rChances, rRng);
     return result;
 }
 

@@ -228,11 +228,11 @@ TEST_CASE("Algo enhancement halves failure; HSA halves success", "[probe][rules]
     CHECK(hsa.successRate == static_cast<int>(std::lround((100 - (200 / 3)) * 0.5)));
 }
 
-TEST_CASE("RollProbeAction RISK 0 always succeeds mission without an HSA coin", "[probe][rules]")
+TEST_CASE("RollProbeAction RISK 0 always succeeds mission without a bust chance", "[probe][rules]")
 {
     ProbeSuccessFormula_t formula;
     const ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
-    REQUIRE_FALSE(chances.bHsaCoin);
+    REQUIRE(chances.successBustChance == 0);
     std::mt19937 rng(1);
     for (int i = 0; i < 20; ++i)
     {
@@ -241,11 +241,28 @@ TEST_CASE("RollProbeAction RISK 0 always succeeds mission without an HSA coin", 
     }
 }
 
-TEST_CASE("RollProbeAction HSA coin can bust a risk-0 mission", "[probe][rules]")
+TEST_CASE("RollProbeAction leaves the RNG alone when there is no draw, save or bust",
+          "[probe][rules]")
+{
+    // Strength 1 draws nothing: risk 0 passes the mission and loses the escape.
+    ProbeChance_t chances;
+    chances.risk = 0;
+    chances.probeStrength = 1;
+    chances.escapeStrength = 1;
+    std::mt19937 rng(7);
+    const std::mt19937 before = rng;
+
+    const ProbeRollResult_t roll = RollProbeAction(chances, rng);
+    CHECK(roll.missionSucceeded);
+    CHECK_FALSE(roll.escaped);
+    CHECK(rng == before);
+}
+
+TEST_CASE("RollProbeAction bust chance can bust a risk-0 mission", "[probe][rules]")
 {
     ProbeSuccessFormula_t formula;
     ProbeChance_t chances = ComputeProbeChances(2, 0, 0, formula, 1.0, 1.0);
-    chances.bHsaCoin = true;
+    chances.successBustChance = 50;
     std::mt19937 rng(1);
     bool bAnyFail = false;
     for (int i = 0; i < 200; ++i)
@@ -259,14 +276,32 @@ TEST_CASE("RollProbeAction HSA coin can bust a risk-0 mission", "[probe][rules]"
     CHECK(bAnyFail);
 }
 
-TEST_CASE("RollProbeAction Algo save can recover a failed mission without HSA", "[probe][rules]")
+TEST_CASE("RollProbeAction bust chance also loses a probe whose escape draw succeeded",
+          "[probe][rules]")
+{
+    // Risk -1 passes both strength draws, so only the bust can fail either.
+    ProbeChance_t chances;
+    chances.risk = -1;
+    chances.probeStrength = 1;
+    chances.escapeStrength = 1;
+    chances.successBustChance = 50;
+    std::mt19937 rng(1);
+    bool bLostAfterMission = false;
+    for (int i = 0; i < 200 && !bLostAfterMission; ++i)
+    {
+        const ProbeRollResult_t roll = RollProbeAction(chances, rng);
+        bLostAfterMission = roll.missionSucceeded && !roll.escaped;
+    }
+    CHECK(bLostAfterMission);
+}
+
+TEST_CASE("RollProbeAction save chance can recover a failed mission", "[probe][rules]")
 {
     ProbeChance_t chances;
     chances.risk = 100;
     chances.probeStrength = 1;
     chances.escapeStrength = 1;
-    chances.bAlgoSave = true;
-    chances.bHsaCoin = false;
+    chances.failureSaveChance = 50;
     std::mt19937 rng(1);
     bool bAnySuccess = false;
     for (int i = 0; i < 200; ++i)
@@ -278,6 +313,23 @@ TEST_CASE("RollProbeAction Algo save can recover a failed mission without HSA", 
         }
     }
     CHECK(bAnySuccess);
+}
+
+TEST_CASE("RollProbeAction save chance can recover a failed escape", "[probe][rules]")
+{
+    // Risk 0 at strength 1 always passes the mission and always loses the escape draw.
+    ProbeChance_t chances;
+    chances.risk = 0;
+    chances.probeStrength = 1;
+    chances.escapeStrength = 1;
+    chances.failureSaveChance = 50;
+    std::mt19937 rng(1);
+    bool bAnyEscape = false;
+    for (int i = 0; i < 200 && !bAnyEscape; ++i)
+    {
+        bAnyEscape = RollProbeAction(chances, rng).escaped;
+    }
+    CHECK(bAnyEscape);
 }
 
 TEST_CASE("TryPromoteProbeMission bumps XP up to max", "[probe][morale]")

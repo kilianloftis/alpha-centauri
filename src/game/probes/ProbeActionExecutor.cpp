@@ -198,7 +198,7 @@ bool ProbeActionExecutor::WouldHunterSeekerDestroy(const Unit& rProbe, const Til
     {
         return false;
     }
-    return HunterSeekerDestroys(rProbe, *target);
+    return ProbeContactDestroys(rProbe, *target);
 }
 
 ProbeActionResult_t ProbeActionExecutor::TryProbeAction(

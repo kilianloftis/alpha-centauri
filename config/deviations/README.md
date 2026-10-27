@@ -60,7 +60,8 @@ absent.
   Thinker matches.
 - **Ours:** the coin runs on every successful escape, as the displayed survival halving
   says.
-- **Where:** `RollProbeAction` in `ProbeActionMutations.cpp`.
+- **Where:** `RollProbeAction` in `ProbeActionMutations.cpp` rolls the target's
+  `probe_success_bust` after both successful draws.
 - **Missing:** the original sea/no-port version and a switch.
 
 ### Combat odds dialog uses hits-to-kill `[Bug]` `[Thinker]`

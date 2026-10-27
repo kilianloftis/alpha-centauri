@@ -1552,19 +1552,63 @@ TEST_CASE("A probe may steal any tech the target knows that the actor does not",
           == std::vector<std::string>{"advanced_build"});
 }
 
-TEST_CASE("A probe's failure scale is void against a target that blocks probe teams, and the "
-          "target's success scale always applies",
-          "[probe][rules]")
+namespace
 {
-    // Declared before the game, whose design holds references into them.
+
+// A probe design with its own ability part; the part outlives the design that points at it.
+Unit& MakeProbeWithAbility_(ProbeGame_& rGame, const UnitComponentConfig_t& rAbility, int x, int y,
+                            BaseManager& rHome)
+{
+    std::vector<UnitSlotConfig_t> slots;
+    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
+    for (const UnitComponentConfig_t* pComponent :
+         {rGame.fixtures.unitComponents.Find("test_chassis"),
+          rGame.fixtures.unitComponents.Find("Probe_Team"), &rAbility})
+    {
+        const std::string slotId = "slot_" + pComponent->id;
+        slots.push_back({.id = slotId, .displayName = slotId,
+                         .componentType = pComponent->type, .required = true});
+        assigned[slotId] = pComponent;
+    }
+    const UnitDesign& rDesign = rGame.fixtures.designs.emplace_back(slots, assigned);
+    return rGame.pPlayer->GetUnitManager().CreateUnit(
+        rGame.fixtures.state.AllocateUnitId(), rDesign,
+        rGame.fixtures.state.GetWorldMap().GetUnitPositions(),
+        *rGame.fixtures.state.GetWorldMap().GetTile(x, y), ac::UnitOrigin::Issued(rHome));
+}
+
+UnitComponentConfig_t IntrusionAbility_(EffectPool& rPool, const std::string& rId, int intrusion)
+{
+    UnitComponentConfig_t ability;
+    ability.id = rId;
+    ability.type = "ability";
+    ability.effects = {
+        rPool.StatMod(StatId_t::ProbeFailureScale, -50, ModifierOp_t::AddPercent,
+                      EffectScope_t::ThisUnit),
+        rPool.StatMod(StatId_t::ProbeFailureSave, 50, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        rPool.StatMod(StatId_t::ProbeIntrusion, intrusion, ModifierOp_t::Add,
+                      EffectScope_t::ThisUnit)};
+    return ability;
+}
+
+} // namespace
+
+TEST_CASE("A hunter that matches a probe's intrusion voids its failure scale and save, and the "
+          "target's success scale and bust always apply",
+          "[probe][rules][hsa]")
+{
+    // Declared before the game, whose designs hold references into them.
     EffectPool pool;
-    UnitComponentConfig_t enhancement;
+    UnitComponentConfig_t unaided;
+    UnitComponentConfig_t matched;
+    UnitComponentConfig_t stronger;
     ProbeGame_ game;
 
     BuildingConfig_t hunterSeeker;
     hunterSeeker.id = "test_hunter_seeker";
     hunterSeeker.name = "Test Hunter-Seeker";
-    hunterSeeker.effects = {pool.RuleFlag(RuleFlagId_t::BlocksProbeTeams),
+    hunterSeeker.effects = {pool.StatMod(StatId_t::ProbeHunter, 1),
+                            pool.StatMod(StatId_t::ProbeSuccessBust, 50),
                             pool.StatMod(StatId_t::ProbeSuccessScale, -50,
                                          ModifierOp_t::AddPercent)};
     // Assigned before any base exists, so no building manager holds the replaced configs.
@@ -1575,45 +1619,59 @@ TEST_CASE("A probe's failure scale is void against a target that blocks probe te
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     Unit& plain = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    // Intrusion 0 still carries a failure scale and save granted elsewhere.
+    unaided = IntrusionAbility_(pool, "test_unaided", 0);
+    matched = IntrusionAbility_(pool, "test_matched", 1);
+    stronger = IntrusionAbility_(pool, "test_stronger", 2);
+    Unit& unaidedProbe = MakeProbeWithAbility_(game, unaided, 9, 9, home);
+    Unit& matchedProbe = MakeProbeWithAbility_(game, matched, 7, 7, home);
+    Unit& strongerProbe = MakeProbeWithAbility_(game, stronger, 9, 7, home);
     // RISK 1 at starting_intrinsic is 0% success, so the scale comparison has no headroom.
-    plain.SetXp(2);
-
-    enhancement.id = "test_failure_halving";
-    enhancement.type = "ability";
-    enhancement.effects = {pool.StatMod(StatId_t::ProbeFailureScale, -50, ModifierOp_t::AddPercent,
-                                        EffectScope_t::ThisUnit)};
-    std::vector<UnitSlotConfig_t> slots;
-    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
-    for (const UnitComponentConfig_t* pComponent :
-         {game.fixtures.unitComponents.Find("test_chassis"),
-          game.fixtures.unitComponents.Find("Probe_Team"),
-          static_cast<const UnitComponentConfig_t*>(&enhancement)})
+    for (Unit* pProbe : {&plain, &unaidedProbe, &matchedProbe, &strongerProbe})
     {
-        const std::string slotId = "slot_" + pComponent->id;
-        slots.push_back({.id = slotId, .displayName = slotId,
-                         .componentType = pComponent->type, .required = true});
-        assigned[slotId] = pComponent;
+        pProbe->SetXp(2);
     }
-    const UnitDesign& rEnhancedDesign = game.fixtures.designs.emplace_back(slots, assigned);
-    Unit& enhanced = game.pPlayer->GetUnitManager().CreateUnit(
-        game.fixtures.state.AllocateUnitId(), rEnhancedDesign,
-        game.fixtures.state.GetWorldMap().GetUnitPositions(), *game.fixtures.state.GetWorldMap().GetTile(9, 9), ac::UnitOrigin::Issued(home));
-    enhanced.SetXp(2);
 
-    const auto successAgainstEnemy = [&](const Unit& rProbe)
+    const auto chancesAgainstEnemy = [&](const Unit& rProbe)
     {
         const ProbeTarget_t target =
             *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
-        return ProbeChancesFor(rProbe, target, /*risk=*/1).successRate;
+        return ProbeChancesFor(rProbe, target, /*risk=*/1);
     };
-    const int plainOpen = successAgainstEnemy(plain);
-    CHECK(plainOpen > 0);
-    CHECK(successAgainstEnemy(enhanced) > plainOpen);
+
+    // No hunter: every probe keeps its scale and save, and nothing busts.
+    const ProbeChance_t plainOpen = chancesAgainstEnemy(plain);
+    CHECK(plainOpen.successRate > 0);
+    CHECK(plainOpen.successBustChance == 0);
+    CHECK(chancesAgainstEnemy(unaidedProbe).successRate > plainOpen.successRate);
+    CHECK(chancesAgainstEnemy(unaidedProbe).failureSaveChance == 50);
 
     enemy.GetBuildingManager().AddBuilding("test_hunter_seeker");
-    const int plainBlocked = successAgainstEnemy(plain);
-    CHECK(plainBlocked < plainOpen);
-    CHECK(successAgainstEnemy(enhanced) == plainBlocked);
+    const ProbeChance_t plainHunted = chancesAgainstEnemy(plain);
+    CHECK(plainHunted.successRate < plainOpen.successRate);
+    CHECK(plainHunted.successBustChance == 50);
+    for (const Unit* pNeutralised : {&unaidedProbe, &matchedProbe})
+    {
+        const ProbeChance_t chances = chancesAgainstEnemy(*pNeutralised);
+        CHECK(chances.successRate == plainHunted.successRate);
+        CHECK(chances.failureSaveChance == 0);
+        CHECK(chances.successBustChance == 50);
+    }
+    const ProbeChance_t strongerHunted = chancesAgainstEnemy(strongerProbe);
+    CHECK(strongerHunted.successRate > plainHunted.successRate);
+    CHECK(strongerHunted.failureSaveChance == 50);
+    CHECK(strongerHunted.successBustChance == 50);
+
+    const auto contactDestroys = [&](const Unit& rProbe)
+    {
+        const ProbeTarget_t target =
+            *ResolveProbeTarget(rProbe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+        return ProbeContactDestroys(rProbe, target);
+    };
+    CHECK(contactDestroys(plain));
+    CHECK(contactDestroys(unaidedProbe));
+    CHECK_FALSE(contactDestroys(matchedProbe));
+    CHECK_FALSE(contactDestroys(strongerProbe));
 }
 
 TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without paying",
@@ -1625,7 +1683,7 @@ TEST_CASE("Unenhanced probe vs Hunter-Seeker is destroyed on contact without pay
     BuildingConfig_t hunterSeeker;
     hunterSeeker.id = "test_hunter_seeker";
     hunterSeeker.name = "Test Hunter-Seeker";
-    hunterSeeker.effects = {pool.RuleFlag(RuleFlagId_t::BlocksProbeTeams)};
+    hunterSeeker.effects = {pool.StatMod(StatId_t::ProbeHunter, 1)};
     std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
     buildings.push_back(hunterSeeker);
     game.fixtures.buildings().Assign(std::move(buildings));
@@ -1675,7 +1733,8 @@ TEST_CASE("SE Probe +3 is immune to paid actions even with Algorithmic Enhanceme
 
     enhancement.id = "test_algo";
     enhancement.type = "ability";
-    enhancement.effects = {pool.RuleFlag(RuleFlagId_t::IgnoresProbeBlock)};
+    enhancement.effects = {pool.StatMod(StatId_t::ProbeIntrusion, 1, ModifierOp_t::Add,
+                                        EffectScope_t::ThisUnit)};
     std::vector<UnitSlotConfig_t> slots;
     std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
     for (const UnitComponentConfig_t* pComponent :

@@ -4,7 +4,7 @@ overview: Replace the Hunter-Seeker / Algorithmic Enhancement / Polymorphic Encr
 todos:
   - id: stats-enums
     content: Add probe_hunter, probe_intrusion, probe_success_bust, probe_failure_save, garrison_probe_weight, garrison_probe_multiplier, subversion_cost_scale, subversion_distance_scale, ai_probe_cost_scale (KindFor, DomainFor, parse map, comments); delete BlocksProbeTeams, IgnoresProbeBlock, PolyEncryption
-    status: pending
+    status: completed
   - id: unit-plan
     content: UnitPlan_t, UnitPlanRules::DesignPlan porting make_proto, optional component plan field, DesignPlan effect condition
     status: completed
@@ -19,13 +19,13 @@ todos:
     status: completed
   - id: mutations-roll
     content: RollPercent fail-save on mission and escape failure, success bust on mission and escape success
-    status: pending
+    status: completed
   - id: executor-notices
     content: Rename contact-destroy path in executor/WorldView; ProbeContactDestroyed_t carries the hunter source id; FillNoticeNames_ fills facilityName; generic notice copy
     status: pending
   - id: config
     content: Rewrite HSA, Algo, Poly shipping and fixture effects
-    status: pending
+    status: completed
   - id: tests-docs
     content: Update ProbeAction/ProbeRules/Parser/Validation/ProbeNotices tests and effects/player-interaction/ui/unit-designer docs; ./bd build and ./bd test
     status: pending
@@ -146,7 +146,7 @@ Original 1 vs 1 falls out: Algo 1 vs HSA 1 → no contact kill, neutralised (no 
 
 `ProbeHunterSource(rTarget)` returns the `sourceId` of the largest positive `probe_hunter` contribution, from `ResolveStatModifiers`' `StatBreakdown_t` on the source base's effects. Called only after `ProbeContactDestroys` is true, so a contributor always exists; throw if none.
 
-`ProbeChance_t` drops `bAlgoSave` / `bHsaCoin`; its comment names the save and bust chances instead of Algo/HSA. Rename the header comments on `ResolveTargetSuccessScale`, `ComputeProbeChances` and `ProbeChancesFor` to describe the hunter/intrusion contest.
+`IntrusionBonuses_` returns the failure scale and save chance together and decides neutralisation itself, so no helper takes a "neutralised" flag. `ProbeChance_t` drops `bAlgoSave` / `bHsaCoin`; its comment names the save and bust chances instead of Algo/HSA. Rename the header comments on `ResolveTargetSuccessScale`, `ComputeProbeChances` and `ProbeChancesFor` to describe the hunter/intrusion contest.
 
 **Mind-control garrison and unit subversion:**
 

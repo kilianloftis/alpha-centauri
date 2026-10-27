@@ -71,6 +71,46 @@ double ResolveMindControlDistanceScale_(const BaseManager& rBase)
                            SeedFor(StatId_t::MindControlDistanceScale), nullptr);
 }
 
+// An Additive target-side stat (hunter, bust chance) from the target's effect source; 0 without one.
+int ResolveTargetAdditive_(const ProbeTarget_t& rTarget, StatId_t stat)
+{
+    const BaseManager* pSource = EffectSourceBase(rTarget);
+    if (!pSource)
+    {
+        return 0;
+    }
+    const double value = ResolveBaseStat(pSource->GetBaseEffects(), stat, SeedFor(stat), nullptr);
+    return static_cast<int>(std::lround(value));
+}
+
+// The target's hunter neutralises the probe's intrusion bonuses when it matches or beats them.
+bool HunterNeutralises_(const Unit& rProbe, const ProbeTarget_t& rTarget)
+{
+    const int hunter = ResolveTargetAdditive_(rTarget, StatId_t::ProbeHunter);
+    return hunter > 0 && hunter >= ResolveStat(rProbe, StatId_t::ProbeIntrusion);
+}
+
+struct IntrusionBonuses_t
+{
+    double failureScale = 1.0;
+    int failureSaveChance = 0;
+};
+
+// The probe's failure scale and save chance, void while the target's hunter neutralises it.
+IntrusionBonuses_t IntrusionBonuses_(const Unit& rProbe, const ProbeTarget_t& rTarget)
+{
+    IntrusionBonuses_t bonuses;
+    if (HunterNeutralises_(rProbe, rTarget))
+    {
+        return bonuses;
+    }
+    bonuses.failureScale = ResolveMultiplicativeStat(
+        rProbe, StatId_t::ProbeFailureScale, SeedFor(StatId_t::ProbeFailureScale),
+        EffectContext_t{});
+    bonuses.failureSaveChance = ResolveStat(rProbe, StatId_t::ProbeFailureSave);
+    return bonuses;
+}
+
 double ResolveSubversionDistanceScale_(const Unit& rTargetUnit)
 {
     const BaseManager* pHome = rTargetUnit.GetHomeBase();
@@ -471,10 +511,10 @@ bool HqAllowsAction_(const ProbeActionConfig_t& rAction, const BaseManager& rBas
 
 } // namespace
 
-bool HunterSeekerDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget)
+bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget)
 {
-    return TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams)
-        && !ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
+    const int hunter = ResolveTargetAdditive_(rTarget, StatId_t::ProbeHunter);
+    return hunter > ResolveStat(rProbe, StatId_t::ProbeIntrusion);
 }
 
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
@@ -604,17 +644,12 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
     EffectContext_t ctx;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
     const int targetProbeEffect = TargetProbeDefenseEffect(rTarget, rFormula);
-    double failureScale = 1.0;
-    if (!TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams))
-    {
-        failureScale = ResolveMultiplicativeStat(rProbe, StatId_t::ProbeFailureScale, 1.0,
-        EffectContext_t{});
-    }
+    const IntrusionBonuses_t bonuses = IntrusionBonuses_(rProbe, rTarget);
     const double successScale = ResolveTargetSuccessScale(rTarget);
-    ProbeChance_t chances =
-        ComputeProbeChances(morale, risk, targetProbeEffect, rFormula, failureScale, successScale);
-    chances.bAlgoSave = ResolveFlag(rProbe, RuleFlagId_t::IgnoresProbeBlock);
-    chances.bHsaCoin = TargetHasFlag(rTarget, RuleFlagId_t::BlocksProbeTeams);
+    ProbeChance_t chances = ComputeProbeChances(morale, risk, targetProbeEffect, rFormula,
+                                                bonuses.failureScale, successScale);
+    chances.failureSaveChance = bonuses.failureSaveChance;
+    chances.successBustChance = ResolveTargetAdditive_(rTarget, StatId_t::ProbeSuccessBust);
     return chances;
 }
 

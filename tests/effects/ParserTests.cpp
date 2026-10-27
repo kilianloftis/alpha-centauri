@@ -67,6 +67,10 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
+    CHECK(ParseStatId("probe_hunter") == StatId_t::ProbeHunter);
+    CHECK(ParseStatId("probe_intrusion") == StatId_t::ProbeIntrusion);
+    CHECK(ParseStatId("probe_success_bust") == StatId_t::ProbeSuccessBust);
+    CHECK(ParseStatId("probe_failure_save") == StatId_t::ProbeFailureSave);
     CHECK(ParseStatId("garrison_probe_weight") == StatId_t::GarrisonProbeWeight);
     CHECK(ParseStatId("garrison_probe_multiplier") == StatId_t::GarrisonProbeMultiplier);
     CHECK(ParseStatId("subversion_cost_scale") == StatId_t::SubversionCostScale);
@@ -169,10 +173,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("headquarters") == RuleFlagId_t::Headquarters);
     CHECK(ParseRuleFlagId("probe_subversion_immune")
           == RuleFlagId_t::ProbeSubversionImmune);
-    CHECK(ParseRuleFlagId("blocks_probe_teams")
-          == RuleFlagId_t::BlocksProbeTeams);
-    CHECK(ParseRuleFlagId("ignores_probe_block")
-          == RuleFlagId_t::IgnoresProbeBlock);
     CHECK(ParseRuleFlagId("high_risk_sabotage") == RuleFlagId_t::HighRiskSabotage);
     CHECK(ParseRuleFlagId("allow_gene_warfare") == RuleFlagId_t::AllowGeneWarfare);
     CHECK(ParseRuleFlagId("inc_gene_warfare_defense")

@@ -273,10 +273,21 @@
         }
       },
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "ignores_probe_block"
+          "stat": "probe_intrusion",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "probe_failure_save",
+          "amount": 50,
+          "op": "Add"
         }
       }
     ]

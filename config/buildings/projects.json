@@ -178,10 +178,21 @@
     "icon": "assets/sprites/projects/proj015.png",
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "FactionGlobal",
         "parameters": {
-          "flag": "blocks_probe_teams"
+          "stat": "probe_hunter",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "probe_success_bust",
+          "amount": 50,
+          "op": "Add"
         }
       },
       {

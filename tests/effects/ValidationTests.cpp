@@ -199,6 +199,14 @@ static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::MindControlDistanceScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PlagueDamageScale) == StatKind_t::PureMultiplier);
 static_assert(DomainFor(StatId_t::MindControlDistanceScale) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::ProbeHunter) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::ProbeHunter) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::ProbeSuccessBust) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::ProbeSuccessBust) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::ProbeIntrusion) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::ProbeIntrusion) == ResolveDomain_t::Unit);
+static_assert(KindFor(StatId_t::ProbeFailureSave) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::ProbeFailureSave) == ResolveDomain_t::Unit);
 static_assert(KindFor(StatId_t::SubversionDistanceScale) == StatKind_t::PureMultiplier);
 static_assert(DomainFor(StatId_t::SubversionDistanceScale) == ResolveDomain_t::Base);
 static_assert(KindFor(StatId_t::AiProbeCostScale) == StatKind_t::PureMultiplier);
