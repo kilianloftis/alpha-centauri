@@ -317,18 +317,29 @@ TEST_CASE("A captured base gains recently-conquered drones",
     CHECK(rBase.GetPopulation().GetAssimilation().OccupierWindow().IsActive());
 }
 
-TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")
+TEST_CASE("Difficulty discounts only an AI's probes against a player, on Thinker and up",
+          "[difficulty][effects]")
 {
     FactionFixture fixtures;
     UseFixtureDifficulty_(fixtures, "citizen");
 
     Faction& rHuman = fixtures.MakeFaction();
     Faction& rAi = fixtures.MakeFaction();
-    BaseManager& rHumanBase = fixtures.MakeFactionBase(rHuman, 2, 2);
     BaseManager& rAiBase = fixtures.MakeFactionBase(rAi, 5, 5);
+    const auto actorCost = [](const Faction& rActor, const Faction& rTarget)
+    {
+        EffectContext_t ctx;
+        ctx.pPartner = &rTarget;
+        return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost, 1.0, &ctx);
+    };
 
-    CHECK(ResolveBaseStat_(rHumanBase, StatId_t::ProbeActionCost, 1.0) == Approx(1.0));
-    CHECK(ResolveBaseStat_(rAiBase, StatId_t::ProbeActionCost, 1.0) == Approx(0.5));
+    // No level makes an AI's bases cheaper to probe.
+    CHECK(ResolveBaseStat_(rAiBase, StatId_t::ProbeActionCost, 1.0) == Approx(1.0));
+    CHECK(actorCost(rAi, rHuman) == Approx(1.0));
+
+    SelectDifficulty_(fixtures, "thinker");
+    CHECK(actorCost(rAi, rHuman) == Approx(0.75));
+    CHECK(actorCost(rHuman, rAi) == Approx(1.0));
 }
 
 TEST_CASE("Command Center MaxClamp follows difficulty", "[difficulty][effects][upkeep]")

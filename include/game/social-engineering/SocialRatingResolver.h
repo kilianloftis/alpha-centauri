@@ -31,8 +31,9 @@ int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);
 const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
     const SocialRatingConfig_t& rConfig, int total);
 
-// Base lane: accumulates rRatingSource and returns each axis's level effects. Ratings
-// accumulate over the local pool, but the base resolves over the composed one.
+// Base lane: accumulates rRatingSource and returns each axis's level effects other than
+// FactionUnits ones. Ratings accumulate over the local pool, but the base resolves over the
+// composed one.
 std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings);
 

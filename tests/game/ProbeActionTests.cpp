@@ -7,6 +7,8 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/base/BaseTypes.h"
+#include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/visibility/FactionExploredMap.h"
@@ -47,6 +49,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
@@ -159,6 +162,14 @@ void ForceSureThing_(ProbeGame_& rGame, ProbeActionId_t actionId)
         }
     }
     FAIL("fixture has no such probe action");
+}
+
+const ProbeActionConfig_t& RequireAction_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    const ProbeActionConfig_t* pAction =
+        rGame.fixtures.dataContext.probeActionsConfig->Find(actionId);
+    REQUIRE(pAction);
+    return *pAction;
 }
 
 bool UnitAlive_(const Faction& rFaction, UnitId_t unitId)
@@ -827,14 +838,14 @@ TEST_CASE("genetic_plague kill count follows defense techs and hospital scale",
     {
         enemy.GetPopulation().AddPop();
     }
-    CHECK(GeneticPlagueKilled(enemy) == 3);
+    CHECK(GeneticPlagueKilled(RequireAction_(game, ProbeActionId_t::GeneticPlague), enemy) == 3);
 
     enemy.GetBuildingManager().AddBuilding("test_hospital");
-    CHECK(GeneticPlagueKilled(enemy) == 2);
+    CHECK(GeneticPlagueKilled(RequireAction_(game, ProbeActionId_t::GeneticPlague), enemy) == 2);
 
     game.pAi->GetResearch().AddDiscoveredTech("discover_tech");
     game.pAi->GetResearch().AddDiscoveredTech("conquer_tech");
-    CHECK(GeneticPlagueKilled(enemy) == 1);
+    CHECK(GeneticPlagueKilled(RequireAction_(game, ProbeActionId_t::GeneticPlague), enemy) == 1);
 }
 
 // Ordering contract: a probe may only act on something its faction can actually see, so a
@@ -1074,7 +1085,8 @@ TEST_CASE("Mind-control quote halves when the actor is the former owner",
     REQUIRE(fullCost.has_value());
     targetBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(),
                                               game.pAi->GetFactionId());
-    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target) == *fullCost / 2);
+    CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target)
+          == static_cast<int>(std::lround(*fullCost * 0.5)));
 }
 
 TEST_CASE("Mind-control quote doubles when the actor has victimized the target",
@@ -1122,14 +1134,6 @@ TEST_CASE("Mind Control transfers the tile garrison to the actor",
 
 namespace
 {
-
-const ProbeActionConfig_t& RequireAction_(ProbeGame_& rGame, ProbeActionId_t actionId)
-{
-    const ProbeActionConfig_t* pAction =
-        rGame.fixtures.dataContext.probeActionsConfig->Find(actionId);
-    REQUIRE(pAction);
-    return *pAction;
-}
 
 int Quote_(ProbeGame_& rGame, const Unit& rProbe, const Tile& rTile, ProbeActionId_t actionId,
            ProbeTargetKind_t kind)
@@ -1199,16 +1203,19 @@ void AddDistanceBuildings_(ProbeGame_& rGame, EffectPool& rPool)
     BuildingConfig_t creche;
     creche.id = "test_creche";
     creche.name = "Test Creche";
-    creche.effects = {distanceScale(StatId_t::MindControlDistanceScale, 0.5)};
+    creche.effects = {distanceScale(StatId_t::ProbeDistanceScale, 0.5)};
     BuildingConfig_t genejack;
     genejack.id = "test_genejack";
     genejack.name = "Test Genejack";
-    genejack.effects = {distanceScale(StatId_t::MindControlDistanceScale, 2)};
+    genejack.effects = {distanceScale(StatId_t::ProbeDistanceScale, 2)};
     BuildingConfig_t punishment;
     punishment.id = "test_punishment";
     punishment.name = "Test Punishment Sphere";
-    punishment.effects = {distanceScale(StatId_t::MindControlDistanceScale, 0.5),
-                          distanceScale(StatId_t::SubversionDistanceScale, 0.5)};
+    // The base's own distance, and that of the units homed there.
+    punishment.effects = {distanceScale(StatId_t::ProbeDistanceScale, 0.5),
+                          rPool.StatMod(StatId_t::ProbeDistanceScale, 0.5,
+                                        ModifierOp_t::MultiplyGeometric, EffectScope_t::FactionUnits,
+                                        std::nullopt, OriginBaseIsHomeBase_t{})};
     std::vector<BuildingConfig_t> buildings = rGame.fixtures.buildings().GetAll();
     buildings.push_back(creche);
     buildings.push_back(genejack);
@@ -1398,6 +1405,257 @@ TEST_CASE("An AI pays the hardest difficulties' discount against a player, and a
           == static_cast<int>(std::lround(aiPaysAtTalent * 0.6)));
 }
 
+namespace
+{
+
+ProbeActionConfig_t& MutableAction_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    for (ProbeActionConfig_t& rAction : rGame.fixtures.dataContext.probeActionsConfig->actions)
+    {
+        if (rAction.id == actionId)
+        {
+            return rAction;
+        }
+    }
+    FAIL("fixture has no such probe action");
+    throw std::logic_error("unreachable");
+}
+
+// An energy that makes the base quote's per-point cost (energy + 1200) / 8 odd, so a halving
+// truncates.
+void MakeMindControlPointOdd_(ProbeGame_& rGame)
+{
+    Faction& rTarget = *rGame.pAi;
+    rTarget.GetEconomy().SpendEnergy(rTarget.GetEconomy().GetEnergy());
+    rTarget.GetEconomy().AddEnergy(8);
+}
+
+} // namespace
+
+TEST_CASE("A riot halves the mind-control quote and a golden age doubles it, through the base's "
+          "mood effects",
+          "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int before = QuoteMindControl_(game, probe, targetBase);
+
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    targetBase.GetPopulation().RestoreMoodState(riot);
+    CHECK(QuoteMindControl_(game, probe, targetBase) == static_cast<int>(std::lround(before * 0.5)));
+
+    MoodState_t goldenAge;
+    goldenAge.bInGoldenAge = true;
+    targetBase.GetPopulation().RestoreMoodState(goldenAge);
+    CHECK(QuoteMindControl_(game, probe, targetBase) == before * 2);
+
+    // The two multiply rather than add: x0.5 x2 leaves the quote alone.
+    MoodState_t both = riot;
+    both.bInGoldenAge = true;
+    targetBase.GetPopulation().RestoreMoodState(both);
+    CHECK(QuoteMindControl_(game, probe, targetBase) == before);
+}
+
+TEST_CASE("Base-quote factors combine into one multiplier, rounded once",
+          "[probe][cost][mind-control]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    MakeMindControlPointOdd_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int before = QuoteMindControl_(game, probe, targetBase);
+    REQUIRE(before % 2 == 1);
+
+    // Halving then doubling leaves an odd quote whole, where the binary's integer steps lose one.
+    targetBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(),
+                                              game.pAi->GetFactionId());
+    MoodState_t goldenAge;
+    goldenAge.bInGoldenAge = true;
+    targetBase.GetPopulation().RestoreMoodState(goldenAge);
+    CHECK(QuoteMindControl_(game, probe, targetBase) == before);
+}
+
+TEST_CASE("Pact's mind-control surcharge is the diplomacy config's partner scale",
+          "[probe][cost][mind-control][diplomacy]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int before = QuoteMindControl_(game, probe, targetBase);
+
+    DiplomacyConfig_t& rDiplomacy = *game.fixtures.dataContext.diplomacyConfig;
+    const std::size_t pactIndex = static_cast<std::size_t>(DiplomaticStatus_t::Pact);
+    bool bFound = false;
+    for (EffectConfig_t& rEffect : rDiplomacy.statuses.at(pactIndex).effects)
+    {
+        auto& rModifier = std::get<StatModifierEffect_t>(rEffect.effect);
+        if (rModifier.stat == StatId_t::ProbeActorCost)
+        {
+            rModifier.amount = 3;
+            bFound = true;
+        }
+    }
+    REQUIRE(bFound);
+    ApplyStatusChange(game.fixtures.state, game.pPlayer->GetFactionId(), game.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Pact);
+    CHECK(QuoteMindControl_(game, probe, targetBase) == before * 3);
+}
+
+TEST_CASE("Subverting a unit ignores Pact, atrocities and its home base's mood, as the binary's "
+          "unit cost does",
+          "[probe][cost][subvert]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pAi, 8, 14);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"}, &home);
+    const int before = QuoteSubvert_(game, probe, victim);
+
+    MoodState_t riot;
+    riot.bRioting = true;
+    riot.consecutiveRiotTurns = 1;
+    home.GetPopulation().RestoreMoodState(riot);
+
+    ApplyStatusChange(game.fixtures.state, game.pPlayer->GetFactionId(), game.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Pact);
+    AtrocityRecord_t record;
+    record.perpetrator = game.pPlayer->GetFactionId();
+    record.victim = game.pAi->GetFactionId();
+    record.severity = AtrocitySeverityId_t::Simple;
+    game.fixtures.state.GetAtrocityLedger().Record(record);
+    CHECK(QuoteSubvert_(game, probe, victim) == before);
+}
+
+TEST_CASE("Sabotage's protected risk, the drain's divisors and the plague's divisors come from "
+          "their actions",
+          "[probe][config]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& hq = game.MakeBase(*game.pAi, 8, 8);
+    const Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeTarget_t hqTarget =
+        *ResolveProbeTarget(probe, hq.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+
+    ProbeActionConfig_t& rSabotage = MutableAction_(game, ProbeActionId_t::SabotageFacility);
+    rSabotage.protectedRisk = 3;
+    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center") == 3);
+
+    game.pAi->GetEconomy().AddEnergy(1000);
+    ProbeActionConfig_t& rDrain = MutableAction_(game, ProbeActionId_t::DrainEnergy);
+    const StealEnergyQuote_t bySix = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
+    const int share = bySix.floor + bySix.remainderBound;
+    CHECK(bySix.floor == share * 5 / 6);
+    CHECK(bySix.remainderDivisor == 2);
+    rDrain.floorMoraleDivisor = 4;
+    rDrain.remainderDivisor = 3;
+    const StealEnergyQuote_t byFour = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
+    CHECK(byFour.floor == share * 5 / 4);
+    CHECK(StealEnergyAmount(byFour, 9) == byFour.floor + 3);
+
+    ProbeActionConfig_t& rPlague = MutableAction_(game, ProbeActionId_t::GeneticPlague);
+    CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 5);
+    CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 6);
+    rPlague.garrisonDamageDivisor = 5;
+    CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 2);
+    CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 3);
+    hq.SetPlagueIntroduced();
+    rPlague.repeatDivisor = 3;
+    CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 7) == 3);
+}
+
+TEST_CASE("A probe cost effect counts for the side that owns it: probe_action_cost for the "
+          "target, probe_actor_cost for the actor",
+          "[probe][cost]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    BuildingConfig_t defended;
+    defended.id = "test_probe_defended";
+    defended.name = "Test Probe Defended";
+    defended.effects = {pool.StatMod(StatId_t::ProbeActionCost, 2, ModifierOp_t::MultiplyGeometric)};
+    BuildingConfig_t nethack;
+    nethack.id = "test_nethack";
+    nethack.name = "Test Nethack";
+    nethack.effects = {pool.StatMod(StatId_t::ProbeActorCost, 0.75, ModifierOp_t::MultiplyGeometric)};
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(defended);
+    buildings.push_back(nethack);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& playerHome = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &playerHome);
+    Unit& victim = game.MakeUnit(*game.pAi, 6, 10, {"test_chassis"});
+    const int before = QuoteMindControl_(game, probe, targetBase);
+    const int unitBefore = QuoteSubvert_(game, probe, victim);
+
+    // The actor's own defenses do not change what it pays.
+    playerHome.GetBuildingManager().AddBuilding("test_probe_defended");
+    CHECK(QuoteMindControl_(game, probe, targetBase) == before);
+
+    playerHome.GetBuildingManager().AddBuilding("test_nethack");
+    const int withNethack = static_cast<int>(std::lround(before * 0.75));
+    CHECK(QuoteMindControl_(game, probe, targetBase) == withNethack);
+
+    // A target that owns the actor-side effect is no cheaper for it.
+    targetBase.GetBuildingManager().AddBuilding("test_nethack");
+    CHECK(QuoteMindControl_(game, probe, targetBase) == withNethack);
+
+    // The actor side reaches unit subversion too.
+    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::lround(unitBefore * 0.75)));
+}
+
+TEST_CASE("A unit's subversion cost ignores its home base's mood, former owner and base-only "
+          "distance facilities",
+          "[probe][cost][subvert]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    AddDistanceBuildings_(game, pool);
+    BaseManager& home = game.MakeBase(*game.pAi, 8, 14);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"}, &home);
+    const int before = QuoteSubvert_(game, probe, victim);
+
+    MoodState_t goldenAge;
+    goldenAge.bInGoldenAge = true;
+    home.GetPopulation().RestoreMoodState(goldenAge);
+    home.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    home.GetBuildingManager().AddBuilding("test_genejack");
+    home.GetBuildingManager().AddBuilding("test_creche");
+    CHECK(QuoteSubvert_(game, probe, victim) == before);
+}
+
+TEST_CASE("SE Probe scales both a base's mind-control cost and a unit's subversion cost",
+          "[probe][cost][se]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    BuildingConfig_t lowProbe;
+    lowProbe.id = "test_low_probe";
+    lowProbe.name = "Test Low Probe";
+    lowProbe.effects = {pool.RatingMod(SocialRatingId_t::Probe, -2)};
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(lowProbe);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    Unit& victim = game.MakeUnit(*game.pAi, 6, 10, {"test_chassis"}, &targetBase);
+    const int baseBefore = QuoteMindControl_(game, probe, targetBase);
+    const int unitBefore = QuoteSubvert_(game, probe, victim);
+
+    // SE Probe -2 halves both, per the fixture's level effects.
+    targetBase.GetBuildingManager().AddBuilding("test_low_probe");
+    CHECK(QuoteMindControl_(game, probe, targetBase)
+          == static_cast<int>(std::lround(baseBefore * 0.5)));
+    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::lround(unitBefore * 0.5)));
+}
+
 TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",
           "[probe][action][diplomacy]")
 {
@@ -1488,13 +1746,13 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
     ProbeGame_ game;
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     game.pAi->GetEconomy().SpendEnergy(game.pAi->GetEconomy().GetEnergy());
-    CHECK(QuoteStealEnergy(enemy, *game.pAi, 3).treasury == 0);
-    CHECK(StealEnergyAmount(QuoteStealEnergy(enemy, *game.pAi, 3), 0) == 0);
+    CHECK(QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 3).treasury == 0);
+    CHECK(StealEnergyAmount(QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 3), 0) == 0);
 
     game.pAi->GetEconomy().AddEnergy(1000);
     const int treasury = game.pAi->GetEconomy().GetEnergy();
-    const StealEnergyQuote_t green = QuoteStealEnergy(enemy, *game.pAi, 1);
-    const StealEnergyQuote_t elite = QuoteStealEnergy(enemy, *game.pAi, 6);
+    const StealEnergyQuote_t green = QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 1);
+    const StealEnergyQuote_t elite = QuoteStealEnergy(RequireAction_(game, ProbeActionId_t::DrainEnergy), enemy, *game.pAi, 6);
     CHECK(green.floor > 0);
     CHECK(elite.floor > green.floor);
     CHECK(StealEnergyAmount(elite, 0) <= treasury);
@@ -1503,7 +1761,8 @@ TEST_CASE("A drain never takes more than the treasury, and a better probe takes 
 
 TEST_CASE("A drain of 1 energy stores 0", "[probe][action]")
 {
-    const StealEnergyQuote_t quote{.floor = 1, .remainderBound = 0, .treasury = 1};
+    const StealEnergyQuote_t quote{.floor = 1, .remainderBound = 0, .treasury = 1,
+                                   .remainderDivisor = 2};
     CHECK(StealEnergyAmount(quote, 0) == 0);
 }
 

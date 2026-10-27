@@ -122,14 +122,15 @@ bool ApplyStealTech_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& r
 }
 
 bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
-                       ProbeActionResult_t& rResult, std::mt19937& rRng)
+                       const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
+                       std::mt19937& rRng)
 {
     Faction& rTarget = rBase.GetFaction();
     Faction& rActor = rProbe.GetFaction();
     EffectContext_t ctx;
     const MoraleCalculator& rMorale = *rGameState.GetGameData().moraleCalculator;
     const int morale = EffectiveMoraleLevel(rProbe, ctx, rMorale);
-    const StealEnergyQuote_t quote = QuoteStealEnergy(rBase, rTarget, morale);
+    const StealEnergyQuote_t quote = QuoteStealEnergy(rAction, rBase, rTarget, morale);
     const int remainderDraw = RollExclusiveMax(quote.remainderBound, rRng);
     const int stolen = StealEnergyAmount(quote, remainderDraw);
     rTarget.GetEconomy().SpendEnergy(stolen);
@@ -262,25 +263,14 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, GameState& rGame
     return true;
 }
 
-void DamagePlagueGarrison_(BaseManager& rBase, GameState& rGameState, std::mt19937& rRng)
+void DamagePlagueGarrison_(const ProbeActionConfig_t& rAction, BaseManager& rBase,
+                           GameState& rGameState, std::mt19937& rRng)
 {
-    const bool bPrior = rBase.HasPlagueIntroduced();
-    const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
-                                         SeedFor(StatId_t::PlagueDamageScale), nullptr);
     for (Unit* pUnit : rGameState.GetWorldMap().GetAllUnitsOnTile(rBase.GetTile()))
     {
-        if (!pUnit)
-        {
-            continue;
-        }
         const int hp = pUnit->GetCurrentHp();
-        const int half = hp / 2;
-        int damage = half + RollExclusiveMax(std::max(1, half), rRng);
-        if (bPrior)
-        {
-            damage /= 2;
-        }
-        damage = static_cast<int>(std::lround(static_cast<double>(damage) * scale));
+        const int draw = RollExclusiveMax(PlagueGarrisonDrawBound(rAction, hp), rRng);
+        const int damage = PlagueGarrisonDamage(rAction, rBase, hp, draw);
         pUnit->SetCurrentHp(hp - damage);
     }
 }
@@ -297,8 +287,8 @@ bool ApplyGeneticPlague_(Faction& rActor, BaseManager& rBase, GameState& rGameSt
                          const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
                          std::mt19937& rRng)
 {
-    const int killed = GeneticPlagueKilled(rBase);
-    DamagePlagueGarrison_(rBase, rGameState, rRng);
+    const int killed = GeneticPlagueKilled(rAction, rBase);
+    DamagePlagueGarrison_(rAction, rBase, rGameState, rRng);
     ApplyPlagueKills_(rBase, killed);
     rBase.GetPopulation().SetNutrientStockpile(0);
     rBase.SetPlagueIntroduced();
@@ -332,7 +322,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
         case ProbeActionId_t::StealTech:
             return ApplyStealTech_(rActor, rBase, rResult, rRng);
         case ProbeActionId_t::DrainEnergy:
-            return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult, rRng);
+            return ApplyDrainEnergy_(rProbe, rBase, rGameState, rAction, rResult, rRng);
         case ProbeActionId_t::SabotageRandom:
         case ProbeActionId_t::SabotageFacility:
             return ApplySabotage_(rActor, rGameState, rBase, rAction, facilityId, rResult, rRng);
@@ -423,19 +413,6 @@ bool ApplySaveAndBust_(bool bDrawSucceeded, const ProbeChance_t& rChances, std::
     return !RollPercent(rChances.successBustChance, rRng);
 }
 
-bool MissionDrawSucceeded_(const ProbeChance_t& rChances, std::mt19937& rRng)
-{
-    const int bound = std::max(1, rChances.probeStrength);
-    const int draw = RollExclusiveMax(bound, rRng);
-    return draw >= rChances.risk;
-}
-
-bool EscapeDrawSucceeded_(const ProbeChance_t& rChances, std::mt19937& rRng)
-{
-    const int bound = std::max(1, rChances.escapeStrength);
-    const int draw = RollExclusiveMax(bound, rRng);
-    return draw > rChances.risk;
-}
 
 } // namespace
 
@@ -444,14 +421,16 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
     ProbeRollResult_t result;
     result.chances = rChances;
 
-    const bool bMissionDraw = MissionDrawSucceeded_(rChances, rRng);
+    const int missionDraw = RollExclusiveMax(rChances.probeStrength, rRng);
+    const bool bMissionDraw = MissionDrawSucceeds(rChances, missionDraw);
     result.missionSucceeded = ApplySaveAndBust_(bMissionDraw, rChances, rRng);
     if (!result.missionSucceeded)
     {
         return result;
     }
 
-    const bool bEscapeDraw = EscapeDrawSucceeded_(rChances, rRng);
+    const int escapeDraw = RollExclusiveMax(rChances.escapeStrength, rRng);
+    const bool bEscapeDraw = EscapeDrawSucceeds(rChances, escapeDraw);
     result.escaped = ApplySaveAndBust_(bEscapeDraw, rChances, rRng);
     return result;
 }

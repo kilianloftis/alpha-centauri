@@ -646,12 +646,12 @@ Some consequences have no condition, no choice and no amount: a transferred base
 `ProbeActionExecutor.cpp:169` (`ResolveMissionRisk_`).
 - What it decides: repeat risk, and a risk floor of 2 for sabotaging a headquarters facility.
 - **Already in the plan:** `ProbeRules::MissionRisk`. Now in commit 12.
-- **Outside the plan:** the 2, in the config package.
+- **Outside the plan:** the 2, in the config package. Now `sabotage_facility`'s `protected_risk`.
 
 ### [D][N] PRB-2 Energy theft amount
 `ProbeActionEffects.cpp:115`.
 - **Already in the plan:** `ProbeRules::StealEnergyAmount`. Now in commit 12.
-- **Outside the plan:** the formula's constants, in the config package.
+- **Outside the plan:** the formula's constants, in the config package. Now `drain_energy`'s `floor_morale_divisor` and `remainder_divisor`.
 
 ### [D] PRB-3 Which techs can be stolen
 `ProbeActionEffects.cpp:82` (`PickStealableTech_`).

@@ -67,16 +67,14 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
+    CHECK(ParseStatId("probe_actor_cost") == StatId_t::ProbeActorCost);
     CHECK(ParseStatId("probe_hunter") == StatId_t::ProbeHunter);
     CHECK(ParseStatId("probe_intrusion") == StatId_t::ProbeIntrusion);
     CHECK(ParseStatId("probe_success_bust") == StatId_t::ProbeSuccessBust);
     CHECK(ParseStatId("probe_failure_save") == StatId_t::ProbeFailureSave);
     CHECK(ParseStatId("garrison_probe_weight") == StatId_t::GarrisonProbeWeight);
     CHECK(ParseStatId("garrison_probe_multiplier") == StatId_t::GarrisonProbeMultiplier);
-    CHECK(ParseStatId("subversion_cost_scale") == StatId_t::SubversionCostScale);
-    CHECK(ParseStatId("subversion_distance_scale") == StatId_t::SubversionDistanceScale);
-    CHECK(ParseStatId("ai_probe_cost_scale") == StatId_t::AiProbeCostScale);
-    CHECK(ParseStatId("mind_control_distance_scale") == StatId_t::MindControlDistanceScale);
+    CHECK(ParseStatId("probe_distance_scale") == StatId_t::ProbeDistanceScale);
     CHECK(ParseStatId("plague_damage_scale") == StatId_t::PlagueDamageScale);
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
     CHECK(ParseStatId("morale_rank") == StatId_t::MoraleRank);
@@ -1162,6 +1160,27 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
 
         CHECK_THROWS(EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "IsNativeLife", "value": "yes" })")));
+    }
+
+    SECTION("Probe relation conditions")
+    {
+        const Condition_t player = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "PartnerPlayerType", "type": "Player" })"));
+        const auto* pPlayer = std::get_if<PartnerPlayerType_t>(&player);
+        REQUIRE(pPlayer);
+        CHECK(pPlayer->type == PlayerType_t::Player);
+        const Condition_t ai = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "PartnerPlayerType", "type": "AI" })"));
+        CHECK(std::get<PartnerPlayerType_t>(ai).type == PlayerType_t::AI);
+        CHECK_THROWS(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "PartnerPlayerType", "type": "Observer" })")));
+
+        CHECK(std::holds_alternative<PartnerIsFormerOwner_t>(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "PartnerIsFormerOwner" })"))));
+        CHECK(std::holds_alternative<VictimizedPartner_t>(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "VictimizedPartner" })"))));
+        CHECK(std::holds_alternative<TargetIsBase_t>(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "TargetIsBase" })"))));
     }
 
     SECTION("DesignPlan")

@@ -107,9 +107,18 @@ enum class StatId_t
     // Facility energy upkeep (RawScaled from BuildingConfig_t::upkeep), per building type with an
     // optional buildingFilter.
     FacilityEnergyUpkeep,
-    // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
-    // SE Probe levels emit AddPercent; resolved from the target base's effect list.
+    // The target side of a mind-control or subversion cost (PureMultiplier), resolved on the base
+    // or unit being probed with the actor as partner, so scope picks the quote: SE Probe, riot,
+    // golden age and former owner reach bases; the plan baseline, Poly and SE Probe's
+    // FactionUnits copies reach units.
     ProbeActionCost,
+    // The actor side (PureMultiplier, Faction), resolved on the faction paying with the target
+    // faction as partner: Nethack, Pact, the AI-vs-player discount, atrocity victim.
+    ProbeActorCost,
+    // The HQ distance in a mind-control or subversion cost (PureMultiplier), resolved like
+    // ProbeActionCost and truncated: Genejack x2 and Children's Creche x0.5 on bases, Punishment
+    // Sphere x0.5 on its base and the units homed there.
+    ProbeDistanceScale,
     // Additive local probe defense (Covert Ops Center +2, etc.). Added to SE Probe before
     // the success/escape clamp.
     ProbeDefense,
@@ -130,24 +139,12 @@ enum class StatId_t
     // Percent chance the probe's failed mission or escape draw is saved (Additive). Void while the
     // target's hunter neutralises the probe. Algorithmic Enhancement Adds 50.
     ProbeFailureSave,
-    // PureMultiplier on the HQ distance in the base mind-control quote, truncated. Genejack ×2,
-    // Children's Crèche ×0.5, Punishment Sphere ×0.5.
-    MindControlDistanceScale,
-    // PureMultiplier on the HQ distance in a unit subversion quote, resolved on the target
-    // unit's home base and truncated. Punishment Sphere ×0.5.
-    SubversionDistanceScale,
     // A unit's count in the base mind-control garrison (Additive). probe_actions.json Adds 1
     // for offense and combat plans.
     GarrisonProbeWeight,
     // A unit's addition to the garrison multiplier, which starts at the cost's
     // garrison_multiplier_base (Additive). Polymorphic Encryption Adds 1.
     GarrisonProbeMultiplier,
-    // PureMultiplier on the cost of subverting this unit. probe_actions.json halves it for every
-    // plan but colony and terraform; Polymorphic Encryption doubles it.
-    SubversionCostScale,
-    // PureMultiplier on paid probe costs an AI actor pays against this target. Difficulty emits
-    // it for player factions on the hardest levels (the binary's cost * 3 / diff_level).
-    AiProbeCostScale,
     // PureMultiplier on genetic-plague pop and garrison damage. Hospitals emit ×0.5.
     PlagueDamageScale,
     // Minerals credited to a newly founded base's production stockpile (resolved once at
@@ -348,12 +345,10 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
         case StatId_t::ProbeActionCost:
+        case StatId_t::ProbeActorCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
-        case StatId_t::MindControlDistanceScale:
-        case StatId_t::SubversionDistanceScale:
-        case StatId_t::SubversionCostScale:
-        case StatId_t::AiProbeCostScale:
+        case StatId_t::ProbeDistanceScale:
         case StatId_t::PlagueDamageScale:
         case StatId_t::TechCost:
         case StatId_t::CommerceRate:
@@ -426,9 +421,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeSuccessScale:
         case StatId_t::ProbeHunter:
         case StatId_t::ProbeSuccessBust:
-        case StatId_t::MindControlDistanceScale:
-        case StatId_t::SubversionDistanceScale:
-        case StatId_t::AiProbeCostScale:
+        case StatId_t::ProbeDistanceScale:
         case StatId_t::PlagueDamageScale:
         case StatId_t::StartingMinerals:
         case StatId_t::GrowthRate:
@@ -455,6 +448,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::TechCostTurnLag:
         case StatId_t::TechCostResearch:
         case StatId_t::CommerceRate:
+        case StatId_t::ProbeActorCost:
         case StatId_t::CouncilVotes:
         case StatId_t::EcoCleanMinerals:
         case StatId_t::RebelJoinWeight: return ResolveDomain_t::Faction;
@@ -487,7 +481,6 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeFailureSave:
         case StatId_t::GarrisonProbeWeight:
         case StatId_t::GarrisonProbeMultiplier:
-        case StatId_t::SubversionCostScale:
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
@@ -549,6 +542,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "retool_penalty_scale")     return StatId_t::RetoolPenaltyScale;
     if (rStat == "facility_energy_upkeep")  return StatId_t::FacilityEnergyUpkeep;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
+    if (rStat == "probe_actor_cost")        return StatId_t::ProbeActorCost;
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
@@ -556,12 +550,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_intrusion")         return StatId_t::ProbeIntrusion;
     if (rStat == "probe_success_bust")      return StatId_t::ProbeSuccessBust;
     if (rStat == "probe_failure_save")      return StatId_t::ProbeFailureSave;
-    if (rStat == "mind_control_distance_scale") return StatId_t::MindControlDistanceScale;
-    if (rStat == "subversion_distance_scale") return StatId_t::SubversionDistanceScale;
+    if (rStat == "probe_distance_scale")    return StatId_t::ProbeDistanceScale;
     if (rStat == "garrison_probe_weight")   return StatId_t::GarrisonProbeWeight;
     if (rStat == "garrison_probe_multiplier") return StatId_t::GarrisonProbeMultiplier;
-    if (rStat == "subversion_cost_scale")   return StatId_t::SubversionCostScale;
-    if (rStat == "ai_probe_cost_scale")     return StatId_t::AiProbeCostScale;
     if (rStat == "plague_damage_scale")     return StatId_t::PlagueDamageScale;
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_rank")             return StatId_t::MoraleRank;

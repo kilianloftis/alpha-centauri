@@ -1807,7 +1807,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "subversion_cost_scale",
+          "stat": "probe_action_cost",
           "amount": 2,
           "op": "MultiplyGeometric"
         }

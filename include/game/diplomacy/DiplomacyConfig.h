@@ -28,8 +28,9 @@ struct DiplomaticStatusRules_t
     bool bRepairAtBases = false;
     bool bMayAttack = false;
     bool bDefensiveObligation = false;
-    // FactionPair CommerceRate modifiers. Each side's pool carries them tagged with the other
-    // side; a resolved rate of 0 means the pair does not trade.
+    // FactionPair modifiers a rule resolves toward the partner (CommerceRate, where 0 means the
+    // pair does not trade; ProbeActorCost). Each side's pool carries them tagged with the other
+    // side.
     std::vector<EffectConfig_t> effects;
     // nullopt: lasts until changed. Otherwise the status steps down after this many turns.
     std::optional<int> durationTurns;

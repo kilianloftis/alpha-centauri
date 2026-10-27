@@ -107,6 +107,14 @@ absent.
   `UnitPlanRules::DesignPlan`, and a Scout Patrol equivalent counts as offense.
 - **Missing:** predefined designs with an explicit plan that overrides `DesignPlan`.
 
+### Wants-revenge mind-control surcharge
+
+- **Original:** a base whose owner was not an atrocity victim of the actor but wants revenge
+  on it (`DIPLO_WANT_REVENGE`) costs `cost + cost / 2` to mind-control ("Mind-control cost").
+- **Ours:** we keep no revenge record, so the surcharge never applies. TODO at
+  `QuoteBaseActionCost_`.
+- **Missing:** a revenge record, a condition on it, and a ×1.5 `probe_actor_cost` effect.
+
 ### Drain-energy repeat risk `[Bug]`
 
 - **Original:** `probe` tests `BSTATE_ENERGY_RESERVES_DRAINED` for a risk-1 repeat but never

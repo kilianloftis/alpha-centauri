@@ -103,6 +103,16 @@ struct ProbeActionConfig_t
     // Incite Drone Riots only: remaining assimilation turns added, and the per-citizen cap.
     int assimilationTurnsAdded = 0;
     double assimilationTurnsCapFactor = 0.0;
+    // Sabotage Facility only: the least risk against an HQ or a high_risk_sabotage facility.
+    int protectedRisk = 0;
+    // Drain Energy only: the floor is share * morale / floorMoraleDivisor, and the remainder
+    // draw is divided by remainderDivisor.
+    int floorMoraleDivisor = 0;
+    int remainderDivisor = 0;
+    // Genetic Plague only: a repeat plague divides kills and garrison damage by repeatDivisor;
+    // a garrison unit takes hp / garrisonDamageDivisor plus a draw below that.
+    int repeatDivisor = 0;
+    int garrisonDamageDivisor = 0;
     std::optional<ProbeCostConfig_t> cost;
     // Continuous effects the action declares. Probe actions have no pool origin, so this is
     // effectively unused today; the mission's real work is in onSuccessEffects.

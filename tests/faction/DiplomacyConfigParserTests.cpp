@@ -118,6 +118,31 @@ TEST_CASE("Status effects are limited to unconditional FactionPair commerce_rate
                     std::runtime_error);
 }
 
+TEST_CASE("A status's probe_actor_cost may be limited to base targets; nothing else takes a "
+          "condition",
+          "[diplomacy][parser]")
+{
+    const auto withTreatyEffect = [](const std::string& rName, const char* pStat,
+                                     const nlohmann::json& rCondition)
+    {
+        return ParseEdited_(rName,
+                            [&](nlohmann::json& j)
+                            {
+                                nlohmann::json& rEffect = j["statuses"]["Treaty"]["effects"][0];
+                                rEffect["parameters"]["stat"] = pStat;
+                                rEffect["condition"] = rCondition;
+                            });
+    };
+    const nlohmann::json targetIsBase = {{"kind", "TargetIsBase"}};
+    CHECK_NOTHROW(withTreatyEffect("ac_diplomacy_probe_base.json", "probe_actor_cost", targetIsBase));
+    CHECK_THROWS_AS(withTreatyEffect("ac_diplomacy_probe_other.json", "probe_actor_cost",
+                                     nlohmann::json{{"kind", "IsHeadquarters"}}),
+                    std::runtime_error);
+    CHECK_THROWS_AS(withTreatyEffect("ac_diplomacy_commerce_base.json", "commerce_rate",
+                                     targetIsBase),
+                    std::runtime_error);
+}
+
 TEST_CASE("A duration is only legal on a status that can step down", "[diplomacy][parser]")
 {
     CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_vendetta_duration.json",

@@ -1115,6 +1115,18 @@ std::vector<UnitDomain_t> ParseConditionDomains_(const nlohmann::json& rJson,
     return domains;
 }
 
+Condition_t ParsePartnerPlayerTypeCondition_(const nlohmann::json& rJson)
+{
+    const std::string type = RequireConditionString_(rJson, "type", "PartnerPlayerType");
+    const auto playerType = magic_enum::enum_cast<PlayerType_t>(type, magic_enum::case_insensitive);
+    if (!playerType)
+    {
+        throw std::runtime_error("PartnerPlayerType condition requires 'type' Player or AI, got '"
+                                 + type + "'");
+    }
+    return PartnerPlayerType_t{*playerType};
+}
+
 Condition_t ParseDesignPlanCondition_(const nlohmann::json& rJson)
 {
     if (!rJson.contains("plans") || !rJson.at("plans").is_array() || rJson.at("plans").empty())
@@ -1255,6 +1267,12 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
                  RequireConditionString_(rJson, "building", "BaseHasBuilding")};
          }},
         {"DesignPlan", ParseDesignPlanCondition_},
+        {"PartnerPlayerType", ParsePartnerPlayerTypeCondition_},
+        {"PartnerIsFormerOwner",
+         [](const nlohmann::json&) -> Condition_t { return PartnerIsFormerOwner_t{}; }},
+        {"VictimizedPartner",
+         [](const nlohmann::json&) -> Condition_t { return VictimizedPartner_t{}; }},
+        {"TargetIsBase", [](const nlohmann::json&) -> Condition_t { return TargetIsBase_t{}; }},
         {"AllOf",
          [](const nlohmann::json& rJson) -> Condition_t {
              return AllOf_t{ParseNestedConditions_(rJson, "AllOf")};

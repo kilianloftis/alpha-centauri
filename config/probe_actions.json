@@ -23,7 +23,7 @@
       "type": "StatModifier",
       "scope": "FactionUnits",
       "parameters": {
-        "stat": "subversion_cost_scale",
+        "stat": "probe_action_cost",
         "amount": 0.5,
         "op": "MultiplyGeometric"
       },
@@ -31,6 +31,34 @@
         "kind": "DesignPlan",
         "plans": ["colony", "terraform"],
         "value": false
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "probe_action_cost",
+        "amount": 0.5,
+        "op": "MultiplyGeometric"
+      },
+      "condition": {
+        "kind": "PartnerIsFormerOwner"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "FactionGlobal",
+      "parameters": {
+        "stat": "probe_actor_cost",
+        "amount": 2,
+        "op": "MultiplyGeometric"
+      },
+      "condition": {
+        "kind": "AllOf",
+        "conditions": [
+          { "kind": "TargetIsBase" },
+          { "kind": "VictimizedPartner" }
+        ]
       }
     }
   ],
@@ -58,6 +86,8 @@
     },
     {
       "id": "drain_energy",
+      "floor_morale_divisor": 6,
+      "remainder_divisor": 2,
       "name": "Drain Energy Reserves",
       "target": "base",
       "risk": 0
@@ -80,6 +110,7 @@
     },
     {
       "id": "sabotage_facility",
+      "protected_risk": 2,
       "name": "Activate Sabotage Virus (Facility)",
       "target": "base",
       "risk": 1
@@ -143,6 +174,8 @@
     },
     {
       "id": "genetic_plague",
+      "repeat_divisor": 2,
+      "garrison_damage_divisor": 2,
       "name": "Introduce Genetic Plague",
       "target": "base",
       "risk": 0,

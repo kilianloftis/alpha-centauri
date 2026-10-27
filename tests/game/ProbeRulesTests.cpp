@@ -71,7 +71,12 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->distBias == 4);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->mindControlDivisor == 4);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->garrisonMultiplierBase == 1);
-    CHECK(config.effects.size() == 2);
+    CHECK(config.Find(ProbeActionId_t::SabotageFacility)->protectedRisk == 2);
+    CHECK(config.Find(ProbeActionId_t::DrainEnergy)->floorMoraleDivisor == 6);
+    CHECK(config.Find(ProbeActionId_t::DrainEnergy)->remainderDivisor == 2);
+    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->repeatDivisor == 2);
+    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->garrisonDamageDivisor == 2);
+    CHECK(config.effects.size() == 4);
     const auto& rMindControlPaid = config.Find(ProbeActionId_t::MindControlBase)->onPaidEffects;
     REQUIRE(rMindControlPaid.size() == 1);
     const auto* pMindControlRecord =
@@ -146,6 +151,17 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
                                        "cost": { "energy_bias": 800, "dist_bias": 2,
                                                  "garrison_multiplier_base": 1 } })"),
                       ContainsSubstring("garrison_multiplier_base"));
+
+    // Each action's own numbers: required on it, rejected on any other.
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "drain_energy", "target": "base",
+                                       "remainder_divisor": 2 })"),
+                      ContainsSubstring("floor_morale_divisor"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "genetic_plague", "target": "base",
+                                       "repeat_divisor": 0, "garrison_damage_divisor": 2 })"),
+                      ContainsSubstring("repeat_divisor"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
+                                       "protected_risk": 2 })"),
+                      ContainsSubstring("protected_risk"));
 }
 
 TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[probe][config]")
@@ -226,6 +242,16 @@ TEST_CASE("Algo enhancement halves failure; HSA halves success", "[probe][rules]
     CHECK(normal.successRate == 100 - (200 / 3));
     CHECK(algo.successRate == 100 - static_cast<int>(std::lround((200 / 3) * 0.5)));
     CHECK(hsa.successRate == static_cast<int>(std::lround((100 - (200 / 3)) * 0.5)));
+}
+
+TEST_CASE("A mission draw at the risk succeeds; an escape draw must exceed it", "[probe][rules]")
+{
+    ProbeChance_t chances;
+    chances.risk = 2;
+    CHECK_FALSE(MissionDrawSucceeds(chances, 1));
+    CHECK(MissionDrawSucceeds(chances, 2));
+    CHECK_FALSE(EscapeDrawSucceeds(chances, 2));
+    CHECK(EscapeDrawSucceeds(chances, 3));
 }
 
 TEST_CASE("RollProbeAction RISK 0 always succeeds mission without a bust chance", "[probe][rules]")

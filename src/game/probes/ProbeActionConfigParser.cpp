@@ -72,6 +72,48 @@ ProbeCostConfig_t ParseCost_(const json& rCostJson, ProbeTargetKind_t target,
     return cost;
 }
 
+// An integer one action's rule reads: required (at least `minimum`) on that action, rejected on
+// any other, which would ignore it.
+int ParseActionInt_(const json& rActionJson, const ProbeActionConfig_t& rAction,
+                    ProbeActionId_t owner, const std::string& rKey, int minimum)
+{
+    if (rAction.id != owner)
+    {
+        if (rActionJson.contains(rKey))
+        {
+            throw std::runtime_error("Probe action '" + rAction.name + "': " + rKey
+                                     + " applies only to " + ProbeActionIdToString(owner));
+        }
+        return 0;
+    }
+    if (!rActionJson.contains(rKey) || !rActionJson.at(rKey).is_number_integer())
+    {
+        throw std::runtime_error("Probe action '" + rAction.name
+                                 + "': missing required integer '" + rKey + "'");
+    }
+    const int value = rActionJson.at(rKey).get<int>();
+    if (value < minimum)
+    {
+        throw std::runtime_error("Probe action '" + rAction.name + "': " + rKey + " must be >= "
+                                 + std::to_string(minimum));
+    }
+    return value;
+}
+
+void ParseActionNumbers_(const json& rActionJson, ProbeActionConfig_t& rAction)
+{
+    rAction.protectedRisk = ParseActionInt_(rActionJson, rAction,
+                                            ProbeActionId_t::SabotageFacility, "protected_risk", 0);
+    rAction.floorMoraleDivisor = ParseActionInt_(
+        rActionJson, rAction, ProbeActionId_t::DrainEnergy, "floor_morale_divisor", 1);
+    rAction.remainderDivisor = ParseActionInt_(rActionJson, rAction,
+                                               ProbeActionId_t::DrainEnergy, "remainder_divisor", 1);
+    rAction.repeatDivisor = ParseActionInt_(rActionJson, rAction, ProbeActionId_t::GeneticPlague,
+                                            "repeat_divisor", 1);
+    rAction.garrisonDamageDivisor = ParseActionInt_(
+        rActionJson, rAction, ProbeActionId_t::GeneticPlague, "garrison_damage_divisor", 1);
+}
+
 bool RunsOnSuccessEffects_(ProbeActionId_t id)
 {
     switch (id)
@@ -166,6 +208,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     {
         RejectInciteKeys_(rActionJson, action.name);
     }
+    ParseActionNumbers_(rActionJson, action);
     if (rActionJson.contains("cost") && !rActionJson.at("cost").is_null())
     {
         action.cost = ParseCost_(rActionJson.at("cost"), action.target, action.name);

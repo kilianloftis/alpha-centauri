@@ -40,6 +40,23 @@ bool RequireBool_(const nlohmann::json& rJson, const std::string& rKey,
     return rValue.get<bool>();
 }
 
+// The stats some rule resolves toward a partner; a status effect on any other would be ignored.
+bool IsPartnerStat_(StatId_t stat)
+{
+    return stat == StatId_t::CommerceRate || stat == StatId_t::ProbeActorCost;
+}
+
+// A probe surcharge may be limited to base quotes (Pact's); nothing else reads a condition here.
+bool ConditionAllowed_(const EffectConfig_t& rEffect, StatId_t stat)
+{
+    if (!rEffect.condition)
+    {
+        return true;
+    }
+    return stat == StatId_t::ProbeActorCost
+        && std::holds_alternative<TargetIsBase_t>(*rEffect.condition);
+}
+
 std::vector<EffectConfig_t> ParseStatusEffects_(const nlohmann::json& rJson,
                                                   const std::string& rContext)
 {
@@ -48,12 +65,13 @@ std::vector<EffectConfig_t> ParseStatusEffects_(const nlohmann::json& rJson,
     for (const EffectConfig_t& rEffect : effects)
     {
         const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-        if (!pModifier || pModifier->stat != StatId_t::CommerceRate || rEffect.condition
-            || pModifier->amountSource)
+        if (!pModifier || !IsPartnerStat_(pModifier->stat) || pModifier->amountSource
+            || !ConditionAllowed_(rEffect, pModifier->stat))
         {
             throw std::runtime_error(rContext
-                                     + ": effects may only be unconditional StatModifier "
-                                       "commerce_rate entries");
+                                     + ": effects may only be StatModifier commerce_rate "
+                                       "entries, or probe_actor_cost ones optionally limited "
+                                       "to TargetIsBase");
         }
     }
     return effects;

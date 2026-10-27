@@ -79,10 +79,11 @@
           "scope": "FactionGlobal",
           "factionFilter": {
             "kind": "PlayerType",
-            "type": "Player"
+            "type": "AI"
           },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "ai_probe_cost_scale",
+            "stat": "probe_actor_cost",
             "amount": 0.75,
             "op": "MultiplyGeometric"
           }
@@ -108,10 +109,11 @@
           "scope": "FactionGlobal",
           "factionFilter": {
             "kind": "PlayerType",
-            "type": "Player"
+            "type": "AI"
           },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "ai_probe_cost_scale",
+            "stat": "probe_actor_cost",
             "amount": 0.6,
             "op": "MultiplyGeometric"
           }

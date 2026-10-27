@@ -286,6 +286,10 @@ struct ConditionReferenceValidator
     void operator()(const IsCombatUnit_t&) const {}
     void operator()(const IsNativeLife_t&) const {}
     void operator()(const DesignPlan_t&) const {}
+    void operator()(const PartnerPlayerType_t&) const {}
+    void operator()(const PartnerIsFormerOwner_t&) const {}
+    void operator()(const VictimizedPartner_t&) const {}
+    void operator()(const TargetIsBase_t&) const {}
 
 private:
     void CheckBuilding_(const std::string& rBuildingId) const

@@ -141,7 +141,7 @@
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "mind_control_distance_scale",
+          "stat": "probe_distance_scale",
           "amount": 0.5,
           "op": "MultiplyGeometric"
         }
@@ -454,7 +454,7 @@
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "mind_control_distance_scale",
+          "stat": "probe_distance_scale",
           "amount": 2,
           "op": "MultiplyGeometric"
         }
@@ -475,16 +475,17 @@
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "mind_control_distance_scale",
+          "stat": "probe_distance_scale",
           "amount": 0.5,
           "op": "MultiplyGeometric"
         }
       },
       {
         "type": "StatModifier",
-        "scope": "ThisBase",
+        "scope": "FactionUnits",
+        "condition": { "kind": "OriginBaseIsHomeBase" },
         "parameters": {
-          "stat": "subversion_distance_scale",
+          "stat": "probe_distance_scale",
           "amount": 0.5,
           "op": "MultiplyGeometric"
         }

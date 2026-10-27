@@ -65,8 +65,8 @@ ProbeChance_t ComputeProbeChances(int moraleLevel, int risk,
                                   double successScale);
 
 // The action's risk, or steal-tech's repeat risk when the base already has stolen research.
-// Targeted sabotage at a headquarters, or at Perimeter Defense / Tachyon Field, is at least
-// risk 2.
+// Targeted sabotage at a headquarters, or at a high_risk_sabotage facility, is at least the
+// action's protected_risk.
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
                 const std::string& facilityId);
 
@@ -84,17 +84,21 @@ bool ProbeContactDestroys(const Unit& rProbe, const ProbeTarget_t& rTarget);
 // meaningful once ProbeContactDestroys holds; throws when nothing contributes.
 std::string ProbeHunterSource(const ProbeTarget_t& rTarget);
 
-// Floor, exclusive remainder bound (share − floor), and the target treasury for a drain.
+// Floor, exclusive remainder bound (share − floor), the target treasury, and the divisor the
+// remainder draw takes, for a drain.
 struct StealEnergyQuote_t
 {
     int floor = 0;
     int remainderBound = 0;
     int treasury = 0;
+    int remainderDivisor = 1;
 };
 
-StealEnergyQuote_t QuoteStealEnergy(const BaseManager& rBase, const Faction& rTarget, int morale);
+// The floor is share * morale / the action's floor_morale_divisor.
+StealEnergyQuote_t QuoteStealEnergy(const ProbeActionConfig_t& rAction, const BaseManager& rBase,
+                                    const Faction& rTarget, int morale);
 
-// floor + remainderDraw/2, clamped to the treasury; a result of 1 becomes 0.
+// floor + remainderDraw / remainderDivisor, clamped to the treasury; a result of 1 becomes 0.
 int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw);
 
 // Every tech the target has discovered that the actor has not.
@@ -114,8 +118,24 @@ HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAct
 
 bool IsHeadquarters(const BaseManager& rBase);
 
-// Pop removed by a genetic plague at rBase (capped at size − 1).
-int GeneticPlagueKilled(const BaseManager& rBase);
+// Pop removed by a genetic plague at rBase (capped at size − 1); a repeat plague divides it by
+// the action's repeat_divisor.
+int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& rBase);
+
+// The exclusive bound of the draw a plague adds to a garrison unit's damage: hp over the
+// action's garrison_damage_divisor, at least 1.
+int PlagueGarrisonDrawBound(const ProbeActionConfig_t& rAction, int hp);
+
+// hp / garrison_damage_divisor plus the draw, divided by repeat_divisor on a repeat plague,
+// times the base's plague_damage_scale.
+int PlagueGarrisonDamage(const ProbeActionConfig_t& rAction, const BaseManager& rBase, int hp,
+                         int draw);
+
+// The binary's mission check: a draw in [0, probeStrength) at or above the risk succeeds.
+bool MissionDrawSucceeds(const ProbeChance_t& rChances, int draw);
+
+// The escape check is strict: a draw in [0, escapeStrength) must exceed the risk.
+bool EscapeDrawSucceeds(const ProbeChance_t& rChances, int draw);
 
 // Nearest own base whose tile the probe's domain can occupy. Null when none is legal.
 const BaseManager* ProbeReturnBase(const Unit& rProbe);

@@ -132,6 +132,11 @@ down to −30% on Transcend). That is expressed with a `factionFilter`:
 keeping an entry only when it matches the owning faction's control. An effect with no
 `PlayerType` filter is kept for everyone.
 
+A filter names the owner; a condition can name the other side. Thinker and Transcend give AI
+factions `probe_actor_cost` ×0.75 and ×0.6 with condition `PartnerPlayerType` Player: an AI
+pays less to mind-control or subvert a player, the binary's `cost * 3 / diff_level` (`0x59ED0C`,
+`0x5A1552`). No level discounts probing an AI; the binary has no such term.
+
 This is distinct from `FactionFilterCoversTarget`, which answers "does this effect reach that
 *other* faction" for cross-faction dispatch such as infiltration. `PlayerType` works there too,
 but the two functions answer different questions — owner-side filtering versus target-side

@@ -3,6 +3,9 @@
 #include "game/effects/IEffectsProvider.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
+#include "game/CurrentGameState.h"
+#include "game/atrocities/AtrocityLedger.h"
+#include "game/population/AssimilationTracker.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/diplomacy/InfiltrationRules.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -675,6 +678,41 @@ struct ConditionEvaluator_
             && ctx.pBase->GetBuildingManager().FindBuilding(rHas.buildingId) != nullptr;
     }
 
+    bool operator()(const PartnerPlayerType_t& rType) const
+    {
+        if (ctx.pPartner == nullptr)
+        {
+            return false;
+        }
+        return ctx.pPartner->IsPlayerControlled() == (rType.type == PlayerType_t::Player);
+    }
+
+    bool operator()(const PartnerIsFormerOwner_t&) const
+    {
+        if (ctx.pBase == nullptr || ctx.pPartner == nullptr)
+        {
+            return false;
+        }
+        const AssimilationState& rWindow =
+            ctx.pBase->GetPopulation().GetAssimilation().OccupierWindow();
+        return rWindow.IsActive() && rWindow.formerOwner == ctx.pPartner->GetFactionId();
+    }
+
+    bool operator()(const VictimizedPartner_t&) const
+    {
+        if (ctx.pFaction == nullptr || ctx.pPartner == nullptr)
+        {
+            return false;
+        }
+        return CurrentGameState().GetAtrocityLedger().HasVictimized(
+            ctx.pFaction->GetFactionId(), ctx.pPartner->GetFactionId());
+    }
+
+    bool operator()(const TargetIsBase_t&) const
+    {
+        return ctx.pBase != nullptr;
+    }
+
     bool operator()(const DesignPlan_t& rPlan) const
     {
         if (ctx.pUnit == nullptr)
@@ -754,7 +792,11 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, AttackerDomain_t>
                                || std::is_same_v<T, DefenderDomain_t>
                                || std::is_same_v<T, IsHeadquarters_t>
-                               || std::is_same_v<T, BaseHasBuilding_t>)
+                               || std::is_same_v<T, BaseHasBuilding_t>
+                               || std::is_same_v<T, PartnerPlayerType_t>
+                               || std::is_same_v<T, PartnerIsFormerOwner_t>
+                               || std::is_same_v<T, VictimizedPartner_t>
+                               || std::is_same_v<T, TargetIsBase_t>)
             {
                 return true;
             }

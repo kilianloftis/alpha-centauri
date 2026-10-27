@@ -1194,8 +1194,17 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "probe_action_cost",
-            "amount": -50,
-            "op": "AddPercent"
+            "amount": 0.5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": 0.5,
+            "op": "MultiplyGeometric"
           }
         }
       ],
@@ -1214,8 +1223,17 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "probe_action_cost",
-            "amount": -25,
-            "op": "AddPercent"
+            "amount": 0.75,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": 0.75,
+            "op": "MultiplyGeometric"
           }
         }
       ],
@@ -1238,8 +1256,17 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "probe_action_cost",
-            "amount": 50,
-            "op": "AddPercent"
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
           }
         }
       ],
@@ -1262,8 +1289,17 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "probe_action_cost",
-            "amount": 100,
-            "op": "AddPercent"
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": 2,
+            "op": "MultiplyGeometric"
           }
         }
       ],

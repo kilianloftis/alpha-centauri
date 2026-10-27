@@ -137,6 +137,10 @@ std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const std::map<SocialRatingId_t, int> totals =
         AccumulateSocialRatings(rRatingSource.effects, std::nullopt);
     AppendRatingLevelEffects_(totals, rRatings, std::nullopt, levelEffects);
+    // As FilterForBase: unit-lane level effects reach units through
+    // ExpandFactionLaneSocialRatingEffects, never a base's list.
+    std::erase_if(levelEffects, [](const ActiveEffect_t& rEffect)
+                  { return LaneFor(rEffect.config->scope) == EffectLane_t::FactionUnits; });
     return levelEffects;
 }
 

@@ -409,9 +409,9 @@
         "type": "StatModifier",
         "scope": "FactionGlobal",
         "parameters": {
-          "stat": "probe_action_cost",
-          "amount": -25,
-          "op": "AddPercent"
+          "stat": "probe_actor_cost",
+          "amount": 0.75,
+          "op": "MultiplyGeometric"
         }
       }
     ]

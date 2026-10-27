@@ -14,10 +14,6 @@
 #include "game/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/probes/MindControlLedger.h"
-#include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticStatus.h"
-#include "game/atrocities/AtrocityLedger.h"
-#include "game/population/AssimilationTracker.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -60,16 +56,32 @@ double ResolveProbeSuccessScale_(const BaseManager& rBase)
                            SeedFor(StatId_t::ProbeSuccessScale), nullptr);
 }
 
-double ResolveProbeActionCostMultiplier_(const BaseManager& rBase)
+// A target-side probe cost stat on a base target, with the actor as partner.
+double ResolveOnTargetBase_(const BaseManager& rBase, StatId_t stat, const Faction& rActor)
 {
-    return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeActionCost,
-                           SeedFor(StatId_t::ProbeActionCost), nullptr);
+    EffectContext_t ctx;
+    ctx.pBase = &rBase;
+    ctx.pPartner = &rActor;
+    return ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat), &ctx);
 }
 
-double ResolveMindControlDistanceScale_(const BaseManager& rBase)
+// The same Base stat on a unit target, from the unit's own live effects. Resolved by hand, as
+// AwayFromHomeDrones resolves a unit stat from a base's list: scope keeps base-only factors out.
+double ResolveOnTargetUnit_(const Unit& rUnit, StatId_t stat, const Faction& rActor)
 {
-    return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::MindControlDistanceScale,
-                           SeedFor(StatId_t::MindControlDistanceScale), nullptr);
+    const UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
+    EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
+    ctx.pPartner = &rActor;
+    return ResolveStatModifiersTotal(FilterByStatIdInContext(unitEffects.effects, stat, ctx),
+                                     SeedFor(stat), &ctx);
+}
+
+// The actor side: what rActor's effects make it pay toward the target named in rCtx (partner,
+// and the base for a base quote, which TargetIsBase reads).
+double ResolveActorCost_(const Faction& rActor, const EffectContext_t& rCtx)
+{
+    return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost,
+                              SeedFor(StatId_t::ProbeActorCost), &rCtx);
 }
 
 // An Additive target-side stat (hunter, bust chance) from the target's effect source; 0 without one.
@@ -112,68 +124,6 @@ IntrusionBonuses_t IntrusionBonuses_(const Unit& rProbe, const ProbeTarget_t& rT
     return bonuses;
 }
 
-double ResolveSubversionDistanceScale_(const Unit& rTargetUnit)
-{
-    const BaseManager* pHome = rTargetUnit.GetHomeBase();
-    if (!pHome)
-    {
-        return 1.0;
-    }
-    return ResolveBaseStat(pHome->GetBaseEffects(), StatId_t::SubversionDistanceScale,
-                           SeedFor(StatId_t::SubversionDistanceScale), nullptr);
-}
-
-// The binary's AI-vs-human discount (cost * 3 / diff_level): only an AI actor pays the target's
-// scale, and difficulty emits it on player factions only.
-double AiActorCostScale_(const Faction& rActor, const BaseManager& rSource)
-{
-    if (rActor.IsPlayerControlled())
-    {
-        return 1.0;
-    }
-    return ResolveBaseStat(rSource.GetBaseEffects(), StatId_t::AiProbeCostScale,
-                           SeedFor(StatId_t::AiProbeCostScale), nullptr);
-}
-
-double ResolveActorProbeActionCostMultiplier_(const Faction& rActor)
-{
-    if (const BaseManager* pHq = rActor.GetHeadquarters())
-    {
-        return ResolveProbeActionCostMultiplier_(*pHq);
-    }
-    for (const BaseManager& rBase : rActor.Bases())
-    {
-        return ResolveProbeActionCostMultiplier_(rBase);
-    }
-    return 1.0;
-}
-
-int ApplyDiplomaticCostMods_(int cost, const Faction& rActor, const ProbeTarget_t& rTarget)
-{
-    const GameState& rGame = CurrentGameState();
-    if (rGame.GetDiplomacyLedger().GetStatus(rActor.GetFactionId(),
-                                            rTarget.rFaction.GetFactionId())
-        == DiplomaticStatus_t::Pact)
-    {
-        cost *= 2;
-    }
-    if (const BaseManager* pBase = AsBase(rTarget))
-    {
-        const AssimilationState& rWindow =
-            pBase->GetPopulation().GetAssimilation().OccupierWindow();
-        if (rWindow.IsActive() && rWindow.formerOwner == rActor.GetFactionId())
-        {
-            cost /= 2;
-        }
-    }
-    if (rGame.GetAtrocityLedger().HasVictimized(rActor.GetFactionId(),
-                                               rTarget.rFaction.GetFactionId()))
-    {
-        cost *= 2;
-    }
-    return std::max(1, cost);
-}
-
 // Every unit sharing the tile counts, allies included. The plan decides each unit's weight
 // (probe_actions.json); Poly units raise one multiplier for the whole stack.
 int MindControlGarrison_(const Tile& rTile, const WorldMap& rMap, const ProbeCostConfig_t& rCost)
@@ -200,43 +150,39 @@ int DistanceToHeadquarters_(const Faction& rFaction, const Tile& rTile, int mapW
 }
 
 // Truncated toward zero, which equals the binary's sequential integer x2 and /2 steps.
-int ScaleDistance_(int distance, double scale)
+int ScaleTruncating_(int value, double scale)
 {
-    const double scaled = static_cast<double>(distance) * scale;
+    const double scaled = static_cast<double>(value) * scale;
     return static_cast<int>(scaled);
 }
 
+// The binary's integer steps after the formula become one multiplier, rounded once.
 int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
 {
     const int scaled = static_cast<int>(std::lround(rawCost * multiplier));
     return std::max(1, scaled);
 }
 
-// (garrison + actorMindControlTotal / divisor + pop) * ((energy + bias) / (dist + bias)), then
-// the cost multiplier.
-int QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int garrison,
-                              int actorMindControlTotal, int population, int energy,
-                              int distToHq, double costMultiplier)
+// (garrison + actorMindControlTotal / divisor + pop) * ((energy + bias) / (dist + bias)).
+int MindControlFormula_(const ProbeCostConfig_t& rCost, int garrison, int actorMindControlTotal,
+                        int population, int energy, int distToHq)
 {
-    const int cost = (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
-                     * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
-    return ApplyProbeCostMultiplier_(cost, costMultiplier);
+    return (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
+           * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
 }
 
-// mineralCost * ((energy + bias) / (dist + bias)), dividing first as the binary does, then the
-// cost multiplier.
-int QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost, int energy,
-                          int distToHq, double costMultiplier)
+// mineralCost * ((energy + bias) / (dist + bias)), dividing first as the binary does.
+int SubvertFormula_(const ProbeCostConfig_t& rCost, int mineralCost, int energy, int distToHq)
 {
-    const int cost = mineralCost * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
-    return ApplyProbeCostMultiplier_(cost, costMultiplier);
+    return mineralCost * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
 }
 
-std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int actorMindControlTotal,
-                                        const BaseManager& rBase,
-                                        const Faction& rTargetFaction, const WorldMap& rMap,
-                                        double costMultiplier)
+// TODO: SMAC charges x1.5 to a faction that wants revenge (DIPLO_WANT_REVENGE) when the target
+// was not an atrocity victim; we keep no revenge record.
+std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
+                                        const BaseManager& rBase, const WorldMap& rMap)
 {
+    const Faction& rTargetFaction = rBase.GetFaction();
     const int rawDistance =
         DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
     // The HQ tile itself, before any facility halves the distance.
@@ -245,28 +191,39 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int acto
         return std::nullopt;
     }
     const int garrison = MindControlGarrison_(rBase.GetTile(), rMap, rCost);
-    const double distScale = ResolveMindControlDistanceScale_(rBase);
-    const int distance = ScaleDistance_(rawDistance, distScale);
-    return QuoteMindControlBaseCost_(rCost, garrison, actorMindControlTotal,
-                                     rBase.GetPopulation().GetSize(),
-                                     rTargetFaction.GetEconomy().GetEnergy(), distance,
-                                     costMultiplier);
+    const double distScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeDistanceScale, rActor);
+    const int distance = ScaleTruncating_(rawDistance, distScale);
+    const int mindControl =
+        CurrentGameState().GetMindControlLedger().Total(rActor.GetFactionId());
+    const int formula = MindControlFormula_(rCost, garrison, mindControl,
+                                            rBase.GetPopulation().GetSize(),
+                                            rTargetFaction.GetEconomy().GetEnergy(), distance);
+    EffectContext_t actorCtx;
+    actorCtx.pPartner = &rTargetFaction;
+    actorCtx.pBase = &rBase;
+    const double targetScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeActionCost, rActor);
+    const double actorScale = ResolveActorCost_(rActor, actorCtx);
+    return ApplyProbeCostMultiplier_(formula, targetScale * actorScale);
 }
 
-int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Unit& rTargetUnit,
-                         const Faction& rTargetFaction, const WorldMap& rMap,
-                         double costMultiplier)
+int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
+                         const Unit& rTargetUnit, const WorldMap& rMap)
 {
+    const Faction& rTargetFaction = rTargetUnit.GetFaction();
     const int mineralCost = std::max(1, rTargetUnit.GetDesign().GetBaseCost());
     const int rawDistance =
         DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth());
-    const double distScale = ResolveSubversionDistanceScale_(rTargetUnit);
-    const int distance = ScaleDistance_(rawDistance, distScale);
-    const double unitScale =
-        ResolveMultiplicativeStat(rTargetUnit, StatId_t::SubversionCostScale,
-                                  SeedFor(StatId_t::SubversionCostScale), EffectContext_t{});
-    return QuoteSubvertUnitCost_(rCost, mineralCost, rTargetFaction.GetEconomy().GetEnergy(),
-                                 distance, costMultiplier * unitScale);
+    const double distScale =
+        ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeDistanceScale, rActor);
+    const int distance = ScaleTruncating_(rawDistance, distScale);
+    const int formula = SubvertFormula_(rCost, mineralCost,
+                                        rTargetFaction.GetEconomy().GetEnergy(), distance);
+    EffectContext_t actorCtx;
+    actorCtx.pPartner = &rTargetFaction;
+    const double targetScale =
+        ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeActionCost, rActor);
+    const double actorScale = ResolveActorCost_(rActor, actorCtx);
+    return ApplyProbeCostMultiplier_(formula, targetScale * actorScale);
 }
 
 bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAction)
@@ -433,7 +390,7 @@ bool IsHeadquarters(const BaseManager& rBase)
     return ResolveFlag(rBase, RuleFlagId_t::Headquarters);
 }
 
-int GeneticPlagueKilled(const BaseManager& rBase)
+int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& rBase)
 {
     const int size = rBase.GetPopulation().GetSize();
     const int cap = std::max(0, size - 1);
@@ -467,12 +424,41 @@ int GeneticPlagueKilled(const BaseManager& rBase)
     killed += 1;
     if (rBase.HasPlagueIntroduced())
     {
-        killed /= 2;
+        killed /= rAction.repeatDivisor;
     }
     const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
                                          SeedFor(StatId_t::PlagueDamageScale), nullptr);
     killed = static_cast<int>(std::lround(static_cast<double>(killed) * scale));
     return std::clamp(killed, 0, cap);
+}
+
+int PlagueGarrisonDrawBound(const ProbeActionConfig_t& rAction, int hp)
+{
+    return std::max(1, hp / rAction.garrisonDamageDivisor);
+}
+
+int PlagueGarrisonDamage(const ProbeActionConfig_t& rAction, const BaseManager& rBase, int hp,
+                         int draw)
+{
+    int damage = hp / rAction.garrisonDamageDivisor + draw;
+    if (rBase.HasPlagueIntroduced())
+    {
+        damage /= rAction.repeatDivisor;
+    }
+    const double scale = ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::PlagueDamageScale,
+                                         SeedFor(StatId_t::PlagueDamageScale), nullptr);
+    const double scaled = static_cast<double>(damage) * scale;
+    return static_cast<int>(std::lround(scaled));
+}
+
+bool MissionDrawSucceeds(const ProbeChance_t& rChances, int draw)
+{
+    return draw >= rChances.risk;
+}
+
+bool EscapeDrawSucceeds(const ProbeChance_t& rChances, int draw)
+{
+    return draw > rChances.risk;
 }
 
 const BaseManager* ProbeReturnBase(const Unit& rProbe)
@@ -592,39 +578,21 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
         return 0;
     }
 
-    double costMultiplier = 1.0;
-    if (const BaseManager* pSource = EffectSourceBase(rTarget))
-    {
-        costMultiplier = ResolveProbeActionCostMultiplier_(*pSource);
-        costMultiplier *= AiActorCostScale_(rActor, *pSource);
-    }
-    costMultiplier *= ResolveActorProbeActionCostMultiplier_(rActor);
-
-    const GameState& rGame = CurrentGameState();
-    const WorldMap& rMap = rGame.GetWorldMap();
-    const MindControlLedger& rMindControl = rGame.GetMindControlLedger();
-    const std::optional<int> quoted = std::visit(
+    const WorldMap& rMap = CurrentGameState().GetWorldMap();
+    return std::visit(
         [&](const auto& rConcrete) -> std::optional<int>
         {
             using T = std::decay_t<decltype(rConcrete)>;
             if constexpr (std::is_same_v<T, ProbeBaseTarget_t>)
             {
-                const int mindControl = rMindControl.Total(rActor.GetFactionId());
-                return QuoteBaseActionCost_(*rAction.cost, mindControl, rConcrete.rBase,
-                                            rTarget.rFaction, rMap, costMultiplier);
+                return QuoteBaseActionCost_(*rAction.cost, rActor, rConcrete.rBase, rMap);
             }
             else
             {
-                return QuoteUnitActionCost_(*rAction.cost, rConcrete.rUnit, rTarget.rFaction,
-                                            rMap, costMultiplier);
+                return QuoteUnitActionCost_(*rAction.cost, rActor, rConcrete.rUnit, rMap);
             }
         },
         rTarget.ref);
-    if (!quoted.has_value())
-    {
-        return std::nullopt;
-    }
-    return ApplyDiplomaticCostMods_(*quoted, rActor, rTarget);
 }
 
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
@@ -646,12 +614,12 @@ int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget
         {
             if (IsHeadquarters(*pBase))
             {
-                risk = std::max(risk, 2);
+                risk = std::max(risk, rAction.protectedRisk);
             }
             const BuildingConfig_t* pFacility = pBase->GetBuildingManager().FindBuilding(facilityId);
             if (pFacility && ConfigHasFlag_(pFacility->effects, RuleFlagId_t::HighRiskSabotage))
             {
-                risk = std::max(risk, 2);
+                risk = std::max(risk, rAction.protectedRisk);
             }
         }
     }
@@ -675,9 +643,11 @@ ProbeChance_t ProbeChancesFor(const Unit& rProbe, const ProbeTarget_t& rTarget, 
     return chances;
 }
 
-StealEnergyQuote_t QuoteStealEnergy(const BaseManager& rBase, const Faction& rTarget, int morale)
+StealEnergyQuote_t QuoteStealEnergy(const ProbeActionConfig_t& rAction, const BaseManager& rBase,
+                                    const Faction& rTarget, int morale)
 {
     StealEnergyQuote_t quote;
+    quote.remainderDivisor = rAction.remainderDivisor;
     quote.treasury = rTarget.GetEconomy().GetEnergy();
     if (quote.treasury <= 0)
     {
@@ -686,14 +656,14 @@ StealEnergyQuote_t QuoteStealEnergy(const BaseManager& rBase, const Faction& rTa
     const int pop = rBase.GetPopulation().GetSize();
     const int factionPop = rTarget.TotalPopulation();
     const int share = quote.treasury * pop / (factionPop + 1);
-    quote.floor = share * std::max(1, morale) / 6;
+    quote.floor = share * std::max(1, morale) / rAction.floorMoraleDivisor;
     quote.remainderBound = std::max(0, share - quote.floor);
     return quote;
 }
 
 int StealEnergyAmount(const StealEnergyQuote_t& rQuote, int remainderDraw)
 {
-    const int remainder = std::max(0, remainderDraw) / 2;
+    const int remainder = std::max(0, remainderDraw) / rQuote.remainderDivisor;
     int stolen = std::clamp(rQuote.floor + remainder, 0, rQuote.treasury);
     if (stolen == 1)
     {

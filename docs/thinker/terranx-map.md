@@ -506,7 +506,9 @@ at `0x5A16EA`, 12 with no HQ); no HQ-tile refusal. A target whose home base
 `unit_cost * ((energy + 800) / (dist + 2))`, dividing first (`idiv` at `0x5A1546`,
 `imul` by `UNIT` +0x29 at `0x5A1565`). Then the same AI-vs-human `× 3 / diff_level`
 (`0x5A1552`–`0x5A15A2`), `RULE_PROBECOST`, Nethack ×3/4, the SE Probe table, Poly
-and plan below. Thinker's `probe` matches.
+and plan below. The unit path reads no diplomatic status (`Faction` `0x96C9F8`) and no
+atrocity record, so Pact, former owner, riot, golden age and atrocity modifiers are base-only.
+Thinker's `probe` matches.
 
 **Unit subversion and Poly Encryption**: after the SE Probe table, a target unit
 with `ABL_POLY_ENCRYPTION` (`0x1000`) doubles the subversion cost (`has_abil` at

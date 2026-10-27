@@ -124,19 +124,6 @@
             "amount": 30,
             "op": "AddPercent"
           }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "AllOwnerBases",
-          "factionFilter": {
-            "kind": "PlayerType",
-            "type": "AI"
-          },
-          "parameters": {
-            "stat": "probe_action_cost",
-            "amount": -50,
-            "op": "AddPercent"
-          }
         }
       ]
     },
@@ -253,19 +240,6 @@
             "amount": 20,
             "op": "AddPercent"
           }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "AllOwnerBases",
-          "factionFilter": {
-            "kind": "PlayerType",
-            "type": "AI"
-          },
-          "parameters": {
-            "stat": "probe_action_cost",
-            "amount": -50,
-            "op": "AddPercent"
-          }
         }
       ]
     },
@@ -358,19 +332,6 @@
           "parameters": {
             "stat": "cost_multiplier",
             "amount": 10,
-            "op": "AddPercent"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "AllOwnerBases",
-          "factionFilter": {
-            "kind": "PlayerType",
-            "type": "AI"
-          },
-          "parameters": {
-            "stat": "probe_action_cost",
-            "amount": -50,
             "op": "AddPercent"
           }
         }
@@ -468,10 +429,11 @@
           "scope": "FactionGlobal",
           "factionFilter": {
             "kind": "PlayerType",
-            "type": "Player"
+            "type": "AI"
           },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "ai_probe_cost_scale",
+            "stat": "probe_actor_cost",
             "amount": 0.75,
             "op": "MultiplyGeometric"
           }
@@ -572,10 +534,11 @@
           "scope": "FactionGlobal",
           "factionFilter": {
             "kind": "PlayerType",
-            "type": "Player"
+            "type": "AI"
           },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "ai_probe_cost_scale",
+            "stat": "probe_actor_cost",
             "amount": 0.6,
             "op": "MultiplyGeometric"
           }

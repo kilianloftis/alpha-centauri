@@ -73,6 +73,16 @@
             "amount": 1,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionPair",
+          "condition": { "kind": "TargetIsBase" },
+          "parameters": {
+            "stat": "probe_actor_cost",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
         }
       ],
       "duration_turns": null
