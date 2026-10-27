@@ -14,6 +14,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/probes/MindControlLedger.h"
+#include "game/probes/ProbeCalculator.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -125,17 +126,15 @@ IntrusionBonuses_t IntrusionBonuses_(const Unit& rProbe, const ProbeTarget_t& rT
 }
 
 // Every unit sharing the tile counts, allies included. The plan decides each unit's weight
-// (probe_actions.json); Poly units raise one multiplier for the whole stack.
-int MindControlGarrison_(const Tile& rTile, const WorldMap& rMap, const ProbeCostConfig_t& rCost)
+// (probe_actions.json); Poly units raise the cost formula's multiplier for the whole stack.
+void SumMindControlGarrison_(const Tile& rTile, const WorldMap& rMap,
+                             MindControlCostInputs_t& rInputs)
 {
-    int weight = 0;
-    int multiplier = rCost.garrisonMultiplierBase;
     for (const Unit* pUnit : rMap.GetAllUnitsOnTile(rTile))
     {
-        weight += ResolveStat(*pUnit, StatId_t::GarrisonProbeWeight);
-        multiplier += ResolveStat(*pUnit, StatId_t::GarrisonProbeMultiplier);
+        rInputs.garrisonWeight += ResolveStat(*pUnit, StatId_t::GarrisonProbeWeight);
+        rInputs.garrisonMultiplier += ResolveStat(*pUnit, StatId_t::GarrisonProbeMultiplier);
     }
-    return weight * multiplier;
 }
 
 // The binary's vector_dist, which TabletopDiagonalDistance equals on every offset.
@@ -163,20 +162,6 @@ int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
     return std::max(1, scaled);
 }
 
-// (garrison + actorMindControlTotal / divisor + pop) * ((energy + bias) / (dist + bias)).
-int MindControlFormula_(const ProbeCostConfig_t& rCost, int garrison, int actorMindControlTotal,
-                        int population, int energy, int distToHq)
-{
-    return (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
-           * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
-}
-
-// mineralCost * ((energy + bias) / (dist + bias)), dividing first as the binary does.
-int SubvertFormula_(const ProbeCostConfig_t& rCost, int mineralCost, int energy, int distToHq)
-{
-    return mineralCost * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
-}
-
 // TODO: SMAC charges x1.5 to a faction that wants revenge (DIPLO_WANT_REVENGE) when the target
 // was not an atrocity victim; we keep no revenge record.
 std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
@@ -190,14 +175,15 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
     {
         return std::nullopt;
     }
-    const int garrison = MindControlGarrison_(rBase.GetTile(), rMap, rCost);
     const double distScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeDistanceScale, rActor);
-    const int distance = ScaleTruncating_(rawDistance, distScale);
-    const int mindControl =
-        CurrentGameState().GetMindControlLedger().Total(rActor.GetFactionId());
-    const int formula = MindControlFormula_(rCost, garrison, mindControl,
-                                            rBase.GetPopulation().GetSize(),
-                                            rTargetFaction.GetEconomy().GetEnergy(), distance);
+    const GameState& rGame = CurrentGameState();
+    MindControlCostInputs_t inputs;
+    SumMindControlGarrison_(rBase.GetTile(), rMap, inputs);
+    inputs.mindControlTotal = rGame.GetMindControlLedger().Total(rActor.GetFactionId());
+    inputs.population = rBase.GetPopulation().GetSize();
+    inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
+    inputs.distance = ScaleTruncating_(rawDistance, distScale);
+    const int formula = rGame.GetGameData().probeCalculator->MindControlCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartner = &rTargetFaction;
     actorCtx.pBase = &rBase;
@@ -215,9 +201,12 @@ int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
         DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth());
     const double distScale =
         ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeDistanceScale, rActor);
-    const int distance = ScaleTruncating_(rawDistance, distScale);
-    const int formula = SubvertFormula_(rCost, mineralCost,
-                                        rTargetFaction.GetEconomy().GetEnergy(), distance);
+    SubvertCostInputs_t inputs;
+    inputs.mineralCost = mineralCost;
+    inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
+    inputs.distance = ScaleTruncating_(rawDistance, distScale);
+    const ProbeCalculator& rCalculator = *CurrentGameState().GetGameData().probeCalculator;
+    const int formula = rCalculator.SubvertCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartner = &rTargetFaction;
     const double targetScale =

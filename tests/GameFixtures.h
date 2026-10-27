@@ -23,6 +23,7 @@
 #include "game/production/ScrapRefundCalculator.h"
 #include "game/production/ProductionConfigParser.h"
 #include "game/economy/CommerceCalculator.h"
+#include "game/probes/ProbeCalculator.h"
 #include "game/economy/CommerceConfigParser.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/buildings/BuildingManager.h"
@@ -283,6 +284,8 @@ struct SessionInputs
             ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
         dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
             ac::ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
+        dataContext.probeCalculator =
+            std::make_unique<ac::ProbeCalculator>(*dataContext.luaRuntime);
         // GameState builds its council from these, enacting the initially active proposals.
         dataContext.councilProposalRegistry = std::make_unique<ac::CouncilProposalRegistry>();
         dataContext.councilProposalRegistry->Load(FixturePath("council/proposals.json"));

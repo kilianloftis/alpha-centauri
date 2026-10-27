@@ -43,6 +43,7 @@ struct LandmarkConfig_t;
 struct MoraleConfig_t;
 class MoraleCalculator;
 class CommerceCalculator;
+class ProbeCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
 class CouncilProposalRegistry;
@@ -127,6 +128,7 @@ struct GameDataContext
     // Reads no save state, so it lives here; every faction, unit and combat path borrows it.
     std::unique_ptr<MoraleCalculator> moraleCalculator;
     std::unique_ptr<CommerceCalculator> commerceCalculator;
+    std::unique_ptr<ProbeCalculator> probeCalculator;
 
     // For config files LoadGameData does not parse, so they resolve against the same root.
     GameDataPaths paths;

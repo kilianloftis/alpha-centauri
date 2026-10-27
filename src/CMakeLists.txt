@@ -155,6 +155,7 @@ add_library(ac-core STATIC
     game/units/UnitTransport.cpp
     game/units/UnitPlacementRules.cpp
     game/units/UnitPlanRules.cpp
+    game/probes/ProbeCalculator.cpp
     game/combat/CombatResolver.cpp
     game/combat/CombatRules.cpp
     game/combat/CombatStrength.cpp

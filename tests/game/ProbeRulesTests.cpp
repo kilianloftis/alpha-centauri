@@ -67,10 +67,7 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.Find(ProbeActionId_t::StealTech)->riskRepeat == 1);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase) != nullptr);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase)->cost.has_value());
-    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->energyBias == 1200);
-    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->distBias == 4);
-    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->mindControlDivisor == 4);
-    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->garrisonMultiplierBase == 1);
+    CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->cost->formula.empty());
     CHECK(config.Find(ProbeActionId_t::SabotageFacility)->protectedRisk == 2);
     CHECK(config.Find(ProbeActionId_t::DrainEnergy)->floorMoraleDivisor == 6);
     CHECK(config.Find(ProbeActionId_t::DrainEnergy)->remainderDivisor == 2);
@@ -86,7 +83,7 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK_FALSE(config.Find(ProbeActionId_t::Infiltrate)->cost.has_value());
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit) != nullptr);
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit)->cost.has_value());
-    CHECK(config.Find(ProbeActionId_t::SubvertUnit)->cost->energyBias == 800);
+    CHECK_FALSE(config.Find(ProbeActionId_t::SubvertUnit)->cost->formula.empty());
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
     const auto& rSubvertSuccess = config.Find(ProbeActionId_t::SubvertUnit)->onSuccessEffects;
     REQUIRE(rSubvertSuccess.size() == 1);
@@ -131,26 +128,13 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
                                   + recordEntry + " }"),
                       ContainsSubstring("on_success_effects"));
 
+    // A cost is its formula.
     CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
-                                       "cost": { "energy_bias": 1200, "dist_bias": 4 } })"),
-                      ContainsSubstring("mind_control_divisor"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
-                                       "cost": { "energy_bias": 1200, "dist_bias": 4,
-                                                 "mind_control_divisor": 0 } })"),
-                      ContainsSubstring("mind_control_divisor"));
+                                       "cost": {} })"),
+                      ContainsSubstring("formula"));
     CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit",
-                                       "cost": { "energy_bias": 800, "dist_bias": 2,
-                                                 "mind_control_divisor": 4 } })"),
-                      ContainsSubstring("mind_control_divisor"));
-
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
-                                       "cost": { "energy_bias": 1200, "dist_bias": 4,
-                                                 "mind_control_divisor": 4 } })"),
-                      ContainsSubstring("garrison_multiplier_base"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit",
-                                       "cost": { "energy_bias": 800, "dist_bias": 2,
-                                                 "garrison_multiplier_base": 1 } })"),
-                      ContainsSubstring("garrison_multiplier_base"));
+                                       "cost": { "formula": "" } })"),
+                      ContainsSubstring("formula"));
 
     // Each action's own numbers: required on it, rejected on any other.
     CHECK_THROWS_WITH(parseAction(R"({ "id": "drain_energy", "target": "base",

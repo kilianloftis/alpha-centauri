@@ -29,46 +29,23 @@ ProbeTargetKind_t ParseTarget_(const std::string& rTarget)
     throw std::runtime_error("probe_actions.json: unknown target '" + rTarget + "'");
 }
 
-int RequireBaseCostInt_(const json& rCostJson, const std::string& rKey, int minimum,
-                        const std::string& rActionName)
+// A required Lua expression that ProbeCalculator evaluates.
+std::string RequireFormula_(const json& rJson, const std::string& rKey,
+                            const std::string& rActionName)
 {
-    if (!rCostJson.contains(rKey) || !rCostJson.at(rKey).is_number_integer())
+    if (!rJson.contains(rKey) || !rJson.at(rKey).is_string()
+        || rJson.at(rKey).get<std::string>().empty())
     {
-        throw std::runtime_error("Probe action '" + rActionName + "': cost requires an integer '"
-                                 + rKey + "'");
+        throw std::runtime_error("Probe action '" + rActionName
+                                 + "': requires a formula string '" + rKey + "'");
     }
-    const int value = rCostJson.at(rKey).get<int>();
-    if (value < minimum)
-    {
-        throw std::runtime_error("Probe action '" + rActionName + "': " + rKey
-                                 + " must be >= " + std::to_string(minimum));
-    }
-    return value;
+    return rJson.at(rKey).get<std::string>();
 }
 
-ProbeCostConfig_t ParseCost_(const json& rCostJson, ProbeTargetKind_t target,
-                              const std::string& rActionName)
+ProbeCostConfig_t ParseCost_(const json& rCostJson, const std::string& rActionName)
 {
     ProbeCostConfig_t cost;
-    cost.energyBias = rCostJson.value("energy_bias", 0);
-    cost.distBias = rCostJson.value("dist_bias", 0);
-    // Only the base formula reads these, so a unit-target cost would ignore them silently.
-    if (target == ProbeTargetKind_t::Unit)
-    {
-        for (const std::string& rKey : {"mind_control_divisor", "garrison_multiplier_base"})
-        {
-            if (rCostJson.contains(rKey))
-            {
-                throw std::runtime_error("Probe action '" + rActionName + "': " + rKey
-                                         + " applies only to base targets");
-            }
-        }
-        return cost;
-    }
-    cost.mindControlDivisor =
-        RequireBaseCostInt_(rCostJson, "mind_control_divisor", 1, rActionName);
-    cost.garrisonMultiplierBase =
-        RequireBaseCostInt_(rCostJson, "garrison_multiplier_base", 0, rActionName);
+    cost.formula = RequireFormula_(rCostJson, "formula", rActionName);
     return cost;
 }
 
@@ -211,7 +188,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     ParseActionNumbers_(rActionJson, action);
     if (rActionJson.contains("cost") && !rActionJson.at("cost").is_null())
     {
-        action.cost = ParseCost_(rActionJson.at("cost"), action.target, action.name);
+        action.cost = ParseCost_(rActionJson.at("cost"), action.name);
     }
     action.effects = ParseActionEffects_(rActionJson, action.id);
     if (rActionJson.contains("on_success_effects") && !RunsOnSuccessEffects_(action.id))

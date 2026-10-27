@@ -47,6 +47,7 @@
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/economy/CommerceCalculator.h"
+#include "game/probes/ProbeCalculator.h"
 #include "game/combat/MoraleConfigParser.h"
 #include "game/probes/ProbeActionConfigParser.h"
 #include "game/base/BaseConquestConfigParser.h"
@@ -294,6 +295,7 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, rLua);
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig, rLua);
     rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
+    rData.probeCalculator = std::make_unique<ProbeCalculator>(rLua);
 }
 
 } // namespace
@@ -345,6 +347,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
         {rData.moraleCalculator.get(), "moraleCalculator"},
         {rData.commerceCalculator.get(), "commerceCalculator"},
+        {rData.probeCalculator.get(), "probeCalculator"},
     };
     for (const auto& [pMember, pName] : required)
     {

@@ -137,10 +137,7 @@
       "risk": 0,
       "not_hq": true,
       "cost": {
-        "energy_bias": 1200,
-        "dist_bias": 4,
-        "mind_control_divisor": 4,
-        "garrison_multiplier_base": 1
+        "formula": "(garrison_weight * (garrison_multiplier + 1) + floor(mind_control_total / 4) + population) * floor((energy + 1200) / (distance + 4))"
       },
       "on_paid_effects": [
         {
@@ -158,10 +155,7 @@
       "risk": 1,
       "not_hq": true,
       "cost": {
-        "energy_bias": 1200,
-        "dist_bias": 4,
-        "mind_control_divisor": 4,
-        "garrison_multiplier_base": 1
+        "formula": "(garrison_weight * (garrison_multiplier + 1) + floor(mind_control_total / 4) + population) * floor((energy + 1200) / (distance + 4))"
       },
       "on_paid_effects": [
         {
@@ -195,8 +189,7 @@
       "target": "unit",
       "risk": 0,
       "cost": {
-        "energy_bias": 800,
-        "dist_bias": 2
+        "formula": "mineral_cost * floor((energy + 800) / (distance + 2))"
       },
       "on_success_effects": [
         {

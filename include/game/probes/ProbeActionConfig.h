@@ -76,17 +76,12 @@ struct ProbeSuccessFormula_t
     int defenseClampMax = 0;
 };
 
-// Paid action tunables. Base cost: (garrison + mindControl / divisor + pop) * ((energy + bias)
-// / (dist + distBias)); unit cost: mineralCost * ((energy + bias) / (dist + distBias)).
+// A paid action's cost before the effect multipliers: a Lua expression ProbeCalculator
+// evaluates. A base target's reads MindControlCostInputs_t's variables, a unit target's
+// SubvertCostInputs_t's.
 struct ProbeCostConfig_t
 {
-    int energyBias = 0;
-    int distBias = 0;
-    // Base target only, as is garrisonMultiplierBase: the parser requires both there and
-    // rejects them on a unit target.
-    int mindControlDivisor = 0;
-    // The garrison multiplier before each unit's garrison_probe_multiplier (the binary's + 1).
-    int garrisonMultiplierBase = 0;
+    std::string formula;
 };
 
 struct ProbeActionConfig_t
