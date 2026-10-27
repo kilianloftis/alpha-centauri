@@ -6,6 +6,7 @@
     "id": "Mind_Worm",
     "name": "Mind Worm",
     "domain": "land",
+    "plan": "combat",
     "mineral_cost": 0,
     "effects": [
       {
@@ -65,6 +66,7 @@
     "id": "Isle_of_the_Deep",
     "name": "Isle of the Deep",
     "domain": "sea",
+    "plan": "naval_transport",
     "mineral_cost": 0,
     "effects": [
       {
@@ -134,6 +136,7 @@
     "id": "Sea_Lurk",
     "name": "Sea Lurk",
     "domain": "sea",
+    "plan": "naval_superiority",
     "mineral_cost": 0,
     "effects": [
       {
@@ -194,6 +197,7 @@
     "id": "Locusts_of_Chiron",
     "name": "Locusts of Chiron",
     "domain": "air",
+    "plan": "air_superiority",
     "mineral_cost": 0,
     "effects": [
       {
@@ -242,6 +246,7 @@
     "id": "Spore_Launcher",
     "name": "Spore Launcher",
     "domain": "land",
+    "plan": "offense",
     "mineral_cost": 0,
     "effects": [
       {
@@ -296,6 +301,7 @@
     "id": "Fungal_Tower",
     "name": "Fungal Tower",
     "domain": "land",
+    "plan": "recon",
     "mineral_cost": 0,
     "effects": [
       {
@@ -354,6 +360,7 @@
     "id": "Alien_Artifact",
     "name": "Alien Artifact",
     "domain": "land",
+    "plan": "artifact",
     "mineral_cost": 0,
     "effects": [
       {

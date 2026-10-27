@@ -71,6 +71,29 @@ double ResolveMindControlDistanceScale_(const BaseManager& rBase)
                            SeedFor(StatId_t::MindControlDistanceScale), nullptr);
 }
 
+double ResolveSubversionDistanceScale_(const Unit& rTargetUnit)
+{
+    const BaseManager* pHome = rTargetUnit.GetHomeBase();
+    if (!pHome)
+    {
+        return 1.0;
+    }
+    return ResolveBaseStat(pHome->GetBaseEffects(), StatId_t::SubversionDistanceScale,
+                           SeedFor(StatId_t::SubversionDistanceScale), nullptr);
+}
+
+// The binary's AI-vs-human discount (cost * 3 / diff_level): only an AI actor pays the target's
+// scale, and difficulty emits it on player factions only.
+double AiActorCostScale_(const Faction& rActor, const BaseManager& rSource)
+{
+    if (rActor.IsPlayerControlled())
+    {
+        return 1.0;
+    }
+    return ResolveBaseStat(rSource.GetBaseEffects(), StatId_t::AiProbeCostScale,
+                           SeedFor(StatId_t::AiProbeCostScale), nullptr);
+}
+
 double ResolveActorProbeActionCostMultiplier_(const Faction& rActor)
 {
     if (const BaseManager* pHq = rActor.GetHeadquarters())
@@ -110,23 +133,21 @@ int ApplyDiplomaticCostMods_(int cost, const Faction& rActor, const ProbeTarget_
     return std::max(1, cost);
 }
 
-int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t ownerId)
+// Every unit sharing the tile counts, allies included. The plan decides each unit's weight
+// (probe_actions.json); Poly units raise one multiplier for the whole stack.
+int MindControlGarrison_(const Tile& rTile, const WorldMap& rMap, const ProbeCostConfig_t& rCost)
 {
-    int count = 0;
-    for (Unit* pUnit : rMap.GetUnitPositions().GetUnitsOnTile(rTile))
+    int weight = 0;
+    int multiplier = rCost.garrisonMultiplierBase;
+    for (const Unit* pUnit : rMap.GetAllUnitsOnTile(rTile))
     {
-        if (!pUnit || pUnit->GetFaction().GetFactionId() != ownerId)
-        {
-            continue;
-        }
-        if (ResolveStat(*pUnit, StatId_t::Attack) > 0 || ResolveStat(*pUnit, StatId_t::Defense) > 0)
-        {
-            count += ResolveFlag(*pUnit, RuleFlagId_t::PolyEncryption) ? 2 : 1;
-        }
+        weight += ResolveStat(*pUnit, StatId_t::GarrisonProbeWeight);
+        multiplier += ResolveStat(*pUnit, StatId_t::GarrisonProbeMultiplier);
     }
-    return count;
+    return weight * multiplier;
 }
 
+// The binary's vector_dist, which TabletopDiagonalDistance equals on every offset.
 int DistanceToHeadquarters_(const Faction& rFaction, const Tile& rTile, int mapWidth)
 {
     const BaseManager* pHq = rFaction.GetHeadquarters();
@@ -134,7 +155,14 @@ int DistanceToHeadquarters_(const Faction& rFaction, const Tile& rTile, int mapW
     {
         return k_defaultHqDistance;
     }
-    return ChebyshevDistance(rTile, pHq->GetTile(), mapWidth);
+    return TabletopDiagonalDistance(rTile, pHq->GetTile(), mapWidth);
+}
+
+// Truncated toward zero, which equals the binary's sequential integer x2 and /2 steps.
+int ScaleDistance_(int distance, double scale)
+{
+    const double scaled = static_cast<double>(distance) * scale;
+    return static_cast<int>(scaled);
 }
 
 int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
@@ -143,33 +171,23 @@ int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
     return std::max(1, scaled);
 }
 
-// (garrison + actorMindControlTotal / divisor + pop) * (energy + bias) / (dist + bias), then SE
-// multiplier.
-std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int garrison,
-                                             int actorMindControlTotal, int population,
-                                             int energy, int distToHq, double costMultiplier)
+// (garrison + actorMindControlTotal / divisor + pop) * ((energy + bias) / (dist + bias)), then
+// the cost multiplier.
+int QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int garrison,
+                              int actorMindControlTotal, int population, int energy,
+                              int distToHq, double costMultiplier)
 {
-    if (distToHq <= 0)
-    {
-        return std::nullopt;
-    }
-    int cost = (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
-               * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
-    cost = ApplyProbeCostMultiplier_(cost, costMultiplier);
-    return cost;
+    const int cost = (garrison + actorMindControlTotal / rCost.mindControlDivisor + population)
+                     * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
+    return ApplyProbeCostMultiplier_(cost, costMultiplier);
 }
 
-// mineralCost * (energy + bias) / (dist + bias), then SE multiplier.
-std::optional<int> QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost,
-                                         int energy, int distToHq, double costMultiplier)
+// mineralCost * ((energy + bias) / (dist + bias)), dividing first as the binary does, then the
+// cost multiplier.
+int QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost, int energy,
+                          int distToHq, double costMultiplier)
 {
-    // 0 is the HQ tile itself, refused as QuoteMindControlBaseCost_ refuses it; the no-HQ case
-    // already became k_defaultHqDistance.
-    if (distToHq <= 0)
-    {
-        return std::nullopt;
-    }
-    const int cost = mineralCost * (energy + rCost.energyBias) / (distToHq + rCost.distBias);
+    const int cost = mineralCost * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
     return ApplyProbeCostMultiplier_(cost, costMultiplier);
 }
 
@@ -178,28 +196,36 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, int acto
                                         const Faction& rTargetFaction, const WorldMap& rMap,
                                         double costMultiplier)
 {
-    const int garrison =
-        CountCombatUnitsOnTile_(rBase.GetTile(), rMap, rTargetFaction.GetFactionId());
     const int rawDistance =
         DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
+    // The HQ tile itself, before any facility halves the distance.
+    if (rawDistance <= 0)
+    {
+        return std::nullopt;
+    }
+    const int garrison = MindControlGarrison_(rBase.GetTile(), rMap, rCost);
     const double distScale = ResolveMindControlDistanceScale_(rBase);
-    const int distance =
-        static_cast<int>(std::lround(static_cast<double>(rawDistance) * distScale));
+    const int distance = ScaleDistance_(rawDistance, distScale);
     return QuoteMindControlBaseCost_(rCost, garrison, actorMindControlTotal,
                                      rBase.GetPopulation().GetSize(),
                                      rTargetFaction.GetEconomy().GetEnergy(), distance,
                                      costMultiplier);
 }
 
-std::optional<int> QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Unit& rTargetUnit,
-                                        const Faction& rTargetFaction, const WorldMap& rMap,
-                                        double costMultiplier)
+int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Unit& rTargetUnit,
+                         const Faction& rTargetFaction, const WorldMap& rMap,
+                         double costMultiplier)
 {
     const int mineralCost = std::max(1, rTargetUnit.GetDesign().GetBaseCost());
-    const int distance =
+    const int rawDistance =
         DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth());
+    const double distScale = ResolveSubversionDistanceScale_(rTargetUnit);
+    const int distance = ScaleDistance_(rawDistance, distScale);
+    const double unitScale =
+        ResolveMultiplicativeStat(rTargetUnit, StatId_t::SubversionCostScale,
+                                  SeedFor(StatId_t::SubversionCostScale), EffectContext_t{});
     return QuoteSubvertUnitCost_(rCost, mineralCost, rTargetFaction.GetEconomy().GetEnergy(),
-                                 distance, costMultiplier);
+                                 distance, costMultiplier * unitScale);
 }
 
 bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAction)
@@ -481,8 +507,7 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
         return false;
     }
 
-    // A paid action whose cost cannot be quoted is not offered, such as subverting a unit on the
-    // HQ tile.
+    // A paid action whose cost cannot be quoted is not offered: a base on the HQ tile.
     if (rAction.cost.has_value()
         && !QuoteProbeActionCost(rAction, rProbe.GetFaction(), rTarget).has_value())
     {
@@ -509,6 +534,7 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
     if (const BaseManager* pSource = EffectSourceBase(rTarget))
     {
         costMultiplier = ResolveProbeActionCostMultiplier_(*pSource);
+        costMultiplier *= AiActorCostScale_(rActor, *pSource);
     }
     costMultiplier *= ResolveActorProbeActionCostMultiplier_(rActor);
 

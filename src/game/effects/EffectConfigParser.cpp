@@ -1115,6 +1115,25 @@ std::vector<UnitDomain_t> ParseConditionDomains_(const nlohmann::json& rJson,
     return domains;
 }
 
+Condition_t ParseDesignPlanCondition_(const nlohmann::json& rJson)
+{
+    if (!rJson.contains("plans") || !rJson.at("plans").is_array() || rJson.at("plans").empty())
+    {
+        throw std::runtime_error("DesignPlan condition requires a non-empty 'plans' array");
+    }
+    DesignPlan_t condition;
+    for (const nlohmann::json& rPlan : rJson.at("plans"))
+    {
+        if (!rPlan.is_string())
+        {
+            throw std::runtime_error("DesignPlan condition plans must be strings");
+        }
+        condition.plans.push_back(ParseUnitPlan(rPlan.get<std::string>()));
+    }
+    condition.bMatches = OptionalConditionBool_(rJson, "value", true, "DesignPlan");
+    return condition;
+}
+
 // "values" desugars to TargetTileHas; "conditions" nests any condition. At least one is given.
 std::vector<Condition_t> ParseNestedConditions_(const nlohmann::json& rJson,
                                                 const std::string& rWhat)
@@ -1235,6 +1254,7 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
              return BaseHasBuilding_t{
                  RequireConditionString_(rJson, "building", "BaseHasBuilding")};
          }},
+        {"DesignPlan", ParseDesignPlanCondition_},
         {"AllOf",
          [](const nlohmann::json& rJson) -> Condition_t {
              return AllOf_t{ParseNestedConditions_(rJson, "AllOf")};

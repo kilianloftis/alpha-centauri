@@ -93,6 +93,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     *rDataContext.difficultyConfig,
                     *rDataContext.nativeLifeLevelConfig,
                     rDataContext.ecoDamageConfig->effects,
+                    rDataContext.probeActionsConfig->effects,
                     *rDataContext.diplomacyConfig)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)

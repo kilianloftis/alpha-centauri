@@ -67,6 +67,11 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
+    CHECK(ParseStatId("garrison_probe_weight") == StatId_t::GarrisonProbeWeight);
+    CHECK(ParseStatId("garrison_probe_multiplier") == StatId_t::GarrisonProbeMultiplier);
+    CHECK(ParseStatId("subversion_cost_scale") == StatId_t::SubversionCostScale);
+    CHECK(ParseStatId("subversion_distance_scale") == StatId_t::SubversionDistanceScale);
+    CHECK(ParseStatId("ai_probe_cost_scale") == StatId_t::AiProbeCostScale);
     CHECK(ParseStatId("mind_control_distance_scale") == StatId_t::MindControlDistanceScale);
     CHECK(ParseStatId("plague_damage_scale") == StatId_t::PlagueDamageScale);
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
@@ -168,7 +173,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::BlocksProbeTeams);
     CHECK(ParseRuleFlagId("ignores_probe_block")
           == RuleFlagId_t::IgnoresProbeBlock);
-    CHECK(ParseRuleFlagId("poly_encryption") == RuleFlagId_t::PolyEncryption);
     CHECK(ParseRuleFlagId("high_risk_sabotage") == RuleFlagId_t::HighRiskSabotage);
     CHECK(ParseRuleFlagId("allow_gene_warfare") == RuleFlagId_t::AllowGeneWarfare);
     CHECK(ParseRuleFlagId("inc_gene_warfare_defense")
@@ -1158,6 +1162,27 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
 
         CHECK_THROWS(EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "IsNativeLife", "value": "yes" })")));
+    }
+
+    SECTION("DesignPlan")
+    {
+        const Condition_t parsed = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "DesignPlan", "plans": ["offense", "combat"] })"));
+        const auto* pPlan = std::get_if<DesignPlan_t>(&parsed);
+        REQUIRE(pPlan);
+        CHECK(pPlan->plans == std::vector<UnitPlan_t>{UnitPlan_t::Offense, UnitPlan_t::Combat});
+        CHECK(pPlan->bMatches);
+
+        const Condition_t negated = EffectConfigParser::ParseCondition(json::parse(
+            R"({ "kind": "DesignPlan", "plans": ["colony", "terraform"], "value": false })"));
+        const auto* pNegated = std::get_if<DesignPlan_t>(&negated);
+        REQUIRE(pNegated);
+        CHECK_FALSE(pNegated->bMatches);
+
+        CHECK_THROWS(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "DesignPlan", "plans": [] })")));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "DesignPlan", "plans": ["skirmish"] })")));
     }
 
     SECTION("Domain without domain throws")

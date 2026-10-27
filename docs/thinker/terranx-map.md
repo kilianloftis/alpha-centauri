@@ -528,7 +528,9 @@ Predefined units take it from `alpha.txt` instead. Thinker's `mod_make_proto` ma
 - Sea triad: `PLAN_NAVAL_SUPERIORITY` (6) (`0x5A5FF7`).
 - Air triad: `PLAN_AIR_SUPERIORITY` (4) with ability `0x20`, else `PLAN_OFFENSE`
   (`0x5A6012`–`0x5A6045`).
-- Land: `PLAN_OFFENSE`; armor defense > 1 → `PLAN_DEFENSE`; then weapon offense ≥
+- Land (offense and defense are the raw `Weapon.offense_value` `0x94AE68` and
+  `Armor.defense_value` `0x94F280` bytes, compared unscaled at `0x5A6081`–`0x5A608D`):
+  `PLAN_OFFENSE`; armor defense > 1 → `PLAN_DEFENSE`; then weapon offense ≥
   armor defense while `PLAN_DEFENSE` → `PLAN_COMBAT`; speed > 1 and offense > defense
   → `PLAN_OFFENSE`; Amphibious, Drop Pods or Artillery (`0x8018`) → `PLAN_OFFENSE`
   (`0x5A604A`–`0x5A60E9`). Offense 1 and defense 1: speed > 1 → `PLAN_RECON` (3);

@@ -77,6 +77,19 @@
         {
           "type": "StatModifier",
           "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "ai_probe_cost_scale",
+            "amount": 0.75,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
           "parameters": {
             "stat": "bureaucracy",
             "amount": 4,
@@ -90,6 +103,19 @@
       "name": "Transcend",
       "rules": { "player_atrocity_threshold": 3, "ai_atrocity_threshold": 7 },
       "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "ai_probe_cost_scale",
+            "amount": 0.6,
+            "op": "MultiplyGeometric"
+          }
+        },
         {
           "type": "StatModifier",
           "scope": "FactionGlobal",

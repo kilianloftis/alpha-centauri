@@ -61,6 +61,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const DifficultyConfig_t& rDifficulty,
                                        const NativeLifeLevelConfig_t& rNativeLifeLevels,
                                        const std::vector<EffectConfig_t>& rEcoDamageEffects,
+                                       const std::vector<EffectConfig_t>& rProbeActionEffects,
                                        const DiplomacyConfig_t& rDiplomacy)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
@@ -75,6 +76,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rDifficulty(rDifficulty)
     , m_rNativeLifeLevels(rNativeLifeLevels)
     , m_rEcoDamageEffects(rEcoDamageEffects)
+    , m_rProbeActionEffects(rProbeActionEffects)
     , m_rDiplomacy(rDiplomacy)
     , m_cachedPool(rFaction)
 {
@@ -235,6 +237,13 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectEcoDamageEffects_() const
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectProbeActionEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rProbeActionEffects, nullptr, "probe_actions", result);
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectDiplomaticStatusEffects_() const
 {
     std::vector<ActiveEffect_t> result;
@@ -359,6 +368,7 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectSources_() const
     AppendAll_(effects, CollectDifficultyEffects_());
     AppendAll_(effects, CollectNativeLifeEffects_());
     AppendAll_(effects, CollectEcoDamageEffects_());
+    AppendAll_(effects, CollectProbeActionEffects_());
     AppendAll_(effects, CollectProductionEffects_());
     AppendAll_(effects, CollectGrowthEffects_());
     AppendAll_(effects, CollectDiplomaticStatusEffects_());

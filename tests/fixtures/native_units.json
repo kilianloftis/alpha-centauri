@@ -6,6 +6,7 @@
       "id": "Mind_Worm",
       "name": "Mind Worm",
       "domain": "land",
+      "plan": "combat",
       "effects": [
         {
           "type": "StatModifier",
@@ -28,6 +29,7 @@
       "id": "Isle_of_the_Deep",
       "name": "Isle of the Deep",
       "domain": "sea",
+      "plan": "naval_transport",
       "effects": [
         {
           "type": "StatModifier",

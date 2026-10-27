@@ -5,6 +5,7 @@
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitPlan.h"
 
 #include <string>
 #include <vector>
@@ -40,6 +41,10 @@ public:
     virtual bool HasComponent(const std::string& rComponentId) const = 0;
 
     virtual UnitDomain_t GetDomain() const = 0;
+
+    // SMAC's UNIT.plan. A native states it, as alpha.txt's predefined units do; a composed
+    // design derives it (UnitPlanRules).
+    virtual UnitPlan_t GetPlan() const = 0;
 
     // RuleFlag native_life on this blueprint (a native's effects, or a filled component).
     bool IsNativeLife() const;

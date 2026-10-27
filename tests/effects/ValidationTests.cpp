@@ -199,6 +199,16 @@ static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::MindControlDistanceScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PlagueDamageScale) == StatKind_t::PureMultiplier);
 static_assert(DomainFor(StatId_t::MindControlDistanceScale) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::SubversionDistanceScale) == StatKind_t::PureMultiplier);
+static_assert(DomainFor(StatId_t::SubversionDistanceScale) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::AiProbeCostScale) == StatKind_t::PureMultiplier);
+static_assert(DomainFor(StatId_t::AiProbeCostScale) == ResolveDomain_t::Base);
+static_assert(KindFor(StatId_t::GarrisonProbeWeight) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::GarrisonProbeWeight) == ResolveDomain_t::Unit);
+static_assert(KindFor(StatId_t::GarrisonProbeMultiplier) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::GarrisonProbeMultiplier) == ResolveDomain_t::Unit);
+static_assert(KindFor(StatId_t::SubversionCostScale) == StatKind_t::PureMultiplier);
+static_assert(DomainFor(StatId_t::SubversionCostScale) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::PlagueDamageScale) == ResolveDomain_t::Base);
 static_assert(KindFor(StatId_t::MoraleExtra) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::PromotionChance) == StatKind_t::RawScaled);

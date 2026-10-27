@@ -60,7 +60,7 @@ TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while t
           == Approx(0.0));
 
     // energy_siphon: "+1 energy, FactionGlobal" on a component.
-    Unit& unit = fixture.MakeUnit(faction, 8, 0, {"energy_siphon"});
+    Unit& unit = fixture.MakeUnit(faction, 8, 0, {"test_chassis", "energy_siphon"});
     CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Energy), 0.0, nullptr).total
           == Approx(1.0));
 
@@ -77,7 +77,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
-    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_weapon"}, &base); // 4 attack intrinsic
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base); // 4 attack intrinsic
     CHECK(ResolveStat(unit, StatId_t::Attack) == 4);
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
@@ -271,7 +271,7 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
         fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
-    Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_weapon"});
+    Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_chassis", "test_weapon"});
     const int attackBefore = ResolveStat(unitB, StatId_t::Attack);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, base domain
@@ -352,7 +352,7 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"sensor_pod"}); // +25% defense, radius 2
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "sensor_pod"}); // +25% defense, radius 2
 
     CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.25)); // own tile
     CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
@@ -395,7 +395,7 @@ TEST_CASE("Unit aura wraps horizontally across the map seam",
     Faction& faction = fixture.MakeFaction();
     const int width = fixture.map.GetWidth();
 
-    fixture.MakeUnit(faction, 0, 4, {"sensor_pod"}); // +25% defense, radius 2
+    fixture.MakeUnit(faction, 0, 4, {"test_chassis", "sensor_pod"}); // +25% defense, radius 2
 
     CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
           == Approx(1.25));

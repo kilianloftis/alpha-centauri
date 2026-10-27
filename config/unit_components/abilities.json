@@ -132,6 +132,7 @@
     "id": "Air_Superiority",
     "name": "Air Superiority",
     "type": "ability",
+    "plan": "air_superiority",
     "required_tech": "",
     "mineral_cost": 0,
     "effects": [
@@ -218,6 +219,7 @@
     "id": "Drop_Pods",
     "name": "Drop Pods",
     "type": "ability",
+    "plan": "offense",
     "required_tech": "",
     "mineral_cost": 5,
     "effects": [
@@ -264,6 +266,7 @@
     "id": "Amphibious_Pods",
     "name": "Amphibious Pods",
     "type": "ability",
+    "plan": "offense",
     "required_tech": "",
     "mineral_cost": 5,
     "combat_rating_modifiers": [
@@ -342,6 +345,7 @@
     "id": "Non_Lethal_Methods",
     "name": "Non-Lethal Methods",
     "type": "ability",
+    "plan": "defense",
     "required_tech": "intellectual_integrity",
     "mineral_cost": 1,
     "effects": [
@@ -360,6 +364,7 @@
     "id": "Bombard",
     "name": "Bombard",
     "type": "ability",
+    "plan": "offense",
     "mineral_cost": 0,
     "effects": [
       {
@@ -396,10 +401,21 @@
     "mineral_cost": 5,
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "poly_encryption"
+          "stat": "garrison_probe_multiplier",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "subversion_cost_scale",
+          "amount": 2,
+          "op": "MultiplyGeometric"
         }
       }
     ]

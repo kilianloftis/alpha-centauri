@@ -47,6 +47,7 @@ graph TB
 
     subgraph "Game Data"
         Military[Military<br/>stores UnitDesign unique_ptrs]
+        PlanRules[UnitPlanRules<br/>DeriveUnitPlan at construction]
         Registry[UnitComponentRegistry<br/>all component configs]
         UnitMgr[UnitManager<br/>active units]
     end
@@ -62,6 +63,7 @@ graph TB
     DStats -->|reads ptr to| State
     DStats -->|Save click →| UDV
     UDV -->|AddDesign| Military
+    Military -.->|each UnitDesign's plan| PlanRules
     DList -->|reads| Military
     DList -->|click sets| SelectedDesign
     USP -->|reads via lambda| SelectedDesign
@@ -95,6 +97,25 @@ graph TB
 2. Player clicks it → `onSaveDesign` callback fires → `UnitDesignerView::HandleSaveDesign_()`
 3. A `std::unique_ptr<UnitDesign>` is constructed and passed to `Military::AddDesign()`
 4. `DesignListPanel` reads `Military::GetDesigns()` each frame — new design appears immediately
+
+## Unit Plan
+
+Every design has SMAC's `UNIT.plan`, the AI role (`IDesign::GetPlan`, `UnitPlan_t`). A
+`UnitDesign` derives it once in its constructor with `UnitPlanRules::DeriveUnitPlan`, a port of
+`make_proto` (`docs/thinker/terranx-map.md`, "Unit plan"):
+
+- A weapon component's optional `plan` (colony, terraform, supply, probe, naval_transport, the
+  missile payloads) wins outright.
+- Otherwise sea designs are `naval_superiority`, air designs `offense` (or `air_superiority`
+  with an ability whose `plan` says so), and orbital (missile) designs `offense`.
+- Land designs compare the weapon's `attack` Add, the armour's `defense` Add and the chassis
+  `movement` Add, unscaled: armour above 1 is `defense`, a weapon at least as strong as that
+  armour is `combat`, a fast design that out-guns its armour is `offense`. An ability `plan` of
+  `offense` overrides any land design; a gun with no armour is `recon` when fast, or `defense`
+  with an ability `plan` of `defense`.
+
+Natives state their plan in `native_units.json`, as `alpha.txt`'s predefined units do. Probe costs
+read plans through the `DesignPlan` effect condition (see `effects-system.md`).
 
 ## TODOs
 

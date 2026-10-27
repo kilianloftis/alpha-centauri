@@ -100,7 +100,7 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
 
     UnitComponentConfig_t armor;
     armor.id = "synthmetal";
-    armor.type = "armor";
+    armor.type = "armour";
     armor.effects = {
         pool.StatMod(StatId_t::Defense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
         // Extra attack points from armor/ability still count toward the base rating.
@@ -117,7 +117,7 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
 
     const std::vector<UnitSlotConfig_t> slots = {
         {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
-        {.id = "armor", .displayName = "Armor", .componentType = "armor", .required = true},
+        {.id = "armor", .displayName = "Armor", .componentType = "armour", .required = true},
         {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
     };
     const std::unordered_map<std::string, const UnitComponentConfig_t*> components = {

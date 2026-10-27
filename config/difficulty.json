@@ -465,6 +465,19 @@
       "effects": [
         {
           "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "ai_probe_cost_scale",
+            "amount": 0.75,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "parameters": {
             "stat": "size_free_drones",
@@ -554,6 +567,19 @@
         "random_events_after_turn": 25
       },
       "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "ai_probe_cost_scale",
+            "amount": 0.6,
+            "op": "MultiplyGeometric"
+          }
+        },
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",

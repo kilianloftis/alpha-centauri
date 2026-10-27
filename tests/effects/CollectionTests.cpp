@@ -93,6 +93,7 @@ TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the
     UnitComponentConfig_t chassis;
     chassis.id = "speeder";
     chassis.type = "chassis";
+    chassis.domain = UnitDomain_t::Land;
     chassis.effects = {
         pool.StatMod(StatId_t::Movement, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
     };

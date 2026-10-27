@@ -44,6 +44,7 @@ public:
     bool UsesFuel() const override;
     int MaxFuel() const override;
     UnitDomain_t GetDomain() const override;
+    UnitPlan_t GetPlan() const override { return m_plan; }
     std::string FormatCombatRating() const override;
 
 private:
@@ -54,6 +55,7 @@ private:
     bool m_bUsesFuel = false;
     int m_maxFuel = 0;
     InteractionGridMask_t m_interactionMask = 0;
+    UnitPlan_t m_plan = UnitPlan_t::Offense;
 };
 
 } // namespace ac

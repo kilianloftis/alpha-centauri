@@ -5,6 +5,35 @@
     "defense_clamp_min": -2,
     "defense_clamp_max": 0
   },
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "parameters": {
+        "stat": "garrison_probe_weight",
+        "amount": 1,
+        "op": "Add"
+      },
+      "condition": {
+        "kind": "DesignPlan",
+        "plans": ["offense", "combat"]
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "parameters": {
+        "stat": "subversion_cost_scale",
+        "amount": 0.5,
+        "op": "MultiplyGeometric"
+      },
+      "condition": {
+        "kind": "DesignPlan",
+        "plans": ["colony", "terraform"],
+        "value": false
+      }
+    }
+  ],
   "actions": [
     {
       "id": "infiltrate",
@@ -79,7 +108,8 @@
       "cost": {
         "energy_bias": 1200,
         "dist_bias": 4,
-        "mind_control_divisor": 4
+        "mind_control_divisor": 4,
+        "garrison_multiplier_base": 1
       },
       "on_paid_effects": [
         {
@@ -99,7 +129,8 @@
       "cost": {
         "energy_bias": 1200,
         "dist_bias": 4,
-        "mind_control_divisor": 4
+        "mind_control_divisor": 4,
+        "garrison_multiplier_base": 1
       },
       "on_paid_effects": [
         {

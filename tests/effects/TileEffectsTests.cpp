@@ -72,7 +72,7 @@ TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
     Faction& foreign = fixture.MakeFaction();
 
     // Unit auras are attributed to the unit's faction, not to territory — no base needed.
-    fixture.MakeUnit(owner, 8, 8, {"sensor_pod"});
+    fixture.MakeUnit(owner, 8, 8, {"test_chassis", "sensor_pod"});
     CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), owner.GetFactionId())
           == Approx(1.25));
     CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), foreign.GetFactionId())

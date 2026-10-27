@@ -29,6 +29,7 @@ public:
     bool IsCombatUnit() const override;
     bool HasComponent(const std::string& rComponentId) const override;
     UnitDomain_t GetDomain() const override;
+    UnitPlan_t GetPlan() const override { return m_config.plan; }
     InteractionGridMask_t GetInteractionMask() const override { return m_interactionMask; }
     bool UsesFuel() const override;
     int MaxFuel() const override;

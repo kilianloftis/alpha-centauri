@@ -4,6 +4,7 @@
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/GameCategory.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitPlan.h"
 
 #include <algorithm>
 #include <iterator>
@@ -388,6 +389,14 @@ struct BaseHasBuilding_t
     std::string buildingId;
 };
 
+// Whether pUnit's IDesign::GetPlan is in plans matches bMatches. Fail closed if pUnit is absent.
+// Empty plans is rejected by the parser.
+struct DesignPlan_t
+{
+    std::vector<UnitPlan_t> plans;
+    bool bMatches = true;
+};
+
 using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
                                         IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
                                         SocialRating_t, OriginBaseHasBuilding_t,
@@ -395,7 +404,7 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
-                                        IsNativeLife_t, BaseHasBuilding_t>;
+                                        IsNativeLife_t, BaseHasBuilding_t, DesignPlan_t>;
 
 struct Condition_t : ConditionVariant_t
 {

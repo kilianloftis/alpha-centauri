@@ -76,14 +76,17 @@ struct ProbeSuccessFormula_t
     int defenseClampMax = 0;
 };
 
-// Paid action tunables. Base cost: (garrison + mindControl / divisor + pop) * (energy + bias)
-// / (dist + distBias); unit cost: mineralCost * (energy + bias) / (dist + distBias).
+// Paid action tunables. Base cost: (garrison + mindControl / divisor + pop) * ((energy + bias)
+// / (dist + distBias)); unit cost: mineralCost * ((energy + bias) / (dist + distBias)).
 struct ProbeCostConfig_t
 {
     int energyBias = 0;
     int distBias = 0;
-    // Base target only: the parser requires it positive there and rejects it on a unit target.
+    // Base target only, as is garrisonMultiplierBase: the parser requires both there and
+    // rejects them on a unit target.
     int mindControlDivisor = 0;
+    // The garrison multiplier before each unit's garrison_probe_multiplier (the binary's + 1).
+    int garrisonMultiplierBase = 0;
 };
 
 struct ProbeActionConfig_t
@@ -114,6 +117,8 @@ struct ProbeActionConfig_t
 struct ProbeActionsConfig_t
 {
     ProbeSuccessFormula_t successFormula;
+    // Baselines injected into every faction's pool (garrison weight, subversion cost scale).
+    std::vector<EffectConfig_t> effects;
     std::vector<ProbeActionConfig_t> actions;
 
     const ProbeActionConfig_t* Find(ProbeActionId_t id) const;

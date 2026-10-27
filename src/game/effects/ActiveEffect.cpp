@@ -675,6 +675,16 @@ struct ConditionEvaluator_
             && ctx.pBase->GetBuildingManager().FindBuilding(rHas.buildingId) != nullptr;
     }
 
+    bool operator()(const DesignPlan_t& rPlan) const
+    {
+        if (ctx.pUnit == nullptr)
+        {
+            return false;
+        }
+        const UnitPlan_t plan = ctx.pUnit->GetDesign().GetPlan();
+        return std::ranges::contains(rPlan.plans, plan) == rPlan.bMatches;
+    }
+
     // An empty AllOf holds nothing, not everything.
     bool operator()(const AllOf_t& rAll) const
     {
@@ -717,7 +727,7 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             if constexpr (std::is_same_v<T, SubjectDomain_t> || std::is_same_v<T, HasComponent_t>
                           || std::is_same_v<T, SubjectDesign_t> || std::is_same_v<T, HasFlag_t>
                           || std::is_same_v<T, IsPrototype_t> || std::is_same_v<T, IsCombatUnit_t>
-                          || std::is_same_v<T, IsNativeLife_t>)
+                          || std::is_same_v<T, IsNativeLife_t> || std::is_same_v<T, DesignPlan_t>)
             {
                 return false;
             }

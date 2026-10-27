@@ -42,6 +42,8 @@
 #include "lib/LuaRuntime.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <random>
@@ -1116,6 +1118,284 @@ TEST_CASE("Mind Control transfers the tile garrison to the actor",
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(&garrison.GetFaction() == game.pPlayer);
     CHECK(&neighbor.GetFaction() == game.pPlayer);
+}
+
+namespace
+{
+
+const ProbeActionConfig_t& RequireAction_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    const ProbeActionConfig_t* pAction =
+        rGame.fixtures.dataContext.probeActionsConfig->Find(actionId);
+    REQUIRE(pAction);
+    return *pAction;
+}
+
+int Quote_(ProbeGame_& rGame, const Unit& rProbe, const Tile& rTile, ProbeActionId_t actionId,
+           ProbeTargetKind_t kind)
+{
+    const std::optional<ProbeTarget_t> target =
+        ResolveProbeTarget(rProbe, rTile, kind, rGame.fixtures.state);
+    REQUIRE(target.has_value());
+    const std::optional<int> quote =
+        QuoteProbeActionCost(RequireAction_(rGame, actionId), rProbe.GetFaction(), *target);
+    REQUIRE(quote.has_value());
+    return *quote;
+}
+
+int QuoteMindControl_(ProbeGame_& rGame, const Unit& rProbe, const BaseManager& rTarget)
+{
+    return Quote_(rGame, rProbe, rTarget.GetTile(), ProbeActionId_t::MindControlBase,
+                  ProbeTargetKind_t::Base);
+}
+
+int QuoteSubvert_(ProbeGame_& rGame, const Unit& rProbe, const Unit& rVictim)
+{
+    return Quote_(rGame, rProbe, rVictim.GetTile(), ProbeActionId_t::SubvertUnit,
+                  ProbeTargetKind_t::Unit);
+}
+
+// The binary's subversion cost before any multiplier: unit cost * ((energy + 800) / (dist + 2)),
+// dividing first.
+int SubvertFormula_(ProbeGame_& rGame, const Unit& rVictim, int distance)
+{
+    const ProbeCostConfig_t& rCost = *RequireAction_(rGame, ProbeActionId_t::SubvertUnit).cost;
+    const int energy = rVictim.GetFaction().GetEconomy().GetEnergy();
+    const int mineralCost = std::max(1, rVictim.GetDesign().GetBaseCost());
+    return mineralCost * ((energy + rCost.energyBias) / (distance + rCost.distBias));
+}
+
+// The binary's mind-control cost with no garrison and no mind-control history.
+int MindControlFormula_(ProbeGame_& rGame, const BaseManager& rTarget, int distance)
+{
+    const ProbeCostConfig_t& rCost =
+        *RequireAction_(rGame, ProbeActionId_t::MindControlBase).cost;
+    const int energy = rTarget.GetFaction().GetEconomy().GetEnergy();
+    const int population = rTarget.GetPopulation().GetSize();
+    return population * ((energy + rCost.energyBias) / (distance + rCost.distBias));
+}
+
+// Leaves the unit formula's division with a remainder, so multiplying first would differ.
+void MakeSubvertDivisionInexact_(ProbeGame_& rGame, Faction& rTarget, int distance)
+{
+    const ProbeCostConfig_t& rCost = *RequireAction_(rGame, ProbeActionId_t::SubvertUnit).cost;
+    const int divisor = distance + rCost.distBias;
+    const int remainder = (rTarget.GetEconomy().GetEnergy() + rCost.energyBias) % divisor;
+    rTarget.GetEconomy().AddEnergy((divisor / 2 - remainder + divisor) % divisor);
+}
+
+void SelectDifficulty_(ProbeGame_& rGame, const char* pDifficultyId)
+{
+    GameRulesConfig_t rules = rGame.fixtures.settings.GetGameRules();
+    rules.difficultyId = pDifficultyId;
+    rGame.fixtures.settings.SetGameRules(rules);
+}
+
+// Must be called before any base exists, so no building manager holds the replaced configs.
+void AddDistanceBuildings_(ProbeGame_& rGame, EffectPool& rPool)
+{
+    const auto distanceScale = [&rPool](StatId_t stat, double factor)
+    { return rPool.StatMod(stat, factor, ModifierOp_t::MultiplyGeometric, EffectScope_t::ThisBase); };
+    BuildingConfig_t creche;
+    creche.id = "test_creche";
+    creche.name = "Test Creche";
+    creche.effects = {distanceScale(StatId_t::MindControlDistanceScale, 0.5)};
+    BuildingConfig_t genejack;
+    genejack.id = "test_genejack";
+    genejack.name = "Test Genejack";
+    genejack.effects = {distanceScale(StatId_t::MindControlDistanceScale, 2)};
+    BuildingConfig_t punishment;
+    punishment.id = "test_punishment";
+    punishment.name = "Test Punishment Sphere";
+    punishment.effects = {distanceScale(StatId_t::MindControlDistanceScale, 0.5),
+                          distanceScale(StatId_t::SubversionDistanceScale, 0.5)};
+    std::vector<BuildingConfig_t> buildings = rGame.fixtures.buildings().GetAll();
+    buildings.push_back(creche);
+    buildings.push_back(genejack);
+    buildings.push_back(punishment);
+    rGame.fixtures.buildings().Assign(std::move(buildings));
+}
+
+} // namespace
+
+TEST_CASE("The mind-control garrison counts offense and combat plans, and Poly multiplies the "
+          "whole stack",
+          "[probe][cost][mind-control][garrison]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int population = targetBase.GetPopulation().GetSize();
+    const int empty = QuoteMindControl_(game, probe, targetBase);
+    REQUIRE(empty % population == 0);
+    const int perPoint = empty / population;
+
+    // Defense and non-combat plans weigh nothing.
+    game.MakeUnit(*game.pAi, 8, 8, {"test_slow_chassis", "test_weak_weapon", "test_armor"});
+    game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_colony_pod"});
+    CHECK(QuoteMindControl_(game, probe, targetBase) == population * perPoint);
+
+    game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pAi, 8, 8, {"test_slow_chassis", "test_weapon", "test_armor"});
+    CHECK(QuoteMindControl_(game, probe, targetBase) == (population + 2) * perPoint);
+
+    // Three weighted units, one of them Poly: 3 x (1 + 1).
+    game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_weapon", "test_poly_encryption"});
+    CHECK(QuoteMindControl_(game, probe, targetBase) == (population + 6) * perPoint);
+}
+
+TEST_CASE("A Poly defender raises the garrison multiplier without counting itself",
+          "[probe][cost][mind-control][garrison]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int population = targetBase.GetPopulation().GetSize();
+    const int perPoint = QuoteMindControl_(game, probe, targetBase) / population;
+
+    game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "test_weapon"});
+    game.MakeUnit(*game.pAi, 8, 8,
+                  {"test_slow_chassis", "test_weak_weapon", "test_armor", "test_poly_encryption"});
+    CHECK(QuoteMindControl_(game, probe, targetBase) == (population + 4) * perPoint);
+}
+
+TEST_CASE("An allied unit in the base counts toward the mind-control garrison",
+          "[probe][cost][mind-control][garrison]")
+{
+    ProbeGame_ game;
+    BaseManager& targetBase = MakeMindControlTarget_(game);
+    Faction& rAlly = game.fixtures.state.AddFaction(std::make_unique<Faction>(
+        game.fixtures.state.AllocateFactionId(), false, game.fixtures.factionDefinition,
+        game.fixtures.dataContext, game.fixtures.state.GetWorldMap(), game.fixtures.settings,
+        game.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
+    ApplyStatusChange(game.fixtures.state, game.pAi->GetFactionId(), rAlly.GetFactionId(),
+                      DiplomaticStatus_t::Pact);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    const int population = targetBase.GetPopulation().GetSize();
+    const int perPoint = QuoteMindControl_(game, probe, targetBase) / population;
+
+    game.MakeUnit(rAlly, 8, 8, {"test_chassis", "test_weapon"});
+    CHECK(QuoteMindControl_(game, probe, targetBase) == (population + 1) * perPoint);
+}
+
+TEST_CASE("Subverting a unit divides first, halves all but colony pods and formers, and Poly "
+          "doubles",
+          "[probe][cost][subvert]")
+{
+    ProbeGame_ game;
+    // No AI base, so no HQ: the binary's distance 12.
+    MakeSubvertDivisionInexact_(game, *game.pAi, 12);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+    Unit& pod = game.MakeUnit(*game.pAi, 8, 8,
+                              {"test_slow_chassis", "test_colony_pod", "test_costly_armor"});
+    Unit& combat = game.MakeUnit(*game.pAi, 6, 10,
+                                 {"test_slow_chassis", "test_costly_weapon", "test_armor"});
+    Unit& polyCombat = game.MakeUnit(
+        *game.pAi, 8, 10,
+        {"test_slow_chassis", "test_costly_weapon", "test_armor", "test_poly_encryption"});
+    REQUIRE(pod.GetDesign().GetBaseCost() > 1);
+
+    CHECK(QuoteSubvert_(game, probe, pod) == SubvertFormula_(game, pod, 12));
+    const double halved = SubvertFormula_(game, combat, 12) * 0.5;
+    CHECK(QuoteSubvert_(game, probe, combat) == static_cast<int>(std::lround(halved)));
+    CHECK(QuoteSubvert_(game, probe, polyCombat) == SubvertFormula_(game, polyCombat, 12));
+}
+
+TEST_CASE("Probe quotes measure HQ distance as the binary's vector_dist", "[probe][cost]")
+{
+    ProbeGame_ game;
+    // Twelve columns along one row: 9 by vector_dist, where king moves would count 6.
+    game.MakeBase(*game.pAi, 8, 8);
+    REQUIRE(game.pAi->GetHeadquarters());
+    MakeSubvertDivisionInexact_(game, *game.pAi, 9);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 19, 9, {"test_chassis", "Probe_Team"});
+    Unit& pod = game.MakeUnit(*game.pAi, 20, 8,
+                              {"test_slow_chassis", "test_colony_pod", "test_costly_armor"});
+
+    CHECK(QuoteSubvert_(game, probe, pod) == SubvertFormula_(game, pod, 9));
+}
+
+TEST_CASE("The base quote scales its distance by each facility in turn, truncating",
+          "[probe][cost][mind-control]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    AddDistanceBuildings_(game, pool);
+    // HQ 6 rows south: vector_dist 4.
+    game.MakeBase(*game.pAi, 8, 14);
+    BaseManager& target = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
+
+    CHECK(QuoteMindControl_(game, probe, target) == MindControlFormula_(game, target, 4));
+    target.GetBuildingManager().AddBuilding("test_genejack");
+    target.GetBuildingManager().AddBuilding("test_creche");
+    CHECK(QuoteMindControl_(game, probe, target) == MindControlFormula_(game, target, 4));
+    target.GetBuildingManager().AddBuilding("test_punishment");
+    // 4 x 2 x 0.5 x 0.5.
+    CHECK(QuoteMindControl_(game, probe, target) == MindControlFormula_(game, target, 2));
+}
+
+TEST_CASE("A base one tile from its HQ is quoted after a facility halves the distance to 0",
+          "[probe][cost][mind-control]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    AddDistanceBuildings_(game, pool);
+    game.MakeBase(*game.pAi, 9, 9);
+    BaseManager& target = game.MakeBase(*game.pAi, 8, 8);
+    target.GetBuildingManager().AddBuilding("test_creche");
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 7, {"test_chassis", "Probe_Team"});
+
+    CHECK(QuoteMindControl_(game, probe, target) == MindControlFormula_(game, target, 0));
+}
+
+TEST_CASE("A Punishment Sphere at a unit's home base halves its subversion distance",
+          "[probe][cost][subvert]")
+{
+    EffectPool pool;
+    ProbeGame_ game;
+    AddDistanceBuildings_(game, pool);
+    BaseManager& home = game.MakeBase(*game.pAi, 8, 8);
+    REQUIRE(IsHeadquarters(home));
+    MakeSubvertDivisionInexact_(game, *game.pAi, 4);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 19, 9, {"test_chassis", "Probe_Team"});
+    Unit& pod = game.MakeUnit(*game.pAi, 20, 8,
+                              {"test_slow_chassis", "test_colony_pod", "test_costly_armor"},
+                              &home);
+
+    CHECK(QuoteSubvert_(game, probe, pod) == SubvertFormula_(game, pod, 9));
+    home.GetBuildingManager().AddBuilding("test_punishment");
+    CHECK(QuoteSubvert_(game, probe, pod) == SubvertFormula_(game, pod, 4));
+}
+
+TEST_CASE("An AI pays the hardest difficulties' discount against a player, and a player does not",
+          "[probe][cost][difficulty]")
+{
+    ProbeGame_ game;
+    BaseManager& playerHome = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& aiHome = game.MakeBase(*game.pAi, 8, 14);
+    Unit& aiProbe = game.MakeUnit(*game.pAi, 7, 9, {"test_chassis", "Probe_Team"}, &aiHome);
+    Unit& playerPod = game.MakeUnit(*game.pPlayer, 8, 8,
+                                    {"test_slow_chassis", "test_colony_pod", "test_costly_armor"},
+                                    &playerHome);
+    Unit& playerProbe =
+        game.MakeUnit(*game.pPlayer, 21, 9, {"test_chassis", "Probe_Team"}, &playerHome);
+    Unit& aiPod = game.MakeUnit(*game.pAi, 22, 8,
+                                {"test_slow_chassis", "test_colony_pod", "test_costly_armor"},
+                                &aiHome);
+
+    const int aiPaysAtTalent = QuoteSubvert_(game, aiProbe, playerPod);
+    const int playerPaysAtTalent = QuoteSubvert_(game, playerProbe, aiPod);
+
+    SelectDifficulty_(game, "thinker");
+    CHECK(QuoteSubvert_(game, aiProbe, playerPod)
+          == static_cast<int>(std::lround(aiPaysAtTalent * 0.75)));
+    CHECK(QuoteSubvert_(game, playerProbe, aiPod) == playerPaysAtTalent);
+
+    SelectDifficulty_(game, "transcend");
+    CHECK(QuoteSubvert_(game, aiProbe, playerPod)
+          == static_cast<int>(std::lround(aiPaysAtTalent * 0.6)));
 }
 
 TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",

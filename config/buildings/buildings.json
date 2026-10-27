@@ -142,8 +142,8 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "mind_control_distance_scale",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
         }
       }
     ]
@@ -455,8 +455,8 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "mind_control_distance_scale",
-          "amount": 100,
-          "op": "AddPercent"
+          "amount": 2,
+          "op": "MultiplyGeometric"
         }
       }
     ]
@@ -476,8 +476,17 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "mind_control_distance_scale",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "subversion_distance_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
         }
       }
     ]

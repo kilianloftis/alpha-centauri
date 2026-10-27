@@ -35,7 +35,7 @@ classDiagram
 ## Config
 
 [`config/native_units.json`](../../config/native_units.json) — `fungal_bloom_native_lifeforms_min` / `fungal_bloom_native_lifeforms_max` are the inclusive count a fungal bloom spawns, and `units` lists each design: `id`, `name`,
-`domain`, `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
+`domain`, `plan` (required; `alpha.txt`'s plan for the predefined unit, read by `IDesign::GetPlan`), `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
 `EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`. Combat natives declare the `native_life` RuleFlag. Alien Artifact does not.
 `IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
 filled component declares it. Combat natives Add `collateral_damage` 1, the fission-tier

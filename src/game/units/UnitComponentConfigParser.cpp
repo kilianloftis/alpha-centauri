@@ -125,6 +125,34 @@ std::optional<UnitDomain_t> ParseDomain_(const nlohmann::json& rComponentJson,
     return EffectConfigParser::ParseUnitDomain(domain);
 }
 
+// make_proto overrides the derived plan for an ability in these three cases only.
+bool IsAbilityPlanOverride_(UnitPlan_t plan)
+{
+    return plan == UnitPlan_t::Offense || plan == UnitPlan_t::AirSuperiority
+        || plan == UnitPlan_t::Defense;
+}
+
+std::optional<UnitPlan_t> ParsePlan_(const nlohmann::json& rComponentJson,
+                                     const UnitComponentConfig_t& rConfig)
+{
+    if (!rComponentJson.contains("plan"))
+    {
+        return std::nullopt;
+    }
+    if (rConfig.type != "weapon" && rConfig.type != "ability")
+    {
+        throw std::runtime_error("Component '" + rConfig.id + "' of type '" + rConfig.type
+                                 + "' must not declare 'plan' (weapon or ability only)");
+    }
+    const UnitPlan_t plan = ParseUnitPlan(rComponentJson.at("plan").get<std::string>());
+    if (rConfig.type == "ability" && !IsAbilityPlanOverride_(plan))
+    {
+        throw std::runtime_error("Ability '" + rConfig.id
+                                 + "': plan must be offense, air_superiority, or defense");
+    }
+    return plan;
+}
+
 } // namespace
 
 std::vector<UnitComponentConfig_t> UnitComponentConfigParser::ParseConfig(const std::string& rConfigPath)
@@ -159,6 +187,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig_(const nlo
                                                 "Component '" + config.id + "' scrap");
     }
     config.domain = ParseDomain_(rComponentJson, config);
+    config.plan = ParsePlan_(rComponentJson, config);
     return config;
 }
 

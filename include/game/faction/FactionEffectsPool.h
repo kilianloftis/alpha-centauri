@@ -35,6 +35,7 @@ public:
                        const DifficultyConfig_t& rDifficulty,
                        const NativeLifeLevelConfig_t& rNativeLifeLevels,
                        const std::vector<EffectConfig_t>& rEcoDamageEffects,
+                       const std::vector<EffectConfig_t>& rProbeActionEffects,
                        const DiplomacyConfig_t& rDiplomacy);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
@@ -89,6 +90,9 @@ private:
     // eco_damage.json continuous effects (the clean-minerals baseline).
     std::vector<ActiveEffect_t> CollectEcoDamageEffects_() const;
 
+    // probe_actions.json continuous effects (garrison weight and subversion cost baselines).
+    std::vector<ActiveEffect_t> CollectProbeActionEffects_() const;
+
     // For every other session faction, the FactionPair effects of the status the two hold,
     // tagged with that partner. None while the faction is not bound to a session.
     std::vector<ActiveEffect_t> CollectDiplomaticStatusEffects_() const;
@@ -121,6 +125,7 @@ private:
     const DifficultyConfig_t& m_rDifficulty;
     const NativeLifeLevelConfig_t& m_rNativeLifeLevels;
     const std::vector<EffectConfig_t>& m_rEcoDamageEffects;
+    const std::vector<EffectConfig_t>& m_rProbeActionEffects;
     const DiplomacyConfig_t& m_rDiplomacy;
 
     // The empty initial stamp never matches a real collection. m_scratchRevisions keeps

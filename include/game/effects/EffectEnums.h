@@ -119,9 +119,24 @@ enum class StatId_t
     // Scales mission/escape success rates against this target (PureMultiplier). Hunter-Seeker
     // Algorithm emits AddPercent -50.
     ProbeSuccessScale,
-    // PureMultiplier on Chebyshev distance-to-HQ in the mind-control quote. Genejack ×2,
-    // Children's Creche ×0.5, Punishment Sphere ×0.5.
+    // PureMultiplier on the HQ distance in the base mind-control quote, truncated. Genejack ×2,
+    // Children's Crèche ×0.5, Punishment Sphere ×0.5.
     MindControlDistanceScale,
+    // PureMultiplier on the HQ distance in a unit subversion quote, resolved on the target
+    // unit's home base and truncated. Punishment Sphere ×0.5.
+    SubversionDistanceScale,
+    // A unit's count in the base mind-control garrison (Additive). probe_actions.json Adds 1
+    // for offense and combat plans.
+    GarrisonProbeWeight,
+    // A unit's addition to the garrison multiplier, which starts at the cost's
+    // garrison_multiplier_base (Additive). Polymorphic Encryption Adds 1.
+    GarrisonProbeMultiplier,
+    // PureMultiplier on the cost of subverting this unit. probe_actions.json halves it for every
+    // plan but colony and terraform; Polymorphic Encryption doubles it.
+    SubversionCostScale,
+    // PureMultiplier on paid probe costs an AI actor pays against this target. Difficulty emits
+    // it for player factions on the hardest levels (the binary's cost * 3 / diff_level).
+    AiProbeCostScale,
     // PureMultiplier on genetic-plague pop and garrison damage. Hospitals emit ×0.5.
     PlagueDamageScale,
     // Minerals credited to a newly founded base's production stockpile (resolved once at
@@ -291,6 +306,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
         case StatId_t::ProbeDefense:
+        case StatId_t::GarrisonProbeWeight:
+        case StatId_t::GarrisonProbeMultiplier:
         case StatId_t::LastDefenderPopLoss:
         case StatId_t::CapturePopLoss:
         case StatId_t::ConqueredDroneCap:
@@ -319,6 +336,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
         case StatId_t::MindControlDistanceScale:
+        case StatId_t::SubversionDistanceScale:
+        case StatId_t::SubversionCostScale:
+        case StatId_t::AiProbeCostScale:
         case StatId_t::PlagueDamageScale:
         case StatId_t::TechCost:
         case StatId_t::CommerceRate:
@@ -390,6 +410,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeDefense:
         case StatId_t::ProbeSuccessScale:
         case StatId_t::MindControlDistanceScale:
+        case StatId_t::SubversionDistanceScale:
+        case StatId_t::AiProbeCostScale:
         case StatId_t::PlagueDamageScale:
         case StatId_t::StartingMinerals:
         case StatId_t::GrowthRate:
@@ -444,6 +466,9 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PoliceEffectiveness:
         case StatId_t::AwayFromHomeDrones:
         case StatId_t::ProbeFailureScale:
+        case StatId_t::GarrisonProbeWeight:
+        case StatId_t::GarrisonProbeMultiplier:
+        case StatId_t::SubversionCostScale:
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
@@ -509,6 +534,11 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
     if (rStat == "mind_control_distance_scale") return StatId_t::MindControlDistanceScale;
+    if (rStat == "subversion_distance_scale") return StatId_t::SubversionDistanceScale;
+    if (rStat == "garrison_probe_weight")   return StatId_t::GarrisonProbeWeight;
+    if (rStat == "garrison_probe_multiplier") return StatId_t::GarrisonProbeMultiplier;
+    if (rStat == "subversion_cost_scale")   return StatId_t::SubversionCostScale;
+    if (rStat == "ai_probe_cost_scale")     return StatId_t::AiProbeCostScale;
     if (rStat == "plague_damage_scale")     return StatId_t::PlagueDamageScale;
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_rank")             return StatId_t::MoraleRank;
@@ -640,8 +670,6 @@ enum class RuleFlagId_t
     BlocksProbeTeams,
     // Probe is not destroyed on contact by BlocksProbeTeams. Does not pierce ProbeSubversionImmune.
     IgnoresProbeBlock,
-    // Combat unit counts as two garrison for mind-control cost.
-    PolyEncryption,
     // Targeted sabotage of this facility is at least risk 2 (Perimeter Defense, Tachyon Field).
     HighRiskSabotage,
     // Tech that unlocks genetic plague (TFLAG_ALLOW_GENE_WARFARE).
@@ -702,7 +730,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
-    if (rFlag == "poly_encryption")             return RuleFlagId_t::PolyEncryption;
     if (rFlag == "high_risk_sabotage")          return RuleFlagId_t::HighRiskSabotage;
     if (rFlag == "allow_gene_warfare")          return RuleFlagId_t::AllowGeneWarfare;
     if (rFlag == "inc_gene_warfare_defense")    return RuleFlagId_t::IncGeneWarfareDefense;

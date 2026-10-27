@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 
 using json = nlohmann::json;
 
@@ -28,34 +29,46 @@ ProbeTargetKind_t ParseTarget_(const std::string& rTarget)
     throw std::runtime_error("probe_actions.json: unknown target '" + rTarget + "'");
 }
 
+int RequireBaseCostInt_(const json& rCostJson, const std::string& rKey, int minimum,
+                        const std::string& rActionName)
+{
+    if (!rCostJson.contains(rKey) || !rCostJson.at(rKey).is_number_integer())
+    {
+        throw std::runtime_error("Probe action '" + rActionName + "': cost requires an integer '"
+                                 + rKey + "'");
+    }
+    const int value = rCostJson.at(rKey).get<int>();
+    if (value < minimum)
+    {
+        throw std::runtime_error("Probe action '" + rActionName + "': " + rKey
+                                 + " must be >= " + std::to_string(minimum));
+    }
+    return value;
+}
+
 ProbeCostConfig_t ParseCost_(const json& rCostJson, ProbeTargetKind_t target,
                               const std::string& rActionName)
 {
     ProbeCostConfig_t cost;
     cost.energyBias = rCostJson.value("energy_bias", 0);
     cost.distBias = rCostJson.value("dist_bias", 0);
-    // Only the base formula reads the divisor, so a unit-target cost would ignore it silently.
+    // Only the base formula reads these, so a unit-target cost would ignore them silently.
     if (target == ProbeTargetKind_t::Unit)
     {
-        if (rCostJson.contains("mind_control_divisor"))
+        for (const std::string& rKey : {"mind_control_divisor", "garrison_multiplier_base"})
         {
-            throw std::runtime_error("Probe action '" + rActionName
-                                     + "': mind_control_divisor applies only to base targets");
+            if (rCostJson.contains(rKey))
+            {
+                throw std::runtime_error("Probe action '" + rActionName + "': " + rKey
+                                         + " applies only to base targets");
+            }
         }
         return cost;
     }
-    if (!rCostJson.contains("mind_control_divisor")
-        || !rCostJson.at("mind_control_divisor").is_number_integer())
-    {
-        throw std::runtime_error("Probe action '" + rActionName
-                                 + "': cost requires an integer 'mind_control_divisor'");
-    }
-    cost.mindControlDivisor = rCostJson.at("mind_control_divisor").get<int>();
-    if (cost.mindControlDivisor < 1)
-    {
-        throw std::runtime_error("Probe action '" + rActionName
-                                 + "': mind_control_divisor must be >= 1");
-    }
+    cost.mindControlDivisor =
+        RequireBaseCostInt_(rCostJson, "mind_control_divisor", 1, rActionName);
+    cost.garrisonMultiplierBase =
+        RequireBaseCostInt_(rCostJson, "garrison_multiplier_base", 0, rActionName);
     return cost;
 }
 
@@ -209,6 +222,13 @@ ProbeActionsConfig_t ProbeActionConfigParser::ParseConfig(const std::string& con
         config.successFormula.defenseClampMin = rFormula.value("defense_clamp_min", -2);
         config.successFormula.defenseClampMax = rFormula.value("defense_clamp_max", 0);
     }
+
+    if (!root.contains("effects"))
+    {
+        throw std::runtime_error("probe_actions.json: missing required 'effects' array");
+    }
+    config.effects = EffectConfigParser::ParseEffects(root, EffectSourceKind_t::ProbeAction,
+                                                      "probe_actions");
 
     if (!root.contains("actions") || !root.at("actions").is_array())
     {

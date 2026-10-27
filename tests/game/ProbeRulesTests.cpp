@@ -70,6 +70,8 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->energyBias == 1200);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->distBias == 4);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->mindControlDivisor == 4);
+    CHECK(config.Find(ProbeActionId_t::MindControlBase)->cost->garrisonMultiplierBase == 1);
+    CHECK(config.effects.size() == 2);
     const auto& rMindControlPaid = config.Find(ProbeActionId_t::MindControlBase)->onPaidEffects;
     REQUIRE(rMindControlPaid.size() == 1);
     const auto* pMindControlRecord =
@@ -111,7 +113,7 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
     const auto parseAction = [](const std::string& rActionJson)
     {
         const TempConfigFile file("probe_actions.json",
-                                  R"({ "actions": [ )" + rActionJson + " ] }");
+                                  R"({ "effects": [], "actions": [ )" + rActionJson + " ] }");
         return ProbeActionConfigParser{}.ParseConfig(file.Path());
     };
     const std::string recordEntry =
@@ -135,6 +137,23 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
                                        "cost": { "energy_bias": 800, "dist_bias": 2,
                                                  "mind_control_divisor": 4 } })"),
                       ContainsSubstring("mind_control_divisor"));
+
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
+                                       "cost": { "energy_bias": 1200, "dist_bias": 4,
+                                                 "mind_control_divisor": 4 } })"),
+                      ContainsSubstring("garrison_multiplier_base"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit",
+                                       "cost": { "energy_bias": 800, "dist_bias": 2,
+                                                 "garrison_multiplier_base": 1 } })"),
+                      ContainsSubstring("garrison_multiplier_base"));
+}
+
+TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[probe][config]")
+{
+    const TempConfigFile file("probe_actions.json",
+                              R"({ "actions": [ { "id": "infiltrate", "target": "base" } ] })");
+    CHECK_THROWS_WITH(ProbeActionConfigParser{}.ParseConfig(file.Path()),
+                      ContainsSubstring("effects"));
 }
 
 TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[probe][config][se]")

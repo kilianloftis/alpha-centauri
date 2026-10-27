@@ -88,6 +88,11 @@ NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const nlohmann:
         throw std::runtime_error("Native unit '" + config.id + "' missing required 'domain'");
     }
     config.domain = EffectConfigParser::ParseUnitDomain(rJson.at("domain").get<std::string>());
+    if (!rJson.contains("plan"))
+    {
+        throw std::runtime_error("Native unit '" + config.id + "' missing required 'plan'");
+    }
+    config.plan = ParseUnitPlan(rJson.at("plan").get<std::string>());
     config.mineralCost = rJson.value("mineral_cost", 0);
     config.effects =
         EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::NativeUnit, config.id);

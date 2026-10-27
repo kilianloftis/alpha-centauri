@@ -7,16 +7,16 @@ todos:
     status: pending
   - id: unit-plan
     content: UnitPlan_t, UnitPlanRules::DesignPlan porting make_proto, optional component plan field, DesignPlan effect condition
-    status: pending
+    status: completed
   - id: probe-baseline-effects
     content: Top-level effects array on probe_actions.json (ProbeActionsConfig_t::effects, parser, FactionEffectsPool, EffectReferenceValidator) carrying the garrison_probe_weight and subversion_cost_scale baselines
-    status: pending
+    status: completed
   - id: rules-contest
     content: ProbeContactDestroys / ProbeChancesFor as the hunter vs intrusion contest; chance fields replace bAlgoSave/bHsaCoin; ProbeHunterSource; mind-control garrison by plan with the Poly stack multiplier; subversion_cost_scale in QuoteUnitActionCost_
     status: pending
   - id: quote-fixes
     content: Mind-control and subversion quotes match the binary - tabletop HQ distance, raw-distance HQ refusal, truncated MultiplyGeometric distance scales, unit divide-first and Punishment Sphere distance, AI-vs-human difficulty discount
-    status: pending
+    status: completed
   - id: mutations-roll
     content: RollPercent fail-save on mission and escape failure, success bust on mission and escape success
     status: pending
@@ -27,7 +27,7 @@ todos:
     content: Rewrite HSA, Algo, Poly shipping and fixture effects
     status: pending
   - id: tests-docs
-    content: Update ProbeAction/ProbeRules/Parser/Validation/ProbeNotices tests and effects/player-interaction/ui/mechanic-decisions docs; ./bd build and ./bd test
+    content: Update ProbeAction/ProbeRules/Parser/Validation/ProbeNotices tests and effects/player-interaction/ui/unit-designer docs; ./bd build and ./bd test
     status: pending
 isProject: false
 ---
@@ -179,7 +179,10 @@ SMAC's `UNIT.plan`, ported as a rule over the design. It feeds the two probe cos
   - An ability component's optional `plan`, applied where `make_proto` tests that ability: `offense` on a land design (Amphibious Pods, Drop Pods, Bombard), `air_superiority` on an air design (Air Superiority), `defense` on a land offense-1 defense-1 design (Non-Lethal Methods).
 - `UnitComponentConfig_t::plan` (`std::optional<UnitPlan_t>`), parsed by `UnitComponentConfigParser`; the config docs mark it optional.
 - Effect condition `DesignPlan`: `{"kind": "DesignPlan", "plans": [...], "value": true}` matches when the subject unit's `DesignPlan` is in `plans`; `"value": false` inverts it, as `IsNativeLife` does. Parser, `ActiveEffect.cpp` evaluator, and validation.
-- Predefined designs that state their plan (alpha.txt) do not exist yet. Leave a TODO at `DesignPlan` for the explicit-plan override that Scout Patrol (recon) needs.
+- `UnitDesign` derives its plan once in its constructor and stores it; `GetPlan()` returns it. Parts are found by component type, as `GetDomain` finds the chassis.
+- Orbital is our Missile chassis: `make_proto`'s missile branch, so a payload weapon's plan, else `offense`.
+- Natives state their plan: `NativeUnitConfig_t::plan`, required in `native_units.json` (Mind Worm combat, Isle of the Deep naval_transport, Sea Lurk naval_superiority, Locusts air_superiority, Spore Launcher offense, Fungal Tower recon, Alien Artifact artifact).
+- Predefined composed designs that state their plan (Scout Patrol is recon in alpha.txt) do not exist yet; the deviations doc tracks it.
 
 ## Roll ([ProbeActionMutations.cpp](src/game/probes/ProbeActionMutations.cpp))
 
@@ -239,6 +242,5 @@ One helper per outcome serves both draws: failed draw → save roll, successful 
 - [player-interaction-system.md](docs/architecture/player-interaction-system.md): `ProbeContactDestroyed_t`.
 - [ui-system.md](docs/architecture/ui-system.md).
 - [unit-designer-system.md](docs/architecture/unit-designer-system.md): `UnitPlanRules`, component `plan`.
-- [mechanic-decisions-review.md](docs/mechanic-decisions-review.md) line 742: HSA/Algo as the contest.
 
 `./bd build` then `./bd test`.

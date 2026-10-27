@@ -3,6 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitPlan.h"
 
 #include <string>
 #include <vector>
@@ -23,6 +24,8 @@ struct NativeUnitConfig_t
     std::string id;
     std::string name;
     UnitDomain_t domain = UnitDomain_t::Land;
+    // As alpha.txt states it for the predefined unit.
+    UnitPlan_t plan = UnitPlan_t::Offense;
     int mineralCost = 0;
     std::vector<EffectConfig_t> effects;
     // Considered when a unit of this design is ordered to Hold, and again when a building

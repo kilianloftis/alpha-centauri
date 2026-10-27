@@ -5,6 +5,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/production/ScrapConfig.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitPlan.h"
 
 #include <algorithm>
 #include <optional>
@@ -44,6 +45,9 @@ struct UnitComponentConfig_t
     std::optional<UnitDomain_t> domain;
     // The only chassis this component may be designed on; empty means any.
     std::vector<std::string> requiresChassis;
+    // Weapon: the design's plan outright (non-combat roles, payloads). Ability: the override
+    // make_proto applies for it (offense on land, air_superiority on air, defense on 1-1 land).
+    std::optional<UnitPlan_t> plan;
     std::vector<EffectConfig_t> effects;
     // Fired once when a unit with this component finishes production (a colony pod's pop cost).
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;

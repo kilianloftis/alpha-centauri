@@ -285,6 +285,7 @@ struct ConditionReferenceValidator
     void operator()(const IsPrototype_t&) const {}
     void operator()(const IsCombatUnit_t&) const {}
     void operator()(const IsNativeLife_t&) const {}
+    void operator()(const DesignPlan_t&) const {}
 
 private:
     void CheckBuilding_(const std::string& rBuildingId) const
@@ -464,6 +465,7 @@ void CheckPolicySources_(const GameDataContext& rData, const EffectSourceChecker
     rCheck.Triggered(rCouncilRules.onElectedEffects, "council_governor");
     const ProbeActionsConfig_t& rProbeActions =
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
+    rCheck.Effects(rProbeActions.effects, "probe_actions");
     for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
         const std::string sourceId =

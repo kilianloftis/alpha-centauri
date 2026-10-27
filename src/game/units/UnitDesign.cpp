@@ -2,6 +2,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionResolve.h"
+#include "game/units/UnitPlanRules.h"
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
@@ -142,6 +143,7 @@ UnitDesign::UnitDesign(
     m_bUsesFuel = turnsOfFuel > 0;
     m_maxFuel = m_bUsesFuel ? turnsOfFuel * GetMovementPoints() : 0;
     m_interactionMask = ComponentsInteractionMask_(m_components);
+    m_plan = DeriveUnitPlan(*this);
 }
 
 const std::string& UnitDesign::GetId() const   { return m_id; }

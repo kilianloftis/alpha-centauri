@@ -4,6 +4,7 @@
     "name": "Colony Pod",
     "unit_name": "Colony Pod",
     "type": "weapon",
+    "plan": "colony",
     "required_tech": "",
     "mineral_cost": 10,
     "effects": [
@@ -52,6 +53,7 @@
     "name": "Transport",
     "unit_name": "Transport",
     "type": "weapon",
+    "plan": "naval_transport",
     "required_tech": "",
     "mineral_cost": 5,
     "effects": [
@@ -150,6 +152,7 @@
     "name": "Supply Crawler",
     "unit_name": "Supply",
     "type": "weapon",
+    "plan": "supply",
     "required_tech": "",
     "mineral_cost": 5,
     "effects": [
@@ -177,6 +180,7 @@
     "name": "Terraformer",
     "unit_name": "Former",
     "type": "weapon",
+    "plan": "terraform",
     "required_tech": "",
     "mineral_cost": 5,
     "effects": [
@@ -201,6 +205,7 @@
     "name": "Probe Team",
     "unit_name": "Probe",
     "type": "weapon",
+    "plan": "probe",
     "required_tech": "",
     "mineral_cost": 5,
     "effects": [
@@ -281,6 +286,7 @@
     "name": "Tectonic Payload",
     "unit_name": "Tectonic",
     "type": "weapon",
+    "plan": "tectonic_missile",
     "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": ["Missile"],
@@ -308,6 +314,7 @@
     "name": "Fungal Payload",
     "unit_name": "Fungal",
     "type": "weapon",
+    "plan": "fungal_missile",
     "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": ["Missile"],
@@ -329,6 +336,7 @@
     "name": "Planet Buster",
     "unit_name": "Planet Buster",
     "type": "weapon",
+    "plan": "planet_buster",
     "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": ["Missile"],
