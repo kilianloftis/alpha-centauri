@@ -665,8 +665,8 @@ Some consequences have no condition, no choice and no amount: a transferred base
 
 ### [X] PRB-5 The automatic-success threshold differs between the chance and the roll
 `ProbeRules.cpp:201` (`ComputeProbeChances`: `risk < 0`), `:238` (`RollProbeAction`: `risk <= 0`).
-- At risk 0 the chance is `100 × successScale`, but the roll always succeeds.
-- **Decision:** risk 0 rolls normally; in Thinker such a mission can fail. That is a bug fix in the package.
+- At risk 0 the chance is `100 × successScale`, but the strength draw always succeeds.
+- **Decision:** stays. The binary passes risk 0 on the strength draw too; only the Hunter-Seeker bust can fail it, and that bust is what `successScale` displays (`docs/thinker/terranx-map.md`, "Mission roll").
 
 ### [B] PRB-6 A random sabotage that destroys nothing wipes production
 `ProbeActionEffects.cpp:145` (`ApplySabotage_`).
@@ -738,10 +738,6 @@ These change behaviour or config, so they do not belong in a plan whose rule is 
   - Today each order counts down alone (`UnitOrderExecutor.cpp:776`).
   - A shared countdown is new save data: progress kept per tile and project rather than per order. The rule goes in `TerraformRules`.
 - **Governor candidates (CNC-2), decided.** Candidates are ranked by votes (`CouncilRules::VoteWeight`), not raw population. The count of 2 moves to config.
-- **Probe success at risk 0 (PRB-5), decided, a bug.**
-  - Many configured missions are risk 0. The Hunter-Seeker Algorithm blocks probe teams, which only Algorithmic Enhancement ignores (`ProbeRules.cpp:292`), and applies `probe_success_scale` −50%.
-  - In Thinker, a risk-0 mission against the Algorithm's owner can fail, so risk 0 rolls normally.
-  - `RollProbeAction` stops treating risk 0 as automatic and rolls against the success rate `ComputeProbeChances` gives. Only negative risk is automatic, as the displayed chance already says, so the decision lives in one place.
 - **Probe repeat record (PRB-1), a bug.** `ProbeActionExecutor::m_probedBases` (`ProbeActionExecutor.cpp:131`) is never cleared and is not saved. Repeat risk is "ever" within a session and resets on load.
 - **Stockpile energy (ECO-7), decided.**
   - Stockpile energy is added to the base the same way collected energy is: through `AllocateBaseEnergy`, so the econ/labs/psych bonuses apply to it in the one function that applies them. `AddAllocatedEnergy` goes.
@@ -810,7 +806,7 @@ The two no-HQ distances (16 for inefficiency, 12 for probes) are separate SMAC n
 | TFM-7 | The cap becomes a rule | Plan, commit 11 |
 | PRB-6 | The sabotage fallback stays | Stays |
 | EFF-1 | Merge the two source lists | Plan, commit 2 |
-| PRB-5 | Risk 0 rolls normally; the roll uses the displayed chance | Package |
+| PRB-5 | Matches the binary: risk 0 passes the draw, and only the Hunter-Seeker bust fails it | Stays |
 | CMB-6 | The defender with the greatest chance of success; odds are a stub that keeps the first unit for now | Plan, commit 10 |
 | MOV-1 | Today's rule matches the original; a candidate for a config option | Plan, commit 11 |
 | TFM-5 | Formers on the same project and tile share the countdown | Package |
