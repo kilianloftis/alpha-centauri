@@ -321,6 +321,7 @@ graph TB
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is the job of `PlanScrapPayout` (`ProductionRules`) and `CreditScrapRefund` (`ProductionMutations`), not the calculator's
   - `ProbeCalculator`: Evaluates `probe_actions.json`'s formulas (each paid action's `cost.formula`, Drain Energy's share/floor/amount, Genetic Plague's kill and garrison damage, and `success_formula`'s target defense and mission and escape draw strengths); `ProbeRules` gathers the inputs and applies the effect multipliers, refusals, caps and draws, and derives the shown rates from the strengths
+  - `DiplomacyCalculator`: Clamps pairwise friction to `diplomacy.json` `friction_max`
   - `CommerceCache` / `CommerceRules` / `CommerceCalculator`: faction-owned commerce queries; the rules pair Treaty/Pact bases, the calculator evaluates the pair formula, and the cache feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
@@ -423,7 +424,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `buildings/`: facility and secret-project definitions, a base's buildings, upkeep, destruction, orbital facilities
 - `combat/`: attack legality, combat resolution, morale, interception, scramble, collateral, explosions
 - `council/`: the Planetary Council, proposals and votes
-- `diplomacy/`: statuses, the ledger, proposals and trade, transitions, permissions, first contact, infiltration
+- `diplomacy/`: statuses, the ledger, friction clamp, proposals and trade, transitions, permissions, first contact, infiltration
 - `display/`: presentation data the ruleset loads — occupant art, base sprite sizes, overlay channels
 - `ecology/`: eco-damage and fungal blooms
 - `economy/`: base resource production, worker assignment, inefficiency, mineral support, energy allocation, commerce
@@ -512,6 +513,8 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Scope**: world, not per-faction. `DiplomacyLedger` and `DiplomaticActionExecutor` live on
   `GameState`, because a relationship belongs to the pair; `Faction` owns only the state a trade
   moves (treasury, techs, explored map, bases).
+- **Friction**: `DiplomacyCalculator`, owned by `GameDataContext`, clamps stored totals to
+  `diplomacy.json` `friction_max`. Ledger writers are not built yet.
 - **Details**: See `docs/architecture/diplomacy-system.md`.
 
 ### Object lifetime and ownership transfer

@@ -25,6 +25,7 @@
 #include "game/economy/CommerceCalculator.h"
 #include "game/probes/ProbeCalculator.h"
 #include "game/economy/CommerceConfigParser.h"
+#include "game/diplomacy/DiplomacyCalculator.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/economy/ResourceManager.h"
@@ -246,6 +247,8 @@ struct SessionInputs
             *dataContext.commerceConfig, *dataContext.luaRuntime);
         dataContext.diplomacyConfig = std::make_unique<ac::DiplomacyConfig_t>(
             ac::DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json")));
+        dataContext.diplomacyCalculator =
+            std::make_unique<ac::DiplomacyCalculator>(*dataContext.diplomacyConfig);
         dataContext.hurryProductionCalculator =
             std::make_unique<ac::HurryProductionCalculator>(*dataContext.productionConfig,
                                                            *dataContext.luaRuntime);

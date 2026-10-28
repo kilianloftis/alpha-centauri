@@ -65,6 +65,20 @@ TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
     CHECK(config.For(DiplomaticStatus_t::Vendetta).bMayAttack);
     CHECK_FALSE(config.For(DiplomaticStatus_t::Neutral).bMayAttack);
     CHECK(config.defensiveObligationMode == DefensiveObligationMode_t::JoinAsDefender);
+    CHECK(config.frictionMax == 20);
+}
+
+TEST_CASE("The diplomacy parser rejects a missing or invalid friction_max", "[diplomacy][parser]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_friction_max.json",
+                                 [](nlohmann::json& j) { j.erase("friction_max"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_friction_max_string.json",
+                                 [](nlohmann::json& j) { j["friction_max"] = "20"; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_friction_max_zero.json",
+                                 [](nlohmann::json& j) { j["friction_max"] = 0; }),
+                    std::runtime_error);
 }
 
 TEST_CASE("The diplomacy parser rejects incomplete or invalid statuses", "[diplomacy][parser]")

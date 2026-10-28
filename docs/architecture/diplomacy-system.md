@@ -28,7 +28,11 @@ graph TB
 
     subgraph "Status definition"
         DiplomaticStatus[DiplomaticStatus_t<br/>closed enum]
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + defensive_obligation_mode<br/>config/diplomacy.json]
+    end
+
+    subgraph "Ruleset (GameDataContext)"
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>config/diplomacy.json]
+        DiplomacyCalculator[DiplomacyCalculator<br/>ClampFriction]
     end
 
     subgraph "What a status permits (DiplomaticPermissionRules)"
@@ -135,6 +139,7 @@ graph TB
     ApplyStatusChange -->|SetStatus / SetKnown| DiplomacyLedger
     ApplyStatusChange -->|rules lost| EvacuateTerritory
     ApplyStatusChange --> DiplomacyConfig
+    DiplomacyCalculator --> DiplomacyConfig
     Movement[MovementRules / StepEvaluator<br/>EvacuateTerritoryRules] --> PermissionRules
     PermissionRules --> DiplomacyConfig
     PermissionRules --> DiplomacyLedger
@@ -170,7 +175,7 @@ sets: a pair is either in them or not.
 |---|---|---|
 | `m_statuses` | `FactionPair` (symmetric) | `Neutral` / `Truce` / `Treaty` / `Pact` / `Vendetta`, and how many turns the pair has held it |
 | `m_known` | `FactionPair` (symmetric) | the two have met; a precondition for every action |
-| `m_grievances` | `DirectedFactionPair` | how much **holder** resents **against** — A may resent B without B resenting A |
+| `m_grievances` | `DirectedFactionPair` | **holder**'s friction toward **against** (0–`frictionMax`) — A may resent B without B resenting A |
 | `m_infiltration` | `DirectedFactionPair` | **infiltrator** has a probe foothold in **target** — emphatically one-way |
 | `m_integrity` | `FactionId_t` | a faction's own reputation for keeping its word; not about any pair |
 
@@ -182,12 +187,13 @@ sets: a pair is either in them or not.
   contact is mutual.
 - **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
   `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
-- **Integrity, grievances, and blemishes are not implemented.** `DiplomacyLedger` keeps the
-  maps, but nothing writes or reads them yet. A counted major's universal Vendetta goes through
-  `JoinVendetta` (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions only, and
-  never native life. See
-  `atrocity-system.md`. Whether a faction has ever been the victim of an atrocity is
-  `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a grievance total.
+- **Integrity and grievances are stored, not yet written.** `DiplomacyLedger` keeps the maps.
+  `DiplomacyCalculator::ClampFriction` keeps a stored total in `[0, frictionMax]` from
+  `diplomacy.json`. Mutation writers are not built yet. A counted major's universal Vendetta goes
+  through `JoinVendetta` (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions
+  only, and never native life. See `atrocity-system.md`. Whether a faction has ever been the
+  victim of an atrocity is `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a
+  grievance total.
 - **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionMutations.h`):
   proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
   hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
@@ -212,7 +218,8 @@ one. What a mod tunes is each status's **rules**, in `config/diplomacy.json`:
 (Shipping values. `null` duration means the status lasts until changed.) `DiplomacyConfigParser`
 requires all five statuses and every key but `effects`, and refuses a duration or a
 `defensive_obligation` on a status with nowhere to step down to. It also requires the top-level
-`defensive_obligation_mode` (see [the defensive obligation](#declaring-vendetta-and-the-defensive-obligation)).
+`defensive_obligation_mode` (see [the defensive obligation](#declaring-vendetta-and-the-defensive-obligation))
+and `friction_max` (integer > 0; `DiplomacyCalculator::ClampFriction`).
 
 A status's `effects` may only be `FactionPair` `StatModifier` entries on a stat some rule
 resolves toward a partner: `commerce_rate`, and `probe_actor_cost`, which a probe quote
@@ -440,6 +447,7 @@ save-game serialisation work to exist first. Recorded in
 | Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
 | What does accepting change? | `DiplomaticProposalMutations::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
+| What stored friction is in range? | `DiplomacyCalculator::ClampFriction` |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built
@@ -455,5 +463,5 @@ save-game serialisation work to exist first. Recorded in
   probe mission (other than infiltrate or Total Thought Control) is attributed even for a
   Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
-- **Integrity, grievances, and blemishes.** The Datalinks name six integrity levels
-  (Noble → Treacherous) and directed grievances. None of that is wired yet.
+- **Integrity and grievance writers.** `ClampFriction` is ready. Nothing writes `m_grievances` or
+  `m_integrity` yet. Mood and repute captions are UI over those integers.

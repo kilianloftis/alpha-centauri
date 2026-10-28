@@ -1,5 +1,6 @@
 {
   "defensive_obligation_mode": "JoinAsDefender",
+  "friction_max": 20,
   "statuses": {
     "Neutral": {
       "enter_territory": true,

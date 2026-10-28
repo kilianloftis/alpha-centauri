@@ -40,6 +40,17 @@ bool RequireBool_(const nlohmann::json& rJson, const std::string& rKey,
     return rValue.get<bool>();
 }
 
+int RequirePositiveInt_(const nlohmann::json& rJson, const std::string& rKey,
+                        const std::string& rContext)
+{
+    const nlohmann::json& rValue = Require_(rJson, rKey, rContext);
+    if (!rValue.is_number_integer() || rValue.get<int>() <= 0)
+    {
+        throw std::runtime_error(rContext + ": '" + rKey + "' must be an integer > 0");
+    }
+    return rValue.get<int>();
+}
+
 // The stats some rule resolves toward a partner; a status effect on any other would be ignored.
 bool IsPartnerStat_(StatId_t stat)
 {
@@ -155,7 +166,8 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     {
         throw std::runtime_error(context + " must be a JSON object");
     }
-    ConfigFields::RejectUnknownKeys(json, {"statuses", "defensive_obligation_mode"}, context);
+    ConfigFields::RejectUnknownKeys(
+        json, {"statuses", "defensive_obligation_mode", "friction_max"}, context);
     const nlohmann::json& rStatuses = Require_(json, "statuses", context);
     if (!rStatuses.is_object())
     {
@@ -164,6 +176,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
 
     DiplomacyConfig_t config;
     config.defensiveObligationMode = RequireObligationMode_(json, context);
+    config.frictionMax = RequirePositiveInt_(json, "friction_max", context);
     config.statuses =
         ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rStatuses, "diplomatic status", context,

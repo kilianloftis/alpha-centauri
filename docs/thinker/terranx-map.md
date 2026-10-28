@@ -597,3 +597,88 @@ The flag still costs the target one turn of minerals. `base_upkeep` calls
 (`+0x40`) only when bit 1 is clear (`0x4F08EC`–`0x4F0907`; also skipped for a
 negative surplus or a Stockpile Energy queue head, `-0x45`). Thinker's
 `mod_base_production` keeps the same test.
+
+## Diplomacy standing and talk
+
+Thinker names from `engine.cpp` / `engine_types.h`. Confirmed in this binary.
+Thinker's diplomacy patches (loans, tech-for-energy, base-swap) are in
+`Details.md`; the functions below are vanilla.
+
+`Factions` `0x96C9E0`, stride `0x20CC`.
+
+| Offset | Field | Meaning |
+|--------|--------|---------|
+| `+0x18` (`0x96C9F8`) | `diplo_status[8]` | bits: Pact `0x1`, Treaty `0x2`, Truce `0x4`, commlink `0x8`, Vendetta `0x10`, infiltrator `0x1000`, atrocity victim `0x40000`, major-atrocity victim `0x80000`, surrendered `0x2000000` |
+| `+0x58` (`0x96CA38`) | `diplo_friction[8]` | directed 0–20; our "grievances" |
+| `+0x124` (`0x96CB04`) | `integrity_blemishes` | per-faction count, 0 = Noble; editor caption "Blemishes" |
+| `+0x128` (`0x96CB08`) | `diplo_reputation` | incremented on made Pact/Treaty/Truce |
+| `+0x12C` | `diplo_gifts[8]` | subtracted from blemishes in `reputation()` |
+
+### `cause_friction` (`0x53A030`)
+
+`void(faction, other, delta)`. `friction[faction][other] = clamp(old + delta, 0, 20)`.
+If the cached talk pair (`DiploFrictionFactionID` `0x93FAC0` /
+`DiploFrictionFactionIDWith` `0x93FABC`) matches, also add `delta` to
+`DiploFriction` `0x93FA74`. 19 call sites.
+
+### `get_mood` (`0x53A090`)
+
+`int(friction)` → 0..8. Bands: ≤0 Magnanimous, 1–2 Solicitous, 3–4 Cooperative,
+5–8 Noncommittal, 9–12 Ambivalent, 13–15 Obstinate, 16–17 Quarrelsome,
+18–19 Belligerent, ≥20 Seething. Labels from `alphax.txt` `#MOOD` (9 names),
+pointer table `0x94C9E4` (filled by `read_rules` `0x5873C0` from the `#MOOD`
+section). Three call sites, all `return` as an index into that table for a
+draw string: `DiploPop_draw_portrait` `0x43FA34`, `InfoWin` text `0x456DFC`,
+`ReportWin_draw_intel` `0x4A2750`. No AI or talk function calls it.
+`#REPUTE` (`0x946A30`, eight names) is the same pattern: portrait `0x43F971`
+and InfoWin `0x457067` only.
+
+### `reputation` (`0x53A100`)
+
+`int(faction, other)` = `clamp(integrity_blemishes - diplo_gifts[other], 0, 99)`.
+AI uses this; the portrait does not.
+
+### `diplomacy_caption` (`0x5399A0`)
+
+Same mood bands on cached `DiploFriction`. If `DIPLO_VENDETTA` and friction < 15,
+floors the caption to friction 15 (Obstinate) without writing the store.
+
+### Integrity display (`DiploPop` `0x43F955`)
+
+`clamp(integrity_blemishes, 0, 7)` indexes `#REPUTE` (8 names: Noble, Faithful,
+Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
+7 still draw Infamous.
+
+### Integrity / friction writers
+
+- `double_cross` `0x50BCC0`: `inc` blemishes; `inc` wrongs/betrayed; friction −4/−2
+  on some paths; Vendetta via `treaty_on` `0x10`; `pact_ends`.
+- `atrocity` `0x55EEE0`: friction +5; `inc` blemishes unless `DIPLO_ATROCITY_VICTIM`.
+- `major_atrocity` `0x55F450`: if not yet `DIPLO_MAJOR_ATROCITY_VICTIM`,
+  `blemishes + 2` then floor 6 cap 99; else +2.
+- `probe` `0x59F120`: `inc` blemishes (`0x5A4FC7`); friction +4 (`0x5A55D0`,
+  `0x5A5791`).
+- `battle_fight_2` `0x506AF0`: friction +3 (`0x5078BB`), −1 (`0x50A1AB`), +5
+  (`0x50B1EF`).
+- `action_terraform` `0x4C9B00`: friction +5 at `0x4CA3EB`.
+- `communicate` `0x54FFD0`: friction −1/−2/+1 and computed gift deltas; can
+  `dec` blemishes when count > 1 (`0x557A99`).
+- `setup_player` `0x5B0E00`: zeros blemishes and `diplo_reputation` (`0x5B1210`).
+
+No per-turn friction decay among the 19 `cause_friction` calls.
+
+### Talk
+
+Scene labels in `xscript.txt`, not a chain state machine: `INTRONEW0–5`,
+`INTRO0–3`, `INTROMAD0–4`, `DIPLOMENU`, `PROPOSALMENU`, `VENDETTA0–18`.
+Per-faction `FACTIONTRUCE` / `FACTIONTREATY` in each faction file.
+`introduce` `0x53D360`, `diplomacy_menu` `0x54C560`, `proposal_menu` `0x54DCF0`,
+`communicate` `0x54FFD0`. `introduce` picks `INTRO` / `MAD` / `NEW` from
+`diplo_status` bits (`0x8000000`, `0x20`), not from `get_mood`. `get_patience`
+`0x53A150` uses raw cached `DiploFriction` and status, not the mood index.
+
+### AI (not fully mapped)
+
+`propose_pact` `0x543BC0`, `propose_treaty` `0x544E40`, `wants_to_attack`
+`0x55BC80`, `enemy_diplomacy` `0x55F930`, `great_satan` `0x539C00`. They read
+friction, `reputation()`, `DiploGoodwill` `0x93FA9C`, status, ranking.
