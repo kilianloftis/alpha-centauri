@@ -5,6 +5,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/buildings/BuildingConfig.h"
 #include "game/production/IConstructable.h"
 #include "game/research/ResearchManager.h"
 #include "game/population/PopulationManager.h"
@@ -12,12 +13,16 @@
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/population/Pop.h"
+#include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialRatingResolver.h"
+#include "game/units/Unit.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/research/ResearchRules.h"
 #include "game/research/TechCostCalculator.h"
 
+#include <algorithm>
 #include <cmath>
+#include <variant>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -454,6 +459,57 @@ TEST_CASE("Faction-lane rating expand ignores ThisBase modifiers across multiple
     // Per-base effective ratings still see their own shrine.
     CHECK(baseA.GetEffectiveSocialRating(SocialRatingId_t::Morale) == 3);
     CHECK(baseB.GetEffectiveSocialRating(SocialRatingId_t::Morale) == 3);
+}
+
+TEST_CASE("A FactionGlobal level flag follows the faction's rating to its bases and units",
+          "[effects][rating]")
+{
+    constexpr RuleFlagId_t k_immune = RuleFlagId_t::ProbeSubversionImmune;
+    actest::EffectPool pool;
+    SocialPolicyConfig_t probePolicy;
+    probePolicy.id = "test_probe_policy";
+    probePolicy.name = "Test Probe Policy";
+    probePolicy.category = SocialCategory_t::Values;
+    probePolicy.effects = {pool.RatingMod(SocialRatingId_t::Probe, 3)};
+    BuildingConfig_t probeShrine;
+    probeShrine.id = "test_probe_shrine";
+    probeShrine.name = "Test Probe Shrine";
+    probeShrine.effects = {pool.RatingMod(SocialRatingId_t::Probe, 3, EffectScope_t::ThisBase)};
+
+    actest::FactionFixture fixture;
+    std::vector<BuildingConfig_t> buildings = fixture.buildings().GetAll();
+    buildings.push_back(probeShrine);
+    fixture.buildings().Assign(std::move(buildings));
+    std::vector<SocialPolicyConfig_t> policies = fixture.socialPolicies().GetAll();
+    policies.push_back(probePolicy);
+    fixture.socialPolicies().Assign(std::move(policies));
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base);
+
+    SECTION("a base's own rating leaves it off")
+    {
+        base.GetBuildingManager().AddBuilding("test_probe_shrine");
+        REQUIRE(base.GetEffectiveSocialRating(SocialRatingId_t::Probe) == 3);
+        CHECK_FALSE(ResolveFlag(faction, k_immune));
+        CHECK_FALSE(ResolveFlag(base, k_immune));
+        CHECK_FALSE(ResolveFlag(unit, k_immune));
+    }
+
+    SECTION("the faction's rating sets it on the faction, the base and the unit, once")
+    {
+        faction.GetSocialEngineering().SetActivePolicy(
+            fixture.socialPolicies().Get("test_probe_policy"));
+        CHECK(ResolveFlag(faction, k_immune));
+        CHECK(ResolveFlag(base, k_immune));
+        CHECK(ResolveFlag(unit, k_immune));
+        const auto isImmunity = [](const ActiveEffect_t& rEffect)
+        {
+            const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+            return pFlag && pFlag->flag == k_immune;
+        };
+        CHECK(std::ranges::count_if(base.GetBaseEffects().effects, isImmunity) == 1);
+    }
 }
 
 TEST_CASE("Faction-lane rating expand observes pop FactionGlobal SocialRatingModifiers",

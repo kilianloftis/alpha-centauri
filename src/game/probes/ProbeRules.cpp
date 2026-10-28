@@ -271,29 +271,6 @@ bool ProbeCanOccupyBase_(const Unit& rProbe, const BaseManager& rBase)
 
 } // namespace
 
-bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag)
-{
-    if (const BaseManager* pSource = EffectSourceBase(rTarget))
-    {
-        if (ResolveFlag(*pSource, flag))
-        {
-            return true;
-        }
-    }
-    if (ResolveFlag(rTarget.rFaction, flag))
-    {
-        return true;
-    }
-    for (const BaseManager& rBase : rTarget.rFaction.Bases())
-    {
-        if (ResolveFlag(rBase, flag))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,
                              const ProbeSuccessFormula_t& rFormula)
 {
@@ -525,7 +502,7 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
     }
 
     if (rAction.cost.has_value()
-        && TargetHasFlag(rTarget, RuleFlagId_t::ProbeSubversionImmune))
+        && ResolveFlag(rTarget.rFaction, RuleFlagId_t::ProbeSubversionImmune))
     {
         return false;
     }

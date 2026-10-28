@@ -105,8 +105,9 @@ not by which config declared it. Each scope has one "lane":
 | Scope | Resolved by | Collected via |
 |---|---|---|
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
-| `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
-| `WorldGlobal` | every resolver that can apply the effect | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Bases and faction stats read that pool. `CollectLiveUnitEffects` appends the unit-domain stat modifiers and rule flags. `TileEffectsContext::CollectAreaEffects` and move-cost entry append the tile-domain slice from `CollectSessionWorldEffects()`. Intercept bills a `WorldGlobal` charge to the granting faction; a council charge has no building ledger. Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
+| `AllOwnerBases` | every base of the faction | faction pool (`CollectActiveEffects`) |
+| `FactionGlobal` | the faction and every base, plus the faction's live units (unit-domain stat modifiers and rule flags) and its units' move cost (tile-domain stat modifiers). A stat resolved at both levels takes it at both: `away_from_home_drones` is summed per unit and then scaled at the base, so use `AllOwnerBases` or `FactionUnits` to pick one | faction pool (`CollectActiveEffects`); `AppendGlobalScopeEffects` hands units and move cost their domain's slice. A faction's composed pool holds only its own `FactionGlobal` effects |
+| `WorldGlobal` | every resolver that can apply the effect | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Bases and faction stats read that pool. `CollectLiveUnitEffects` appends the unit-domain stat modifiers and rule flags (`AppendGlobalScopeEffects`, shared with `FactionGlobal`). `TileEffectsContext::CollectAreaEffects` and move-cost entry append the tile-domain slice from `CollectSessionWorldEffects()`. Intercept bills a `WorldGlobal` charge to the granting faction; a council charge has no building ledger. Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
 | `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`; in-square extras use `SubjectIsOnOriginBase`) | faction pool → `CollectLiveUnitEffects`. Combat Attack/Defense use `ResolveCombatUnitStat` with `MoraleCalculator::CombatAddPercent` at `CombatMoraleLevel` (stated `morale_rank` plus `morale_extra`; defense clamped to `[defense_floor_index, MaxLevel]`). The percent is `(combatLevel - baseline_index) * percent_per_level` from `morale_levels.json` and shares the AddPercent bucket with weapon/chassis modifiers. Named rows keep `promotion_chance` and `planet_pearls` only. `EffectContext_t::combatRole` enables `IsInCombat` (riot rank penalty) and `IsDefending` (SE +2/+3 defend-in-base extra and attack-only Crèche extras via `"value": false`). The rank word is `EffectiveMoraleLevel` with `combatRole` None. Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
 | `ProducedAtThisBase` | units built at the originating base | stamped onto the unit at construction (`Unit::GetProductionGrants`); collected by `CollectLiveUnitEffects` from the unit, not by live pool origin matching. Permanent non-XP train grants. Starting XP (Command Center, Aerospace, prototype) uses triggered `GrantXp` on `on_unit_produced_effects` instead. |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
@@ -371,7 +372,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `FactionUnits` — all live units owned by the faction. Consumed by `Unit::Get*` /
     `Is*` resolution, which merges the design's own `ThisUnit` effects with the faction
     pool's `FactionUnits` effects (so a building or policy can boost every unit).
-  - `FactionGlobal` — the whole faction.
+  - `FactionGlobal` — the whole faction: its bases and faction resolves, and its live units
+    and their move cost by stat domain, as `WorldGlobal` does for the session.
   - `WorldGlobal` — the session. A faction's own `FactionEffectsPool` carries its own
     `WorldGlobal` effects; `Faction::GetActiveEffects()` (when a game state is current)
     also appends peer WorldGlobal and council extras. `GetLocalActiveEffects()` is the
@@ -746,8 +748,8 @@ no bases means no spawn. Placement takes the anchor tile if free, then outward r
 grants fewer units and reports the real count rather than throwing.
 
 ### CollectLiveUnitEffects
-- Returns design + FactionUnits + `WorldGlobal` unit-domain stat modifiers and rule flags from
-  the composed pool + permanent `ProducedAtThisBase` grants stamped on the unit at
+- Returns design + FactionUnits + `FactionGlobal` and `WorldGlobal` unit-domain stat modifiers
+  and rule flags from the composed pool + permanent `ProducedAtThisBase` grants stamped on the unit at
   construction (`Unit::GetProductionGrants`). Identity conditions (Domain / IsPrototype / …)
   are applied at collect; resolve paths re-check via `ConditionSatisfied`.
 
@@ -789,7 +791,8 @@ grants fewer units and reports the real count rather than throwing.
      step 5.
   5. **Expand faction-lane social ratings** via `ExpandFactionLaneSocialRatingEffects`
      (`FactionEffects_t`): accumulate only `LaneFor(scope) == FactionWide` modifiers,
-     append only `FactionUnits` gameplay effects from the level table.
+     append the level effects units or the faction resolve (`FactionUnits` ones, and
+     `FactionGlobal` ones other than Base-domain stat modifiers).
   6. **Gate** a last time (a level table's own effects may carry the field).
 
      Between steps 2 and 3 the pool also collects `CollectMoodEffects_`: the faction-lane
@@ -828,14 +831,17 @@ grants fewer units and reports the real count rather than throwing.
   - `ResolveSocialRatingLevelEffects(const BaseEffects_t&, ratingRegistry)` — base lane:
     maps each non-zero accumulated level through `SocialRatingConfig_t::levelEffects`
     (SMAC clamp-at-extremes) and **returns** the gameplay effects with sourceId
-    `se_rating_<axis>_<level>` (clamped level), leaving out `FactionUnits` ones as
-    `FilterForBase` does: those reach units through the faction lane below, and a base list
-    holding them would count a level twice for a stat both lanes resolve (`probe_action_cost`).
+    `se_rating_<axis>_<level>` (clamped level), leaving out what the faction lane below
+    carries (`ExpandsAtFactionLevel_`): those reach units, and the base itself through the
+    faction pool, so a base list holding them would count a level twice. A `FactionGlobal`
+    level flag therefore follows the faction's rating, not a base's own (SE Probe +3's
+    `probe_subversion_immune`, which `ResolveFlag(Faction)` sees).
     It returns rather than appends because the accumulation source (local pool, filtered +
     pop-merged) is not the list the base resolves against (composed pool).
   - `ExpandFactionLaneSocialRatingEffects(FactionEffects_t&, ratingRegistry)` — faction
     lane: accumulates **FactionWide** modifiers only (ignores `ThisBase`) and appends
-    `FactionUnits` gameplay effects. Do not re-expand FactionWide economy effects here.
+    `FactionUnits` gameplay effects, plus `FactionGlobal` rule flags and non-Base-domain stat
+    modifiers. Base-domain economy effects stay on the base lane.
 - **Per-base effective ratings fall out automatically**: `BaseManager::CollectRatingSource_`
   filters the *local* pool for the base and merges its pops; that one list feeds both
   `GetEffectiveSocialRating` and the level effects spliced into `BuildBaseEffects_`, so the
@@ -1207,7 +1213,7 @@ rather than building a parallel collection path — the faction pool via
 `CollectActiveEffects(faction)` (a `FactionEffects_t`), a base's final list via
 `BaseManager::BuildBaseEffects_` (a `BaseEffects_t`, already including pop effects and
 rating expansion), a live unit's via `CollectLiveUnitEffects` (design `ThisUnit` effects, the pool's
-`FactionUnits`, and `WorldGlobal` unit-domain stats and rule flags), a tile's via
+`FactionUnits`, and `FactionGlobal` and `WorldGlobal` unit-domain stats and rule flags), a tile's via
 `TileEffectsContext` (own tile, auras, and `WorldGlobal` tile-domain stats and rule flags). The pool types enforce the stage: base-level filters and the per-tile
 selector pass won't compile against the raw pool.
 

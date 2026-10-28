@@ -488,15 +488,17 @@ bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId);
 // MultiplyGeometric — the SMAC-style base combat rating (e.g. laser 2, not 2 * 1.25).
 int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId);
 
-// A live unit's effects: design, FactionUnits, WorldGlobal and production grants, already
-// filtered by identity conditions. Situational conditions remain.
+// A live unit's effects: design, FactionUnits, the owner pool's FactionGlobal and WorldGlobal
+// unit-domain stats and rule flags, and production grants, already filtered by identity
+// conditions. Situational conditions remain.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
 
-// WorldGlobal stat modifiers in `domain`, and rule flags.
-void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
+// FactionGlobal and WorldGlobal stat modifiers in `domain`, and their rule flags. A faction's
+// composed pool holds only its own FactionGlobal effects; the session list holds none.
+void AppendGlobalScopeEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
                               std::vector<ActiveEffect_t>& rOut);
 
-// Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
+// Resolve a live unit's stats / flags over CollectLiveUnitEffects.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
 // Only AddPercent and MultiplyGeometric, from baseValue: psi combat strengths start at 1.
@@ -505,8 +507,8 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
-// Context-free. Misses social-rating effects, which expand per base: use
-// ResolveFlag(BaseManager).
+// Context-free. Sees FactionGlobal social-rating flags; ThisBase and AllOwnerBases level
+// effects expand per base only, so read those with ResolveFlag(BaseManager).
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 
 // From the base's full effect list, social ratings included. Context-free.

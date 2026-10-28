@@ -43,10 +43,6 @@ struct ProbeRollResult_t
 // Probe mechanics: eligibility, cost quotes, chances and effect stats for a resolved target.
 // Gates, payment and mutations belong to ProbeActionExecutor.
 
-// Whether the target, its faction pool or any of its bases carries the flag; SE-expanded flags
-// appear only on base effect lists.
-bool TargetHasFlag(const ProbeTarget_t& rTarget, RuleFlagId_t flag);
-
 // Wiki "target base PROBE effect": success_formula's defense over the target's probe_defense.
 // Positive Probe raises own-probe morale instead.
 int TargetProbeDefenseEffect(const ProbeTarget_t& rTarget,

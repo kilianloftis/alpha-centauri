@@ -2,8 +2,8 @@
 // scope, regardless of which source declared it.
 //
 // Lanes covered here: faction pool contributions from pops and unit components,
-// FactionUnits -> live unit stats, WorldGlobal across factions, and unit-projected
-// ThisTile auras.
+// FactionUnits -> live unit stats, FactionGlobal -> the faction's own units, WorldGlobal
+// across factions, and unit-projected ThisTile auras.
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"
@@ -12,6 +12,7 @@
 #include "game/GameState.h"
 #include "game/GameSettings.h"
 #include "game/base/BaseManager.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/population/PopulationManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -23,13 +24,44 @@
 #include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
 
+#include <memory>
 #include <variant>
+#include <vector>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace ac;
 using Catch::Approx;
+
+namespace
+{
+
+Faction& AddFaction_(actest::FactionFixture& rFixture, bool bIsPlayer)
+{
+    return rFixture.state.AddFaction(std::make_unique<Faction>(
+        rFixture.state.AllocateFactionId(), bIsPlayer, rFixture.factionDefinition,
+        rFixture.dataContext, rFixture.map, rFixture.settings,
+        rFixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
+}
+
+void AddBuildings_(actest::FactionFixture& rFixture, std::vector<BuildingConfig_t> added)
+{
+    std::vector<BuildingConfig_t> buildings = rFixture.buildings().GetAll();
+    buildings.insert(buildings.end(), added.begin(), added.end());
+    rFixture.buildings().Assign(std::move(buildings));
+}
+
+BuildingConfig_t Building_(const std::string& rId, std::vector<EffectConfig_t> effects)
+{
+    BuildingConfig_t building;
+    building.id = rId;
+    building.name = rId;
+    building.effects = std::move(effects);
+    return building;
+}
+
+} // namespace
 
 TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-wide",
           "[effects][routing][pop]")
@@ -281,6 +313,41 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
     CHECK(ResolveStat(unitB, StatId_t::Attack) == attackBefore + 1);
 }
 
+TEST_CASE("FactionGlobal lane: unit-domain stats and rule flags reach the faction's own units",
+          "[effects][routing][unit]")
+{
+    actest::EffectPool pool;
+    actest::FactionFixture fixture;
+    AddBuildings_(fixture,
+                  {Building_("test_faction_attack",
+                             {pool.StatMod(StatId_t::Attack, 1, ModifierOp_t::Add,
+                                           EffectScope_t::FactionGlobal),
+                              pool.RuleFlag(RuleFlagId_t::OrbitalInsertion)}),
+                   Building_("test_bases_attack",
+                             {pool.StatMod(StatId_t::Attack, 1, ModifierOp_t::Add,
+                                           EffectScope_t::AllOwnerBases),
+                              pool.RuleFlag(RuleFlagId_t::OrbitalInsertion,
+                                            EffectScope_t::AllOwnerBases)})});
+    Faction& factionA = AddFaction_(fixture, true);
+    Faction& factionB = AddFaction_(fixture, false);
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
+    Unit& unitA = fixture.MakeUnit(factionA, 8, 8, {"test_chassis", "test_weapon"}, &baseA);
+    Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_chassis", "test_weapon"});
+    const int attackA = ResolveStat(unitA, StatId_t::Attack);
+    const int attackB = ResolveStat(unitB, StatId_t::Attack);
+
+    baseA.GetBuildingManager().AddBuilding("test_bases_attack");
+    CHECK(ResolveStat(unitA, StatId_t::Attack) == attackA);
+    CHECK_FALSE(ResolveFlag(unitA, RuleFlagId_t::OrbitalInsertion));
+
+    baseA.GetBuildingManager().DestroyBuilding("test_bases_attack");
+    baseA.GetBuildingManager().AddBuilding("test_faction_attack");
+    CHECK(ResolveStat(unitA, StatId_t::Attack) == attackA + 1);
+    CHECK(ResolveFlag(unitA, RuleFlagId_t::OrbitalInsertion));
+    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackB);
+    CHECK_FALSE(ResolveFlag(unitB, RuleFlagId_t::OrbitalInsertion));
+}
+
 TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on the base",
           "[effects][routing][world][tile]")
 {
@@ -331,6 +398,34 @@ TEST_CASE("WorldGlobal lane: a move_cost clamp applies when entering a tile",
 
     base.GetBuildingManager().AddBuilding("world_move_clamp");
     CHECK(costs.EntryTerms(rocky).costFragments == 0);
+}
+
+TEST_CASE("FactionGlobal lane: a move_cost clamp applies to the faction's own units only",
+          "[effects][routing][movement]")
+{
+    actest::EffectPool pool;
+    actest::FactionFixture fixture;
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    AddBuildings_(fixture, {Building_("test_faction_move_clamp",
+                                      {pool.StatMod(StatId_t::MoveCost, 0, ModifierOp_t::MaxClamp,
+                                                    EffectScope_t::FactionGlobal)})});
+    Faction& factionA = AddFaction_(fixture, true);
+    Faction& factionB = AddFaction_(fixture, false);
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
+    Unit& unitA = fixture.MakeUnit(factionA, 8, 8, {"test_chassis"});
+    Unit& unitB = fixture.MakeUnit(factionB, 10, 10, {"test_chassis"});
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
+
+    Tile& rocky = fixture.At(9, 9);
+    rocky.SetRockiness(Rockiness_t::Rocky);
+    const int rockyCost = 2 * MovementConstants_t::k_moveFragmentsPerPoint;
+
+    baseA.GetBuildingManager().AddBuilding("test_faction_move_clamp");
+    CHECK(calc.ForUnit(unitA, fixture.map).EntryTerms(rocky).costFragments == 0);
+    CHECK(calc.ForUnit(unitB, fixture.map).EntryTerms(rocky).costFragments == rockyCost);
 }
 
 TEST_CASE("Social policy stat effects flow through the standard pool (no special-casing)",

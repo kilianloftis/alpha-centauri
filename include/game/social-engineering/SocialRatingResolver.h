@@ -31,14 +31,16 @@ int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);
 const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
     const SocialRatingConfig_t& rConfig, int total);
 
-// Base lane: accumulates rRatingSource and returns each axis's level effects other than
-// FactionUnits ones. Ratings accumulate over the local pool, but the base resolves over the
-// composed one.
+// Base lane: accumulates rRatingSource and returns each axis's level effects other than those
+// ExpandFactionLaneSocialRatingEffects carries. Ratings accumulate over the local pool, but
+// the base resolves over the composed one.
 std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings);
 
-// Appends the FactionUnits effects of FactionWide rating modifiers, so SE Morale reaches
-// units. Base-lane modifiers and AllOwnerBases gameplay effects stay on the base path.
+// Appends, at the faction's rating (FactionWide modifiers), the level effects units or the
+// faction resolve: FactionUnits ones, and FactionGlobal ones other than Base-domain stat
+// modifiers. So SE Morale reaches units and SE Probe +3's immunity flag reaches the faction.
+// ThisBase, AllOwnerBases and FactionGlobal Base-domain effects stay on the base path.
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings);
 

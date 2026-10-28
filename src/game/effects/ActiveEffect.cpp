@@ -914,12 +914,17 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
     return result;
 }
 
-void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
+void AppendGlobalScopeEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
                               std::vector<ActiveEffect_t>& rOut)
 {
     for (const ActiveEffect_t& rEffect : rPool)
     {
-        if (!rEffect.config || rEffect.config->scope != EffectScope_t::WorldGlobal)
+        if (!rEffect.config)
+        {
+            continue;
+        }
+        const EffectScope_t scope = rEffect.config->scope;
+        if (scope != EffectScope_t::FactionGlobal && scope != EffectScope_t::WorldGlobal)
         {
             continue;
         }
@@ -946,7 +951,7 @@ std::vector<ActiveEffect_t> GatherUnitEffects_(const Unit& rUnit)
     const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
     auto factionEffects = FilterByScope(rPool, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
-    AppendWorldGlobalEffects(rPool, ResolveDomain_t::Unit, effects);
+    AppendGlobalScopeEffects(rPool, ResolveDomain_t::Unit, effects);
     const auto& rGrants = rUnit.GetProductionGrants();
     effects.insert(effects.end(), rGrants.begin(), rGrants.end());
     return effects;

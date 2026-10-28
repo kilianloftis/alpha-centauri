@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <variant>
 
 namespace ac
 {
@@ -50,11 +51,26 @@ std::optional<LevelRow_t> RatingLevelRow_(const SocialRatingConfig_t& rRatingCon
     return LevelRow_t{ClampSocialRatingTotal(rRatingConfig, total), pLevelEffects};
 }
 
+// What units or the faction itself resolve: FactionUnits effects, and FactionGlobal ones other
+// than Base-domain stat modifiers. These expand once, at the faction's rating.
+bool ExpandsAtFactionLevel_(const EffectConfig_t& rEffect)
+{
+    if (rEffect.scope == EffectScope_t::FactionUnits)
+    {
+        return true;
+    }
+    if (rEffect.scope != EffectScope_t::FactionGlobal)
+    {
+        return false;
+    }
+    const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+    return !pModifier || DomainFor(pModifier->stat) != ResolveDomain_t::Base;
+}
+
 // Appends each axis's level effects ("se_rating_<axis>_<level>"), level-0 rows included. Total
 // 0 matches only an exact "0" key; other totals clamp to the extremes (SMAC).
 void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
                                const SocialRatingRegistry& rRatings,
-                               std::optional<EffectLane_t> appendLane,
                                std::vector<ActiveEffect_t>& rOut)
 {
     for (const SocialRatingConfig_t& rRatingConfig : rRatings.GetAll())
@@ -72,10 +88,6 @@ void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
             "se_rating_" + rRatingConfig.id + "_" + std::to_string(row->level);
         for (const EffectConfig_t& rEffect : *row->pEffects)
         {
-            if (appendLane && LaneFor(rEffect.scope) != *appendLane)
-            {
-                continue;
-            }
             rOut.emplace_back(rEffect, sourceId, nullptr);
         }
     }
@@ -136,22 +148,29 @@ std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     std::vector<ActiveEffect_t> levelEffects;
     const std::map<SocialRatingId_t, int> totals =
         AccumulateSocialRatings(rRatingSource.effects, std::nullopt);
-    AppendRatingLevelEffects_(totals, rRatings, std::nullopt, levelEffects);
-    // As FilterForBase: unit-lane level effects reach units through
-    // ExpandFactionLaneSocialRatingEffects, never a base's list.
+    AppendRatingLevelEffects_(totals, rRatings, levelEffects);
+    // These reach the base through the faction pool, and units through it alone; a base list
+    // holding them too would count a level twice.
     std::erase_if(levelEffects, [](const ActiveEffect_t& rEffect)
-                  { return LaneFor(rEffect.config->scope) == EffectLane_t::FactionUnits; });
+                  { return ExpandsAtFactionLevel_(*rEffect.config); });
     return levelEffects;
 }
 
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings)
 {
-    // FactionWide modifiers only, so ThisBase shrines cannot inflate FactionUnits bonuses.
+    // FactionWide modifiers only, so ThisBase shrines cannot inflate faction-level effects.
     const std::map<SocialRatingId_t, int> totals =
         AccumulateSocialRatings(rFactionEffects.effects, EffectLane_t::FactionWide);
-    AppendRatingLevelEffects_(totals, rRatings, EffectLane_t::FactionUnits,
-                              rFactionEffects.effects);
+    std::vector<ActiveEffect_t> levelEffects;
+    AppendRatingLevelEffects_(totals, rRatings, levelEffects);
+    for (const ActiveEffect_t& rEffect : levelEffects)
+    {
+        if (ExpandsAtFactionLevel_(*rEffect.config))
+        {
+            rFactionEffects.effects.push_back(rEffect);
+        }
+    }
 }
 
 } // namespace ac

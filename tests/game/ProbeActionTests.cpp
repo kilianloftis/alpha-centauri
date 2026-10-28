@@ -29,6 +29,8 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/effects/ActiveEffect.h"
@@ -2010,6 +2012,32 @@ TEST_CASE("A probe the target's hunter out-ranks dies on contact without paying,
     CHECK(game.pPlayer->GetEconomy().GetEnergy() == energyBefore);
     CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 0);
     CHECK(&enemy.GetFaction() == game.pAi);
+}
+
+TEST_CASE("SE Probe +3 protects the units of a faction without bases", "[probe][action][se]")
+{
+    EffectPool pool;
+    SocialPolicyConfig_t probePolicy;
+    probePolicy.id = "test_probe_policy";
+    probePolicy.name = "Test Probe Policy";
+    probePolicy.category = SocialCategory_t::Values;
+    probePolicy.effects = {pool.RatingMod(SocialRatingId_t::Probe, 3)};
+    ProbeGame_ game;
+    std::vector<SocialPolicyConfig_t> policies = game.fixtures.socialPolicies().GetAll();
+    policies.push_back(probePolicy);
+    game.fixtures.socialPolicies().Assign(std::move(policies));
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
+    REQUIRE(game.pAi->Bases().empty());
+    const ProbeTarget_t target =
+        *ResolveProbeTarget(probe, victim.GetTile(), ProbeTargetKind_t::Unit, game.fixtures.state);
+    const ProbeActionConfig_t& rSubvert = RequireAction_(game, ProbeActionId_t::SubvertUnit);
+    REQUIRE(CanProbeAction(probe, rSubvert, target));
+
+    game.pAi->GetSocialEngineering().SetActivePolicy(
+        game.fixtures.socialPolicies().Get("test_probe_policy"));
+    CHECK_FALSE(CanProbeAction(probe, rSubvert, target));
 }
 
 TEST_CASE("SE Probe +3 is immune to paid actions even with Algorithmic Enhancement",

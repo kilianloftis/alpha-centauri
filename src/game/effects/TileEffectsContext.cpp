@@ -335,7 +335,7 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
     AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     if (m_pWorldEffects)
     {
-        AppendWorldGlobalEffects(m_pWorldEffects->CollectSessionWorldEffects(),
+        AppendGlobalScopeEffects(m_pWorldEffects->CollectSessionWorldEffects(),
                                  ResolveDomain_t::Tile, effects);
     }
     return effects;

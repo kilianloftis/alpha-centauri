@@ -777,8 +777,9 @@ enum class EffectLane_t
 {
     // In the faction pool tagged with originBase; FilterForBase includes it per base.
     Base,
-    // At every base of the faction. WorldGlobal also crosses factions, and reaches live units
-    // and tiles.
+    // At every base of the faction and in faction resolves. FactionGlobal and WorldGlobal
+    // also reach live units and unit move cost (AppendGlobalScopeEffects); WorldGlobal also
+    // crosses factions and reaches session tile resolvers.
     FactionWide,
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
