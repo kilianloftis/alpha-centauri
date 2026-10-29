@@ -73,6 +73,7 @@ graph TB
     subgraph "Hostile act sources"
         Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
+        ProbeFrame[ResolveProbeStanding ProbeRules<br/>ResolveProbeFrame: who blames whom,<br/>then whether keep or break follows]
         ProbeAftermath[ResolveProbeAftermath ProbeRules<br/>the choice, before any Vendetta<br/>ApplyProbeAftermath ProbeActionMutations<br/>writes keep or break]
         Atrocity[CommitAtrocity<br/>always attributed]
     end
@@ -124,7 +125,9 @@ graph TB
     TerritoryEntry[TerritoryEntryMutations<br/>BreakAgreementAndContinue] --> DeclareVendetta
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
-    Probe --> ProbeAftermath
+    Probe --> ProbeFrame
+    ProbeFrame -->|held: victim vs framed<br/>flop: framed vs actor| ApplyProbeVendetta
+    ProbeFrame -->|no frame, or a flop| ProbeAftermath
     ProbeAftermath -->|no agreement, or double cross| ApplyHostileAct
     ProbeAftermath -->|broken below mind control| ApplyProbeVendetta
     ProbeAftermath -->|kept: victim resents actor| ApplyStanding
@@ -452,6 +455,35 @@ A victim that keeps adds a draw in `[0, probe_keep_friction_draw)` to its fricti
 actor, and the status stays. Native life never holds an agreement, so it always takes
 `HostileAct`, which ignores it. A surrendered Pact should skip the aftermath; nobody surrenders
 yet.
+
+#### Framing
+
+A player probe against an AI may implicate another faction (SMAC's `FRAME` menu;
+`terranx-map.md`, "Frame"). `ProbeMayFrame` allows it for an action whose `may_frame` is true
+(shipping: steal tech, drain, both sabotages, incite, assassinate). `FrameCandidates` lists every
+other faction with diplomacy that the actor knows and that still holds a base. Vendetta does not
+exclude one. `WorldView` offers the candidates after the action (and, for targeted sabotage, the
+facility) is chosen, and passes the choice to `TryProbeAction` as `framedId`. Implicating someone
+adds the top-level `frame_risk` to `MissionRisk`.
+
+`ResolveProbeStanding` returns both writes as one `ProbeStanding_t`: the frame from
+`ResolveProbeFrame`, and the aftermath unless the frame held.
+`ProbeActionExecutor::ApplyProbeStanding_` applies the frame's Vendetta first, then the
+aftermath. `ResolveProbeFrame` resolves every framed act, whatever the actor and victim hold.
+SMAC resolves a frame only over a Truce, Treaty or Pact; see "Frame against a victim with no
+agreement" in [`config/deviations/README.md`](../../config/deviations/README.md). Against a
+victim with no agreement, a held frame skips the aftermath and with it the victim's Vendetta on
+the actor.
+
+| Roll | Vendetta (`ApplyProbeVendetta`) | Keep or break |
+|---|---|---|
+| Mission and escape succeed: `Framed` | victim and framed faction | skipped |
+| Mission or escape fails: `Flopped` | framed faction and actor | runs between actor and victim |
+
+The frame's notice, `ProbeFrameNoticeInteraction_t`, follows the mission's own: `FRAMED` or
+`FRAMEFLOP` for the actor. A held frame should also leave the victim wanting revenge; there is no
+revenge record yet. AI actors do not frame, so a player is never framed and the player's
+`FRAMEEXCUSE` choice does not exist yet.
 
 ## TradeItem_t and TradeKind_t
 

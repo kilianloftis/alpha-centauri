@@ -1002,12 +1002,8 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     if (m_rGameState.GetProbeActions().WouldContactDestroyProbe(rProbe, rTargetTile,
                                                                m_rGameState))
     {
-        const ProbeActionResult_t result = m_rGameState.GetProbeActions().TryProbeAction(
-            rProbe, ProbeActionId_t::Infiltrate, rTargetTile, m_rGameState, BuildingId_t{});
-        if (result.outcome != ProbeActionOutcome_t::Rejected)
-        {
-            SelectNextAvailableUnit_();
-        }
+        RunProbeAction_(rProbe, ProbeActionId_t::Infiltrate, rTargetTile, BuildingId_t{},
+                        std::nullopt);
         return;
     }
 
@@ -1040,13 +1036,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
                                    OpenSabotageFacilityPicker_(*pProbe, *pTargetTile);
                                    return;
                                }
-                               const ProbeActionResult_t result =
-                                   m_rGameState.GetProbeActions().TryProbeAction(
-                                       *pProbe, id, *pTargetTile, m_rGameState, BuildingId_t{});
-                               if (result.outcome != ProbeActionOutcome_t::Rejected)
-                               {
-                                   SelectNextAvailableUnit_();
-                               }
+                               CommitProbeAction_(*pProbe, id, *pTargetTile, BuildingId_t{});
                            }});
     }
 
@@ -1089,14 +1079,8 @@ void WorldView::OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTil
                                {
                                    return;
                                }
-                               const ProbeActionResult_t result =
-                                   m_rGameState.GetProbeActions().TryProbeAction(
-                                       *pProbe, ProbeActionId_t::SabotageFacility, *pTargetTile,
-                                       m_rGameState, facilityId);
-                               if (result.outcome != ProbeActionOutcome_t::Rejected)
-                               {
-                                   SelectNextAvailableUnit_();
-                               }
+                               CommitProbeAction_(*pProbe, ProbeActionId_t::SabotageFacility,
+                                                  *pTargetTile, facilityId);
                            }});
     }
     choices.push_back({"Wipe production",
@@ -1106,14 +1090,8 @@ void WorldView::OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTil
                            {
                                return;
                            }
-                           const ProbeActionResult_t result =
-                               m_rGameState.GetProbeActions().TryProbeAction(
-                                   *pProbe, ProbeActionId_t::SabotageFacility, *pTargetTile,
-                                   m_rGameState, BuildingId_t{});
-                           if (result.outcome != ProbeActionOutcome_t::Rejected)
-                           {
-                               SelectNextAvailableUnit_();
-                           }
+                           CommitProbeAction_(*pProbe, ProbeActionId_t::SabotageFacility,
+                                              *pTargetTile, BuildingId_t{});
                        }});
 
     DismissOpenModals_();
@@ -1121,6 +1099,74 @@ void WorldView::OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTil
         "Sabotage Facility", "No facilities available", std::move(choices),
         GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
     m_elements.push_back(std::move(pPopup));
+}
+
+void WorldView::CommitProbeAction_(Unit& rProbe, ProbeActionId_t actionId,
+                                   const Tile& rTargetTile, const BuildingId_t& facilityId)
+{
+    const std::vector<FactionId_t> candidates =
+        m_rGameState.GetProbeActions().ListFrameCandidates(rProbe, actionId, rTargetTile,
+                                                           m_rGameState);
+    if (candidates.empty())
+    {
+        RunProbeAction_(rProbe, actionId, rTargetTile, facilityId, std::nullopt);
+        return;
+    }
+    OpenFramePicker_(rProbe, actionId, rTargetTile, facilityId, candidates);
+}
+
+void WorldView::OpenFramePicker_(Unit& rProbe, ProbeActionId_t actionId,
+                                 const Tile& rTargetTile, const BuildingId_t& facilityId,
+                                 const std::vector<FactionId_t>& rCandidates)
+{
+    std::vector<PopupChoice_t> choices;
+    choices.reserve(rCandidates.size() + 1);
+    choices.push_back({"Too risky. Just make a clean getaway.",
+                       FrameChoiceAction_(rProbe, actionId, rTargetTile, facilityId,
+                                          std::nullopt)});
+    for (const FactionId_t framedId : rCandidates)
+    {
+        const LeaderConfig& rLeader = m_rGameState.RequireFaction(framedId).GetDefinition().leader;
+        choices.push_back({"Yes, make it look like " + rLeader.title + " " + rLeader.name
+                               + " was responsible!",
+                           FrameChoiceAction_(rProbe, actionId, rTargetTile, facilityId,
+                                              framedId)});
+    }
+
+    DismissOpenModals_();
+    auto pPopup = std::make_unique<ListSelectorPopup>(
+        "Frame Another Faction?", "No factions to implicate", std::move(choices),
+        GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
+    m_elements.push_back(std::move(pPopup));
+}
+
+std::function<void()> WorldView::FrameChoiceAction_(Unit& rProbe, ProbeActionId_t actionId,
+                                                    const Tile& rTargetTile,
+                                                    const BuildingId_t& facilityId,
+                                                    std::optional<FactionId_t> framedId)
+{
+    Unit* pProbe = &rProbe;
+    const Tile* pTargetTile = &rTargetTile;
+    return [this, pProbe, pTargetTile, actionId, facilityId, framedId]
+    {
+        if (m_pSelectedUnit != pProbe)
+        {
+            return;
+        }
+        RunProbeAction_(*pProbe, actionId, *pTargetTile, facilityId, framedId);
+    };
+}
+
+void WorldView::RunProbeAction_(Unit& rProbe, ProbeActionId_t actionId, const Tile& rTargetTile,
+                                const BuildingId_t& facilityId,
+                                std::optional<FactionId_t> framedId)
+{
+    const ProbeActionResult_t result = m_rGameState.GetProbeActions().TryProbeAction(
+        rProbe, actionId, rTargetTile, m_rGameState, facilityId, framedId);
+    if (result.outcome != ProbeActionOutcome_t::Rejected)
+    {
+        SelectNextAvailableUnit_();
+    }
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const

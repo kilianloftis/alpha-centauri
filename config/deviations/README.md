@@ -123,6 +123,19 @@ absent.
   does.
 - **Missing:** a decision, then the repeat-risk version and a switch.
 
+### Frame against a victim with no agreement `[Bug]`
+
+- **Original:** the frame menu and its +1 risk ignore actor–target standing, but the
+  aftermath returns at `has_treaty(actor, target, 0x7)` (`0x5A4B2F`) before either frame
+  branch. Framing a target the actor holds no Truce, Treaty or Pact with costs risk and
+  writes nothing: no target–framed Vendetta on success, no framed–actor Vendetta on a flop
+  ("Frame"). Thinker matches.
+- **Ours:** every frame resolves, whatever the actor and target hold. A held frame against a
+  target with no agreement also skips the aftermath, so the target does not declare Vendetta
+  on the actor.
+- **Where:** `ResolveProbeFrame` in `ProbeRules.cpp`.
+- **Missing:** the original agreement-gated version and a switch.
+
 ### Audit unclassified Thinker fixes `[Thinker]`
 
 - **Original:** terranx-map.md records these Thinker `Fix:` changes without an entry here:
@@ -174,6 +187,9 @@ it behind a switch turns the line into a TODO entry.
 - **Conventional rounds deal 1 damage** ("Combat odds"): Thinker's `ignore_reactor_power`
   (default on) uses reactor firepower.
 - **Drain energy amount** ("Drain energy"): Thinker multiplies by `conf.steal_energy_rate`.
+- **A flopped frame still runs keep-or-break** ("Frame"): Thinker's `mod_probe` flips
+  `prb_state` positive after the framed faction's Vendetta, so the flop also writes the
+  successful frame's Vendetta and skips keep-or-break.
 
 ## Variant files
 

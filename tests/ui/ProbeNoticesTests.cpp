@@ -232,3 +232,30 @@ TEST_CASE("NoTarget has no post-mission script", "[ui][probe]")
     RequireNoCopy_(notice, k_ActorId);
     RequireNoCopy_(notice, k_TargetId);
 }
+
+TEST_CASE("Frame notice copy reports the flop or the framing, to the actor alone", "[ui][probe]")
+{
+    ProbeFrameNoticeInteraction_t notice;
+    notice.actorId = k_ActorId;
+    notice.target = BaseNotice_(ProbeActionId_t::StealTech).target;
+    notice.framed.title = "Colonel";
+    notice.framed.leader = "Corazon Santiago";
+    notice.framed.noun = "Spartans";
+
+    notice.outcome = ProbeFrameOutcome_t::Framed;
+    std::optional<ProbeNoticeCopy_t> copy = ProbeFrameNoticeCopy(notice, k_ActorId);
+    REQUIRE(copy.has_value());
+    CHECK(copy->title == "Operations Director");
+    CHECK(copy->body
+          == "We have successfully framed the Spartans! Commissioner Pravin Lal has pronounced "
+             "Vendetta against Colonel Corazon Santiago!");
+    CHECK_FALSE(ProbeFrameNoticeCopy(notice, k_TargetId).has_value());
+
+    notice.outcome = ProbeFrameOutcome_t::Flopped;
+    copy = ProbeFrameNoticeCopy(notice, k_ActorId);
+    REQUIRE(copy.has_value());
+    CHECK(copy->body
+          == "Colonel Corazon Santiago has learned of our attempt to frame them and has "
+             "pronounced Vendetta!");
+    CHECK_FALSE(ProbeFrameNoticeCopy(notice, k_TargetId).has_value());
+}

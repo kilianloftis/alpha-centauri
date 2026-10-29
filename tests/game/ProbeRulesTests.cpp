@@ -32,7 +32,7 @@ const std::string k_SuccessFormula = R"("success_formula": {
     "defense": "probe_defense", "mission_strength": "morale", "escape_strength": "morale" })";
 
 const std::string k_Standing =
-    R"("may_keep_agreement": true, "hostile_act_on_break": false)";
+    R"("may_keep_agreement": true, "hostile_act_on_break": false, "may_frame": false)";
 
 const StatModifierEffect_t* FindProbeDefenseAtLevel_(const SocialRatingConfig_t& rConfig, int level)
 {
@@ -72,6 +72,12 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
           == FactionFilterKind_t::ActionTarget);
     REQUIRE(config.Find(ProbeActionId_t::StealTech) != nullptr);
     CHECK(config.Find(ProbeActionId_t::StealTech)->riskRepeat == 1);
+    CHECK(config.frameRisk == 1);
+    CHECK(config.Find(ProbeActionId_t::StealTech)->bMayFrame);
+    CHECK(config.Find(ProbeActionId_t::SabotageFacility)->bMayFrame);
+    CHECK_FALSE(config.Find(ProbeActionId_t::Infiltrate)->bMayFrame);
+    CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->bMayFrame);
+    CHECK_FALSE(config.Find(ProbeActionId_t::SubvertUnit)->bMayFrame);
     CHECK(config.Find(ProbeActionId_t::StealTech)->bMayKeepAgreement);
     CHECK_FALSE(config.Find(ProbeActionId_t::StealTech)->bHostileActOnBreak);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase) != nullptr);
@@ -126,8 +132,10 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
 {
     const auto parseAction = [](const std::string& rActionJson)
     {
-        const TempConfigFile file("probe_actions.json", "{ " + k_SuccessFormula
-                                  + R"(, "effects": [], "actions": [ )" + rActionJson + " ] }");
+        const TempConfigFile file("probe_actions.json",
+                                  "{ " + k_SuccessFormula
+                                      + R"(, "frame_risk": 1, "effects": [], "actions": [ )"
+                                      + rActionJson + " ] }");
         return ProbeActionConfigParser{}.ParseConfig(file.Path());
     };
     const std::string recordEntry =
@@ -168,13 +176,36 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
     CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
                                        "may_keep_agreement": true })"),
                       ContainsSubstring("hostile_act_on_break"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
+                                       "may_keep_agreement": true,
+                                       "hostile_act_on_break": false })"),
+                      ContainsSubstring("may_frame"));
+}
+
+TEST_CASE("ProbeActionConfigParser requires a non-negative integer frame_risk", "[probe][config]")
+{
+    const auto parseFrameRisk = [](const std::string& rFrameRiskJson)
+    {
+        const TempConfigFile file("probe_actions.json",
+                                  "{ " + k_SuccessFormula + rFrameRiskJson
+                                      + R"( "effects": [], "actions": [
+                                         { "id": "infiltrate", "target": "base", )"
+                                      + k_Standing + " } ] }");
+        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+    };
+
+    CHECK(parseFrameRisk(R"(, "frame_risk": 2,)").frameRisk == 2);
+    CHECK_THROWS_WITH(parseFrameRisk(","), ContainsSubstring("frame_risk"));
+    CHECK_THROWS_WITH(parseFrameRisk(R"(, "frame_risk": -1,)"), ContainsSubstring("frame_risk"));
+    CHECK_THROWS_WITH(parseFrameRisk(R"(, "frame_risk": 1.5,)"), ContainsSubstring("frame_risk"));
 }
 
 TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[probe][config]")
 {
     const TempConfigFile file("probe_actions.json",
                               "{ " + k_SuccessFormula
-                                  + R"(, "actions": [ { "id": "infiltrate", "target": "base", )"
+                                  + R"(, "frame_risk": 1, "actions": [
+                                         { "id": "infiltrate", "target": "base", )"
                                   + k_Standing + " } ] }");
     CHECK_THROWS_WITH(ProbeActionConfigParser{}.ParseConfig(file.Path()),
                       ContainsSubstring("effects"));
@@ -186,7 +217,7 @@ TEST_CASE("ProbeActionConfigParser requires success_formula's three formulas", "
     {
         const TempConfigFile file("probe_actions.json",
                                   R"({ "success_formula": )" + rOddsJson
-                                      + R"(, "effects": [],
+                                      + R"(, "frame_risk": 1, "effects": [],
                                          "actions": [ { "id": "infiltrate", "target": "base", )"
                                       + k_Standing + " } ] }");
         return ProbeActionConfigParser{}.ParseConfig(file.Path());

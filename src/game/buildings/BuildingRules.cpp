@@ -4,6 +4,7 @@
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
@@ -14,24 +15,6 @@
 
 namespace ac
 {
-
-namespace
-{
-
-bool BuildingIsHeadquarters_(const BuildingConfig_t& rBuilding)
-{
-    for (const EffectConfig_t& rEffect : rBuilding.effects)
-    {
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
-        if (pFlag && pFlag->flag == RuleFlagId_t::Headquarters)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-} // namespace
 
 bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding)
 {
@@ -83,7 +66,7 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
         {
             continue;
         }
-        if (rExclusions.excludeHq && BuildingIsHeadquarters_(*pBuilding))
+        if (rExclusions.excludeHq && ResolveFlag(pBuilding->effects, RuleFlagId_t::Headquarters))
         {
             continue;
         }

@@ -31,6 +31,7 @@
 #include "game/units/UnitDomain.h"
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
 
 #include <algorithm>
 #include <cmath>
@@ -231,19 +232,6 @@ bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAc
                                 rProbe.GetFaction().GetResearch().GetDiscoveredTechs());
 }
 
-bool ConfigHasFlag_(const std::vector<EffectConfig_t>& rEffects, RuleFlagId_t flag)
-{
-    for (const EffectConfig_t& rEffect : rEffects)
-    {
-        const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
-        if (pFlag && pFlag->flag == flag)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 bool SabotageFacilityOffered_(const BaseManager& rBase)
 {
     FacilityExclusions_t exclusions;
@@ -367,6 +355,18 @@ BreakOutcome_t BreakOutcomeFor_(DiplomaticStatus_t status, const ProbeActionConf
     return BreakOutcome_t::Vendetta;
 }
 
+// Factions are never removed, so one with no base left is out of the game.
+bool IsFrameCandidate_(const Faction& rFaction, const Faction& rActor, const Faction& rTarget)
+{
+    if (&rFaction == &rActor || &rFaction == &rTarget)
+    {
+        return false;
+    }
+    const DiplomacyLedger& rLedger = CurrentGameState().GetDiplomacyLedger();
+    return HasDiplomacy(rFaction) && rFaction.GetBaseCount() > 0
+        && rLedger.AreKnown(rActor.GetFactionId(), rFaction.GetFactionId());
+}
+
 } // namespace
 
 ProbeAftermath_t ResolveProbeAftermath(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction)
@@ -386,9 +386,63 @@ ProbeAftermath_t ResolveProbeAftermath(const HostileAct_t& rAct, const ProbeActi
     return aftermath;
 }
 
-bool IsHeadquarters(const BaseManager& rBase)
+bool ProbeMayFrame(const Faction& rActor, const Faction& rTarget,
+                   const ProbeActionConfig_t& rAction)
 {
-    return ResolveFlag(rBase, RuleFlagId_t::Headquarters);
+    // TODO: an AI actor with morale >= 5 frames the human (0x5A2E04); no AI probes yet.
+    return rAction.bMayFrame && rActor.IsPlayerControlled() && !rTarget.IsPlayerControlled()
+        && HasDiplomacy(rActor) && HasDiplomacy(rTarget);
+}
+
+std::vector<FactionId_t> FrameCandidates(const Faction& rActor, const Faction& rTarget)
+{
+    std::vector<FactionId_t> candidates;
+    for (const Faction& rFaction : CurrentGameState().Factions())
+    {
+        if (IsFrameCandidate_(rFaction, rActor, rTarget))
+        {
+            candidates.push_back(rFaction.GetFactionId());
+        }
+    }
+    return candidates;
+}
+
+std::optional<ProbeFrame_t> ResolveProbeFrame(const HostileAct_t& rAct,
+                                              std::optional<FactionId_t> framedId,
+                                              const ProbeRollResult_t& rRoll)
+{
+    // The binary resolves a frame only over an actor-victim agreement (0x5A4B2F); we resolve
+    // every frame (config/deviations/README.md).
+    if (!framedId.has_value())
+    {
+        return std::nullopt;
+    }
+    if (rRoll.missionSucceeded && rRoll.escaped)
+    {
+        return ProbeFrame_t{.outcome = ProbeFrameOutcome_t::Framed,
+                            .framedId = *framedId,
+                            .avenger = rAct.victim,
+                            .avengedOn = *framedId};
+    }
+    // TODO: a player framed by an AI gets FRAMEEXCUSE / PACTFRAMEEXCUSE (0x5A4C3E) instead;
+    // only the player frames yet. The flop's prb_state stays negative, so keep-or-break follows.
+    return ProbeFrame_t{.outcome = ProbeFrameOutcome_t::Flopped,
+                        .framedId = *framedId,
+                        .avenger = *framedId,
+                        .avengedOn = rAct.aggressor};
+}
+
+ProbeStanding_t ResolveProbeStanding(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction,
+                                     std::optional<FactionId_t> framedId,
+                                     const ProbeRollResult_t& rRoll)
+{
+    ProbeStanding_t standing;
+    standing.frame = ResolveProbeFrame(rAct, framedId, rRoll);
+    if (!standing.frame.has_value() || standing.frame->outcome == ProbeFrameOutcome_t::Flopped)
+    {
+        standing.aftermath = ResolveProbeAftermath(rAct, rAction);
+    }
+    return standing;
 }
 
 int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& rBase)
@@ -408,7 +462,7 @@ int GeneticPlagueKilled(const ProbeActionConfig_t& rAction, const BaseManager& r
         const ResearchManager& rResearch = rBase.GetFaction().GetResearch();
         for (const TechConfig_t& rTech : pTechs->GetAll())
         {
-            if (!ConfigHasFlag_(rTech.effects, RuleFlagId_t::IncGeneWarfareDefense))
+            if (!ResolveFlag(rTech.effects, RuleFlagId_t::IncGeneWarfareDefense))
             {
                 continue;
             }
@@ -484,7 +538,7 @@ namespace
 
 bool HqAllowsAction_(const ProbeActionConfig_t& rAction, const BaseManager& rBase)
 {
-    const bool bHq = IsHeadquarters(rBase);
+    const bool bHq = rBase.IsHeadquarters();
     if (rAction.bHqOnly && !bHq)
     {
         return false;
@@ -593,7 +647,7 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
 }
 
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-                const std::string& facilityId)
+                const std::string& facilityId, std::optional<FactionId_t> framedId)
 {
     int risk = rAction.risk;
     if (rAction.id == ProbeActionId_t::StealTech && rAction.riskRepeat.has_value())
@@ -609,16 +663,20 @@ int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget
         const BaseManager* pBase = AsBase(rTarget);
         if (pBase)
         {
-            if (IsHeadquarters(*pBase))
+            if (pBase->IsHeadquarters())
             {
                 risk = std::max(risk, rAction.protectedRisk);
             }
             const BuildingConfig_t* pFacility = pBase->GetBuildingManager().FindBuilding(facilityId);
-            if (pFacility && ConfigHasFlag_(pFacility->effects, RuleFlagId_t::HighRiskSabotage))
+            if (pFacility && ResolveFlag(pFacility->effects, RuleFlagId_t::HighRiskSabotage))
             {
                 risk = std::max(risk, rAction.protectedRisk);
             }
         }
+    }
+    if (framedId.has_value())
+    {
+        risk += CurrentGameState().GetGameData().probeActionsConfig->frameRisk;
     }
     return risk;
 }

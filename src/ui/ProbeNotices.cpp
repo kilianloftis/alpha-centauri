@@ -288,4 +288,27 @@ std::optional<ProbeNoticeCopy_t> ProbeNoticeCopy(const ProbeNoticeInteraction_t&
     return ProbeNoticeCopy_t{k_DirectorTitle, *outcomeBody};
 }
 
+// The script picks the framed leader's pronoun; we have no leader gender, so FRAMEFLOP takes its
+// plural form.
+std::optional<ProbeNoticeCopy_t> ProbeFrameNoticeCopy(const ProbeFrameNoticeInteraction_t& rNotice,
+                                                     FactionId_t audienceId)
+{
+    if (audienceId != rNotice.actorId)
+    {
+        return std::nullopt;
+    }
+    if (rNotice.outcome == ProbeFrameOutcome_t::Flopped)
+    {
+        return ProbeNoticeCopy_t{
+            k_DirectorTitle, rNotice.framed.title + " " + rNotice.framed.leader
+                                 + " has learned of our attempt to frame them and has pronounced "
+                                   "Vendetta!"};
+    }
+    return ProbeNoticeCopy_t{
+        k_DirectorTitle, "We have successfully framed the " + rNotice.framed.noun + "! "
+                             + rNotice.target.title + " " + rNotice.target.leader
+                             + " has pronounced Vendetta against " + rNotice.framed.title + " "
+                             + rNotice.framed.leader + "!"};
+}
+
 } // namespace ac

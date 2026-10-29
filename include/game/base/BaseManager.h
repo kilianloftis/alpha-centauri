@@ -152,6 +152,9 @@ public:
     // Checked when the tile becomes water.
     bool MayOccupyWater() const;
 
+    // RuleFlag headquarters among this base's effects.
+    bool IsHeadquarters() const;
+
     // SMAC BSTATE_RESEARCH_DATA_STOLEN: a successful steal-tech at this base.
     bool HasStolenResearch() const { return m_bStolenResearch; }
     void SetStolenResearch() { m_bStolenResearch = true; }

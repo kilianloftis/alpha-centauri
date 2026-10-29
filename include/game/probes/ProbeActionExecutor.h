@@ -44,10 +44,17 @@ public:
     std::vector<std::pair<ProbeActionId_t, std::string>> ListAvailableProbeActions(
         const Unit& rProbe, const Tile& rTile, GameState& rGameState) const;
 
+    // The factions the probe may implicate in actionId against rTile's target: FrameCandidates
+    // when ProbeMayFrame allows, else none.
+    std::vector<FactionId_t> ListFrameCandidates(const Unit& rProbe, ProbeActionId_t actionId,
+                                                 const Tile& rTile, GameState& rGameState) const;
+
     // Pays, rolls mission and escape, applies the effect, promotes on full success and destroys a
-    // failed probe.
+    // failed probe. framedId is the faction implicated; throws unless it is a FrameCandidates
+    // entry for an action ProbeMayFrame allows.
     ProbeActionResult_t TryProbeAction(Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile,
-                                       GameState& rGameState, const BuildingId_t& facilityId);
+                                       GameState& rGameState, const BuildingId_t& facilityId,
+                                       std::optional<FactionId_t> framedId);
 
 private:
     bool CanTryProbeAction_(const Unit& rUnit, const ProbeActionConfig_t& rAction,
@@ -66,8 +73,15 @@ private:
     ProbeActionResult_t ResolveProbeRoll_(Unit& rUnit, const ProbeActionConfig_t& rAction,
                                           const ProbeTarget_t& rTarget, GameState& rGameState,
                                           const BuildingId_t& facilityId,
+                                          std::optional<FactionId_t> framedId,
                                           ProbeActionResult_t result,
                                           const ProbeRollResult_t& roll);
+    std::optional<ProbeFrame_t> ApplyProbeStanding_(const Unit& rUnit,
+                                                    const ProbeActionConfig_t& rAction,
+                                                    const ProbeTarget_t& rTarget,
+                                                    GameState& rGameState,
+                                                    std::optional<FactionId_t> framedId,
+                                                    const ProbeRollResult_t& roll);
 
     ProbeActionResult_t FailMission_(Unit& rUnit, ProbeActionResult_t result) const;
     ProbeActionResult_t CaptureProbe_(Unit& rUnit, ProbeActionResult_t result) const;

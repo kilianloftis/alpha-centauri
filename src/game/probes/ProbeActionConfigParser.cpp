@@ -228,6 +228,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     const std::string context = ActionContext_(action.name);
     action.bMayKeepAgreement = RequireBool_(rActionJson, "may_keep_agreement", context);
     action.bHostileActOnBreak = RequireBool_(rActionJson, "hostile_act_on_break", context);
+    action.bMayFrame = RequireBool_(rActionJson, "may_frame", context);
     action.risk = rActionJson.value("risk", 0);
     if (rActionJson.contains("risk_repeat") && !rActionJson.at("risk_repeat").is_null())
     {
@@ -303,6 +304,16 @@ ProbeActionsConfig_t ProbeActionConfigParser::ParseConfig(const std::string& con
     config.successFormula.missionStrength =
         RequireFormula_(rOdds, "mission_strength", oddsContext);
     config.successFormula.escapeStrength = RequireFormula_(rOdds, "escape_strength", oddsContext);
+
+    if (!root.contains("frame_risk") || !root.at("frame_risk").is_number_integer())
+    {
+        throw std::runtime_error("probe_actions.json: missing required integer 'frame_risk'");
+    }
+    config.frameRisk = root.at("frame_risk").get<int>();
+    if (config.frameRisk < 0)
+    {
+        throw std::runtime_error("probe_actions.json: frame_risk must be >= 0");
+    }
 
     if (!root.contains("effects"))
     {

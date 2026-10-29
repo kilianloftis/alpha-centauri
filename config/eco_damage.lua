@@ -34,6 +34,8 @@ function eco_damage_formula()
         (minerals + mineral_offset - clean2 + virtual_minerals) / (1 + damage_reduction)
     local factor = math.max(0, math.floor((terraform - clean1) + mineral_term))
 
+    -- TODO: SMAC rounds to the nearest percent, (x + 50) / 100 (Thinker base.cpp, unverified
+    -- in terranx.exe).
     return math.floor(factor * techs * eco_scale / 300)
 end
 

@@ -301,6 +301,11 @@ bool BaseManager::MayOccupyWater() const
     return m_bMayOccupyWater || m_pBuildings->HasBuilding(k_PressureDomeBuildingId);
 }
 
+bool BaseManager::IsHeadquarters() const
+{
+    return ResolveFlag(*this, RuleFlagId_t::Headquarters);
+}
+
 PopulationManager& BaseManager::GetPopulation()
 {
     return *m_pPopulation;

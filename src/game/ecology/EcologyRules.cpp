@@ -92,7 +92,12 @@ EcoDamageInputs_t EcoDamageInputs(const BaseManager& rBase)
     const double damageReduction = ResolveBaseStat(
         rEffects, StatId_t::EcoDamageReduction, SeedFor(StatId_t::EcoDamageReduction), nullptr);
     inputs.damageReduction = FinalizeResolvedStat(damageReduction);
+    // TODO: SMAC counts tech_ranking − tech_count_transcendent (Thinker base.cpp, unverified in
+    // terranx.exe): starting and turn-1 free techs do not count, and each Transcendent Thought
+    // counts half.
     inputs.techs = static_cast<int>(rFaction.GetResearch().GetDiscoveredTechs().size());
+    // TODO: SMAC doubles eco damage once Voice of Planet exists under the Transcendence victory
+    // (Thinker base.cpp, unverified in terranx.exe); Voice_Of_Planet has no effects yet.
     inputs.ecoScale = ResolveBaseStat(rEffects, StatId_t::EcologicalDamage,
                                       SeedFor(StatId_t::EcologicalDamage), nullptr);
     return inputs;

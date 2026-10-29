@@ -633,7 +633,7 @@ struct ConditionEvaluator_
 
     bool operator()(const IsHeadquarters_t&) const
     {
-        return ctx.pBase != nullptr && ResolveFlag(*ctx.pBase, RuleFlagId_t::Headquarters);
+        return ctx.pBase != nullptr && ctx.pBase->IsHeadquarters();
     }
 
     bool operator()(const SubjectDomain_t& rDomain) const
@@ -1118,17 +1118,22 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
 namespace
 {
 
+bool DeclaresUnconditionalFlag_(const EffectConfig_t& rConfig, RuleFlagId_t flagId)
+{
+    if (rConfig.condition.has_value())
+    {
+        return false;
+    }
+    const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rConfig.effect);
+    return pFlag && pFlag->flag == flagId;
+}
+
 template <std::ranges::input_range Range>
 bool ResolveFlagFromEffects_(Range&& effects, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : effects)
     {
-        if (rEffect.config->condition.has_value())
-        {
-            continue;
-        }
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
+        if (DeclaresUnconditionalFlag_(*rEffect.config, flagId))
         {
             return true;
         }
@@ -1223,6 +1228,12 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 {
     return ResolveFlagFromEffects_(rBase.GetBaseEffects().effects, flagId);
+}
+
+bool ResolveFlag(std::span<const EffectConfig_t> effects, RuleFlagId_t flagId)
+{
+    return std::ranges::any_of(effects, [flagId](const EffectConfig_t& rConfig)
+                               { return DeclaresUnconditionalFlag_(rConfig, flagId); });
 }
 
 namespace

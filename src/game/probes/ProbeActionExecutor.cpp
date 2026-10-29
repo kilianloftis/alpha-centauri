@@ -18,12 +18,15 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/Faction.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/GameState.h"
 
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace ac
 {
@@ -99,8 +102,20 @@ void FillNoticeNames_(const GameState& rGameState, ProbeNoticeInteraction_t& rNo
     }
 }
 
+void AnnounceProbeFrame_(GameState& rGameState, const Faction& rActor, const Faction& rTarget,
+                         const ProbeFrame_t& rFrame)
+{
+    ProbeFrameNoticeInteraction_t notice;
+    notice.actorId = rActor.GetFactionId();
+    notice.target = FactionCopy_(rTarget);
+    notice.framed = FactionCopy_(rGameState.RequireFaction(rFrame.framedId));
+    notice.outcome = rFrame.outcome;
+    EnqueueForPlayer(rGameState, notice);
+}
+
 void AnnounceProbe_(GameState& rGameState, const Faction& rActor, ProbeActionId_t actionId,
-                    const ProbeTarget_t& rTarget, const ProbeActionResult_t& rResult)
+                    const ProbeTarget_t& rTarget, const ProbeActionResult_t& rResult,
+                    const std::optional<ProbeFrame_t>& frame)
 {
     const FactionId_t actorId = rActor.GetFactionId();
     const FactionId_t targetId = rTarget.rFaction.GetFactionId();
@@ -120,6 +135,35 @@ void AnnounceProbe_(GameState& rGameState, const Faction& rActor, ProbeActionId_
     notice.result = rResult;
     FillNoticeNames_(rGameState, notice);
     EnqueueForPlayer(rGameState, notice);
+    if (frame.has_value())
+    {
+        AnnounceProbeFrame_(rGameState, rActor, rTarget.rFaction, *frame);
+    }
+}
+
+std::vector<FactionId_t> FrameCandidatesFor_(const Faction& rActor,
+                                             const ProbeActionConfig_t& rAction,
+                                             const ProbeTarget_t& rTarget)
+{
+    if (!ProbeMayFrame(rActor, rTarget.rFaction, rAction))
+    {
+        return {};
+    }
+    return FrameCandidates(rActor, rTarget.rFaction);
+}
+
+void RequireFrameCandidate_(const Faction& rActor, const ProbeActionConfig_t& rAction,
+                            const ProbeTarget_t& rTarget, std::optional<FactionId_t> framedId)
+{
+    if (!framedId.has_value())
+    {
+        return;
+    }
+    const std::vector<FactionId_t> candidates = FrameCandidatesFor_(rActor, rAction, rTarget);
+    if (std::find(candidates.begin(), candidates.end(), *framedId) == candidates.end())
+    {
+        throw std::invalid_argument("TryProbeAction: framedId is not a frame candidate");
+    }
 }
 
 } // namespace
@@ -172,6 +216,26 @@ std::vector<std::pair<ProbeActionId_t, std::string>> ProbeActionExecutor::ListAv
     return actions;
 }
 
+std::vector<FactionId_t> ProbeActionExecutor::ListFrameCandidates(const Unit& rProbe,
+                                                                 ProbeActionId_t actionId,
+                                                                 const Tile& rTile,
+                                                                 GameState& rGameState) const
+{
+    RequireCurrentGameState(rGameState);
+    const ProbeActionConfig_t* pAction = m_rProbeActions.Find(actionId);
+    if (!pAction)
+    {
+        return {};
+    }
+    const std::optional<ProbeTarget_t> target =
+        ResolveEligibleTarget_(rProbe, rTile, *pAction, rGameState);
+    if (!target.has_value())
+    {
+        return {};
+    }
+    return FrameCandidatesFor_(rProbe.GetFaction(), *pAction, *target);
+}
+
 bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rTile,
                                               GameState& rGameState) const
 {
@@ -206,7 +270,7 @@ bool ProbeActionExecutor::WouldContactDestroyProbe(const Unit& rProbe, const Til
 
 ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile, GameState& rGameState,
-    const BuildingId_t& facilityId)
+    const BuildingId_t& facilityId, std::optional<FactionId_t> framedId)
 {
     RequireCurrentGameState(rGameState);
     ProbeActionResult_t result;
@@ -225,7 +289,12 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
 
     const std::optional<ProbeTarget_t> target =
         ResolveEligibleTarget_(rUnit, rTile, *pAction, rGameState);
-    if (!target.has_value() || !TryPayProbeCost_(rUnit, *pAction, *target))
+    if (!target.has_value())
+    {
+        return result;
+    }
+    RequireFrameCandidate_(rUnit.GetFaction(), *pAction, *target, framedId);
+    if (!TryPayProbeCost_(rUnit, *pAction, *target))
     {
         return result;
     }
@@ -236,10 +305,11 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
         ApplyProbeActionEffect(rUnit, *pAction, *target, rGameState, facilityId, result, m_rRng);
     }
 
-    const int risk = MissionRisk(*pAction, *target, facilityId);
+    const int risk = MissionRisk(*pAction, *target, facilityId, framedId);
     result.chances = ProbeChancesFor(rUnit, *target, risk);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
-    return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, result, roll);
+    return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, facilityId, framedId, result,
+                             roll);
 }
 
 std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveContactTarget_(
@@ -263,7 +333,8 @@ ProbeActionResult_t ProbeActionExecutor::DestroyOnProbeContact_(Unit& rUnit,
     result.detail = ProbeContactDestroyed_t{ProbeHunterSource(rTarget)};
     Faction& rActor = rUnit.GetFaction();
     rActor.GetUnitManager().DestroyUnit(rUnit);
-    AnnounceProbe_(rGameState, rActor, ProbeActionId_t::Infiltrate, rTarget, result);
+    AnnounceProbe_(rGameState, rActor, ProbeActionId_t::Infiltrate, rTarget, result,
+                   std::nullopt);
     return result;
 }
 
@@ -304,21 +375,17 @@ bool ProbeActionExecutor::TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_
 
 ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     Unit& rUnit, const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-    GameState& rGameState, const BuildingId_t& facilityId, ProbeActionResult_t result,
-    const ProbeRollResult_t& roll)
+    GameState& rGameState, const BuildingId_t& facilityId, std::optional<FactionId_t> framedId,
+    ProbeActionResult_t result, const ProbeRollResult_t& roll)
 {
-    if (ProbeDeclaresHostileAct(rAction))
-    {
-        const HostileAct_t act = ProbeHostileAct(rUnit, rAction, rTarget, roll);
-        const ProbeAftermath_t aftermath = ResolveProbeAftermath(act, rAction);
-        ApplyProbeAftermath(rGameState, act, aftermath, m_rRng);
-    }
+    const std::optional<ProbeFrame_t> frame =
+        ApplyProbeStanding_(rUnit, rAction, rTarget, rGameState, framedId, roll);
 
     const Faction& rActor = rUnit.GetFaction();
     if (!roll.missionSucceeded)
     {
         ProbeActionResult_t failed = FailMission_(rUnit, result);
-        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, failed);
+        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, failed, frame);
         return failed;
     }
 
@@ -335,13 +402,36 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
     if (!roll.escaped || !ReturnProbeHome_(rUnit, rGameState))
     {
         ProbeActionResult_t captured = CaptureProbe_(rUnit, result);
-        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, captured);
+        AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, captured, frame);
         return captured;
     }
 
     FinalizeProbeSuccess_(rUnit, result);
-    AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, result);
+    AnnounceProbe_(rGameState, rActor, rAction.id, rTarget, result, frame);
     return result;
+}
+
+std::optional<ProbeFrame_t> ProbeActionExecutor::ApplyProbeStanding_(
+    const Unit& rUnit, const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
+    GameState& rGameState, std::optional<FactionId_t> framedId, const ProbeRollResult_t& roll)
+{
+    if (!ProbeDeclaresHostileAct(rAction))
+    {
+        return std::nullopt;
+    }
+    const HostileAct_t act = ProbeHostileAct(rUnit, rAction, rTarget, roll);
+    const ProbeStanding_t standing = ResolveProbeStanding(act, rAction, framedId, roll);
+    if (standing.frame.has_value())
+    {
+        // TODO: a frame that held also sets DIPLO_WANT_REVENGE and treaty bit 0x40 (0x5A53BE);
+        // there is no revenge record yet.
+        ApplyProbeVendetta(rGameState, standing.frame->avenger, standing.frame->avengedOn);
+    }
+    if (standing.aftermath.has_value())
+    {
+        ApplyProbeAftermath(rGameState, act, *standing.aftermath, m_rRng);
+    }
+    return standing.frame;
 }
 
 ProbeActionResult_t ProbeActionExecutor::FailMission_(Unit& rUnit,

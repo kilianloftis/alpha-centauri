@@ -1,6 +1,9 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/combat/CombatResolver.h"
+#include "game/probes/ProbeActionConfig.h"
 #include "ui/IWorldView.h"
 #include "ui/world/CameraInputController.h"
 #include "ui/world/UnitOrderInputController.h"
@@ -9,6 +12,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -195,6 +199,18 @@ private:
     void ContinueBombardPlayback_(std::shared_ptr<BombardPlayback_t> pPlayback, size_t index);
     void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
     void OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTile);
+    // Opens the frame picker when the probe may implicate someone, else runs the action.
+    void CommitProbeAction_(Unit& rProbe, ProbeActionId_t actionId, const Tile& rTargetTile,
+                            const BuildingId_t& facilityId);
+    void OpenFramePicker_(Unit& rProbe, ProbeActionId_t actionId, const Tile& rTargetTile,
+                          const BuildingId_t& facilityId,
+                          const std::vector<FactionId_t>& rCandidates);
+    std::function<void()> FrameChoiceAction_(Unit& rProbe, ProbeActionId_t actionId,
+                                             const Tile& rTargetTile,
+                                             const BuildingId_t& facilityId,
+                                             std::optional<FactionId_t> framedId);
+    void RunProbeAction_(Unit& rProbe, ProbeActionId_t actionId, const Tile& rTargetTile,
+                         const BuildingId_t& facilityId, std::optional<FactionId_t> framedId);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
     void OpenDisbandMenu_(Unit& rUnit);
     void HandleDisbandChoice_(Unit& rUnit);

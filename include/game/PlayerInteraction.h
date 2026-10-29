@@ -138,6 +138,16 @@ struct ProbeNoticeInteraction_t
     ProbeActionResult_t result;
 };
 
+// A probe implicated another faction, and whether the frame held. Follows the mission's own
+// notice; names are snapshotted at enqueue.
+struct ProbeFrameNoticeInteraction_t
+{
+    FactionId_t actorId = 0;
+    ProbeNoticeFaction_t target;
+    ProbeNoticeFaction_t framed;
+    ProbeFrameOutcome_t outcome = ProbeFrameOutcome_t::Framed;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -149,6 +159,7 @@ using PlayerInteraction_t = std::variant<
     PactObligationInteraction_t,
     TerritoryEntryInteraction_t,
     ProbeNoticeInteraction_t,
+    ProbeFrameNoticeInteraction_t,
     AtrocityNoticeInteraction_t
 >;
 

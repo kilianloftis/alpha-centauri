@@ -35,6 +35,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/production/IConstructable.h"
 #include "game/production/ProductionManager.h"
+#include "game/probes/ProbeActionExecutor.h"
 #include "game/probes/ProbeActionMutations.h"
 #include "game/probes/ProbeActionResult.h"
 #include "game/probes/ProbeRules.h"
@@ -192,7 +193,7 @@ BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
 {
     rGame.MakeBase(*rGame.pAi, 8, 14);
     BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 8, 8);
-    REQUIRE_FALSE(IsHeadquarters(rTarget));
+    REQUIRE_FALSE(rTarget.IsHeadquarters());
     return rTarget;
 }
 
@@ -269,7 +270,8 @@ ProbeActionResult_t StealTechAgainstAi_(ProbeGame_& rGame)
     BaseManager& enemy = rGame.MakeBase(*rGame.pAi, 8, 8);
     Unit& probe = rGame.MakeUnit(*rGame.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     return rGame.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::StealTech, enemy.GetTile(), rGame.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), rGame.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 }
 
 } // namespace
@@ -285,7 +287,8 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     const int xpBefore = probe.GetXp();
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+            probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -312,7 +315,8 @@ TEST_CASE("A busted infiltrate still sets the infiltration bit", "[probe][action
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
@@ -331,7 +335,7 @@ TEST_CASE("TryProbeAction incite riots when the extra drone tips the base", "[pr
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
             probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
-            BuildingId_t{});
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -359,7 +363,7 @@ TEST_CASE("TryProbeAction incite reports increased activity when talents still o
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
             probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
-            BuildingId_t{});
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -385,7 +389,7 @@ TEST_CASE("TryProbeAction incite on an already-rioting base stays Riot", "[probe
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
             probe, ProbeActionId_t::InciteDroneRiots, enemy.GetTile(), game.fixtures.state,
-            BuildingId_t{});
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -407,7 +411,7 @@ TEST_CASE("TryProbeAction incite notifies the player when their base is the targ
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
             probe, ProbeActionId_t::InciteDroneRiots, playerBase.GetTile(), game.fixtures.state,
-            BuildingId_t{});
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -431,7 +435,7 @@ TEST_CASE("TryProbeAction incite does not notify when neither side is the player
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
             probe, ProbeActionId_t::InciteDroneRiots, target.GetTile(), game.fixtures.state,
-            BuildingId_t{});
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -451,7 +455,8 @@ TEST_CASE("TryProbeAction drain_energy transfers credits", "[probe][action]")
 
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+            probe, ProbeActionId_t::DrainEnergy, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -471,7 +476,8 @@ TEST_CASE("TryProbeAction steal_tech grants any tech the target knows that the a
 
     const ProbeActionResult_t result =
         game.fixtures.state.GetProbeActions().TryProbeAction(
-            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+            probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state,
+            BuildingId_t{}, std::nullopt);
 
     REQUIRE((result.outcome == ProbeActionOutcome_t::Succeeded
              || result.outcome == ProbeActionOutcome_t::Captured));
@@ -626,7 +632,8 @@ TEST_CASE("A successful steal-tech sets the base stolen-research flag for risk_r
 
     Unit& first = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t firstResult = game.fixtures.state.GetProbeActions().TryProbeAction(
-        first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        first, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
     CHECK(firstResult.chances.risk == pAction->risk);
     REQUIRE((firstResult.outcome == ProbeActionOutcome_t::Succeeded
              || firstResult.outcome == ProbeActionOutcome_t::Captured));
@@ -634,7 +641,8 @@ TEST_CASE("A successful steal-tech sets the base stolen-research flag for risk_r
 
     Unit& second = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeActionResult_t secondResult = game.fixtures.state.GetProbeActions().TryProbeAction(
-        second, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        second, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
     CHECK(secondResult.chances.risk == *pAction->riskRepeat);
 }
 
@@ -946,7 +954,8 @@ TEST_CASE("Mind Control adds 4 to the actor's mind-control total, not the former
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&target.GetFaction() == game.pPlayer);
@@ -964,7 +973,8 @@ TEST_CASE("Total Thought Control adds 4 to the actor's mind-control total",
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(game.fixtures.state.GetMindControlLedger().Total(game.pPlayer->GetFactionId()) == 4);
@@ -982,7 +992,8 @@ TEST_CASE("A failed Mind Control still adds 4 to the actor's mind-control total"
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&target.GetFaction() == game.pAi);
@@ -998,7 +1009,8 @@ TEST_CASE("Subvert Unit adds 1 to the actor's mind-control total", "[probe][acti
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     REQUIRE(&victim.GetFaction() == game.pPlayer);
@@ -1017,7 +1029,8 @@ TEST_CASE("A failed Subvert Unit adds nothing to the actor's mind-control total"
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
     CHECK(&victim.GetFaction() == game.pAi);
@@ -1165,7 +1178,7 @@ TEST_CASE("Mind Control transfers the tile garrison to the actor",
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::MindControlBase, target.GetTile(), game.fixtures.state,
-        BuildingId_t{});
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(&garrison.GetFaction() == game.pPlayer);
@@ -1407,7 +1420,7 @@ TEST_CASE("A Punishment Sphere at a unit's home base halves its subversion dista
     ProbeGame_ game;
     AddDistanceBuildings_(game, pool);
     BaseManager& home = game.MakeBase(*game.pAi, 8, 8);
-    REQUIRE(IsHeadquarters(home));
+    REQUIRE(home.IsHeadquarters());
     MakeSubvertDivisionInexact_(*game.pAi, 4);
     Unit& probe = game.MakeUnit(*game.pPlayer, 19, 9, {"test_chassis", "Probe_Team"});
     Unit& pod = game.MakeUnit(*game.pAi, 20, 8,
@@ -1584,7 +1597,7 @@ TEST_CASE("Sabotage's protected risk and the drain and plague formulas come from
 
     ProbeActionConfig_t& rSabotage = MutableAction_(game, ProbeActionId_t::SabotageFacility);
     rSabotage.protectedRisk = 3;
-    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center") == 3);
+    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center", std::nullopt) == 3);
 
     game.pAi->GetEconomy().AddEnergy(1000);
     ProbeActionConfig_t& rDrain = MutableAction_(game, ProbeActionId_t::DrainEnergy);
@@ -1740,7 +1753,8 @@ TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
@@ -1940,7 +1954,8 @@ TEST_CASE("A covert probe's steal-tech is still attributed", "[probe][action][di
         game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
@@ -1958,7 +1973,7 @@ TEST_CASE("Total Thought Control against a Treaty partner does not declare Vende
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
         probe, ProbeActionId_t::TotalThoughtControl, target.GetTile(), game.fixtures.state,
-        BuildingId_t{});
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
@@ -1973,7 +1988,8 @@ TEST_CASE("Subverting a covert unit is still attributed", "[probe][action][diplo
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "covert"});
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::SubvertUnit, victim.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
@@ -2013,8 +2029,8 @@ TEST_CASE("Mission risk uses stolen-research on the base, and at least 2 at an H
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& hq = game.MakeBase(*game.pAi, 8, 8);
     BaseManager& colony = game.MakeBase(*game.pAi, 14, 8);
-    REQUIRE(IsHeadquarters(hq));
-    REQUIRE_FALSE(IsHeadquarters(colony));
+    REQUIRE(hq.IsHeadquarters());
+    REQUIRE_FALSE(colony.IsHeadquarters());
     const Unit& atHq = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const Unit& atColony =
         game.MakeUnit(*game.pPlayer, 13, 9, {"test_chassis", "Probe_Team"}, &home);
@@ -2026,15 +2042,15 @@ TEST_CASE("Mission risk uses stolen-research on the base, and at least 2 at an H
     const ProbeActionsConfig_t& rActions = *game.fixtures.dataContext.probeActionsConfig;
     const ProbeActionConfig_t& rSteal = *rActions.Find(ProbeActionId_t::StealTech);
     const ProbeActionConfig_t& rSabotage = *rActions.Find(ProbeActionId_t::SabotageFacility);
-    CHECK(MissionRisk(rSteal, colonyTarget, "") == 0);
+    CHECK(MissionRisk(rSteal, colonyTarget, "", std::nullopt) == 0);
     colony.SetStolenResearch();
-    CHECK(MissionRisk(rSteal, colonyTarget, "") == 1);
-    CHECK(MissionRisk(rSabotage, colonyTarget, "Command_Center") == 1);
-    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center") == 2);
+    CHECK(MissionRisk(rSteal, colonyTarget, "", std::nullopt) == 1);
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Command_Center", std::nullopt) == 1);
+    CHECK(MissionRisk(rSabotage, hqTarget, "Command_Center", std::nullopt) == 2);
     colony.GetBuildingManager().AddBuilding("Perimeter_Defense");
-    CHECK(MissionRisk(rSabotage, colonyTarget, "Perimeter_Defense") == 2);
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Perimeter_Defense", std::nullopt) == 2);
     colony.GetBuildingManager().AddBuilding("Tachyon_Field");
-    CHECK(MissionRisk(rSabotage, colonyTarget, "Tachyon_Field") == 2);
+    CHECK(MissionRisk(rSabotage, colonyTarget, "Tachyon_Field", std::nullopt) == 2);
 }
 
 TEST_CASE("A probe may steal any tech the target knows that the actor does not",
@@ -2202,7 +2218,8 @@ TEST_CASE("A probe the target's hunter out-ranks dies on contact without paying,
         probe, rEnemyTile, game.fixtures.state));
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::MindControlBase, rEnemyTile, game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::MindControlBase, rEnemyTile, game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     CHECK(result.outcome == ProbeActionOutcome_t::MissionFailed);
     const auto* pContact = std::get_if<ProbeContactDestroyed_t>(&result.detail);
@@ -2301,7 +2318,8 @@ TEST_CASE("A surviving probe returns to the nearest occupiable own base",
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     REQUIRE(result.outcome == ProbeActionOutcome_t::Succeeded);
     CHECK(&probe.GetTile() == &nearer.GetTile());
@@ -2317,7 +2335,8 @@ TEST_CASE("A surviving probe with no legal return base is captured",
     const UnitId_t probeId = probe.GetUnitId();
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     CHECK(result.outcome == ProbeActionOutcome_t::Captured);
     CHECK(game.fixtures.state.GetDiplomacyLedger().HasInfiltration(
@@ -2336,7 +2355,8 @@ TEST_CASE("A sea probe cannot return to a land base and is captured",
     const UnitId_t probeId = probe.GetUnitId();
 
     const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+        probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), game.fixtures.state,
+        BuildingId_t{}, std::nullopt);
 
     CHECK(result.outcome == ProbeActionOutcome_t::Captured);
     CHECK_FALSE(UnitAlive_(*game.pPlayer, probeId));
@@ -2369,4 +2389,293 @@ TEST_CASE("Sabotage facility is offered and an empty id wipes production",
                                    {}, result, rng));
     CHECK(std::holds_alternative<ProbeProductionWiped_t>(result.detail));
     CHECK(enemy.GetProduction().GetCurrentProduction() != &rItem);
+}
+
+namespace
+{
+
+// Another AI faction the player knows.
+Faction& AddKnownAi_(ProbeGame_& rGame)
+{
+    auto pFaction = std::make_unique<Faction>(
+        rGame.fixtures.state.AllocateFactionId(), false, rGame.fixtures.factionDefinition,
+        rGame.fixtures.dataContext, rGame.fixtures.state.GetWorldMap(), rGame.fixtures.settings,
+        rGame.fixtures.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);
+    Faction& rFaction = rGame.fixtures.state.AddFaction(std::move(pFaction));
+    rGame.fixtures.state.GetDiplomacyLedger().SetKnown(rGame.pPlayer->GetFactionId(),
+                                                       rFaction.GetFactionId(), true);
+    return rFaction;
+}
+
+// A known AI holding a base at (x, 14), to implicate.
+Faction& AddFramedFaction_(ProbeGame_& rGame, int x)
+{
+    Faction& rFramed = AddKnownAi_(rGame);
+    rGame.MakeBase(rFramed, x, 14);
+    return rFramed;
+}
+
+// Low enough that the mission and the strict escape draw both pass with frame_risk added.
+void ForceFramedSureThing_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    const int frameRisk = rGame.fixtures.dataContext.probeActionsConfig->frameRisk;
+    MutableAction_(rGame, actionId).risk = -1 - frameRisk;
+}
+
+ProbeActionResult_t FramedStealTech_(ProbeGame_& rGame, const Faction& rFramed)
+{
+    BaseManager& home = rGame.MakeBase(*rGame.pPlayer, 8, 2);
+    BaseManager& enemy = rGame.MakeBase(*rGame.pAi, 8, 8);
+    Unit& probe = rGame.MakeUnit(*rGame.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    return rGame.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), rGame.fixtures.state,
+        BuildingId_t{}, rFramed.GetFactionId());
+}
+
+DiplomaticStatus_t StatusBetween_(ProbeGame_& rGame, const Faction& rA, const Faction& rB)
+{
+    return rGame.fixtures.state.GetDiplomacyLedger().GetStatus(rA.GetFactionId(),
+                                                               rB.GetFactionId());
+}
+
+bool FrameNoticeQueued_(ProbeGame_& rGame, ProbeFrameOutcome_t outcome)
+{
+    return rGame.fixtures.state.GetPlayerInteractions().AnyOf(
+        [outcome](const QueuedInteraction_t& rQueued)
+        {
+            const auto* pNotice = std::get_if<ProbeFrameNoticeInteraction_t>(&rQueued.payload);
+            return pNotice && pNotice->outcome == outcome;
+        });
+}
+
+} // namespace
+
+TEST_CASE("A frame that holds sets the victim against the framed faction and spares the actor",
+          "[probe][action][diplomacy][frame]")
+{
+    ProbeGame_ game;
+    SignTreaty_(game);
+    Faction& rFramed = AddFramedFaction_(game, 28);
+    ForceFramedSureThing_(game, ProbeActionId_t::StealTech);
+    // A break would be visible, so an aftermath that ran could not hide behind a zero draw.
+    MutableAction_(game, ProbeActionId_t::StealTech).bMayKeepAgreement = false;
+
+    const ProbeActionResult_t result = FramedStealTech_(game, rFramed);
+
+    REQUIRE(result.outcome == ProbeActionOutcome_t::Succeeded);
+    CHECK(StatusBetween_(game, *game.pAi, rFramed) == DiplomaticStatus_t::Vendetta);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+    CHECK(StatusBetween_(game, *game.pPlayer, rFramed) == DiplomaticStatus_t::Neutral);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
+    CHECK(PlayerBlemishes_(game) == 0);
+    CHECK(FrameNoticeQueued_(game, ProbeFrameOutcome_t::Framed));
+}
+
+TEST_CASE("A frame that flops sets the framed faction against the actor, then the victim keeps "
+          "or breaks",
+          "[probe][action][diplomacy][frame]")
+{
+    SECTION("A victim that may not keep breaks")
+    {
+        ProbeGame_ game;
+        SignTreaty_(game);
+        Faction& rFramed = AddFramedFaction_(game, 28);
+        ForceMissionFailure_(game, ProbeActionId_t::StealTech);
+        MutableAction_(game, ProbeActionId_t::StealTech).bMayKeepAgreement = false;
+
+        const ProbeActionResult_t result = FramedStealTech_(game, rFramed);
+
+        REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+        CHECK(StatusBetween_(game, rFramed, *game.pPlayer) == DiplomaticStatus_t::Vendetta);
+        CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+        CHECK(StatusBetween_(game, *game.pAi, rFramed) == DiplomaticStatus_t::Neutral);
+        CHECK(FrameNoticeQueued_(game, ProbeFrameOutcome_t::Flopped));
+    }
+    SECTION("A victim that may keep keeps with friction")
+    {
+        ProbeGame_ game;
+        SignPact_(game);
+        Faction& rFramed = AddFramedFaction_(game, 28);
+        ForceMissionFailure_(game, ProbeActionId_t::StealTech);
+
+        const ProbeActionResult_t result = FramedStealTech_(game, rFramed);
+
+        REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+        CHECK(StatusBetween_(game, rFramed, *game.pPlayer) == DiplomaticStatus_t::Vendetta);
+        CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Pact);
+        CHECK(AiFrictionTowardPlayer_(game) >= 0);
+        CHECK(AiFrictionTowardPlayer_(game) < 4);
+    }
+}
+
+TEST_CASE("A frame against a victim with no agreement still holds or flops",
+          "[probe][action][diplomacy][frame]")
+{
+    SECTION("A frame that holds spares the actor the victim's Vendetta")
+    {
+        ProbeGame_ game;
+        Faction& rFramed = AddFramedFaction_(game, 28);
+        ForceFramedSureThing_(game, ProbeActionId_t::StealTech);
+
+        const ProbeActionResult_t result = FramedStealTech_(game, rFramed);
+
+        REQUIRE(result.outcome == ProbeActionOutcome_t::Succeeded);
+        CHECK(StatusBetween_(game, *game.pAi, rFramed) == DiplomaticStatus_t::Vendetta);
+        CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Neutral);
+        CHECK(FrameNoticeQueued_(game, ProbeFrameOutcome_t::Framed));
+    }
+    SECTION("A frame that flops sets both the framed faction and the victim against the actor")
+    {
+        ProbeGame_ game;
+        Faction& rFramed = AddFramedFaction_(game, 28);
+        ForceMissionFailure_(game, ProbeActionId_t::StealTech);
+
+        const ProbeActionResult_t result = FramedStealTech_(game, rFramed);
+
+        REQUIRE(result.outcome == ProbeActionOutcome_t::MissionFailed);
+        CHECK(StatusBetween_(game, rFramed, *game.pPlayer) == DiplomaticStatus_t::Vendetta);
+        CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+        CHECK(FrameNoticeQueued_(game, ProbeFrameOutcome_t::Flopped));
+    }
+}
+
+TEST_CASE("An unframed probe leaves a known third faction alone",
+          "[probe][action][diplomacy][frame]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+    Faction& rFramed = AddFramedFaction_(game, 28);
+
+    const ProbeActionResult_t result = StealTechAgainstAi_(game);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Pact);
+    CHECK(StatusBetween_(game, *game.pAi, rFramed) == DiplomaticStatus_t::Neutral);
+    CHECK(StatusBetween_(game, *game.pPlayer, rFramed) == DiplomaticStatus_t::Neutral);
+}
+
+TEST_CASE("Framing adds frame_risk to the mission risk", "[probe][risk][frame]")
+{
+    ProbeGame_ game;
+    Faction& rFramed = AddFramedFaction_(game, 28);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeTarget_t target =
+        *ResolveProbeTarget(probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    const ProbeActionConfig_t& rSteal = RequireAction_(game, ProbeActionId_t::StealTech);
+    REQUIRE(game.fixtures.dataContext.probeActionsConfig->frameRisk == 1);
+
+    CHECK(MissionRisk(rSteal, target, "", rFramed.GetFactionId())
+          == MissionRisk(rSteal, target, "", std::nullopt) + 1);
+
+    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{},
+        rFramed.GetFactionId());
+    CHECK(result.chances.risk == rSteal.risk + 1);
+}
+
+TEST_CASE("Only may_frame actions by the player against an AI offer frame candidates",
+          "[probe][action][frame]")
+{
+    ProbeGame_ game;
+    Faction& rFramed = AddFramedFaction_(game, 28);
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = MakeMindControlTarget_(game);
+    game.pPlayer->GetEconomy().AddEnergy(10000);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    ProbeActionExecutor& rProbes = game.fixtures.state.GetProbeActions();
+    GameState& rState = game.fixtures.state;
+
+    CHECK(rProbes.ListFrameCandidates(probe, ProbeActionId_t::StealTech, enemy.GetTile(), rState)
+          == std::vector<FactionId_t>{rFramed.GetFactionId()});
+    CHECK(rProbes.ListFrameCandidates(probe, ProbeActionId_t::Infiltrate, enemy.GetTile(), rState)
+              .empty());
+    CHECK(rProbes
+              .ListFrameCandidates(probe, ProbeActionId_t::MindControlBase, enemy.GetTile(),
+                                   rState)
+              .empty());
+    CHECK_THROWS_AS(rProbes.TryProbeAction(probe, ProbeActionId_t::MindControlBase,
+                                           enemy.GetTile(), rState, BuildingId_t{},
+                                           rFramed.GetFactionId()),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(rProbes.TryProbeAction(probe, ProbeActionId_t::StealTech, enemy.GetTile(),
+                                           rState, BuildingId_t{}, game.pAi->GetFactionId()),
+                    std::invalid_argument);
+    CHECK(UnitAlive_(*game.pPlayer, probe.GetUnitId()));
+}
+
+TEST_CASE("Frame candidates are the other living factions the actor knows",
+          "[probe][rules][frame]")
+{
+    ProbeGame_ game;
+    Faction& rKnown = AddFramedFaction_(game, 28);
+    Faction& rUnknown = AddFramedFaction_(game, 20);
+    DiplomacyLedger& rLedger = game.fixtures.state.GetDiplomacyLedger();
+    rLedger.SetKnown(game.pPlayer->GetFactionId(), rUnknown.GetFactionId(), false);
+    AddKnownAi_(game);
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures);
+    rLedger.SetKnown(game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), true);
+
+    CHECK(FrameCandidates(*game.pPlayer, *game.pAi)
+          == std::vector<FactionId_t>{rKnown.GetFactionId()});
+
+    const ProbeActionConfig_t& rSteal = RequireAction_(game, ProbeActionId_t::StealTech);
+    CHECK(ProbeMayFrame(*game.pPlayer, *game.pAi, rSteal));
+    CHECK_FALSE(ProbeMayFrame(*game.pAi, rKnown, rSteal));
+    CHECK_FALSE(ProbeMayFrame(*game.pPlayer, rPlanet, rSteal));
+    CHECK_FALSE(ProbeMayFrame(*game.pPlayer, *game.pAi,
+                              RequireAction_(game, ProbeActionId_t::Infiltrate)));
+}
+
+TEST_CASE("A frame resolves only a framed act, held on success and flopped otherwise",
+          "[probe][rules][frame]")
+{
+    ProbeGame_ game;
+    Faction& rFramed = AddFramedFaction_(game, 28);
+    const FactionId_t framedId = rFramed.GetFactionId();
+    const HostileAct_t act = PlayerActAgainstAi_(game);
+    const ProbeRollResult_t success{.missionSucceeded = true, .escaped = true};
+    const ProbeRollResult_t captured{.missionSucceeded = true, .escaped = false};
+
+    CHECK_FALSE(ResolveProbeFrame(act, std::nullopt, success).has_value());
+
+    const std::optional<ProbeFrame_t> framed = ResolveProbeFrame(act, framedId, success);
+    REQUIRE(framed.has_value());
+    CHECK(framed->outcome == ProbeFrameOutcome_t::Framed);
+    CHECK(framed->avenger == game.pAi->GetFactionId());
+    CHECK(framed->avengedOn == framedId);
+
+    const std::optional<ProbeFrame_t> flopped = ResolveProbeFrame(act, framedId, captured);
+    REQUIRE(flopped.has_value());
+    CHECK(flopped->outcome == ProbeFrameOutcome_t::Flopped);
+    CHECK(flopped->avenger == framedId);
+    CHECK(flopped->avengedOn == game.pPlayer->GetFactionId());
+}
+
+TEST_CASE("Only a frame that held skips the probe aftermath", "[probe][rules][frame]")
+{
+    ProbeGame_ game;
+    SignTreaty_(game);
+    Faction& rFramed = AddFramedFaction_(game, 28);
+    const HostileAct_t act = PlayerActAgainstAi_(game);
+    const ProbeActionConfig_t& rSteal = RequireAction_(game, ProbeActionId_t::StealTech);
+    const ProbeRollResult_t success{.missionSucceeded = true, .escaped = true};
+    const ProbeRollResult_t failed{.missionSucceeded = false, .escaped = false};
+
+    const ProbeStanding_t unframed = ResolveProbeStanding(act, rSteal, std::nullopt, success);
+    CHECK_FALSE(unframed.frame.has_value());
+    CHECK(unframed.aftermath.has_value());
+
+    const ProbeStanding_t held =
+        ResolveProbeStanding(act, rSteal, rFramed.GetFactionId(), success);
+    REQUIRE(held.frame.has_value());
+    CHECK(held.frame->outcome == ProbeFrameOutcome_t::Framed);
+    CHECK_FALSE(held.aftermath.has_value());
+
+    const ProbeStanding_t flopped =
+        ResolveProbeStanding(act, rSteal, rFramed.GetFactionId(), failed);
+    REQUIRE(flopped.frame.has_value());
+    CHECK(flopped.frame->outcome == ProbeFrameOutcome_t::Flopped);
+    CHECK(flopped.aftermath.has_value());
 }

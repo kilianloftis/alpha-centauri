@@ -824,7 +824,7 @@ BaseManager* Faction::GetHeadquarters()
 {
     for (BaseManager& rBase : Bases())
     {
-        if (ResolveFlag(rBase, RuleFlagId_t::Headquarters))
+        if (rBase.IsHeadquarters())
         {
             return &rBase;
         }
@@ -836,7 +836,7 @@ const BaseManager* Faction::GetHeadquarters() const
 {
     for (const BaseManager& rBase : Bases())
     {
-        if (ResolveFlag(rBase, RuleFlagId_t::Headquarters))
+        if (rBase.IsHeadquarters())
         {
             return &rBase;
         }

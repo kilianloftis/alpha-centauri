@@ -121,6 +121,8 @@ struct ProbeActionConfig_t
     // obligations). Otherwise a Pact steps down to Treaty, and Truce/Treaty become Vendetta with
     // no blemish and no obligations. SMAC action_id >= 6.
     bool bHostileActOnBreak = false;
+    // A human actor against an AI may implicate another faction (terranx-map.md Frame).
+    bool bMayFrame = false;
     // Incite Drone Riots only: remaining assimilation turns added, and the per-citizen cap.
     int assimilationTurnsAdded = 0;
     double assimilationTurnsCapFactor = 0.0;
@@ -144,6 +146,8 @@ struct ProbeActionConfig_t
 struct ProbeActionsConfig_t
 {
     ProbeSuccessFormula_t successFormula;
+    // Added to the mission risk when the probe implicates another faction.
+    int frameRisk = 0;
     // Baselines injected into every faction's pool (garrison weight, subversion cost scale).
     std::vector<EffectConfig_t> effects;
     std::vector<ProbeActionConfig_t> actions;

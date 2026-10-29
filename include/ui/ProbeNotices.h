@@ -18,4 +18,8 @@ struct ProbeNoticeCopy_t
 std::optional<ProbeNoticeCopy_t> ProbeNoticeCopy(const ProbeNoticeInteraction_t& rNotice,
                                                 FactionId_t audienceId);
 
+// FRAMEFLOP or FRAMED, for the actor alone.
+std::optional<ProbeNoticeCopy_t> ProbeFrameNoticeCopy(const ProbeFrameNoticeInteraction_t& rNotice,
+                                                     FactionId_t audienceId);
+
 } // namespace ac

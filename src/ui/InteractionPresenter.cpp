@@ -126,6 +126,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             },
             [this](const TerritoryEntryInteraction_t& rEntry) { PresentTerritoryEntry_(rEntry); },
             [this](const ProbeNoticeInteraction_t& rNotice) { PresentProbeNotice_(rNotice); },
+            [this](const ProbeFrameNoticeInteraction_t& rNotice) {
+                PresentProbeFrameNotice_(rNotice);
+            },
             [this](const AtrocityNoticeInteraction_t& rNotice) {
                 PresentAtrocityNotice_(rNotice);
             },
@@ -470,6 +473,18 @@ void InteractionPresenter::PresentProbeNotice_(const ProbeNoticeInteraction_t& r
         return;
     }
     PresentNotice_(NoticeInteraction_t{std::nullopt, copy->title, copy->body, rNotice.cameraTile});
+}
+
+void InteractionPresenter::PresentProbeFrameNotice_(const ProbeFrameNoticeInteraction_t& rNotice)
+{
+    const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
+    const std::optional<ProbeNoticeCopy_t> copy = ProbeFrameNoticeCopy(rNotice, audienceId);
+    if (!copy.has_value())
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+    PresentNotice_(NoticeInteraction_t{std::nullopt, copy->title, copy->body, std::nullopt});
 }
 
 void InteractionPresenter::PresentAtrocityNotice_(const AtrocityNoticeInteraction_t& rNotice)

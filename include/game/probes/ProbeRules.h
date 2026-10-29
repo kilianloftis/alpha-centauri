@@ -59,9 +59,9 @@ ProbeChance_t ComputeProbeChances(int probeStrength, int escapeStrength, int ris
 
 // The action's risk, or steal-tech's repeat risk when the base already has stolen research.
 // Targeted sabotage at a headquarters, or at a high_risk_sabotage facility, is at least the
-// action's protected_risk.
+// action's protected_risk. Implicating framedId adds frame_risk.
 int MissionRisk(const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
-                const std::string& facilityId);
+                const std::string& facilityId, std::optional<FactionId_t> framedId);
 
 // ComputeProbeChances for this probe and target: success_formula's strengths from its effective
 // morale and the target's defense, the target's success scale, and the target's bust chance. The probe's failure scale and save
@@ -133,7 +133,49 @@ struct ProbeAftermath_t
 // pair holding Truce, Treaty or Pact over an attributed act has an agreement to keep.
 ProbeAftermath_t ResolveProbeAftermath(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction);
 
-bool IsHeadquarters(const BaseManager& rBase);
+// Whether rActor may implicate another faction in rAction against rTarget: the action's
+// may_frame, a player actor and an AI target, both with diplomacy.
+bool ProbeMayFrame(const Faction& rActor, const Faction& rTarget,
+                   const ProbeActionConfig_t& rAction);
+
+// The factions rActor may implicate against rTarget: every other living faction with diplomacy
+// that rActor knows. No Vendetta filter.
+std::vector<FactionId_t> FrameCandidates(const Faction& rActor, const Faction& rTarget);
+
+enum class ProbeFrameOutcome_t
+{
+    // The victim blames the framed faction, and its keep-or-break toward the actor is skipped.
+    Flopped,
+};
+
+struct ProbeFrame_t
+{
+    ProbeFrameOutcome_t outcome = ProbeFrameOutcome_t::Framed;
+    FactionId_t framedId = 0;
+    // ApplyProbeVendetta's pair: the victim against the framed faction, or on a flop the framed
+    // faction against the actor.
+    FactionId_t avenger = 0;
+    FactionId_t avengedOn = 0;
+};
+
+// A successful mission and escape frames framedId; anything else flops. Empty without a frame.
+// Unlike the binary, the actor and victim need not hold an agreement.
+std::optional<ProbeFrame_t> ResolveProbeFrame(const HostileAct_t& rAct,
+                                              std::optional<FactionId_t> framedId,
+                                              const ProbeRollResult_t& rRoll);
+
+// Every standing write a hostile probe makes, in order: the frame's Vendetta, then the victim's
+// keep-or-break toward the actor.
+struct ProbeStanding_t
+{
+    std::optional<ProbeFrame_t> frame;
+    std::optional<ProbeAftermath_t> aftermath;
+};
+
+// A frame that held spares the actor the aftermath; a flop or no frame does not.
+ProbeStanding_t ResolveProbeStanding(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction,
+                                     std::optional<FactionId_t> framedId,
+                                     const ProbeRollResult_t& rRoll);
 
 // Pop removed by a genetic plague at rBase: the action's kill_formula times the base's
 // plague_damage_scale, capped at size − 1.

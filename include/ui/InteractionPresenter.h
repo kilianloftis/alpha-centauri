@@ -49,6 +49,7 @@ private:
     void PresentPactObligation_(const PactObligationInteraction_t& rObligation);
     void PresentTerritoryEntry_(const TerritoryEntryInteraction_t& rEntry);
     void PresentProbeNotice_(const ProbeNoticeInteraction_t& rNotice);
+    void PresentProbeFrameNotice_(const ProbeFrameNoticeInteraction_t& rNotice);
     void PresentAtrocityNotice_(const AtrocityNoticeInteraction_t& rNotice);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);

@@ -450,10 +450,24 @@ passes the strength check; only HSA's coin can still eliminate the probe.
 
 **Frame** (`FRAME` `0x690668` at `0x5A2F1B`, `FRAMEMENU` `0x690670`): after a
 hostile mission against an AI, a human actor may pick another commlink faction
-as the implicated party (stored in `Veh.probe_action` bits 5+). An AI actor
-with morale ≥ 5 may implicate the human `RankingFactionIDUnk1` when that
-target has a commlink and is not at Vendetta. Busting while a frame is set
-negates the id (`0x5A31D1`).
+as the implicated party (stored in `Veh.probe_action` bits 5+, `shl 5` at
+`0x5A30BE`). An AI actor with morale ≥ 5 may implicate the human
+`RankingFactionIDUnk1` (`0x5A2E04`) when that target has a commlink and is not
+at Vendetta. Busting while a frame is set negates the id (`0x5A31D1`).
+
+- Offer (`[ebp-0x18]` action id at `0x5A2DCD`): ids `1..5` (`jge 6` / `jg 0` at
+  `0x5A2DDA`–`0x5A2DDE`: steal tech, sabotage, drain, incite, assassinate) and
+  `8` (free captured leader, `cmp 8` / `jne 0x5A3111` at `0x5A2DE0`). Infiltrate
+  `0`, unit subversion `−1`, mind-control city `6` (and TTC) and plague `7` skip
+  the menu.
+- Candidates (loop at `0x5A2FDB`): not the actor, not the target, actor→them
+  `DIPLO_COMMLINK` (`test 0x8` at `0x5A2FFF`), alive (`FactionStatus[1]`
+  `0x9A64E9` at `0x5A3009`). No Vendetta filter.
+- A nonzero framed id adds 1 to the mission risk (`inc [ebp-0x30]` at
+  `0x5A3101`), after any targeted-sabotage minimum.
+- The aftermath's `has_treaty(actor, target, 0x7)` return (`0x5A4B2F`) and the
+  surrendered-Pact return (`0x5A4B47`) come before the frame branches, so a
+  frame against a victim with no Truce/Treaty/Pact writes nothing.
 
 - Frame flop (`prb_state < 0`, `0x5A4BA0`): `FactionStatus` `0x9A64E8` bit
   of the framed id is the human test. AI framed: `FRAMEFLOP`;
@@ -464,6 +478,15 @@ negates the id (`0x5A31D1`).
   `0x5A4E55`. SP otherwise: `FRAMEEXCUSE`; a yes calls
   `treaty_on(actor, framed, VENDETTA)` at `0x5A4EB8`. Then the target's
   excuse dialogs still name the actor.
+- After the AI-framed flop's `treaty_on`, `neg edi` at `0x5A4C37` stores the
+  framed id back into `prb_state` still negative. The human-framed test
+  (`je 0x5A4EE7` at `0x5A4C5B`) skips the human block, and with an AI target
+  `0x5A4EF8` jumps to `0x5A53B3` with `eax` unchanged: `jle 0x5A5515` skips
+  the successful-frame write, so keep-or-break between actor and target runs.
+  Thinker's `mod_probe` instead sets `prb_state = -prb_state` (positive) after
+  that `treaty_on` (`probe.cpp` "FRAMEFLOP"), so its `prb_state > 0` block also
+  writes the successful frame's Vendetta and skips keep-or-break. Not marked
+  `Fix:`.
 - Human target (`is_human` at the `EXCUSE` / `PACTEXCUSE` / `NETEXCUSE`
   block `0x5A4EE7`): the incident is with the **actor**, not the framed
   faction. The successful-frame path is not reached. MP mind-control-city or
@@ -471,10 +494,11 @@ negates the id (`0x5A31D1`).
   (`0x5A4FC4`).
 - Successful frame (`prb_state > 0`, `0x5A53B3`): `treaty_on(target, framed,
   COMMLINK|VENDETTA|0x40)` at `0x5A53C2`, `set_treaty` `DIPLO_WANT_REVENGE`;
-  `FRAMEJOB` / `FRAMED`. No `cause_friction` and no blemish write.
+  `FRAMEJOB` / `FRAMED`, then `jmp 0x5A5816` (`0x5A5510`). No `cause_friction`
+  and no blemish write.
 
-The two `cause_friction` sites (`0x5A55D0`, `0x5A5791`) run only after that
-frame-success return, and only when the pair still has Truce/Treaty/Pact
+The two `cause_friction` sites (`0x5A55D0`, `0x5A5791`) run only when no frame
+succeeded, and only when the pair still has Truce/Treaty/Pact
 (`has_treaty` mask `0x7` at `0x5A4B2B`; Vendetta skips the whole aftermath).
 Args are `cause_friction(target, actor, game_randv(4))` — delta `0..3`,
 victim resents the **actor**. Thinker's `mod_probe` matches the frame

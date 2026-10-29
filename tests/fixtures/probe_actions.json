@@ -61,12 +61,14 @@
       }
     }
   ],
+  "frame_risk": 1,
   "actions": [
     {
       "id": "infiltrate",
       "name": "Infiltrate Datalinks",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": false,
       "hostile_act_on_break": false,
       "risk": 0,
       "on_success_effects": [
@@ -83,6 +85,7 @@
       "name": "Procure Research Data",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 0,
       "risk_repeat": 1
@@ -95,6 +98,7 @@
       "name": "Drain Energy Reserves",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 0
     },
@@ -103,6 +107,7 @@
       "name": "Activate Sabotage Virus (Random)",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 0,
       "on_success_effects": [
@@ -122,6 +127,7 @@
       "name": "Activate Sabotage Virus (Facility)",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 1
     },
@@ -130,6 +136,7 @@
       "name": "Incite Drone Riots",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 0,
       "assimilation_turns_added": 10,
@@ -140,6 +147,7 @@
       "name": "Assassinate Prominent Researchers",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": true,
       "hostile_act_on_break": false,
       "risk": 1,
       "hq_only": true
@@ -149,6 +157,7 @@
       "name": "Engage Mind Control Probe",
       "target": "base",
       "may_keep_agreement": false,
+      "may_frame": false,
       "hostile_act_on_break": true,
       "risk": 0,
       "not_hq": true,
@@ -169,6 +178,7 @@
       "name": "Attempt Total Thought Control",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": false,
       "hostile_act_on_break": true,
       "risk": 1,
       "not_hq": true,
@@ -192,6 +202,7 @@
       "name": "Introduce Genetic Plague",
       "target": "base",
       "may_keep_agreement": true,
+      "may_frame": false,
       "hostile_act_on_break": true,
       "risk": 0,
       "required_tech": "gene_splicing",
@@ -209,6 +220,7 @@
       "name": "Mind Control Unit",
       "target": "unit",
       "may_keep_agreement": true,
+      "may_frame": false,
       "hostile_act_on_break": false,
       "risk": 0,
       "cost": {
