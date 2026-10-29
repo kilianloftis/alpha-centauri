@@ -24,19 +24,6 @@ std::size_t RequireIndex_(AtrocitySeverityId_t id)
 
 } // namespace
 
-std::string_view AtrocitySeverityLabel(AtrocitySeverityId_t id)
-{
-    switch (id)
-    {
-    case AtrocitySeverityId_t::Simple:
-        return "simple";
-    case AtrocitySeverityId_t::Major:
-        return "major";
-    }
-    throw std::runtime_error("Atrocity severity has no label: "
-                             + std::to_string(static_cast<int>(id)));
-}
-
 const AtrocitySeverityConfig_t& AtrocitiesConfig_t::For(AtrocitySeverityId_t id) const
 {
     return severities[RequireIndex_(id)];

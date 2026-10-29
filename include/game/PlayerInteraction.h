@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/atrocities/AtrocityConfig.h"
 #include "game/diplomacy/DiplomaticStatus.h"
 #include "game/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
@@ -110,6 +111,17 @@ struct ProbeNoticeFaction_t
     std::string adjective;
 };
 
+// An atrocity was committed. Names are snapshotted at enqueue so the presenter does not
+// look the factions up again.
+struct AtrocityNoticeInteraction_t
+{
+    std::string perpetratorName;
+    std::optional<std::string> victimName;
+    AtrocitySeverityId_t severity = AtrocitySeverityId_t::Simple;
+    AtrocityExcuse_t excuse = AtrocityExcuse_t::None;
+    std::optional<int> sanctionUntilYear;
+};
+
 // A probe mission finished. Names and the camera tile are snapshotted at enqueue so
 // the presenter does not look the target up again.
 struct ProbeNoticeInteraction_t
@@ -136,7 +148,8 @@ using PlayerInteraction_t = std::variant<
     ArtifactLinkInteraction_t,
     PactObligationInteraction_t,
     TerritoryEntryInteraction_t,
-    ProbeNoticeInteraction_t
+    ProbeNoticeInteraction_t,
+    AtrocityNoticeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

@@ -66,6 +66,8 @@ TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
     CHECK_FALSE(config.For(DiplomaticStatus_t::Neutral).bMayAttack);
     CHECK(config.defensiveObligationMode == DefensiveObligationMode_t::JoinAsDefender);
     CHECK(config.frictionMax == 20);
+    CHECK(config.blemishesMax == 99);
+    CHECK(config.breakAgreementBlemishes == 1);
 }
 
 TEST_CASE("The diplomacy parser rejects a missing or invalid friction_max", "[diplomacy][parser]")
@@ -78,6 +80,33 @@ TEST_CASE("The diplomacy parser rejects a missing or invalid friction_max", "[di
                     std::runtime_error);
     CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_friction_max_zero.json",
                                  [](nlohmann::json& j) { j["friction_max"] = 0; }),
+                    std::runtime_error);
+}
+
+TEST_CASE("The diplomacy parser rejects a missing or invalid blemishes_max", "[diplomacy][parser]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_blemishes_max.json",
+                                 [](nlohmann::json& j) { j.erase("blemishes_max"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_blemishes_max_string.json",
+                                 [](nlohmann::json& j) { j["blemishes_max"] = "99"; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_blemishes_max_zero.json",
+                                 [](nlohmann::json& j) { j["blemishes_max"] = 0; }),
+                    std::runtime_error);
+}
+
+TEST_CASE("The diplomacy parser rejects a missing or invalid break_agreement_blemishes",
+          "[diplomacy][parser]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_break_blemishes.json",
+                                 [](nlohmann::json& j) { j.erase("break_agreement_blemishes"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_break_blemishes_string.json",
+                                 [](nlohmann::json& j) { j["break_agreement_blemishes"] = "1"; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_break_blemishes_negative.json",
+                                 [](nlohmann::json& j) { j["break_agreement_blemishes"] = -1; }),
                     std::runtime_error);
 }
 

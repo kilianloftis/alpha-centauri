@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/atrocities/AtrocityConfig.h"
+#include "game/diplomacy/DiplomacyConfig.h"
 #include "game/faction/FactionConfig.h"
 #include "game/base/BaseTypes.h"
 
@@ -15,14 +16,6 @@ class Faction;
 // Atrocity decisions; AtrocityMutations carries them out. The escalation rule, the legality gate
 // and the duration curve are separate game rules that happen to be consulted together.
 
-// Why an act was not answered for. Decided once, so the notice does not re-derive it.
-enum class AtrocityExcuse_t
-{
-    None,
-    CharterRepealed,
-    ProgenitorParty,
-};
-
 struct AtrocityOutcome_t
 {
     // A perpetrator named as its own victim is victimless.
@@ -36,6 +29,9 @@ struct AtrocityOutcome_t
     std::optional<int> sanctionYears;
     bool bUniversalVendetta = false;
     bool bExpelFromCouncil = false;
+    // Friction is pairwise and needs a diplomatic victim; blemishes land on any counted act.
+    int friction = 0;
+    BlemishChange_t blemishes;
 };
 
 // The Charter is named first because a repeal excuses everyone; a Progenitor party keeps the

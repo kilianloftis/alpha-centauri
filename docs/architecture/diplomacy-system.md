@@ -31,8 +31,8 @@ graph TB
     end
 
     subgraph "Ruleset (GameDataContext)"
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>config/diplomacy.json]
-        DiplomacyCalculator[DiplomacyCalculator<br/>ClampFriction]
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>config/diplomacy.json]
+        DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes]
     end
 
     subgraph "What a status permits (DiplomaticPermissionRules)"
@@ -48,6 +48,7 @@ graph TB
         CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
         HostileActAgainst[HostileAct_t / HostileActAgainst<br/>attributed unless a side is covert]
         VendettaRules[VendettaFromHostileAct / VendettaWithdrawsTerritory<br/>HonoredObligationCascades / BombardHostileActs]
+        AgreementBreak[IsAgreement / AgreementBreakBlemishes]
     end
 
     subgraph "Transition effects (DiplomaticTransitionMutations)"
@@ -55,12 +56,17 @@ graph TB
         ExpireStatuses[ExpireDiplomaticStatuses<br/>TurnStart]
         CancelTreaty[CancelTreaty<br/>one-sided StepDown]
         ApplyHostileAct[ApplyHostileAct<br/>ignores unattributed acts;<br/>sneak attack unless may_attack]
+        ApplyAtrocityVendetta[ApplyAtrocityVendetta<br/>sneak; no agreement-break blemish]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
         VendettaImpl[EnterVendetta_ / DeclareVendetta_<br/>private, take VendettaKind_t]
         RaiseObligations[RaiseDefensiveObligations_<br/>private, checks each partner in turn]
         HonorDecline[HonorDefensiveObligation / DeclineDefensiveObligation<br/>carry VendettaKind_t]
         EvacuateTerritory[EvacuateUnitsFromTerritory<br/>EvacuateUnitsSharingWith]
+    end
+
+    subgraph "Standing (DiplomaticStandingMutations)"
+        ApplyStanding[ApplyFriction / ApplyBlemishes]
     end
 
     subgraph "Hostile act sources"
@@ -117,13 +123,15 @@ graph TB
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
     Probe --> ApplyHostileAct
-    Atrocity --> ApplyHostileAct
+    Atrocity --> ApplyAtrocityVendetta
     Combat --> HostileActAgainst
     Probe --> HostileActAgainst
     HostileActAgainst --> OwnerKnown
     ApplyHostileAct -->|VendettaFromHostileAct| VendettaRules
     VendettaRules -->|may_attack| PermissionRules
     ApplyHostileAct -->|SneakAttack| VendettaImpl
+    ApplyAtrocityVendetta -->|SneakAttack| VendettaImpl
+    ApplyAtrocityVendetta --> RaiseObligations
     DeclareVendetta -->|Declaration| VendettaImpl
     JoinVendetta -->|Declaration| VendettaImpl
     VendettaImpl -->|HasDiplomacy| PermissionRules
@@ -140,6 +148,13 @@ graph TB
     ApplyStatusChange -->|rules lost| EvacuateTerritory
     ApplyStatusChange --> DiplomacyConfig
     DiplomacyCalculator --> DiplomacyConfig
+    ApplyStanding --> DiplomacyCalculator
+    ApplyStanding -->|SetFriction / SetBlemishes| DiplomacyLedger
+    Atrocity -->|counted blemishes; friction if diplomatic victim| ApplyStanding
+    CancelTreaty --> AgreementBreak
+    DeclareVendetta --> AgreementBreak
+    ApplyHostileAct --> AgreementBreak
+    AgreementBreak --> ApplyStanding
     Movement[MovementRules / StepEvaluator<br/>EvacuateTerritoryRules] --> PermissionRules
     PermissionRules --> DiplomacyConfig
     PermissionRules --> DiplomacyLedger
@@ -175,9 +190,9 @@ sets: a pair is either in them or not.
 |---|---|---|
 | `m_statuses` | `FactionPair` (symmetric) | `Neutral` / `Truce` / `Treaty` / `Pact` / `Vendetta`, and how many turns the pair has held it |
 | `m_known` | `FactionPair` (symmetric) | the two have met; a precondition for every action |
-| `m_grievances` | `DirectedFactionPair` | **holder**'s friction toward **against** (0–`frictionMax`) — A may resent B without B resenting A |
+| `m_friction` | `DirectedFactionPair` | **holder**'s friction toward **against** (0–`frictionMax`) — A may resent B without B resenting A |
 | `m_infiltration` | `DirectedFactionPair` | **infiltrator** has a probe foothold in **target** — emphatically one-way |
-| `m_integrity` | `FactionId_t` | a faction's own reputation for keeping its word; not about any pair |
+| `m_blemishes` | `FactionId_t` | a faction's blemish count (0–`blemishesMax`); not about any pair |
 
 - **Known-ness** is set by `FirstContactResolver` during visibility rebuilds, and by
   `TradeCommFrequency_t` as a trade item (introducing a third party). Native life is never met:
@@ -187,13 +202,22 @@ sets: a pair is either in them or not.
   contact is mutual.
 - **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
   `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
-- **Integrity and grievances are stored, not yet written.** `DiplomacyLedger` keeps the maps.
-  `DiplomacyCalculator::ClampFriction` keeps a stored total in `[0, frictionMax]` from
-  `diplomacy.json`. Mutation writers are not built yet. A counted major's universal Vendetta goes
-  through `JoinVendetta` (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions
-  only, and never native life. See `atrocity-system.md`. Whether a faction has ever been the
-  victim of an atrocity is `AtrocityLedger::HasVictimized` / `HasCommittedMajorAgainst`, not a
-  grievance total.
+- **Friction and blemishes** are written through `DiplomaticStandingMutations`
+  (`ApplyFriction` / `ApplyBlemishes`). The ledger stores; `DiplomacyCalculator::NextFriction` /
+  `NextBlemishes` add, raise to a floor, and clamp to `[0, frictionMax]` / `[0, blemishesMax]`.
+  The writers apply what their rule decided: `ResolveAtrocity` writes friction only toward a
+  victim with diplomacy (`HasDiplomacy`) and blemishes on every counted act. Victimless counted
+  majors add `blemishes` with no floor. An agreement break only follows a status native life
+  never holds. Atrocity amounts live on `atrocities.json` severities (`friction`, `blemishes`,
+  `blemishes_floor`, `repeat_blemishes`); `ResolveAtrocity` picks first or repeat from prior
+  `HasVictimizedAtLeast` when the act has a victim, before anything is written.
+  `break_agreement_blemishes` lives in `diplomacy.json`. Cancelling an agreement or declaring
+  Vendetta from one (menu, trade, or sneak `ApplyHostileAct`) writes that blemish;
+  `HonorDefensiveObligation` and `ApplyAtrocityVendetta` do not. Probe, combat, terraform
+  and talk gifts are not wired yet. A counted major's universal Vendetta goes through `JoinVendetta`
+  (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions only, and never
+  native life. See `atrocity-system.md`. Whether a faction has ever been the victim of an
+  atrocity is `AtrocityLedger::HasVictimized` / `HasVictimizedAtLeast`, not a friction total.
 - **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionMutations.h`):
   proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
   hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
@@ -219,7 +243,9 @@ one. What a mod tunes is each status's **rules**, in `config/diplomacy.json`:
 requires all five statuses and every key but `effects`, and refuses a duration or a
 `defensive_obligation` on a status with nowhere to step down to. It also requires the top-level
 `defensive_obligation_mode` (see [the defensive obligation](#declaring-vendetta-and-the-defensive-obligation))
-and `friction_max` (integer > 0; `DiplomacyCalculator::ClampFriction`).
+`friction_max` (integer > 0; `DiplomacyCalculator::NextFriction`), `blemishes_max`
+(integer > 0; `NextBlemishes`), and `break_agreement_blemishes` (integer ≥ 0). Atrocity
+friction and blemishes live on `atrocities.json` severities.
 
 A status's `effects` may only be `FactionPair` `StatModifier` entries on a stat some rule
 resolves toward a partner: `commerce_rate`, and `probe_actor_cost`, which a probe quote
@@ -282,11 +308,12 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 | Kind | Entry point | Started by | Territory | Shared tiles and bases |
 |---|---|---|---|---|
 | Declaration | `DeclareVendetta`, `JoinVendetta` | the diplomacy menu's Declare Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
-| Sneak attack | `ApplyHostileAct` | a hostile act | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+| Sneak attack | `ApplyHostileAct`, `ApplyAtrocityVendetta` | a hostile act, or an atrocity against a victim | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
 Both run through the private `EnterVendetta_`: the status change and, for a declaration, the
-withdrawal. `DeclareVendetta_` then raises the target's partners' obligations. Both take a
-`VendettaKind_t`.
+withdrawal. `DeclareVendetta_` then raises the target's partners' obligations. `ApplyAtrocityVendetta`
+raises them the same way, without an agreement-break blemish. `EnterVendetta_` and
+`DeclareVendetta_` take a `VendettaKind_t`.
 
 The territory withdrawal is part of declaring, not a rule of the Vendetta status, which allows
 entering territory. It runs only where the previous status let units in: breaking a Treaty at
@@ -311,6 +338,8 @@ Starting a conflict:
   `TradeDeclareVendetta_t` (the item's giver declares on the third party), and by breaking an
   agreement at a territory border (`BreakAgreementAndContinue`);
 - `ApplyHostileAct`: a hostile act, below, as a sneak attack;
+- `ApplyAtrocityVendetta`: an atrocity against a diplomatic victim, as a sneak attack, without
+  an agreement-break blemish;
 - honoring a defensive obligation under `SeparateDeclaration`, with the obligation's kind.
 
 Entering a conflict on the defending side:
@@ -376,8 +405,12 @@ covert unit is never identified.
 - `ProbeActionExecutor`, with `ProbeHostileAct`: the act against the targeted unit or base, also
   attributed when `ProbeDetected` says the target identified the sender. **Stub:** the detection
   roll is not implemented and nothing is detected yet.
-- `CommitAtrocity`, for the victim, whether or not the atrocity's penalties apply. An atrocity is
-  always attributed, even when a covert unit commits it.
+
+`CommitAtrocity` calls `ApplyAtrocityVendetta` for the victim, counted or not: sneak Vendetta
+and the victim's Pact obligations, without the agreement-break blemish (`atrocity` /
+`major_atrocity` do not call `double_cross`; see `terranx-map.md`). Combat that already ran
+`ApplyHostileAct` then `CommitAtrocity` still stacks both writes: the Vendetta is already in
+place, and the atrocity standing is a separate `ApplyBlemishes`.
 
 ## TradeItem_t and TradeKind_t
 
@@ -447,7 +480,9 @@ save-game serialisation work to exist first. Recorded in
 | Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
 | What does accepting change? | `DiplomaticProposalMutations::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
-| What stored friction is in range? | `DiplomacyCalculator::ClampFriction` |
+| What is the next stored friction / blemish total, in range? | `DiplomacyCalculator::NextFriction` / `NextBlemishes` |
+| Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
+| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, and `DeclareVendetta` (including sneak `ApplyHostileAct`). `ApplyAtrocityVendetta` and `HonorDefensiveObligation` do not. |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built
@@ -463,5 +498,6 @@ save-game serialisation work to exist first. Recorded in
   probe mission (other than infiltrate or Total Thought Control) is attributed even for a
   Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
-- **Integrity and grievance writers.** `ClampFriction` is ready. Nothing writes `m_grievances` or
-  `m_integrity` yet. Mood and repute captions are UI over those integers.
+- **Probe, combat, terraform and talk standing.** Atrocity and agreement-break writers are in.
+  Probe frame/excuse, combat `cause_friction`, terraform, and talk gifts are not. Mood and
+  repute captions are UI over the stored integers.

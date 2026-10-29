@@ -1,6 +1,8 @@
 {
   "defensive_obligation_mode": "JoinAsDefender",
   "friction_max": 20,
+  "blemishes_max": 99,
+  "break_agreement_blemishes": 1,
   "statuses": {
     "Neutral": {
       "enter_territory": true,

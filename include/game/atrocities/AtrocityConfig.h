@@ -4,13 +4,12 @@
 
 #include <array>
 #include <cstddef>
-#include <string_view>
 
 namespace ac
 {
 
 // The two forbidden-act tiers the Datalinks name. Closed: a config file configures these,
-// it does not add new ones.
+// it does not add new ones. Ordered mildest first; AtrocityLedger::HasVictimizedAtLeast compares.
 enum class AtrocitySeverityId_t
 {
     Simple,
@@ -20,9 +19,13 @@ enum class AtrocitySeverityId_t
 inline constexpr std::size_t k_AtrocitySeverityCount =
     magic_enum::enum_count<AtrocitySeverityId_t>();
 
-// Display spelling, kept beside the enum so no call site re-derives one from the enumerator
-// name. Throws when id is not one of the closed set.
-std::string_view AtrocitySeverityLabel(AtrocitySeverityId_t id);
+// Why an act was not answered for. Decided once, so the notice does not re-derive it.
+enum class AtrocityExcuse_t
+{
+    None,
+    CharterRepealed,
+    ProgenitorParty,
+};
 
 // What one severity costs; every field is required.
 struct AtrocitySeverityConfig_t
@@ -31,6 +34,13 @@ struct AtrocitySeverityConfig_t
     int ecoVirtualMinerals = 0;
     bool bUniversalVendetta = false;
     bool bExpelFromCouncil = false;
+    // The victim's friction toward the perpetrator. Written only when the victim has diplomacy.
+    int friction = 0;
+    // Counted acts add this; a first act against a victim also raises to blemishesFloor.
+    // Victimless uses the delta only (terranx-map.md, planet_busting).
+    int blemishes = 0;
+    int blemishesFloor = 0;
+    int repeatBlemishes = 0;
 };
 
 struct AtrocitiesConfig_t

@@ -31,22 +31,16 @@ int AtrocityLedger::SimpleCount(FactionId_t perpetrator) const
 
 bool AtrocityLedger::HasVictimized(FactionId_t perpetrator, FactionId_t victim) const
 {
-    for (const AtrocityRecord_t& rRecord : m_records)
-    {
-        if (rRecord.perpetrator == perpetrator && rRecord.victim && *rRecord.victim == victim)
-        {
-            return true;
-        }
-    }
-    return false;
+    return HasVictimizedAtLeast(perpetrator, victim, AtrocitySeverityId_t::Simple);
 }
 
-bool AtrocityLedger::HasCommittedMajorAgainst(FactionId_t perpetrator, FactionId_t victim) const
+bool AtrocityLedger::HasVictimizedAtLeast(FactionId_t perpetrator, FactionId_t victim,
+                                          AtrocitySeverityId_t severity) const
 {
     for (const AtrocityRecord_t& rRecord : m_records)
     {
         if (rRecord.perpetrator == perpetrator && rRecord.victim && *rRecord.victim == victim
-            && rRecord.severity == AtrocitySeverityId_t::Major)
+            && rRecord.severity >= severity)
         {
             return true;
         }

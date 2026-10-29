@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
+#include "lib/config/ConfigFields.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -128,16 +129,6 @@ void ValidateMoraleLevelEffects_(const MoraleConfig_t& rConfig)
     }
 }
 
-int RequireInt_(const json& rRoot, const char* pKey)
-{
-    if (!rRoot.contains(pKey) || !rRoot.at(pKey).is_number_integer())
-    {
-        throw std::runtime_error(std::string("morale_levels.json: '") + pKey
-                                 + "' must be an integer");
-    }
-    return rRoot.at(pKey).get<int>();
-}
-
 std::string RequireFormula_(const json& rRoot)
 {
     const auto missing = std::runtime_error(
@@ -193,7 +184,7 @@ MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
     config.startingIntrinsic = root.value("starting_intrinsic", 1);
     config.defenseFloorIndex = root.value("defense_floor_index", 1);
     config.percentPerLevel = EffectConfigParser::RequireNumber(root, "percent_per_level");
-    config.baselineIndex = RequireInt_(root, "baseline_index");
+    config.baselineIndex = ConfigFields::RequireInt(root, "baseline_index", "morale_levels.json");
     config.promotionSeedFormula = RequireFormula_(root);
     config.levels = ParseLevels_(root);
 

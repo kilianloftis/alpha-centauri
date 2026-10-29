@@ -49,14 +49,13 @@ They stay until that feature lands, and this list records what is left to build.
 
 ### Diplomacy, council and atrocity queries used only by tests
 - **Where:** the whole `DiplomaticActionExecutor` (`Propose`, `Accept`, `Reject`,
-  `GetPendingProposal`) and `GameState::GetDiplomaticActionExecutor` (5); `AtrocityLedger::HasVictimized`
-  (6), `HasCommittedMajorAgainst` (5), `SanctionUntilYear` (4); `PenaltiesApplied` in
+  `GetPendingProposal`) and `GameState::GetDiplomaticActionExecutor` (5);
+  `AtrocityLedger::SanctionUntilYear` (4); `PenaltiesApplied` in
   `AtrocityMutations.h` (18); `CouncilVoteExecutor::VetoPending` (3), `AllMembersVoted` (3);
   `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2); `GetAvailableActions` in
-  `DiplomacyActions.h` (5); `DiplomacyLedger::AddGrievance` (1), `AddIntegrity` (1);
-  `MayRepairAt` (4); `TradeKinds` (1)
+  `DiplomacyActions.h` (5); `MayRepairAt` (4); `TradeKinds` (1)
 - **Problem:** no production caller. Nothing proposes a diplomatic action, so the executor is
   unwired end to end.
-- **Waits on:** the diplomacy UI and AI (the executor, the ledger queries, `GetAvailableActions`,
+- **Waits on:** the diplomacy UI and AI (the executor, the ledger query, `GetAvailableActions`,
   `TradeKinds`), the council UI (`VetoPending`, `AllMembersVoted`), the diplomatic victory
   check (`GetSupremeLeaderVictoryStub`) and per-turn healing (`MayRepairAt`).

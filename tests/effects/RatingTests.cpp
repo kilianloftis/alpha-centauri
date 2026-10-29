@@ -13,7 +13,6 @@
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/population/Pop.h"
-#include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/Unit.h"
 #include "game/effects/ActiveEffect.h"
@@ -466,11 +465,6 @@ TEST_CASE("A FactionGlobal level flag follows the faction's rating to its bases 
 {
     constexpr RuleFlagId_t k_immune = RuleFlagId_t::ProbeSubversionImmune;
     actest::EffectPool pool;
-    SocialPolicyConfig_t probePolicy;
-    probePolicy.id = "test_probe_policy";
-    probePolicy.name = "Test Probe Policy";
-    probePolicy.category = SocialCategory_t::Values;
-    probePolicy.effects = {pool.RatingMod(SocialRatingId_t::Probe, 3)};
     BuildingConfig_t probeShrine;
     probeShrine.id = "test_probe_shrine";
     probeShrine.name = "Test Probe Shrine";
@@ -480,9 +474,6 @@ TEST_CASE("A FactionGlobal level flag follows the faction's rating to its bases 
     std::vector<BuildingConfig_t> buildings = fixture.buildings().GetAll();
     buildings.push_back(probeShrine);
     fixture.buildings().Assign(std::move(buildings));
-    std::vector<SocialPolicyConfig_t> policies = fixture.socialPolicies().GetAll();
-    policies.push_back(probePolicy);
-    fixture.socialPolicies().Assign(std::move(policies));
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base);
@@ -499,7 +490,7 @@ TEST_CASE("A FactionGlobal level flag follows the faction's rating to its bases 
     SECTION("the faction's rating sets it on the faction, the base and the unit, once")
     {
         faction.GetSocialEngineering().SetActivePolicy(
-            fixture.socialPolicies().Get("test_probe_policy"));
+            fixture.socialPolicies().Get("probe_plus3_policy"));
         CHECK(ResolveFlag(faction, k_immune));
         CHECK(ResolveFlag(base, k_immune));
         CHECK(ResolveFlag(unit, k_immune));

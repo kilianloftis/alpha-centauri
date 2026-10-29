@@ -36,11 +36,20 @@ struct DiplomaticStatusRules_t
     std::optional<int> durationTurns;
 };
 
+// A change to one faction's blemishes: add delta, then raise the total to floor.
+struct BlemishChange_t
+{
+    int delta = 0;
+    int floor = 0;
+};
+
 struct DiplomacyConfig_t
 {
     std::array<DiplomaticStatusRules_t, k_DiplomaticStatusCount> statuses{};
     DefensiveObligationMode_t defensiveObligationMode{};
     int frictionMax = 0;
+    int blemishesMax = 0;
+    int breakAgreementBlemishes = 0;
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

@@ -159,6 +159,14 @@
     ]
   },
   {
+    "id": "probe_plus3_policy",
+    "name": "Probe +3",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "probe", "amount": 3 } }
+    ]
+  },
+  {
     "id": "morale_policy",
     "name": "Morale Policy (+2 Morale rating, faction-wide)",
     "category": "values",

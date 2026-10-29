@@ -119,7 +119,21 @@ bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t 
     {
         return false;
     }
-    return StepDown(rLedger.GetStatus(a, b)).has_value();
+    return IsAgreement(rLedger.GetStatus(a, b));
+}
+
+bool IsAgreement(DiplomaticStatus_t status)
+{
+    return StepDown(status).has_value();
+}
+
+int AgreementBreakBlemishes(DiplomaticStatus_t from)
+{
+    if (!IsAgreement(from))
+    {
+        return 0;
+    }
+    return CurrentGameState().GetGameData().diplomacyConfig->breakAgreementBlemishes;
 }
 
 } // namespace ac

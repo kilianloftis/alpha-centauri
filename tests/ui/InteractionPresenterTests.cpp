@@ -319,6 +319,38 @@ TEST_CASE("A probe notice without copy completes without a modal",
     CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 0);
 }
 
+TEST_CASE("An atrocity notice presents a modal",
+          "[ui][InteractionPresenter][PlayerInteraction][atrocity]")
+{
+    PresenterHarness_ harness;
+    AtrocityNoticeInteraction_t notice;
+    notice.perpetratorName = "Gaia's Stepdaughters";
+    notice.victimName = "Spartan Federation";
+    harness.Enqueue(notice);
+
+    harness.pPresenter->Update();
+
+    CHECK(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 0);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Size() == 1);
+}
+
+TEST_CASE("A disabled atrocity notice completes without a modal",
+          "[ui][InteractionPresenter][PlayerInteraction][atrocity]")
+{
+    PresenterHarness_ harness;
+    PauseOnEventsConfig_t config = harness.fixture.settings.GetPauseOnEvents();
+    config.atrocityCommitted = false;
+    harness.fixture.settings.SetPauseOnEvents(config);
+
+    harness.Enqueue(AtrocityNoticeInteraction_t{});
+    harness.pPresenter->Update();
+
+    CHECK_FALSE(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 1);
+    CHECK(harness.fixture.state.GetPlayerInteractions().Empty());
+}
+
 TEST_CASE("A Pact obligation the player no longer owes completes without a prompt",
           "[ui][InteractionPresenter][PlayerInteraction][diplomacy]")
 {

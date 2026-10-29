@@ -6,6 +6,7 @@
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
+#include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/movement/EvacuateTerritoryMutations.h"
@@ -96,11 +97,19 @@ void RaiseDefensiveObligations_(GameState& rGameState, FactionId_t aggressor, Fa
     }
 }
 
+void ApplyAgreementBreakBlemishes_(GameState& rGameState, FactionId_t faction,
+                                   DiplomaticStatus_t from)
+{
+    ApplyBlemishes(rGameState, faction, BlemishChange_t{.delta = AgreementBreakBlemishes(from)});
+}
+
 void DeclareVendetta_(GameState& rGameState, FactionId_t declarer, FactionId_t target,
                       VendettaKind_t kind)
 {
+    const DiplomaticStatus_t from = rGameState.GetDiplomacyLedger().GetStatus(declarer, target);
     if (EnterVendetta_(rGameState, declarer, target, kind))
     {
+        ApplyAgreementBreakBlemishes_(rGameState, declarer, from);
         RaiseDefensiveObligations_(rGameState, declarer, target, kind);
     }
 }
@@ -158,13 +167,14 @@ void ExpireDiplomaticStatuses(GameState& rGameState)
 
 void CancelTreaty(GameState& rGameState, FactionId_t a, FactionId_t b)
 {
-    const std::optional<DiplomaticStatus_t> lower =
-        StepDown(rGameState.GetDiplomacyLedger().GetStatus(a, b));
+    const DiplomaticStatus_t from = rGameState.GetDiplomacyLedger().GetStatus(a, b);
+    const std::optional<DiplomaticStatus_t> lower = StepDown(from);
     if (!lower)
     {
         throw std::logic_error("CancelTreaty: the pair holds no agreement to cancel");
     }
     ApplyStatusChange(rGameState, a, b, *lower);
+    ApplyAgreementBreakBlemishes_(rGameState, a, from);
 }
 
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target)
@@ -185,15 +195,22 @@ void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct)
     }
 }
 
+void ApplyAtrocityVendetta(GameState& rGameState, FactionId_t perpetrator, FactionId_t victim)
+{
+    if (EnterVendetta_(rGameState, perpetrator, victim, VendettaKind_t::SneakAttack))
+    {
+        RaiseDefensiveObligations_(rGameState, perpetrator, victim, VendettaKind_t::SneakAttack);
+    }
+}
+
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
                               VendettaKind_t kind)
 {
-    if (HonoredObligationCascades())
+    // SMAC pact honor is intervention's treaty_on, not double_cross (terranx-map.md).
+    if (EnterVendetta_(rGameState, partner, aggressor, kind) && HonoredObligationCascades())
     {
-        DeclareVendetta_(rGameState, partner, aggressor, kind);
-        return;
+        RaiseDefensiveObligations_(rGameState, partner, aggressor, kind);
     }
-    EnterVendetta_(rGameState, partner, aggressor, kind);
 }
 
 void DeclineDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t ally)

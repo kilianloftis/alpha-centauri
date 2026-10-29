@@ -26,18 +26,6 @@ const nlohmann::json& RequireKey_(const nlohmann::json& rJson, const char* pKey,
     return rJson.at(pKey);
 }
 
-int RequireInt_(const nlohmann::json& rJson, const char* pKey, int minimum,
-                const std::string& rContext)
-{
-    const nlohmann::json& rValue = RequireKey_(rJson, pKey, rContext);
-    if (!rValue.is_number_integer() || rValue.get<int>() < minimum)
-    {
-        throw std::runtime_error(rContext + ": '" + pKey + "' must be an integer >= "
-                                 + std::to_string(minimum));
-    }
-    return rValue.get<int>();
-}
-
 WorldEventCycle_t ParseTrigger_(const nlohmann::json& rJson, const std::string& rContext)
 {
     const std::string ctx = rContext + " trigger";
@@ -53,9 +41,9 @@ WorldEventCycle_t ParseTrigger_(const nlohmann::json& rJson, const std::string& 
         throw std::runtime_error(ctx + ": 'kind' must be \"Cycle\"");
     }
     WorldEventCycle_t cycle;
-    cycle.cycleYears = RequireInt_(rJson, "cycle_years", 1, ctx);
-    cycle.durationYears = RequireInt_(rJson, "duration_years", 1, ctx);
-    cycle.startYearOffset = RequireInt_(rJson, "start_year_offset", 0, ctx);
+    cycle.cycleYears = ConfigFields::RequireIntAtLeast(rJson, "cycle_years", 1, ctx);
+    cycle.durationYears = ConfigFields::RequireIntAtLeast(rJson, "duration_years", 1, ctx);
+    cycle.startYearOffset = ConfigFields::RequireIntAtLeast(rJson, "start_year_offset", 0, ctx);
     if (cycle.durationYears > cycle.cycleYears)
     {
         throw std::runtime_error(ctx + ": 'duration_years' must not exceed 'cycle_years'");

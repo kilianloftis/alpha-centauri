@@ -15,13 +15,14 @@
 #include "game/council/CouncilVoteExecutor.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStatus.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/research/ResearchManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -116,6 +117,13 @@ struct AtrocityGame_
         REQUIRE_FALSE(fixtures.state.GetPlanetaryCouncil().HasActiveRuleFlag(
             RuleFlagId_t::AtrocitiesForbidden));
     }
+
+    void ReinstateCharter(Faction& rProposer)
+    {
+        PassStandard(rProposer, "reinstate_un_charter");
+        REQUIRE(fixtures.state.GetPlanetaryCouncil().HasActiveRuleFlag(
+            RuleFlagId_t::AtrocitiesForbidden));
+    }
 };
 
 } // namespace
@@ -136,8 +144,8 @@ TEST_CASE("A Simple atrocity under the Charter sanctions and the victim remember
     CHECK(game.Sanctioned(game.pA->GetFactionId()));
     CHECK(game.Ledger().Records().size() == 1);
     CHECK(game.Ledger().HasVictimized(game.pA->GetFactionId(), game.pB->GetFactionId()));
-    CHECK_FALSE(game.Ledger().HasCommittedMajorAgainst(game.pA->GetFactionId(),
-                                                       game.pB->GetFactionId()));
+    CHECK_FALSE(game.Ledger().HasVictimizedAtLeast(game.pA->GetFactionId(),
+                                                   game.pB->GetFactionId(), k_Major));
 
     // The act is an attack on the victim. A Simple atrocity is not a Major one: no universal
     // vendetta from bystanders, and the seat is kept.
@@ -416,7 +424,7 @@ TEST_CASE("A repealed Charter lifts Major penalties and the victim still remembe
     CHECK(game.Diplomacy().GetStatus(game.pC->GetFactionId(), id) != DiplomaticStatus_t::Vendetta);
     CHECK(AtrocityEcoMinerals(game.Ledger(), id) == 0);
     CHECK(game.Ledger().HasVictimized(id, game.pB->GetFactionId()));
-    CHECK(game.Ledger().HasCommittedMajorAgainst(id, game.pB->GetFactionId()));
+    CHECK(game.Ledger().HasVictimizedAtLeast(id, game.pB->GetFactionId(), k_Major));
 }
 
 TEST_CASE("Either party being a Progenitor excuses every tier, and the victim remembers it",
@@ -453,7 +461,7 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
         CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Major);
     CHECK_FALSE(major.PenaltiesApplied());
     CHECK_FALSE(game.Ledger().Records().back().bCounted);
-    CHECK(game.Ledger().HasCommittedMajorAgainst(humanId, rAlien.GetFactionId()));
+    CHECK(game.Ledger().HasVictimizedAtLeast(humanId, rAlien.GetFactionId(), k_Major));
     CHECK(game.Diplomacy().GetStatus(game.pB->GetFactionId(), humanId)
           != DiplomaticStatus_t::Vendetta);
     CHECK(game.fixtures.state.GetPlanetaryCouncil().IsCouncilMember(*game.pA));
@@ -461,13 +469,14 @@ TEST_CASE("Either party being a Progenitor excuses every tier, and the victim re
     const AtrocityCommitted_t progenitorPerp =
         CommitAtrocity(game.fixtures.state, rAlien, game.pA, k_Major);
     CHECK_FALSE(progenitorPerp.PenaltiesApplied());
-    CHECK(game.Ledger().HasCommittedMajorAgainst(rAlien.GetFactionId(), humanId));
+    CHECK(game.Ledger().HasVictimizedAtLeast(rAlien.GetFactionId(), humanId, k_Major));
     CHECK(game.Diplomacy().HasVendetta(humanId, rAlien.GetFactionId()));
 
     const AtrocityCommitted_t bothProgenitors =
         CommitAtrocity(game.fixtures.state, rUsurper, &rAlien, k_Major);
     CHECK_FALSE(bothProgenitors.PenaltiesApplied());
-    CHECK(game.Ledger().HasCommittedMajorAgainst(rUsurper.GetFactionId(), rAlien.GetFactionId()));
+    CHECK(game.Ledger().HasVictimizedAtLeast(rUsurper.GetFactionId(), rAlien.GetFactionId(),
+                                             k_Major));
 
     const AtrocityCommitted_t againstLife =
         CommitAtrocity(game.fixtures.state, *game.pA, &rWorms, k_Simple);
@@ -657,11 +666,19 @@ TEST_CASE("atrocities.json round-trips and rejects bad input", "[atrocity][parse
     CHECK(rSimple.ecoVirtualMinerals == 0);
     CHECK_FALSE(rSimple.bUniversalVendetta);
     CHECK_FALSE(rSimple.bExpelFromCouncil);
+    CHECK(rSimple.friction == 5);
+    CHECK(rSimple.blemishes == 1);
+    CHECK(rSimple.blemishesFloor == 0);
+    CHECK(rSimple.repeatBlemishes == 0);
 
     const AtrocitySeverityConfig_t& rMajor = config.For(k_Major);
     CHECK(rMajor.ecoVirtualMinerals == 3);
     CHECK(rMajor.bUniversalVendetta);
     CHECK(rMajor.bExpelFromCouncil);
+    CHECK(rMajor.friction == 5);
+    CHECK(rMajor.blemishes == 2);
+    CHECK(rMajor.blemishesFloor == 6);
+    CHECK(rMajor.repeatBlemishes == 2);
 
     CHECK(config.sanctionYearsPerAtrocity == 7);
 }
@@ -682,7 +699,8 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
     const std::string onlySimple = R"({
       "severities": {
         "Simple": {
-          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "blemishes_floor": 0, "repeat_blemishes": 0
         }
       },
       "sanction_years_per_atrocity": 10
@@ -694,7 +712,8 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
     const std::string badName = R"({
       "severities": {
         "Moderate": {
-          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "blemishes_floor": 0, "repeat_blemishes": 0
         }
       },
       "sanction_years_per_atrocity": 10
@@ -721,10 +740,12 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
     const std::string unknownKey = R"({
       "severities": {
         "Simple": {
-          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "blemishes_floor": 0, "repeat_blemishes": 0
         },
         "Major": {
           "eco_virtual_minerals": 5, "universal_vendetta": true, "expel_from_council": true,
+          "friction": 5, "blemishes": 2, "blemishes_floor": 6, "repeat_blemishes": 2,
           "integrity_loss": 50
         }
       },
@@ -732,6 +753,24 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
     })";
     CHECK_THROWS_AS(
         AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_unknown.json", unknownKey)),
+        std::runtime_error);
+
+    // Every severity states its standing in full, Simple's zero floor included.
+    const std::string noFloor = R"({
+      "severities": {
+        "Simple": {
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "repeat_blemishes": 0
+        },
+        "Major": {
+          "eco_virtual_minerals": 5, "universal_vendetta": true, "expel_from_council": true,
+          "friction": 5, "blemishes": 2, "blemishes_floor": 6, "repeat_blemishes": 2
+        }
+      },
+      "sanction_years_per_atrocity": 10
+    })";
+    CHECK_THROWS_AS(
+        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_no_floor.json", noFloor)),
         std::runtime_error);
 }
 
@@ -809,13 +848,16 @@ TEST_CASE("The atrocities parser rejects a severity outside the closed set", "[a
     const std::string extraTier = R"({
       "severities": {
         "Simple": {
-          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "blemishes_floor": 0, "repeat_blemishes": 0
         },
         "Moderate": {
-          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false
+          "eco_virtual_minerals": 0, "universal_vendetta": false, "expel_from_council": false,
+          "friction": 5, "blemishes": 1, "blemishes_floor": 0, "repeat_blemishes": 0
         },
         "Major": {
-          "eco_virtual_minerals": 5, "universal_vendetta": true, "expel_from_council": true
+          "eco_virtual_minerals": 5, "universal_vendetta": true, "expel_from_council": true,
+          "friction": 5, "blemishes": 2, "blemishes_floor": 6, "repeat_blemishes": 2
         }
       },
       "sanction_years_per_atrocity": 0
@@ -831,7 +873,7 @@ TEST_CASE("The atrocities parser rejects a severity outside the closed set", "[a
 
 // --- Notice ---------------------------------------------------------------------------------
 
-TEST_CASE("Committing an atrocity tells the player what it cost", "[atrocity][notice]")
+TEST_CASE("Committing an atrocity queues a notice with the sanction year", "[atrocity][notice]")
 {
     AtrocityGame_ game;
     PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
@@ -842,27 +884,29 @@ TEST_CASE("Committing an atrocity tells the player what it cost", "[atrocity][no
     REQUIRE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());
-    const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
+    const auto* pNotice = std::get_if<AtrocityNoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
-    CHECK(pNotice->event == PauseOnEventId_t::AtrocityCommitted);
-    // The sanction year is the actionable part, so it has to be in the body.
-    CHECK(pNotice->body.find(std::to_string(*committed.sanctionUntilYear)) != std::string::npos);
+    CHECK(pNotice->perpetratorName == game.pA->GetDefinition().identity.name);
+    REQUIRE(pNotice->victimName.has_value());
+    CHECK(*pNotice->victimName == game.pB->GetDefinition().identity.name);
+    CHECK(pNotice->severity == k_Simple);
+    CHECK(pNotice->excuse == AtrocityExcuse_t::None);
+    CHECK(pNotice->sanctionUntilYear == committed.sanctionUntilYear);
 }
 
-TEST_CASE("The notice names the tier in prose, not as the enumerator", "[atrocity][notice]")
+TEST_CASE("The notice carries the answered-for tier", "[atrocity][notice]")
 {
     AtrocityGame_ game;
     PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
 
     CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
-    const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
+    const auto* pNotice = std::get_if<AtrocityNoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
-    CHECK(pNotice->body.find("major atrocity") != std::string::npos);
-    // The C++ spelling is not player-facing copy.
-    CHECK(pNotice->body.find("Major") == std::string::npos);
+    CHECK(pNotice->severity == k_Major);
 }
 
-TEST_CASE("An unpunished atrocity says so rather than naming a sanction", "[atrocity][notice]")
+TEST_CASE("An unpunished atrocity queues the charter excuse, not a sanction year",
+          "[atrocity][notice]")
 {
     AtrocityGame_ game;
     game.RepealCharter(*game.pA);
@@ -878,13 +922,13 @@ TEST_CASE("An unpunished atrocity says so rather than naming a sanction", "[atro
     REQUIRE_FALSE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());
-    const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
+    const auto* pNotice = std::get_if<AtrocityNoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
-    CHECK(pNotice->body.find("no longer forbids") != std::string::npos);
-    CHECK(pNotice->body.find("no sanctions") != std::string::npos);
+    CHECK(pNotice->excuse == AtrocityExcuse_t::CharterRepealed);
+    CHECK_FALSE(pNotice->sanctionUntilYear.has_value());
 }
 
-TEST_CASE("An atrocity with a Progenitor party names that exemption", "[atrocity][notice]")
+TEST_CASE("An atrocity with a Progenitor party queues that excuse", "[atrocity][notice]")
 {
     AtrocityGame_ game;
     FactionConfig_t alien = game.fixtures.factionDefinition;
@@ -900,10 +944,10 @@ TEST_CASE("An atrocity with a Progenitor party names that exemption", "[atrocity
     REQUIRE_FALSE(committed.PenaltiesApplied());
 
     REQUIRE_FALSE(rQueue.Empty());
-    const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
+    const auto* pNotice = std::get_if<AtrocityNoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
-    CHECK(pNotice->body.find("take no interest") != std::string::npos);
-    CHECK(pNotice->body.find("no longer forbids") == std::string::npos);
+    CHECK(pNotice->excuse == AtrocityExcuse_t::ProgenitorParty);
+    CHECK_FALSE(pNotice->sanctionUntilYear.has_value());
 }
 
 TEST_CASE("Resolving an atrocity names its outcome and records nothing", "[atrocity]")
@@ -925,4 +969,186 @@ TEST_CASE("Resolving an atrocity names its outcome and records nothing", "[atroc
         UniversalVendettaJoiners(game.pA->GetFactionId(), game.pB->GetFactionId());
     CHECK(std::find(joiners.begin(), joiners.end(), game.pB->GetFactionId()) == joiners.end());
     CHECK(std::find(joiners.begin(), joiners.end(), game.pA->GetFactionId()) == joiners.end());
+}
+
+TEST_CASE("A counted Simple atrocity writes fixture friction and one blemish", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 5);
+    CHECK(game.Diplomacy().GetFriction(perp, victim) == 0);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 1);
+}
+
+TEST_CASE("A second Simple against the same victim adds friction but not another blemish",
+          "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 10);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 1);
+}
+
+TEST_CASE("The first Major against a victim floors blemishes; a later one only adds",
+          "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 5);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 6);
+
+    game.Diplomacy().SetBlemishes(perp, 3);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 10);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 5);
+}
+
+TEST_CASE("A Simple after a Major against the same victim is a repeat", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 10);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 6);
+}
+
+TEST_CASE("A Major after a Simple against the same victim still floors", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 1);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 10);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 6);
+}
+
+TEST_CASE("A counted atrocity after an excused one against the same victim is a repeat",
+          "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+
+    game.RepealCharter(*game.pC);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 0);
+
+    game.ReinstateCharter(*game.pC);
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Major);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 5);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 2);
+}
+
+TEST_CASE("A counted atrocity from Treaty writes atrocity standing only", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+    game.Diplomacy().SetStatus(perp, victim, DiplomaticStatus_t::Treaty);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+
+    CHECK(game.Diplomacy().GetStatus(perp, victim) == DiplomaticStatus_t::Vendetta);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 5);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 1);
+}
+
+TEST_CASE("A hostile act then an atrocity from Treaty stacks both blemishes",
+          "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+    const FactionId_t victim = game.pB->GetFactionId();
+    game.Diplomacy().SetStatus(perp, victim, DiplomaticStatus_t::Treaty);
+
+    ApplyHostileAct(game.fixtures.state, HostileAct_t{.aggressor = perp,
+                                                      .victim = victim,
+                                                      .bAttributed = true});
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 1);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pB, k_Simple);
+    CHECK(game.Diplomacy().GetFriction(victim, perp) == 5);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 2);
+}
+
+TEST_CASE("An excused atrocity writes no friction or blemishes", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    FactionConfig_t alien = game.fixtures.factionDefinition;
+    alien.id = "alien";
+    alien.identity.species = FactionSpecies_t::Progenitor;
+    Faction& rAlien = game.AddFaction_(alien, false);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, &rAlien, k_Simple);
+
+    CHECK(game.Diplomacy().GetFriction(rAlien.GetFactionId(), game.pA->GetFactionId()) == 0);
+    CHECK(game.Diplomacy().GetBlemishes(game.pA->GetFactionId()) == 0);
+}
+
+TEST_CASE("An atrocity against native life writes blemishes but no friction",
+          "[atrocity][standing][native]")
+{
+    AtrocityGame_ game;
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, &rPlanet, k_Simple);
+
+    CHECK(game.Diplomacy().GetFriction(rPlanet.GetFactionId(), game.pA->GetFactionId()) == 0);
+    CHECK(game.Diplomacy().GetBlemishes(game.pA->GetFactionId()) == 1);
+}
+
+TEST_CASE("A counted victimless Major adds blemishes without the floor", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+    const FactionId_t perp = game.pA->GetFactionId();
+
+    CommitAtrocity(game.fixtures.state, *game.pA, nullptr, k_Major);
+
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 2);
+    CHECK(game.Diplomacy().GetFriction(game.pB->GetFactionId(), perp) == 0);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, nullptr, k_Major);
+    CHECK(game.Diplomacy().GetBlemishes(perp) == 4);
+}
+
+TEST_CASE("Nuking your own ground still blemishes the perpetrator", "[atrocity][standing]")
+{
+    AtrocityGame_ game;
+
+    CommitAtrocity(game.fixtures.state, *game.pA, game.pA, k_Major);
+
+    CHECK(game.Diplomacy().GetBlemishes(game.pA->GetFactionId()) == 2);
+    CHECK(game.Diplomacy().GetFriction(game.pB->GetFactionId(), game.pA->GetFactionId()) == 0);
+}
+
+TEST_CASE("A Major against native life floors blemishes and writes no friction",
+          "[atrocity][standing][native]")
+{
+    AtrocityGame_ game;
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures);
+
+    CommitAtrocity(game.fixtures.state, *game.pA, &rPlanet, k_Major);
+
+    CHECK(game.Diplomacy().GetFriction(rPlanet.GetFactionId(), game.pA->GetFactionId()) == 0);
+    CHECK(game.Diplomacy().GetBlemishes(game.pA->GetFactionId()) == 6);
 }

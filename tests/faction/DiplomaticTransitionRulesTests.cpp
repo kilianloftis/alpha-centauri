@@ -109,3 +109,18 @@ TEST_CASE("A bombard offends each struck owner once, or an empty improved tile's
     REQUIRE(wrecked.size() == 1);
     CHECK(wrecked.front().victim == game.pB->GetFactionId());
 }
+
+TEST_CASE("Truce, Treaty and Pact are agreements; breaking one costs fixture blemishes",
+          "[diplomacy][transitions][standing]")
+{
+    DiplomacyFixture game;
+
+    CHECK(IsAgreement(DiplomaticStatus_t::Truce));
+    CHECK(IsAgreement(DiplomaticStatus_t::Treaty));
+    CHECK(IsAgreement(DiplomaticStatus_t::Pact));
+    CHECK_FALSE(IsAgreement(DiplomaticStatus_t::Neutral));
+    CHECK_FALSE(IsAgreement(DiplomaticStatus_t::Vendetta));
+
+    CHECK(AgreementBreakBlemishes(DiplomaticStatus_t::Treaty) == 1);
+    CHECK(AgreementBreakBlemishes(DiplomaticStatus_t::Neutral) == 0);
+}

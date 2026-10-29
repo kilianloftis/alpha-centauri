@@ -46,8 +46,9 @@ public:
 
     // "Has this perpetrator ever committed an atrocity against this victim", counted or not.
     bool HasVictimized(FactionId_t perpetrator, FactionId_t victim) const;
-    // The same question limited to records answered for as Major.
-    bool HasCommittedMajorAgainst(FactionId_t perpetrator, FactionId_t victim) const;
+    // The same question limited to records answered for at severity or worse.
+    bool HasVictimizedAtLeast(FactionId_t perpetrator, FactionId_t victim,
+                              AtrocitySeverityId_t severity) const;
 
 
     // From the stored expiry, so it is right before or after ExpireSanctions runs.

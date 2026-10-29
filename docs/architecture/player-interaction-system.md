@@ -69,6 +69,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `PactObligationInteraction_t` | Declare Vendetta / Stand aside → `HonorDefensiveObligation` / `DeclineDefensiveObligation` → Complete. Completes without asking when the obligation no longer stands (`IsObligedToDefend`) |
 | `TerritoryEntryInteraction_t` | Break the agreement → `BreakAgreementAndContinue` (`movement/TerritoryEntryMutations.h`) / Cancel the order → `Unit::ClearOrder` → Complete |
 | `ProbeNoticeInteraction_t` | `NoticePopup` from `ProbeNoticeCopy` (actor vs target script); completes without a modal when that audience has no script |
+| `AtrocityNoticeInteraction_t` | `NoticePopup` from `AtrocityNoticeCopy`; gated by `PauseOnEventId_t::AtrocityCommitted` |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -84,9 +85,10 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
 - Current production no longer constructable → `ProductionPreemptedInteraction_t` (after this turn's minerals have already been banked onto it)
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
-- A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct` and `DeclareVendetta`)
+- A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct`, `ApplyAtrocityVendetta`, and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)
 - Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome. A probe the target's `probe_hunter` out-ranks dies on contact (`ProbeContactDestroyed_t`) and skips the action menu; the result carries the hunter's source building, which `FillNoticeNames_` turns into `facilityName` for the copy. Steal-tech with an empty pool copies the target's explored tiles (`CopyExploredMap`) and uses `ProbeStolenMap_t` (`STOLEMAP`) when the actor learned any tile.
+- Atrocity committed → `AtrocityNoticeInteraction_t`; `AtrocityNoticeCopy` phrases the notice.
 
 **Follow-on PRs on the same spine**
 

@@ -22,12 +22,15 @@ struct AtrocityCommitted_t
     // Mission year the commerce sanction lifts. Absent when this act added no sanction: a
     // Major act, or one that was not counted.
     std::optional<int> sanctionUntilYear;
+    // Absent for a victimless act.
+    std::optional<FactionId_t> victimId;
 
     bool PenaltiesApplied() const { return excuse == AtrocityExcuse_t::None; }
 };
 
-// Records the act and, when it counts, charges sanctions, universal Vendetta and expulsion.
-// The record is written either way; self-victims are recorded victimless.
+// Records the act and, when it counts, charges blemishes, sanctions, universal Vendetta and
+// expulsion, and friction when the victim has diplomacy. The record is written either way;
+// self-victims are recorded victimless.
 AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
                                    Faction* pVictim, AtrocitySeverityId_t severity);
 

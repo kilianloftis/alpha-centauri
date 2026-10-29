@@ -21,6 +21,7 @@
 #include "game/units/Unit.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
+#include "ui/AtrocityNotices.h"
 #include "ui/ProbeNotices.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
@@ -125,6 +126,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             },
             [this](const TerritoryEntryInteraction_t& rEntry) { PresentTerritoryEntry_(rEntry); },
             [this](const ProbeNoticeInteraction_t& rNotice) { PresentProbeNotice_(rNotice); },
+            [this](const AtrocityNoticeInteraction_t& rNotice) {
+                PresentAtrocityNotice_(rNotice);
+            },
         },
         rPayload);
 }
@@ -466,6 +470,13 @@ void InteractionPresenter::PresentProbeNotice_(const ProbeNoticeInteraction_t& r
         return;
     }
     PresentNotice_(NoticeInteraction_t{std::nullopt, copy->title, copy->body, rNotice.cameraTile});
+}
+
+void InteractionPresenter::PresentAtrocityNotice_(const AtrocityNoticeInteraction_t& rNotice)
+{
+    const AtrocityNoticeCopy_t copy = AtrocityNoticeCopy(rNotice);
+    PresentNotice_(NoticeInteraction_t{PauseOnEventId_t::AtrocityCommitted, copy.title, copy.body,
+                                       std::nullopt});
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)

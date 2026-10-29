@@ -32,6 +32,7 @@ add_library(ac-core STATIC
     game/diplomacy/DiplomacyCalculator.cpp
     game/diplomacy/DiplomacyLedger.cpp
     game/diplomacy/DiplomaticPermissionRules.cpp
+    game/diplomacy/DiplomaticStandingMutations.cpp
     game/diplomacy/DiplomacyActions.cpp
     game/diplomacy/DiplomaticTransitionMutations.cpp
     game/diplomacy/DiplomaticTransitionRules.cpp
@@ -376,6 +377,7 @@ add_library(ac-ui STATIC
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp
+    ui/AtrocityNotices.cpp
     ui/ProbeNotices.cpp
     ui/style/UiStyle.cpp
     ui/style/DrawPanelChrome.cpp

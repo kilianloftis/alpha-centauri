@@ -61,6 +61,27 @@ std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::st
     return values;
 }
 
+int RequireInt(const nlohmann::json& j, const std::string& key, const std::string& rContext)
+{
+    if (!j.contains(key) || !j.at(key).is_number_integer())
+    {
+        throw std::runtime_error(rContext + ": '" + key + "' must be an integer");
+    }
+    return j.at(key).get<int>();
+}
+
+int RequireIntAtLeast(const nlohmann::json& j, const std::string& key, int minimum,
+                      const std::string& rContext)
+{
+    const int value = RequireInt(j, key, rContext);
+    if (value < minimum)
+    {
+        throw std::runtime_error(rContext + ": '" + key + "' must be an integer >= "
+                                 + std::to_string(minimum));
+    }
+    return value;
+}
+
 void RejectUnknownKeys(const nlohmann::json& j, const std::vector<std::string>& rKnown,
                        const std::string& rContext)
 {

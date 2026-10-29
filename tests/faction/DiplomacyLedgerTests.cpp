@@ -74,25 +74,25 @@ TEST_CASE("SetKnown among many factions links every pair", "[diplomacy]")
     CHECK_FALSE(ledger.AreKnown(1, 4));
 }
 
-TEST_CASE("Grievance and infiltration are directed", "[diplomacy]")
+TEST_CASE("Friction and infiltration are directed", "[diplomacy]")
 {
     DiplomacyLedger ledger;
-    ledger.AddGrievance(1, 2, 3);
-    CHECK(ledger.GetGrievance(1, 2) == 3);
-    CHECK(ledger.GetGrievance(2, 1) == 0);
+    ledger.SetFriction(1, 2, 3);
+    CHECK(ledger.GetFriction(1, 2) == 3);
+    CHECK(ledger.GetFriction(2, 1) == 0);
 
     ledger.SetInfiltration(1, 2, true);
     CHECK(ledger.HasInfiltration(1, 2));
     CHECK_FALSE(ledger.HasInfiltration(2, 1));
 }
 
-TEST_CASE("Integrity is per-faction", "[diplomacy]")
+TEST_CASE("Blemishes are per-faction", "[diplomacy]")
 {
     DiplomacyLedger ledger;
-    CHECK(ledger.GetIntegrity(1) == 0);
-    ledger.AddIntegrity(1, 5);
-    CHECK(ledger.GetIntegrity(1) == 5);
-    CHECK(ledger.GetIntegrity(2) == 0);
+    CHECK(ledger.GetBlemishes(1) == 0);
+    ledger.SetBlemishes(1, 5);
+    CHECK(ledger.GetBlemishes(1) == 5);
+    CHECK(ledger.GetBlemishes(2) == 0);
 }
 
 TEST_CASE("Turns held count up per turn and restart only on a new status", "[diplomacy][ledger]")

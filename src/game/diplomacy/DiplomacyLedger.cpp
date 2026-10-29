@@ -92,31 +92,26 @@ void DiplomacyLedger::SetKnown(const std::vector<FactionId_t>& rFactionIds)
     }
 }
 
-int DiplomacyLedger::GetGrievance(FactionId_t holder, FactionId_t against) const
+int DiplomacyLedger::GetFriction(FactionId_t holder, FactionId_t against) const
 {
     const DirectedFactionPair key = DirectedFactionPair::Make(holder, against);
-    const auto it = m_grievances.find(key);
-    if (it == m_grievances.end())
+    const auto it = m_friction.find(key);
+    if (it == m_friction.end())
     {
         return 0;
     }
     return it->second;
 }
 
-void DiplomacyLedger::SetGrievance(FactionId_t holder, FactionId_t against, int value)
+void DiplomacyLedger::SetFriction(FactionId_t holder, FactionId_t against, int value)
 {
     const DirectedFactionPair key = DirectedFactionPair::Make(holder, against);
     if (value == 0)
     {
-        m_grievances.erase(key);
+        m_friction.erase(key);
         return;
     }
-    m_grievances[key] = value;
-}
-
-void DiplomacyLedger::AddGrievance(FactionId_t holder, FactionId_t against, int delta)
-{
-    SetGrievance(holder, against, GetGrievance(holder, against) + delta);
+    m_friction[key] = value;
 }
 
 bool DiplomacyLedger::HasInfiltration(FactionId_t infiltrator, FactionId_t target) const
@@ -137,29 +132,24 @@ void DiplomacyLedger::SetInfiltration(FactionId_t infiltrator, FactionId_t targe
     }
 }
 
-int DiplomacyLedger::GetIntegrity(FactionId_t faction) const
+int DiplomacyLedger::GetBlemishes(FactionId_t faction) const
 {
-    const auto it = m_integrity.find(faction);
-    if (it == m_integrity.end())
+    const auto it = m_blemishes.find(faction);
+    if (it == m_blemishes.end())
     {
         return 0;
     }
     return it->second;
 }
 
-void DiplomacyLedger::SetIntegrity(FactionId_t faction, int value)
+void DiplomacyLedger::SetBlemishes(FactionId_t faction, int value)
 {
     if (value == 0)
     {
-        m_integrity.erase(faction);
+        m_blemishes.erase(faction);
         return;
     }
-    m_integrity[faction] = value;
-}
-
-void DiplomacyLedger::AddIntegrity(FactionId_t faction, int delta)
-{
-    SetIntegrity(faction, GetIntegrity(faction) + delta);
+    m_blemishes[faction] = value;
 }
 
 } // namespace ac

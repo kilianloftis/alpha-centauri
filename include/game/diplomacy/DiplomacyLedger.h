@@ -38,9 +38,8 @@ public:
     // Establish mutual known-contact (commlinks) between every pair in rFactionIds.
     void SetKnown(const std::vector<FactionId_t>& rFactionIds);
 
-    int GetGrievance(FactionId_t holder, FactionId_t against) const;
-    void SetGrievance(FactionId_t holder, FactionId_t against, int value);
-    void AddGrievance(FactionId_t holder, FactionId_t against, int delta);
+    int GetFriction(FactionId_t holder, FactionId_t against) const;
+    void SetFriction(FactionId_t holder, FactionId_t against, int value);
 
     bool HasInfiltration(FactionId_t infiltrator, FactionId_t target) const;
     void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated);
@@ -49,9 +48,8 @@ public:
     // memoizes against this rather than re-deriving pairs on every query.
     uint64_t GetRevision() const { return m_statusRevision.Get(); }
 
-    int GetIntegrity(FactionId_t faction) const;
-    void SetIntegrity(FactionId_t faction, int value);
-    void AddIntegrity(FactionId_t faction, int delta);
+    int GetBlemishes(FactionId_t faction) const;
+    void SetBlemishes(FactionId_t faction, int value);
 
 private:
     Revision m_statusRevision;
@@ -63,9 +61,9 @@ private:
 
     std::map<FactionPair, StatusEntry_t> m_statuses;
     std::set<FactionPair> m_known;
-    std::map<DirectedFactionPair, int> m_grievances;
+    std::map<DirectedFactionPair, int> m_friction;
     std::set<DirectedFactionPair> m_infiltration;
-    std::map<FactionId_t, int> m_integrity;
+    std::map<FactionId_t, int> m_blemishes;
 };
 
 } // namespace ac

@@ -1,5 +1,6 @@
 #include "game/diplomacy/DiplomacyConfigParser.h"
 
+#include "lib/config/ConfigFields.h"
 #include "lib/config/ConfigSets.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
@@ -40,15 +41,15 @@ bool RequireBool_(const nlohmann::json& rJson, const std::string& rKey,
     return rValue.get<bool>();
 }
 
-int RequirePositiveInt_(const nlohmann::json& rJson, const std::string& rKey,
-                        const std::string& rContext)
+const nlohmann::json& RequireObject_(const nlohmann::json& rJson, const std::string& rKey,
+                                     const std::string& rContext)
 {
     const nlohmann::json& rValue = Require_(rJson, rKey, rContext);
-    if (!rValue.is_number_integer() || rValue.get<int>() <= 0)
+    if (!rValue.is_object())
     {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be an integer > 0");
+        throw std::runtime_error(rContext + ": '" + rKey + "' must be a JSON object");
     }
-    return rValue.get<int>();
+    return rValue;
 }
 
 // The stats some rule resolves toward a partner; a status effect on any other would be ignored.
@@ -166,17 +167,18 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     {
         throw std::runtime_error(context + " must be a JSON object");
     }
-    ConfigFields::RejectUnknownKeys(
-        json, {"statuses", "defensive_obligation_mode", "friction_max"}, context);
-    const nlohmann::json& rStatuses = Require_(json, "statuses", context);
-    if (!rStatuses.is_object())
-    {
-        throw std::runtime_error(context + ": 'statuses' must be a JSON object");
-    }
+    ConfigFields::RejectUnknownKeys(json,
+                                    {"statuses", "defensive_obligation_mode", "friction_max",
+                                     "blemishes_max", "break_agreement_blemishes"},
+                                    context);
+    const nlohmann::json& rStatuses = RequireObject_(json, "statuses", context);
 
     DiplomacyConfig_t config;
     config.defensiveObligationMode = RequireObligationMode_(json, context);
-    config.frictionMax = RequirePositiveInt_(json, "friction_max", context);
+    config.frictionMax = ConfigFields::RequireIntAtLeast(json, "friction_max", 1, context);
+    config.blemishesMax = ConfigFields::RequireIntAtLeast(json, "blemishes_max", 1, context);
+    config.breakAgreementBlemishes =
+        ConfigFields::RequireIntAtLeast(json, "break_agreement_blemishes", 0, context);
     config.statuses =
         ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rStatuses, "diplomatic status", context,

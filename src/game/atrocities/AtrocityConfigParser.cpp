@@ -1,5 +1,6 @@
 #include "game/atrocities/AtrocityConfigParser.h"
 
+#include "lib/config/ConfigFields.h"
 #include "lib/config/ConfigSets.h"
 #include "lib/config/EnumNames.h"
 
@@ -15,16 +16,6 @@ namespace ac
 
 namespace
 {
-
-int RequireInt_(const nlohmann::json& rJson, const std::string& rKey,
-                const std::string& rContext)
-{
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_number_integer())
-    {
-        throw std::runtime_error(rContext + " requires an integer '" + rKey + "'");
-    }
-    return rJson.at(rKey).get<int>();
-}
 
 bool RequireBool_(const nlohmann::json& rJson, const std::string& rKey,
                   const std::string& rContext)
@@ -44,16 +35,21 @@ AtrocitySeverityConfig_t ParseSeverity_(const nlohmann::json& rJson, const std::
     }
 
     static const std::vector<std::string> known = {
-        "eco_virtual_minerals",
-        "universal_vendetta",
-        "expel_from_council",
+        "eco_virtual_minerals", "universal_vendetta", "expel_from_council",
+        "friction",             "blemishes",          "blemishes_floor",
+        "repeat_blemishes",
     };
     ConfigFields::RejectUnknownKeys(rJson, known, rContext);
 
     AtrocitySeverityConfig_t config;
-    config.ecoVirtualMinerals = RequireInt_(rJson, "eco_virtual_minerals", rContext);
+    config.ecoVirtualMinerals = ConfigFields::RequireInt(rJson, "eco_virtual_minerals", rContext);
     config.bUniversalVendetta = RequireBool_(rJson, "universal_vendetta", rContext);
     config.bExpelFromCouncil = RequireBool_(rJson, "expel_from_council", rContext);
+    config.friction = ConfigFields::RequireIntAtLeast(rJson, "friction", 0, rContext);
+    config.blemishes = ConfigFields::RequireIntAtLeast(rJson, "blemishes", 0, rContext);
+    config.blemishesFloor = ConfigFields::RequireIntAtLeast(rJson, "blemishes_floor", 0, rContext);
+    config.repeatBlemishes =
+        ConfigFields::RequireIntAtLeast(rJson, "repeat_blemishes", 0, rContext);
     return config;
 }
 
@@ -92,12 +88,8 @@ AtrocitiesConfig_t AtrocityConfigParser::ParseConfig(const std::string& configPa
                 return ParseSeverity_(rEntry, "severities." + rName);
             });
 
-    config.sanctionYearsPerAtrocity =
-        RequireInt_(json, "sanction_years_per_atrocity", "atrocities config");
-    if (config.sanctionYearsPerAtrocity < 0)
-    {
-        throw std::runtime_error("Atrocities sanction_years_per_atrocity must be >= 0");
-    }
+    config.sanctionYearsPerAtrocity = ConfigFields::RequireIntAtLeast(
+        json, "sanction_years_per_atrocity", 0, "Atrocities config '" + configPath + "'");
 
     return config;
 }

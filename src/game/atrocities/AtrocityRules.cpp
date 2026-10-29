@@ -8,8 +8,8 @@
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/faction/Faction.h"
-
 
 namespace ac
 {
@@ -142,6 +142,47 @@ void SetPenalties_(const GameState& rGameState, const Faction& rPerpetrator,
     rOutcome.bExpelFromCouncil = rSeverity.bExpelFromCouncil;
 }
 
+void SetFriction_(const GameState& rGameState, AtrocityOutcome_t& rOutcome,
+                  const AtrocitySeverityConfig_t& rSeverity)
+{
+    if (!rOutcome.victimId)
+    {
+        return;
+    }
+    const Faction& rVictim = rGameState.RequireFaction(*rOutcome.victimId);
+    if (!HasDiplomacy(rVictim))
+    {
+        return;
+    }
+    rOutcome.friction = rSeverity.friction;
+}
+
+void SetBlemishes_(const GameState& rGameState, const Faction& rPerpetrator,
+                   AtrocityOutcome_t& rOutcome, const AtrocitySeverityConfig_t& rSeverity)
+{
+    if (!rOutcome.victimId)
+    {
+        // major_atrocity tgt < 0: add, no floor (terranx-map.md, planet_busting).
+        rOutcome.blemishes = BlemishChange_t{.delta = rSeverity.blemishes};
+        return;
+    }
+    // SMAC sets DIPLO_ATROCITY_VICTIM before the Charter check (terranx-map.md, atrocity).
+    const bool bRepeat = rGameState.GetAtrocityLedger().HasVictimizedAtLeast(
+        rPerpetrator.GetFactionId(), *rOutcome.victimId, rOutcome.severity);
+    rOutcome.blemishes = bRepeat ? BlemishChange_t{.delta = rSeverity.repeatBlemishes}
+                                 : BlemishChange_t{.delta = rSeverity.blemishes,
+                                                   .floor = rSeverity.blemishesFloor};
+}
+
+void SetStanding_(const GameState& rGameState, const Faction& rPerpetrator,
+                  AtrocityOutcome_t& rOutcome)
+{
+    const AtrocitySeverityConfig_t& rSeverity =
+        rGameState.GetGameData().atrocitiesConfig->For(rOutcome.severity);
+    SetFriction_(rGameState, rOutcome, rSeverity);
+    SetBlemishes_(rGameState, rPerpetrator, rOutcome, rSeverity);
+}
+
 } // namespace
 
 AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pVictim,
@@ -153,6 +194,7 @@ AtrocityOutcome_t ResolveAtrocity(const Faction& rPerpetrator, const Faction* pV
     if (outcome.bCounted)
     {
         SetPenalties_(rGameState, rPerpetrator, authored, outcome);
+        SetStanding_(rGameState, rPerpetrator, outcome);
     }
     return outcome;
 }

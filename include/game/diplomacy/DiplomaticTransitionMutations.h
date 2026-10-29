@@ -18,12 +18,13 @@ void ApplyStatusChange(GameState& rGameState, FactionId_t a, FactionId_t b,
 // duration_turns.
 void ExpireDiplomaticStatuses(GameState& rGameState);
 
-// a cancels its agreement with b, stepping their status down one rung. One-sided, so not a
-// proposal. Throws when their status has nothing to cancel.
+// a cancels its agreement with b, stepping their status down one rung, and blemishes a.
+// One-sided, so not a proposal. Throws when their status has nothing to cancel.
 void CancelTreaty(GameState& rGameState, FactionId_t a, FactionId_t b);
 
 // A formal declaration; a no-op at Vendetta already or with native life. Units withdraw, and
-// each faction obliged to defend target answers (the player through an interaction).
+// each faction obliged to defend target answers (the player through an interaction). Blemishes
+// the declarer when the pair held an agreement.
 void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t target);
 
 // Joins an existing conflict on the defending side, obliging nobody, as for an atrocity's
@@ -31,8 +32,13 @@ void DeclareVendetta(GameState& rGameState, FactionId_t declarer, FactionId_t ta
 void JoinVendetta(GameState& rGameState, FactionId_t defender, FactionId_t aggressor);
 
 // A sneak attack unless the status already permits attacks: Vendetta undeclared, only shared
-// tiles move, and the victim's partners are obliged. Ignored if unattributed or native.
+// tiles move, and the victim's partners are obliged. Ignored if unattributed or native. An
+// agreement break blemishes through DeclareVendetta.
 void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct);
+
+// Sneak Vendetta and obligations without an agreement-break blemish. Atrocity standing is the
+// integrity write; SMAC atrocity / major_atrocity do not call double_cross (terranx-map.md).
+void ApplyAtrocityVendetta(GameState& rGameState, FactionId_t perpetrator, FactionId_t victim);
 
 // partner honors its obligation as defensive_obligation_mode says. After a sneak attack the
 // partner withdraws from nothing either.

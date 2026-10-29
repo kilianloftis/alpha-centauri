@@ -6,10 +6,8 @@
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/atrocities/AtrocityRules.h"
 #include "game/council/CouncilVoteExecutor.h"
+#include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
-
-#include <stdexcept>
-#include <string>
 
 namespace ac
 {
@@ -17,42 +15,22 @@ namespace ac
 namespace
 {
 
-// Who did what, and what it costs.
 // TODO(atrocity): announced to the player even between unmet AI factions; whether that needs
 // contact is unrecorded.
-void AnnounceToPlayer_(GameState& rGameState, const Faction& rPerpetrator, const Faction* pVictim,
-                       const AtrocityCommitted_t& rCommitted)
+void EnqueueAtrocityNotice_(GameState& rGameState, const Faction& rPerpetrator,
+                            const AtrocityCommitted_t& rCommitted)
 {
-    const std::string actor = rPerpetrator.GetDefinition().identity.name;
-    const std::string against =
-        pVictim ? " against " + pVictim->GetDefinition().identity.name : std::string();
-
-    std::string body = actor + " has committed a "
-                       + std::string(AtrocitySeverityLabel(rCommitted.severity)) + " atrocity"
-                       + against + ".";
-    switch (rCommitted.excuse)
+    AtrocityNoticeInteraction_t notice;
+    notice.perpetratorName = rPerpetrator.GetDefinition().identity.name;
+    if (rCommitted.victimId)
     {
-    case AtrocityExcuse_t::None:
-        if (rCommitted.sanctionUntilYear)
-        {
-            body += " Commerce sanctions are in force until "
-                    + std::to_string(*rCommitted.sanctionUntilYear) + ".";
-        }
-        break;
-    case AtrocityExcuse_t::CharterRepealed:
-        body += " The Planetary Council no longer forbids it, so no sanctions follow.";
-        break;
-    case AtrocityExcuse_t::ProgenitorParty:
-        body += " Other faction leaders take no interest, so no sanctions follow.";
-        break;
+        const Faction& rVictim = rGameState.RequireFaction(*rCommitted.victimId);
+        notice.victimName = rVictim.GetDefinition().identity.name;
     }
-
-    EnqueueForPlayer(rGameState, NoticeInteraction_t{
-                                     PauseOnEventId_t::AtrocityCommitted,
-                                     "Atrocity",
-                                     std::move(body),
-                                     std::nullopt,
-                                 });
+    notice.severity = rCommitted.severity;
+    notice.excuse = rCommitted.excuse;
+    notice.sanctionUntilYear = rCommitted.sanctionUntilYear;
+    EnqueueForPlayer(rGameState, notice);
 }
 
 AtrocityRecord_t MakeRecord_(FactionId_t perpetratorId, const AtrocityOutcome_t& rOutcome,
@@ -93,26 +71,22 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
                                    Faction* pVictim, AtrocitySeverityId_t severity)
 {
     const AtrocityOutcome_t outcome = ResolveAtrocity(rPerpetrator, pVictim, severity);
-    if (!outcome.victimId)
-    {
-        pVictim = nullptr;
-    }
     AtrocityLedger& rLedger = rGameState.GetAtrocityLedger();
     const FactionId_t perpetratorId = rPerpetrator.GetFactionId();
-
+    if (outcome.victimId)
+    {
+        ApplyAtrocityVendetta(rGameState, perpetratorId, *outcome.victimId);
+        ApplyFriction(rGameState, *outcome.victimId, perpetratorId, outcome.friction);
+    }
+    ApplyBlemishes(rGameState, perpetratorId, outcome.blemishes);
     const AtrocityRecord_t record =
         MakeRecord_(perpetratorId, outcome, rGameState.GetMissionYear());
     rLedger.Record(record);
-    if (outcome.victimId)
-    {
-        ApplyHostileAct(rGameState, HostileAct_t{.aggressor = perpetratorId,
-                                                 .victim = *outcome.victimId,
-                                                 .bAttributed = true});
-    }
 
     AtrocityCommitted_t result;
     result.severity = outcome.severity;
     result.excuse = outcome.excuse;
+    result.victimId = outcome.victimId;
     if (outcome.sanctionYears)
     {
         result.sanctionUntilYear =
@@ -120,7 +94,7 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     }
     RallyWorldAgainst_(rGameState, rPerpetrator, outcome);
 
-    AnnounceToPlayer_(rGameState, rPerpetrator, pVictim, result);
+    EnqueueAtrocityNotice_(rGameState, rPerpetrator, result);
     return result;
 }
 

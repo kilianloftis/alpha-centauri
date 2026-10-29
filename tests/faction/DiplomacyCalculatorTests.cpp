@@ -8,14 +8,24 @@
 using namespace ac;
 using namespace actest;
 
-TEST_CASE("ClampFriction keeps friction in the fixture range", "[diplomacy][calculator]")
+TEST_CASE("NextFriction adds then clamps", "[diplomacy][calculator]")
 {
     const DiplomacyConfig_t config =
         DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
 
-    CHECK(calculator.ClampFriction(-1) == 0);
-    CHECK(calculator.ClampFriction(0) == 0);
-    CHECK(calculator.ClampFriction(20) == 20);
-    CHECK(calculator.ClampFriction(21) == 20);
+    CHECK(calculator.NextFriction(19, 5) == 20);
+    CHECK(calculator.NextFriction(3, -10) == 0);
+}
+
+TEST_CASE("NextBlemishes adds, raises to the floor, then clamps", "[diplomacy][calculator]")
+{
+    const DiplomacyConfig_t config =
+        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+    const DiplomacyCalculator calculator(config);
+
+    CHECK(calculator.NextBlemishes(0, 2, 6) == 6);
+    CHECK(calculator.NextBlemishes(6, 2, 6) == 8);
+    CHECK(calculator.NextBlemishes(0, 2, 150) == 99);
+    CHECK(calculator.NextBlemishes(1, -5, 0) == 0);
 }

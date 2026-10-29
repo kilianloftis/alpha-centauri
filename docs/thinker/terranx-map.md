@@ -448,6 +448,38 @@ still busts when `random() & 1` (`0x5A3228`–`0x5A3238`). Risk 0 therefore alwa
 passes the strength check; only HSA's coin can still eliminate the probe.
 `BUSTED` is `0x5A31F0`. Thinker's `probe` rewrite matches this two-step roll.
 
+**Frame** (`FRAME` `0x690668` at `0x5A2F1B`, `FRAMEMENU` `0x690670`): after a
+hostile mission against an AI, a human actor may pick another commlink faction
+as the implicated party (stored in `Veh.probe_action` bits 5+). An AI actor
+with morale ≥ 5 may implicate the human `RankingFactionIDUnk1` when that
+target has a commlink and is not at Vendetta. Busting while a frame is set
+negates the id (`0x5A31D1`).
+
+- Frame flop (`prb_state < 0`, `0x5A4BA0`): `FactionStatus` `0x9A64E8` bit
+  of the framed id is the human test. AI framed: `FRAMEFLOP`;
+  `treaty_on(framed, actor, VENDETTA)` at `0x5A4C2F` always. Human framed:
+  no automatic Vendetta. MP (`0x93F660`): `HAVEFRAMEEXCUSE` /
+  `HASFRAMEEXCUSE` only (`agenda_on` `0x20` at `0x5A4D4F`). SP Pact:
+  `PACTFRAMEEXCUSE` (`popp_2` `0x50B970`); a yes calls `pact_ends` at
+  `0x5A4E55`. SP otherwise: `FRAMEEXCUSE`; a yes calls
+  `treaty_on(actor, framed, VENDETTA)` at `0x5A4EB8`. Then the target's
+  excuse dialogs still name the actor.
+- Human target (`is_human` at the `EXCUSE` / `PACTEXCUSE` / `NETEXCUSE`
+  block `0x5A4EE7`): the incident is with the **actor**, not the framed
+  faction. The successful-frame path is not reached. MP mind-control-city or
+  worse (`action_id >= 6`) `inc` the actor's `integrity_blemishes`
+  (`0x5A4FC4`).
+- Successful frame (`prb_state > 0`, `0x5A53B3`): `treaty_on(target, framed,
+  COMMLINK|VENDETTA|0x40)` at `0x5A53C2`, `set_treaty` `DIPLO_WANT_REVENGE`;
+  `FRAMEJOB` / `FRAMED`. No `cause_friction` and no blemish write.
+
+The two `cause_friction` sites (`0x5A55D0`, `0x5A5791`) run only after that
+frame-success return, and only when the pair still has Truce/Treaty/Pact
+(`has_treaty` mask `0x7` at `0x5A4B2B`; Vendetta skips the whole aftermath).
+Args are `cause_friction(target, actor, game_randv(4))` — delta `0..3`,
+victim resents the **actor**. Thinker's `mod_probe` matches the frame
+retarget; its Total Thought Control `cause_friction(..., 5)` is a `Fix:`.
+
 **Escape roll** (base targets, `0x5A42CA`–`0x5A4466`): `game_randv(morale − defense)`;
 `jle` risk at `0x5A4306` = lost. A lost probe is saved (returns home) only when Algo
 and not HSA and `random() & 1` is set (`0x5A4454`–`0x5A446D`). On escape, HSA's
@@ -652,12 +684,38 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
 ### Integrity / friction writers
 
 - `double_cross` `0x50BCC0`: `inc` blemishes; `inc` wrongs/betrayed; friction −4/−2
-  on some paths; Vendetta via `treaty_on` `0x10`; `pact_ends`.
-- `atrocity` `0x55EEE0`: friction +5; `inc` blemishes unless `DIPLO_ATROCITY_VICTIM`.
-- `major_atrocity` `0x55F450`: if not yet `DIPLO_MAJOR_ATROCITY_VICTIM`,
-  `blemishes + 2` then floor 6 cap 99; else +2.
-- `probe` `0x59F120`: `inc` blemishes (`0x5A4FC7`); friction +4 (`0x5A55D0`,
-  `0x5A5791`).
+  on some paths; Vendetta via `treaty_on` `0x10`; `pact_ends`. Calls
+  `intervention(def, atk)` at `0x50C2C8`.
+- `intervention` `0x50BA50` (`faction_id_def`, `faction_id_atk`): each living Pact
+  partner of `def` that is not already at Vendetta or Pact with `atk` joins via
+  `treaty_on` (`0x55B870` at `0x50BC45`) `DIPLO_VENDETTA|commlink|0x80000000`. No
+  `double_cross`, so pact honor writes no agreement-break blemish.
+- `act_of_aggression` `0x50C2E0`: `double_cross(atk, def, -1)` when the pair holds
+  Truce/Treaty/Pact, then `treaty_on` Vendetta. Combat hostility; not called from
+  `atrocity` / `major_atrocity` / `planet_busting`.
+- `atrocity` `0x55EEE0`: ORs `0x40020` (`DIPLO_ATROCITY_VICTIM|DIPLO_WANT_REVENGE`)
+  onto **tgt→perp** at `0x55EF0D` and saves the old `0x40000` bit for first/repeat,
+  before `un_charter` (`jg` `0x55EF3E`). Charter on: friction +5; `inc` blemishes
+  unless that saved bit. Does not call `double_cross`. Calls `major_atrocity` at
+  `0x55F29F` on some paths.
+- `major_atrocity` `0x55F450` (`faction_id`, `faction_id_tgt`). `tgt >= 0` ORs
+  `0xC0020` (`DIPLO_MAJOR_ATROCITY_VICTIM|DIPLO_ATROCITY_VICTIM|DIPLO_WANT_REVENGE`)
+  onto **tgt→perp** `diplo_status` and agenda bit 2, even if the Charter is
+  repealed. Penalties (`jg` at `0x55F4A6`) run only while
+  `ProposalPassCount[8] <= ProposalPassCount[9]` (`un_charter`). Then:
+  `tgt < 0` → `integrity_blemishes += 2` (no floor, no cap) at `0x55F51E`;
+  `tgt >= 0` and perp→tgt lacks `0x80000` → `clamp(blemishes+2, 6, 99)`;
+  perp→tgt already has `0x80000` → skip the blemish write (`jne` `0x55F4CE`).
+  The first/repeat test is the opposite direction from the OR, so a second
+  strike on the same victim still takes the floor path unless something else
+  set perp→tgt. Charter on: always `major_atrocities++` and living AI (not
+  human, not perp, not tgt) join Vendetta. No `cause_friction`. Does not call
+  `double_cross`. Thinker's rewrite matches these branches.
+- `probe` `0x59F120`: agreement aftermath only (see Frame under Probe).
+  `inc` actor blemishes at `0x5A4FC4` (MP, human target, `action_id >= 6`).
+  `cause_friction(target, actor, game_randv(4))` at `0x5A55D0` and
+  `0x5A5791` (delta `0..3`). Successful frame writes Vendetta on the
+  implicated faction and skips both.
 - `battle_fight_2` `0x506AF0`: friction +3 (`0x5078BB`), −1 (`0x50A1AB`), +5
   (`0x50B1EF`).
 - `action_terraform` `0x4C9B00`: friction +5 at `0x4CA3EB`.
@@ -666,6 +724,30 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
 - `setup_player` `0x5B0E00`: zeros blemishes and `diplo_reputation` (`0x5B1210`).
 
 No per-turn friction decay among the 19 `cause_friction` calls.
+
+### `planet_busting` (`0x500B60`)
+
+`void(veh_id, tx, ty)`. Blast radius `TableRange[reactor]` when `UNIT.plan`
+is `PLAN_PLANET_BUSTER` (5), else 0. A pre-pass (`shoot` `0x500560`) can abort
+the detonation (missile still dies); territory (`whose_territory` `0x4E3EF0`)
+is only that abort check, not the atrocity victim.
+
+On a real blast, one scan of `TableOffset*` tiles, impact first:
+
+1. `base_at` (`0x4E3A50`): first **foreign** base owner (byte `BASE+0x4` at
+   `0x97D044` ≠ detonator) becomes the victim; own bases are killed
+   (`base_kill` `0x4E5250`) and skipped.
+2. Else units on the tile (`veh_at` / `stack_fix`): first **foreign** unit
+   owner (`VEH+0x1A` at `0x952836`).
+3. If both stayed `-1` (empty disk, or only the detonator's bases/units),
+   the victim is `-1`.
+
+Then `major_atrocity(detonator, victim)` at `0x5010AC`. A victimless buster
+is still a major atrocity: Charter on, `+2` blemishes and `major_atrocities++`
+and the AI rally, with no victim flags. `shoot` and `major_atrocity` do not
+call `double_cross`, so a buster from Treaty takes no agreement-break blemish.
+Thinker's `planet_busting` matches this victim order; its `Fix:` is only
+placeholder draw veh ids.
 
 ### Talk
 

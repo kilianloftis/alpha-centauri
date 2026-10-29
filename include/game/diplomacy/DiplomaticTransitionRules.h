@@ -82,7 +82,13 @@ constexpr std::optional<DiplomaticStatus_t> StepDown(DiplomaticStatus_t status)
 // Whether a and b may propose StepUp of their current status.
 bool CanProposeStepUp(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
 bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
-// Whether a and b hold a status with a StepDown to cancel into.
+// Whether a and b know each other and hold an agreement to cancel.
 bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
+
+// Truce, Treaty and Pact: the statuses with a StepDown to fall to.
+bool IsAgreement(DiplomaticStatus_t status);
+
+// break_agreement_blemishes when from is an agreement, otherwise 0.
+int AgreementBreakBlemishes(DiplomaticStatus_t from);
 
 } // namespace ac

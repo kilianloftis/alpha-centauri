@@ -28,6 +28,7 @@ add_executable(effects-tests
     faction/PsychTests.cpp
     faction/DiplomacyConfigParserTests.cpp
     faction/DiplomacyCalculatorTests.cpp
+    faction/DiplomaticStandingMutationsTests.cpp
     faction/DiplomacyLedgerTests.cpp
     faction/DiplomaticPermissionRulesTests.cpp
     faction/DiplomaticStatusCommerceTests.cpp
@@ -157,6 +158,7 @@ add_executable(effects-tests
     ui/FactionBaseArtTests.cpp
     ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
+    ui/AtrocityNoticesTests.cpp
     ui/ProbeNoticesTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp

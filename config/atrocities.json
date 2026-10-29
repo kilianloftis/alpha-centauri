@@ -3,12 +3,20 @@
     "Simple": {
       "eco_virtual_minerals": 0,
       "universal_vendetta": false,
-      "expel_from_council": false
+      "expel_from_council": false,
+      "friction": 5,
+      "blemishes": 1,
+      "blemishes_floor": 0,
+      "repeat_blemishes": 0
     },
     "Major": {
       "eco_virtual_minerals": 5,
       "universal_vendetta": true,
-      "expel_from_council": true
+      "expel_from_council": true,
+      "friction": 5,
+      "blemishes": 2,
+      "blemishes_floor": 6,
+      "repeat_blemishes": 2
     }
   },
   "sanction_years_per_atrocity": 10

@@ -36,7 +36,8 @@ graph TB
         CommerceRules[CommerceRules<br/>sanctions zero the pair]
         EcoDamage[BaseEcology<br/>virtual minerals term]
         TurnStart[TurnStart<br/>ExpireSanctions]
-        Notices[PlayerInteractionQueue<br/>AtrocityCommitted notice]
+        Notices[PlayerInteractionQueue<br/>AtrocityNoticeInteraction_t]
+        AtrocityNotices[AtrocityNoticeCopy<br/>ui]
     end
 
     GameState --> AtrocityLedger
@@ -55,6 +56,7 @@ graph TB
     AtrocityMutations -->|ApplyStatusChange| DiplomacyLedger
     AtrocityMutations -->|Expel| PlanetaryCouncil
     AtrocityMutations -->|EnqueueForPlayer| Notices
+    Notices -->|InteractionPresenter| AtrocityNotices
 
     AtrocityRules --> AtrocitiesConfig
     AtrocitiesConfig --> SeverityConfig
@@ -110,8 +112,10 @@ the same year come to 150. An excused act does not lengthen it.
 
 The Charter gates every tier. With it repealed, nothing is counted: no universal Vendetta, no
 expulsion, no sanction, and that record adds no eco weight. The act is still an attack on the
-victim, so the victim pair goes to Vendetta either way (`ApplyHostileAct`). The victim fact is the
-record itself (`HasVictimized`, `HasCommittedMajorAgainst`), counted or not.
+victim, so the victim pair goes to Vendetta either way (`ApplyAtrocityVendetta`). The victim fact is the
+record itself (`HasVictimized`, `HasVictimizedAtLeast`), counted or not. SMAC sets
+`DIPLO_ATROCITY_VICTIM` before the Charter check, so an excused record still makes a later counted
+act against the same victim a repeat.
 
 A perpetrator named as its own victim is recorded **victimless**: razing your own ground is
 still an atrocity, but it is not a victim relationship, and the ledger rejects a record that
@@ -141,10 +145,18 @@ which of them answers for it.
 ### AtrocityMutations (mutation)
 
 `ResolveAtrocity` (`AtrocityRules`) decides whether the authored act is counted, classifies the
-severity from the simple counter, and names the sanction years, universal Vendetta and expulsion
-that follow. `CommitAtrocity` writes the record, then charges what the outcome names (the
-`UniversalVendettaJoiners` are read only after the act's own hostile act lands) and announces it. **The record is written either way**, because the victim's memory is that
-record. Escalation, sanctions, and the eco term read `bCounted` only.
+severity from the simple counter, and names the sanction years, universal Vendetta, expulsion,
+and standing change that follow. A counted act always writes blemishes. Against a victim, the
+first act at that severity or worse (`HasVictimizedAtLeast`) adds `blemishes` and raises the
+total to `blemishes_floor`; a later one adds `repeat_blemishes`. Victimless (and a perpetrator
+named as its own victim) adds `blemishes` with no floor. Friction is pairwise: only a victim
+with diplomacy (`HasDiplomacy`) takes the severity's `friction`. The first/repeat query runs
+against the ledger as it stands, so `CommitAtrocity` can record afterwards without the new row
+changing this act's standing.
+`CommitAtrocity` applies the outcome (`ApplyAtrocityVendetta`, standing, then the record), what
+the outcome names (the `UniversalVendettaJoiners` are read only after the act's own Vendetta
+lands), and `AtrocityNoticeInteraction_t`. **The record is written either way**, because the
+victim's memory is that record. Escalation, sanctions, and the eco term read `bCounted` only.
 
 `AtrocityCommitted_t` reports the severity actually answered for (which escalation may have
 raised), the `AtrocityExcuse_t` saying why nothing was charged when nothing was, and the
@@ -160,7 +172,7 @@ holds the standing commerce sanction: the mission year each sanctioned faction's
 per-base memo key, because a sanction zeroes a pair without touching any treaty or effect pool.
 
 `AtrocityEcoMinerals` (`EcologyRules`) reads the config (the weight is authored there) and sums
-counted records only. `HasVictimized` and `HasCommittedMajorAgainst` read every record of that pair, including
+counted records only. `HasVictimized` and `HasVictimizedAtLeast` read every record of that pair, including
 ones that were not counted.
 
 `IsSanctioned(faction, missionYear)` answers from the stored expiry rather than from the entry
@@ -173,12 +185,12 @@ its revision bump is what invalidates `CommerceCache`'s memo.
 | Consequence | Where it lands |
 |---|---|
 | Commerce sanctions | `AtrocityLedger::ExtendSanction`, counted Simple acts only; `CommerceRules` drops the owner and skips sanctioned partners |
-| Victim memory | `AtrocityLedger::HasVictimized` and `HasCommittedMajorAgainst`. Written with the record, before the gates |
-| Victim Vendetta | `ApplyHostileAct(perpetrator, victim)`, before the gates: a sneak attack, so nobody withdraws from territory. It obliges the victim's Pact partners, who join as part of the sneak attack (see `diplomacy-system.md`) |
+| Victim memory | `AtrocityLedger::HasVictimized` and `HasVictimizedAtLeast` (a severity or worse, by enum order). Written with the record |
+| Victim Vendetta | `ApplyAtrocityVendetta(perpetrator, victim)`: a sneak attack, so nobody withdraws from territory. It obliges the victim's Pact partners, who join as part of the sneak attack, and does not write an agreement-break blemish (see `diplomacy-system.md`) |
 | Universal Vendetta | Living AI factions only, excluding the victim and anyone already at Vendetta (including the victim's partners, who joined through the sneak attack), via `JoinVendetta`, a declaration (each side withdraws from the other's territory, evicts what Vendetta no longer allows, grants a commlink, obliges nobody: the world defends the victim, so the perpetrator's AI Pact partners' Pacts end and nobody is asked to defend it). Humans are never forced, and native life never joins: it has no diplomacy |
 | Council expulsion | `PlanetaryCouncil::Expel`, counted acts whose tier sets it |
 | Eco-damage | `AtrocityEcoMinerals` (`EcologyRules`), counted records only |
-| Player notice | `EnqueueForPlayer`, gated by `PauseOnEventId_t::AtrocityCommitted`. Phrased from `AtrocitySeverityLabel`, not from the enumerator name |
+| Player notice | `EnqueueForPlayer` of `AtrocityNoticeInteraction_t`, gated by `PauseOnEventId_t::AtrocityCommitted`. `AtrocityNoticeCopy` phrases the body in `src/ui/` |
 
 Sanctions lapse in `TurnStart`, which is world-scoped and owns the mission year; per-faction
 `Upkeep` would run the sweep once per faction.
@@ -201,8 +213,11 @@ wrongs every faction it hit is an unrecorded rules question.
 
 Every commission announces to the human, including one between two AI factions they have never
 met. Whether atrocities are common knowledge or gated on contact is unrecorded, and carries a
-`TODO(atrocity)` in `AnnounceToPlayer_`.
+`TODO(atrocity)` in `EnqueueAtrocityNotice_`.
 
-Consumers that do not exist yet: AI diplomatic reaction, integrity / blemishes / grievances,
-and the eco-damage calculator. The calculator reads `AtrocityEcoMinerals` for the
-`5 * Atrocities` term.
+A counted act writes blemishes through `DiplomaticStandingMutations`; friction only when the
+victim has diplomacy (see [diplomacy-system.md](diplomacy-system.md)). Each `atrocities.json`
+severity requires `friction`, `blemishes`, `blemishes_floor` and `repeat_blemishes`. Prior acts
+include excused records: SMAC sets `DIPLO_ATROCITY_VICTIM` before the Charter check.
+Consumers that do not exist yet: AI diplomatic reaction. The eco-damage calculator reads
+`AtrocityEcoMinerals` for the `5 * Atrocities` term.
