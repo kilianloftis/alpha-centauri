@@ -14,6 +14,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
+#include "game/worldgen/MoistureGeneration.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
@@ -277,11 +278,13 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
 TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                                        const UnitComponentRegistry* pUnitComponents,
                                        const TileYieldRulesConfig_t& rYieldRules,
-                                       const InteractionGridsConfig_t& rInteractionGrids)
+                                       const InteractionGridsConfig_t& rInteractionGrids,
+                                       const MoistureDecorationConfig_t& rMoisture)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
     , m_rYieldRules(rYieldRules)
     , m_rInteractionGrids(rInteractionGrids)
+    , m_rMoisture(rMoisture)
     , m_maxRadius(MaxAuraRadius_(rImprovements, pUnitComponents))
 {
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
@@ -435,6 +438,16 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile)
     rTile.SetMoisture(static_cast<Moisture_t>(clamped));
 }
 
+void TileEffectsContext::RecomputeClimate()
+{
+    TileChangeDeferral defer;
+    RecomputeRivers(m_rWorldMap);
+    for (Tile* pTile : moisture_gen::RecomputeRainfall(m_rWorldMap, m_rMoisture))
+    {
+        RecomputeMoisture(*pTile);
+    }
+}
+
 void TileEffectsContext::AddOccupantWithEffects(Tile& rTile, const std::string& occupantId)
 {
     const ImprovementConfig_t& rConfig = m_rImprovements.Get(occupantId);
@@ -442,7 +455,7 @@ void TileEffectsContext::AddOccupantWithEffects(Tile& rTile, const std::string& 
     RecomputeMoistureInRadius_(rTile, MaxEffectReach_(rConfig), *this, m_rWorldMap);
     if (rConfig.terminatesRiver)
     {
-        RecomputeRivers(m_rWorldMap);
+        RecomputeClimate();
     }
 }
 
@@ -518,7 +531,7 @@ void TileEffectsContext::RemoveOccupantWithEffects(Tile& rTile, const std::strin
     RecomputeMoistureInRadius_(rTile, radius, *this, m_rWorldMap);
     if (bTerminatesRiver)
     {
-        RecomputeRivers(m_rWorldMap);
+        RecomputeClimate();
     }
 }
 

@@ -65,7 +65,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing
 TEST_CASE("TraceRiverFrom follows orthogonal downhill and keeps terminus HasRiver",
           "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 4000);
     // Path: (8,2) -> (7,3) -> (6,4) sink
     SetLandElev_(*world.GetTile(8, 2), 3000);
@@ -84,7 +84,7 @@ TEST_CASE("TraceRiverFrom follows orthogonal downhill and keeps terminus HasRive
 
 TEST_CASE("TraceRiverFrom does not step diagonally from the aquifer", "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 3000);
     // Aquifer is a local orthogonal minimum; the tile due south on screen is a lattice
     // diagonal and much lower but must not be used.
@@ -104,7 +104,7 @@ TEST_CASE("TraceRiverFrom does not step diagonally from the aquifer", "[worldgen
 
 TEST_CASE("TraceRiverFrom ends on water but marks the water tile", "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 4000);
     SetLandElev_(*world.GetTile(8, 2), 2000);
     SetLandElev_(*world.GetTile(7, 3), 1000);
@@ -122,7 +122,7 @@ TEST_CASE("TraceRiverFrom ends on water but marks the water tile", "[worldgen][r
 
 TEST_CASE("TraceRiverFrom prefers N before E on equal lower elevation", "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 3000);
     SetLandElev_(*world.GetTile(6, 4), 2000);
     SetLandElev_(*world.GetTile(7, 3), 1000); // N
@@ -138,7 +138,7 @@ TEST_CASE("TraceRiverFrom prefers N before E on equal lower elevation", "[worldg
 
 TEST_CASE("TraceRiverFrom wraps X when flowing west", "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 4000);
     SetLandElev_(*world.GetTile(0, 4), 2000);
     SetLandElev_(*world.GetTile(k_RiverMapWidth - 1, 3), 1000); // west of (0,4) via wrap
@@ -153,7 +153,7 @@ TEST_CASE("TraceRiverFrom wraps X when flowing west", "[worldgen][rivers]")
 
 TEST_CASE("RecomputeRivers clears stale path after elevation change", "[worldgen][rivers]")
 {
-    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules());
+    WorldMap world(k_RiverMapWidth, k_RiverMapHeight, actest::TestMapRules(), Rainfall_t::Average);
     FillElevation_(world, 4000);
     SetLandElev_(*world.GetTile(8, 2), 3000);
     SetLandElev_(*world.GetTile(7, 3), 2000);

@@ -72,6 +72,15 @@ int ElevationFor_(float value, const ElevationScale_t& rScale,
     return static_cast<int>(std::lround(raised));
 }
 
+// Nothing on a new world shifts moisture, so each tile's moisture is its rainfall.
+void ApplyBaseMoisture_(WorldMap& rWorld)
+{
+    for (const std::unique_ptr<Tile>& pTile : rWorld.GetTiles())
+    {
+        pTile->SetMoisture(pTile->GetBaseMoisture());
+    }
+}
+
 } // namespace
 
 WorldGenerator::WorldGenerator() = default;
@@ -90,7 +99,8 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 
     ElevationRulesConfig_t rules = rMapRules;
     WorldGenPresetConfigParser::ApplyElevationRange(rules, rPreset);
-    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules);
+    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules,
+                                             rConfig.rainfall);
 
     // Bound before any stage runs: an unbound tile answers coexistence questions differently from
     // the same tile in play.
@@ -107,7 +117,8 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     PlaceFungus(*pWorld, rDecoration.fungus, rFungus, m_rng);
     PlaceLandmarks(*pWorld, rLandmarks, rOccupants, m_rng);
     GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
-    moisture_gen::GenerateRainfall(*pWorld, rDecoration.moisture, rConfig.rainfall);
+    moisture_gen::RecomputeRainfall(*pWorld, rDecoration.moisture);
+    ApplyBaseMoisture_(*pWorld);
     PlaceTileBonuses(*pWorld, rDecoration.tileBonuses, rOccupants, m_rng);
 
     return pWorld;

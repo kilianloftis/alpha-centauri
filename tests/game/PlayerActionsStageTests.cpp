@@ -322,7 +322,7 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
         SeededSession_(FactionFixture& rFixtures, GameSettings& rSettings, unsigned seed)
             : pState(std::make_unique<GameState>(
                   std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
-                                             actest::TestMapRules()),
+                                             actest::TestMapRules(), Rainfall_t::Average),
                   rFixtures.dataContext, rSettings, actest::k_TestRngSeed))
             , scope(*pState)
         {

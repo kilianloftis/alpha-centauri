@@ -39,6 +39,7 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
+#include "game/worldgen/WorldGenDecorationConfig.h"
 #include "lib/EventBus.h"
 #include <algorithm>
 #include <functional>
@@ -165,7 +166,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pCouncilVotes = std::make_unique<CouncilVoteExecutor>(*m_pCouncil);
     m_pTileEffects = std::make_unique<TileEffectsContext>(
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
-        rGameData.tileYieldRules, rGameData.interactionGrids);
+        rGameData.tileYieldRules, rGameData.interactionGrids,
+        rGameData.worldGenDecorationConfig->moisture);
     m_pTileEffects->BindWorldEffects(*this);
     m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry,
                                                    MovementConstants_t{});

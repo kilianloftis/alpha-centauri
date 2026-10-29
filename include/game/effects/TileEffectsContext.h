@@ -13,6 +13,7 @@ namespace ac
 
 class ImprovementRegistry;
 class IWorldEffectsSource;
+struct MoistureDecorationConfig_t;
 class Tile;
 struct ImprovementConfig_t;
 class UnitComponentRegistry;
@@ -25,12 +26,13 @@ struct InteractionGridsConfig_t;
 class TileEffectsContext : public TileChangeListener
 {
 public:
-    // pUnitComponents sizes the aura scan; nullptr if units never project auras. rYieldRules and
-    // rInteractionGrids must outlive this.
+    // pUnitComponents sizes the aura scan; nullptr if units never project auras. rYieldRules,
+    // rInteractionGrids and rMoisture must outlive this.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                        const UnitComponentRegistry* pUnitComponents,
                        const TileYieldRulesConfig_t& rYieldRules,
-                       const InteractionGridsConfig_t& rInteractionGrids);
+                       const InteractionGridsConfig_t& rInteractionGrids,
+                       const MoistureDecorationConfig_t& rMoisture);
     ~TileEffectsContext() override;
 
     // Session WorldGlobal source. Unbound contexts resolve tile-local effects only.
@@ -60,6 +62,10 @@ public:
 
     // Recomputed from base moisture plus Condensers in range, so overlap and order never drift.
     void RecomputeMoisture(Tile& rTile);
+
+    // SMAC world_climate: rivers, then rainfall into base moisture, then moisture wherever the
+    // base changed. Run after anything that moves elevation, aquifers or river ends.
+    void RecomputeClimate();
 
     // Adds occupantId, drops improvements that can no longer stay, and recomputes moisture in its
     // radius. Use instead of Tile::AddOccupant.
@@ -96,6 +102,7 @@ private:
     const ImprovementRegistry& m_rImprovements;
     const TileYieldRulesConfig_t& m_rYieldRules;
     const InteractionGridsConfig_t& m_rInteractionGrids;
+    const MoistureDecorationConfig_t& m_rMoisture;
     // Max ThisTile-scoped effect radius across improvement configs and unit components;
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;

@@ -383,6 +383,31 @@ TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived 
     }
 }
 
+TEST_CASE("RecomputeClimate: lowland forest carries coastal rain further inland",
+          "[effects][tile][moisture]")
+{
+    // Sea at the west edge seeds each row's rain belt; on bare flats it dries out within a few
+    // tiles. A forest resets the dry count for its own row from the forest to one tile past it.
+    actest::WorldFixture world;
+    for (const std::unique_ptr<Tile>& pTile : world.map.GetTiles())
+    {
+        pTile->SetElevation(pTile->GetX() <= 3 ? -100 : 200);
+    }
+    constexpr int y = 8;
+    Tile& rInland = world.At(24, y);
+    world.ctx.RecomputeClimate();
+    REQUIRE(rInland.GetMoisture() == Moisture_t::Arid);
+
+    for (int x = 8; x <= 20; x += 2)
+    {
+        world.ctx.AddOccupantWithEffects(world.At(x, y), "Forest");
+    }
+    CHECK(rInland.GetMoisture() == Moisture_t::Arid); // planting does not re-run the climate
+
+    world.ctx.RecomputeClimate();
+    CHECK(rInland.GetMoisture() == Moisture_t::Moist);
+}
+
 TEST_CASE("RecomputeMoisture: the moisture shift feeds back into tile yield", "[effects][tile][moisture]")
 {
     actest::WorldFixture world;

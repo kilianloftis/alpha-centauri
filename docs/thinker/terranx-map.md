@@ -259,6 +259,61 @@ Runs only when the tile crosses the shore line (`(old < 3) != (new < 3)`, `0x591
 Thinker's `alt_set` clamps the reduced pop at 0 before testing it (`Fix:`, the original can
 store a negative byte). Otherwise it follows the same flow.
 
+## Climate
+
+### `world_climate` (`0x5C5A30`)
+
+Rebuilds the whole map's derived climate: `world_shorelines` (`0x5C3F70`), `world_temperature`
+(`0x5C4170`), `world_rivers` (`0x5C38B0`), `world_rainfall` (`0x5C4470`), `Path_continents`
+(`0x59C790`), `world_analysis` (`0x5C55C0`), then `reset_territory` (`0x523DD0`) unless
+`0x9B22EC` is set. Rainfall is never updated locally: every in-game change re-runs the full
+scan. Its only other callers are the map generators (`world_monsoon`, `world_dune`).
+
+In-game callers:
+
+- `action_terraform` (`0x4C9B00`): condenser or thermal bore (`0x4CA10C`), aquifer
+  (`0x4CA127`), raise land (`0x4CA13F`, after `world_raise_alt` `0x5C2380`), lower land
+  (`0x4CA199`, after `world_lower_alt` `0x5C23E0`). Planting or removing forest does not call
+  it.
+- `action_destroy` (`0x4CAA50`): only when the destroyed items include bore, mirror or
+  condenser (`test eax, 0x1C00000` at `0x4CAF7B`, call `0x4CAF80`).
+- `action_tectonic` (`0x4CE210`, `0x4CE56B`): after `world_raise_alt` per reactor level.
+- `planet_busting` (`0x500B60`, `0x500F0E`): after the crater.
+- `base_ecology` (`0x4F67F0`): after `world_volcano` (`0x5C6DB0`, `0x4F78C3`).
+- `random_events` (`0x51F2E0`): after `world_crater` (`0x5C5C70`, `0x5211A4`).
+- `climactic_changes` (`0x524210`, `0x52426E`) and the same code inlined in `turn_upkeep`
+  (`0x5258C0`, `0x525B6E`): each one-level sea level step (`MapSeaLevel` `0x94987C`).
+- `goody_box` (`0x57A660`): new river source (`0x57B18E`) and earthquake (`0x57B464`, after
+  two `world_raise_alt`).
+- Editor and load: `MapWin_editor`, `MapWin_UNK4`, `MapWin_click`, `Console_editor_*`,
+  `map_menu`, `clear_dirty`, `world_build`.
+
+### `world_rainfall` (`0x5C4470`)
+
+Thinker's `mapgen.cpp` reimplements it faithfully. In-game the inputs include altitude, ocean,
+temperature, rivers, forest at altitude 3–4 (scratch bit `0x40`), the dune, mesa, jungle and
+Unity landmarks, and condensers.
+
+- **Forest** (`items` bit `0x200000`, `0x5C4816`) at altitude 3–4 sets scratch bit `0x40` on
+  `(x + 1, y − 1…y + 1)` and `(x + 2, y)` (`0x5C4823`–`0x5C48FB`). The middle `x + 1` index
+  rounds onto the forest itself on even columns and onto E on odd ones, so the marks are NE, E,
+  SE, plus the forest tile when x is even. In the scan, a marked tile at altitude ≤ 4 resets
+  `rain_steps` and `dry_steps`, floors `moisture_mod` at 0 and resets moisture to `sloping`
+  (`0x5C4BFA`–`0x5C4C27`), after the lee-dry bit. A forest therefore keeps a rain belt alive
+  across flats it would otherwise dry out over.
+- **Condenser** (`items` bit `0x400000`, tested as byte `+0xA` bit `0x40` at `0x5C450D`):
+  marks its 3×3 in scratch byte `MAP+6`, bit `0x1` for the first condenser and `0x4` for a
+  second (`0x5C456C`–`0x5C4576`). A third adds nothing.
+- After the belt result is clamped to 0..2, each mark adds 1 up to 2 **and sets `rain_flag` to
+  1** (`0x5C4DA6`–`0x5C4DC9`). `rain_flag` carries east along the row scan, so a condenser also
+  feeds `moisture_mod` on tiles past its 3×3 until the belt decays.
+- **Smoothing pass** (`0x5C4EB3`–`0x5C4F9A`): any tile with rainfall 0 that has a land
+  neighbour at rainfall 2 is set to 1 (`climate_set` `0x591A80`). This runs on the final values,
+  condensers included, so a condenser that makes a tile wet also lifts arid tiles one ring
+  further out. The centre tile is not tested for land.
+- While `CurrentTurn` (`0x9A64D4`) is non-zero, the first changed tile within 2 of a player
+  base sets `0x9B22E0`, which drives `action_terraform`'s TERRAMINE / TERRAYOURS popup.
+
 ## Research
 
 ### `tech_rate` (`0x5BE6B0`)

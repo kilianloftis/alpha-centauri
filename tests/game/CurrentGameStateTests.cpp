@@ -15,7 +15,8 @@ namespace
 
 std::unique_ptr<ac::GameState> MakeState_(actest::FactionFixture& rFixture)
 {
-    auto pMap = std::make_unique<ac::WorldMap>(2, 1, actest::TestMapRules());
+    auto pMap =
+        std::make_unique<ac::WorldMap>(2, 1, actest::TestMapRules(), ac::Rainfall_t::Average);
     return std::make_unique<ac::GameState>(std::move(pMap), rFixture.dataContext,
                                            rFixture.settings, actest::k_TestRngSeed);
 }
@@ -70,7 +71,7 @@ TEST_CASE("A scope on one thread is not visible on another", "[game][current-gam
 TEST_CASE("AddFaction rejects a faction built against another map", "[game][current-game-state]")
 {
     actest::FactionFixture fixture;
-    ac::WorldMap otherMap(2, 1, actest::TestMapRules());
+    ac::WorldMap otherMap(2, 1, actest::TestMapRules(), ac::Rainfall_t::Average);
     auto pFaction = std::make_unique<ac::Faction>(
         fixture.state.AllocateFactionId(), /*bIsPlayerControlled=*/true, fixture.factionDefinition,
         fixture.dataContext, otherMap, fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed);

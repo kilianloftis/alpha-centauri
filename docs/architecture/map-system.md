@@ -114,7 +114,7 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
 ## Component Overview
 
 ### Tile
-- **Purpose**: Represents a single tile on the game map with all its characteristics. `Tile` does not know the effects system. Yield and defense stay in `TileEffectsContext`. Characteristic changes and `AddImprovement` notify an optional `TileChangeListener` (`include/game/map/TileChangeListener.h`). The session binds `TileEffectsContext` as that listener, so coexistence is reassessed from the tile mutation itself. `RecomputeRivers` and `ApplyElevationDelta` defer those notifications until the batch has a final elevation, surface, and river layout.
+- **Purpose**: Represents a single tile on the game map with all its characteristics. `Tile` does not know the effects system. Yield and defense stay in `TileEffectsContext`. Characteristic changes and `AddImprovement` notify an optional `TileChangeListener` (`include/game/map/TileChangeListener.h`). The session binds `TileEffectsContext` as that listener, so coexistence is reassessed from the tile mutation itself. `RecomputeRivers`, `RecomputeClimate` and `ApplyElevationDelta` defer those notifications until the batch has a final elevation, surface, river, and moisture layout.
 - **Responsibilities**:
   - Store terrain characteristics:
     - Moisture_t (enum: Arid, Moist, Wet)
@@ -173,22 +173,36 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
 
 ```mermaid
 graph LR
-    Elevation[Elevation<br/>FBM noise + landmass mask] --> Moisture[Moisture<br/>coastal / tropical / orographic]
-    Moisture --> Rockiness[Rockiness<br/>erosive-forces weights]
+    Elevation[Elevation<br/>FBM noise + landmass mask] --> Rockiness[Rockiness<br/>erosive-forces weights]
     Rockiness --> Fungus[Fungus patches]
     Fungus --> Landmarks[Landmarks<br/>stamp + sculpt]
     Landmarks --> Rivers[Aquifers + RecomputeRivers]
-    Rivers --> Bonuses[Tile bonuses]
+    Rivers --> Rainfall[RecomputeRainfall<br/>base moisture]
+    Rainfall --> Bonuses[Tile bonuses]
 ```
 
 - **Ocean depth**: water takes how far below the waterline its noise sits (0–1), raised to the preset's `ocean_depth_exponent`, as a share of `min_elevation`. Below 1 the sea deepens quickly off the coast, so the shelf (above `ocean_shelf_meters`) stays a coastal band and the open sea renders as SMAC's deep blue; the shipping presets use 0.6.
 - **Landmarks before rivers**: landmark placement is the last stage that changes elevation (the Mount Planet sculpt raises peaks and roughens slopes) or stamps a `terminates_river` feature (BoreholeCluster). River tracing walks strictly downhill and stops at terminators, so it has to see the finished terrain. Run the other way round, rivers flowed down pre-sculpt slopes and straight through boreholes.
 - **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks.
-- **Orographic moisture**: elevation weight is local meters divided by the preset's `max_elevation`, clamped to [0, 1], so a tile at that ceiling takes the full `orographic_strength`. Slope saturation stays `orographic_elev_scale` in `decoration.json`.
+- **Rain after rivers**: `RecomputeRainfall` ports SMAC's `world_rainfall`, which reads rivers and landmarks, so it runs after both, as in `world_climate`. It writes base moisture; on a new world each tile's moisture is then its base.
 - **Fungus before landmarks**: `PlaceFungus` covers `decoration.json`'s `fungus.fraction` of the tiles the fungus entry can occupy, land and water in one pool. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
 - **Aquifers**: `GenerateAquifers_` covers `aquifers.fraction` of the tiles the Aquifer entry can occupy. The shipping entry's `domain` is land, so water tiles stay out of that pool.
 - **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
 - **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
+
+### Climate in play
+
+SMAC never updates rainfall locally: every change that can move it re-runs the whole-map
+`world_climate` ([terranx-map.md](../thinker/terranx-map.md), "Climate").
+`TileEffectsContext::RecomputeClimate` is that step: `RecomputeRivers`, then `RecomputeRainfall`
+into base moisture (including lowland forest humidity, which world gen never sees), then
+`RecomputeMoisture` on each tile whose base changed. Elevation writes, aquifer toggles and
+`terminates_river` occupants call it. Planting forest does not, matching the binary; the next
+re-run picks it up. The rainfall setting it reads is `WorldMap::GetRainfall`, fixed at
+generation, since the session's settings can change mid-game.
+
+Condensers stay a local `moisture_tier` overlay on top of base moisture (see
+[deviations](../../config/deviations/README.md), "Condenser moisture is a local overlay").
 
 ### Occupant art (`OccupantArt_t`)
 
@@ -318,8 +332,7 @@ and yield lookups for object rows still read the live tile.
 
 ## Future Enhancements
 
-- **Weather System**: Dynamic moisture/river modifications based on climate
-- **Orographic moisture after sculpting**: landmark sculpting is the last stage to change elevation, but moisture is derived before it, so a sculpted peak keeps its pre-sculpt moisture tier. Re-deriving moisture afterwards would re-roll tiers that landmark anchors were already chosen against (moisture ids are themselves `CanBuildImprovement` features) — resolving it needs a rule, not a reorder.
+- **Climate side effects**: SMAC's `world_climate` also rebuilds temperature, shorelines and continents, and a rainfall change near a base drives the TERRAMINE / TERRAYOURS popup. `RecomputeClimate` covers rivers and rainfall only.
 - **Seed persistence**: `Engine` resolves one session seed and the whole map derives from it, but nothing writes it down — replaying a finished game waits on a save system.
 - **Combat system**: `ResolveTileDefenseMultiplier(tile, forFaction)` is ready to call but nothing resolves attacks yet
 - **Territory UI**: WorldDisplay draws faction base sprites and name labels; border/ownership tint is not implemented yet

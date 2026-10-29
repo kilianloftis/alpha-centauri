@@ -164,7 +164,6 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     Tile& rAquifer = game.At_(8, 6);
     Tile& rOutside = game.At_(10, 10);
     const Rockiness_t rockiness = rOrigin.GetRockiness();
-    const Moisture_t moisture = rOrigin.GetMoisture();
 
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFarm, std::string(ImprovementIds::k_Farm));
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungus, std::string(ImprovementIds::k_Fungus));
@@ -193,7 +192,6 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     CHECK(rFungus.HasFeature(ImprovementIds::k_Fungus));
     CHECK(rAquifer.GetHasAquifer());
     CHECK(rOrigin.GetRockiness() == rockiness);
-    CHECK(rOrigin.GetMoisture() == moisture);
 
     const ElevationRulesConfig_t& rRules = rOrigin.MapRules();
     for (const auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())

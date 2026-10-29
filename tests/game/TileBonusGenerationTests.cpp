@@ -32,7 +32,7 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable til
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
                      terrain, operations);
 
-    WorldMap world(24, 24, actest::TestMapRules());
+    WorldMap world(24, 24, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
 
     TileBonusDecorationConfig_t cfg;
@@ -82,7 +82,7 @@ TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
                      terrain, operations);
 
-    WorldMap world(16, 16, actest::TestMapRules());
+    WorldMap world(16, 16, actest::TestMapRules(), Rainfall_t::Average);
     for (auto& pTile : world.GetTiles())
     {
         pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);

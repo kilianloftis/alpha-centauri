@@ -149,7 +149,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
 TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
           "[worldgen][fungus]")
 {
-    WorldMap world(40, 80, actest::TestMapRules());
+    WorldMap world(40, 80, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -170,7 +170,7 @@ TEST_CASE("PlaceFungus covers roughly the configured fraction of viable tiles",
 TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
           "[worldgen][fungus]")
 {
-    WorldMap world(8, 16, actest::TestMapRules());
+    WorldMap world(8, 16, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -195,7 +195,7 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
 
 TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]")
 {
-    WorldMap world(20, 40, actest::TestMapRules());
+    WorldMap world(20, 40, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -229,7 +229,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
 TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
           "[worldgen][fungus]")
 {
-    WorldMap world(40, 80, actest::TestMapRules());
+    WorldMap world(40, 80, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -266,7 +266,7 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
 TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
           "[worldgen][fungus]")
 {
-    WorldMap world(16, 32, actest::TestMapRules());
+    WorldMap world(16, 32, actest::TestMapRules(), Rainfall_t::Average);
     for (auto& pTile : world.GetTiles())
     {
         pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);
@@ -308,7 +308,7 @@ TEST_CASE("PlaceFungus stamps land and water from one fraction of viable tiles",
 
 TEST_CASE("PlaceFungus counts only tiles the fungus entry can occupy", "[worldgen][fungus]")
 {
-    WorldMap world(20, 40, actest::TestMapRules());
+    WorldMap world(20, 40, actest::TestMapRules(), Rainfall_t::Average);
     int land = 0;
     for (auto& pTile : world.GetTiles())
     {

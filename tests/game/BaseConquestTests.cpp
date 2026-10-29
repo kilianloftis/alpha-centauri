@@ -854,7 +854,7 @@ TEST_CASE("ResolveBaseEntryConquest rejects a GameState that is not current",
     Unit& mover = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     auto pOther = std::make_unique<GameState>(
         std::make_unique<WorldMap>(actest::k_TestMapWidth, actest::k_TestMapHeight,
-                                   actest::TestMapRules()),
+                                   actest::TestMapRules(), Rainfall_t::Average),
         game.fixtures.dataContext, game.fixtures.settings, actest::k_TestRngSeed);
     std::mt19937 rng(1);
     CHECK_THROWS_AS(ResolveBaseEntryConquest(mover, *pOther, rng), std::logic_error);

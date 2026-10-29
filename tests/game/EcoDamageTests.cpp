@@ -20,6 +20,7 @@
 #include "game/map/Tile.h"
 #include "game/units/SupplyCrawlMutations.h"
 #include "game/units/Unit.h"
+#include "game/worldgen/WorldGenDecorationConfig.h"
 #include "lib/IdAllocator.h"
 #include "lib/LuaRuntime.h"
 
@@ -332,10 +333,11 @@ TEST_CASE("The score needs the faction bound to a session", "[ecology]")
 {
     // No WorldFixture: scoring reads CurrentGameState(), which must be absent here.
     SessionInputs inputs;
-    WorldMap map(k_TestMapWidth, k_TestMapHeight, TestMapRules());
+    WorldMap map(k_TestMapWidth, k_TestMapHeight, TestMapRules(), Rainfall_t::Average);
     TileEffectsContext ctx(map, inputs.improvements, &inputs.unitComponents,
                            inputs.dataContext.tileYieldRules,
-                           inputs.dataContext.interactionGrids);
+                           inputs.dataContext.interactionGrids,
+                           inputs.dataContext.worldGenDecorationConfig->moisture);
     inputs.ownerDefinition.id = "test_base_owner";
     IdAllocator unitIds;
     Faction owner(/*factionId*/ 1, /*bIsPlayerControlled*/ true, inputs.ownerDefinition,

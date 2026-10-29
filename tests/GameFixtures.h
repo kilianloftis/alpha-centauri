@@ -67,6 +67,8 @@
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/map/ElevationRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
+#include "game/worldgen/WorldGenDecorationConfig.h"
+#include "game/worldgen/WorldGenDecorationConfigParser.h"
 #include "game/population/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
@@ -219,6 +221,10 @@ struct SessionInputs
             FixturePath("tile_yield_rules.json"));
         dataContext.interactionGrids = ac::InteractionGridsConfigParser{}.ParseConfig(
             FixturePath("interaction_grids.json"));
+        // Climate re-runs read the rainfall knobs.
+        dataContext.worldGenDecorationConfig = std::make_unique<ac::WorldGenDecorationConfig_t>(
+            ac::WorldGenDecorationConfigParser{}.ParseConfig(
+                FixturePath("worldGen/decoration.json")));
         dataContext.worldRules = std::move(worldRules);
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         // Same morale table Engine loads, and the one calculator built from it.
@@ -334,8 +340,8 @@ struct WorldFixture : SessionInputs
                           std::vector<ac::EffectConfig_t> worldRules = {},
                           const ac::ElevationRulesConfig_t& rMapRules = TestMapRules())
         : SessionInputs(rOccupants, std::move(worldRules))
-        , state(std::make_unique<ac::WorldMap>(width, height, rMapRules), dataContext, settings,
-                k_TestRngSeed)
+        , state(std::make_unique<ac::WorldMap>(width, height, rMapRules, ac::Rainfall_t::Average),
+                dataContext, settings, k_TestRngSeed)
         , scope(state)
         , map(state.GetWorldMap())
         , ctx(state.GetTileEffects())

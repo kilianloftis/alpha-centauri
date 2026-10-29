@@ -2,7 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
-#include "game/map/RiverGeneration.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/terraform/SurfaceOccupancy.h"
@@ -51,7 +51,7 @@ std::vector<SurfaceFlip_t> FlippedSurfaces_(const std::vector<SurfaceFlip_t>& rB
 }
 
 // Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
-// recomputes rivers. Returns false when there was nothing to write.
+// recomputes the climate. Returns false when there was nothing to write.
 bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, GameState& rGameState)
 {
     if (rWrites.empty())
@@ -63,7 +63,7 @@ bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, GameSta
     WorldMap& rWorldMap = rGameState.GetWorldMap();
     const std::vector<SurfaceFlip_t> before = WriteElevations_(rWrites, rWorldMap);
     ReconcileSurfaceFlips(rGameState, FlippedSurfaces_(before));
-    RecomputeRivers(rWorldMap);
+    rGameState.GetTileEffects().RecomputeClimate();
     return true;
 }
 

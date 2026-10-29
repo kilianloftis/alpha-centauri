@@ -1,11 +1,15 @@
 #include "game/worldgen/MoistureGeneration.h"
 
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <span>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -42,11 +46,9 @@ int CloudCover_(Rainfall_t rainfall)
     throw std::invalid_argument("Unknown rainfall value");
 }
 
-void SetTileMoisture_(Tile& rTile, int tier)
+void SetBaseTier_(Tile& rTile, int tier)
 {
-    const Moisture_t moisture = MoistureFromTier_(tier);
-    rTile.SetBaseMoisture(moisture);
-    rTile.SetMoisture(moisture);
+    rTile.SetBaseMoisture(MoistureFromTier_(tier));
 }
 
 } // namespace
@@ -243,7 +245,25 @@ void MarkCloudmass_(const WorldMap& rWorld, RainfallGrids_t& rGrids,
     MarkBelt_(rWorld, rGrids, x, y, alt, 2, cloudmass - rainfallDelta, k_FlagLeeDry);
 }
 
-// Ocean moisture eastward + cloudmass west-wet / east-dry belts.
+// NE, E and SE of the forest. SMAC's middle step is x + 1 on the forest's own row, which lands
+// on the forest itself on even columns and on E on odd ones (0x5C4823).
+void MarkForestHumidity_(const WorldMap& rWorld, RainfallGrids_t& rGrids, int x, int y)
+{
+    constexpr std::array<std::pair<int, int>, 3> k_Steps = {{{1, -1}, {2, 0}, {1, 1}}};
+    for (const auto& [dx, dy] : k_Steps)
+    {
+        if (const Tile* pTile = rWorld.GetTile(x + dx, y + dy))
+        {
+            rGrids.Flags(rWorld, *pTile) |= k_FlagForestHumid;
+        }
+    }
+    if ((x & 1) == 0)
+    {
+        rGrids.Flags(rWorld, *rWorld.GetTile(x, y)) |= k_FlagForestHumid;
+    }
+}
+
+// Ocean moisture eastward, cloudmass west-wet / east-dry belts, lowland forest humidity.
 void MarkPass_(WorldMap& rWorld, RainfallGrids_t& rGrids, const MoistureDecorationConfig_t& rConfig,
                int cloudCover)
 {
@@ -254,11 +274,14 @@ void MarkPass_(WorldMap& rWorld, RainfallGrids_t& rGrids, const MoistureDecorati
             MarkOceanMoistureEast_(rWorld, rGrids, x, y, cloudCover);
             return;
         }
-        // TODO: forest humidity (0x40) when climate is re-run after forests exist.
         const int alt = rGrids.Alt(rWorld, rTile);
         if (alt > k_AltOneAboveSea)
         {
             MarkCloudmass_(rWorld, rGrids, rConfig, x, y, alt, cloudCover);
+        }
+        else if (rTile.HasFeature(ImprovementIds::k_Forest))
+        {
+            MarkForestHumidity_(rWorld, rGrids, x, y);
         }
     });
 }
@@ -279,8 +302,8 @@ struct TileRain_t
     int sloping = 0;
 };
 
-void ApplyMarkFlags_(RainBelt_t& rBelt, TileRain_t& rRain, int tileFlags, int temperature,
-                     int cloudCover)
+void ApplyMarkFlags_(RainBelt_t& rBelt, TileRain_t& rRain, int tileFlags, int alt,
+                     int temperature, int cloudCover)
 {
     if (tileFlags & k_FlagWindwardWet)
     {
@@ -306,6 +329,13 @@ void ApplyMarkFlags_(RainBelt_t& rBelt, TileRain_t& rRain, int tileFlags, int te
             --rBelt.rainFlag;
         }
         --rRain.moistureMod;
+    }
+    if ((tileFlags & k_FlagForestHumid) && alt <= k_AltOneAboveSea)
+    {
+        rBelt.rainSteps = 0;
+        rBelt.drySteps = 0;
+        rRain.moistureMod = std::max(0, rRain.moistureMod);
+        rRain.moisture = rRain.sloping;
     }
 }
 
@@ -418,7 +448,7 @@ int RainBeltMoisture_(RainBelt_t& rBelt, const Tile& rTile, int x, int alt, int 
     {
         rBelt.rainFlag = 1;
     }
-    ApplyMarkFlags_(rBelt, rain, tileFlags, temperature, cloudCover);
+    ApplyMarkFlags_(rBelt, rain, tileFlags, alt, temperature, cloudCover);
     AdvanceBelt_(rBelt, rain, alt, cloudCover, rConfig);
     if (rTile.GetHasRiver())
     {
@@ -428,8 +458,8 @@ int RainBeltMoisture_(RainBelt_t& rBelt, const Tile& rTile, int x, int alt, int 
     return LandmarkMoisture_(rTile, alt, rain.moisture);
 }
 
-// Stateful rain belts → discrete Arid/Moist/Wet. Condenser bits stay in RecomputeMoisture;
-// forest humidity is omitted (no world-gen forests). Pole rows are always arid.
+// Stateful rain belts → discrete Arid/Moist/Wet. Condenser bits stay in RecomputeMoisture.
+// Pole rows are always arid.
 void ScanRainBelts_(WorldMap& rWorld, RainfallGrids_t& rGrids,
                     const MoistureDecorationConfig_t& rConfig, int cloudCover)
 {
@@ -438,13 +468,13 @@ void ScanRainBelts_(WorldMap& rWorld, RainfallGrids_t& rGrids,
     ForEachRowTile_(rWorld, [&](Tile& rTile, int x, int y) {
         if (y <= 0 || y >= height - 1)
         {
-            SetTileMoisture_(rTile, 0);
+            SetBaseTier_(rTile, 0);
             return;
         }
         const int tier = RainBeltMoisture_(belt, rTile, x, rGrids.Alt(rWorld, rTile),
                                            rGrids.Temp(rWorld, rTile),
                                            rGrids.Flags(rWorld, rTile), cloudCover, rConfig);
-        SetTileMoisture_(rTile, tier);
+        SetBaseTier_(rTile, tier);
     });
 }
 
@@ -452,7 +482,7 @@ bool BesideWetLand_(const WorldMap& rWorld, const Tile& rTile)
 {
     return std::ranges::any_of(k_RingNeighbors, [&](const LatticeOffset_t& rOff) {
         const Tile* pNeighbor = GetTileAtLatticeOffset(rWorld, rTile, rOff.p, rOff.q);
-        return pNeighbor && pNeighbor->IsLand() && pNeighbor->GetMoisture() == Moisture_t::Wet;
+        return pNeighbor && pNeighbor->IsLand() && pNeighbor->GetBaseMoisture() == Moisture_t::Wet;
     });
 }
 
@@ -460,25 +490,50 @@ bool BesideWetLand_(const WorldMap& rWorld, const Tile& rTile)
 void SmoothAridNeighbors_(WorldMap& rWorld)
 {
     ForEachRowTile_(rWorld, [&](Tile& rTile, int, int) {
-        if (rTile.IsLand() && rTile.GetMoisture() == Moisture_t::Arid
+        if (rTile.IsLand() && rTile.GetBaseMoisture() == Moisture_t::Arid
             && BesideWetLand_(rWorld, rTile))
         {
-            SetTileMoisture_(rTile, 1);
+            SetBaseTier_(rTile, 1);
         }
     });
 }
 
+std::vector<Moisture_t> BaseMoistures_(const WorldMap& rWorld)
+{
+    std::vector<Moisture_t> moistures;
+    moistures.reserve(rWorld.GetTiles().size());
+    for (const std::unique_ptr<Tile>& pTile : rWorld.GetTiles())
+    {
+        moistures.push_back(pTile->GetBaseMoisture());
+    }
+    return moistures;
+}
+
+std::vector<Tile*> ChangedSince_(const WorldMap& rWorld, const std::vector<Moisture_t>& rBefore)
+{
+    std::vector<Tile*> changed;
+    const std::span<const std::unique_ptr<Tile>> tiles = rWorld.GetTiles();
+    for (std::size_t i = 0; i < tiles.size(); ++i)
+    {
+        if (tiles[i]->GetBaseMoisture() != rBefore[i])
+        {
+            changed.push_back(tiles[i].get());
+        }
+    }
+    return changed;
+}
+
 } // namespace
 
-void GenerateRainfall(WorldMap& rWorld,
-                      const MoistureDecorationConfig_t& rConfig,
-                      Rainfall_t rainfall)
+std::vector<Tile*> RecomputeRainfall(WorldMap& rWorld, const MoistureDecorationConfig_t& rConfig)
 {
-    const int cloudCover = CloudCover_(rainfall);
+    const std::vector<Moisture_t> before = BaseMoistures_(rWorld);
+    const int cloudCover = CloudCover_(rWorld.GetRainfall());
     RainfallGrids_t grids = SampleTiles_(rWorld, rConfig);
     MarkPass_(rWorld, grids, rConfig, cloudCover);
     ScanRainBelts_(rWorld, grids, rConfig, cloudCover);
     SmoothAridNeighbors_(rWorld);
+    return ChangedSince_(rWorld, before);
 }
 
 } // namespace moisture_gen

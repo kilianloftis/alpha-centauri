@@ -594,7 +594,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `Tile`: A single map tile — position (x,y), terrain characteristics (Moisture_t, Rockiness_t, elevation, river, aquifer), optional terrain occupants (fungus, landmarks, bonuses, Monolith), its improvements, and the coexistence waivers those improvements were built under. Holds no worked-tile or ownership state; those live in the world-scoped indexes below.
   - `WorldMap`: Owns the tile grid plus `UnitPositionIndex`, `WorkedTileIndex` and `TerritoryMap`. Tile addresses are stable for its lifetime, so `GetTiles()` hands out a const-element span rather than the owning vector.
   - `ImprovementRegistry`: every tile occupant, from both `improvements.json` and `terrain.json`, with `ImprovementConfig_t::placement` telling improvements from terrain features (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith). An improvement with a `turns_required` is a former project. `TerrainOperationRegistry` holds the closed terrain mutations.
-  - `WorldGenerator`: Builds a `WorldMap` from a seed — elevation, moisture, rockiness, fungus, landmarks, aquifers/rivers, tile bonuses, in that order.
+  - `WorldGenerator`: Builds a `WorldMap` from a seed — elevation, rockiness, fungus, landmarks, aquifers/rivers, rainfall, tile bonuses, in that order.
 - **Dependencies**:
   - Faction subsystems (particularly Military with Bases) work tiles for resources
   - ImprovementRegistry loads config/improvements.json and config/terrain.json together (`LoadOccupants`); TerrainOperationRegistry loads config/terrain.json

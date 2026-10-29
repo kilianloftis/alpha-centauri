@@ -9,10 +9,12 @@
 namespace ac
 {
 
-WorldMap::WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules)
+WorldMap::WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules,
+                   Rainfall_t rainfall)
     : m_width(width)
     , m_height(height)
     , m_mapRules(rMapRules)
+    , m_rainfall(rainfall)
 {
     if (width <= 0 || height <= 0)
     {
@@ -56,6 +58,11 @@ int WorldMap::GetAreaSqRoot() const
 {
     const double tileCount = static_cast<double>(m_tiles.size());
     return static_cast<int>(std::sqrt(tileCount));
+}
+
+Rainfall_t WorldMap::GetRainfall() const
+{
+    return m_rainfall;
 }
 
 Tile& WorldMap::MutableTile(const Tile& rTile)

@@ -302,6 +302,36 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
     }
 }
 
+TEST_CASE("Raising a ridge re-runs rainfall around it", "[map][elevation][moisture]")
+{
+    WorldFixture fixture;
+    const ElevationRulesConfig_t& rules = TestMapRules();
+    WorldMap& map = fixture.map;
+    for (const std::unique_ptr<Tile>& pTile : map.GetTiles())
+    {
+        pTile->SetElevation(500);
+    }
+    constexpr int y = 8;
+    Tile& rRidge = At_(map, 18, y);
+    Tile& rWindward = At_(map, 14, y);
+    Tile& rLee = At_(map, 22, y);
+    fixture.ctx.AddOccupantWithEffects(At_(map, 17, y + 1), "Condenser");
+    fixture.ctx.RecomputeClimate();
+    REQUIRE(rRidge.GetBaseMoisture() == Moisture_t::Arid);
+    REQUIRE(rRidge.GetMoisture() == Moisture_t::Moist);
+    REQUIRE(rWindward.GetMoisture() == Moisture_t::Arid);
+
+    // 2000 m is the hill band, and within the slope limit, so no neighbor moves.
+    REQUIRE(ApplyElevationDelta(rRidge, 1500, rules, rules.minElevationMeters,
+                                rules.maxElevationMeters, fixture.state));
+
+    CHECK(rWindward.GetMoisture() == Moisture_t::Wet);
+    CHECK(rLee.GetMoisture() == Moisture_t::Arid);
+    // Rain on the ridge itself, plus the condenser beside it.
+    CHECK(rRidge.GetBaseMoisture() == Moisture_t::Moist);
+    CHECK(rRidge.GetMoisture() == Moisture_t::Wet);
+}
+
 TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
           "[map][elevation]")
 {

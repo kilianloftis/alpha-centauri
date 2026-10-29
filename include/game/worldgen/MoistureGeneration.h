@@ -4,6 +4,8 @@
 #include "game/worldgen/WorldGenDecorationConfig.h"
 #include "game/map/WorldMap.h"
 
+#include <vector>
+
 namespace ac
 {
 namespace moisture_gen
@@ -20,6 +22,7 @@ constexpr int k_AltFourAboveSea = 7;
 // Mark-pass bitflags (Thinker MAP::unk_1 during world_rainfall).
 constexpr int k_FlagLeeDry = 0x10;       // east of peak / rain shadow
 constexpr int k_FlagWindwardWet = 0x20;  // west of peak
+constexpr int k_FlagForestHumid = 0x40;  // beside a lowland forest
 constexpr int k_FlagOceanMoisture = 0x80;
 
 // Map continuous elevation (meters) onto SMAC altitude bands using decoration hill/peak
@@ -33,10 +36,9 @@ int AltitudeBand(int elevationMeters,
 int StubTemperature(int y, int mapHeight);
 
 // Port of Thinker world_rainfall (vanilla 0x5C4470): cloudmass belts, ocean moisture blown
-// east, rain-belt scan, smoothing. Call after rivers and landmarks.
-void GenerateRainfall(WorldMap& rWorld,
-                      const MoistureDecorationConfig_t& rConfig,
-                      Rainfall_t rainfall);
+// east, forest humidity, rain-belt scan, smoothing. Writes base moisture only; call after rivers
+// and landmarks. Returns the tiles whose base moisture changed.
+std::vector<Tile*> RecomputeRainfall(WorldMap& rWorld, const MoistureDecorationConfig_t& rConfig);
 
 } // namespace moisture_gen
 } // namespace ac

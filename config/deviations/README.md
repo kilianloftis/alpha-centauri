@@ -148,6 +148,17 @@ absent.
 - **Missing:** an entry for each, or a line under
   [Thinker changes not adopted](#thinker-changes-not-adopted).
 
+### Condenser moisture is a local overlay `[Ours]`
+
+- **Original:** a condenser is an input to the full `world_rainfall` scan. It adds up to +2 on
+  its 3×3, sets `rain_flag` (which carries east along the row), and its wet tiles feed the
+  arid-neighbour smoothing pass ("Climate", `world_rainfall`).
+- **Ours:** a radius-1 `moisture_tier` +1 `StatModifier` on top of the world-gen base moisture.
+  There is no eastward carry and no smoothing spill.
+- **Where:** `Condenser` in `config/improvements.json`; `TileEffectsContext::RecomputeMoisture`.
+- **Missing:** the original version (a condenser as a `RecomputeRainfall` input, re-run on
+  build and removal) and a switch.
+
 ### Sweep existing docs for unlisted deviations
 
 - **Missing:** read `docs/architecture/` and

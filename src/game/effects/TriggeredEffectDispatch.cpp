@@ -27,7 +27,6 @@
 #include "game/ecology/FungalBloom.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
-#include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -294,7 +293,7 @@ bool ToggleTerrainFeature_(GameState& rGameState, Tile& rTile, const std::string
             return false;
         }
         rTile.SetHasAquifer(bPresent);
-        RecomputeRivers(rGameState.GetWorldMap());
+        rGameState.GetTileEffects().RecomputeClimate();
         return true;
     }
     if (rFeatureId == magic_enum::enum_name(TerrainFeature_t::River))

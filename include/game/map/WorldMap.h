@@ -5,6 +5,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/TerritoryMap.h"
+#include "game/worldgen/MapGenerationConfig.h"
 #include "lib/Revision.h"
 #include <memory>
 #include <span>
@@ -20,7 +21,7 @@ class WorldMap
 public:
     // Throws unless both dimensions are positive and width (the SMAC x wrap period) is even.
     // Immovable, since every tile points at its copy of rMapRules.
-    WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules);
+    WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules, Rainfall_t rainfall);
     WorldMap(const WorldMap&) = delete;
     WorldMap& operator=(const WorldMap&) = delete;
     WorldMap(WorldMap&&) = delete;
@@ -32,6 +33,9 @@ public:
     // Integer square root of the tile count, terranx MapAreaSqRoot (0x949888). 56 on a standard
     // map; tech cost and the bureaucracy limit scale by it over 56.
     int GetAreaSqRoot() const;
+    // The planet's rainfall from world generation (terranx MapCloudCover, 0x94A2B4); climate
+    // re-runs in play read it.
+    Rainfall_t GetRainfall() const;
 
     // Tile access in SMAC coordinates (x+y even). X wraps horizontally (cylinder);
     // Y out of bounds returns nullptr. Odd parity throws.
@@ -73,6 +77,7 @@ private:
     int m_width;
     int m_height;
     ElevationRulesConfig_t m_mapRules;
+    Rainfall_t m_rainfall;
     std::vector<std::unique_ptr<Tile>> m_tiles;
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;

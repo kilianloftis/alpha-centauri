@@ -14,7 +14,7 @@ using namespace ac;
 TEST_CASE("A WorldMap holds width * height / 2 tiles, one per even-parity coordinate",
           "[map][worldmap]")
 {
-    const WorldMap map(8, 5, actest::TestMapRules());
+    const WorldMap map(8, 5, actest::TestMapRules(), Rainfall_t::Average);
 
     CHECK(map.GetWidth() == 8);
     CHECK(map.GetHeight() == 5);
@@ -32,7 +32,7 @@ TEST_CASE("A WorldMap holds width * height / 2 tiles, one per even-parity coordi
 
 TEST_CASE("WorldMap tiles are stored row-major, north row first", "[map][worldmap]")
 {
-    const WorldMap map(8, 4, actest::TestMapRules());
+    const WorldMap map(8, 4, actest::TestMapRules(), Rainfall_t::Average);
     const auto tiles = map.GetTiles();
     const int tilesPerRow = map.GetWidth() / 2;
 
@@ -61,7 +61,7 @@ TEST_CASE("WorldMap tiles are stored row-major, north row first", "[map][worldma
 
 TEST_CASE("WorldMap wraps x at the width and not y", "[map][worldmap]")
 {
-    WorldMap map(8, 4, actest::TestMapRules());
+    WorldMap map(8, 4, actest::TestMapRules(), Rainfall_t::Average);
 
     SECTION("a whole period east or west is the same tile")
     {
@@ -98,7 +98,7 @@ TEST_CASE("WorldMap wraps x at the width and not y", "[map][worldmap]")
 
 TEST_CASE("WorldMap rejects odd-parity addresses and odd widths", "[map][worldmap]")
 {
-    WorldMap map(8, 4, actest::TestMapRules());
+    WorldMap map(8, 4, actest::TestMapRules(), Rainfall_t::Average);
 
     CHECK_THROWS_AS(map.GetTile(1, 0), std::invalid_argument);
     CHECK_THROWS_AS(map.GetTile(0, 1), std::invalid_argument);
@@ -108,15 +108,15 @@ TEST_CASE("WorldMap rejects odd-parity addresses and odd widths", "[map][worldma
     const WorldMap& rConstMap = map;
     CHECK_THROWS_AS(rConstMap.GetTile(1, 2), std::invalid_argument);
 
-    CHECK_THROWS_AS(WorldMap(7, 4, actest::TestMapRules()), std::invalid_argument);
-    CHECK_THROWS_AS(WorldMap(1, 1, actest::TestMapRules()), std::invalid_argument);
-    CHECK_NOTHROW(WorldMap(8, 3, actest::TestMapRules()));
+    CHECK_THROWS_AS(WorldMap(7, 4, actest::TestMapRules(), Rainfall_t::Average), std::invalid_argument);
+    CHECK_THROWS_AS(WorldMap(1, 1, actest::TestMapRules(), Rainfall_t::Average), std::invalid_argument);
+    CHECK_NOTHROW(WorldMap(8, 3, actest::TestMapRules(), Rainfall_t::Average));
 }
 
 TEST_CASE("TerritoryMap and TileFlagMap hold one entry per tile and reject odd parity",
           "[map][worldmap]")
 {
-    const WorldMap map(8, 4, actest::TestMapRules());
+    const WorldMap map(8, 4, actest::TestMapRules(), Rainfall_t::Average);
 
     SECTION("territory starts unowned and rejects odd-parity reads")
     {

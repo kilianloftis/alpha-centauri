@@ -57,7 +57,7 @@ TEST_CASE("TileIndex is row-major over half-width rows and rejects odd parity", 
 TEST_CASE("Each unit lattice offset lands on the neighbor in its screen direction",
           "[map][maputils][lattice]")
 {
-    WorldMap map(k_Width, k_Height, actest::TestMapRules());
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
     const Tile& rOrigin = *map.GetTile(20, 14);
 
     for (const ScreenStep_t& rStep : k_ScreenSteps)
@@ -103,7 +103,7 @@ TEST_CASE("Each unit lattice offset lands on the neighbor in its screen directio
 
 TEST_CASE("LatticeDelta takes the shortest way round the seam", "[map][maputils][lattice]")
 {
-    WorldMap map(k_Width, k_Height, actest::TestMapRules());
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
 
     SECTION("across the seam matches the same step away from it")
     {
@@ -143,7 +143,7 @@ TEST_CASE("LatticeDelta takes the shortest way round the seam", "[map][maputils]
 
 TEST_CASE("Chebyshev and tabletop distance follow the lattice", "[map][maputils][distance]")
 {
-    WorldMap map(k_Width, k_Height, actest::TestMapRules());
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
     const Tile& rOrigin = *map.GetTile(20, 14);
 
     const auto at = [&](int p, int q) -> const Tile&
@@ -197,7 +197,7 @@ TEST_CASE("Chebyshev and tabletop distance follow the lattice", "[map][maputils]
 
 TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputils][radius]")
 {
-    WorldMap map(k_Width, k_Height, actest::TestMapRules());
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
     const Tile& rOrigin = *map.GetTile(20, 14);
 
     SECTION("Chebyshev radius 1 and 2 are the 3x3 and 5x5 lattice squares")
@@ -292,7 +292,7 @@ TEST_CASE("Radius walks cover the same lattice shapes as before", "[map][maputil
 
 TEST_CASE("Orthogonal neighbors are the tiles across the diamond's edges", "[map][maputils]")
 {
-    WorldMap map(k_Width, k_Height, actest::TestMapRules());
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
     const Tile& rOrigin = *map.GetTile(20, 14);
 
     std::vector<std::pair<int, int>> seen;
