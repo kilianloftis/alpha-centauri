@@ -43,6 +43,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/population/RiotLatch.h"
 #include "lib/LuaRuntime.h"
+#include "lib/RandomRoll.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
@@ -230,6 +231,45 @@ void SignTreaty_(ProbeGame_& rGame)
 {
     ApplyStatusChange(rGame.fixtures.state, rGame.pPlayer->GetFactionId(), rGame.pAi->GetFactionId(),
                       DiplomaticStatus_t::Treaty);
+}
+
+void SignPact_(ProbeGame_& rGame)
+{
+    SignTreaty_(rGame);
+    ApplyStatusChange(rGame.fixtures.state, rGame.pPlayer->GetFactionId(), rGame.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Pact);
+}
+
+int AiFrictionTowardPlayer_(ProbeGame_& rGame)
+{
+    return rGame.fixtures.state.GetDiplomacyLedger().GetFriction(rGame.pAi->GetFactionId(),
+                                                                 rGame.pPlayer->GetFactionId());
+}
+
+int PlayerBlemishes_(ProbeGame_& rGame)
+{
+    return rGame.fixtures.state.GetDiplomacyLedger().GetBlemishes(rGame.pPlayer->GetFactionId());
+}
+
+HostileAct_t PlayerActAgainstAi_(ProbeGame_& rGame)
+{
+    return HostileAct_t{.aggressor = rGame.pPlayer->GetFactionId(),
+                        .victim = rGame.pAi->GetFactionId(),
+                        .bAttributed = true};
+}
+
+ProbeAftermath_t AftermathAgainstAi_(ProbeGame_& rGame, ProbeActionId_t actionId)
+{
+    return ResolveProbeAftermath(PlayerActAgainstAi_(rGame), RequireAction_(rGame, actionId));
+}
+
+ProbeActionResult_t StealTechAgainstAi_(ProbeGame_& rGame)
+{
+    BaseManager& home = rGame.MakeBase(*rGame.pPlayer, 8, 2);
+    BaseManager& enemy = rGame.MakeBase(*rGame.pAi, 8, 8);
+    Unit& probe = rGame.MakeUnit(*rGame.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+    return rGame.fixtures.state.GetProbeActions().TryProbeAction(
+        probe, ProbeActionId_t::StealTech, enemy.GetTile(), rGame.fixtures.state, BuildingId_t{});
 }
 
 } // namespace
@@ -1704,31 +1744,198 @@ TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
 }
 
-TEST_CASE("A completed steal-tech against a Treaty partner declares Vendetta",
-          "[probe][action][diplomacy]")
+TEST_CASE("A Treaty partner keeps the Treaty after a steal-tech and resents the actor",
+          "[probe][action][diplomacy][standing]")
 {
     ProbeGame_ game;
-    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
-    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
     SignTreaty_(game);
-    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
 
-    const ProbeActionResult_t result = game.fixtures.state.GetProbeActions().TryProbeAction(
-        probe, ProbeActionId_t::StealTech, enemy.GetTile(), game.fixtures.state, BuildingId_t{});
+    const ProbeActionResult_t result = StealTechAgainstAi_(game);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+    CHECK(AiFrictionTowardPlayer_(game) >= 0);
+    CHECK(AiFrictionTowardPlayer_(game) < 4);
+    CHECK(PlayerBlemishes_(game) == 0);
+}
+
+TEST_CASE("A steal-tech against a Neutral faction declares Vendetta with no friction",
+          "[probe][action][diplomacy][standing]")
+{
+    ProbeGame_ game;
+
+    const ProbeActionResult_t result = StealTechAgainstAi_(game);
 
     REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
 }
 
-TEST_CASE("A covert probe's steal-tech still declares Vendetta",
-          "[probe][action][diplomacy][covert]")
+TEST_CASE("A Pact partner keeps the Pact after a steal-tech and resents the actor",
+          "[probe][action][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+
+    const ProbeActionResult_t result = StealTechAgainstAi_(game);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Pact);
+    CHECK(AiFrictionTowardPlayer_(game) >= 0);
+    CHECK(AiFrictionTowardPlayer_(game) < 4);
+    CHECK(PlayerBlemishes_(game) == 0);
+}
+
+TEST_CASE("A kept agreement's friction is one draw below probe_keep_friction_draw",
+          "[probe][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::StealTech);
+    REQUIRE(aftermath.bMayKeepAgreement);
+    CHECK(aftermath.keepFrictionDraw == 4);
+
+    std::mt19937 rng(11);
+    std::mt19937 expectedRng = rng;
+    const int expected = RollExclusiveMax(4, expectedRng);
+    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+
+    CHECK(AiFrictionTowardPlayer_(game) == expected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Pact);
+}
+
+TEST_CASE("Breaking a Pact below mind control ends it without a blemish",
+          "[probe][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::StealTech);
+    REQUIRE(aftermath.breakOutcome == BreakOutcome_t::PactEnded);
+    aftermath.bMayKeepAgreement = false;
+    std::mt19937 rng(3);
+
+    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
+    CHECK(PlayerBlemishes_(game) == 0);
+}
+
+TEST_CASE("A steal-tech at Vendetta adds no friction", "[probe][action][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    ApplyStatusChange(game.fixtures.state, game.pPlayer->GetFactionId(), game.pAi->GetFactionId(),
+                      DiplomaticStatus_t::Vendetta);
+
+    const ProbeActionResult_t result = StealTechAgainstAi_(game);
+
+    REQUIRE(result.outcome != ProbeActionOutcome_t::Rejected);
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
+}
+
+TEST_CASE("A probe against native life adds no friction or blemish",
+          "[probe][diplomacy][standing][native]")
+{
+    ProbeGame_ game;
+    Faction& rPlanet = AddNativeLifeFaction(game.fixtures);
+    const HostileAct_t act{.aggressor = game.pPlayer->GetFactionId(),
+                           .victim = rPlanet.GetFactionId(),
+                           .bAttributed = true};
+    std::mt19937 rng(3);
+
+    const ProbeAftermath_t aftermath =
+        ResolveProbeAftermath(act, RequireAction_(game, ProbeActionId_t::StealTech));
+    ApplyProbeAftermath(game.fixtures.state, act, aftermath, rng);
+
+    const DiplomacyLedger& rLedger = game.fixtures.state.GetDiplomacyLedger();
+    CHECK(rLedger.GetFriction(rPlanet.GetFactionId(), game.pPlayer->GetFactionId()) == 0);
+    CHECK(PlayerBlemishes_(game) == 0);
+}
+
+TEST_CASE("Breaking an agreement over a plague is a double cross",
+          "[probe][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::GeneticPlague);
+    REQUIRE(aftermath.bMayKeepAgreement);
+    REQUIRE(aftermath.breakOutcome == BreakOutcome_t::HostileAct);
+    aftermath.bMayKeepAgreement = false;
+    std::mt19937 rng(3);
+
+    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+    CHECK(PlayerBlemishes_(game) == 1);
+}
+
+TEST_CASE("Breaking a Treaty below mind control is a Vendetta without a blemish",
+          "[probe][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignTreaty_(game);
+    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::DrainEnergy);
+    REQUIRE(aftermath.breakOutcome == BreakOutcome_t::Vendetta);
+    aftermath.bMayKeepAgreement = false;
+    std::mt19937 rng(3);
+
+    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+    CHECK(PlayerBlemishes_(game) == 0);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
+}
+
+TEST_CASE("hostile_act_on_break makes a Pact steal-tech's break a hostile act",
+          "[probe][diplomacy][standing]")
+{
+    ProbeGame_ game;
+    SignPact_(game);
+    MutableAction_(game, ProbeActionId_t::StealTech).bHostileActOnBreak = true;
+
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::StealTech);
+    CHECK(aftermath.breakOutcome == BreakOutcome_t::HostileAct);
+}
+
+TEST_CASE("may_keep_agreement lets a mind-control victim keep the agreement",
+          "[probe][diplomacy][standing][mind-control]")
+{
+    ProbeGame_ game;
+    SignTreaty_(game);
+    MutableAction_(game, ProbeActionId_t::MindControlBase).bMayKeepAgreement = true;
+
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::MindControlBase);
+    CHECK(aftermath.bMayKeepAgreement);
+}
+
+TEST_CASE("Mind-controlling a Treaty partner's base double-crosses it without a choice",
+          "[probe][diplomacy][standing][mind-control]")
+{
+    ProbeGame_ game;
+    SignTreaty_(game);
+    std::mt19937 rng(3);
+
+    const ProbeAftermath_t aftermath =
+        AftermathAgainstAi_(game, ProbeActionId_t::MindControlBase);
+    REQUIRE_FALSE(aftermath.bMayKeepAgreement);
+    REQUIRE(aftermath.breakOutcome == BreakOutcome_t::HostileAct);
+    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+
+    CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
+    CHECK(PlayerBlemishes_(game) == 1);
+    CHECK(AiFrictionTowardPlayer_(game) == 0);
+}
+
+TEST_CASE("A covert probe's steal-tech is still attributed", "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
-    SignTreaty_(game);
     Unit& probe =
         game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team", "covert"}, &home);
 
@@ -1757,12 +1964,10 @@ TEST_CASE("Total Thought Control against a Treaty partner does not declare Vende
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
 }
 
-TEST_CASE("Subverting a covert unit against a Treaty partner declares Vendetta",
-          "[probe][action][diplomacy][covert]")
+TEST_CASE("Subverting a covert unit is still attributed", "[probe][action][diplomacy][covert]")
 {
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
-    SignTreaty_(game);
     game.pPlayer->GetEconomy().AddEnergy(10000);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     Unit& victim = game.MakeUnit(*game.pAi, 8, 8, {"test_chassis", "covert"});

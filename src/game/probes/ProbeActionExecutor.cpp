@@ -10,7 +10,6 @@
 #include "game/research/TechRegistry.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
@@ -310,7 +309,9 @@ ProbeActionResult_t ProbeActionExecutor::ResolveProbeRoll_(
 {
     if (ProbeDeclaresHostileAct(rAction))
     {
-        ApplyHostileAct(rGameState, ProbeHostileAct(rUnit, rAction, rTarget, roll));
+        const HostileAct_t act = ProbeHostileAct(rUnit, rAction, rTarget, roll);
+        const ProbeAftermath_t aftermath = ResolveProbeAftermath(act, rAction);
+        ApplyProbeAftermath(rGameState, act, aftermath, m_rRng);
     }
 
     const Faction& rActor = rUnit.GetFaction();

@@ -50,6 +50,9 @@ struct DiplomacyConfig_t
     int frictionMax = 0;
     int blemishesMax = 0;
     int breakAgreementBlemishes = 0;
+    // Exclusive bound of the friction draw a probe victim that keeps its agreement adds toward
+    // the actor.
+    int probeKeepFrictionDraw = 0;
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

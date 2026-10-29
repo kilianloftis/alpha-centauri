@@ -3,6 +3,7 @@
   "friction_max": 20,
   "blemishes_max": 99,
   "break_agreement_blemishes": 1,
+  "probe_keep_friction_draw": 4,
   "statuses": {
     "Neutral": {
       "enter_territory": true,

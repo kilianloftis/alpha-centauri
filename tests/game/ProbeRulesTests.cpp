@@ -31,6 +31,9 @@ namespace
 const std::string k_SuccessFormula = R"("success_formula": {
     "defense": "probe_defense", "mission_strength": "morale", "escape_strength": "morale" })";
 
+const std::string k_Standing =
+    R"("may_keep_agreement": true, "hostile_act_on_break": false)";
+
 const StatModifierEffect_t* FindProbeDefenseAtLevel_(const SocialRatingConfig_t& rConfig, int level)
 {
     const auto it = rConfig.levelEffects.find(level);
@@ -69,7 +72,11 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
           == FactionFilterKind_t::ActionTarget);
     REQUIRE(config.Find(ProbeActionId_t::StealTech) != nullptr);
     CHECK(config.Find(ProbeActionId_t::StealTech)->riskRepeat == 1);
+    CHECK(config.Find(ProbeActionId_t::StealTech)->bMayKeepAgreement);
+    CHECK_FALSE(config.Find(ProbeActionId_t::StealTech)->bHostileActOnBreak);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase) != nullptr);
+    CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->bMayKeepAgreement);
+    CHECK(config.Find(ProbeActionId_t::MindControlBase)->bHostileActOnBreak);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase)->cost.has_value());
     CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->cost->formula.empty());
     CHECK(config.Find(ProbeActionId_t::SabotageFacility)->protectedRisk == 2);
@@ -96,6 +103,8 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(pSubvertRecord->weight == 1);
 
     REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
+    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->bMayKeepAgreement);
+    CHECK(config.Find(ProbeActionId_t::GeneticPlague)->bHostileActOnBreak);
     const auto& rPlagueEffects = config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects;
     REQUIRE(rPlagueEffects.size() == 1);
     // Genetic warfare is a Simple atrocity; the mission answers for it through the effects list
@@ -124,42 +133,49 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
     const std::string recordEntry =
         R"([{ "type": "RecordMindControl", "parameters": { "weight": 4 } }])";
 
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", "on_paid_effects": )"
-                                  + recordEntry + " }"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", )" + k_Standing
+                                  + R"(, "on_paid_effects": )" + recordEntry + " }"),
                       ContainsSubstring("on_paid_effects"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", "on_success_effects": )"
-                                  + recordEntry + " }"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "steal_tech", "target": "base", )" + k_Standing
+                                  + R"(, "on_success_effects": )" + recordEntry + " }"),
                       ContainsSubstring("on_success_effects"));
 
     // A cost is its formula.
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base",
-                                       "cost": {} })"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "mind_control_base", "target": "base", )" + k_Standing
+                                  + R"(, "cost": {} })"),
                       ContainsSubstring("formula"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit",
-                                       "cost": { "formula": "" } })"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "subvert_unit", "target": "unit", )" + k_Standing
+                                  + R"(, "cost": { "formula": "" } })"),
                       ContainsSubstring("formula"));
 
     // Each action's own numbers and formulas: required on it, rejected on any other.
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "drain_energy", "target": "base",
-                                       "share_formula": "treasury", "amount_formula": "draw" })"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "drain_energy", "target": "base", )" + k_Standing
+                                  + R"(, "share_formula": "treasury", "amount_formula": "draw" })"),
                       ContainsSubstring("floor_formula"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "genetic_plague", "target": "base",
-                                       "kill_formula": "", "garrison_damage_bound_formula": "1",
+    CHECK_THROWS_WITH(
+        parseAction(R"({ "id": "genetic_plague", "target": "base", )" + k_Standing
+                    + R"(, "kill_formula": "", "garrison_damage_bound_formula": "1",
                                        "garrison_damage_formula": "hp" })"),
-                      ContainsSubstring("kill_formula"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
-                                       "share_formula": "treasury" })"),
+        ContainsSubstring("kill_formula"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base", )" + k_Standing
+                                  + R"(, "share_formula": "treasury" })"),
                       ContainsSubstring("share_formula"));
-    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
-                                       "protected_risk": 2 })"),
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base", )" + k_Standing
+                                  + R"(, "protected_risk": 2 })"),
                       ContainsSubstring("protected_risk"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base" })"),
+                      ContainsSubstring("may_keep_agreement"));
+    CHECK_THROWS_WITH(parseAction(R"({ "id": "infiltrate", "target": "base",
+                                       "may_keep_agreement": true })"),
+                      ContainsSubstring("hostile_act_on_break"));
 }
 
 TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[probe][config]")
 {
     const TempConfigFile file("probe_actions.json",
                               "{ " + k_SuccessFormula
-                                  + R"(, "actions": [ { "id": "infiltrate", "target": "base" } ] })");
+                                  + R"(, "actions": [ { "id": "infiltrate", "target": "base", )"
+                                  + k_Standing + " } ] }");
     CHECK_THROWS_WITH(ProbeActionConfigParser{}.ParseConfig(file.Path()),
                       ContainsSubstring("effects"));
 }
@@ -171,7 +187,8 @@ TEST_CASE("ProbeActionConfigParser requires success_formula's three formulas", "
         const TempConfigFile file("probe_actions.json",
                                   R"({ "success_formula": )" + rOddsJson
                                       + R"(, "effects": [],
-                                         "actions": [ { "id": "infiltrate", "target": "base" } ] })");
+                                         "actions": [ { "id": "infiltrate", "target": "base", )"
+                                      + k_Standing + " } ] }");
         return ProbeActionConfigParser{}.ParseConfig(file.Path());
     };
 

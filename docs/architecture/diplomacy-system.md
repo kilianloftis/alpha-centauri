@@ -31,7 +31,7 @@ graph TB
     end
 
     subgraph "Ruleset (GameDataContext)"
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>config/diplomacy.json]
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>probe_keep_friction_draw<br/>config/diplomacy.json]
         DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes]
     end
 
@@ -57,6 +57,7 @@ graph TB
         CancelTreaty[CancelTreaty<br/>one-sided StepDown]
         ApplyHostileAct[ApplyHostileAct<br/>ignores unattributed acts;<br/>sneak attack unless may_attack]
         ApplyAtrocityVendetta[ApplyAtrocityVendetta<br/>sneak; no agreement-break blemish]
+        ApplyProbeVendetta[ApplyProbeVendetta<br/>sneak; no blemish, obliges nobody]
         DeclareVendetta[DeclareVendetta<br/>declared Vendetta + defensive obligation]
         JoinVendetta[JoinVendetta<br/>declared Vendetta, obliges nobody]
         VendettaImpl[EnterVendetta_ / DeclareVendetta_<br/>private, take VendettaKind_t]
@@ -72,6 +73,7 @@ graph TB
     subgraph "Hostile act sources"
         Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
+        ProbeAftermath[ResolveProbeAftermath ProbeRules<br/>the choice, before any Vendetta<br/>ApplyProbeAftermath ProbeActionMutations<br/>writes keep or break]
         Atrocity[CommitAtrocity<br/>always attributed]
     end
 
@@ -122,7 +124,13 @@ graph TB
     TerritoryEntry[TerritoryEntryMutations<br/>BreakAgreementAndContinue] --> DeclareVendetta
     ExpireStatuses -->|StepDown| ApplyStatusChange
     Combat -->|IUnitOrderWorld::OnHostileAct| ApplyHostileAct
-    Probe --> ApplyHostileAct
+    Probe --> ProbeAftermath
+    ProbeAftermath -->|no agreement, or double cross| ApplyHostileAct
+    ProbeAftermath -->|broken below mind control| ApplyProbeVendetta
+    ProbeAftermath -->|kept: victim resents actor| ApplyStanding
+    ProbeAftermath -->|Pact ended: StepDown| ApplyStatusChange
+    ProbeAftermath --> DiplomacyConfig
+    ApplyProbeVendetta -->|SneakAttack| VendettaImpl
     Atrocity --> ApplyAtrocityVendetta
     Combat --> HostileActAgainst
     Probe --> HostileActAgainst
@@ -213,8 +221,9 @@ sets: a pair is either in them or not.
   `HasVictimizedAtLeast` when the act has a victim, before anything is written.
   `break_agreement_blemishes` lives in `diplomacy.json`. Cancelling an agreement or declaring
   Vendetta from one (menu, trade, or sneak `ApplyHostileAct`) writes that blemish;
-  `HonorDefensiveObligation` and `ApplyAtrocityVendetta` do not. Probe, combat, terraform
-  and talk gifts are not wired yet. A counted major's universal Vendetta goes through `JoinVendetta`
+  `HonorDefensiveObligation`, `ApplyAtrocityVendetta` and `ApplyProbeVendetta` do not. A
+  hostile probe that keeps its agreement adds the victim's friction toward the actor (see
+  [Probe standing](#probe-standing)). Combat, terraform and talk gifts are not wired yet. A counted major's universal Vendetta goes through `JoinVendetta`
   (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions only, and never
   native life. See `atrocity-system.md`. Whether a faction has ever been the victim of an
   atrocity is `AtrocityLedger::HasVictimized` / `HasVictimizedAtLeast`, not a friction total.
@@ -244,7 +253,8 @@ requires all five statuses and every key but `effects`, and refuses a duration o
 `defensive_obligation` on a status with nowhere to step down to. It also requires the top-level
 `defensive_obligation_mode` (see [the defensive obligation](#declaring-vendetta-and-the-defensive-obligation))
 `friction_max` (integer > 0; `DiplomacyCalculator::NextFriction`), `blemishes_max`
-(integer > 0; `NextBlemishes`), and `break_agreement_blemishes` (integer ≥ 0). Atrocity
+(integer > 0; `NextBlemishes`), `break_agreement_blemishes` (integer ≥ 0), and
+`probe_keep_friction_draw` (integer > 0; see [Probe standing](#probe-standing)). Atrocity
 friction and blemishes live on `atrocities.json` severities.
 
 A status's `effects` may only be `FactionPair` `StatModifier` entries on a stat some rule
@@ -308,7 +318,7 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 | Kind | Entry point | Started by | Territory | Shared tiles and bases |
 |---|---|---|---|---|
 | Declaration | `DeclareVendetta`, `JoinVendetta` | the diplomacy menu's Declare Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
-| Sneak attack | `ApplyHostileAct`, `ApplyAtrocityVendetta` | a hostile act, or an atrocity against a victim | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+| Sneak attack | `ApplyHostileAct`, `ApplyAtrocityVendetta`, `ApplyProbeVendetta` | a hostile act, an atrocity against a victim, or a probe whose victim breaks the agreement | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
 Both run through the private `EnterVendetta_`: the status change and, for a declaration, the
 withdrawal. `DeclareVendetta_` then raises the target's partners' obligations. `ApplyAtrocityVendetta`
@@ -402,15 +412,46 @@ covert unit is never identified.
   - A bombard makes one act per faction whose units it targets, or for the territory owner of an
     empty tile's improvements, all collected before the strikes. Each act is attributed when any
     of that faction's targets is.
-- `ProbeActionExecutor`, with `ProbeHostileAct`: the act against the targeted unit or base, also
-  attributed when `ProbeDetected` says the target identified the sender. **Stub:** the detection
-  roll is not implemented and nothing is detected yet.
+- `ApplyProbeAftermath`, with `ProbeHostileAct`: the act against the targeted unit or base, also
+  attributed when `ProbeDetected` says the target identified the sender, when the pair holds no
+  agreement or the probe double-crosses it. **Stub:** the detection roll is not implemented and
+  nothing is detected yet.
 
 `CommitAtrocity` calls `ApplyAtrocityVendetta` for the victim, counted or not: sneak Vendetta
 and the victim's Pact obligations, without the agreement-break blemish (`atrocity` /
 `major_atrocity` do not call `double_cross`; see `terranx-map.md`). Combat that already ran
 `ApplyHostileAct` then `CommitAtrocity` still stacks both writes: the Vendetta is already in
 place, and the atrocity standing is a separate `ApplyBlemishes`.
+
+### Probe standing
+
+A hostile probe (`ProbeDeclaresHostileAct`: not infiltrate, not Total Thought Control) does not
+simply add friction. The victim either keeps the agreement and resents the actor, or breaks it.
+The status is exclusive, and a Vendetta leaves no agreement to keep, so the decision comes first:
+`ProbeActionExecutor::ResolveProbeRoll_` asks `ResolveProbeAftermath` (`ProbeRules`), then
+`ApplyProbeAftermath` (`ProbeActionMutations`) writes the result. This follows SMAC's agreement
+aftermath in `probe` (`terranx-map.md`, "Agreement aftermath").
+
+Keeping or breaking is the victim's decision in SMAC: an AI victim weighs its attitude toward the
+actor, and a player victim answers a dialog. `ResolveProbeAftermath` sets out the choice in a
+`ProbeAftermath_t`: whether the victim may keep (`bMayKeepAgreement`), what keeping costs
+(`keepFrictionDraw`), and what breaking does (`breakOutcome`, a `BreakOutcome_t`).
+`ApplyProbeAftermath` keeps whenever the victim may. Each action in `probe_actions.json` requires `may_keep_agreement` and
+`hostile_act_on_break` (shipping: mind-control city always breaks as a hostile act; plague may be
+kept, and is a hostile act if it breaks; everything else may be kept, and if it breaks a Pact
+steps down to Treaty or a Truce/Treaty becomes Vendetta with no blemish).
+
+| Status | Action | May keep | Break |
+|---|---|---|---|
+| Neutral, Vendetta, or an unattributed act | any | no | `HostileAct`: `ApplyHostileAct` |
+| Truce, Treaty, Pact | `hostile_act_on_break` | the action's `may_keep_agreement` | `HostileAct`: Vendetta, agreement-break blemish, Pact obligations |
+| Pact | otherwise | the action's `may_keep_agreement` | `PactEnded`: `StepDown` to Treaty, no blemish |
+| Truce, Treaty | otherwise | the action's `may_keep_agreement` | `Vendetta`: `ApplyProbeVendetta`, no blemish and no obligations |
+
+A victim that keeps adds a draw in `[0, probe_keep_friction_draw)` to its friction toward the
+actor, and the status stays. Native life never holds an agreement, so it always takes
+`HostileAct`, which ignores it. A surrendered Pact should skip the aftermath; nobody surrenders
+yet.
 
 ## TradeItem_t and TradeKind_t
 
@@ -482,7 +523,8 @@ save-game serialisation work to exist first. Recorded in
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | What is the next stored friction / blemish total, in range? | `DiplomacyCalculator::NextFriction` / `NextBlemishes` |
 | Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
-| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, and `DeclareVendetta` (including sneak `ApplyHostileAct`). `ApplyAtrocityVendetta` and `HonorDefensiveObligation` do not. |
+| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), and `ApplyProbeAftermath` for a kept agreement. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
+| Does a hostile probe keep or break the agreement? | `ResolveProbeAftermath` (`bMayKeepAgreement` / `BreakOutcome_t`). `ApplyProbeAftermath` writes it. |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built
@@ -498,6 +540,9 @@ save-game serialisation work to exist first. Recorded in
   probe mission (other than infiltrate or Total Thought Control) is attributed even for a
   Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
-- **Probe, combat, terraform and talk standing.** Atrocity and agreement-break writers are in.
-  Probe frame/excuse, combat `cause_friction`, terraform, and talk gifts are not. Mood and
-  repute captions are UI over the stored integers.
+- **Combat, terraform and talk standing.** Atrocity, agreement-break and probe keep-agreement
+  writers are in. Probe frame and the player's excuse dialog, combat `cause_friction`,
+  terraform, and talk gifts are not. Mood and repute captions are UI over the stored integers.
+- **Probe keep-or-break decision.** Every probe victim keeps its agreement until an AI attitude
+  model decides, and the player's excuse dialog is not built; see
+  [Probe standing](#probe-standing).

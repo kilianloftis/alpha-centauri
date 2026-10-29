@@ -114,6 +114,13 @@ struct ProbeActionConfig_t
     std::string requiredTech;
     bool bHqOnly = false;
     bool bNotHq = false;
+    // The victim may keep the current status. False: the agreement always breaks (mind-control
+    // city's act_of_aggression).
+    bool bMayKeepAgreement = false;
+    // If the agreement breaks: ApplyHostileAct (Vendetta, agreement-break blemish, Pact
+    // obligations). Otherwise a Pact steps down to Treaty, and Truce/Treaty become Vendetta with
+    // no blemish and no obligations. SMAC action_id >= 6.
+    bool bHostileActOnBreak = false;
     // Incite Drone Riots only: remaining assimilation turns added, and the per-citizen cap.
     int assimilationTurnsAdded = 0;
     double assimilationTurnsCapFactor = 0.0;

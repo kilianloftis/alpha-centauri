@@ -480,6 +480,58 @@ Args are `cause_friction(target, actor, game_randv(4))` — delta `0..3`,
 victim resents the **actor**. Thinker's `mod_probe` matches the frame
 retarget; its Total Thought Control `cause_friction(..., 5)` is a `Fix:`.
 
+**Agreement aftermath** (`0x5A4B15`–`0x5A5813`). `ebx` actor, `esi` target,
+`[ebp-0x18]` action id, `[ebp-0x30]` the mission risk (Thinker's `prb_diff`, the
+value the roll at `0x5A3198` compares against; Total Thought Control is
+mind-control city with it nonzero).
+
+- Entry `0x5A4B15`: action 0 (infiltrate) returns. Busted missions jump here
+  too (`0x5A3223`, `0x5A3298`, after `veh_kill`), so failures get the aftermath.
+- Unit subversion (−1) jumps from `SUBVERTED` straight to `0x5A4B28` when its
+  risk is 0 (`0x5A42B8`) and so is an action below 6 below.
+- `act_of_aggression(actor, target)` at `0x5A4AA4` is mind-control city only:
+  `0x5A4783` sends every other action to `0x5A4ABD`, past it, and TTC's nonzero
+  risk skips it at `0x5A4A9D`. Mind-control city therefore reaches `0x5A4B2B` at
+  Vendetta and returns there; every other action arrives with its agreement.
+- `0x5A4B47`: target→actor Pact with `DIPLO_HAVE_SURRENDERED` (`0x2000000`)
+  returns. `0x5A4B76`: TTC sets `0x420` (`SHALL_BETRAY|WANT_REVENGE`) and returns.
+  Frame and human-target branches follow (above).
+- `0x5A5515`: `diplomacy_check(actor, target, 0)` (`0x53A980`) refills the
+  `Diplo*` globals for this pair, then `diplomacy_caption`.
+- **Pact** (`has_treaty(actor, target, PACT)` at `0x5A556F`):
+  - Steal tech (1), target `tech_ranking` > actor's (`jle` `0x5A55AD`), actor
+    `ranking` < 6 (`0x5A55AF`), `!DiploGreatSatan`: friction at `0x5A55D0`,
+    `KEPTPACT`. Pact kept.
+  - Else action < 6, actor `ranking` < target's and actor `ranking` < 5
+    (`0x5A5636`–`0x5A5641`): `EXCUSEDPACT` only. Pact kept, no friction.
+  - Else `USEDEXCUSE`. Action < 6: `pact_ends(actor, target)` (`0x53C650`, at
+    `0x5A5691`) — `treaty_off` PACT plus `pact_withdraw` both ways; `treaty_on`
+    PACT also sets TREATY, so the pair is left at Treaty. No `double_cross`, no
+    blemish. Action ≥ 6: `double_cross(actor, target, -1)` at `0x5A56A1`, then
+    `treaty_on` VENDETTA.
+- **Truce / Treaty** (`0x5A56B7`):
+  - target→actor `DIPLO_WANT_REVENGE` (`0x20`) or action ≥ 6: break.
+  - Steal tech (1) or assassinate (5) with the Pact steal-tech gates and
+    `game_randv(8) != 0` (`0x5A571B`): keep.
+  - Sabotage (2) or incite (4): keep when `DiploFearScale && !DiploGreatSatan`;
+    else when target `ranking` > actor's, `!DiploTributeDemand`, and
+    `game_randv(8) != 0` (`0x5A5779`).
+  - Drain (3) and every failed gate: break.
+  - Keep: friction at `0x5A5791`, `KEPT%d` by action id. Status unchanged.
+  - Break (`0x5A57D6`): `USEDEXCUSE`. Action < 6: `treaty_on(actor, target,
+    VENDETTA)` at `0x5A5801` — no `double_cross`, so no blemish and no
+    `intervention`. Action ≥ 6: `double_cross(actor, target, -1)` at `0x5A580B`.
+- Thinker's `mod_probe` matches every branch above.
+
+Inputs on those paths: `Faction.ranking` (`+0x4`, `0x96C9E4`) is the 0 (lowest)
+to 7 (highest) power rank `rankings` assigns by score (Thinker replaces
+`0x5AC690`). `Faction.tech_ranking` is `+0x35C` (`0x96CD3C`, see TECHS).
+`DiploGreatSatan` (`0x93FA3C`, written `0x53AA73`–`0x53AAE6`) is `great_satan`
+for the pair. `DiploFearScale` (`0x93FA98`, `0x53B10D`–`0x53B4EB`) is the
+target's fear of the actor's force. `DiploTributeDemand` (`0x93FA88`,
+`0x53B2F5`–`0x53B462`) is the energy the target would demand. All three are
+`diplomacy_check` outputs.
+
 **Escape roll** (base targets, `0x5A42CA`–`0x5A4466`): `game_randv(morale − defense)`;
 `jle` risk at `0x5A4306` = lost. A lost probe is saved (returns home) only when Algo
 and not HSA and `random() & 1` is set (`0x5A4454`–`0x5A446D`). On escape, HSA's
@@ -692,7 +744,8 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
   `double_cross`, so pact honor writes no agreement-break blemish.
 - `act_of_aggression` `0x50C2E0`: `double_cross(atk, def, -1)` when the pair holds
   Truce/Treaty/Pact, then `treaty_on` Vendetta. Combat hostility; not called from
-  `atrocity` / `major_atrocity` / `planet_busting`.
+  `atrocity` / `major_atrocity` / `planet_busting`. `probe` calls it only for
+  mind-control city (`0x5A4AA4`).
 - `atrocity` `0x55EEE0`: ORs `0x40020` (`DIPLO_ATROCITY_VICTIM|DIPLO_WANT_REVENGE`)
   onto **tgt→perp** at `0x55EF0D` and saves the old `0x40000` bit for first/repeat,
   before `un_charter` (`jg` `0x55EF3E`). Charter on: friction +5; `inc` blemishes
@@ -711,11 +764,12 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
   set perp→tgt. Charter on: always `major_atrocities++` and living AI (not
   human, not perp, not tgt) join Vendetta. No `cause_friction`. Does not call
   `double_cross`. Thinker's rewrite matches these branches.
-- `probe` `0x59F120`: agreement aftermath only (see Frame under Probe).
-  `inc` actor blemishes at `0x5A4FC4` (MP, human target, `action_id >= 6`).
+- `probe` `0x59F120`: agreement aftermath only (see Agreement aftermath under
+  Probe). `inc` actor blemishes at `0x5A4FC4` (MP, human target, `action_id >= 6`).
   `cause_friction(target, actor, game_randv(4))` at `0x5A55D0` and
-  `0x5A5791` (delta `0..3`). Successful frame writes Vendetta on the
-  implicated faction and skips both.
+  `0x5A5791` (delta `0..3`) when the agreement is kept. A broken agreement
+  blemishes only through `double_cross` (`action_id >= 6`). Successful frame
+  writes Vendetta on the implicated faction and skips both.
 - `battle_fight_2` `0x506AF0`: friction +3 (`0x5078BB`), −1 (`0x50A1AB`), +5
   (`0x50B1EF`).
 - `action_terraform` `0x4C9B00`: friction +5 at `0x4CA3EB`.

@@ -66,6 +66,8 @@
       "id": "infiltrate",
       "name": "Infiltrate Datalinks",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0,
       "on_success_effects": [
         {
@@ -80,6 +82,8 @@
       "id": "steal_tech",
       "name": "Procure Research Data",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0,
       "risk_repeat": 1
     },
@@ -90,12 +94,16 @@
       "amount_formula": "floor_amount + floor(draw / 2)",
       "name": "Drain Energy Reserves",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0
     },
     {
       "id": "sabotage_random",
       "name": "Activate Sabotage Virus (Random)",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0,
       "on_success_effects": [
         {
@@ -113,12 +121,16 @@
       "protected_risk": 2,
       "name": "Activate Sabotage Virus (Facility)",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 1
     },
     {
       "id": "incite_drone_riots",
       "name": "Incite Drone Riots",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0,
       "assimilation_turns_added": 10,
       "assimilation_turns_cap_factor": 2.5
@@ -127,6 +139,8 @@
       "id": "assassinate",
       "name": "Assassinate Prominent Researchers",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 1,
       "hq_only": true
     },
@@ -134,6 +148,8 @@
       "id": "mind_control_base",
       "name": "Engage Mind Control Probe",
       "target": "base",
+      "may_keep_agreement": false,
+      "hostile_act_on_break": true,
       "risk": 0,
       "not_hq": true,
       "cost": {
@@ -152,6 +168,8 @@
       "id": "total_thought_control",
       "name": "Attempt Total Thought Control",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": true,
       "risk": 1,
       "not_hq": true,
       "cost": {
@@ -173,6 +191,8 @@
       "garrison_damage_formula": "floor((floor(hp / 2) + draw) / (repeated + 1))",
       "name": "Introduce Genetic Plague",
       "target": "base",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": true,
       "risk": 0,
       "required_tech": "gene_splicing",
       "on_success_effects": [
@@ -188,6 +208,8 @@
       "id": "subvert_unit",
       "name": "Mind Control Unit",
       "target": "unit",
+      "may_keep_agreement": true,
+      "hostile_act_on_break": false,
       "risk": 0,
       "cost": {
         "formula": "mineral_cost * floor((energy + 800) / (distance + 2))"

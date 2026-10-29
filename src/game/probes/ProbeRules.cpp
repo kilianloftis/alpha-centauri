@@ -29,6 +29,8 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionManager.h"
 #include "game/units/UnitDomain.h"
+#include "game/diplomacy/DiplomacyConfig.h"
+#include "game/diplomacy/DiplomacyLedger.h"
 
 #include <algorithm>
 #include <cmath>
@@ -345,6 +347,43 @@ HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAct
         : HostileActAgainst(rProbe, rTarget.rFaction.GetFactionId());
     act.bAttributed = act.bAttributed || ProbeDetected(rProbe, rAction, rTarget, rRoll);
     return act;
+}
+
+namespace
+{
+
+// HostileAct when the action's hostile_act_on_break, else pact_ends from a Pact and a bare
+// treaty_on Vendetta from a Truce or Treaty.
+BreakOutcome_t BreakOutcomeFor_(DiplomaticStatus_t status, const ProbeActionConfig_t& rAction)
+{
+    if (rAction.bHostileActOnBreak)
+    {
+        return BreakOutcome_t::HostileAct;
+    }
+    if (status == DiplomaticStatus_t::Pact)
+    {
+        return BreakOutcome_t::PactEnded;
+    }
+    return BreakOutcome_t::Vendetta;
+}
+
+} // namespace
+
+ProbeAftermath_t ResolveProbeAftermath(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction)
+{
+    const GameState& rGame = CurrentGameState();
+    const DiplomaticStatus_t status =
+        rGame.GetDiplomacyLedger().GetStatus(rAct.aggressor, rAct.victim);
+    ProbeAftermath_t aftermath;
+    if (!rAct.bAttributed || !IsAgreement(status))
+    {
+        return aftermath;
+    }
+    // TODO: a surrendered Pact skips the aftermath (terranx-map.md); nobody surrenders yet.
+    aftermath.breakOutcome = BreakOutcomeFor_(status, rAction);
+    aftermath.bMayKeepAgreement = rAction.bMayKeepAgreement;
+    aftermath.keepFrictionDraw = rGame.GetGameData().diplomacyConfig->probeKeepFrictionDraw;
+    return aftermath;
 }
 
 bool IsHeadquarters(const BaseManager& rBase)

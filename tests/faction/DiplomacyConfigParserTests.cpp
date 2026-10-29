@@ -68,6 +68,7 @@ TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
     CHECK(config.frictionMax == 20);
     CHECK(config.blemishesMax == 99);
     CHECK(config.breakAgreementBlemishes == 1);
+    CHECK(config.probeKeepFrictionDraw == 4);
 }
 
 TEST_CASE("The diplomacy parser rejects a missing or invalid friction_max", "[diplomacy][parser]")
@@ -107,6 +108,20 @@ TEST_CASE("The diplomacy parser rejects a missing or invalid break_agreement_ble
                     std::runtime_error);
     CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_break_blemishes_negative.json",
                                  [](nlohmann::json& j) { j["break_agreement_blemishes"] = -1; }),
+                    std::runtime_error);
+}
+
+TEST_CASE("The diplomacy parser rejects a missing or invalid probe_keep_friction_draw",
+          "[diplomacy][parser][probe]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_probe_friction.json",
+                                 [](nlohmann::json& j) { j.erase("probe_keep_friction_draw"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_probe_friction_string.json",
+                                 [](nlohmann::json& j) { j["probe_keep_friction_draw"] = "4"; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_probe_friction_zero.json",
+                                 [](nlohmann::json& j) { j["probe_keep_friction_draw"] = 0; }),
                     std::runtime_error);
 }
 

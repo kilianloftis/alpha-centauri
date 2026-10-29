@@ -40,6 +40,11 @@ void ApplyHostileAct(GameState& rGameState, const HostileAct_t& rAct);
 // integrity write; SMAC atrocity / major_atrocity do not call double_cross (terranx-map.md).
 void ApplyAtrocityVendetta(GameState& rGameState, FactionId_t perpetrator, FactionId_t victim);
 
+// Sneak Vendetta with no agreement-break blemish and no obligations: SMAC's bare treaty_on when a
+// probe's victim breaks the agreement (terranx-map.md). A no-op at Vendetta already or with
+// native life.
+void ApplyProbeVendetta(GameState& rGameState, FactionId_t actor, FactionId_t victim);
+
 // partner honors its obligation as defensive_obligation_mode says. After a sneak attack the
 // partner withdraws from nothing either.
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,

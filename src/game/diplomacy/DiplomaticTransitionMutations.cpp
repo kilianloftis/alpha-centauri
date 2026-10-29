@@ -203,6 +203,11 @@ void ApplyAtrocityVendetta(GameState& rGameState, FactionId_t perpetrator, Facti
     }
 }
 
+void ApplyProbeVendetta(GameState& rGameState, FactionId_t actor, FactionId_t victim)
+{
+    EnterVendetta_(rGameState, actor, victim, VendettaKind_t::SneakAttack);
+}
+
 void HonorDefensiveObligation(GameState& rGameState, FactionId_t partner, FactionId_t aggressor,
                               VendettaKind_t kind)
 {

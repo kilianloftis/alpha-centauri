@@ -24,6 +24,9 @@
 #include "game/combat/MoraleRules.h"
 #include "game/units/Unit.h"
 #include "game/visibility/VisibilityMutations.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStandingMutations.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "lib/RandomRoll.h"
 
 #include "game/effects/EffectEnums.h"
@@ -413,8 +416,44 @@ bool ApplySaveAndBust_(bool bDrawSucceeded, const ProbeChance_t& rChances, std::
     return !RollPercent(rChances.successBustChance, rRng);
 }
 
+void EndPact_(GameState& rGameState, FactionId_t a, FactionId_t b)
+{
+    const DiplomaticStatus_t status = rGameState.GetDiplomacyLedger().GetStatus(a, b);
+    ApplyStatusChange(rGameState, a, b, StepDown(status).value());
+}
+
+void ApplyBreakOutcome_(GameState& rGameState, const HostileAct_t& rAct, BreakOutcome_t outcome)
+{
+    switch (outcome)
+    {
+        case BreakOutcome_t::HostileAct:
+            ApplyHostileAct(rGameState, rAct);
+            return;
+        case BreakOutcome_t::PactEnded:
+            EndPact_(rGameState, rAct.aggressor, rAct.victim);
+            return;
+        case BreakOutcome_t::Vendetta:
+            ApplyProbeVendetta(rGameState, rAct.aggressor, rAct.victim);
+            return;
+    }
+    throw std::logic_error("ApplyBreakOutcome_: unknown break outcome");
+}
 
 } // namespace
+
+void ApplyProbeAftermath(GameState& rGameState, const HostileAct_t& rAct,
+                         const ProbeAftermath_t& rAftermath, std::mt19937& rRng)
+{
+    // TODO: AI attitude model. Until it exists every victim that may keep does. A player
+    // victim should get SMAC's EXCUSE / PACTEXCUSE choice; no AI probes the player yet.
+    if (rAftermath.bMayKeepAgreement)
+    {
+        const int friction = RollExclusiveMax(rAftermath.keepFrictionDraw, rRng);
+        ApplyFriction(rGameState, rAct.victim, rAct.aggressor, friction);
+        return;
+    }
+    ApplyBreakOutcome_(rGameState, rAct, rAftermath.breakOutcome);
+}
 
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng)
 {

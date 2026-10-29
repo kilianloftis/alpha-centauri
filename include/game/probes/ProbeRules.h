@@ -108,6 +108,31 @@ bool ProbeDeclaresHostileAct(const ProbeActionConfig_t& rAction);
 HostileAct_t ProbeHostileAct(const Unit& rProbe, const ProbeActionConfig_t& rAction,
                              const ProbeTarget_t& rTarget, const ProbeRollResult_t& rRoll);
 
+// Standing write when the victim does not keep: the agreement breaks, or there was none
+// (terranx-map.md "Agreement aftermath").
+enum class BreakOutcome_t
+{
+    // ApplyHostileAct: no agreement to break, or the action's hostile_act_on_break.
+    HostileAct,
+    // The Pact falls to Treaty with no blemish.
+    PactEnded,
+    // ApplyProbeVendetta: Vendetta with no blemish and no obligations.
+    Vendetta,
+};
+
+struct ProbeAftermath_t
+{
+    // False when the break is forced: no agreement, or the action's may_keep_agreement is false.
+    bool bMayKeepAgreement = false;
+    // Keeping adds a draw in [0, keepFrictionDraw) to the victim's friction toward the actor.
+    int keepFrictionDraw = 0;
+    BreakOutcome_t breakOutcome = BreakOutcome_t::HostileAct;
+};
+
+// Decided before any Vendetta, since keeping an agreement needs the agreement in place. Only a
+// pair holding Truce, Treaty or Pact over an attributed act has an agreement to keep.
+ProbeAftermath_t ResolveProbeAftermath(const HostileAct_t& rAct, const ProbeActionConfig_t& rAction);
+
 bool IsHeadquarters(const BaseManager& rBase);
 
 // Pop removed by a genetic plague at rBase: the action's kill_formula times the base's

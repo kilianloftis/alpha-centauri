@@ -48,6 +48,15 @@ std::string ActionContext_(const std::string& rActionName)
     return "Probe action '" + rActionName + "'";
 }
 
+bool RequireBool_(const json& rJson, const std::string& rKey, const std::string& rContext)
+{
+    if (!rJson.contains(rKey) || !rJson.at(rKey).is_boolean())
+    {
+        throw std::runtime_error(rContext + ": requires a boolean '" + rKey + "'");
+    }
+    return rJson.at(rKey).get<bool>();
+}
+
 ProbeCostConfig_t ParseCost_(const json& rCostJson, const std::string& rActionName)
 {
     ProbeCostConfig_t cost;
@@ -216,6 +225,9 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     action.id = ParseProbeActionId(rActionJson.at("id").get<std::string>());
     action.name = rActionJson.value("name", rActionJson.at("id").get<std::string>());
     action.target = ParseTarget_(rActionJson.at("target").get<std::string>());
+    const std::string context = ActionContext_(action.name);
+    action.bMayKeepAgreement = RequireBool_(rActionJson, "may_keep_agreement", context);
+    action.bHostileActOnBreak = RequireBool_(rActionJson, "hostile_act_on_break", context);
     action.risk = rActionJson.value("risk", 0);
     if (rActionJson.contains("risk_repeat") && !rActionJson.at("risk_repeat").is_null())
     {

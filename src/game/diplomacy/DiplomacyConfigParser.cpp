@@ -169,7 +169,8 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     }
     ConfigFields::RejectUnknownKeys(json,
                                     {"statuses", "defensive_obligation_mode", "friction_max",
-                                     "blemishes_max", "break_agreement_blemishes"},
+                                     "blemishes_max", "break_agreement_blemishes",
+                                     "probe_keep_friction_draw"},
                                     context);
     const nlohmann::json& rStatuses = RequireObject_(json, "statuses", context);
 
@@ -179,6 +180,8 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     config.blemishesMax = ConfigFields::RequireIntAtLeast(json, "blemishes_max", 1, context);
     config.breakAgreementBlemishes =
         ConfigFields::RequireIntAtLeast(json, "break_agreement_blemishes", 0, context);
+    config.probeKeepFrictionDraw =
+        ConfigFields::RequireIntAtLeast(json, "probe_keep_friction_draw", 1, context);
     config.statuses =
         ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rStatuses, "diplomatic status", context,
