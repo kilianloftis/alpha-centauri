@@ -47,6 +47,10 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId);
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
+// Whether rUnit may start projectId (a buildable improvement or a terrain operation) on its tile
+// now: FindTerraformProject, then CanStartTerraform.
+bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId);
+
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 
 // The improvement can be placed once the improvements it displaces are gone. Terrain is

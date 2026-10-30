@@ -73,6 +73,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.moraleLevels = FixturePath("morale_levels.json");
     paths.probeActions = FixturePath("probe_actions.json");
     paths.baseConquest = FixturePath("base_conquest.json");
+    paths.combat = FixturePath("combat.json");
     paths.councilProposals = FixturePath("council/proposals.json");
     paths.councilRules = FixturePath("council/rules.json");
     paths.hotkeys = FixturePath("hotkeys.json");

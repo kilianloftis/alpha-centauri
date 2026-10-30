@@ -334,6 +334,13 @@ struct DefenderDomain_t
     std::vector<UnitDomain_t> domains;
 };
 
+// EffectContext_t::pDefender's design has native_life matching bMatches; fails closed without a
+// defender. Omit the JSON value to require native life.
+struct DefenderIsNativeLife_t
+{
+    bool bMatches = true;
+};
+
 // True when EffectContext_t::pBase has the Headquarters rule flag (Economy SE −1
 // energy-at-HQ). Requires pBase in the resolve context.
 struct IsHeadquarters_t
@@ -426,7 +433,8 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
                                         SocialRating_t, OriginBaseHasBuilding_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                        AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
+                                        AttackerDomain_t, DefenderDomain_t,
+                                        DefenderIsNativeLife_t, IsHeadquarters_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
                                         IsNativeLife_t, BaseHasBuilding_t, DesignPlan_t,

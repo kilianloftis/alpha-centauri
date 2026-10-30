@@ -39,6 +39,7 @@ struct GameDataPaths
     std::string moraleLevels = "config/morale_levels.json";
     std::string probeActions = "config/probe_actions.json";
     std::string baseConquest = "config/base_conquest.json";
+    std::string combat = "config/combat.json";
     std::string councilProposals = "config/council/proposals.json";
     std::string councilRules = "config/council/rules.json";
     std::string hotkeys = "config/ui/hotkeys.json";

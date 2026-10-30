@@ -106,4 +106,9 @@ std::vector<const Tile*> DisengageRules::CollectRetreatTiles(const Unit& rUnit) 
     return candidates;
 }
 
+bool PastDisengageThreshold(const Unit& rUnit, int startHp)
+{
+    return (startHp - rUnit.GetCurrentHp()) * 2 >= startHp;
+}
+
 } // namespace ac

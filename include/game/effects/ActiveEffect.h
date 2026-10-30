@@ -506,6 +506,8 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
                                  const EffectContext_t& rCtx);
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
+// Conditions are evaluated against rCtx, with rUnit as the subject.
+bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId, const EffectContext_t& rCtx);
 
 // Context-free. Sees FactionGlobal social-rating flags; ThisBase and AllOwnerBases level
 // effects expand per base only, so read those with ResolveFlag(BaseManager).

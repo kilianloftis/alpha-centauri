@@ -1,5 +1,7 @@
 #include "GameFixtures.h"
 
+#include "game/base/BaseManager.h"
+#include "game/population/PopulationManager.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -11,7 +13,7 @@
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
 #include "game/combat/CombatResolver.h"
-#include "game/combat/CombatStrength.h"
+#include "game/combat/CombatRules.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
 #include "game/movement/MoveCostRules.h"
@@ -21,12 +23,14 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitManager.h"
 #include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <optional>
 #include <vector>
 
 using namespace ac;
@@ -95,20 +99,6 @@ int ResolvedFloorPercent_(const FactionFixture& fixture, const Tile& rTile)
         FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0, nullptr).total);
 }
 
-CombatResolveOptions_t StrikeOptions_()
-{
-    CombatResolveOptions_t options;
-    options.engagement = CombatEngagement_t::ArtilleryStrike;
-    return options;
-}
-
-CombatResolveOptions_t DuelOptions_()
-{
-    CombatResolveOptions_t options;
-    options.engagement = CombatEngagement_t::ArtilleryDuel;
-    return options;
-}
-
 const CombatResult_t* FirstWinningStrike_(FactionFixture& fixture, Unit& rAttacker, Unit& rDefender,
                                           int startingHp)
 {
@@ -118,13 +108,29 @@ const CombatResult_t* FirstWinningStrike_(FactionFixture& fixture, Unit& rAttack
         rDefender.SetCurrentHp(startingHp);
         rAttacker.SetCurrentHp(10);
         CombatHarness_ harness(fixture, seed);
-        found = harness.combat.Resolve(rAttacker, rDefender, StrikeOptions_());
+        found = harness.combat.Strike(rAttacker, rDefender);
         if (!found.rounds.empty() && found.rounds.front().roundWinner == CombatSide_t::Attacker)
         {
             return &found;
         }
     }
     return nullptr;
+}
+
+// The first strike in seeds 1..16 that kills rTarget; nullopt when none does.
+std::optional<CombatResult_t> FirstKillingStrike_(FactionFixture& fixture, Unit& rAttacker,
+                                                  Unit& rTarget)
+{
+    for (uint32_t seed = 1; seed <= 16; ++seed)
+    {
+        CombatHarness_ harness(fixture, seed);
+        CombatResult_t strike = harness.combat.Strike(rAttacker, rTarget);
+        if (strike.bDefenderDestroyed)
+        {
+            return strike;
+        }
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -165,7 +171,7 @@ TEST_CASE("An artillery strike leaves the attacker unhurt and respects the HP fl
     const int attackerHp = attacker.GetCurrentHp();
 
     CombatHarness_ harness(fixture, 1);
-    const CombatResult_t lost = harness.combat.Resolve(attacker, defender, StrikeOptions_());
+    const CombatResult_t lost = harness.combat.Strike(attacker, defender);
     REQUIRE(lost.rounds.size() == 1);
     CHECK(lost.rounds.front().roundWinner == CombatSide_t::Defender);
     CHECK(attacker.GetCurrentHp() == attackerHp);
@@ -239,6 +245,98 @@ TEST_CASE("A strike rolls every hostile and cancels each order", "[bombard]")
     CHECK(attacker.GetMoveFragmentsRemaining() == 0);
 }
 
+TEST_CASE("A strike's kill is destroyed outright, with no capture or collateral",
+          "[bombard][capture][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& shooter = fixture.MakeUnit(player, 8, 8,
+                                     {"test_chassis", "test_weapon", "bombard", "test_collateral_1"});
+
+    SECTION("an artifact is not taken")
+    {
+        Unit& artifact = fixture.MakeUnit(enemy, 9, 9, {"test_artifact_chassis"});
+        const std::optional<CombatResult_t> strike = FirstKillingStrike_(fixture, shooter, artifact);
+        REQUIRE(strike);
+        CHECK(strike->capturedUnitIds.empty());
+        CHECK(enemy.GetUnitManager().Units().empty());
+        CHECK(fixture.map.GetUnitsOnTile(fixture.At(8, 8)).size() == 1);
+    }
+
+    SECTION("the rest of the stack is untouched")
+    {
+        Unit& target = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+        Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+        target.SetCurrentHp(1);
+        const int stackmateHp = stackmate.GetCurrentHp();
+        REQUIRE(FirstKillingStrike_(fixture, shooter, target));
+        CHECK(fixture.map.GetUnitsOnTile(fixture.At(9, 9)).size() == 1);
+        CHECK(stackmate.GetCurrentHp() == stackmateHp);
+    }
+}
+
+TEST_CASE("A strike that kills a base's last defender costs the base no population",
+          "[bombard][conquest]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    BaseManager& rBase = fixture.MakeFactionBase(enemy, 9, 9, 4);
+    // Without the Base improvement's MinClamp floor, a strike can kill there.
+    fixture.At(9, 9).RemoveImprovement(ImprovementIds::k_Base);
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    defender.SetCurrentHp(1);
+    REQUIRE(ResolvedFloorPercent_(fixture, rBase.GetTile()) == 0);
+
+    bool bKilled = false;
+    for (uint32_t seed = 1; seed <= 16 && !bKilled; ++seed)
+    {
+        Unit& shooter = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+        OrderHarness_ orders(fixture, seed);
+        const auto result = orders.attacks.TryBombard(shooter, rBase.GetTile());
+        REQUIRE(result);
+        REQUIRE(result->combats.size() == 1);
+        bKilled = result->combats.front().bDefenderDestroyed;
+    }
+    REQUIRE(bKilled);
+    CHECK(rBase.GetPopulation().GetSize() == 4);
+}
+
+TEST_CASE("A strike that kills earns no promotion", "[bombard][promotion]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    int kills = 0;
+    Unit* pTarget = nullptr;
+    for (uint32_t seed = 1; seed <= 16; ++seed)
+    {
+        if (!pTarget)
+        {
+            pTarget = &fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+            pTarget->SetCurrentHp(1);
+        }
+        Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+        const int startXp = attacker.GetXp();
+        OrderHarness_ orders(fixture, seed);
+        const auto result = orders.attacks.TryBombard(attacker, fixture.At(9, 9));
+        REQUIRE(result);
+        REQUIRE(result->combats.size() == 1);
+        if (result->combats.front().bDefenderDestroyed)
+        {
+            ++kills;
+            pTarget = nullptr;
+            CHECK(attacker.GetXp() == startXp);
+        }
+    }
+    REQUIRE(kills > 0);
+}
+
 TEST_CASE("An artillery duel rates the defender with attack and can destroy either side", "[bombard]")
 {
     FactionFixture fixture;
@@ -267,7 +365,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
         defenderAttackRating * 1.0 / static_cast<double>(point) * k_CombatStrengthScale));
 
     CombatHarness_ harness(fixture, 1);
-    const CombatResult_t duel = harness.combat.Resolve(attacker, defender, DuelOptions_());
+    const CombatResult_t duel = harness.combat.ResolveDuel(attacker, defender);
     CHECK(duel.defenseStrength == expected.defenseStrength);
     CHECK(duel.defenseStrength == defenderAttackRating * k_CombatStrengthScale);
     CHECK(duel.defenseStrength != scaledByLeftover);
@@ -278,7 +376,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     Unit& gunner = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "bombard"});
     fragileAttacker.SetCurrentHp(10);
     CombatHarness_ hurt(fixture, 2);
-    const CombatResult_t attackerFalls = hurt.combat.Resolve(fragileAttacker, gunner, DuelOptions_());
+    const CombatResult_t attackerFalls = hurt.combat.ResolveDuel(fragileAttacker, gunner);
     CHECK(attackerFalls.bAttackerDestroyed);
     CHECK_FALSE(attackerFalls.bAttackerDisengaged);
 
@@ -288,7 +386,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     fragileDefender.SetXp(2);
     fragileDefender.SetCurrentHp(1);
     CombatHarness_ kill(fixture, 1);
-    const CombatResult_t defenderDies = kill.combat.Resolve(killer, fragileDefender, DuelOptions_());
+    const CombatResult_t defenderDies = kill.combat.ResolveDuel(killer, fragileDefender);
     CHECK(defenderDies.bDefenderDestroyed);
     CHECK_FALSE(defenderDies.bAttackerDisengaged);
     CHECK_FALSE(defenderDies.bDefenderDisengaged);
@@ -298,7 +396,7 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     Unit& slow = fixture.MakeUnit(enemy, 7, 3, {"test_slow_chassis", "test_weapon", "bombard"});
     fast.SetCurrentHp(2);
     CombatHarness_ noRetreat(fixture, 3);
-    const CombatResult_t stayed = noRetreat.combat.Resolve(fast, slow, DuelOptions_());
+    const CombatResult_t stayed = noRetreat.combat.ResolveDuel(fast, slow);
     CHECK(stayed.bAttackerDestroyed);
     CHECK_FALSE(stayed.bAttackerDisengaged);
     CHECK(stayed.pRetreatTile == nullptr);

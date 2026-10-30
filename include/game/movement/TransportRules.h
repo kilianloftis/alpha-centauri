@@ -34,6 +34,10 @@ bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile);
 // Used by MovementRules::CanEnterTile and by explicit attach orders.
 Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile);
 
+// First carrier of factionId's on rTile with a free slot for domain that may load there. For a
+// passenger that is not yet factionId's (a captured unit).
+Unit* FindCarrierWithRoom(const Tile& rTile, UnitDomain_t domain, FactionId_t factionId);
+
 // Whether an embarked passenger may step off its carrier's tile onto rTo
 // (adjacency + MovementRules::CanPhysicallyEnterTile; territory is checked by the step).
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo);

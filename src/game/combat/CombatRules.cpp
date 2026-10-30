@@ -3,14 +3,13 @@
 #include "game/CurrentGameState.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
-#include "game/combat/CombatStrength.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/faction/Faction.h"
-#include "game/map/Tile.h"
-#include "game/map/WorldMap.h"
-#include "game/natives/NativeRules.h"
+#include "game/movement/MovementConstants.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -24,6 +23,12 @@ namespace ac
 namespace
 {
 
+bool IsPsiCombat_(const Unit& rAttacker, const Unit& rDefender)
+{
+    return ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
+           || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
+}
+
 int RoundDamage_(const Unit& rReceiver, bool bPsiCombat)
 {
     if (!bPsiCombat)
@@ -33,57 +38,44 @@ int RoundDamage_(const Unit& rReceiver, bool bPsiCombat)
     return std::max(1, ResolveStat(rReceiver, StatId_t::PsiDamage));
 }
 
-int ResolveSplash_(const Unit& rAttacker)
+// One side of the fight, with the context and morale bonus its stats resolve under.
+struct Fighter_t
 {
+    const Unit& rUnit;
     EffectContext_t ctx;
-    ctx.pUnit = &rAttacker;
-    ctx.pAttacker = &rAttacker;
-    return std::max(0, ResolveCombatUnitStat(
-                           rAttacker, StatId_t::CollateralDamage, ctx, {}));
-}
-
-// Tile effects and the occupant's live list, same combined stack move cost uses.
-// A MaxClamp that leaves 0 (Base, Bunker) skips the occupant. A geometric 0 does not.
-struct Susceptibility_t
-{
-    double scale = 1.0;
-    bool bTileImmune = false;
+    double moralePercent;
 };
 
-Susceptibility_t ResolveSusceptibility_(const Unit& rOccupant, const Tile& rTile)
+Fighter_t MakeFighter_(const Unit& rUnit, const Unit& rAttacker, const Unit& rDefender,
+                       CombatRole_t role, const MoraleCalculator& rMorale)
 {
-    std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile);
-    const UnitEffects_t live = CollectLiveUnitEffects(rOccupant);
-    effects.insert(effects.end(), live.effects.begin(), live.effects.end());
-
-    EffectContext_t ctx;
-    ctx.targetTile = &rTile;
-    ctx.pUnit = &rOccupant;
-
-    const StatBreakdown_t breakdown = ResolveStatModifiers(
-        FilterByStatIdInContext(effects, StatId_t::CollateralSusceptibility, ctx),
-        SeedFor(StatId_t::CollateralSusceptibility),
-        &ctx);
-
-    Susceptibility_t susceptibility;
-    susceptibility.scale = std::max(0.0, breakdown.total);
-    bool bClamped = false;
-    for (const StatBreakdown_t::Contribution_t& rContribution : breakdown.contributions)
-    {
-        if (rContribution.op == ModifierOp_t::MaxClamp)
-        {
-            bClamped = true;
-            break;
-        }
-    }
-    susceptibility.bTileImmune = bClamped && susceptibility.scale == 0.0;
-    return susceptibility;
+    EffectContext_t ctx{&rDefender.GetTile(), role};
+    ctx.pAttacker = &rAttacker;
+    ctx.pDefender = &rDefender;
+    const int level = CombatMoraleLevel(rUnit, ctx, rMorale);
+    return Fighter_t{rUnit, ctx, rMorale.CombatAddPercent(level)};
 }
 
-bool IsImmune_(const Unit* pUnit, const std::vector<CollateralHit_t>& rPlan)
+double PsiRating_(const Fighter_t& rFighter, StatId_t stat)
 {
-    return std::any_of(rPlan.begin(), rPlan.end(), [pUnit](const CollateralHit_t& rHit)
-                       { return rHit.pOccupant == pUnit && rHit.bImmune; });
+    return ResolveCombatUnitMultiplicativeStat(rFighter.rUnit, stat, 1.0, rFighter.ctx,
+                                               rFighter.moralePercent);
+}
+
+double ConventionalRating_(const Fighter_t& rFighter, StatId_t stat)
+{
+    const int rating =
+        ResolveCombatUnitStat(rFighter.rUnit, stat, rFighter.ctx, rFighter.moralePercent);
+    return static_cast<double>(rating);
+}
+
+// An attacker with less than one move point left strikes at that fraction of its rating.
+int PartialMoveAttack_(double attackRating, int remainingFragments)
+{
+    const double perPoint = static_cast<double>(MovementConstants_t::k_moveFragmentsPerPoint);
+    const double scaled =
+        attackRating * static_cast<double>(remainingFragments) / perPoint * k_CombatStrengthScale;
+    return static_cast<int>(std::lround(scaled));
 }
 
 int HitsToKill_(int hp, int damagePerHit)
@@ -110,31 +102,81 @@ CombatOdds_t ReduceOdds_(int attackerProduct, int defenderProduct)
 
 } // namespace
 
-CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
-                                        int attackRoll, int defenseRoll,
-                                        CombatEngagement_t engagement, int hpFloor)
+CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
+                                       const TileEffectsContext& rTileEffects,
+                                       const MoraleCalculator& rMorale,
+                                       CombatEngagement_t engagement)
 {
-    const bool bPsiCombat = ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
-                            || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
-    const bool bStrike = engagement == CombatEngagement_t::ArtilleryStrike;
+    // TODO(difficulty): apply combat handicap from rules.combat_handicap /
+    // combat_handicap_natives_only once magnitude is known (do not invent percents).
+    CombatStrength_t strength;
+    const Fighter_t attacker =
+        MakeFighter_(rAttacker, rAttacker, rDefender, CombatRole_t::Attacker, rMorale);
+    const Fighter_t defender =
+        MakeFighter_(rDefender, rAttacker, rDefender, CombatRole_t::Defender, rMorale);
+    const StatId_t defenderStat = engagement == CombatEngagement_t::ArtilleryDuel
+                                      ? StatId_t::Attack
+                                      : StatId_t::Defense;
+    strength.bPsiCombat = IsPsiCombat_(rAttacker, rDefender);
+    const double attackRating = strength.bPsiCombat
+                                    ? PsiRating_(attacker, StatId_t::Attack)
+                                    : ConventionalRating_(attacker, StatId_t::Attack);
+    const double defenseRating = strength.bPsiCombat
+                                     ? PsiRating_(defender, defenderStat)
+                                     : ConventionalRating_(defender, defenderStat);
+    const double tileDefenseMult = rTileEffects.ResolveTileDefenseMultiplier(
+        rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
 
+    strength.attackStrength = static_cast<int>(std::lround(attackRating * k_CombatStrengthScale));
+    strength.defenseStrength =
+        static_cast<int>(std::lround(defenseRating * tileDefenseMult * k_CombatStrengthScale));
+    const int remainingFragments = rAttacker.GetMoveFragmentsRemaining();
+    if (remainingFragments < MovementConstants_t::k_moveFragmentsPerPoint)
+    {
+        strength.attackStrength = PartialMoveAttack_(attackRating, remainingFragments);
+    }
+    return strength;
+}
+
+CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
+                                        int attackRoll, int defenseRoll)
+{
+    const bool bPsiCombat = IsPsiCombat_(rAttacker, rDefender);
     CombatRoundOutcome_t outcome;
     if (attackRoll > defenseRoll)
     {
         outcome.winner = CombatSide_t::Attacker;
         outcome.damage = RoundDamage_(rDefender, bPsiCombat);
-        const int current = rDefender.GetCurrentHp();
-        const int floorHp = std::min(current, hpFloor);
-        const int next = bStrike ? std::max(current - outcome.damage, floorHp)
-                                 : current - outcome.damage;
-        outcome.defenderHpLoss = current - next;
+        outcome.defenderHpLoss = outcome.damage;
         return outcome;
     }
-
     outcome.winner = CombatSide_t::Defender;
     outcome.damage = RoundDamage_(rAttacker, bPsiCombat);
-    outcome.attackerHpLoss = bStrike ? 0 : outcome.damage;
+    outcome.attackerHpLoss = outcome.damage;
     return outcome;
+}
+
+CombatRoundOutcome_t ResolveStrikeRound(const Unit& rAttacker, const Unit& rDefender,
+                                        int attackRoll, int defenseRoll, int hpFloor)
+{
+    CombatRoundOutcome_t outcome = ResolveCombatRound(rAttacker, rDefender, attackRoll, defenseRoll);
+    outcome.attackerHpLoss = 0;
+    const int current = rDefender.GetCurrentHp();
+    const int floorHp = std::min(current, hpFloor);
+    outcome.defenderHpLoss = current - std::max(current - outcome.defenderHpLoss, floorHp);
+    return outcome;
+}
+
+int BombardHpFloor(const Unit& rTarget)
+{
+    const int hitPoints = ResolveStat(rTarget, StatId_t::HitPoints);
+    const std::vector<ActiveEffect_t> effects =
+        CurrentGameState().GetTileEffects().CollectAreaEffects(rTarget.GetTile());
+    const double percentTotal = ResolveStatModifiers(
+        FilterByStatId(effects, StatId_t::BombardMinHpPercent), 0.0, nullptr).total;
+    const int percent = FinalizeResolvedStat(percentTotal);
+    const double floorHp = static_cast<double>(hitPoints) * static_cast<double>(percent) / 100.0;
+    return static_cast<int>(std::ceil(floorHp));
 }
 
 CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
@@ -159,72 +201,6 @@ double DefenderWinChance(const Unit& rAttacker, const Unit& rDefender)
         ComputeCombatOdds(rAttacker, rDefender, CombatEngagement_t::Standard);
     const int total = odds.attackerOdds + odds.defenderOdds;
     return static_cast<double>(odds.defenderOdds) / static_cast<double>(total);
-}
-
-bool PastDisengageThreshold(const Unit& rUnit, int startHp)
-{
-    return (startHp - rUnit.GetCurrentHp()) * 2 >= startHp;
-}
-
-std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender)
-{
-    const GameState& rGame = CurrentGameState();
-    const WorldMap& rWorldMap = rGame.GetWorldMap();
-    const Tile& rTile = rDefender.GetTile();
-    const int splash = ResolveSplash_(rAttacker);
-
-    std::vector<CollateralHit_t> plan;
-    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pOccupant == nullptr || pOccupant == &rDefender)
-        {
-            continue;
-        }
-        CollateralHit_t hit;
-        hit.pOccupant = pOccupant;
-        const Susceptibility_t susceptibility = ResolveSusceptibility_(*pOccupant, rTile);
-        if (susceptibility.bTileImmune)
-        {
-            hit.bImmune = true;
-        }
-        else if (IsWildNative(*pOccupant))
-        {
-            hit.bDestroyed = true;
-        }
-        else
-        {
-            hit.damage = static_cast<int>(std::lround(splash * susceptibility.scale));
-        }
-        plan.push_back(hit);
-    }
-    return plan;
-}
-
-std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Unit& rDefender,
-                                                const std::vector<CollateralHit_t>& rPlan)
-{
-    if (!ResolveFlag(rAttacker.GetFaction(),
-                     RuleFlagId_t::NonCombatantsDestroyedWithoutCombatant))
-    {
-        return {};
-    }
-
-    const GameState& rGame = CurrentGameState();
-    const WorldMap& rWorldMap = rGame.GetWorldMap();
-    std::vector<Unit*> nonCombatants;
-    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rDefender.GetTile()))
-    {
-        if (pOccupant == nullptr || pOccupant == &rDefender || IsImmune_(pOccupant, rPlan))
-        {
-            continue;
-        }
-        if (!ResolveFlag(*pOccupant, RuleFlagId_t::NonCombatant))
-        {
-            return {};
-        }
-        nonCombatants.push_back(pOccupant);
-    }
-    return nonCombatants;
 }
 
 } // namespace ac

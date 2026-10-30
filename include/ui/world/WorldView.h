@@ -151,7 +151,7 @@ private:
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
-    void ExecuteAttack_(Unit& rAttacker, const Tile& rTargetTile);
+    void ExecuteAttack_(Unit& rAttacker, Unit& rDefender);
     // False when the shot is illegal. True after playback has been opened.
     bool TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
     // Bombard and former projects bound to this chord. Runs the one that is valid and
@@ -211,7 +211,6 @@ private:
                                              std::optional<FactionId_t> framedId);
     void RunProbeAction_(Unit& rProbe, ProbeActionId_t actionId, const Tile& rTargetTile,
                          const BuildingId_t& facilityId, std::optional<FactionId_t> framedId);
-    std::string FindUnitNameOnTile_(const Tile& rTile) const;
     void OpenDisbandMenu_(Unit& rUnit);
     void HandleDisbandChoice_(Unit& rUnit);
     void HandleDisbandConfirmed_(Unit& rUnit);

@@ -199,7 +199,7 @@ TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conques
     Unit& land = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
 
     CHECK_FALSE(game.fixtures.state.GetUnitAttacks().TryAttack(
-        land, defender.GetTile()).has_value());
+        land, defender).has_value());
 
     defender.GetFaction().GetUnitManager().DestroyUnit(defender);
     MoveOrder_t order;
@@ -221,7 +221,7 @@ TEST_CASE("Pods land can attack then step into a sea base to capture",
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        amph, defender.GetTile());
+        amph, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
     CHECK(game.pPlayer->GetBaseCount() == 0);
@@ -266,7 +266,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
     REQUIRE_FALSE(result->bAttackerDestroyed);
@@ -309,7 +309,7 @@ TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss s
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -337,7 +337,7 @@ TEST_CASE("A facility can clamp capture facility destruction to nothing", "[unit
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -365,7 +365,7 @@ TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -390,7 +390,7 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -496,7 +496,7 @@ TEST_CASE("Human conquering Progenitor reduces population to one and spawns esca
     const size_t aiUnitsBefore = CountUnits_(*game.pAi);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -527,7 +527,7 @@ TEST_CASE("Population reduced to zero razes the base and tombstones Secret Proje
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
@@ -551,7 +551,7 @@ TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
     Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender.GetTile());
+        attacker, defender);
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);

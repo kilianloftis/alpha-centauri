@@ -99,6 +99,17 @@ struct TerraformGame_
             fixtures.state.AllocateUnitId(), rDesign, fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHome));
     }
 
+    // The caller's path: CanStartTerraformProject, then the mutation. False when it may not.
+    bool StartTerraform(Unit& rFormer, const std::string& projectId)
+    {
+        if (!CanStartTerraformProject(rFormer, projectId))
+        {
+            return false;
+        }
+        ac::StartTerraform(fixtures.state, rFormer, projectId);
+        return true;
+    }
+
     void FinishTerraform(Unit& rUnit)
     {
         UnitOrderExecutor& rExec = fixtures.state.GetUnitOrderExecutor();
@@ -112,7 +123,7 @@ struct TerraformGame_
 
 } // namespace
 
-TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terraform]")
+TEST_CASE("StartTerraform places Road after turns complete", "[unit][terraform]")
 {
     TerraformGame_ game;
     BaseManager& home = game.MakeBase(8, 8);
@@ -122,7 +133,7 @@ TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terrafor
     Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     REQUIRE_FALSE(tile.HasImprovement("Road"));
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Road", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Road"));
     REQUIRE(former.GetOrder().has_value());
     CHECK(std::get<TerraformOrder_t>(*former.GetOrder()).projectId == "Road");
     CHECK(former.GetMoveFragmentsRemaining() == 0);
@@ -132,7 +143,7 @@ TEST_CASE("TryStartTerraform places Road after turns complete", "[unit][terrafor
     CHECK_FALSE(former.GetOrder().has_value());
 }
 
-TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraform]")
+TEST_CASE("StartTerraform rejects non-formers and exclusions", "[unit][terraform]")
 {
     TerraformGame_ game;
     BaseManager& home = game.MakeBase(8, 8);
@@ -153,12 +164,12 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
         game.fixtures.state.AllocateUnitId(), game.fixtures.designs.back(),
         game.fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Issued(home));
 
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(scout, "Farm", game.fixtures.state));
+    CHECK_FALSE(game.StartTerraform(scout, "Farm"));
 
     Unit& former = game.MakeFormer(11, 11, &home);
     Tile& rocky = *game.fixtures.state.GetWorldMap().GetTile(11, 11);
     rocky.SetRockiness(Rockiness_t::Rocky);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Farm", game.fixtures.state));
+    CHECK_FALSE(game.StartTerraform(former, "Farm"));
     CHECK(rocky.GetRockiness() == Rockiness_t::Rocky);
     CHECK_FALSE(rocky.HasImprovement("Farm"));
 }
@@ -171,23 +182,19 @@ TEST_CASE("Terraform mutations: level, fungus, aquifer", "[unit][terraform][muta
     Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     tile.SetRockiness(Rockiness_t::Rocky);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "LevelTerrain", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "LevelTerrain"));
     game.FinishTerraform(former);
     CHECK(tile.GetRockiness() == Rockiness_t::Rolling);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "PlantFungus", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "PlantFungus"));
     game.FinishTerraform(former);
     CHECK(tile.HasFeature("Fungus"));
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "RemoveFungus", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "RemoveFungus"));
     game.FinishTerraform(former);
     CHECK_FALSE(tile.HasFeature("Fungus"));
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "Aquifer", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Aquifer"));
     game.FinishTerraform(former);
     CHECK(tile.GetHasAquifer());
     CHECK(tile.GetHasRiver());
@@ -216,8 +223,7 @@ TEST_CASE("A terrain operation the code has never heard of runs end to end",
     Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     REQUIRE(tile.GetRockiness() == Rockiness_t::Flat);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Rockify",
-                                                                 game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Rockify"));
     game.FinishTerraform(former);
     CHECK(tile.GetRockiness() == Rockiness_t::Rolling);
 }
@@ -235,17 +241,14 @@ TEST_CASE("A project whose effects would all no-op is refused before it is paid 
 
     // Nothing to level on flat ground, and no fungus to remove.
     const int energyBefore = game.pPlayer->GetEconomy().GetEnergy();
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "LevelTerrain",
-                                                                     game.fixtures.state));
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "RemoveFungus",
-                                                                     game.fixtures.state));
+    CHECK_FALSE(game.StartTerraform(former, "LevelTerrain"));
+    CHECK_FALSE(game.StartTerraform(former, "RemoveFungus"));
     CHECK(game.pPlayer->GetEconomy().GetEnergy() == energyBefore);
     CHECK_FALSE(former.GetOrder().has_value());
 
     // And the same project is allowed the moment its condition holds.
     tile.SetRockiness(Rockiness_t::Rocky);
-    CHECK(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "LevelTerrain",
-                                                               game.fixtures.state));
+    CHECK(game.StartTerraform(former, "LevelTerrain"));
 }
 
 TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
@@ -257,8 +260,7 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
     tile.SetElevation(1000);
 
     const int energyBefore = game.pPlayer->GetEconomy().GetEnergy();
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "RaiseLand", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "RaiseLand"));
     CHECK(game.pPlayer->GetEconomy().GetEnergy() < energyBefore);
     game.FinishTerraform(former);
     const ElevationRulesConfig_t& rRules = tile.MapRules();
@@ -266,8 +268,7 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
     CHECK(raised >= 1000 + rRules.levelMinMeters);
     CHECK(raised <= 1000 + rRules.levelMaxMeters);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(
-        former, "LowerLand", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "LowerLand"));
     game.FinishTerraform(former);
     const int lowered = tile.GetElevation();
     CHECK(lowered >= raised - rRules.levelMaxMeters);
@@ -386,7 +387,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK(std::find(farmRemoves.begin(), farmRemoves.end(), "Nutrients") == farmRemoves.end());
 
     Unit& former = game.MakeFormer(10, 10, &home);
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Farm", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Farm"));
     game.FinishTerraform(former);
     CHECK(rFarmTile.HasImprovement("Farm"));
     CHECK_FALSE(rFarmTile.HasImprovement("Forest"));
@@ -396,16 +397,14 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     Unit& rockyFormer = game.MakeFormer(11, 11, &home);
     Tile& rRocky = *game.fixtures.state.GetWorldMap().GetTile(11, 11);
     rRocky.SetRockiness(Rockiness_t::Rocky);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(rockyFormer, "Farm",
-                                                                      game.fixtures.state));
+    CHECK_FALSE(game.StartTerraform(rockyFormer, "Farm"));
     CHECK(rRocky.GetRockiness() == Rockiness_t::Rocky);
     CHECK_FALSE(rRocky.HasImprovement("Farm"));
 
     Unit& fungusFormer = game.MakeFormer(12, 12, &home);
     Tile& rBlockedFungus = *game.fixtures.state.GetWorldMap().GetTile(12, 12);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rBlockedFungus, "Fungus");
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(fungusFormer, "Farm",
-                                                                      game.fixtures.state));
+    CHECK_FALSE(game.StartTerraform(fungusFormer, "Farm"));
     CHECK_FALSE(rBlockedFungus.HasImprovement("Farm"));
     CHECK(rBlockedFungus.HasFeature("Fungus"));
 
@@ -448,7 +447,7 @@ TEST_CASE("A coexistence override lets Farm share a rocky tile", "[unit][terrafo
     Tile& rocky = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Farm", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Farm"));
     game.FinishTerraform(former);
     CHECK(rocky.HasImprovement("Farm"));
     CHECK(rocky.GetRockiness() == Rockiness_t::Rocky);
@@ -474,7 +473,7 @@ TEST_CASE("A coexistence waiver outlives the former that earned it", "[unit][ter
     Tile& rocky = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Farm", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Farm"));
     game.FinishTerraform(former);
     REQUIRE(rocky.HasImprovement("Farm"));
 
@@ -509,7 +508,7 @@ TEST_CASE("A coexistence waiver dies with the occupant it was granted for",
     Tile& rocky = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     rocky.SetRockiness(Rockiness_t::Rocky);
 
-    REQUIRE(game.fixtures.state.GetUnitOrderExecutor().TryStartTerraform(former, "Farm", game.fixtures.state));
+    REQUIRE(game.StartTerraform(former, "Farm"));
     game.FinishTerraform(former);
     REQUIRE(rocky.HasImprovement("Farm"));
     REQUIRE_FALSE(rocky.GetCoexistenceWaivers().empty());

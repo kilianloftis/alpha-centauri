@@ -282,7 +282,7 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     CHECK_FALSE(move.moves.TryStep(mover, fixture.At(9, 9), bumpHostile).bEntered);
 
     const int movesBefore = mover.GetMoveFragmentsRemaining();
-    const auto result = move.attacks.TryAttack(mover, fixture.At(9, 9));
+    const auto result = AttackTile(move.attacks, mover, fixture.At(9, 9));
     REQUIRE(result.has_value());
     CHECK(result->bDefenderDestroyed);
     CHECK_FALSE(result->bAttackerDestroyed);
@@ -290,6 +290,27 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     CHECK(mover.GetMoveFragmentsRemaining() == movesBefore - k_point);
     CHECK_FALSE(mover.GetOrder().has_value());
     CHECK(&mover.GetTile() == &fixture.At(8, 8)); // still on own tile
+}
+
+TEST_CASE("An attack refuses a defender the tile would not field", "[movement][attack]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& unarmored = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& armored = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+    Unit& mover = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    REQUIRE(FindAttackableHostileOnTile(mover, fixture.At(9, 9)) == &armored);
+    const UnitId_t armoredId = armored.GetUnitId();
+
+    CHECK_FALSE(move.attacks.TryAttack(mover, unarmored));
+    CHECK(mover.GetMoveFragmentsRemaining() == 2 * k_point);
+    const auto result = move.attacks.TryAttack(mover, armored);
+    REQUIRE(result);
+    CHECK(result->defenderId == armoredId);
 }
 
 TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
@@ -307,14 +328,14 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked));
-    CHECK_FALSE(move.attacks.TryAttack(mover, fixture.At(9, 9)));
+    CHECK_FALSE(move.attacks.TryAttack(mover, cloaked));
     CHECK(mover.GetMoveFragmentsRemaining() == 2 * k_point);
 
     // Bumping the occupied tile reveals the cloaked unit.
     MoveOrder_t bumpCloaked{&fixture.At(9, 9)};
     CHECK_FALSE(move.moves.TryStep(mover, fixture.At(9, 9), bumpCloaked).bEntered);
     CHECK(IsUnitVisibleTo(player, cloaked));
-    REQUIRE(move.attacks.TryAttack(mover, fixture.At(9, 9)));
+    REQUIRE(move.attacks.TryAttack(mover, cloaked));
 }
 
 TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
@@ -335,7 +356,7 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
     MoveOrder_t zocBump{&fixture.At(7, 9)};
     CHECK_FALSE(move.moves.TryStep(mover, fixture.At(7, 9), zocBump).bEntered);
     CHECK(IsUnitVisibleTo(player, cloaked));
-    CHECK(move.attacks.TryAttack(mover, fixture.At(9, 9)));
+    CHECK(move.attacks.TryAttack(mover, cloaked));
 }
 
 TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
@@ -770,8 +791,8 @@ TEST_CASE("Attack wraps horizontally across the map seam", "[movement][zoc][wrap
     fixture.MakeUnit(enemy, width - 2, 4, {"test_chassis"});
     Unit& mover = fixture.MakeUnit(player, 0, 4, {"test_chassis", "test_weapon"});
 
-    CHECK_FALSE(move.attacks.TryAttack(mover, fixture.At(width - 4, 4))); // not adjacent
-    const auto result = move.attacks.TryAttack(mover, fixture.At(width - 2, 4));
+    CHECK_FALSE(AttackTile(move.attacks, mover, fixture.At(width - 4, 4))); // not adjacent
+    const auto result = AttackTile(move.attacks, mover, fixture.At(width - 2, 4));
     REQUIRE(result.has_value());
     CHECK(mover.GetTile().GetX() == 0);
 }

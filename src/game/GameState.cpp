@@ -33,6 +33,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/base/BaseConquestMutations.h"
+#include "game/combat/CaptureMutations.h"
 #include "game/combat/InterceptMutations.h"
 #include "game/GameDataContext.h"
 #include "game/council/CouncilVoteExecutor.h"
@@ -662,6 +663,11 @@ BaseConquestResult_t GameState::ResolveBaseEntryConquest(Unit& rMover, std::mt19
 void GameState::OnHostileAct(const HostileAct_t& rAct)
 {
     ApplyHostileAct(*this, rAct);
+}
+
+void GameState::OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult)
+{
+    ApplyCombatCaptureAftermath(*this, rAttacker, rResult);
 }
 
 void GameState::OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner)

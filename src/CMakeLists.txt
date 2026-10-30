@@ -154,15 +154,18 @@ add_library(ac-core STATIC
     game/units/UnitAttackExecutor.cpp
     game/units/UnitMoveExecutor.cpp
     game/units/UnitOrderExecutor.cpp
+    game/units/UnitMutations.cpp
     game/units/UnitTransport.cpp
     game/units/UnitPlacementRules.cpp
     game/units/UnitPlanRules.cpp
     game/probes/ProbeCalculator.cpp
+    game/combat/CaptureMutations.cpp
+    game/combat/CaptureRules.cpp
+    game/combat/CombatConfigParser.cpp
     game/combat/CombatResolver.cpp
     game/combat/CombatRules.cpp
-    game/combat/CombatStrength.cpp
-    game/combat/StackCollateral.cpp
-    game/combat/PlanetPearls.cpp
+    game/combat/CollateralMutations.cpp
+    game/combat/CollateralRules.cpp
     game/combat/MoraleConfig.cpp
     game/combat/MoraleConfigParser.cpp
     game/combat/MoraleCalculator.cpp
@@ -378,6 +381,7 @@ add_library(ac-ui STATIC
     ui/ViewFactory.cpp
     ui/InteractionPresenter.cpp
     ui/AtrocityNotices.cpp
+    ui/CaptureNotices.cpp
     ui/ProbeNotices.cpp
     ui/style/UiStyle.cpp
     ui/style/DrawPanelChrome.cpp

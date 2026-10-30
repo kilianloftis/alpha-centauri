@@ -301,7 +301,7 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
     garrison.SetMoveFragmentsRemaining(garrison.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, garrison.GetTile());
+        missile, garrison);
     // Deployed ODP cannot intercept; combat proceeds (missile may die in combat or survive).
     REQUIRE(result);
     // If intercept had fired, rounds would be empty and attacker destroyed without combat.
@@ -321,7 +321,7 @@ TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital]
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, garrison.GetTile());
+        missile, garrison);
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -340,7 +340,7 @@ TEST_CASE("An attack ended by interception is still a hostile act", "[orbital][i
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison.GetTile());
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison);
     REQUIRE(result);
     REQUIRE(result->bAttackerDestroyed);
     CHECK(game.fixtures.state.GetDiplomacyLedger().HasVendetta(game.pAi->GetFactionId(),
@@ -358,7 +358,7 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, garrison.GetTile());
+        missile, garrison);
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
@@ -377,7 +377,7 @@ TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, garrison.GetTile());
+        missile, garrison);
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
@@ -404,7 +404,7 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
         game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &defendingBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
-    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison.GetTile());
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison);
     REQUIRE(result);
 
     // The base that actually fired lost its copy; the uninvolved base kept its own.
@@ -507,7 +507,7 @@ TEST_CASE("ThisUnit Intercept fires for the defending unit only", "[orbital][int
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, samGarrison.GetTile());
+        missile, samGarrison);
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -525,7 +525,7 @@ TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]"
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        missile, garrison.GetTile());
+        missile, garrison);
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -596,7 +596,7 @@ TEST_CASE("WorldGlobal building intercept fires for another faction and charges 
     Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
-    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, defender.GetTile());
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, defender);
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -616,7 +616,7 @@ TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
     Unit& attacker = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
     attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
 
-    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, defender.GetTile());
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(attacker, defender);
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -701,7 +701,7 @@ TEST_CASE("A defender lost to its own failed intercept ends the attack with no f
     const int popBefore = playerBase.GetPopulation().GetSize();
 
     const std::optional<CombatResult_t> result =
-        game.fixtures.state.GetUnitAttacks().TryAttack(attacker, playerBase.GetTile());
+        game.fixtures.state.GetUnitAttacks().TryAttack(attacker, garrison);
     REQUIRE(result);
     CHECK(result->bDefenderDestroyed);
     CHECK_FALSE(result->bAttackerDestroyed);

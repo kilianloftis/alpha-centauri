@@ -5,13 +5,10 @@
 
 #include <optional>
 #include <random>
-#include <string>
 
 namespace ac
 {
 
-class BaseManager;
-class GameState;
 class IUnitOrderWorld;
 class Pathfinder;
 class StepEvaluator;
@@ -21,8 +18,7 @@ class TileEffectsContext;
 class UnitMoveExecutor;
 class WorldMap;
 
-// Carries out unit orders turn by turn, founds bases and starts terraforming, and spends
-// SingleUse units.
+// Carries out unit orders turn by turn.
 class UnitOrderExecutor
 {
 public:
@@ -36,16 +32,6 @@ public:
 
     // Drops turn-scoped orders (SkipTurn) when moves refresh.
     void OnTurnStart(Unit& rUnit);
-
-    // Founds a base on the unit's tile, spending a SingleUse unit. nullptr when it may not.
-    BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState);
-
-    // Whether rUnit may start projectId (a buildable improvement or a terrain operation) on
-    // its tile now, under the rules of the world it stands in.
-    bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId) const;
-
-    // Starts projectId, paying its energy up front. False when the unit may not.
-    bool TryStartTerraform(Unit& rUnit, const std::string& projectId, GameState& rGameState);
 
 private:
     OrderProgress_t Execute_(Unit& rUnit, MoveOrder_t& rOrder);

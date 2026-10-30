@@ -2,6 +2,7 @@
 // array schema used by every config source (buildings, unit components, pop types,
 // improvements, social policies).
 
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/movement/MovementConstants.h"
@@ -48,6 +49,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
+    CHECK(ParseStatId("board_chance") == StatId_t::BoardChance);
+    CHECK(ParseStatId("board_hp_limit") == StatId_t::BoardHpLimit);
     CHECK(ParseStatId("turns_of_fuel") == StatId_t::TurnsOfFuel);
     CHECK(ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
@@ -152,6 +155,8 @@ TEST_CASE("CompareSatisfied: Eq, Le, Ge", "[effects][compare]")
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
 {
     CHECK(ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
+    CHECK(ParseRuleFlagId("captured_on_defeat") == RuleFlagId_t::CapturedOnDefeat);
+    CHECK(ParseRuleFlagId("attack_not_hostile") == RuleFlagId_t::AttackNotHostile);
     CHECK(ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
     CHECK(ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK(ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
@@ -1160,6 +1165,22 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
 
         CHECK_THROWS(EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "IsNativeLife", "value": "yes" })")));
+    }
+
+    SECTION("DefenderIsNativeLife")
+    {
+        const Condition_t required =
+            EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "DefenderIsNativeLife" })"));
+        const auto* pRequired = std::get_if<DefenderIsNativeLife_t>(&required);
+        REQUIRE(pRequired);
+        CHECK(pRequired->bMatches);
+
+        const Condition_t negated = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "DefenderIsNativeLife", "value": false })"));
+        const auto* pNegated = std::get_if<DefenderIsNativeLife_t>(&negated);
+        REQUIRE(pNegated);
+        CHECK_FALSE(pNegated->bMatches);
+        CHECK(ConditionNeedsSituationalContext(negated));
     }
 
     SECTION("Probe relation conditions")

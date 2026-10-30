@@ -30,6 +30,10 @@ HostileAct_t HostileActAgainst(const Unit& rActor, const Unit& rTarget);
 // rActor is.
 HostileAct_t HostileActAgainst(const Unit& rActor, FactionId_t victim);
 
+// False when rDefender has attack_not_hostile on its tile: attacking it is no act at all
+// (terranx-map.md "Alien artifacts").
+bool IsHostileAttack(const Unit& rAttacker, const Unit& rDefender);
+
 // An attributed act the pair's status does not allow is a sneak attack.
 std::optional<VendettaKind_t> VendettaFromHostileAct(const HostileAct_t& rAct);
 
@@ -41,7 +45,8 @@ bool VendettaWithdrawsTerritory(VendettaKind_t kind);
 bool HonoredObligationCascades();
 
 // One act per faction a shot from rAttacker at rTarget will hit: the duel opponent or the units
-// it strikes, or an empty tile's territory owner. Attributed when any of that faction's targets is.
+// it strikes that IsHostileAttack, or an empty tile's territory owner. Attributed when any of
+// that faction's targets is.
 std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget);
 
 // The status a pair may propose next. Any status may also go to Vendetta.

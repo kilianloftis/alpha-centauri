@@ -39,6 +39,9 @@ public:
     // A unit's attack, described before it resolved. Called once it has resolved.
     virtual void OnHostileAct(const HostileAct_t& rAct) = 0;
 
+    // A resolved fight in which rAttacker took units (CombatResult_t::capturedUnitIds).
+    virtual void OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult) = 0;
+
     // A player unit's move order reached the border of territoryOwner's territory, which its
     // faction may not enter. The order is kept until the player decides.
     virtual void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) = 0;

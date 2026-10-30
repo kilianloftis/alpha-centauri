@@ -49,6 +49,8 @@ A weapon with `"attack": { "base": 10 }` combined with a reactor providing `"att
 | `movement` | chassis | Movement points per turn |
 | `hit_points` | reactor | Unit HP |
 | `disengage_chance` | chassis | % chance to disengage from combat |
+| `board_chance` | ability | % chance per qualifying lost round that a boarding takes the defender's tile (Marine Detachment) |
+| `board_hp_limit` | ability | Share of the defender's starting HP it must lose before boarding rolls start (a fraction, e.g. `0.6667`) |
 | `turns_of_fuel` | chassis | Turns of fuel; max fuel = turns × movement. Omit or `0` = unlimited (no fuel tracking) |
 | `damage_from_out_of_fuel` | chassis | Percent of max HP applied when ending a turn at 0 fuel away from a refuel site |
 | `cargo_capacity` | chassis | Number of units that can be transported |
@@ -70,6 +72,8 @@ Boolean properties. A flag is `true` on the unit if **any** equipped component h
 | `flight` | Unit can fly, ignoring terrain movement costs |
 | `single_use` | Unit is expended on use |
 | `attacking_ends_turn` | Attack spends all remaining moves (Needlejet: one strike per turn) |
+| `captured_on_defeat` | A combat kill may capture the unit instead, onto the attacker's tile; the kill earns no promotion (Alien Artifact) |
+| `attack_not_hostile` | Attacking the unit is not a hostile act; may carry a condition on its tile (Alien Artifact off a base) |
 
 New flags can be added freely in JSON without any code changes.
 

@@ -86,7 +86,36 @@
     "type": "ability",
     "required_tech": "",
     "mineral_cost": 0,
-    "effects": []
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "sea" },
+            { "kind": "DefenderDomain", "domains": ["sea"] },
+            { "kind": "DefenderIsNativeLife", "value": false },
+            { "kind": "TargetTileHas", "value": "Water" },
+            { "kind": "TargetTileHas", "value": "Base", "present": false }
+          ]
+        },
+        "parameters": {
+          "stat": "board_chance",
+          "amount": 50,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "board_hp_limit",
+          "amount": 0.6667,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "AAA_Tracking",

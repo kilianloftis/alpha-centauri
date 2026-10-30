@@ -159,6 +159,76 @@ absent.
 - **Missing:** the original version (a condenser as a `RecomputeRainfall` input, re-run on
   build and removal) and a switch.
 
+### Disengage is a chance roll for either side `[Ours]`
+
+- **Original:** only a defender faster than its attacker withdraws, with one deterministic try
+  once it has lost `(HP + 1) / 2` ("Disengage").
+- **Ours:** either side may withdraw, rolling `disengage_chance` every round once it has lost
+  half its starting HP.
+- **Where:** `CombatResolver::TryDisengage_`, `DisengageRules::CanDisengage`,
+  `PastDisengageThreshold`; `disengage_chance` in `config/unit_components/chassis.json`.
+- **Missing:** the original version and a switch.
+
+### Collateral hits colony pods, probes and supply crawlers `[Ours]`
+
+- **Original:** collateral skips non-defender occupants with plan colony, probe, supply or
+  artifact ("Unit capture in combat", Alien artifacts).
+- **Ours:** only the artifact is shielded, by its own `collateral_susceptibility` × 0. Colony
+  pods, probe teams and supply crawlers take the splash.
+- **Where:** `PlanStackCollateral`; `collateral_susceptibility` on each design.
+- **Missing:** the original version (susceptibility 0 on those designs) and a switch.
+
+### Artifact capture sets no want-to-talk `[Ours]`
+
+- **Original:** taking an AI faction's artifacts outside Vendetta adds friction 5 and flags the
+  victim as wanting to talk ("Unit capture in combat", Alien artifacts).
+- **Ours:** the friction only; there is no want-to-talk state.
+- **Where:** `ArtifactCaptureFriction` (`CaptureRules`).
+- **Missing:** want-to-talk state, and the original version behind a switch.
+
+### Boarded units lose their orders `[Ours]`
+
+- **Original:** a boarded unit keeps its order; `veh_skip` only spends its moves ("Marine
+  Detachment", Capture).
+- **Ours:** every captured unit's order is cleared, so it never carries out the old owner's.
+- **Where:** `CaptureUnits` (`CaptureMutations`).
+- **Missing:** the original version and a switch.
+
+### Configurable home base for captured units `[Ours]`
+
+- **Original:** boarding homes each unit at the nearest base of any owner, kept only when the
+  captor owns it with population ≥ 3; Subvert Unit homes it at the captor's nearest base; an
+  artifact taken on defeat gets none ("Unit capture in combat").
+- **Ours:** planned: each capture kind (boarding, Subvert Unit, taken on defeat) takes its
+  home-base rule from config: which bases to search (any owner, the captor's, or none) and a
+  minimum population, with the original as the default. Today only boarding's minimum is
+  config (`boarding_home_base_min_pop`); the searches are fixed in code.
+- **Where:** `BoardingCapture`, `SubvertCapture`, `DefeatedUnitCapture` (`CaptureRules`);
+  `config/combat.json`.
+- **Missing:** the per-kind search setting and minimum population in `combat.json`, read by
+  those rules.
+
+### Boarding captures only the defender `[Ours]`
+
+- **Original:** a successful boarding takes every unit on the defender's tile, cargo and any
+  ally's ships included ("Marine Detachment", Capture).
+- **Ours:** planned: a config switch so a boarding takes only the defender and the cargo it
+  carries, leaving the rest of the stack to its owner. The original whole-tile capture stays
+  the default.
+- **Where:** `BoardingCapture` (`CaptureRules`).
+- **Missing:** the switch in `config/combat.json`, read by `BoardingCapture`, and the
+  defender-only version. That version must settle the captured ship sharing a tile with its
+  former owner's units, which the stacking rules do not allow between enemies.
+
+### Nearest base by Chebyshev distance
+
+- **Original:** boarding re-homes to `base_find`'s nearest base and Subvert Unit to
+  `base_find_2`'s ("Unit capture in combat"); their distance measure is not mapped.
+- **Ours:** wrap-aware Chebyshev distance (`Faction::FindNearestBase`).
+- **Where:** `BoardingCapture` and `SubvertCapture` (`CaptureRules`).
+- **Missing:** confirm `base_find`'s distance in the binary; if it differs, the original version
+  and a switch.
+
 ### Sweep existing docs for unlisted deviations
 
 - **Missing:** read `docs/architecture/` and

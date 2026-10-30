@@ -146,7 +146,7 @@ TEST_CASE("AttackingEndsTurn spends all remaining moves and matching fuel", "[fu
     REQUIRE(jet.GetCurrentFuel() == 8);
     REQUIRE(jet.GetMoveFragmentsRemaining() == 4 * k_point);
 
-    REQUIRE(harness.attacks.TryAttack(jet, fixture.At(9, 9)).has_value());
+    REQUIRE(AttackTile(harness.attacks, jet, fixture.At(9, 9)).has_value());
     CHECK(jet.GetMoveFragmentsRemaining() == 0);
     CHECK(jet.GetCurrentFuel() == 4);
     CHECK(FindAttackableHostileOnTile(jet, fixture.At(9, 9)) == nullptr);

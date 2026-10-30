@@ -631,6 +631,12 @@ struct ConditionEvaluator_
         return DomainListed_(rDomain.domains, ctx.pDefender);
     }
 
+    bool operator()(const DefenderIsNativeLife_t& rNative) const
+    {
+        return ctx.pDefender != nullptr
+            && ctx.pDefender->GetDesign().IsNativeLife() == rNative.bMatches;
+    }
+
     bool operator()(const IsHeadquarters_t&) const
     {
         return ctx.pBase != nullptr && ctx.pBase->IsHeadquarters();
@@ -791,6 +797,7 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                || std::is_same_v<T, AttackerDomain_t>
                                || std::is_same_v<T, DefenderDomain_t>
+                               || std::is_same_v<T, DefenderIsNativeLife_t>
                                || std::is_same_v<T, IsHeadquarters_t>
                                || std::is_same_v<T, BaseHasBuilding_t>
                                || std::is_same_v<T, PartnerPlayerType_t>
@@ -1204,7 +1211,12 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
 
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
-    const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
+    return ResolveFlag(rUnit, flagId, EffectContext_t{});
+}
+
+bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId, const EffectContext_t& rCtx)
+{
+    const EffectContext_t ctx = UnitSubjectContext(&rUnit, rCtx);
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
         if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))

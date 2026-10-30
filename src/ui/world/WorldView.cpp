@@ -1,5 +1,9 @@
 #include "ui/world/WorldView.h"
 
+#include "game/base/BaseMutations.h"
+#include "game/base/FoundBaseRules.h"
+#include "game/terraform/TerraformMutations.h"
+#include "game/terraform/TerraformRules.h"
 #include "game/units/SupplyCrawlMutations.h"
 #include <algorithm>
 #include "ui/world/InfoPanelElement.h"
@@ -540,11 +544,13 @@ void WorldView::OpenSupplyCrawlMenu_(Unit& rUnit)
 
 void WorldView::FoundBaseWith_(Unit& rUnit)
 {
-    if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(rUnit, m_rGameState))
+    if (!CanFoundBase(rUnit))
     {
-        // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
-        SelectNextAvailableUnit_();
+        return;
     }
+    FoundBase(m_rGameState, rUnit);
+    // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
+    SelectNextAvailableUnit_();
 }
 
 void WorldView::Detonate_(Unit& rUnit)
@@ -775,32 +781,32 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     const CombatOdds_t odds =
         ComputeCombatOdds(rAttacker, *pDefender, CombatEngagement_t::Standard);
     Unit* pAttacker = &rAttacker;
-    const Tile* pTile = &rTargetTile;
     DismissOpenModals_();
     auto pConfirm = MakeConfirmPopup(
         "Their odds are " + std::to_string(odds.attackerOdds) + " to "
             + std::to_string(odds.defenderOdds) + ". Proceed?",
         GetPopupLayout(),
-        [this, pAttacker, pTile]
+        [this, pAttacker, pDefender]
         {
             if (m_pSelectedUnit != pAttacker)
             {
                 return;
             }
-            ExecuteAttack_(*pAttacker, *pTile);
+            ExecuteAttack_(*pAttacker, *pDefender);
         },
         Style().listSelectorPopup);
     m_elements.push_back(std::move(pConfirm));
 }
 
-void WorldView::ExecuteAttack_(Unit& rAttacker, const Tile& rTargetTile)
+void WorldView::ExecuteAttack_(Unit& rAttacker, Unit& rDefender)
 {
     // Capture identity / tiles before Resolve mutates positions / destroys units.
     const Tile& rAttackerTile = rAttacker.GetTile();
+    const Tile& rTargetTile = rDefender.GetTile();
     const std::string attackerName = rAttacker.GetDesign().GetName();
-    const std::string defenderName = FindUnitNameOnTile_(rTargetTile);
+    const std::string defenderName = rDefender.GetDesign().GetName();
 
-    const auto result = m_rGameState.GetUnitAttacks().TryAttack(rAttacker, rTargetTile);
+    const auto result = m_rGameState.GetUnitAttacks().TryAttack(rAttacker, rDefender);
     if (!result)
     {
         return;
@@ -845,10 +851,8 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
         ToggleBombardTargeting_();
         return true;
     }
-    if (m_rGameState.GetUnitOrderExecutor().TryStartTerraform(rUnit, projects.front(), m_rGameState))
-    {
-        SelectNextAvailableUnit_();
-    }
+    StartTerraform(m_rGameState, rUnit, projects.front());
+    SelectNextAvailableUnit_();
     return true;
 }
 
@@ -864,8 +868,7 @@ std::vector<std::string> WorldView::StartableTerraforms_(const KeyEvent_t& rEven
     for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
     {
         if (rBinding.chord.Matches(rEvent)
-            && m_rGameState.GetUnitOrderExecutor().CanStartTerraformProject(rUnit,
-                                                                            rBinding.projectId))
+            && CanStartTerraformProject(rUnit, rBinding.projectId))
         {
             projects.push_back(rBinding.projectId);
         }
@@ -1167,19 +1170,6 @@ void WorldView::RunProbeAction_(Unit& rProbe, ProbeActionId_t actionId, const Ti
     {
         SelectNextAvailableUnit_();
     }
-}
-
-std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
-{
-    const std::vector<Unit*> units = m_rGameState.GetWorldMap().GetAllUnitsOnTile(rTile);
-    for (const Unit* pUnit : units)
-    {
-        if (pUnit)
-        {
-            return pUnit->GetDesign().GetName();
-        }
-    }
-    return {};
 }
 
 void WorldView::SelectUnitAtTile_(int tileX, int tileY)

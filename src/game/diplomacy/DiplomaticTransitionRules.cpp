@@ -7,6 +7,8 @@
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticPermissionRules.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
@@ -33,6 +35,14 @@ HostileAct_t HostileActAgainst(const Unit& rActor, FactionId_t victim)
     return {.aggressor = rActor.GetFaction().GetFactionId(),
             .victim = victim,
             .bAttributed = IsOwnerKnownTo(victim, rActor)};
+}
+
+bool IsHostileAttack(const Unit& rAttacker, const Unit& rDefender)
+{
+    EffectContext_t ctx{&rDefender.GetTile(), CombatRole_t::Defender};
+    ctx.pAttacker = &rAttacker;
+    ctx.pDefender = &rDefender;
+    return !ResolveFlag(rDefender, RuleFlagId_t::AttackNotHostile, ctx);
 }
 
 std::optional<VendettaKind_t> VendettaFromHostileAct(const HostileAct_t& rAct)
@@ -89,7 +99,10 @@ std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& 
     }
     for (const Unit* pTarget : BombardStrikeTargets(rAttacker, rTarget))
     {
-        addAct(HostileActAgainst(rAttacker, *pTarget));
+        if (IsHostileAttack(rAttacker, *pTarget))
+        {
+            addAct(HostileActAgainst(rAttacker, *pTarget));
+        }
     }
     if (!BombardImprovementTargets(rTarget).empty())
     {

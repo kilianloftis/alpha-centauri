@@ -1,5 +1,11 @@
 #include "game/terraform/TerraformMutations.h"
 
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
+#include "game/economy/EconomyManager.h"
+#include "game/faction/Faction.h"
+#include "game/units/UnitOrder.h"
+
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileEffectsContext.h"
@@ -47,6 +53,17 @@ bool PlaceImprovement_(Tile& rTile, const ImprovementConfig_t& rPlaced,
 }
 
 } // namespace
+
+void StartTerraform(GameState& rGameState, Unit& rFormer, const std::string& projectId)
+{
+    const TerraformProject_t project =
+        FindTerraformProject(projectId, rGameState.GetTileEffects().GetImprovements(),
+                             *rGameState.GetGameData().terrainOperationRegistry)
+            .value();
+    rFormer.GetFaction().GetEconomy().SpendEnergy(TerraformEnergyCost(rFormer, project));
+    rFormer.SetOrder(TerraformOrder_t{projectId, project.project.turnsRequired});
+    rFormer.SpendRemainingMoveFragments();
+}
 
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
                           TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,

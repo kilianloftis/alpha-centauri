@@ -213,6 +213,135 @@ at `0x94a37d`), attacker state not `VSTATE_EXPLORE | VSTATE_ON_ALERT`
 then `jge` skip at `0x507D3E`). `#GOODIDEA` only if
 `GameMorePreferences & 0x8000`.
 
+### Disengage (`battle_fight_2` `0x506AF0`)
+
+Only the defender withdraws. `retreat_value` (`[ebp-0x24]`) is zeroed at `0x508C9F` and set
+only when `veh_speed(def) > veh_speed(atk)` (`0x508CB8`) and the remaining Thinker conditions
+hold (no artillery, defender armed, neither side air, Comm Jammer vs Dissociative Wave, not
+on Hold, no base, airbase or bunker, alone on its tile). Its value is
+`(HP + 1) / 2` (`0x508E27`–`0x508E2D`).
+
+Each round the defender loses while alive, `retreat_value −= ` damage (`0x5093DE`–`0x5093EB`).
+At `≤ 0` it is zeroed (`0x509400`) and the adjacent tiles are searched for a retreat. There is
+no `rand()` in the block (`0x5093F1`–`0x509740`), so the withdrawal is one deterministic try,
+and with no tile found it is never retried.
+
+### Artillery strike vs duel (`battle_fight_2` `0x506AF0`)
+
+`combat_type` lives in `[ebp+0x18]` (the render path writes it 0 / 1 at `0x50880A` /
+`0x5088DA`). A plain strike (`combat_type == 1`, `cmp` / `jne 0x508B50` at `0x5084AB`) takes its
+own branch, `0x5084B4`–`0x508B4F`. For each unit on the target tile it calls `veh_skip` on the
+attacker (`0x5085CF`) and `battle_compute(..., 1)` (`0x5085E0`). It then applies one damage roll,
+capped by `max_dmg_percent_arty_*` (the formula follows Thinker and is not traced here). Units
+left at 0 HP are removed with `stack_kill` (`0x508AAE`), and the branch returns 0 at `0x508B4F`.
+No jump leaves the branch, so a strike never reaches `promote` (`0x5062B0`, called only at
+`0x50A2D5` / `0x50A42A`) or `battle_kill` (`0x505D80`, called only at `0x50A8F4` / `0x50ABB0`).
+That means no promotion for either side, no artifact capture and no collateral damage.
+
+A duel (`combat_type == 3`, `CT_CAN_ARTY | CT_WEAPON_ONLY`) skips that branch and runs the
+normal round loop. It then makes the same `promote` calls as any fight, at the same rate.
+
+## Unit capture in combat
+
+Two ways a fight hands units to the attacker: Marine Detachment boarding, and alien artifacts.
+The probe team's Mind Control is separate (see the Probe sections). Thinker's
+`mod_battle_fight_2` and `battle_kill` (`refs/thinker/src/veh_combat.cpp`, `veh.cpp`) match
+everything below.
+
+### Marine Detachment (`battle_fight_2` `0x506AF0`)
+
+**Eligibility** (`0x508E33`–`0x508F5B`), checked once before the rounds. Every test must pass,
+or `detach_value` (`[ebp-0x80]`) stays 0:
+
+- attacker has ability `0x4000000` (`ABL_MARINE_DETACHMENT`, `has_abil` `0x5BF1F0`);
+- attacker chassis triad is sea (`Chassis+0x94A379 == 1`);
+- the target tile is ocean (altitude bits `& 0xE0 < 0x60`);
+- the defender's triad is sea;
+- the defender is not native: a predefined unit (`unit_id < 0x40`) with a psi weapon
+  (`Weapon.offense_value < 0`) fails, as does Spore Launcher (`unit_id == 0xF`);
+- no base on the tile (`base_id` `[ebp-0x20] < 0`).
+
+Then `detach_value = 2 * HP / 3`, where HP is the defender's hit points at the start of the
+fight (`clamp(reactor, 1, 100) * 10 − damage_taken`, clamped `[0, 9999]`).
+
+**Roll** (`0x5092EA`–`0x509366`), inside the branch where the defender loses the round,
+after its damage is applied and before the disengage check. If `detach_value ≠ 0` and the
+defender is still alive: `detach_value −= ` that round's damage; if the result is `≤ 0`,
+`rand() % 100 < 50` (`0x50935C`–`0x509363`) captures. A failed roll leaves `detach_value`
+negative, so **every** later round the defender loses rolls the 50% again until it dies.
+
+**Capture** (`0x50973A`–`0x509921`):
+
+- every unit on the defender's tile (`veh_top`, then `next_veh_id_stack`), cargo included,
+  takes the attacker's `faction_id`. Damage is kept;
+- home base: `base_find(tx, ty)` (`0x4E3B80`, the nearest base of any owner); kept if the
+  attacker owns it and it has `pop_size ≥ 3`, else `−1`;
+- `veh_skip` (`0x5C1D20`) on each, which spends all its moves;
+- `bit_set(tx, ty, 0x100000, 1)` (`BIT_SUPPLY_REMOVE`): no random supply pod spawns on the
+  tile again;
+- `owner_set(tx, ty, attacker)` (`0x591B10`) writes `MAP.val2 & 0xF`, the cached faction of
+  the tile's occupant (Thinker `veh_owner()`). Territory (`MAP.owner`, `+0x7`) is not
+  touched. Probe Mind Control on a unit makes the same call;
+- `#WEMARINEDETACH` to the attacker, `#THEYMARINEDETACH` to the victim;
+- `marine_detach` (`[ebp-0x50]`) = 1 and the round loop breaks.
+
+**After the loop** (`0x50A44D`): the attacker's normal promotion roll still runs, then
+`marine_detach` jumps to the end of the battle (`0x50B203`). Nothing is killed, there is no
+collateral, and the combat win/loss tallies and `diplo_combat_*` counts are not touched.
+
+### Probe Mind Control on a unit (`probe` `0x59F120`)
+
+For comparison with boarding (`0x5A41F3`–`0x5A4239`): the unit takes the actor's faction,
+`owner_set` on its tile, then `home_base_id = base_find_2(x, y, actor)` (`0x4E3C60`, the
+nearest base the actor owns; no population test). `moves_spent` (`VEH+0x28`) = 0, so it
+keeps its full moves; `order = ORDER_NONE`; state bits `0x3004200` clear. Damage is kept.
+
+### Alien artifacts (`battle_kill` `0x505D80`)
+
+Artifacts are `UNIT.plan == 12`. In combat they have 1 HP (`cur_hitpoints` is
+`!damage_taken`) and a flat defense of 1 that ignores morale (Thinker `get_basic_defense`
+returns 1 before the morale multiply). `battle_compute` (`0x501DA0`) tests only for probe
+teams (`plan == 0xB`, `0x502149` / `0x502B87`), so terrain, base and other defense
+multipliers still apply to that 1. The first round an artifact loses kills it, and rounds it
+wins still damage the attacker.
+
+Collateral damage after a kill skips every occupant other than the defender whose plan is
+artifact (12), colony (8), probe (11) or supply (10) (`0x50AA47`–`0x50AA60`). An artifact in a
+stack is therefore taken only when the stack has no combatant left.
+
+`battle_kill(veh_id, num_killed, num_relics, credits, veh_id_atk, faction_id_atk)` runs for
+every unit a fight destroys: the defender, a stack wiped for losing its last combatant, and
+each unit of a defeated attacker's stack. The artifact is **captured instead of killed**
+(`0x505DC1`–`0x505F67`) when all of these hold:
+
+- `veh_id_atk ≥ 0`, not the artifact itself, and the attacker's faction is not native
+  (`faction_id > 0`). A defeated attacker's stack is passed `veh_id_atk = −1`, so a
+  defender never captures;
+- the attacker is on the map, and its chassis is not a missile (`Chassis+0x94A37D == 0`);
+- the attacker stands on land, **or** its stack has spare cargo space
+  (`stack_check(atk, 8)` `> 0`: sea cargo capacity minus land units), **or** the artifact has
+  `VFLAG_IS_OBJECTIVE` (`VEH+0x8` bit `0x20`, scenario objective).
+
+Capture: `veh_lift`, `damage_taken = 0`, `faction_id = attacker`, `order = ORDER_NONE`,
+the per-faction unit counts move, state bits `0x3004200` clear, `veh_drop` on the
+**attacker's** tile, `veh_skip`, `++num_relics`. It returns 0 (not killed). Otherwise the
+artifact is killed like any unit.
+
+**Diplomacy** in `battle_fight_2`:
+
+- The human treaty-break prompt (`break_treaty` `0x55F770`, at `0x507117`) is skipped for a
+  probe team, or for an artifact defender with no base on the tile (`0x5070E4`–`0x5070F2`).
+  Taking a lone artifact outside a base therefore never breaks a treaty or pact.
+- Thinker skips the `#SURPRISE` sneak-attack notice for an artifact defender too
+  (`!veh_def->is_artifact()`); not confirmed in the disassembly.
+- If `num_relics > 0`, the defender is not human, and there is no Vendetta
+  (`0x50B1BC`–`0x50B1E9`): `cause_friction(defender, attacker, 5)` and
+  `treaty_on(... 0x2000)` (want to talk).
+- The attacker's promotion roll is skipped when the defender was an artifact (`cmp cl, 0xC` /
+  `je` past `promote` at `0x50A296`).
+- Popups: `#OURBOOTY1` / `#OURBOOTY2` (count) to the captor. The victim gets
+  `#THEIRBOOTY1` / `2` under Vendetta, otherwise `#THEIRBOOTY3` ("has appropriated").
+
 ## Sea bases
 
 ### `base_init` (`0x4E4B80`)

@@ -314,7 +314,7 @@ TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat]
 
     // Expenditure is on UnitOrderExecutor::TryAttack, not CombatResolver::Resolve.
     OrderHarness_ harness(fixture, /*seed*/ 42);
-    const auto result = harness.attacks.TryAttack(attacker, defender.GetTile());
+    const auto result = harness.attacks.TryAttack(attacker, defender);
     REQUIRE(result.has_value());
 
     CHECK(result->bDefenderDestroyed);
@@ -663,6 +663,30 @@ TEST_CASE("Eligible attacker disengages at half HP to an adjacent tile", "[comba
     REQUIRE(result.pRetreatTile != nullptr);
     CHECK(&setup.pAttacker->GetTile() == result.pRetreatTile);
     CHECK(result.pRetreatTile->GetX() != attackerX);
+}
+
+TEST_CASE("Nobody withdraws from a fight that has just ended in a death", "[combat][disengage]")
+{
+    // A wounded attacker past its own threshold that fails its rolls can still land the kill.
+    bool bKilledWhileWounded = false;
+    for (uint32_t seed = 1; seed <= 200; ++seed)
+    {
+        DisengageSetup_ setup({"test_chassis", "test_weapon", "test_coin_disengages"},
+                              {"test_slow_chassis", "test_armor"});
+        setup.pAttacker->SetCurrentHp(4);
+        setup.pDefender->SetCurrentHp(3);
+
+        CombatHarness_ harness(setup.fixture, seed);
+        const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
+
+        if (result.bDefenderDestroyed)
+        {
+            CHECK_FALSE(result.bAttackerDisengaged);
+            CHECK(result.victor == CombatSide_t::Attacker);
+            bKilledWhileWounded = bKilledWhileWounded || setup.pAttacker->GetCurrentHp() <= 2;
+        }
+    }
+    CHECK(bKilledWhileWounded);
 }
 
 TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")

@@ -22,6 +22,7 @@
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/AtrocityNotices.h"
+#include "ui/CaptureNotices.h"
 #include "ui/ProbeNotices.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
@@ -132,6 +133,7 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             [this](const AtrocityNoticeInteraction_t& rNotice) {
                 PresentAtrocityNotice_(rNotice);
             },
+            [this](const CaptureNoticeInteraction_t& rNotice) { PresentCaptureNotice_(rNotice); },
         },
         rPayload);
 }
@@ -479,6 +481,18 @@ void InteractionPresenter::PresentProbeFrameNotice_(const ProbeFrameNoticeIntera
 {
     const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
     const std::optional<ProbeNoticeCopy_t> copy = ProbeFrameNoticeCopy(rNotice, audienceId);
+    if (!copy.has_value())
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+    PresentNotice_(NoticeInteraction_t{std::nullopt, copy->title, copy->body, std::nullopt});
+}
+
+void InteractionPresenter::PresentCaptureNotice_(const CaptureNoticeInteraction_t& rNotice)
+{
+    const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
+    const std::optional<CaptureNoticeCopy_t> copy = CaptureNoticeCopy(rNotice, audienceId);
     if (!copy.has_value())
     {
         CompleteAndAdvance_();

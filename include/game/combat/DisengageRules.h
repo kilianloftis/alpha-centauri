@@ -29,4 +29,7 @@ private:
     WorldMap& m_rWorldMap;
 };
 
+// A unit may withdraw once it has lost half the HP it started the fight with.
+bool PastDisengageThreshold(const Unit& rUnit, int startHp);
+
 } // namespace ac

@@ -22,8 +22,12 @@ int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
 int CombatMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                       const MoraleCalculator& rMorale);
 
-// The side that may be promoted: the survivor of a fight in which the other side died.
+// The side that may be promoted: the survivor of a fight in which the other side died, unless
+// the kill earns none, and the attacker after a boarding.
 std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult);
+
+// False for a captured_on_defeat unit (terranx-map.md "Alien artifacts").
+bool KillEarnsPromotion(const Unit& rDefeated);
 
 // Rank word: stated level with combatRole None (SE and home Crèche; not riot or extras).
 const std::string& MoraleDisplayName(const Unit& rUnit, const EffectContext_t& rCtx,

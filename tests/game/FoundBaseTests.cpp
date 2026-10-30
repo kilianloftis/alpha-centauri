@@ -17,11 +17,11 @@
 #include "game/map/ImprovementIds.h"
 #include "game/terraform/SurfaceOccupancy.h"
 #include "game/terraform/TerraformRules.h"
+#include "game/base/BaseMutations.h"
 #include "game/base/BaseRules.h"
 #include "game/base/FoundBaseRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
-#include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
 
@@ -92,6 +92,12 @@ struct FoundBaseGame_
 
         pPlayer = &fixtures.state.AddFaction(std::move(pFactionA));
         pAi = &fixtures.state.AddFaction(std::move(pFactionB));
+    }
+
+    // The caller's founding path: CanFoundBase, then the mutation. nullptr when it may not.
+    BaseManager* FoundBase(Unit& rFounder)
+    {
+        return CanFoundBase(rFounder) ? &ac::FoundBase(fixtures.state, rFounder) : nullptr;
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
@@ -169,7 +175,7 @@ TEST_CASE("Founding is illegal in another faction's territory", "[unit][found-ba
     CHECK(CanFoundBaseAt(inOwnerTerritory, owner.GetFactionId(), AllBases_(fixture)));
 }
 
-TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[unit][found-base]")
+TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][found-base]")
 {
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
@@ -179,8 +185,7 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     REQUIRE(CountUnits_(*game.pPlayer) == 1);
 
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     CHECK(pNew->GetTile().GetX() == 11);
     CHECK(pNew->GetTile().GetY() == 11);
@@ -209,7 +214,7 @@ TEST_CASE("The first founded base is Headquarters and keeps all energy", "[unit]
           == home.GetEnergyProduction());
 }
 
-TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals",
+TEST_CASE("FoundBase stacks founding-unit and AllOwnerBases StartingMinerals",
           "[unit][found-base][starting-minerals]")
 {
     FoundBaseGame_ game;
@@ -217,8 +222,7 @@ TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals"
     home.GetBuildingManager().AddBuilding("founding_minerals_project");
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     // Pod 10 + project AllOwnerBases +5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 15);
@@ -234,8 +238,7 @@ TEST_CASE("Support -2 cancels the colony pod's 10 free founding minerals",
     REQUIRE(home.GetEffectiveSocialRating(SocialRatingId_t::Support) == -2);
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     // Pod +10 offset by Support ≤ -2 StartingMinerals -10.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 0);
@@ -251,8 +254,7 @@ TEST_CASE("Support -2 still allows project StartingMinerals above the cancelled 
         game.fixtures.socialPolicies().Get("low_support_policy"));
 
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     // Pod 10 + project 5 + Support -10 → 5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 5);
@@ -269,8 +271,7 @@ TEST_CASE("Founding minerals above the retool threshold may switch freely",
     Unit& pod =
         game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod_rich"}, &home);
 
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     REQUIRE(pNew->GetProduction().GetMineralStockpile() == 40);
 
@@ -288,7 +289,7 @@ TEST_CASE("Founding minerals above the retool threshold may switch freely",
     CHECK(rProd.GetMineralStockpile() == 40);
 }
 
-TEST_CASE("TryFoundBase without SingleUse leaves the unit alive", "[unit][found-base]")
+TEST_CASE("FoundBase without SingleUse leaves the unit alive", "[unit][found-base]")
 {
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
@@ -296,27 +297,24 @@ TEST_CASE("TryFoundBase without SingleUse leaves the unit alive", "[unit][found-
     REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
     REQUIRE_FALSE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
 
-    BaseManager* pNew = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        pod, game.fixtures.state);
+    BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 1);
 }
 
-TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][found-base]")
+TEST_CASE("FoundBase fails without FoundBase or on an illegal tile", "[unit][found-base]")
 {
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
 
     Unit& scout = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis"}, &home);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        scout, game.fixtures.state));
+    CHECK_FALSE(game.FoundBase(scout));
     CHECK(game.pPlayer->GetBaseCount() == 1);
     CHECK(CountUnits_(*game.pPlayer) == 1);
 
     Unit& tooClose = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_colony_pod"}, &home);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        tooClose, game.fixtures.state));
+    CHECK_FALSE(game.FoundBase(tooClose));
     CHECK(game.pPlayer->GetBaseCount() == 1);
     CHECK(CountUnits_(*game.pPlayer) == 2);
 
@@ -329,8 +327,7 @@ TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][
     REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(*pForeign) == game.pAi->GetFactionId());
 
     Unit& inForeign = game.MakeUnit(*game.pPlayer, 5, 3, {"test_chassis", "test_colony_pod"}, &home);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        inForeign, game.fixtures.state));
+    CHECK_FALSE(game.FoundBase(inForeign));
     CHECK(game.pPlayer->GetBaseCount() == 1);
 }
 
@@ -352,19 +349,16 @@ TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy
 
     Unit& landPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
     CHECK(landPod.GetDomain() == UnitDomain_t::Land);
-    CHECK_FALSE(game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        landPod, game.fixtures.state));
+    CHECK_FALSE(game.FoundBase(landPod));
     CHECK(game.pPlayer->GetBaseCount() == 1);
 
     Unit& seaOnLand = game.MakeUnit(*game.pPlayer, 5, 5, {"test_sea_chassis", "test_colony_pod"}, &home);
-    BaseManager* pLandFounded = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        seaOnLand, game.fixtures.state);
+    BaseManager* pLandFounded = game.FoundBase(seaOnLand);
     REQUIRE(pLandFounded);
     CHECK_FALSE(pLandFounded->MayOccupyWater());
 
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_colony_pod"}, &home);
-    BaseManager* pSea = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        seaPod, game.fixtures.state);
+    BaseManager* pSea = game.FoundBase(seaPod);
     REQUIRE(pSea);
     CHECK(pSea->GetTile().IsWater());
     CHECK(pSea->MayOccupyWater());
@@ -446,8 +440,7 @@ TEST_CASE("A domed base and a sea base keep their tiles across a flip",
     Tile& water = *game.fixtures.state.GetWorldMap().GetTile(14, 8);
     water.SetElevation(-100);
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 14, 8, {"test_sea_chassis", "test_colony_pod"});
-    BaseManager* pSea = game.fixtures.state.GetUnitOrderExecutor().TryFoundBase(
-        seaPod, game.fixtures.state);
+    BaseManager* pSea = game.FoundBase(seaPod);
     REQUIRE(pSea);
     REQUIRE(pSea->MayOccupyWater());
     CrossElevation_(game.fixtures.state, pSea->GetTile(), 500);

@@ -145,6 +145,8 @@ std::vector<FactionId_t> FrameCandidates(const Faction& rActor, const Faction& r
 enum class ProbeFrameOutcome_t
 {
     // The victim blames the framed faction, and its keep-or-break toward the actor is skipped.
+    Framed,
+    // The frame failed: the framed faction turns on the actor.
     Flopped,
 };
 

@@ -17,6 +17,7 @@
 #include "game/production/ProductionConfigParser.h"
 #include "game/economy/CommerceConfig.h"
 #include "game/diplomacy/DiplomacyConfig.h"
+#include "game/combat/CombatConfig.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
@@ -75,6 +76,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
     rData.commerceConfig = std::make_unique<CommerceConfig_t>();
     rData.diplomacyConfig = std::make_unique<DiplomacyConfig_t>();
+    rData.combatConfig = std::make_unique<CombatConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
     rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>();
@@ -171,6 +173,8 @@ static_assert(KindFor(StatId_t::ExplosionRadius) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CollateralSusceptibility) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PlanetPearls) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::BoardChance) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::BoardHpLimit) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TurnsOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AirdropRange) == StatKind_t::Additive);
@@ -294,6 +298,8 @@ static_assert(DomainFor(StatId_t::TileDefense) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::MoveCost) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::BombardRange) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::BombardMinHpPercent) == ResolveDomain_t::Tile);
+static_assert(DomainFor(StatId_t::BoardChance) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::BoardHpLimit) == ResolveDomain_t::Unit);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

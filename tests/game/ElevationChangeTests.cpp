@@ -449,7 +449,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     const int targetElevation = fixture.At(9, 9).GetElevation();
 
     OrderHarness_ harness(fixture);
-    const auto result = harness.attacks.TryAttack(attacker, fixture.At(9, 9));
+    const auto result = AttackTile(harness.attacks, attacker, fixture.At(9, 9));
     REQUIRE(result.has_value());
     CHECK(fixture.At(9, 9).GetElevation() == targetElevation);
 }

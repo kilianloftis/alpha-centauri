@@ -1,6 +1,8 @@
 #pragma once
 
 #include "TestHelpers.h"
+#include "game/combat/AttackRules.h"
+#include "game/units/UnitAttackExecutor.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
@@ -27,6 +29,7 @@
 #include "game/economy/CommerceConfigParser.h"
 #include "game/diplomacy/DiplomacyCalculator.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
+#include "game/combat/CombatConfigParser.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/economy/ResourceManager.h"
 #include "game/GameSettings.h"
@@ -253,6 +256,8 @@ struct SessionInputs
             *dataContext.commerceConfig, *dataContext.luaRuntime);
         dataContext.diplomacyConfig = std::make_unique<ac::DiplomacyConfig_t>(
             ac::DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json")));
+        dataContext.combatConfig = std::make_unique<ac::CombatConfig_t>(
+            ac::CombatConfigParser{}.ParseConfig(FixturePath("combat.json")));
         dataContext.diplomacyCalculator =
             std::make_unique<ac::DiplomacyCalculator>(*dataContext.diplomacyConfig);
         dataContext.hurryProductionCalculator =
@@ -579,6 +584,20 @@ inline ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& 
         throw std::runtime_error("MakeSessionBase: CreateBase failed");
     }
     return *pBase;
+}
+
+// The attack a player declares on rTargetTile: the defender FindAttackableHostileOnTile picks,
+// then TryAttack against it. nullopt when the tile has no attackable hostile.
+inline std::optional<ac::CombatResult_t> AttackTile(ac::UnitAttackExecutor& rAttacks,
+                                                    ac::Unit& rAttacker,
+                                                    const ac::Tile& rTargetTile)
+{
+    ac::Unit* pDefender = ac::FindAttackableHostileOnTile(rAttacker, rTargetTile);
+    if (!pDefender)
+    {
+        return std::nullopt;
+    }
+    return rAttacks.TryAttack(rAttacker, *pDefender);
 }
 
 } // namespace actest

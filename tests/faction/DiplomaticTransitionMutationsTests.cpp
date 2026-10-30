@@ -158,7 +158,7 @@ TEST_CASE("A sneak attack leaves each side's units in the other's territory",
     Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
     Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
-    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender.GetTile()));
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
 
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
     CHECK(&rGuest.GetTile() == &game.At(11, 9));
@@ -203,7 +203,7 @@ TEST_CASE("A sneak attack out of a shared stack resolves, then separates the two
     const UnitId_t defenderId = rDefender.GetUnitId();
 
     const std::optional<CombatResult_t> result =
-        game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, game.At(13, 5));
+        AttackTile(game.fixtures.state.GetUnitAttacks(), rAttacker, game.At(13, 5));
 
     REQUIRE(result);
     CHECK(result->attackerId == attackerId);
@@ -222,7 +222,7 @@ TEST_CASE("Attacking a faction you are not at Vendetta with declares Vendetta",
     Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
     Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
-    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender.GetTile()));
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Vendetta);
 }
 
@@ -255,7 +255,7 @@ TEST_CASE("Attacking a covert unit keeps the Treaty", "[diplomacy][status][hosti
     Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon"});
     Unit& rDefender = game.MakeUnit(*game.pB, 13, 5, {"test_chassis", "covert"});
 
-    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender.GetTile()));
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 
@@ -266,7 +266,7 @@ TEST_CASE("A covert attacker keeps the Treaty", "[diplomacy][status][hostile][co
     Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4, {"test_chassis", "test_weapon", "covert"});
     Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
 
-    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender.GetTile()));
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
     CHECK(game.Status(*game.pA, *game.pB) == DiplomaticStatus_t::Treaty);
 }
 

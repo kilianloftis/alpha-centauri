@@ -24,7 +24,7 @@ enum class UnitOrderRequestKind_t
     UnloadTransport,  // Shift+U
     SupplyCrawl,      // O: WorldView opens the resource picker
     Disband,          // Shift+D: Disband / Self Destruct / Cancel
-    FoundBase,        // B: tile legality is TryFoundBase's
+    FoundBase,        // B: tile legality is CanFoundBase's
     Detonate,         // Shift+X on a design with on_detonate_effects
     ToggleAirdrop,    // I on an airdrop-capable unit that may drop now
     Probe,            // long-press release where a probe menu is legal

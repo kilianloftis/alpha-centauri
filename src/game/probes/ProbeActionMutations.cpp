@@ -20,6 +20,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/research/TechConfigParser.h"
+#include "game/combat/CaptureMutations.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
 #include "game/units/Unit.h"
@@ -307,7 +308,8 @@ bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, GameState& rGameState
 {
     TriggeredEffectContext_t context = UnitMissionContext_(rActor, rTargetUnit, rGameState, rRng);
     ApplyTriggeredEffects(rAction.onSuccessEffects, context);
-    rTargetUnit.GetFaction().TransferUnitTo(rTargetUnit.GetUnitId(), rActor);
+    UnitPositionIndex& rPositions = rGameState.GetWorldMap().GetUnitPositions();
+    CaptureUnits(rPositions, rActor, {SubvertCapture(rActor, rTargetUnit)});
     rResult.detail = ProbeUnitSubverted_t{};
     return true;
 }

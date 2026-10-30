@@ -148,6 +148,29 @@ struct ProbeFrameNoticeInteraction_t
     ProbeFrameOutcome_t outcome = ProbeFrameOutcome_t::Framed;
 };
 
+enum class CaptureNoticeKind_t
+{
+    // A Marine Detachment took the defender's tile.
+    Boarded,
+    // Defeated captured_on_defeat units (artifacts) were taken instead of destroyed.
+    TakenOnDefeat,
+};
+
+// A fight handed units to the attacker. Names are snapshotted at enqueue.
+struct CaptureNoticeInteraction_t
+{
+    CaptureNoticeKind_t kind = CaptureNoticeKind_t::Boarded;
+    FactionId_t captorId = 0;
+    FactionId_t victimId = 0;
+    std::string captorNoun;
+    std::string captorAdjective;
+    std::string victimAdjective;
+    // The boarded defender, or the first unit taken on defeat.
+    std::string unitName;
+    int count = 0;
+    bool bVictimInVendetta = false;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -160,7 +183,8 @@ using PlayerInteraction_t = std::variant<
     TerritoryEntryInteraction_t,
     ProbeNoticeInteraction_t,
     ProbeFrameNoticeInteraction_t,
-    AtrocityNoticeInteraction_t
+    AtrocityNoticeInteraction_t,
+    CaptureNoticeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

@@ -54,6 +54,7 @@ add_executable(effects-tests
     game/UnitPositionTests.cpp
     game/UnitStatsTests.cpp
     game/CombatRatingTests.cpp
+    game/CaptureTests.cpp
     game/CombatResolverTests.cpp
     game/CombatRulesTests.cpp
     game/UnitPlacementRulesTests.cpp
@@ -159,6 +160,7 @@ add_executable(effects-tests
     ui/MapViewportTests.cpp
     ui/InteractionPresenterTests.cpp
     ui/AtrocityNoticesTests.cpp
+    ui/CaptureNoticesTests.cpp
     ui/ProbeNoticesTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp

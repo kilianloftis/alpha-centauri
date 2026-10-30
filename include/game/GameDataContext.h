@@ -47,6 +47,7 @@ class ProbeCalculator;
 class DiplomacyCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
+struct CombatConfig_t;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 struct DifficultyConfig_t;
@@ -108,6 +109,7 @@ struct GameDataContext
     std::unique_ptr<MoraleConfig_t> moraleConfig;
     std::unique_ptr<ProbeActionsConfig_t> probeActionsConfig;
     std::unique_ptr<BaseConquestConfig_t> baseConquestConfig;
+    std::unique_ptr<CombatConfig_t> combatConfig;
     std::unique_ptr<CouncilProposalRegistry> councilProposalRegistry;
     std::unique_ptr<CouncilRulesConfig_t> councilRules;
     std::unique_ptr<DifficultyConfig_t> difficultyConfig;

@@ -7,6 +7,7 @@
 #include "game/GameState.h"
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
@@ -200,6 +201,15 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
         return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId());
     }
     return rProject.project.energyCost;
+}
+
+bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId)
+{
+    const GameState& rGame = CurrentGameState();
+    const std::optional<TerraformProject_t> resolved =
+        FindTerraformProject(projectId, rGame.GetTileEffects().GetImprovements(),
+                             *rGame.GetGameData().terrainOperationRegistry);
+    return resolved && CanStartTerraform(rUnit, *resolved);
 }
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)

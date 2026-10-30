@@ -32,9 +32,10 @@ public:
                        const MoraleCalculator& rMorale, std::mt19937& rRng,
                        IUnitOrderWorld& rWorld, UnitOrderExecutor& rOrders);
 
-    // Attacks a hostile on an adjacent tile without moving. nullopt when the attack is not
-    // allowed; otherwise the result, for playback. An intercept or scrambler can change it.
-    std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
+    // Attacks rDefender on an adjacent tile without moving. nullopt unless rDefender is the
+    // hostile FindAttackableHostileOnTile picks there; otherwise the result, for playback. An
+    // intercept or scrambler can still change who fights.
+    std::optional<CombatResult_t> TryAttack(Unit& rAttacker, Unit& rDefender);
 
     // One bombard shot, spending all remaining moves. nullopt when the unit cannot bombard.
     struct BombardResult_t
@@ -46,26 +47,24 @@ public:
     std::optional<BombardResult_t> TryBombard(Unit& rAttacker, const Tile& rTargetTile);
 
 private:
-    // A ready intercept fights the attack in the defender's place; nullopt when none does.
-    std::optional<CombatResult_t> TryIntercept_(Unit& rAttacker, Unit& rDefender);
-    // Combat with rDefender or a scrambler in its place, then the attack's cost and any
-    // last-defender casualties.
+    // Combat with rDefender or a scrambler in its place, and the report of any capture.
     CombatResult_t FightDefender_(Unit& rAttacker, Unit& rDefender);
-    // The duel first, then a strike on each target, until the attacker falls.
-    std::vector<CombatResult_t> FireBombard_(Unit& rAttacker, Unit* pDuelTarget,
-                                             const std::vector<Unit*>& rStrikeTargets);
+    CombatResult_t FireDuel_(Unit& rAttacker, Unit& rDuelTarget);
+    // Strikes never hurt the attacker, so every target is struck.
+    std::vector<CombatResult_t> FireStrikes_(Unit& rAttacker, const std::vector<Unit*>& rTargets);
     void ReportHostileAct_(const HostileAct_t& rAct);
+    void ReportCapture_(const Unit& rAttacker, const CombatResult_t& rResult);
     // Returns the destroyed improvement's id.
     std::string DestroyRandomImprovement_(const Tile& rTile,
                                           const std::vector<std::string>& rCandidates);
-    void PromoteOnKill_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);
     // Marks the attack, spends AttackMoveFragments, clears the order, and destroys a
     // SingleUse unit. Returns true when that expend destroyed rAttacker.
     bool SpendAttackAction_(Unit& rAttacker, AttackKind_t kind);
     // Last-defender casualties on a base tile. Returns true when the raid destroyed rAttacker.
     bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
-    CombatResult_t ResolveBombardExchange_(Unit& rAttacker, Unit& rDefender,
-                                           CombatEngagement_t engagement);
+    // Marks a duel or strike for bombard playback and keeps a surviving target from carrying on
+    // with its order.
+    CombatResult_t SettleBombardExchange_(Unit& rDefender, CombatResult_t combat);
     // Assign a MoveOrder to an eligible scrambler and Execute until arrival (or failure).
     // Fills rOutPath with hops taken. Returns the combat defender (scrambler if arrived).
     Unit& ResolveScrambleDefender_(Unit& rAttacker,
@@ -76,7 +75,6 @@ private:
 
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;
-    const MoraleCalculator& m_rMorale;
     std::mt19937& m_rRng;
     CombatResolver m_combat;
     IUnitOrderWorld& m_rWorld;

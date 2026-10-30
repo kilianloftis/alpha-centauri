@@ -89,7 +89,7 @@ public:
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);
     // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint]. Does not burn fuel
-    // (TurnStart refresh, test setup). Gameplay spend uses SpendMoveFragments.
+    // (TurnStart refresh, captures, test setup). Gameplay spend uses SpendMoveFragments.
     void SetMoveFragmentsRemaining(int fragments);
     // Refills moves and rolls the per-turn latches. Orders are UnitOrderExecutor's.
     void BeginTurn();

@@ -1,8 +1,5 @@
 #include "game/units/UnitOrderExecutor.h"
 
-#include "game/base/BaseMutations.h"
-#include "game/base/FoundBaseRules.h"
-#include "game/economy/EconomyManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
@@ -15,7 +12,6 @@
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/IUnitOrderWorld.h"
-#include "game/units/UnitManager.h"
 #include "game/units/UnitMoveExecutor.h"
 
 #include <iostream>
@@ -51,54 +47,6 @@ UnitOrderExecutor::UnitOrderExecutor(UnitMoveExecutor& rMoves, const StepEvaluat
     , m_rRng(rRng)
     , m_rWorld(rWorld)
 {
-}
-
-BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState)
-{
-    if (!CanFoundBase(rUnit))
-    {
-        return nullptr;
-    }
-
-    Faction& rFaction = rUnit.GetFaction();
-    Tile& rTile = rGameState.GetWorldMap().MutableTile(rUnit.GetTile());
-    BaseManager* pBase = rFaction.CreateBase(rGameState.AllocateBaseId(),
-                                             rFaction.SuggestBaseName(), &rTile,
-                                             rGameState.GetTileEffects(), std::nullopt);
-
-    // Before SingleUse destroy: founding-unit StartingMinerals still resolve on the pod.
-    ApplyStartingMinerals(*pBase, &rUnit);
-
-    if (ResolveFlag(rUnit, RuleFlagId_t::SingleUse))
-    {
-        rFaction.GetUnitManager().DestroyUnit(rUnit);
-    }
-    return pBase;
-}
-
-bool UnitOrderExecutor::CanStartTerraformProject(const Unit& rUnit,
-                                                 const std::string& projectId) const
-{
-    const std::optional<TerraformProject_t> resolved =
-        FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
-    return resolved && CanStartTerraform(rUnit, *resolved);
-}
-
-bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& projectId,
-                                          GameState& rGameState)
-{
-    if (!CanStartTerraformProject(rUnit, projectId))
-    {
-        return false;
-    }
-    const TerraformProject_t resolved =
-        *FindTerraformProject(projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations);
-
-    const int cost = TerraformEnergyCost(rUnit, resolved);
-    rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
-    rUnit.SetOrder(TerraformOrder_t{projectId, resolved.project.turnsRequired});
-    rUnit.SpendRemainingMoveFragments();
-    return true;
 }
 
 OrderProgress_t UnitOrderExecutor::Execute(Unit& rUnit)

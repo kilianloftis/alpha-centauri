@@ -116,16 +116,14 @@ void CombatPresentation::Render(Graphics& rGraphics,
         return;
     }
 
-    if (const std::optional<Rectangle_t> cached = rDisplay.MarkerRectOf(*flashingId))
-    {
-        UnitMarkerRenderer::DrawHitOverlay(rGraphics, *cached);
-        return;
-    }
-
-    // Unit was destroyed during Resolve — never drawn this frame, so place a ghost hit on
-    // its pre-fight tile using the same marker layout.
+    // A defeated unit has left its tile (destroyed, or captured onto the attacker's), so its hit
+    // is a ghost on its pre-fight tile using the same marker layout.
     if (!WasDestroyed_(*flashingId))
     {
+        if (const std::optional<Rectangle_t> cached = rDisplay.MarkerRectOf(*flashingId))
+        {
+            UnitMarkerRenderer::DrawHitOverlay(rGraphics, *cached);
+        }
         return;
     }
 

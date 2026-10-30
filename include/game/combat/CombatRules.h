@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
-
 namespace ac
 {
 
+class MoraleCalculator;
+class TileEffectsContext;
 class Unit;
 
 // Which side of a fight a roll / outcome refers to. Attacker initiated; Defender is the
@@ -15,15 +15,35 @@ enum class CombatSide_t
     Defender,
 };
 
+// Which exchange the strengths are resolved for (ResolveCombatStrength).
 enum class CombatEngagement_t
 {
+    // CombatResolver::Resolve.
     Standard,
-    // One round that never hurts the attacker; the defender stops at the bombard floor, and one
-    // already under it is not healed.
+    // CombatResolver::Strike: one round that never hurts the attacker.
     ArtilleryStrike,
-    // Full fight, no disengage. The defender is rated with Attack. Either side can reach 0.
+    // CombatResolver::ResolveDuel: the defender is rated with Attack.
     ArtilleryDuel,
 };
+
+// Roll-pool scale applied to a resolved attack or defense rating.
+inline constexpr int k_CombatStrengthScale = 0x100;
+
+// Roll pools for one fight. attackStrength and defenseStrength are the resolved ratings
+// after k_CombatStrengthScale. bPsiCombat is true when either side forces psi combat.
+struct CombatStrength_t
+{
+    int attackStrength = 0;
+    int defenseStrength = 0;
+    bool bPsiCombat = false;
+};
+
+// Attack and defence pools; psi ratings start at 1. The defender uses Defense (Attack in a duel)
+// times its tile's multiplier; under one movement point, attack scales by the fraction left.
+CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
+                                       const TileEffectsContext& rTileEffects,
+                                       const MoraleCalculator& rMorale,
+                                       CombatEngagement_t engagement);
 
 // Placeholder until weapon / reactor damage tables exist.
 inline constexpr int k_CombatRoundDamage = 1;
@@ -37,11 +57,19 @@ struct CombatRoundOutcome_t
     int defenderHpLoss = 0;
 };
 
-// Equal rolls favour the defender. Psi combat deals the receiver's PsiDamage. A strike
-// damages only the defender, and never below hpFloor.
+// One round of a fight. Equal rolls favour the defender. Psi combat deals the receiver's
+// PsiDamage.
 CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
-                                        int attackRoll, int defenseRoll,
-                                        CombatEngagement_t engagement, int hpFloor);
+                                        int attackRoll, int defenseRoll);
+
+// An artillery strike's one round: as ResolveCombatRound, but the attacker is never hurt and the
+// defender never drops below hpFloor (one already under it is not healed).
+CombatRoundOutcome_t ResolveStrikeRound(const Unit& rAttacker, const Unit& rDefender,
+                                        int attackRoll, int defenseRoll, int hpFloor);
+
+// HP a strike must leave on rTarget: bombard_min_hp_percent of its HitPoints, from the area
+// effects on its tile, rounded up.
+int BombardHpFloor(const Unit& rTarget);
 
 // Reduced attacker:defender ratio of strength × hits-to-kill (Thinker combat_odds_fix).
 // docs/thinker/terranx-map.md.
@@ -56,27 +84,5 @@ CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
 
 // Defender share of ComputeCombatOdds(..., Standard). SelectDefender ranks by this.
 double DefenderWinChance(const Unit& rAttacker, const Unit& rDefender);
-
-// A unit may withdraw once it has lost half the HP it started the fight with.
-bool PastDisengageThreshold(const Unit& rUnit, int startHp);
-
-// What collateral does to one other occupant of the defender's tile.
-struct CollateralHit_t
-{
-    Unit* pOccupant = nullptr;
-    // A MaxClamp that leaves collateral_susceptibility at 0 shields the occupant.
-    bool bImmune = false;
-    // A wild native is destroyed outright.
-    bool bDestroyed = false;
-    int damage = 0;
-};
-
-// One entry per other occupant of the defender's tile, in tile order.
-std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender);
-
-// Read after collateral lands: while NonCombatantsDestroyedWithoutCombatant is in force, the
-// non-combatants left with no combatant beside them. Immune occupants count for neither.
-std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Unit& rDefender,
-                                                const std::vector<CollateralHit_t>& rPlan);
 
 } // namespace ac

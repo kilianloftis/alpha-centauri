@@ -1,8 +1,10 @@
 #include "GameFixtures.h"
 
 #include "game/combat/AttackRules.h"
+#include "game/combat/CollateralRules.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
+#include "game/combat/DisengageRules.h"
 #include "game/combat/MoraleRules.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/WorldRulesConfigParser.h"
@@ -44,13 +46,13 @@ TEST_CASE("A tied round goes to the defender and only the attacker loses HP", "[
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
     const CombatRoundOutcome_t tie =
-        ResolveCombatRound(attacker, defender, 5, 5, CombatEngagement_t::Standard, 0);
+        ResolveCombatRound(attacker, defender, 5, 5);
     CHECK(tie.winner == CombatSide_t::Defender);
     CHECK(tie.attackerHpLoss == k_CombatRoundDamage);
     CHECK(tie.defenderHpLoss == 0);
 
     const CombatRoundOutcome_t win =
-        ResolveCombatRound(attacker, defender, 6, 5, CombatEngagement_t::Standard, 0);
+        ResolveCombatRound(attacker, defender, 6, 5);
     CHECK(win.winner == CombatSide_t::Attacker);
     CHECK(win.attackerHpLoss == 0);
     CHECK(win.defenderHpLoss == k_CombatRoundDamage);
@@ -70,7 +72,7 @@ TEST_CASE("A strike spares a losing attacker and stops the defender at the floor
     const int floor = 4;
 
     const CombatRoundOutcome_t miss =
-        ResolveCombatRound(attacker, defender, 0, 5, CombatEngagement_t::ArtilleryStrike, floor);
+        ResolveStrikeRound(attacker, defender, 0, 5, floor);
     CHECK(miss.winner == CombatSide_t::Defender);
     CHECK(miss.damage == k_CombatRoundDamage);
     CHECK(miss.attackerHpLoss == 0);
@@ -78,9 +80,7 @@ TEST_CASE("A strike spares a losing attacker and stops the defender at the floor
     auto hitAt = [&](int defenderHp)
     {
         defender.SetCurrentHp(defenderHp);
-        return ResolveCombatRound(attacker, defender, 5, 0, CombatEngagement_t::ArtilleryStrike,
-                                  floor)
-            .defenderHpLoss;
+        return ResolveStrikeRound(attacker, defender, 5, 0, floor).defenderHpLoss;
     };
     CHECK(hitAt(10) == k_CombatRoundDamage);
     CHECK(hitAt(floor) == 0);

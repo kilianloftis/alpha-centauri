@@ -145,6 +145,7 @@ public:
         Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) override;
     BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) override;
     void OnHostileAct(const HostileAct_t& rAct) override;
+    void OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult) override;
     void OnImprovementVisited(Unit& rVisitor) override;
     void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
     bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,

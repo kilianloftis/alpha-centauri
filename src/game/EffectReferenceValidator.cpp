@@ -279,6 +279,7 @@ struct ConditionReferenceValidator
     void operator()(const HasAirdroppedThisTurn_t&) const {}
     void operator()(const AttackerDomain_t&) const {}
     void operator()(const DefenderDomain_t&) const {}
+    void operator()(const DefenderIsNativeLife_t&) const {}
     void operator()(const IsHeadquarters_t&) const {}
     void operator()(const SubjectDomain_t&) const {}
     void operator()(const HasFlag_t&) const {}

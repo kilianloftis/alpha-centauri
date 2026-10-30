@@ -46,8 +46,22 @@ unless a change touches it. A change that breaks one is not finished.
    logic moves, its callers call the new home.
 5. **No flag parameters.** A `bool` that chooses what a function does is derived from an object the
    caller already passes, or the function splits in two (named constructors for a type). An enum
-   parameter is the last resort. A `bool` that describes the input, like `bNowWater`, is fine. No
-   default arguments: callers pass the value, even `nullptr`, and no overload stands in for one.
+   parameter is the last resort. A `bool` that describes the input, like `bNowWater`, is fine. A
+   nullable pointer or `std::optional` parameter whose presence chooses what the function does
+   is a flag too, and worse, since the call site does not show the choice: split the function,
+   and the code that obtained the value calls the matching half. A nullable that is only data
+   (stored, passed on, or skipped as a no-op) is fine. No default arguments: callers pass the
+   value, even `nullptr`, and no overload stands in for one.
+   ```cpp
+   // No: two jobs behind one null check
+   FireBombard_(rAttacker, pDuelTarget, strikeTargets);
+   // Yes
+   if (Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTile))
+   {
+       return {FireDuel_(rAttacker, *pDuelTarget)};
+   }
+   return FireStrikes_(rAttacker, BombardStrikeTargets(rAttacker, rTile));
+   ```
 6. **Nothing speculative.** No function, getter, setter, type, interface or template without a
    caller that needs it now. A config or Lua file in the repo counts as a caller, so a mod seam
    lands with one that uses it. An interface is needed when it narrows what its consumer can reach

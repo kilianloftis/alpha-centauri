@@ -133,6 +133,21 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile)
     return nullptr;
 }
 
+Unit* FindCarrierWithRoom(const Tile& rTile, UnitDomain_t domain, FactionId_t factionId)
+{
+    const GameState& rGame = CurrentGameState();
+    const WorldMap& rWorldMap = rGame.GetWorldMap();
+    for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (FreeCargoSlots(*pUnit) > 0 && UnitCarries(*pUnit, domain, factionId)
+            && CanLoadAtTile(*pUnit, rTile))
+        {
+            return pUnit;
+        }
+    }
+    return nullptr;
+}
+
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo)
 {
     if (!rPassenger.Transport().IsEmbarked())

@@ -51,6 +51,7 @@ private:
     void PresentProbeNotice_(const ProbeNoticeInteraction_t& rNotice);
     void PresentProbeFrameNotice_(const ProbeFrameNoticeInteraction_t& rNotice);
     void PresentAtrocityNotice_(const AtrocityNoticeInteraction_t& rNotice);
+    void PresentCaptureNotice_(const CaptureNoticeInteraction_t& rNotice);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);
     Unit* FindUnit_(UnitId_t unitId);

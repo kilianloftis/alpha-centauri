@@ -33,8 +33,16 @@ int CombatMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
 
 std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult)
 {
+    if (rResult.bDefenderBoarded)
+    {
+        return CombatSide_t::Attacker;
+    }
     if (rResult.bDefenderDestroyed && !rResult.bAttackerDestroyed)
     {
+        if (!rResult.bKillEarnsPromotion)
+        {
+            return std::nullopt;
+        }
         return CombatSide_t::Attacker;
     }
     if (rResult.bAttackerDestroyed && !rResult.bDefenderDestroyed)
@@ -42,6 +50,11 @@ std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult)
         return CombatSide_t::Defender;
     }
     return std::nullopt;
+}
+
+bool KillEarnsPromotion(const Unit& rDefeated)
+{
+    return !ResolveFlag(rDefeated, RuleFlagId_t::CapturedOnDefeat);
 }
 
 const std::string& MoraleDisplayName(const Unit& rUnit, const EffectContext_t& rCtx,

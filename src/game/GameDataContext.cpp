@@ -52,6 +52,7 @@
 #include "game/combat/MoraleConfigParser.h"
 #include "game/probes/ProbeActionConfigParser.h"
 #include "game/base/BaseConquestConfigParser.h"
+#include "game/combat/CombatConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/atrocities/AtrocityConfigParser.h"
 #include "game/council/CouncilRulesConfigParser.h"
@@ -252,6 +253,7 @@ void LoadRuleConfigs_(GameDataContext& rData)
     rData.moraleConfig = ParseOwned_<MoraleConfigParser>(rPaths.moraleLevels);
     rData.probeActionsConfig = ParseOwned_<ProbeActionConfigParser>(rPaths.probeActions);
     rData.baseConquestConfig = ParseOwned_<BaseConquestConfigParser>(rPaths.baseConquest);
+    rData.combatConfig = ParseOwned_<CombatConfigParser>(rPaths.combat);
     ValidateEscapePodComponents_(rData);
     rData.councilProposalRegistry = LoadRegistry_<CouncilProposalRegistry>(rPaths.councilProposals);
     rData.councilRules = ParseOwned_<CouncilRulesConfigParser>(rPaths.councilRules);
@@ -332,6 +334,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.moraleConfig.get(), "moraleConfig"},
         {rData.probeActionsConfig.get(), "probeActionsConfig"},
         {rData.baseConquestConfig.get(), "baseConquestConfig"},
+        {rData.combatConfig.get(), "combatConfig"},
         {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
         {rData.councilRules.get(), "councilRules"},
         {rData.difficultyConfig.get(), "difficultyConfig"},

@@ -53,6 +53,8 @@ struct DiplomacyConfig_t
     // Exclusive bound of the friction draw a probe victim that keeps its agreement adds toward
     // the actor.
     int probeKeepFrictionDraw = 0;
+    // Friction an AI victim outside Vendetta gains toward a faction that captures its artifacts.
+    int artifactCaptureFriction = 0;
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

@@ -62,6 +62,12 @@ enum class StatId_t
     // base; the intrinsic lifecycle level MultiplyGeometrics it (10, 20, 30, …).
     PlanetPearls,
     DisengageChance,
+    // Percent chance per qualifying round that a Marine Detachment boarding succeeds; 0 cannot
+    // board.
+    BoardChance,
+    // Share of the defender's starting HP it must lose before boarding rolls start (a fraction,
+    // read unrounded).
+    BoardHpLimit,
     // Turns of fuel capacity; max fuel pool = TurnsOfFuel × Movement. 0 = unlimited / no tracking.
     TurnsOfFuel,
     // Percent of max HP applied when a fueled unit ends a turn at 0 fuel away from a refuel site.
@@ -296,6 +302,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ExplosionRadius:
         case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
+        case StatId_t::BoardChance:
+        case StatId_t::BoardHpLimit:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
@@ -466,6 +474,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::CollateralSusceptibility:
         case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
+        case StatId_t::BoardChance:
+        case StatId_t::BoardHpLimit:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
@@ -524,6 +534,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "collateral_susceptibility") return StatId_t::CollateralSusceptibility;
     if (rStat == "planet_pearls")           return StatId_t::PlanetPearls;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
+    if (rStat == "board_chance")            return StatId_t::BoardChance;
+    if (rStat == "board_hp_limit")          return StatId_t::BoardHpLimit;
     if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "airdrop_range")           return StatId_t::AirdropRange;
@@ -655,6 +667,11 @@ enum class RuleFlagId_t
     AttackingEndsTurn,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
+    // A combat kill of this unit may capture it instead (Alien Artifact), and earns no promotion.
+    CapturedOnDefeat,
+    // Attacking this unit is not a hostile act. Resolved with its tile, so conditions can
+    // restrict it (an artifact off a base).
+    AttackNotHostile,
     // Owner is unknown to other factions (IsOwnerKnownTo): its hostile acts and those against
     // it are unattributed, it is not met on sight, and territory bans do not hold it (Probe Team).
     Covert,
@@ -733,6 +750,8 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "covert")                      return RuleFlagId_t::Covert;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
+    if (rFlag == "captured_on_defeat")          return RuleFlagId_t::CapturedOnDefeat;
+    if (rFlag == "attack_not_hostile")          return RuleFlagId_t::AttackNotHostile;
     if (rFlag == "harbors")                     return RuleFlagId_t::Harbors;
     if (rFlag == "airdrop_launch")              return RuleFlagId_t::AirdropLaunch;
     if (rFlag == "airdrop_interdiction")        return RuleFlagId_t::AirdropInterdiction;
