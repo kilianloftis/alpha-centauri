@@ -15,6 +15,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/population/CompositionInputs.h"
 #include "game/map/WorldMap.h"
+#include "game/economy/ResourceManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>

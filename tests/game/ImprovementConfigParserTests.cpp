@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
 
@@ -15,7 +17,7 @@ namespace
 
 std::filesystem::path WriteTempJson(const std::string& name, const std::string& body)
 {
-    const std::filesystem::path path = std::filesystem::temp_directory_path() / name;
+    const std::filesystem::path path = actest::TestTempDir::Path() / name;
     std::ofstream out(path);
     out << body;
     return path;

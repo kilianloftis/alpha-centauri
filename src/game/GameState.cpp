@@ -41,6 +41,14 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/worldgen/WorldGenDecorationConfig.h"
+#include "game/atrocities/AtrocityLedger.h"
+#include "game/diplomacy/FirstContactResolver.h"
+#include "game/ecology/EcologyLedger.h"
+#include "game/movement/MoveCostRules.h"
+#include "game/movement/MovementConstants.h"
+#include "game/movement/StepEvaluator.h"
+#include "game/probes/MindControlLedger.h"
+#include "game/world-events/WorldEventTracker.h"
 #include "lib/EventBus.h"
 #include <algorithm>
 #include <functional>
@@ -146,6 +154,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_visibilitySettingsChanged(rSettings.OnVisibilityChanged.ConnectScoped(
           [this]() { OnVisibilitySettingsChanged_(); }))
     , m_pEventBus(std::make_unique<EventBus>())
+    , m_pPlayerInteractions(std::make_unique<PlayerInteractionQueue>())
     , m_worldMap(std::move(pWorldMap))
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
     , m_pAtrocities(std::make_unique<AtrocityLedger>())
@@ -257,12 +266,12 @@ const EventBus& GameState::GetEventBus() const
 
 PlayerInteractionQueue& GameState::GetPlayerInteractions()
 {
-    return m_playerInteractions;
+    return *m_pPlayerInteractions;
 }
 
 const PlayerInteractionQueue& GameState::GetPlayerInteractions() const
 {
-    return m_playerInteractions;
+    return *m_pPlayerInteractions;
 }
 
 uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const

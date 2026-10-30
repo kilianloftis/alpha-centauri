@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/GameSettings.h"
 
 #include <catch2/catch_approx.hpp>
@@ -15,7 +17,7 @@ namespace
 
 std::filesystem::path TempSettingsPath(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 } // namespace

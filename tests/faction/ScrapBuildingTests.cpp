@@ -23,6 +23,7 @@
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/map/WorldMap.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

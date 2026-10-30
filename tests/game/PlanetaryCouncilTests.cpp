@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/GameSettings.h"
@@ -164,7 +165,7 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
     // Stock fixture already exercised WorldGlobal `effects`, on_passed GrantEnergy and
     // on_passed WorldParameter via the load test above.
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_council_bad_proposal.json";
+        actest::TestTempDir::Path() / "ac_council_bad_proposal.json";
 
     SECTION("A non-WorldGlobal standing law throws")
     {
@@ -202,7 +203,7 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
 TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][parser]")
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_council_bad_rules.json";
+        actest::TestTempDir::Path() / "ac_council_bad_rules.json";
 
     SECTION("A non-FactionGlobal standing governor effect throws")
     {
@@ -255,7 +256,7 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
 TEST_CASE("Tile yield rules reject illegal scopes", "[effects][parser][tile_yield]")
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_bad_tile_yield_rules.json";
+        actest::TestTempDir::Path() / "ac_bad_tile_yield_rules.json";
     {
         std::ofstream out(path);
         out << R"({

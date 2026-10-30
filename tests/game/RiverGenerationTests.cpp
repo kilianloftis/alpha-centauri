@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 #include "game/map/RiverGeneration.h"
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
@@ -16,7 +17,7 @@ namespace
 
 std::filesystem::path TempDecorationPath_(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 void SetLandElev_(Tile& rTile, int elev)

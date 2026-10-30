@@ -3,6 +3,7 @@
 #include "GameFixtures.h"
 #include "RecordingGraphics.h"
 #include "SpriteRig.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
@@ -41,7 +42,7 @@ struct ViewFixture : WorldFixture
     std::unique_ptr<ac::ViewFactory> pFactory;
     // The settings UI saves on every toggle, so each fixture saves to a file of its own rather
     // than the developer's user_settings.json or a file another test process shares.
-    std::filesystem::path settingsPath = std::filesystem::temp_directory_path()
+    std::filesystem::path settingsPath = actest::TestTempDir::Path()
         / ("ac_view_settings_" + std::to_string(std::random_device{}()) + ".json");
 
     // Loaded once per process — UiStyle is still a singleton (deferred, package 14), so every

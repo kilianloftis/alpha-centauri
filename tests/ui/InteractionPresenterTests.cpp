@@ -22,6 +22,7 @@
 #include "ui/InteractionPresenter.h"
 #include "ui/UIManager.h"
 #include "ui/world/WorldView.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -22,6 +22,8 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/ecology/EcologyLedger.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

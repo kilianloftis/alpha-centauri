@@ -50,6 +50,9 @@
 #include "game/probes/ProbeActionResult.h"
 #include "game/effects/EffectEnums.h"
 #include "ui/style/UiStyle.h"
+#include "game/probes/ProbeActionExecutor.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 #include "graphics/Graphics.h"
 #include <magic_enum.hpp>
 #include <string>

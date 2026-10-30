@@ -1,5 +1,6 @@
 #include "game/PlayerInteraction.h"
 #include "ui/ProbeNotices.h"
+#include "game/probes/ProbeActionId.h"
 
 #include <catch2/catch_test_macros.hpp>
 

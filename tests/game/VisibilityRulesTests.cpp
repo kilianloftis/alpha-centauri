@@ -8,6 +8,8 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/units/Unit.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 

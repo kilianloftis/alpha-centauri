@@ -4,6 +4,7 @@
 #include "game/movement/MovementRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/UnitMoveExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
 

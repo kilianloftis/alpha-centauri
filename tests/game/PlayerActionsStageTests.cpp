@@ -21,6 +21,7 @@
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/PauseOnEventsConfig.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

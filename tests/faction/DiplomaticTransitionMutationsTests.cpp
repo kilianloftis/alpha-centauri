@@ -4,6 +4,7 @@
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/movement/EvacuateTerritoryMutations.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/UnitAttackExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
 

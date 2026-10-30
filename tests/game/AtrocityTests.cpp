@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/DifficultyConfig.h"
@@ -687,7 +688,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
 {
     const auto writeTemp = [](const std::string& rName, const std::string& rBody)
     {
-        const std::filesystem::path path = std::filesystem::temp_directory_path() / rName;
+        const std::filesystem::path path = actest::TestTempDir::Path() / rName;
         std::ofstream out(path);
         out << rBody;
         out.close();
@@ -863,7 +864,7 @@ TEST_CASE("The atrocities parser rejects a severity outside the closed set", "[a
       "sanction_years_per_atrocity": 0
     })";
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_atrocities_extra_tier.json";
+        actest::TestTempDir::Path() / "ac_atrocities_extra_tier.json";
     std::ofstream out(path);
     out << extraTier;
     out.close();

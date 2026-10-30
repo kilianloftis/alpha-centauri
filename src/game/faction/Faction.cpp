@@ -55,6 +55,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/ActiveEffect.h"
 #include "lib/IdAllocator.h"
+#include "game/probes/ProbeActionConfig.h"
 
 namespace ac
 {

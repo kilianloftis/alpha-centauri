@@ -3,6 +3,7 @@
 // seed semantics (KindFor/SeedFor).
 
 #include "TempConfigFile.h"
+#include "TestTempDir.h"
 #include "game/natives/NativeLifeLevelConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
@@ -513,7 +514,7 @@ TEST_CASE("ValidateEffectReferences(GameDataContext): probe action effect ids ar
     // Minimal building registry — the full buildings fixture grants techs that would
     // fail against an empty TechRegistry before the probe walk is reached.
     const std::filesystem::path buildingsPath =
-        std::filesystem::temp_directory_path() / "ac_probe_effect_buildings.json";
+        actest::TestTempDir::Path() / "ac_probe_effect_buildings.json";
     {
         std::ofstream out(buildingsPath);
         out << R"([
@@ -543,7 +544,7 @@ TEST_CASE("ValidateEffectReferences(GameDataContext): probe action effect ids ar
         data.probeActionsConfig->actions = {action};
 
         CHECK_THROWS_WITH(ValidateEffectReferences(data),
-                          Catch::Matchers::ContainsSubstring("probe_action:infiltrate")
+                          Catch::Matchers::ContainsSubstring("probe_action:Infiltrate")
                               && Catch::Matchers::ContainsSubstring("no_such_building"));
     }
 
@@ -554,7 +555,7 @@ TEST_CASE("ValidateEffectReferences(GameDataContext): production effect ids are 
           "[effects][validation][production]")
 {
     const std::filesystem::path buildingsPath =
-        std::filesystem::temp_directory_path() / "ac_production_effect_buildings.json";
+        actest::TestTempDir::Path() / "ac_production_effect_buildings.json";
     {
         std::ofstream out(buildingsPath);
         out << R"([

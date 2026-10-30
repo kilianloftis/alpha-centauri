@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include <algorithm>
 #include <array>
 #include <cstddef>

@@ -4,6 +4,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
+#include "game/buildings/BuildingManager.h"
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"

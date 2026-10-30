@@ -17,6 +17,7 @@
 #include "ui/TileShapeGeometry.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapAppearance.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>

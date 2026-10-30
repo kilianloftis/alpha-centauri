@@ -18,11 +18,14 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/units/SupplyCrawlMutations.h"
 #include "game/units/Unit.h"
 #include "game/worldgen/WorldGenDecorationConfig.h"
 #include "lib/IdAllocator.h"
 #include "lib/LuaRuntime.h"
+#include "game/base/BaseRuleset.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

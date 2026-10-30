@@ -35,6 +35,9 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/research/ResearchManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

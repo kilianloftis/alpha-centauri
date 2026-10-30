@@ -27,6 +27,7 @@
 #include "ui/world/AirdropFailMessages.h"
 #include "ui/world/WorldDisplay.h"
 #include "ui/world/WorldView.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

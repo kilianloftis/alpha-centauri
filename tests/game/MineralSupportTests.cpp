@@ -17,6 +17,11 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <unordered_map>

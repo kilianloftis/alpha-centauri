@@ -2,6 +2,7 @@
 // load-time rules that keep the promotion graph classifiable.
 
 #include "GameFixtures.h"
+#include "PopRulesFixture.h"
 #include "TempConfigFile.h"
 #include "TestHelpers.h"
 
@@ -29,6 +30,10 @@
 #include "game/effects/EffectEnums.h"
 #include "game/population/GrowthRules.h"
 #include "lib/LuaRuntime.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/map/WorldMap.h"
+#include "game/economy/ResourceManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>

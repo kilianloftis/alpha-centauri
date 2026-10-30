@@ -26,6 +26,7 @@
 #include "game/units/UnitManager.h"
 #include "game/units/UnitMoveExecutor.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

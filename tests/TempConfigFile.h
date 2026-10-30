@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TestTempDir.h"
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <atomic>
@@ -12,16 +14,15 @@
 namespace actest
 {
 
-// A config file written for one test and removed with it. Names are made unique per instance,
-// so concurrently running test binaries cannot read each other's files.
+// A config file written for one test and removed with it. Names are unique per instance, so a
+// test can write two files of the same name.
 class TempConfigFile
 {
 public:
     TempConfigFile(const char* name, const std::string& rContents)
     {
         static std::atomic<unsigned> counter{0};
-        m_path = std::filesystem::temp_directory_path()
-                 / (std::to_string(counter++) + "_" + name);
+        m_path = TestTempDir::Path() / (std::to_string(counter++) + "_" + name);
 
         std::ofstream out(m_path);
         if (!out.is_open())

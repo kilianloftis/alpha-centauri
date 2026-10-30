@@ -18,6 +18,8 @@
 #include "game/probes/ProbeActionConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 
+#include <magic_enum.hpp>
+
 #include <memory>
 #include <stdexcept>
 
@@ -72,7 +74,7 @@ void ValidateProbeActionTech_(const ProbeActionsConfig_t& rProbeActions, const T
         if (!rAction.requiredTech.empty() && !rTechs.Find(rAction.requiredTech))
         {
             throw std::runtime_error(
-                std::string("Probe action '") + ProbeActionIdToString(rAction.id)
+                "Probe action '" + std::string(magic_enum::enum_name(rAction.id))
                 + "' has required_tech '" + rAction.requiredTech
                 + "' which is not a known tech");
         }

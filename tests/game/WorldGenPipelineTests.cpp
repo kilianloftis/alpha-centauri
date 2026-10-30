@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -28,7 +29,7 @@ namespace
 
 std::filesystem::path TempPath_(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 MapGenerationConfig_t SmallMapConfig_()

@@ -14,6 +14,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "lib/EventBus.h"
+#include "game/ecology/EcologyLedger.h"
 
 #include <algorithm>
 #include <vector>

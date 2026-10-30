@@ -23,6 +23,13 @@
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/units/UnitManager.h"
+#include "game/economy/ResourceManager.h"
+#include "game/map/WorldMap.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 
 #include <memory>
 #include <variant>

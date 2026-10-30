@@ -42,7 +42,7 @@ Commands:
       Configure and build in one step.
 
   test [build-dir] [--config <Debug|Release>] [-j N|--jobs N]
-      Build the test suite and run it via ctest.
+      Build the test suite and run it via ctest, -j N test processes at a time.
       CTest output is printed only when a test fails.
 
   clean [build-dir]
@@ -185,7 +185,7 @@ function run_tests() {
   local test_log
   test_log="$(mktemp)"
   local test_status=0
-  ctest --test-dir "$build_dir" --output-on-failure >"$test_log" 2>&1 || test_status=$?
+  ctest --test-dir "$build_dir" --output-on-failure -j"$JOBS" >"$test_log" 2>&1 || test_status=$?
   if [[ "$test_status" -ne 0 ]]; then
     cat "$test_log"
   fi

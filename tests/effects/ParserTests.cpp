@@ -2438,7 +2438,7 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
     CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectSourceKind_t::UnitComponent, "sensor_pod"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectSourceKind_t::ProbeAction, "genetic_plague"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::ProbeAction, "GeneticPlague"));
     CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::UnitComponent, "colony_pod"));
     CHECK_THROWS(ValidateScopeForSource_(

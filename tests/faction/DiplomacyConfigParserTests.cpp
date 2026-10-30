@@ -1,4 +1,5 @@
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "game/effects/EffectEnums.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
@@ -30,7 +31,7 @@ DiplomacyConfig_t ParseEdited_(const std::string& rName,
 {
     nlohmann::json json = LoadFixture_();
     rEdit(json);
-    const std::filesystem::path path = std::filesystem::temp_directory_path() / rName;
+    const std::filesystem::path path = actest::TestTempDir::Path() / rName;
     std::ofstream(path) << json.dump();
     return DiplomacyConfigParser{}.ParseConfig(path.string());
 }

@@ -4,6 +4,7 @@
 // applied to it and had to be rejected one by one.
 
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
@@ -29,7 +30,7 @@ namespace
 std::string WriteTempStockpiles_(const std::string& contents)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_stockpile_parser.json";
+        actest::TestTempDir::Path() / "ac_stockpile_parser.json";
     std::ofstream out(path);
     out << contents;
     return path.string();

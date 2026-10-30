@@ -23,7 +23,7 @@ graph TB
 
     subgraph "Trigger sites (config-authored)"
         CommitArm[CommitAtrocityEffect_t<br/>triggered-effect arm]
-        ProbeActions[probe_actions.json<br/>genetic_plague on_success]
+        ProbeActions[probe_actions.json<br/>GeneticPlague on_success]
         Warheads[specials.json<br/>Planet Buster on_detonate]
         ExplosionArm[ExplosionEffect_t arm<br/>ApplyExplosion]
         DerivedVictim{{"TriggeredEffectContext_t<br/>derivedVictim"}}

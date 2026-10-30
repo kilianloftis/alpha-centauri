@@ -10,6 +10,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <memory>

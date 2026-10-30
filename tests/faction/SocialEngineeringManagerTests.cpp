@@ -3,6 +3,8 @@
 // the registry. The starting ids used to be compiled in, so a mod shipping its own policy set
 // hard-failed every faction constructor.
 
+#include "TestTempDir.h"
+
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/effects/EffectEnums.h"
@@ -19,7 +21,7 @@ namespace
 
 std::filesystem::path WriteTempJson(const std::string& name, const std::string& body)
 {
-    const std::filesystem::path path = std::filesystem::temp_directory_path() / name;
+    const std::filesystem::path path = actest::TestTempDir::Path() / name;
     std::ofstream out(path);
     out << body;
     return path;

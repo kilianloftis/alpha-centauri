@@ -10,6 +10,7 @@
 #include "game/combat/AttackRules.h"
 #include "game/movement/AirdropRules.h"
 #include "ui/style/UiStyle.h"
+#include "game/probes/ProbeActionExecutor.h"
 
 #include <magic_enum.hpp>
 #include <stdexcept>

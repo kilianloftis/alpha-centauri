@@ -12,6 +12,8 @@
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/atrocities/AtrocityLedger.h"
+#include "game/ecology/EcologyLedger.h"
 
 #include <cstdint>
 #include <vector>

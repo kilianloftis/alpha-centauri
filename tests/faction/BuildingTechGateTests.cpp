@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/buildings/BuildingConfigParser.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -15,7 +17,7 @@ namespace
 std::filesystem::path WriteTempBuildingJson(const std::string& body)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_building_tech_gate.json";
+        actest::TestTempDir::Path() / "ac_building_tech_gate.json";
     std::ofstream out(path);
     out << "[\n" << body << "\n]\n";
     return path;

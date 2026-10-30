@@ -12,6 +12,9 @@
 #include "game/movement/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/WorldMap.h"
+#include "game/buildings/BuildingManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 

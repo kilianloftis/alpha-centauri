@@ -34,6 +34,8 @@
 #include "game/probes/ProbeActionConfig.h"
 #include "game/effects/EffectConfig.h"
 
+#include <magic_enum.hpp>
+
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -474,7 +476,7 @@ void CheckPolicySources_(const GameDataContext& rData, const EffectSourceChecker
     for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
         const std::string sourceId =
-            std::string("probe_action:") + ProbeActionIdToString(rAction.id);
+            "probe_action:" + std::string(magic_enum::enum_name(rAction.id));
         rCheck.Effects(rAction.effects, sourceId);
         rCheck.Triggered(rAction.onPaidEffects, sourceId);
         rCheck.Triggered(rAction.onSuccessEffects, sourceId);

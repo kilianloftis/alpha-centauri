@@ -7,6 +7,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(effects-tests
+    GameFixtures.cpp
     effects/ModifierMathTests.cpp
     effects/FilterTests.cpp
     effects/ParserTests.cpp

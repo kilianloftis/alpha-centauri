@@ -3,6 +3,7 @@
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

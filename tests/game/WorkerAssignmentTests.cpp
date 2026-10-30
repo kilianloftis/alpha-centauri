@@ -12,6 +12,8 @@
 #include "game/map/Tile.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/population/Pop.h"
+#include "game/map/WorldMap.h"
+#include "game/population/PopTypeRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

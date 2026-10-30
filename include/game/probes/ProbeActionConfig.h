@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
+#include "game/probes/ProbeActionId.h"
 
 #include <optional>
 #include <stdexcept>
@@ -16,57 +17,6 @@ enum class ProbeTargetKind_t
     Base,
     Unit,
 };
-
-// Fixed C++ probe handlers. JSON action "id" strings parse to these.
-enum class ProbeActionId_t
-{
-    Infiltrate,
-    StealTech,
-    DrainEnergy,
-    SabotageRandom,
-    SabotageFacility,
-    InciteDroneRiots,
-    Assassinate,
-    MindControlBase,
-    TotalThoughtControl,
-    GeneticPlague,
-    SubvertUnit,
-};
-
-inline const char* ProbeActionIdToString(ProbeActionId_t id)
-{
-    switch (id)
-    {
-        case ProbeActionId_t::Infiltrate:          return "infiltrate";
-        case ProbeActionId_t::StealTech:           return "steal_tech";
-        case ProbeActionId_t::DrainEnergy:         return "drain_energy";
-        case ProbeActionId_t::SabotageRandom:      return "sabotage_random";
-        case ProbeActionId_t::SabotageFacility:    return "sabotage_facility";
-        case ProbeActionId_t::InciteDroneRiots:    return "incite_drone_riots";
-        case ProbeActionId_t::Assassinate:         return "assassinate";
-        case ProbeActionId_t::MindControlBase:     return "mind_control_base";
-        case ProbeActionId_t::TotalThoughtControl: return "total_thought_control";
-        case ProbeActionId_t::GeneticPlague:       return "genetic_plague";
-        case ProbeActionId_t::SubvertUnit:         return "subvert_unit";
-    }
-    throw std::logic_error("ProbeActionIdToString: unhandled enumerator");
-}
-
-inline ProbeActionId_t ParseProbeActionId(const std::string& rId)
-{
-    if (rId == "infiltrate")            return ProbeActionId_t::Infiltrate;
-    if (rId == "steal_tech")            return ProbeActionId_t::StealTech;
-    if (rId == "drain_energy")          return ProbeActionId_t::DrainEnergy;
-    if (rId == "sabotage_random")       return ProbeActionId_t::SabotageRandom;
-    if (rId == "sabotage_facility")     return ProbeActionId_t::SabotageFacility;
-    if (rId == "incite_drone_riots")    return ProbeActionId_t::InciteDroneRiots;
-    if (rId == "assassinate")           return ProbeActionId_t::Assassinate;
-    if (rId == "mind_control_base")     return ProbeActionId_t::MindControlBase;
-    if (rId == "total_thought_control") return ProbeActionId_t::TotalThoughtControl;
-    if (rId == "genetic_plague")        return ProbeActionId_t::GeneticPlague;
-    if (rId == "subvert_unit")          return ProbeActionId_t::SubvertUnit;
-    throw std::runtime_error("probe_actions.json: unknown action id '" + rId + "'");
-}
 
 // The odds' formulas, Lua expressions ProbeCalculator evaluates: the target's probe defense from
 // its probe_defense stat, and the mission and escape draw strengths from the probe's morale and

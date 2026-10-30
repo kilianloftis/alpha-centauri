@@ -20,6 +20,8 @@
 #include "game/GameSettings.h"
 #include "game/stages/TurnStart.h"
 #include "game/map/WorldMap.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/units/UnitManager.h"
 
 #include <algorithm>
 #include <memory>

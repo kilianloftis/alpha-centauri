@@ -22,6 +22,9 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/movement/MovementConstants.h"
+#include "game/units/UnitMoveExecutor.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

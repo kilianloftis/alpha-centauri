@@ -8,6 +8,10 @@
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/map/WorldMap.h"
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"

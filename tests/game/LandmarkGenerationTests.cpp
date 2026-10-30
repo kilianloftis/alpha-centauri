@@ -1,7 +1,10 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 #include "game/worldgen/LandmarkConfigParser.h"
 #include "game/worldgen/LandmarkGeneration.h"
 #include "game/map/WorldMap.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -16,7 +19,7 @@ namespace
 
 std::filesystem::path TempPath_(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 void FillLand_(WorldMap& rWorld, int elev = 1000)

@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainOperationRegistry.h"
 #include "TestHelpers.h"
@@ -24,7 +26,7 @@ namespace
 
 std::filesystem::path TempPath_(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 const ImprovementConfig_t& TestFungus_()

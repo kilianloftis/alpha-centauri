@@ -546,8 +546,8 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 
 `on_paid_effects` fire once a paid probe action's cost is paid, before the success roll, so a
 failed attempt still fires them; an action without `cost` rejects the list. `on_success_effects`
-fire from the mission handler, and only the handlers that run them (`infiltrate`,
-`sabotage_random`, `genetic_plague`, `subvert_unit`) accept the list. Genetic plague's
+fire from the mission handler, and only the handlers that run them (`Infiltrate`,
+`SabotageRandom`, `GeneticPlague`, `SubvertUnit`) accept the list. Genetic plague's
 population math lives in `ProbeRules::GeneticPlagueKilled` (defense techs, hospitals'
 `plague_damage_scale`, prior-plague flag); the effects list records the atrocity. Both use the
 probe mission context: the actor is the subject faction, the target base or unit is the subject,

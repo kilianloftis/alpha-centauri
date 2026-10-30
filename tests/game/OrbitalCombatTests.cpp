@@ -22,6 +22,8 @@
 #include "game/movement/MovementRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/UnitAttackExecutor.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>

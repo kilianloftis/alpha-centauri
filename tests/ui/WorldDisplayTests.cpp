@@ -9,6 +9,7 @@
 #include "ui/style/UiStyle.h"
 #include "ui/world/FactionBaseArt.h"
 #include "ui/world/WorldDisplay.h"
+#include "game/map/ImprovementConfigParser.h"
 
 #include <catch2/catch_test_macros.hpp>
 

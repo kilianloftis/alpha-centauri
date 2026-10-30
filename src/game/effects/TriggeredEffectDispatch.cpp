@@ -40,6 +40,8 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitPlacementRules.h"
 #include "lib/RandomRoll.h"
+#include "game/ecology/EcologyLedger.h"
+#include "game/probes/MindControlLedger.h"
 
 #include <algorithm>
 #include <cmath>

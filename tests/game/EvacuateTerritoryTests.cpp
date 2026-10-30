@@ -9,6 +9,7 @@
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -12,6 +12,9 @@
 #include "game/population/GarrisonPolice.h"
 #include "game/map/TerritoryMap.h"
 #include "game/units/Unit.h"
+#include "game/map/WorldMap.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/buildings/BuildingManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <vector>

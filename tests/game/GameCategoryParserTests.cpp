@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
@@ -19,7 +21,7 @@ namespace
 
 std::filesystem::path WriteTempTechJson_(const std::string& body)
 {
-    const auto path = std::filesystem::temp_directory_path() / "ac_tech_icon_test.json";
+    const auto path = actest::TestTempDir::Path() / "ac_tech_icon_test.json";
     std::ofstream out(path);
     out << "[\n" << body << "\n]\n";
     return path;

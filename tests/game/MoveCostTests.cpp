@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
@@ -7,6 +9,8 @@
 #include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
 #include "lib/Rational.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/WorldMap.h"
 
 #include <filesystem>
 #include <fstream>
@@ -27,7 +31,7 @@ TEST_CASE("Rational parses ints and fraction strings", "[move-cost][rational]")
 TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-cost]")
 {
     namespace fs = std::filesystem;
-    const fs::path path = fs::temp_directory_path() / "ac_bad_move_cost.json";
+    const fs::path path = actest::TestTempDir::Path() / "ac_bad_move_cost.json";
     {
         std::ofstream out(path);
         out << R"([
@@ -46,7 +50,7 @@ TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-c
 TEST_CASE("Negative move_cost fails at improvement parse time", "[move-cost]")
 {
     namespace fs = std::filesystem;
-    const fs::path path = fs::temp_directory_path() / "ac_negative_move_cost.json";
+    const fs::path path = actest::TestTempDir::Path() / "ac_negative_move_cost.json";
     {
         std::ofstream out(path);
         out << R"([

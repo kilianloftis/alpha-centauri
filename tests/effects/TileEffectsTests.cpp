@@ -12,6 +12,8 @@
 #include "game/terraform/TerraformRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

@@ -3,6 +3,8 @@
 // separate requiredTech field buildings/improvements/unit components/unit slots/social
 // policies/pop types/council proposals/probe actions all carry.
 
+#include "TestTempDir.h"
+
 #include "game/RequiredTechValidator.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -28,7 +30,7 @@ namespace
 
 std::filesystem::path WriteTempJson(const std::string& name, const std::string& body)
 {
-    const std::filesystem::path path = std::filesystem::temp_directory_path() / name;
+    const std::filesystem::path path = actest::TestTempDir::Path() / name;
     std::ofstream out(path);
     out << body;
     return path;
@@ -161,7 +163,7 @@ TEST_CASE("ValidateRequiredTechReferences: probe action required_tech must name 
         data.probeActionsConfig->actions = {action};
 
         CHECK_THROWS_WITH(ValidateRequiredTechReferences(data),
-                          Catch::Matchers::ContainsSubstring("genetic_plague")
+                          Catch::Matchers::ContainsSubstring("GeneticPlague")
                               && Catch::Matchers::ContainsSubstring("not_a_tech"));
     }
 

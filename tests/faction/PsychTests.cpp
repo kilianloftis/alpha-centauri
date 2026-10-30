@@ -13,6 +13,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/economy/ResourceManager.h"
 #include "game/population/Pop.h"
+#include "game/buildings/BuildingManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 

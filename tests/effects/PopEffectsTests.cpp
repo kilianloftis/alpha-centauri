@@ -2,6 +2,7 @@
 // generation) split documented in "Pop Type Effects".
 
 #include "GameFixtures.h"
+#include "PopRulesFixture.h"
 #include "TestHelpers.h"
 
 #include "game/base/BaseTypes.h"

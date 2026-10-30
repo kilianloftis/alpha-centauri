@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/terraform/ElevationChange.h"
@@ -110,7 +111,7 @@ struct OrderHarness_
 TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation]")
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_bad_elevation_rules.json";
+        actest::TestTempDir::Path() / "ac_bad_elevation_rules.json";
 
     WriteTempRules_(path, R"({
         "ocean_level_meters": 0,
@@ -391,7 +392,7 @@ TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
     CHECK_THROWS_WITH(UnitDesign(slots, onOther), ContainsSubstring("Tectonic_Payload"));
 
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_bad_chassis_requirement.json";
+        actest::TestTempDir::Path() / "ac_bad_chassis_requirement.json";
     {
         std::ofstream out(path);
         out << R"([{

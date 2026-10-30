@@ -24,6 +24,10 @@
 #include "game/units/UnitDomain.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>

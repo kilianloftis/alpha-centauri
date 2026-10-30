@@ -11,6 +11,13 @@ endif()
 
 project(alpha-centauri VERSION 0.1 LANGUAGES C CXX)
 
+# Link with mold when installed; GNU ld takes ~15s on the debug test binary.
+find_program(MOLD_PROGRAM mold)
+if(MOLD_PROGRAM AND NOT CMAKE_LINKER_TYPE)
+    message(STATUS "Using mold: ${MOLD_PROGRAM}")
+    set(CMAKE_LINKER_TYPE MOLD)
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

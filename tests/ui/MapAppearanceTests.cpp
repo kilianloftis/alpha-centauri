@@ -7,6 +7,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "ui/world/MapAppearance.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

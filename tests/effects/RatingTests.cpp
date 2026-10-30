@@ -18,6 +18,11 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/research/ResearchRules.h"
 #include "game/research/TechCostCalculator.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/economy/ResourceManager.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <algorithm>
 #include <cmath>

@@ -3,6 +3,7 @@
 // destruction path shares.
 
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
@@ -39,7 +40,7 @@ namespace
 std::string WriteTempBuildings_(const std::string& rContents)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_building_parser_test.json";
+        actest::TestTempDir::Path() / "ac_building_parser_test.json";
     std::ofstream out(path);
     out << rContents;
     return path.string();

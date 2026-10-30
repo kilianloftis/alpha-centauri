@@ -12,6 +12,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/map/Tile.h"
 #include "ui/world/FactionBaseArt.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

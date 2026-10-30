@@ -12,6 +12,7 @@
 #include "game/research/TechConfigParser.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "lib/LuaRuntime.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>

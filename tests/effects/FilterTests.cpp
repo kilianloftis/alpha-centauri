@@ -11,6 +11,7 @@
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include "game/buildings/BuildingManager.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

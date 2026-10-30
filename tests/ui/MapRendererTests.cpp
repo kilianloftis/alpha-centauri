@@ -21,6 +21,8 @@
 #include "ui/world/LocationPanel.h"
 #include "ui/world/MapAppearance.h"
 #include "ui/world/UnitMarkerRenderer.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>

@@ -5,6 +5,9 @@
 #include "TestHelpers.h"
 
 #include "game/effects/ActiveEffect.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/research/ResearchManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 

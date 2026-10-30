@@ -8,6 +8,7 @@
 #include "game/map/TerritoryMap.h"
 #include "game/map/TerritoryRules.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <vector>

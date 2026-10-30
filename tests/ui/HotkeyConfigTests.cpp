@@ -1,4 +1,5 @@
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "ui/HotkeyConfig.h"
 
@@ -35,7 +36,7 @@ class TempHotkeys
 {
 public:
     TempHotkeys(const std::string& name, const std::string& body)
-        : m_path(std::filesystem::temp_directory_path() / name)
+        : m_path(actest::TestTempDir::Path() / name)
     {
         std::ofstream out(m_path);
         out << body;

@@ -28,6 +28,10 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitSlotConfig.h"
 #include "lib/Rational.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/units/UnitMoveExecutor.h"
+#include "game/ecology/EcologyLedger.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>

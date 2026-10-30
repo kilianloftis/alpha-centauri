@@ -1,4 +1,5 @@
 #include "ui/ProbeNotices.h"
+#include "game/probes/ProbeActionId.h"
 
 #include <string>
 #include <type_traits>

@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
@@ -25,6 +26,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitDomain.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -271,7 +274,7 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
 TEST_CASE("Native units reject an inverted fungal lifeform range", "[map][fungus]")
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_bad_fungal_bloom_natives.json";
+        actest::TestTempDir::Path() / "ac_bad_fungal_bloom_natives.json";
     {
         std::ofstream file(path);
         file << R"({

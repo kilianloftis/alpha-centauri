@@ -1,4 +1,5 @@
 #include "RecordingGraphics.h"
+#include "TestTempDir.h"
 #include "ViewFixture.h"
 
 #include "ui/SpriteLibrary.h"
@@ -55,7 +56,7 @@ TEST_CASE("DrawPanelChrome draws a native-size sprite when Ensure succeeds", "[u
 {
     RecordingGraphics graphics;
     const std::filesystem::path png =
-        std::filesystem::temp_directory_path() / "ac_chrome_test" / "panel.png";
+        actest::TestTempDir::Path() / "ac_chrome_test" / "panel.png";
     WriteTinyPng_(png);
     SpriteLibrary sprites(graphics, [png](const std::string& path) { return path == png.string(); });
     const WindowLayout_t layout{10.0f, 20.0f, 100.0f, 50.0f};

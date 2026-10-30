@@ -3,6 +3,8 @@
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/terraform/TerraformSpread.h"
 #include "game/stages/TurnStageRegistrar.h"
+#include "game/world-events/WorldEventConfig.h"
+#include "game/world-events/WorldEventTracker.h"
 
 #include <vector>
 

@@ -1,5 +1,6 @@
 #include "RecordingGraphics.h"
 #include "TestHelpers.h"
+#include "TestTempDir.h"
 
 #include "game/GameSettings.h"
 #include "ui/settings/SettingsPanel.h"
@@ -63,7 +64,7 @@ TEST_CASE("The elevation row cycles smooth, stepped and flat, saving each change
 {
     EnsureStyleLoaded_();
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_settings_panel_relief.json";
+        actest::TestTempDir::Path() / "ac_settings_panel_relief.json";
     std::filesystem::remove(path);
     GameSettings settings;
     settings.Load(path.string());
@@ -90,7 +91,7 @@ TEST_CASE("The ocean grid row toggles the ocean grid", "[ui][settings]")
 {
     EnsureStyleLoaded_();
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_settings_panel_ocean_grid.json";
+        actest::TestTempDir::Path() / "ac_settings_panel_ocean_grid.json";
     std::filesystem::remove(path);
     GameSettings settings;
     settings.Load(path.string());

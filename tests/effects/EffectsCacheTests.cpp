@@ -18,6 +18,8 @@
 #include "game/units/Unit.h"
 #include "lib/LuaRuntime.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 
 #include <cmath>
 

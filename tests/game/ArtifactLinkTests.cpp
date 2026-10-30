@@ -24,6 +24,8 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/units/UnitComponentRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

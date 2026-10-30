@@ -45,6 +45,10 @@
 #include "game/population/RiotLatch.h"
 #include "lib/LuaRuntime.h"
 #include "lib/RandomRoll.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/map/WorldMap.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>

@@ -6,6 +6,7 @@
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/base/BaseManager.h"
 #include "game/map/WorldMap.h"
+#include "game/atrocities/AtrocityLedger.h"
 
 namespace ac
 {

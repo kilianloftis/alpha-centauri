@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
+#include "lib/config/EnumNames.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -74,7 +75,7 @@ int ParseActionInt_(const json& rActionJson, const ProbeActionConfig_t& rAction,
         if (rActionJson.contains(rKey))
         {
             throw std::runtime_error("Probe action '" + rAction.name + "': " + rKey
-                                     + " applies only to " + ProbeActionIdToString(owner));
+                                     + " applies only to " + std::string(magic_enum::enum_name(owner)));
         }
         return 0;
     }
@@ -105,7 +106,7 @@ bool OwnsKeys_(const json& rActionJson, const ProbeActionConfig_t& rAction, Prob
         if (rActionJson.contains(rKey))
         {
             throw std::runtime_error("Probe action '" + rAction.name + "': " + rKey
-                                     + " applies only to " + ProbeActionIdToString(owner));
+                                     + " applies only to " + std::string(magic_enum::enum_name(owner)));
         }
     }
     return false;
@@ -203,7 +204,7 @@ void RejectInciteKeys_(const json& rActionJson, const std::string& rName)
         || rActionJson.contains("assimilation_turns_cap_factor"))
     {
         throw std::runtime_error("Probe action '" + rName
-                                 + "': assimilation_turns_* applies only to incite_drone_riots");
+                                 + "': assimilation_turns_* applies only to InciteDroneRiots");
     }
 }
 
@@ -215,15 +216,16 @@ std::vector<EffectConfig_t> ParseActionEffects_(const json& rActionJson, ProbeAc
     }
     nlohmann::json wrapper = nlohmann::json::object();
     wrapper["effects"] = rActionJson.at("effects");
-    return EffectConfigParser::ParseEffects(wrapper, EffectSourceKind_t::ProbeAction,
-                                            ProbeActionIdToString(id));
+    const std::string sourceId(magic_enum::enum_name(id));
+    return EffectConfigParser::ParseEffects(wrapper, EffectSourceKind_t::ProbeAction, sourceId);
 }
 
 ProbeActionConfig_t ParseAction_(const json& rActionJson)
 {
     ProbeActionConfig_t action;
-    action.id = ParseProbeActionId(rActionJson.at("id").get<std::string>());
-    action.name = rActionJson.value("name", rActionJson.at("id").get<std::string>());
+    const std::string idName = rActionJson.at("id").get<std::string>();
+    action.id = EnumFromName<ProbeActionId_t>(idName, "probe action id");
+    action.name = rActionJson.value("name", idName);
     action.target = ParseTarget_(rActionJson.at("target").get<std::string>());
     const std::string context = ActionContext_(action.name);
     action.bMayKeepAgreement = RequireBool_(rActionJson, "may_keep_agreement", context);
@@ -251,20 +253,21 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
         action.cost = ParseCost_(rActionJson.at("cost"), action.name);
     }
     action.effects = ParseActionEffects_(rActionJson, action.id);
+    const std::string sourceId(magic_enum::enum_name(action.id));
     if (rActionJson.contains("on_success_effects") && !RunsOnSuccessEffects_(action.id))
     {
         throw std::runtime_error("Probe action '" + action.name
                                  + "': its handler does not run on_success_effects");
     }
     action.onSuccessEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        rActionJson, "on_success_effects", ProbeActionIdToString(action.id));
+        rActionJson, "on_success_effects", sourceId);
     if (rActionJson.contains("on_paid_effects") && !action.cost.has_value())
     {
         throw std::runtime_error("Probe action '" + action.name
                                  + "': on_paid_effects requires a cost");
     }
     action.onPaidEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        rActionJson, "on_paid_effects", ProbeActionIdToString(action.id));
+        rActionJson, "on_paid_effects", sourceId);
     return action;
 }
 

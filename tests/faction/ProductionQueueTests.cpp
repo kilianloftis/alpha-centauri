@@ -13,6 +13,10 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/map/WorldMap.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/buildings/BuildingManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 

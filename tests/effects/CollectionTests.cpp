@@ -2,6 +2,7 @@
 // CollectFromPops, and CollectTileEffects.
 
 #include "GameFixtures.h"
+#include "PopRulesFixture.h"
 #include "TestHelpers.h"
 
 #include "game/population/PopulationManager.h"
@@ -11,6 +12,8 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <unordered_map>

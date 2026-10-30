@@ -24,6 +24,7 @@
 #include "game/units/Unit.h"
 #include "lib/EventBus.h"
 #include "lib/GameEvent.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 

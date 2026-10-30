@@ -4,6 +4,7 @@
 // available, minerals are wasted.
 
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/economy/EconomyMutations.h"
 #include "game/CurrentGameState.h"
@@ -74,7 +75,7 @@ void LeaveMineralBank_(BaseManager& rBase, int desired)
 std::string WriteTempStockpiles_(const std::string& rContents)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_stockpiles.json";
+        actest::TestTempDir::Path() / "ac_stockpiles.json";
     std::ofstream out(path);
     out << rContents;
     return path.string();
@@ -134,7 +135,7 @@ BaseManager& MakeBaseWithStockpiles_(FactionFixture& rFixtures, Faction& rFactio
 std::string WriteTempBuildings_(const std::string& rContents)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_stockpile_buildings.json";
+        actest::TestTempDir::Path() / "ac_stockpile_buildings.json";
     std::ofstream out(path);
     out << rContents;
     return path.string();

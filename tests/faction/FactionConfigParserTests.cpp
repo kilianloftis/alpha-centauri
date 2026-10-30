@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/faction/FactionConfigParser.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -75,7 +77,7 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
 TEST_CASE("FactionConfigParser throws when required files are missing", "[faction][parser]")
 {
     const std::filesystem::path tempDir =
-        std::filesystem::temp_directory_path() / "ac_faction_parser_missing_test";
+        actest::TestTempDir::Path() / "ac_faction_parser_missing_test";
     std::filesystem::remove_all(tempDir);
     const std::filesystem::path factionDir = tempDir / "broken";
     std::filesystem::create_directories(factionDir);
@@ -112,7 +114,7 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
 TEST_CASE("FactionConfigParser honors participates_in_council false", "[faction][parser]")
 {
     const std::filesystem::path tempDir =
-        std::filesystem::temp_directory_path() / "ac_faction_parser_council_test";
+        actest::TestTempDir::Path() / "ac_faction_parser_council_test";
     std::filesystem::remove_all(tempDir);
     const std::filesystem::path factionDir = tempDir / "alien";
     std::filesystem::create_directories(factionDir);

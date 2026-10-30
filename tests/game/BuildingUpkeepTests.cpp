@@ -2,6 +2,7 @@
 // the faction sum is deducted from the energy treasury in the Upkeep stage.
 
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/faction/Faction.h"
 #include "game/economy/EconomyManager.h"
@@ -30,7 +31,7 @@ namespace
 std::string WriteTempBuildings_(const std::string& rContents)
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_building_upkeep_parser_test.json";
+        actest::TestTempDir::Path() / "ac_building_upkeep_parser_test.json";
     std::ofstream out(path);
     out << rContents;
     return path.string();

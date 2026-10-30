@@ -23,6 +23,7 @@
 #include "game/stages/EcoDamage.h"
 #include "game/stages/WorldEvents.h"
 #include "lib/EventBus.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

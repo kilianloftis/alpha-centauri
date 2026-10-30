@@ -9,6 +9,10 @@
 #include "game/economy/Inefficiency.h"
 #include "game/economy/ResourceManager.h"
 #include "game/map/MapUtils.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/map/WorldMap.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

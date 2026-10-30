@@ -8,6 +8,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/EventBus.h"
 #include "lib/GameEvent.h"
+#include "game/atrocities/AtrocityLedger.h"
 #include <iostream>
 
 namespace ac

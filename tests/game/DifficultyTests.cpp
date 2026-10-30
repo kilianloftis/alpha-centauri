@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestTempDir.h"
 
 #include "game/DifficultyConfig.h"
 #include "game/DifficultyConfigParser.h"
@@ -64,7 +65,7 @@ double ResolveBaseStat_(const BaseManager& rBase, StatId_t stat, double seed)
 TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
 {
     const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "ac_bad_difficulty.json";
+        actest::TestTempDir::Path() / "ac_bad_difficulty.json";
 
     {
         std::ofstream out(path);

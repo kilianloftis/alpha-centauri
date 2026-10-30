@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/probes/ProbeActionConfig.h"
+#include "game/probes/ProbeActionResult.h"
 #include "game/probes/ProbeTarget.h"
 
 #include "game/base/BaseTypes.h"
@@ -17,21 +18,6 @@ namespace ac
 
 class Unit;
 class BaseManager;
-
-struct ProbeChance_t
-{
-    // 0..100 style rates matching Thinker display. The integer mission/escape rolls use
-    // probeStrength / escapeStrength and the save and bust chances, not these percents.
-    int successRate = 100;
-    int survivalRate = 100;
-    int risk = 0;
-    int probeStrength = 1;
-    int escapeStrength = 1;
-    // Percent chance a failed mission or escape draw is saved.
-    int failureSaveChance = 0;
-    // Percent chance a successful mission or escape draw is busted anyway.
-    int successBustChance = 0;
-};
 
 struct ProbeRollResult_t
 {
@@ -141,14 +127,6 @@ bool ProbeMayFrame(const Faction& rActor, const Faction& rTarget,
 // The factions rActor may implicate against rTarget: every other living faction with diplomacy
 // that rActor knows. No Vendetta filter.
 std::vector<FactionId_t> FrameCandidates(const Faction& rActor, const Faction& rTarget);
-
-enum class ProbeFrameOutcome_t
-{
-    // The victim blames the framed faction, and its keep-or-break toward the actor is skipped.
-    Framed,
-    // The frame failed: the framed faction turns on the actor.
-    Flopped,
-};
 
 struct ProbeFrame_t
 {

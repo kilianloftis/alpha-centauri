@@ -20,6 +20,8 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/map/WorldMap.h"
+#include "game/units/UnitAttackExecutor.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

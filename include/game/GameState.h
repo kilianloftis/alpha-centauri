@@ -2,26 +2,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/effects/IWorldEffectsSource.h"
-#include "game/atrocities/AtrocityLedger.h"
-#include "game/probes/MindControlLedger.h"
-#include "game/ecology/EcologyLedger.h"
-#include "game/world-events/WorldEventTracker.h"
-#include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticActionExecutor.h"
-#include "game/diplomacy/FirstContactResolver.h"
-#include "game/map/WorldMap.h"
-#include "game/buildings/BuildingRules.h"
-#include "game/buildings/BuildingMutations.h"
-#include "game/buildings/OrbitalCensus.h"
-#include "game/PlayerInteractionQueue.h"
-#include "game/movement/MoveCostRules.h"
-#include "game/movement/StepEvaluator.h"
-#include "game/movement/Pathfinder.h"
 #include "game/units/IUnitOrderWorld.h"
-#include "game/units/UnitAttackExecutor.h"
-#include "game/units/UnitMoveExecutor.h"
-#include "game/units/UnitOrderExecutor.h"
-#include "game/probes/ProbeActionExecutor.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
 #include "lib/Signal.h"
@@ -38,6 +19,22 @@ namespace ac
 
 class TileEffectsContext;
 class EventBus;
+class WorldMap;
+class PlayerInteractionQueue;
+class DiplomacyLedger;
+class DiplomaticActionExecutor;
+class FirstContactResolver;
+class AtrocityLedger;
+class MindControlLedger;
+class EcologyLedger;
+class WorldEventTracker;
+class MoveCostRules;
+class StepEvaluator;
+class Pathfinder;
+class UnitMoveExecutor;
+class UnitOrderExecutor;
+class UnitAttackExecutor;
+class ProbeActionExecutor;
 class GameSettings;
 struct GameDataContext;
 class CouncilVoteExecutor;
@@ -222,7 +219,7 @@ private:
     const GameDataContext& m_rGameData;
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
-    PlayerInteractionQueue m_playerInteractions;
+    std::unique_ptr<PlayerInteractionQueue> m_pPlayerInteractions;
     std::set<std::string> m_consumedTriggerKeys;
     // Before m_factions, so they outlive the BaseManagers that reference TileEffectsContext.
     std::unique_ptr<WorldMap> m_worldMap;

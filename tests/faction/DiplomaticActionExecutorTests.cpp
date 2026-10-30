@@ -12,6 +12,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/production/ProductionManager.h"
+#include "game/buildings/BuildingRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 

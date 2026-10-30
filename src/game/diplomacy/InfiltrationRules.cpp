@@ -5,6 +5,7 @@
 #include "game/GameState.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/diplomacy/DiplomacyLedger.h"
 
 #include <variant>
 

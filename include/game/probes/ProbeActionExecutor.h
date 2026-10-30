@@ -5,6 +5,7 @@
 #include "game/probes/ProbeActionResult.h"
 #include "game/probes/ProbeTarget.h"
 #include "game/units/Unit.h"
+#include "game/probes/ProbeRules.h"
 
 #include <optional>
 #include <random>

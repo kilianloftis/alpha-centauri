@@ -19,6 +19,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/Faction.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

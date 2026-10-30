@@ -4,6 +4,7 @@
 #include "game/diplomacy/DiplomaticStatus.h"
 #include "game/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
+#include "game/probes/ProbeActionId.h"
 #include "game/probes/ProbeActionResult.h"
 #include "game/units/Unit.h"
 #include "lib/GameEvent.h"

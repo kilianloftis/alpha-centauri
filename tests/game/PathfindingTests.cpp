@@ -12,6 +12,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/map/ImprovementRegistry.h"
 
 #include <random>
 

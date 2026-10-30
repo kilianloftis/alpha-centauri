@@ -1,3 +1,5 @@
+#include "TestTempDir.h"
+
 #include "game/worldgen/RockinessGeneration.h"
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
 
@@ -15,7 +17,7 @@ namespace
 
 std::filesystem::path TempDecorationPath_(const char* name)
 {
-    return std::filesystem::temp_directory_path() / name;
+    return actest::TestTempDir::Path() / name;
 }
 
 } // namespace
