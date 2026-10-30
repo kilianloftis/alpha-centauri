@@ -9,7 +9,6 @@
 #include "ui/base/ProductionDisplay.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/SupportDisplay.h"
-#include "ui/ConfirmPopup.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/ScrapRefundText.h"
@@ -400,11 +399,7 @@ void BaseView::ConfirmScrap_(const std::optional<ScrapPayout_t>& payout,
     }
 
     // The popup is modal, so the turn cannot advance and change the quote before it is confirmed.
-    DismissOpenModals_();
-    const std::string message = FormatScrapConfirm(*payout, m_rBase.GetFaction());
-    auto pPopup = MakeConfirmPopup(
-        message, GetPopupLayout(), std::move(onConfirmed), Style().listSelectorPopup);
-    m_elements.push_back(std::move(pPopup));
+    Confirm_(FormatScrapConfirm(*payout, m_rBase.GetFaction()), std::move(onConfirmed));
 }
 
 void BaseView::ShowNotice_(const std::string& rTitle, const std::string& rMessage)

@@ -7,12 +7,14 @@
 namespace ac
 {
 
+class Tile;
 class UnitPositionIndex;
 
-// Splash onto the defender's tile-mates, as PlanStackCollateral plans it. Wild natives die
-// outright; with NonCombatantsDestroyedWithoutCombatant, non-combatants die once no combatant is
-// left. Every unit it kills goes through RemoveDefeatedUnit; returns the ids of those captured.
+// Splash onto the units left on rTile once its defender is gone, as PlanStackCollateral plans it.
+// Wild natives die outright; with NonCombatantsDestroyedWithoutCombatant, non-combatants die once
+// no combatant is left. Every unit it kills goes through RemoveDefeatedUnit; returns the ids of
+// those captured.
 std::vector<UnitId_t> ApplyStackCollateral(UnitPositionIndex& rPositions, Unit& rAttacker,
-                                           Unit& rDefender);
+                                           const Tile& rTile);
 
 } // namespace ac

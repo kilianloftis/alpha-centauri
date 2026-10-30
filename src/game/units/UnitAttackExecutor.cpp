@@ -1,6 +1,9 @@
 #include "game/units/UnitAttackExecutor.h"
 
+#include "game/combat/CollateralMutations.h"
 #include "game/combat/InterceptMutations.h"
+#include "game/combat/MoraleMutations.h"
+#include "game/combat/MoraleRules.h"
 #include "game/combat/ScrambleRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -27,6 +30,7 @@ UnitAttackExecutor::UnitAttackExecutor(const MoveCostRules& rMoveCosts,
                                        IUnitOrderWorld& rWorld, UnitOrderExecutor& rOrders)
     : m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
+    , m_rMorale(rMorale)
     , m_rRng(rRng)
     , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, rRng)
     , m_rWorld(rWorld)
@@ -34,30 +38,13 @@ UnitAttackExecutor::UnitAttackExecutor(const MoveCostRules& rMoveCosts,
 {
 }
 
-bool UnitAttackExecutor::SpendAttackAction_(Unit& rAttacker, AttackKind_t kind)
+void UnitAttackExecutor::HaltBombardedTarget_(Unit& rTarget, const CombatResult_t& rCombat)
 {
-    rAttacker.Latches().MarkAttacked();
-    const int fragments = AttackMoveFragments(rAttacker, kind);
-    rAttacker.SpendMoveFragments(fragments);
-    rAttacker.ClearOrder();
-    return ExpendIfSingleUse(rAttacker);
-}
-
-bool UnitAttackExecutor::ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile)
-{
-    return m_rWorld.ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, m_rRng)
-        .bActorDestroyed;
-}
-
-CombatResult_t UnitAttackExecutor::SettleBombardExchange_(Unit& rDefender, CombatResult_t combat)
-{
-    combat.bBombardPlayback = true;
-    if (!combat.bDefenderDestroyed)
+    if (!rCombat.bDefenderDestroyed)
     {
         // TODO: a bombarded unit must not heal this turn, once per-turn healing exists.
-        rDefender.ClearOrder();
+        rTarget.ClearOrder();
     }
-    return combat;
 }
 
 std::optional<CombatResult_t> UnitAttackExecutor::TryAttack(Unit& rAttacker, Unit& rDefender)
@@ -69,48 +56,60 @@ std::optional<CombatResult_t> UnitAttackExecutor::TryAttack(Unit& rAttacker, Uni
 
     // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
     // move either side before the blow lands.
-    const HostileAct_t act = HostileActAgainst(rAttacker, rDefender);
-    const bool bHostile = IsHostileAttack(rAttacker, rDefender);
+    const std::optional<HostileAct_t> act = AttackHostileAct(rAttacker, rDefender);
     // Read before the fight may destroy the defender.
-    const Tile& rDefenderTile = rDefender.GetTile();
+    const Tile& rBattleTile = rDefender.GetTile();
 
-    const std::optional<CombatResult_t> intercepted =
-        m_rWorld.TryInterceptAttack(rAttacker, rDefender, m_rRng);
-    CombatResult_t result = intercepted ? *intercepted : FightDefender_(rAttacker, rDefender);
+    CombatResult_t result;
+    if (std::optional<CombatResult_t> intercepted =
+            m_rWorld.TryInterceptAttack(rAttacker, rDefender, m_rRng))
+    {
+        // A defender lost to its own intercept was never fought, so no fight aftermath follows.
+        result = std::move(*intercepted);
+    }
+    else
+    {
+        std::vector<const Tile*> scrambleHops;
+        Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, rDefender, scrambleHops);
+        result = m_combat.Resolve(rAttacker, rCombatDefender);
+        result.scramblePath = std::move(scrambleHops);
+        ApplyFightAftermath_(rAttacker, rCombatDefender, rBattleTile, result);
+    }
 
-    // Combat never moves either side, so capturing an emptied base is a later step onto it.
-    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Attack))
+    if (!result.bAttackerDestroyed)
     {
-        result.bAttackerDestroyed = true;
+        result.bAttackerDestroyed = SpendAttack(rAttacker, AttackKind_t::Attack);
     }
-    // A defender lost to its own intercept was never fought: no last defender lost in battle.
-    // A native raider spends itself on the raid, so playback must not show it surviving.
-    if (!intercepted && result.bDefenderDestroyed && !result.bAttackerDestroyed
-        && ApplyLastDefenderConquest_(rAttacker, rDefenderTile))
+    if (act)
     {
-        result.bAttackerDestroyed = true;
-    }
-    if (bHostile)
-    {
-        ReportHostileAct_(act);
+        m_rWorld.OnHostileAct(*act);
     }
     return result;
 }
 
-CombatResult_t UnitAttackExecutor::FightDefender_(Unit& rAttacker, Unit& rDefender)
+void UnitAttackExecutor::ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender,
+                                              const Tile& rBattleTile, CombatResult_t& rResult)
 {
-    std::vector<const Tile*> scrambleHops;
-    Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, rDefender, scrambleHops);
-
-    CombatResult_t result = m_combat.Resolve(rAttacker, rCombatDefender);
-    result.scramblePath = std::move(scrambleHops);
-    ReportCapture_(rAttacker, result);
-    return result;
-}
-
-void UnitAttackExecutor::ReportHostileAct_(const HostileAct_t& rAct)
-{
-    m_rWorld.OnHostileAct(rAct);
+    if (rResult.bDefenderDestroyed)
+    {
+        const std::vector<UnitId_t> captured =
+            ApplyStackCollateral(m_rWorldMap.GetUnitPositions(), rAttacker, rBattleTile);
+        rResult.capturedUnitIds.insert(rResult.capturedUnitIds.end(), captured.begin(),
+                                       captured.end());
+    }
+    if (const std::optional<CombatSide_t> survivor = PromotionCandidate(rResult))
+    {
+        Unit& rSurvivor = *survivor == CombatSide_t::Attacker ? rAttacker : rDefender;
+        TryPromote(rSurvivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
+    }
+    ReportCapture_(rAttacker, rResult);
+    // Combat never moves either side, so capturing an emptied base is a later step onto it. A
+    // native raider spends itself on the raid, so playback must not show it surviving.
+    if (rResult.bDefenderDestroyed
+        && m_rWorld.ResolvePostCombatBaseConquest(rAttacker, rBattleTile, m_rRng).bActorDestroyed)
+    {
+        rResult.bAttackerDestroyed = true;
+    }
 }
 
 void UnitAttackExecutor::ReportCapture_(const Unit& rAttacker, const CombatResult_t& rResult)
@@ -136,8 +135,7 @@ std::optional<UnitAttackExecutor::BombardResult_t> UnitAttackExecutor::TryBombar
     BombardResult_t result;
     // A hostile that can bombard back answers with a duel, and then nothing is struck.
     Unit* pDuelTarget = ArtilleryDuelTarget(rAttacker, rTargetTile);
-    const bool bDuel = pDuelTarget != nullptr;
-    if (bDuel)
+    if (pDuelTarget)
     {
         result.combats.push_back(FireDuel_(rAttacker, *pDuelTarget));
     }
@@ -151,31 +149,24 @@ std::optional<UnitAttackExecutor::BombardResult_t> UnitAttackExecutor::TryBombar
         result.destroyedImprovementId = DestroyRandomImprovement_(rTargetTile, improvementTargets);
     }
 
-    if (!result.bAttackerDestroyed && SpendAttackAction_(rAttacker, AttackKind_t::Bombard))
+    if (!result.bAttackerDestroyed)
     {
-        result.bAttackerDestroyed = true;
-    }
-
-    // A strike's kill never costs a base its last defender (terranx-map.md "Artillery strike vs
-    // duel").
-    if (bDuel && result.combats.front().bDefenderDestroyed && !result.bAttackerDestroyed
-        && ApplyLastDefenderConquest_(rAttacker, rTargetTile))
-    {
-        result.bAttackerDestroyed = true;
-        result.combats.back().bAttackerDestroyed = true;
+        result.bAttackerDestroyed = SpendAttack(rAttacker, AttackKind_t::Bombard);
     }
     for (const HostileAct_t& rAct : acts)
     {
-        ReportHostileAct_(rAct);
+        m_rWorld.OnHostileAct(rAct);
     }
     return result;
 }
 
 CombatResult_t UnitAttackExecutor::FireDuel_(Unit& rAttacker, Unit& rDuelTarget)
 {
+    const Tile& rBattleTile = rDuelTarget.GetTile();
     CombatResult_t duel = m_combat.ResolveDuel(rAttacker, rDuelTarget);
-    ReportCapture_(rAttacker, duel);
-    return SettleBombardExchange_(rDuelTarget, std::move(duel));
+    ApplyFightAftermath_(rAttacker, rDuelTarget, rBattleTile, duel);
+    HaltBombardedTarget_(rDuelTarget, duel);
+    return duel;
 }
 
 std::vector<CombatResult_t> UnitAttackExecutor::FireStrikes_(Unit& rAttacker,
@@ -185,7 +176,8 @@ std::vector<CombatResult_t> UnitAttackExecutor::FireStrikes_(Unit& rAttacker,
     for (Unit* pTarget : rTargets)
     {
         CombatResult_t strike = m_combat.Strike(rAttacker, *pTarget);
-        strikes.push_back(SettleBombardExchange_(*pTarget, std::move(strike)));
+        HaltBombardedTarget_(*pTarget, strike);
+        strikes.push_back(std::move(strike));
     }
     return strikes;
 }

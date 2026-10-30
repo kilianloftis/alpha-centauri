@@ -9,6 +9,14 @@
 namespace ac
 {
 
+bool SpendAttack(Unit& rAttacker, AttackKind_t kind)
+{
+    rAttacker.Latches().MarkAttacked();
+    rAttacker.SpendMoveFragments(AttackMoveFragments(rAttacker, kind));
+    rAttacker.ClearOrder();
+    return ExpendIfSingleUse(rAttacker);
+}
+
 bool ExpendIfSingleUse(Unit& rUnit)
 {
     if (!ResolveFlag(rUnit, RuleFlagId_t::SingleUse))

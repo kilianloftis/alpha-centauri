@@ -22,7 +22,7 @@ class TileEffectsContext;
 class UnitOrderExecutor;
 class WorldMap;
 
-// Attacks and bombards: intercepts, scramblers, combat, promotion and the attack's cost.
+// Attacks and bombards: intercepts, scramblers, combat and its aftermath, and the attack's cost.
 class UnitAttackExecutor
 {
 public:
@@ -47,24 +47,20 @@ public:
     std::optional<BombardResult_t> TryBombard(Unit& rAttacker, const Tile& rTargetTile);
 
 private:
-    // Combat with rDefender or a scrambler in its place, and the report of any capture.
-    CombatResult_t FightDefender_(Unit& rAttacker, Unit& rDefender);
+    // After a fight or duel, never an intercept or a strike: collateral on rBattleTile when the
+    // defender died there, promotion for the survivor, the report of any capture, and the
+    // last-defender loss of a base there. rBattleTile is read before the fight.
+    void ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender, const Tile& rBattleTile,
+                              CombatResult_t& rResult);
     CombatResult_t FireDuel_(Unit& rAttacker, Unit& rDuelTarget);
     // Strikes never hurt the attacker, so every target is struck.
     std::vector<CombatResult_t> FireStrikes_(Unit& rAttacker, const std::vector<Unit*>& rTargets);
-    void ReportHostileAct_(const HostileAct_t& rAct);
     void ReportCapture_(const Unit& rAttacker, const CombatResult_t& rResult);
     // Returns the destroyed improvement's id.
     std::string DestroyRandomImprovement_(const Tile& rTile,
                                           const std::vector<std::string>& rCandidates);
-    // Marks the attack, spends AttackMoveFragments, clears the order, and destroys a
-    // SingleUse unit. Returns true when that expend destroyed rAttacker.
-    bool SpendAttackAction_(Unit& rAttacker, AttackKind_t kind);
-    // Last-defender casualties on a base tile. Returns true when the raid destroyed rAttacker.
-    bool ApplyLastDefenderConquest_(Unit& rAttacker, const Tile& rDefenderTile);
-    // Marks a duel or strike for bombard playback and keeps a surviving target from carrying on
-    // with its order.
-    CombatResult_t SettleBombardExchange_(Unit& rDefender, CombatResult_t combat);
+    // A target that survives a duel or strike loses its order.
+    void HaltBombardedTarget_(Unit& rTarget, const CombatResult_t& rCombat);
     // Assign a MoveOrder to an eligible scrambler and Execute until arrival (or failure).
     // Fills rOutPath with hops taken. Returns the combat defender (scrambler if arrived).
     Unit& ResolveScrambleDefender_(Unit& rAttacker,
@@ -75,6 +71,7 @@ private:
 
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;
+    const MoraleCalculator& m_rMorale;
     std::mt19937& m_rRng;
     CombatResolver m_combat;
     IUnitOrderWorld& m_rWorld;

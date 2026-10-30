@@ -45,6 +45,15 @@ bool IsHostileAttack(const Unit& rAttacker, const Unit& rDefender)
     return !ResolveFlag(rDefender, RuleFlagId_t::AttackNotHostile, ctx);
 }
 
+std::optional<HostileAct_t> AttackHostileAct(const Unit& rAttacker, const Unit& rDefender)
+{
+    if (!IsHostileAttack(rAttacker, rDefender))
+    {
+        return std::nullopt;
+    }
+    return HostileActAgainst(rAttacker, rDefender);
+}
+
 std::optional<VendettaKind_t> VendettaFromHostileAct(const HostileAct_t& rAct)
 {
     if (!rAct.bAttributed || StatusRulesFor(rAct.aggressor, rAct.victim).bMayAttack)
@@ -52,6 +61,23 @@ std::optional<VendettaKind_t> VendettaFromHostileAct(const HostileAct_t& rAct)
         return std::nullopt;
     }
     return VendettaKind_t::SneakAttack;
+}
+
+std::optional<DiplomaticStatus_t> StatusBrokenByAttack(const Unit& rAttacker,
+                                                       const Unit& rDefender)
+{
+    const std::optional<HostileAct_t> act = AttackHostileAct(rAttacker, rDefender);
+    const DiplomacyLedger& rLedger = CurrentGameState().GetDiplomacyLedger();
+    if (!act || !VendettaFromHostileAct(*act) || !rLedger.AreKnown(act->aggressor, act->victim))
+    {
+        return std::nullopt;
+    }
+    return rLedger.GetStatus(act->aggressor, act->victim);
+}
+
+bool MayBreakByAttack(DiplomaticStatus_t broken)
+{
+    return CurrentGameState().GetGameData().diplomacyConfig->For(broken).bBreakByAttack;
 }
 
 bool VendettaWithdrawsTerritory(VendettaKind_t kind)

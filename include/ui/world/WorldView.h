@@ -150,8 +150,20 @@ private:
     void TryAutoReturnLowFuel_(Unit& rUnit);
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
+    // Asks first when the attack breaks a status (StatusBrokenByAttack), then the odds.
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
-    void ExecuteAttack_(Unit& rAttacker, Unit& rDefender);
+    void ConfirmAttackOdds_(Unit& rAttacker, Unit& rDefender);
+    // Who fought where, for the combat screen after either unit may be gone.
+    struct AttackPlayback_t
+    {
+        const Tile* pAttackerTile = nullptr;
+        const Tile* pTargetTile = nullptr;
+        std::string attackerName;
+        std::string defenderName;
+    };
+    // Nothing to play when the attack was refused.
+    void PlayAttack_(const AttackPlayback_t& rPlayback,
+                     const std::optional<CombatResult_t>& rResult);
     // False when the shot is illegal. True after playback has been opened.
     bool TryBeginBombard_(Unit& rAttacker, const Tile& rTargetTile);
     // Bombard and former projects bound to this chord. Runs the one that is valid and
@@ -220,7 +232,8 @@ private:
     void SyncTargetingCursor_(Graphics& rGraphics);
     void DrawConsoleChrome_(Graphics& rGraphics) const;
     void TryCommitAirdrop_(Unit& rUnit, const Tile& rDest);
-    void ShowAirdropNotice_(std::string message);
+    // A titled notice with OK, replacing any open modal.
+    void ShowNotice_(std::string title, std::string message);
 
     GameState& m_rGameState;
     const HotkeyConfig& m_rHotkeys;

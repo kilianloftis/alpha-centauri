@@ -108,10 +108,11 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
     Faction& enemy = fixture.MakeFaction();
     Unit& attacker =
         fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_2"});
-    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    // The defender has already left the tile when collateral is planned.
+    const Tile& rTile = fixture.At(9, 9);
     Unit& inOpen = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
-    const std::vector<CollateralHit_t> open = PlanStackCollateral(attacker, defender);
+    const std::vector<CollateralHit_t> open = PlanStackCollateral(attacker, rTile);
     REQUIRE(open.size() == 1);
     CHECK(open.front().pOccupant == &inOpen);
     CHECK_FALSE(open.front().bImmune);
@@ -120,7 +121,7 @@ TEST_CASE("Planning collateral marks base occupants immune and changes no unit",
 
     fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
     const std::vector<CollateralHit_t> inBase =
-        PlanStackCollateral(attacker, defender);
+        PlanStackCollateral(attacker, rTile);
     REQUIRE(inBase.size() == 1);
     CHECK(inBase.front().bImmune);
     CHECK(inBase.front().damage == 0);
@@ -152,17 +153,18 @@ TEST_CASE("Non-combatants are left unprotected only when no combatant shares the
     Faction& enemy = fixture.MakeFaction();
     Unit& attacker =
         fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    // The defender has already left the tile when collateral is planned.
+    const Tile& rTile = fixture.At(9, 9);
     Unit& probe = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
 
-    const std::vector<CollateralHit_t> alone = PlanStackCollateral(attacker, defender);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, alone)
+    const std::vector<CollateralHit_t> alone = PlanStackCollateral(attacker, rTile);
+    CHECK(NonCombatantsLeftUnprotected(attacker, rTile, alone)
           == std::vector<Unit*>{&probe});
 
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
     const std::vector<CollateralHit_t> guarded =
-        PlanStackCollateral(attacker, defender);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, guarded).empty());
+        PlanStackCollateral(attacker, rTile);
+    CHECK(NonCombatantsLeftUnprotected(attacker, rTile, guarded).empty());
 }
 
 TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotected",
@@ -174,11 +176,12 @@ TEST_CASE("Without the world rule, collateral leaves no non-combatant unprotecte
     Faction& enemy = fixture.MakeFaction();
     Unit& attacker =
         fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
-    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    // The defender has already left the tile when collateral is planned.
+    const Tile& rTile = fixture.At(9, 9);
     fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "Probe_Team"});
 
-    const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, defender);
-    CHECK(NonCombatantsLeftUnprotected(attacker, defender, plan).empty());
+    const std::vector<CollateralHit_t> plan = PlanStackCollateral(attacker, rTile);
+    CHECK(NonCombatantsLeftUnprotected(attacker, rTile, plan).empty());
 }
 
 TEST_CASE("Equal conventional units reduce combat odds to 1 to 1", "[combat][odds]")

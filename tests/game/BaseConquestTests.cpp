@@ -256,6 +256,24 @@ TEST_CASE("Pods land can enter an undefended sea base to capture it",
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
 }
 
+TEST_CASE("A single-use attacker that kills the last defender still cuts pop", "[unit][conquest]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/4);
+    Unit& missile =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_single_use_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
+
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, defender);
+    REQUIRE(result.has_value());
+    REQUIRE(result->bDefenderDestroyed);
+
+    // terranx-map.md "Last defender lost": the base loses pop before the missile is spent.
+    CHECK(result->bAttackerDestroyed);
+    CHECK(game.pPlayer->GetUnitManager().Units().empty());
+    CHECK(rBase.GetPopulation().GetSize() == 3);
+}
+
 TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys facilities, repairs",
           "[unit][conquest]")
 {

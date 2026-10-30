@@ -9,10 +9,8 @@
 #include "game/map/WorldMap.h"
 #include "game/combat/CaptureMutations.h"
 #include "game/combat/CaptureRules.h"
-#include "game/combat/MoraleMutations.h"
 #include "game/combat/MoraleRules.h"
 #include "game/movement/MoveCostRules.h"
-#include "game/combat/CollateralMutations.h"
 #include "game/movement/StepEvaluator.h"
 #include "game/effects/TileEffectsContext.h"
 #include "lib/RandomRoll.h"
@@ -133,20 +131,7 @@ CombatResult_t CombatResolver::Fight_(Unit& rAttacker, Unit& rDefender,
                                rExits.bDefenderMayDisengage};
     const FightEnd_t end = FightRounds_(attacker, defender, rExits.boardingHpToLose, result);
     Finish_(rAttacker, rDefender, end, result);
-    PromoteSurvivor_(rAttacker, rDefender, result);
     return result;
-}
-
-void CombatResolver::PromoteSurvivor_(Unit& rAttacker, Unit& rDefender,
-                                      const CombatResult_t& rResult)
-{
-    const std::optional<CombatSide_t> candidate = PromotionCandidate(rResult);
-    if (!candidate)
-    {
-        return;
-    }
-    Unit& rSurvivor = *candidate == CombatSide_t::Attacker ? rAttacker : rDefender;
-    TryPromote(rSurvivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
 }
 
 CombatResolver::FightEnd_t CombatResolver::FightRounds_(const Combatant_t& rAttacker,
@@ -283,23 +268,16 @@ void CombatResolver::RemoveLosers_(Unit& rAttacker, Unit& rDefender, CombatResul
 {
     if (rResult.bDefenderDestroyed)
     {
-        RemoveDefeatedDefender_(rAttacker, rDefender, rResult);
+        const std::optional<UnitId_t> capturedId =
+            RemoveDefeatedUnit(m_rWorldMap.GetUnitPositions(), rAttacker, rDefender);
+        if (capturedId)
+        {
+            rResult.capturedUnitIds.push_back(*capturedId);
+        }
     }
     if (rResult.bAttackerDestroyed)
     {
         rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
-    }
-}
-
-void CombatResolver::RemoveDefeatedDefender_(Unit& rAttacker, Unit& rDefender,
-                                             CombatResult_t& rResult)
-{
-    UnitPositionIndex& rPositions = m_rWorldMap.GetUnitPositions();
-    rResult.capturedUnitIds = ApplyStackCollateral(rPositions, rAttacker, rDefender);
-    const std::optional<UnitId_t> capturedId = RemoveDefeatedUnit(rPositions, rAttacker, rDefender);
-    if (capturedId)
-    {
-        rResult.capturedUnitIds.push_back(*capturedId);
     }
 }
 

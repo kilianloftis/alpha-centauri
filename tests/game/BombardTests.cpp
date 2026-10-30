@@ -239,7 +239,6 @@ TEST_CASE("A strike rolls every hostile and cancels each order", "[bombard]")
     REQUIRE(result->combats.size() == 2);
     CHECK(result->combats[0].rounds.size() == 1);
     CHECK(result->combats[1].rounds.size() == 1);
-    CHECK(result->combats[0].bBombardPlayback);
     CHECK_FALSE(first.GetOrder().has_value());
     CHECK_FALSE(second.GetOrder().has_value());
     CHECK(attacker.GetCurrentHp() == 10);
@@ -401,6 +400,31 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     CHECK(stayed.bAttackerDestroyed);
     CHECK_FALSE(stayed.bAttackerDisengaged);
     CHECK(stayed.pRetreatTile == nullptr);
+}
+
+TEST_CASE("A duel that kills lands collateral and promotes the survivor", "[bombard][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(
+        player, 8, 8, {"test_chassis", "test_weapon", "bombard", "test_collateral_1"});
+    Unit& gunner = fixture.MakeUnit(enemy, 9, 9, {"test_slow_chassis", "bombard"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    gunner.SetCurrentHp(1);
+    // Green always promotes.
+    attacker.SetXp(1);
+
+    OrderHarness_ orders(fixture, 1);
+    const auto result = orders.attacks.TryBombard(attacker, fixture.At(9, 9));
+
+    REQUIRE(result);
+    REQUIRE(result->combats.size() == 1);
+    REQUIRE(result->combats.front().bDefenderDestroyed);
+    CHECK(stackmate.GetCurrentHp() == 9);
+    CHECK(attacker.GetXp() == 2);
 }
 
 TEST_CASE("Partial movement scales bombard attack and the shot spends the rest", "[bombard]")

@@ -70,6 +70,33 @@ TEST_CASE("An attributed act the pair's status forbids is a sneak attack",
     CHECK_FALSE(VendettaFromHostileAct(attributed).has_value());
 }
 
+TEST_CASE("An attack breaks the pair's agreement, or Neutral with a faction it has met",
+          "[diplomacy][transitions][hostile]")
+{
+    DiplomacyFixture game;
+    Unit& rAttacker = game.MakeUnit(*game.pA, 12, 4);
+    Unit& rDefender = game.MakeUnit(*game.pB, 13, 5);
+    game.Ledger().SetKnown(game.pA->GetFactionId(), game.pB->GetFactionId(), false);
+    CHECK_FALSE(StatusBrokenByAttack(rAttacker, rDefender).has_value());
+
+    game.MeetAll();
+    CHECK(StatusBrokenByAttack(rAttacker, rDefender) == DiplomaticStatus_t::Neutral);
+    for (const DiplomaticStatus_t status : {DiplomaticStatus_t::Truce, DiplomaticStatus_t::Treaty})
+    {
+        game.Set(*game.pA, *game.pB, status);
+        CHECK(StatusBrokenByAttack(rAttacker, rDefender) == status);
+    }
+
+    Unit& rCovert = game.MakeUnit(*game.pA, 12, 6, {"test_chassis", "covert"});
+    CHECK_FALSE(StatusBrokenByAttack(rCovert, rDefender).has_value());
+
+    game.Set(*game.pA, *game.pB, DiplomaticStatus_t::Vendetta);
+    CHECK_FALSE(StatusBrokenByAttack(rAttacker, rDefender).has_value());
+
+    CHECK(MayBreakByAttack(DiplomaticStatus_t::Treaty));
+    CHECK_FALSE(MayBreakByAttack(DiplomaticStatus_t::Pact));
+}
+
 TEST_CASE("Only a declared Vendetta withdraws units from each other's territory",
           "[diplomacy][transitions][vendetta]")
 {

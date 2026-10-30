@@ -4,6 +4,7 @@
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/combat/CombatRules.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InteractionResolve.h"
@@ -110,6 +111,10 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile)
 
 Unit* SelectDefender(const Unit& rAttacker, const std::vector<Unit*>& rCandidates)
 {
+    // TODO: add SMAC's best_defender scoring behind a combat config switch: HP-scaled defense
+    // minus the candidate's weapon offense, x16 for combat plans and terraformers, the designated
+    // defender bonus, and ties to the later unit (deviations README "Defender selection ignores
+    // unit plan and weapon").
     Unit* pBest = nullptr;
     double bestChance = 0.0;
     for (Unit* pCandidate : rCandidates)
@@ -171,6 +176,13 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
         return nullptr;
     }
     return pDefender;
+}
+
+bool JoinsSharedStack(const Unit& rMover, const Tile& rTile)
+{
+    const Unit* pOccupant = FindVisibleHostileOnTile(rMover, rTile);
+    return pOccupant
+        && MayShareTiles(rMover.GetFaction(), pOccupant->GetFaction().GetFactionId());
 }
 
 bool CanBombard(const Unit& rAttacker)

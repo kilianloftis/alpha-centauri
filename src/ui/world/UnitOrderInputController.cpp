@@ -233,7 +233,9 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
     // Whether to act on the tile is the game layer's question. A visible but non-attackable
     // hostile still steers a move order.
     const Unit* pVisibleHostile = FindVisibleHostileOnTile(rMover, rDest);
-    const Unit* pAttackableHostile = bBombards ? nullptr : FindAttackableHostileOnTile(rMover, rDest);
+    const Unit* pAttackableHostile = bBombards || JoinsSharedStack(rMover, rDest)
+                                         ? nullptr
+                                         : FindAttackableHostileOnTile(rMover, rDest);
 
     if (bAdjacent && TryAdjacentInteract_(rMover, rDest, pAttackableHostile))
     {

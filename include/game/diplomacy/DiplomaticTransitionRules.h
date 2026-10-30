@@ -34,8 +34,21 @@ HostileAct_t HostileActAgainst(const Unit& rActor, FactionId_t victim);
 // (terranx-map.md "Alien artifacts").
 bool IsHostileAttack(const Unit& rAttacker, const Unit& rDefender);
 
+// rAttacker's attack on rDefender as a hostile act. nullopt when IsHostileAttack is false.
+std::optional<HostileAct_t> AttackHostileAct(const Unit& rAttacker, const Unit& rDefender);
+
 // An attributed act the pair's status does not allow is a sneak attack.
 std::optional<VendettaKind_t> VendettaFromHostileAct(const HostileAct_t& rAct);
+
+// The status an attack on rDefender breaks, which a human confirms before the attack: the
+// pair's agreement, or Neutral for a faction it has met. nullopt when the attack is no
+// VendettaFromHostileAct, or the pair has never met.
+std::optional<DiplomaticStatus_t> StatusBrokenByAttack(const Unit& rAttacker,
+                                                       const Unit& rDefender);
+
+// Whether a human may confirm an attack that breaks `broken`: its break_by_attack. A status
+// without it ends only in talks, as a Pact does in SMAC (terranx-map.md "break_treaty").
+bool MayBreakByAttack(DiplomaticStatus_t broken);
 
 // A declared Vendetta withdraws both sides from each other's territory; a sneak attack does not.
 bool VendettaWithdrawsTerritory(VendettaKind_t kind);

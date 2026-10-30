@@ -20,6 +20,7 @@ namespace ac
 {
 class BaseManager;
 class BuildingRegistry;
+class CombatResolver;
 class ImprovementRegistry;
 class MoraleCalculator;
 class PopTypeRegistry;
@@ -206,6 +207,11 @@ ac::Faction& AddSessionFaction(FactionFixture& rFixtures, const ac::FactionConfi
 ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures);
 
 ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& rFaction, int x, int y);
+
+// CombatResolver::Resolve, then the collateral UnitAttackExecutor lands on the tile a killed
+// defender left. For tests that fight a defender the tile would not field.
+ac::CombatResult_t ResolveWithCollateral(ac::CombatResolver& rCombat, ac::WorldMap& rMap,
+                                         ac::Unit& rAttacker, ac::Unit& rDefender);
 
 // The attack a player declares on rTargetTile: the defender FindAttackableHostileOnTile picks,
 // then TryAttack against it. nullopt when the tile has no attackable hostile.

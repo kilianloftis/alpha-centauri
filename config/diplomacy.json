@@ -11,6 +11,7 @@
       "share_tiles": false,
       "repair_at_bases": false,
       "may_attack": false,
+      "break_by_attack": true,
       "defensive_obligation": false,
       "effects": [
         {
@@ -30,6 +31,7 @@
       "share_tiles": false,
       "repair_at_bases": false,
       "may_attack": false,
+      "break_by_attack": true,
       "defensive_obligation": false,
       "effects": [
         {
@@ -49,6 +51,7 @@
       "share_tiles": false,
       "repair_at_bases": false,
       "may_attack": false,
+      "break_by_attack": true,
       "defensive_obligation": false,
       "effects": [
         {
@@ -68,6 +71,7 @@
       "share_tiles": true,
       "repair_at_bases": true,
       "may_attack": false,
+      "break_by_attack": false,
       "defensive_obligation": true,
       "effects": [
         {
@@ -97,6 +101,7 @@
       "share_tiles": false,
       "repair_at_bases": false,
       "may_attack": true,
+      "break_by_attack": true,
       "defensive_obligation": false,
       "effects": [
         {

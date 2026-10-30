@@ -27,6 +27,8 @@ struct DiplomaticStatusRules_t
     bool bShareTiles = false;
     bool bRepairAtBases = false;
     bool bMayAttack = false;
+    // Whether a player may break this status by attacking; otherwise it ends only in talks.
+    bool bBreakByAttack = false;
     bool bDefensiveObligation = false;
     // FactionPair modifiers a rule resolves toward the partner (CommerceRate, where 0 means the
     // pair does not trade; ProbeActorCost). Each side's pool carries them tagged with the other

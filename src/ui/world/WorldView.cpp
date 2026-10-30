@@ -9,9 +9,9 @@
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
-#include "ui/ConfirmPopup.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
+#include "ui/AttackConfirmText.h"
 #include "ui/ScrapRefundText.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
@@ -38,6 +38,7 @@
 #include "game/movement/FuelMutations.h"
 #include "game/movement/AirdropRules.h"
 #include "game/combat/AttackRules.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/combat/CombatRules.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/SpriteLibrary.h"
@@ -781,41 +782,42 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     {
         return;
     }
-    const CombatOdds_t odds =
-        ComputeCombatOdds(rAttacker, *pDefender, CombatEngagement_t::Standard);
-    Unit* pAttacker = &rAttacker;
-    DismissOpenModals_();
-    auto pConfirm = MakeConfirmPopup(
-        "Their odds are " + std::to_string(odds.attackerOdds) + " to "
-            + std::to_string(odds.defenderOdds) + ". Proceed?",
-        GetPopupLayout(),
-        [this, pAttacker, pDefender]
+    if (const std::optional<DiplomaticStatus_t> broken = StatusBrokenByAttack(rAttacker, *pDefender))
+    {
+        if (!MayBreakByAttack(*broken))
         {
-            if (m_pSelectedUnit != pAttacker)
-            {
-                return;
-            }
-            ExecuteAttack_(*pAttacker, *pDefender);
-        },
-        Style().listSelectorPopup);
-    m_elements.push_back(std::move(pConfirm));
+            ShowNotice_("Attack", FormatStatusBreakRefusal(*broken, pDefender->GetFaction()));
+            return;
+        }
+        Confirm_(FormatStatusBreakConfirm(*broken, pDefender->GetFaction()),
+                 [this, &rAttacker, pDefender] { ConfirmAttackOdds_(rAttacker, *pDefender); });
+        return;
+    }
+    ConfirmAttackOdds_(rAttacker, *pDefender);
 }
 
-void WorldView::ExecuteAttack_(Unit& rAttacker, Unit& rDefender)
+void WorldView::ConfirmAttackOdds_(Unit& rAttacker, Unit& rDefender)
 {
-    // Capture identity / tiles before Resolve mutates positions / destroys units.
-    const Tile& rAttackerTile = rAttacker.GetTile();
-    const Tile& rTargetTile = rDefender.GetTile();
-    const std::string attackerName = rAttacker.GetDesign().GetName();
-    const std::string defenderName = rDefender.GetDesign().GetName();
+    // Taken now: the attack may destroy either unit, and nothing changes while the popup is up.
+    const AttackPlayback_t playback{&rAttacker.GetTile(), &rDefender.GetTile(),
+                                    rAttacker.GetDesign().GetName(),
+                                    rDefender.GetDesign().GetName()};
+    Confirm_(FormatAttackConfirm(rAttacker, rDefender),
+             [this, &rAttacker, &rDefender, playback]
+            {
+                const auto result = m_rGameState.GetUnitAttacks().TryAttack(rAttacker, rDefender);
+                PlayAttack_(playback, result);
+            });
+}
 
-    const auto result = m_rGameState.GetUnitAttacks().TryAttack(rAttacker, rDefender);
-    if (!result)
+void WorldView::PlayAttack_(const AttackPlayback_t& rPlayback,
+                            const std::optional<CombatResult_t>& rResult)
+{
+    if (!rResult)
     {
         return;
     }
-
-    if (result->rounds.empty())
+    if (rResult->rounds.empty())
     {
         SelectNextAvailableUnit_();
         return;
@@ -823,11 +825,11 @@ void WorldView::ExecuteAttack_(Unit& rAttacker, Unit& rDefender)
 
     SetSuppressDashboard(true);
     m_callbacks.onOpenCombat(
-        *result,
-        rAttackerTile,
-        rTargetTile,
-        attackerName,
-        defenderName,
+        *rResult,
+        *rPlayback.pAttackerTile,
+        *rPlayback.pTargetTile,
+        rPlayback.attackerName,
+        rPlayback.defenderName,
         *m_pWorldDisplay,
         m_mapLayout,
         [this]() {
@@ -1254,32 +1256,20 @@ void WorldView::HandleDisbandChoice_(Unit& rUnit)
     const std::optional<ScrapPayout_t> payout = rFaction.QuoteScrapUnit(rUnit);
     if (!payout)
     {
-        DismissOpenModals_();
-        auto pPopup = std::make_unique<NoticePopup>(
-            GetPopupLayout(),
-            "Disband",
-            "This unit cannot be disbanded.",
-            nullptr,
-            &m_rSprites);
-        m_elements.push_back(std::move(pPopup));
+        ShowNotice_("Disband", "This unit cannot be disbanded.");
         return;
     }
 
     Unit* pUnit = &rUnit;
-    DismissOpenModals_();
-    auto pConfirm = MakeConfirmPopup(
-        FormatScrapConfirm(*payout, rFaction),
-        GetPopupLayout(),
-        [this, pUnit]
-        {
-            if (m_pSelectedUnit != pUnit)
-            {
-                return;
-            }
-            HandleDisbandConfirmed_(*pUnit);
-        },
-        Style().listSelectorPopup);
-    m_elements.push_back(std::move(pConfirm));
+    Confirm_(FormatScrapConfirm(*payout, rFaction),
+             [this, pUnit]
+             {
+                 if (m_pSelectedUnit != pUnit)
+                 {
+                     return;
+                 }
+                 HandleDisbandConfirmed_(*pUnit);
+             });
 }
 
 void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
@@ -1287,14 +1277,7 @@ void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
     Faction& rFaction = rUnit.GetFaction();
     if (!rFaction.QuoteScrapUnit(rUnit))
     {
-        DismissOpenModals_();
-        auto pPopup = std::make_unique<NoticePopup>(
-            GetPopupLayout(),
-            "Disband",
-            "This unit cannot be disbanded.",
-            nullptr,
-            &m_rSprites);
-        m_elements.push_back(std::move(pPopup));
+        ShowNotice_("Disband", "This unit cannot be disbanded.");
         return;
     }
 
@@ -1304,14 +1287,7 @@ void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
 
 void WorldView::ShowSelfDestructStub_()
 {
-    DismissOpenModals_();
-    auto pPopup = std::make_unique<NoticePopup>(
-        GetPopupLayout(),
-        "Self Destruct",
-        "Self Destruct is not implemented.",
-        nullptr,
-        &m_rSprites);
-    m_elements.push_back(std::move(pPopup));
+    ShowNotice_("Self Destruct", "Self Destruct is not implemented.");
 }
 
 void WorldView::ClearAirdropTargeting_()
@@ -1388,16 +1364,11 @@ void WorldView::SyncTargetingCursor_(Graphics& rGraphics)
     }
 }
 
-void WorldView::ShowAirdropNotice_(std::string message)
+void WorldView::ShowNotice_(std::string title, std::string message)
 {
     DismissOpenModals_();
-    auto pPopup = std::make_unique<NoticePopup>(
-        GetPopupLayout(),
-        "Airdrop",
-        std::move(message),
-        nullptr,
-        &m_rSprites);
-    m_elements.push_back(std::move(pPopup));
+    m_elements.push_back(std::make_unique<NoticePopup>(GetPopupLayout(), std::move(title),
+                                                       std::move(message), nullptr, &m_rSprites));
 }
 
 void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)
@@ -1405,7 +1376,7 @@ void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)
     const auto result = m_rGameState.GetUnitMoves().TryAirdrop(rUnit, rDest);
     if (!result.Ok())
     {
-        ShowAirdropNotice_(AirdropFailReasonMessage(result.failReason));
+        ShowNotice_("Airdrop", AirdropFailReasonMessage(result.failReason));
         m_bPresentationDirty = true;
         return;
     }

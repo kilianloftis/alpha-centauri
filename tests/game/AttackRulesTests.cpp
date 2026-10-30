@@ -11,6 +11,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
+#include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/base/BaseConquestConfig.h"
 #include "game/movement/MovementRules.h"
 #include "game/movement/TransportRules.h"
@@ -295,6 +296,24 @@ TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit]
     attacker.SetMoveFragmentsRemaining(0);
     CHECK(FindAttackableHostileOnTile(attacker, defender.GetTile()) == nullptr);
     CHECK(FindVisibleHostileOnTile(attacker, defender.GetTile()) == &defender);
+}
+
+TEST_CASE("A step onto a Pact partner's stack joins it, though attacking it stays legal",
+          "[unit][attack]")
+{
+    AttackGame_ game;
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+    rMap.GetTile(8, 8)->SetElevation(100);
+    rMap.GetTile(9, 9)->SetElevation(100);
+    Unit& mover = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& partner = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis", "test_weapon"});
+    CHECK_FALSE(JoinsSharedStack(mover, partner.GetTile()));
+
+    ApplyStatusChange(game.fixtures.state, game.pPlayer->GetFactionId(),
+                      game.pAi->GetFactionId(), DiplomaticStatus_t::Pact);
+    CHECK(JoinsSharedStack(mover, partner.GetTile()));
+    CHECK(FindAttackableHostileOnTile(mover, partner.GetTile()) == &partner);
+    CHECK_FALSE(JoinsSharedStack(mover, *rMap.GetTile(9, 7)));
 }
 
 TEST_CASE("Embarked cargo defends only in a base; carrier preferred",

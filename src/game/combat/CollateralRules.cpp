@@ -75,17 +75,16 @@ bool IsImmune_(const Unit* pUnit, const std::vector<CollateralHit_t>& rPlan)
 
 } // namespace
 
-std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Unit& rDefender)
+std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Tile& rTile)
 {
     const GameState& rGame = CurrentGameState();
     const WorldMap& rWorldMap = rGame.GetWorldMap();
-    const Tile& rTile = rDefender.GetTile();
     const int splash = ResolveSplash_(rAttacker);
 
     std::vector<CollateralHit_t> plan;
     for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pOccupant == nullptr || pOccupant == &rDefender)
+        if (pOccupant == nullptr)
         {
             continue;
         }
@@ -109,7 +108,7 @@ std::vector<CollateralHit_t> PlanStackCollateral(const Unit& rAttacker, const Un
     return plan;
 }
 
-std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Unit& rDefender,
+std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Tile& rTile,
                                                 const std::vector<CollateralHit_t>& rPlan)
 {
     if (!ResolveFlag(rAttacker.GetFaction(),
@@ -121,9 +120,9 @@ std::vector<Unit*> NonCombatantsLeftUnprotected(const Unit& rAttacker, const Uni
     const GameState& rGame = CurrentGameState();
     const WorldMap& rWorldMap = rGame.GetWorldMap();
     std::vector<Unit*> nonCombatants;
-    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rDefender.GetTile()))
+    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pOccupant == nullptr || pOccupant == &rDefender || IsImmune_(pOccupant, rPlan))
+        if (pOccupant == nullptr || IsImmune_(pOccupant, rPlan))
         {
             continue;
         }

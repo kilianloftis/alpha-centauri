@@ -1,5 +1,6 @@
 #include "GameFixtures.h"
 
+#include "game/combat/AttackRules.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
@@ -936,10 +937,35 @@ TEST_CASE("Killing a defender in the open damages the rest of the stack", "[comb
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
+    CHECK(stackmate.GetCurrentHp() == 9);
+}
+
+TEST_CASE("An attack that kills its defender lands collateral on the rest of the stack",
+          "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    const UnitId_t defenderId = defender.GetUnitId();
+    REQUIRE(FindAttackableHostileOnTile(attacker, fixture.At(9, 9)) == &defender);
+
+    OrderHarness_ harness(fixture, /*seed*/ 42);
+    const std::optional<CombatResult_t> result = harness.attacks.TryAttack(attacker, defender);
+
+    REQUIRE(result);
+    REQUIRE(result->defenderId == defenderId);
+    REQUIRE(result->bDefenderDestroyed);
     CHECK(stackmate.GetCurrentHp() == 9);
 }
 
@@ -957,7 +983,8 @@ TEST_CASE("Collateral damage follows the attacker's reactor tier", "[combat][col
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(stackmate.GetCurrentHp() == 8);
@@ -981,7 +1008,8 @@ TEST_CASE("Base and bunker clamp collateral susceptibility to zero; an airbase d
         defender.SetCurrentHp(1);
 
         CombatHarness_ harness(fixture, /*seed*/ 42);
-        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        const CombatResult_t result =
+            ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
         REQUIRE(result.bDefenderDestroyed);
         CHECK(stackmate.GetCurrentHp() == (bExpectSplash ? 8 : 10));
     };
@@ -1003,7 +1031,8 @@ TEST_CASE("A surviving defender leaves the stack untouched", "[combat][collatera
     Unit& stackmate = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
 
     CombatHarness_ harness(fixture, /*seed*/ 7);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     CHECK_FALSE(result.bDefenderDestroyed);
     CHECK(stackmate.GetCurrentHp() == 10);
@@ -1026,7 +1055,8 @@ TEST_CASE("Collateral that reaches zero hit points destroys the stackmate", "[co
     const UnitId_t stackmateId = stackmate.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(FindOnTile_(fixture, 9, 9, stackmateId) == nullptr);
@@ -1052,7 +1082,8 @@ TEST_CASE("A wild native stack is wiped when one of them dies in the open", "[co
     const UnitId_t stackmateId = stackmate.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(FindOnTile_(fixture, 9, 9, stackmateId) == nullptr);
@@ -1078,7 +1109,8 @@ TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][co
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
@@ -1101,7 +1133,8 @@ TEST_CASE("A faction-owned native takes collateral damage and stays alive", "[co
     REQUIRE(native.GetDesign().IsNativeLife());
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, native.GetUnitId()) != nullptr);
@@ -1123,7 +1156,8 @@ TEST_CASE("A native-life attacker deals one collateral damage", "[combat][collat
     REQUIRE(attacker.GetDesign().IsNativeLife());
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(stackmate.GetCurrentHp() == 9);
@@ -1143,7 +1177,8 @@ TEST_CASE("Killing a wild native pays planet pearls for its lifecycle stage", "[
     defender.SetXp(0);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(player.GetEconomy().GetEnergy() == 10);
@@ -1163,7 +1198,8 @@ TEST_CASE("A later lifecycle stage pays another multiple of the pearl base", "[c
     defender.SetXp(2);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(player.GetEconomy().GetEnergy() == 30);
@@ -1186,7 +1222,8 @@ TEST_CASE("Every wild native destroyed in the stack pays pearls", "[combat][pear
     stackmate.SetXp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) == nullptr);
@@ -1207,7 +1244,8 @@ TEST_CASE("A faction-owned native pays no planet pearls", "[combat][pearls]")
     defender.SetXp(0);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(player.GetEconomy().GetEnergy() == 0);
@@ -1231,7 +1269,8 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     stackmate.SetXp(3);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, stackmate.GetUnitId()) != nullptr);
@@ -1259,7 +1298,8 @@ TEST_CASE("A unit with susceptibility zero takes no splash while a stackmate doe
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(immune.GetCurrentHp() == 10);
@@ -1285,7 +1325,8 @@ TEST_CASE("An air unit takes no splash and a wild locust in the open is still wi
     const UnitId_t locustId = locust.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, air.GetUnitId()) != nullptr);
@@ -1308,7 +1349,8 @@ TEST_CASE("A non-combatant is destroyed when no combatant remains", "[combat][co
     const UnitId_t probeId = probe.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(FindOnTile_(fixture, 9, 9, probeId) == nullptr);
@@ -1329,7 +1371,8 @@ TEST_CASE("A stack of only non-combatants is wiped", "[combat][collateral]")
     const UnitId_t probeId = probe.GetUnitId();
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     CHECK(FindOnTile_(fixture, 9, 9, probeId) == nullptr);
@@ -1351,7 +1394,8 @@ TEST_CASE("A non-combatant stacked with a surviving combatant takes only the spl
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);
@@ -1374,7 +1418,8 @@ TEST_CASE("Without the world rule a lone non-combatant takes only the splash",
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);
@@ -1396,7 +1441,8 @@ TEST_CASE("A non-combatant in a base survives the defender's death", "[combat][c
     defender.SetCurrentHp(1);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
-    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    const CombatResult_t result =
+        ResolveWithCollateral(harness.combat, fixture.map, attacker, defender);
 
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 9, 9, probe.GetUnitId()) != nullptr);

@@ -25,6 +25,11 @@ Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile);
 // attack_unit grid. The hostile, or nullptr.
 Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile);
 
+// Whether a step onto rTile joins the stack there instead of attacking it: rMover may share a
+// tile with the owner of the hostile FindVisibleHostileOnTile picks (a Pact partner). Attacking
+// that unit stays legal; only the player's step is routed as a move.
+bool JoinsSharedStack(const Unit& rMover, const Tile& rTile);
+
 // Bombard flag and any movement fragments left. The hotkey uses this before a tile is chosen.
 bool CanBombard(const Unit& rAttacker);
 

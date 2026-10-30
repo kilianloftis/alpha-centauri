@@ -407,7 +407,9 @@ TEST_CASE("An artifact is taken when its stack loses its last combatant, and not
 
     SECTION("last combatant")
     {
-        const CombatResult_t result = Resolve_(game, rAttacker, rGuard, 1);
+        Resolver_ resolver(game.fixtures, 1);
+        const CombatResult_t result =
+            ResolveWithCollateral(resolver.combat, game.fixtures.map, rAttacker, rGuard);
         REQUIRE(result.bDefenderDestroyed);
         CHECK(Contains_(result.capturedUnitIds, rArtifact.GetUnitId()));
         CHECK(&rArtifact.GetFaction() == game.pA);
@@ -417,7 +419,9 @@ TEST_CASE("An artifact is taken when its stack loses its last combatant, and not
     SECTION("a combatant survives the splash")
     {
         game.Make(*game.pB, 9, 9, {"test_chassis"});
-        const CombatResult_t result = Resolve_(game, rAttacker, rGuard, 1);
+        Resolver_ resolver(game.fixtures, 1);
+        const CombatResult_t result =
+            ResolveWithCollateral(resolver.combat, game.fixtures.map, rAttacker, rGuard);
         REQUIRE(result.bDefenderDestroyed);
         CHECK(result.capturedUnitIds.empty());
         CHECK(&rArtifact.GetFaction() == game.pB);

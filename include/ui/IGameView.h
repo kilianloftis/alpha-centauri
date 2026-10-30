@@ -1,9 +1,12 @@
 #pragma once
 
 #include "input/Input.h"
+#include "ui/ConfirmPopup.h"
 #include "ui/UIElement.h"
 #include "ui/style/UiStyle.h"
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace ac
@@ -126,6 +129,14 @@ protected:
                 pElement->RequestClose();
             }
         }
+    }
+
+    // OK / Cancel over rMessage, replacing any open modal. onOk runs only on OK.
+    void Confirm_(std::string message, std::function<void()> onOk)
+    {
+        DismissOpenModals_();
+        m_elements.push_back(MakeConfirmPopup(std::move(message), GetPopupLayout(),
+                                              std::move(onOk), Style().listSelectorPopup));
     }
 
     const WindowLayout_t m_layout;

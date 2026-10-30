@@ -169,6 +169,45 @@ absent.
   `PastDisengageThreshold`; `disengage_chance` in `config/unit_components/chassis.json`.
 - **Missing:** the original version and a switch.
 
+### Defender selection ignores unit plan and weapon `[Ours]`
+
+- **Original:** `best_defender` ranks each unit by defense against this attacker, scaled by its
+  HP fraction, minus its own weapon's offense, and multiplies the result by 16 for every combat
+  plan, naval transport and terraformer. Colony pods, supply crawlers, probe teams and artifacts
+  defend only when nothing else scores higher. Designated defenders and, in an artillery
+  exchange, artillery get a flat bonus ("Defender selection").
+- **Ours:** `SelectDefender` picks the best `DefenderWinChance` (strength × hits to kill), ties in
+  tile order. A non-combatant whose odds are better than a combatant's defends first, and a
+  stronger gun never keeps a unit out of the line.
+- **Where:** `SelectDefender` (`AttackRules`).
+- **Missing:** the original version and a switch.
+
+### No agreement prompt before other hostile actions `[Ours]`
+
+- **Original:** `break_treaty` with mask 7 (Pact, Treaty, Truce) also guards `sat_attack`,
+  `action_airdrop`, `Console_terraform`, `Console_destroy`, `Console_use_ability` and
+  `order_veh` ("`break_treaty`"). What each one asks about is not confirmed. Whether a bombard
+  reaches the `battle_fight_2` prompt is not confirmed either.
+- **Ours:** only an attack asks first (`StatusBrokenByAttack`), and a move into forbidden
+  territory (`PresentTerritoryEntry_`). A bombard declares its sneak-attack Vendetta with no
+  prompt.
+- **Where:** `WorldView::TryBeginAttack_`, `WorldView::TryBeginBombard_`.
+- **Missing:** confirm what each call site guards, then the prompts that are missing.
+
+### Last-defender loss conditions `[Ours]`
+
+- **Original:** killing a base's last defender costs one population only when that defender had
+  a weapon and the attacker is not native life; an ocean square (the attacker's, a binary bug),
+  an objective base at size 1, Perimeter Defense, Tachyon Field and difficulty 0 for a human
+  also prevent it ("Last defender lost").
+- **Thinker:** tests the base tile for ocean instead of the attacker's square (`Fix:`).
+- **Ours:** any last-defender kill costs `LastDefenderPopLoss` (Perimeter Defense and Citizen
+  difficulty clamp it to 0). A weaponless defender (colony pod, former, probe team) still costs
+  population, and a native-life attacker applies the loss and then raids the base.
+- **Where:** `ConquestOnLastDefenderKill` (`BaseConquestRules`).
+- **Missing:** the original's weapon and native-attacker conditions, a Tachyon Field clamp, the
+  ocean and objective checks, and a switch.
+
 ### Collateral hits colony pods, probes and supply crawlers `[Ours]`
 
 - **Original:** collateral skips non-defender occupants with plan colony, probe, supply or
@@ -271,6 +310,10 @@ it behind a switch turns the line into a TODO entry.
 - **A flopped frame still runs keep-or-break** ("Frame"): Thinker's `mod_probe` flips
   `prb_state` positive after the framed faction's Vendetta, so the flop also writes the
   successful frame's Vendetta and skips keep-or-break.
+
+- **A contacted faction with no agreement is asked "Pronounce Vendetta!"** ("`break_treaty`"):
+  Thinker's `battle_fight_2` passes Truce instead of Commlink (`Fix:`), so it attacks with no
+  prompt.
 
 ## Variant files
 

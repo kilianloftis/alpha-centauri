@@ -16,7 +16,8 @@ class Tile;
 class Unit;
 struct TerraformProject_t;
 
-// The session queries UnitOrderExecutor needs beyond its map and pathfinder.
+// The session queries and hooks UnitOrderExecutor and UnitAttackExecutor need beyond their map
+// and pathfinder.
 class IUnitOrderWorld
 {
 public:

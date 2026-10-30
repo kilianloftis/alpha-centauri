@@ -48,17 +48,17 @@ void ApplyHit_(UnitPositionIndex& rPositions, Unit& rAttacker, const CollateralH
 } // namespace
 
 std::vector<UnitId_t> ApplyStackCollateral(UnitPositionIndex& rPositions, Unit& rAttacker,
-                                           Unit& rDefender)
+                                           const Tile& rTile)
 {
     std::vector<UnitId_t> captured;
-    const std::vector<CollateralHit_t> plan = PlanStackCollateral(rAttacker, rDefender);
+    const std::vector<CollateralHit_t> plan = PlanStackCollateral(rAttacker, rTile);
     for (const CollateralHit_t& rHit : plan)
     {
         ApplyHit_(rPositions, rAttacker, rHit, captured);
     }
 
     const std::vector<Unit*> unprotected =
-        NonCombatantsLeftUnprotected(rAttacker, rDefender, plan);
+        NonCombatantsLeftUnprotected(rAttacker, rTile, plan);
     for (Unit* pNonCombatant : unprotected)
     {
         RemoveCasualty_(rPositions, rAttacker, *pNonCombatant, captured);

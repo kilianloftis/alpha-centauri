@@ -8,7 +8,9 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/combat/AttackRules.h"
+#include "game/combat/CollateralMutations.h"
 #include "game/combat/CombatConfigParser.h"
+#include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleConfig.h"
 #include "game/combat/MoraleConfigParser.h"
@@ -495,6 +497,21 @@ ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& rFactio
         throw std::runtime_error("MakeSessionBase: CreateBase failed");
     }
     return *pBase;
+}
+
+ac::CombatResult_t ResolveWithCollateral(ac::CombatResolver& rCombat, ac::WorldMap& rMap,
+                                         ac::Unit& rAttacker, ac::Unit& rDefender)
+{
+    const ac::Tile& rTile = rDefender.GetTile();
+    ac::CombatResult_t result = rCombat.Resolve(rAttacker, rDefender);
+    if (result.bDefenderDestroyed)
+    {
+        const std::vector<ac::UnitId_t> captured =
+            ac::ApplyStackCollateral(rMap.GetUnitPositions(), rAttacker, rTile);
+        result.capturedUnitIds.insert(result.capturedUnitIds.end(), captured.begin(),
+                                      captured.end());
+    }
+    return result;
 }
 
 std::optional<ac::CombatResult_t> AttackTile(ac::UnitAttackExecutor& rAttacks, ac::Unit& rAttacker,

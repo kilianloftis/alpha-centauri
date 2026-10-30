@@ -248,6 +248,7 @@ one. What a mod tunes is each status's **rules**, in `config/diplomacy.json`:
 | `effects` (`CommerceRate`) | ×0 | ×0 | ×0.5 | ×1 | ×0 |
 | `effects` (`ProbeActorCost`, base targets) | — | — | — | ×2 | — |
 | `may_attack` | ✗ | ✗ | ✗ | ✗ | ✓ |
+| `break_by_attack` | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `defensive_obligation` | ✗ | ✗ | ✗ | ✓ | ✗ |
 | `duration_turns` | null | 20 | null | null | null |
 
@@ -292,10 +293,11 @@ side has nothing to accept.
 | Rule | Read by |
 |---|---|
 | `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `movement/TerritoryEntryMutations.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
-| `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles` |
+| `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles`. `JoinsSharedStack`: a player's step onto a stack it may share is a move, not an attack. Attacking that stack stays legal, so a sneak attack out of a shared stack still works. |
 | `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceRules` resolves `CommerceRate` toward the partner, and skips the pair at 0; `QuoteProbeActionCost` resolves `ProbeActorCost` toward the target |
-| `may_attack` | `ApplyHostileAct`: an attack under a status that does not allow it declares Vendetta |
+| `may_attack` | `ApplyHostileAct`: an attack under a status that does not allow it declares Vendetta. `StatusBrokenByAttack` names the status such an attack breaks, for a faction the attacker has met, and the player's attack asks first (`WorldView::TryBeginAttack_`): "Break the Treaty?" / "Break the Truce?", or "Pronounce Vendetta?" under Neutral. The prompt is the player's alone; the attack itself stays legal, so an AI attack or one out of a shared stack still sneak-attacks. |
+| `break_by_attack` | `MayBreakByAttack`: without it, the player's attack is refused with a notice instead of the prompt, and the status ends only in talks (SMAC's Pact). |
 | `defensive_obligation` | `IsObligedToDefend`: when a declaration raises obligations, and again when the player's prompt is shown |
 | `duration_turns` | `ExpireDiplomaticStatuses`, run by the TurnStart stage |
 

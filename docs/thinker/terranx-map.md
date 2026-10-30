@@ -241,6 +241,57 @@ That means no promotion for either side, no artifact capture and no collateral d
 A duel (`combat_type == 3`, `CT_CAN_ARTY | CT_WEAPON_ONLY`) skips that branch and runs the
 normal round loop. It then makes the same `promote` calls as any fight, at the same rate.
 
+### Defender selection (`best_defender` `0x5044D0`)
+
+Walks the defender's stack (`next_veh_id_stack`, `VEH+0x952858`, loop at `0x504A7F`) and keeps the
+highest score. For each unit it calls `battle_compute` (`0x50474C`) and stops the whole scan when
+`offense_out` is 0 (`je 0x504A91` at `0x504759`). Then:
+
+- HP: 1 for an artifact (`UNIT.plan == 0xC`, `cmp bl, 0xc` at `0x504775`), else
+  `clamp(reactor_id, 1, 100) * 10 − damage_taken`, clamped `[0, 9999]`; max HP the same without
+  the damage (`0x504775`–`0x5047F0`). `value = defense_out * HP / maxHP` (`0x5047F2`–`0x5047F7`).
+- `score = attacker_offense * value / offense_out / 8 − Weapon.offense_value` of the candidate
+  (`0x94AE68`, `0x504801`–`0x504821`), so of two equal defenders the one with the weaker gun
+  defends.
+- `score <<= 4` (×16) when `plan < 8` or `plan == 9` (`cmp bl, 8` / `jb`, `cmp bl, 9` / `jne`,
+  `shl esi, 4` at `0x504823`–`0x50482D`): every combat plan, naval transport and terraformers.
+  Colony (8), supply (10), probe (11), artifact (12) and the special missiles keep their score.
+- `+0x80000` (`0x504A61`) for: an air candidate against an air attacker when either side has Air
+  Superiority (ability `0x20`, `0x50485D`–`0x5049D6`); in an artillery exchange (`combat_type`,
+  `[ebp+0x10]`) a candidate that `can_arty` (`0x5C0DB0` at `0x5049EF`); otherwise a designated
+  defender (`VEH.state & 0x80`, `0x504A58`) on a base, an airbase, a carrier stack, or a stack
+  with no air units (`stack_check` `0x5B9580` at `0x504A09` / `0x504A4C`).
+- Ties: the packed key is `(score << 11) + veh_id`, replaced only when strictly greater (`jle` at
+  `0x504A74`), so the higher `veh_id` wins a tie.
+
+Before scoring (`0x5045A0`–`0x504636`, read with Thinker), a land unit on open ocean is skipped,
+and a probe attacker (plan 11, `cmp ..., 0xb` at `0x504602` / `0x50460C`) only considers probes.
+Thinker's `find_defender` (`refs/thinker/src/veh_combat.cpp`) keeps all of this and replaces the
+packed key with a score / id pair to avoid overflow.
+
+### Last defender lost (`battle_fight_2` `0x506AF0`)
+
+After an attacker win, once the defender and any stack casualties are removed, a base on the
+target tile (`[ebp-0x20] >= 0`, `0x50AC90`) gets state bit `0x8` (`0x50ACAA`) and loses one
+population (`dec` at `0x50AD8E`–`0x50AD98`; size 0 calls `base_kill` `0x4E5250` at `0x50ADA8`)
+unless any of these holds:
+
+- `is_ocean` (`0x5001E0`, `0x50ACB1`) on the attacker's square; Thinker's `Fix:` tests the base
+  tile instead.
+- The base is an objective (`0x5AC060`) at size 1 or less (`0x50ACC2`–`0x50ACD5`).
+- It has facility 4 or 5, Perimeter Defense or Tachyon Field (`0x421670` at `0x50ACE0` /
+  `0x50ACF4`), or `0x4F80D0(5, ...)` passes (`0x50AD0A`; Thinker's `Fix:` says the original asks
+  the wrong faction).
+- The killed defender has no weapon: `Weapon.offense_value` (`0x94AE68`) of its unit is 0
+  (`0x50AD1A`–`0x50AD42`, Thinker's `combat_defend`).
+- The attacker is native life, faction 0 (`[ebp-0x10]`, `0x50AD48`).
+- Any unit is still on the tile (`veh_who` `0x500250` at `0x50AD5B`).
+- The defender is human and plays at difficulty 0 (`0x50AD6B`–`0x50AD8C`).
+
+A missile attacker is still on the map at this point. `battle_fight_2` removes it at the very end
+(`Chassis.missile` test at `0x50B807`, `kill` `0x5C0B00` at `0x50B812`), so a missile that kills
+a base's last defender costs the base population like any other attacker.
+
 ## Unit capture in combat
 
 Two ways a fight hands units to the attacker: Marine Detachment boarding, and alien artifacts.
@@ -905,6 +956,33 @@ Thinker's diplomacy patches (loans, tech-for-energy, base-swap) are in
 | `+0x124` (`0x96CB04`) | `integrity_blemishes` | per-faction count, 0 = Noble; editor caption "Blemishes" |
 | `+0x128` (`0x96CB08`) | `diplo_reputation` | incremented on made Pact/Treaty/Truce |
 | `+0x12C` | `diplo_gifts[8]` | subtracted from blemishes in `reputation()` |
+
+### `break_treaty` (`0x55F770`)
+
+`break_treaty(faction, target, mask)` asks a human whether to break an agreement. It returns
+nonzero to cancel the action. Status is `diplo_status[faction][target]` (`0x96C9F8`). No prompt
+and 0 when the pair is at Vendetta (`0x10`, `0x55F798`) or `status & mask` is 0 (`0x55F7A3`).
+Otherwise, first match wins:
+
+- Pact (`0x1`, `0x55F86C`): the `#BREAKINGPACT` notice ("abrogate the pact during face-to-face
+  negotiations"), and the action is cancelled.
+- Treaty (`0x2`, `0x55F894`): `#BREAKINGTREATY`, "Cancel action" / "Break treaty!".
+- Truce (`0x4`) without `0x10000` (`0x55F8BE`–`0x55F8C2`): `#BREAKINGTRUCE`, same choices.
+- `mask & 0x10000` (`0x55F8EE`): 0. Else `#BEGINVENDETTA`, "Cancel action" / "Pronounce
+  Vendetta!".
+
+`battle_fight_2` calls it at `0x507117` with mask `0xB` (Pact | Treaty | Commlink), before the
+odds dialog (`0x507CA4`). The Commlink bit means any contacted faction with no agreement gets the
+`#BEGINVENDETTA` prompt. Thinker gates the call on a human attacker that is not a probe and not
+attacking an artifact off a base, and its `Fix:` passes Truce instead of Commlink, so a faction
+with no agreement is attacked without a prompt (`refs/thinker/src/veh_combat.cpp`).
+
+The other callers pass mask 7 (Pact | Treaty | Truce), so a faction with no agreement is never
+asked: `sat_attack` (`0x4A050D`), `action_airdrop` (`0x4CC766`), `Console_terraform`
+(`0x4D498F`), `Console_destroy` (`0x4D5A06`), `Console_use_ability` (`0x4D8334`) and
+`order_veh` (`0x597551`). `break_treaty` only asks: it changes no status itself
+(its calls are `parse_says`, `get_pact_hood`, `NetMsg_pop` and `popp`), so the attack that
+follows a "Break" answer is what breaks the agreement.
 
 ### `cause_friction` (`0x53A030`)
 

@@ -62,6 +62,8 @@ TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
     CHECK(rPact.bRepairAtBases);
     CHECK(rPact.bDefensiveObligation);
     CHECK_FALSE(rPact.bMayAttack);
+    CHECK_FALSE(rPact.bBreakByAttack);
+    CHECK(config.For(DiplomaticStatus_t::Treaty).bBreakByAttack);
 
     CHECK(config.For(DiplomaticStatus_t::Vendetta).bMayAttack);
     CHECK_FALSE(config.For(DiplomaticStatus_t::Neutral).bMayAttack);

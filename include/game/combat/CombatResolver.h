@@ -87,12 +87,11 @@ public:
                    std::mt19937& rRng);
 
     // A melee fight: rounds until a unit dies, withdraws (disengage_chance) or is boarded
-    // (board_chance). A killed defender also runs ApplyStackCollateral; every unit the attacker
-    // kills goes through RemoveDefeatedUnit. The survivor of a kill or boarding may then be
-    // promoted.
+    // (board_chance). A killed defender goes through RemoveDefeatedUnit and a killed attacker is
+    // destroyed. What follows a kill for anyone else (collateral, promotion) is the caller's.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
     // Two artillery units trade fire until one falls; neither withdraws or boards. The defender
-    // is rated with Attack. The survivor may be promoted, as after Resolve.
+    // is rated with Attack. Losers are removed as after Resolve.
     CombatResult_t ResolveDuel(Unit& rAttacker, Unit& rDefender);
     // One bombard shot: the attacker is never hurt and the target stops at its bombard HP floor.
     // A killed target is destroyed outright: never captured, no promotion, no collateral.
@@ -155,17 +154,12 @@ private:
     // Applies the ending the rounds chose.
     void Finish_(Unit& rAttacker, Unit& rDefender, const FightEnd_t& rEnd,
                  CombatResult_t& rResult);
-    // Rolls promotion for the side PromotionCandidate names, if any.
-    void PromoteSurvivor_(Unit& rAttacker, Unit& rDefender, const CombatResult_t& rResult);
     // Moves rWithdrawing to its retreat tile; withdrawing concedes the fight.
     void Withdraw_(Unit& rWithdrawing, const FightEnd_t& rEnd, CombatResult_t& rResult);
     // Captures the defender's tile and records it on rResult.
     void Board_(Unit& rAttacker, const Unit& rDefender, CombatResult_t& rResult);
-    // Removes whichever side reached 0 HP.
+    // Removes whichever side reached 0 HP; a captured defender is recorded on rResult.
     void RemoveLosers_(Unit& rAttacker, Unit& rDefender, CombatResult_t& rResult);
-    // Stack collateral for the kill, then the defender goes through RemoveDefeatedUnit; captures
-    // are recorded on rResult.
-    void RemoveDefeatedDefender_(Unit& rAttacker, Unit& rDefender, CombatResult_t& rResult);
 
     int Roll_(int strength) const;
     // Both rolls for a round, drawn from the strengths on rResult.

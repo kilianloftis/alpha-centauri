@@ -114,7 +114,7 @@ DiplomaticStatusRules_t ParseStatus_(const nlohmann::json& rJson, DiplomaticStat
     }
     static const std::vector<std::string> known = {
         "enter_territory",      "share_tiles", "repair_at_bases", "may_attack",
-        "defensive_obligation", "effects",     "duration_turns",
+        "break_by_attack",      "defensive_obligation", "effects", "duration_turns",
     };
     ConfigFields::RejectUnknownKeys(rJson, known, rContext);
 
@@ -123,6 +123,7 @@ DiplomaticStatusRules_t ParseStatus_(const nlohmann::json& rJson, DiplomaticStat
     rules.bShareTiles = RequireBool_(rJson, "share_tiles", rContext);
     rules.bRepairAtBases = RequireBool_(rJson, "repair_at_bases", rContext);
     rules.bMayAttack = RequireBool_(rJson, "may_attack", rContext);
+    rules.bBreakByAttack = RequireBool_(rJson, "break_by_attack", rContext);
     rules.bDefensiveObligation = RequireBool_(rJson, "defensive_obligation", rContext);
     rules.effects = ParseStatusEffects_(rJson, rContext);
     rules.durationTurns = RequireOptionalPositiveInt_(rJson, "duration_turns", rContext);
