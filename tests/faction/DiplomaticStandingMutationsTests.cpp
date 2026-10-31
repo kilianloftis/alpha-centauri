@@ -2,6 +2,11 @@
 
 #include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
+#include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
+#include "game/diplomacy/DiplomacyConfig.h"
+#include "game/units/UnitAttackExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -179,4 +184,141 @@ TEST_CASE("A sneak against native life adds no blemishes", "[diplomacy][standing
                                                       .bAttributed = true});
 
     CHECK(game.Ledger().GetBlemishes(game.pA->GetFactionId()) == 0);
+}
+
+namespace
+{
+
+// A at Truce with B, B at Vendetta with C, so A fighting C on B's land earns B's goodwill.
+// Returns the battle tile (11, 9), which B owns.
+Tile& SetUpAlliedTerritory_(DiplomacyFixture& rGame)
+{
+    rGame.Set(*rGame.pA, *rGame.pB, DiplomaticStatus_t::Truce);
+    rGame.Set(*rGame.pB, *rGame.pC, DiplomaticStatus_t::Vendetta);
+    REQUIRE(rGame.Owner(11, 9) == rGame.pB->GetFactionId());
+    rGame.Ledger().SetFriction(rGame.pB->GetFactionId(), rGame.pA->GetFactionId(), 5);
+    return rGame.At(11, 9);
+}
+
+int TerritoryFriction_(DiplomacyFixture& rGame)
+{
+    return rGame.fixtures.state.GetGameData().diplomacyConfig->alliedTerritoryBattleFriction;
+}
+
+int FrictionBTowardA_(DiplomacyFixture& rGame)
+{
+    return rGame.Ledger().GetFriction(rGame.pB->GetFactionId(), rGame.pA->GetFactionId());
+}
+
+} // namespace
+
+TEST_CASE("Fighting the owner's Vendetta enemy on its land changes its friction toward the "
+          "attacker",
+          "[diplomacy][standing][combat]")
+{
+    DiplomacyFixture game;
+    SetUpAlliedTerritory_(game);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pC, 11, 9);
+
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
+
+    CHECK(FrictionBTowardA_(game) == 5 + TerritoryFriction_(game));
+}
+
+TEST_CASE("Allied-territory friction applies when the attacker dies",
+          "[diplomacy][standing][combat]")
+{
+    DiplomacyFixture game;
+    SetUpAlliedTerritory_(game);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "test_weapon"});
+    rAttacker.SetCurrentHp(1);
+    Unit& rDefender = game.MakeUnit(*game.pC, 11, 9, {"test_chassis", "test_armor"});
+
+    const auto result = game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender);
+    REQUIRE(result);
+    REQUIRE(result->bAttackerDestroyed);
+
+    CHECK(FrictionBTowardA_(game) == 5 + TerritoryFriction_(game));
+}
+
+TEST_CASE("Allied-territory friction clamps at zero", "[diplomacy][standing][combat]")
+{
+    DiplomacyFixture game;
+    SetUpAlliedTerritory_(game);
+    game.Ledger().SetFriction(game.pB->GetFactionId(), game.pA->GetFactionId(), 0);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pC, 11, 9);
+
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
+
+    CHECK(FrictionBTowardA_(game) == 0);
+}
+
+TEST_CASE("Allied-territory friction needs the owner at Vendetta with the defender and in an "
+          "agreement with the attacker",
+          "[diplomacy][standing][combat]")
+{
+    DiplomacyFixture game;
+    Tile& rBattle = SetUpAlliedTerritory_(game);
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const FactionId_t c = game.pC->GetFactionId();
+
+    CHECK(AlliedTerritoryOwner(a, c, rBattle) == b);
+    CHECK_FALSE(AlliedTerritoryOwner(b, c, rBattle));
+    CHECK_FALSE(AlliedTerritoryOwner(a, b, rBattle));
+    CHECK_FALSE(AlliedTerritoryOwner(a, c, game.At(0, 16)));
+
+    game.Ledger().SetStatus(b, c, DiplomaticStatus_t::Neutral);
+    CHECK_FALSE(AlliedTerritoryOwner(a, c, rBattle));
+
+    game.Ledger().SetStatus(b, c, DiplomaticStatus_t::Vendetta);
+    game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Neutral);
+    CHECK_FALSE(AlliedTerritoryOwner(a, c, rBattle));
+
+    game.Ledger().SetStatus(a, b, DiplomaticStatus_t::Pact);
+    CHECK(AlliedTerritoryOwner(a, c, rBattle) == b);
+}
+
+TEST_CASE("Allied-territory friction counts the owner's water as well as its land",
+          "[diplomacy][standing][combat]")
+{
+    DiplomacyFixture game;
+    Tile& rBattle = SetUpAlliedTerritory_(game);
+    rBattle.SetElevation(-500);
+    REQUIRE(rBattle.IsWater());
+    REQUIRE(game.Owner(11, 9) == game.pB->GetFactionId());
+
+    CHECK(AlliedTerritoryOwner(game.pA->GetFactionId(), game.pC->GetFactionId(), rBattle) ==
+          game.pB->GetFactionId());
+}
+
+TEST_CASE("An artillery duel on allied territory writes friction; a bombard strike does not",
+          "[diplomacy][standing][combat][bombard]")
+{
+    SECTION("strike")
+    {
+        DiplomacyFixture game;
+        Tile& rBattle = SetUpAlliedTerritory_(game);
+        Unit& rShooter = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "bombard"});
+        game.MakeUnit(*game.pC, 11, 9);
+
+        REQUIRE(game.fixtures.state.GetUnitAttacks().TryBombard(rShooter, rBattle));
+
+        CHECK(FrictionBTowardA_(game) == 5);
+    }
+    SECTION("duel")
+    {
+        DiplomacyFixture game;
+        Tile& rBattle = SetUpAlliedTerritory_(game);
+        Unit& rShooter = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "test_weapon", "bombard"});
+        game.MakeUnit(*game.pC, 11, 9, {"test_slow_chassis", "bombard"});
+
+        const auto result = game.fixtures.state.GetUnitAttacks().TryBombard(rShooter, rBattle);
+        REQUIRE(result);
+        REQUIRE(result->combats.size() == 1);
+
+        CHECK(FrictionBTowardA_(game) == 5 + TerritoryFriction_(game));
+    }
 }

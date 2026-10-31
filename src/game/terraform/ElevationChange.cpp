@@ -8,6 +8,7 @@
 #include "game/terraform/SurfaceOccupancy.h"
 #include "game/terraform/TerraformRules.h"
 
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <unordered_set>
@@ -51,20 +52,20 @@ std::vector<SurfaceFlip_t> FlippedSurfaces_(const std::vector<SurfaceFlip_t>& rB
 }
 
 // Applies the writes in order, then reconciles the tiles whose surface ended up flipped and
-// recomputes the climate. Returns false when there was nothing to write.
-bool ApplyElevationWrites_(const std::vector<ElevationWrite_t>& rWrites, GameState& rGameState)
+// recomputes the climate. nullopt when there was nothing to write.
+std::optional<std::vector<MoistureChange_t>> ApplyElevationWrites_(
+    const std::vector<ElevationWrite_t>& rWrites, GameState& rGameState)
 {
     if (rWrites.empty())
     {
-        return false;
+        return std::nullopt;
     }
 
     TileChangeDeferral defer;
     WorldMap& rWorldMap = rGameState.GetWorldMap();
     const std::vector<SurfaceFlip_t> before = WriteElevations_(rWrites, rWorldMap);
     ReconcileSurfaceFlips(rGameState, FlippedSurfaces_(before));
-    rGameState.GetTileEffects().RecomputeClimate();
-    return true;
+    return rGameState.GetTileEffects().RecomputeClimate();
 }
 
 } // namespace
@@ -79,8 +80,9 @@ int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules)
     return distribution(rRng);
 }
 
-bool ApplyElevationDelta(Tile& rOrigin, int deltaMeters, const ElevationRulesConfig_t& rRules,
-                         int floorMeters, int ceilingMeters, GameState& rGameState)
+std::optional<std::vector<MoistureChange_t>> ApplyElevationDelta(
+    Tile& rOrigin, int deltaMeters, const ElevationRulesConfig_t& rRules, int floorMeters,
+    int ceilingMeters, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
     const ElevationSeed_t seed{&rOrigin, deltaMeters};
@@ -107,7 +109,8 @@ bool ApplyEarthquake(Tile& rOrigin, int levelCount, std::mt19937& rRng,
     }
     const int delta = EarthquakeDeltaMeters(rolls, rRules);
     return ApplyElevationDelta(rOrigin, delta, rRules, rRules.minElevationMeters,
-                               rRules.maxElevationMeters, rGameState);
+                               rRules.maxElevationMeters, rGameState)
+        .has_value();
 }
 
 bool LowerTilesOneLevel(std::span<Tile*> tiles, std::mt19937& rRng,
@@ -131,7 +134,7 @@ bool LowerTilesOneLevel(std::span<Tile*> tiles, std::mt19937& rRng,
     }
     const std::vector<ElevationWrite_t> writes = PlanElevationChange(
         seeds, rRules.minElevationMeters, rRules.maxElevationMeters, rRules);
-    return ApplyElevationWrites_(writes, rGameState);
+    return ApplyElevationWrites_(writes, rGameState).has_value();
 }
 
 } // namespace ac

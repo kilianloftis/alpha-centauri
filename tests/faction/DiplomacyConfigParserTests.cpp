@@ -126,6 +126,41 @@ TEST_CASE("The diplomacy parser rejects a missing or negative artifact_capture_f
                     std::runtime_error);
 }
 
+TEST_CASE("The diplomacy parser requires allied_territory_battle_friction and accepts a "
+          "negative one",
+          "[diplomacy][parser][combat]")
+{
+    CHECK_THROWS_AS(
+        ParseEdited_("ac_diplomacy_missing_territory_friction.json",
+                     [](nlohmann::json& j) { j.erase("allied_territory_battle_friction"); }),
+        std::runtime_error);
+    CHECK_THROWS_AS(
+        ParseEdited_("ac_diplomacy_territory_friction_string.json",
+                     [](nlohmann::json& j) { j["allied_territory_battle_friction"] = "-1"; }),
+        std::runtime_error);
+    const DiplomacyConfig_t config = ParseEdited_(
+        "ac_diplomacy_territory_friction_negative.json",
+        [](nlohmann::json& j) { j["allied_territory_battle_friction"] = -3; });
+    CHECK(config.alliedTerritoryBattleFriction == -3);
+}
+
+TEST_CASE("The diplomacy parser rejects missing or negative terraform rainfall keys",
+          "[diplomacy][parser][terraform]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_rainfall_stop.json",
+                                 [](nlohmann::json& j) { j.erase("terraform_rainfall_stop_distance"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_negative_rainfall_stop.json",
+                                 [](nlohmann::json& j) { j["terraform_rainfall_stop_distance"] = -1; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_rainfall_friction.json",
+                                 [](nlohmann::json& j) { j.erase("terraform_rainfall_friction"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_negative_rainfall_friction.json",
+                                 [](nlohmann::json& j) { j["terraform_rainfall_friction"] = -1; }),
+                    std::runtime_error);
+}
+
 TEST_CASE("The diplomacy parser rejects a missing or invalid probe_keep_friction_draw",
           "[diplomacy][parser][probe]")
 {

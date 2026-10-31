@@ -171,7 +171,10 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
     ConfigFields::RejectUnknownKeys(json,
                                     {"statuses", "defensive_obligation_mode", "friction_max",
                                      "blemishes_max", "break_agreement_blemishes",
-                                     "probe_keep_friction_draw", "artifact_capture_friction"},
+                                     "probe_keep_friction_draw", "artifact_capture_friction",
+                                     "allied_territory_battle_friction",
+                                     "terraform_rainfall_friction",
+                                     "terraform_rainfall_stop_distance"},
                                     context);
     const nlohmann::json& rStatuses = RequireObject_(json, "statuses", context);
 
@@ -185,6 +188,12 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
         ConfigFields::RequireIntAtLeast(json, "probe_keep_friction_draw", 1, context);
     config.artifactCaptureFriction =
         ConfigFields::RequireIntAtLeast(json, "artifact_capture_friction", 0, context);
+    config.alliedTerritoryBattleFriction =
+        ConfigFields::RequireInt(json, "allied_territory_battle_friction", context);
+    config.terraformRainfallFriction =
+        ConfigFields::RequireIntAtLeast(json, "terraform_rainfall_friction", 0, context);
+    config.terraformRainfallStopDistance =
+        ConfigFields::RequireIntAtLeast(json, "terraform_rainfall_stop_distance", 0, context);
     config.statuses =
         ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rStatuses, "diplomatic status", context,

@@ -14,6 +14,7 @@ struct ImprovementConfig_t;
 class ImprovementRegistry;
 class Revision;
 class TileChangeListener;
+class Tile;
 
 enum class Rockiness_t
 {
@@ -27,6 +28,13 @@ enum class Moisture_t
     Arid,
     Moist,
     Wet
+};
+
+// A tile whose base moisture a rainfall rerun changed, with its value before the rerun.
+struct MoistureChange_t
+{
+    Tile* pTile = nullptr;
+    Moisture_t before = Moisture_t::Arid;
 };
 
 // Features answered from intrinsic tile state. Names are the terrain.json ids (magic_enum).

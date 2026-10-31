@@ -28,10 +28,6 @@ public:
     virtual std::optional<CombatResult_t> TryInterceptAttack(
         Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) = 0;
 
-    // Nothing happens when no base stands on rDefenderTile.
-    virtual BaseConquestResult_t ResolvePostCombatBaseConquest(
-        Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) = 0;
-
     virtual BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) = 0;
 
     // rVisitor arrived on a tile with on_visit_effects.
@@ -40,8 +36,9 @@ public:
     // A unit's attack, described before it resolved. Called once it has resolved.
     virtual void OnHostileAct(const HostileAct_t& rAct) = 0;
 
-    // A resolved fight in which rAttacker took units (CombatResult_t::capturedUnitIds).
-    virtual void OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult) = 0;
+    // ApplyFightConsequences after a fight or duel on rBattleTile, never a bombard strike.
+    virtual void ApplyFightConsequences(Unit& rAttacker, const Tile& rBattleTile,
+                                        CombatResult_t& rResult) = 0;
 
     // A player unit's move order reached the border of territoryOwner's territory, which its
     // faction may not enter. The order is kept until the player decides.

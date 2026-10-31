@@ -4,6 +4,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ElevationRulesConfig.h"
 #include "game/map/TerrainConfig.h"
+#include "game/map/Tile.h"
 #include "game/units/UnitDomain.h"
 
 #include <optional>
@@ -15,6 +16,7 @@ namespace ac
 {
 
 class BaseManager;
+class Faction;
 class ImprovementRegistry;
 class TerrainOperationRegistry;
 class Tile;
@@ -140,5 +142,13 @@ std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_
 // The sum of the level rolls, capped at Planet's full elevation span.
 int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
                           const ElevationRulesConfig_t& rRules);
+
+// The faction a Former's raise or lower land aggrieves by drying land, from the climate rerun's
+// changes in scan order. A tile that got drier records the faction holding the nearest base of
+// any owner, until a player-controlled one is recorded. The scan stops after the first change
+// within terraform_rainfall_stop_distance of one of rTerraformer's bases. nullopt unless the record
+// is not player-controlled, rTerraformer is, and the two hold neither Pact nor Vendetta.
+std::optional<FactionId_t> RainfallGrievant(const Faction& rTerraformer,
+                                            std::span<const MoistureChange_t> changes);
 
 } // namespace ac

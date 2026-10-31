@@ -557,7 +557,9 @@ save-game serialisation work to exist first. Recorded in
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | What is the next stored friction / blemish total, in range? | `DiplomacyCalculator::NextFriction` / `NextBlemishes` |
 | Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
-| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), and `ApplyProbeAftermath` for a kept agreement. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
+| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `ApplyProbeAftermath` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyAlliedTerritoryFriction` after a melee or duel, and `ApplyRainfallGrievance` after a Former's raise or lower land. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
+| Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner`: the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
+| Whom does terraforming aggrieve? | `RainfallGrievant`: the AI owning the base nearest the last tile the re-run dried, scanning until a change lands within `terraform_rainfall_stop_distance` of the terraformer's bases. A player-controlled owner, once recorded, sticks. Only a player-controlled terraformer, and not across a Pact or Vendetta. |
 | Does a hostile probe keep or break the agreement? | `ResolveProbeAftermath` (`bMayKeepAgreement` / `BreakOutcome_t`). `ApplyProbeAftermath` writes it. |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
@@ -574,9 +576,11 @@ save-game serialisation work to exist first. Recorded in
   probe mission (other than infiltrate or Total Thought Control) is attributed even for a
   Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
-- **Combat, terraform and talk standing.** Atrocity, agreement-break and probe keep-agreement
-  writers are in. Probe frame and the player's excuse dialog, combat `cause_friction`,
-  terraform, and talk gifts are not. Mood and repute captions are UI over the stored integers.
+- **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory and
+  terraform-rainfall writers are in. The player's probe excuse dialog, talk gifts, the +3
+  refused-demand battle friction, and the wants-revenge betrayal that replaces rainfall friction
+  are not ([deviations](../../config/deviations/README.md)). Mood and repute captions are UI
+  over the stored integers.
 - **Probe keep-or-break decision.** Every probe victim keeps its agreement until an AI attitude
   model decides, and the player's excuse dialog is not built; see
   [Probe standing](#probe-standing).

@@ -438,14 +438,17 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile)
     rTile.SetMoisture(static_cast<Moisture_t>(clamped));
 }
 
-void TileEffectsContext::RecomputeClimate()
+std::vector<MoistureChange_t> TileEffectsContext::RecomputeClimate()
 {
     TileChangeDeferral defer;
     RecomputeRivers(m_rWorldMap);
-    for (Tile* pTile : moisture_gen::RecomputeRainfall(m_rWorldMap, m_rMoisture))
+    std::vector<MoistureChange_t> changes =
+        moisture_gen::RecomputeRainfall(m_rWorldMap, m_rMoisture);
+    for (const MoistureChange_t& rChange : changes)
     {
-        RecomputeMoisture(*pTile);
+        RecomputeMoisture(*rChange.pTile);
     }
+    return changes;
 }
 
 void TileEffectsContext::AddOccupantWithEffects(Tile& rTile, const std::string& occupantId)

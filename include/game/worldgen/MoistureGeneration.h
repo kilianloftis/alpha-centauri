@@ -37,8 +37,9 @@ int StubTemperature(int y, int mapHeight);
 
 // Port of Thinker world_rainfall (vanilla 0x5C4470): cloudmass belts, ocean moisture blown
 // east, forest humidity, rain-belt scan, smoothing. Writes base moisture only; call after rivers
-// and landmarks. Returns the tiles whose base moisture changed.
-std::vector<Tile*> RecomputeRainfall(WorldMap& rWorld, const MoistureDecorationConfig_t& rConfig);
+// and landmarks. Returns each base-moisture change in tile-index order, which is world_rainfall's
+// row scan.
+std::vector<MoistureChange_t> RecomputeRainfall(WorldMap& rWorld, const MoistureDecorationConfig_t& rConfig);
 
 } // namespace moisture_gen
 } // namespace ac

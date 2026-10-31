@@ -319,12 +319,13 @@ TEST_CASE("Rainfall on a fixed map reproduces its recorded moisture", "[worldgen
     }
 }
 
-TEST_CASE("Rainfall writes base moisture and reports the tiles it changed", "[worldgen][moisture]")
+TEST_CASE("Rainfall writes base moisture and reports each change with its prior value",
+          "[worldgen][moisture]")
 {
     WorldMap world(40, 24, actest::TestMapRules(), Rainfall_t::Average);
     FillPinnedTerrain_(world);
 
-    const std::vector<Tile*> changed = RecomputeRainfall(world, DefaultMoisture_());
+    const std::vector<MoistureChange_t> changed = RecomputeRainfall(world, DefaultMoisture_());
 
     // Every tile starts arid, so the first run changes exactly the tiles it leaves non-arid.
     std::size_t nonArid = 0;
@@ -338,8 +339,9 @@ TEST_CASE("Rainfall writes base moisture and reports the tiles it changed", "[wo
     }
     CHECK(nonArid > 0);
     CHECK(changed.size() == nonArid);
-    CHECK(std::ranges::all_of(changed, [](const Tile* pTile) {
-        return pTile->GetBaseMoisture() != Moisture_t::Arid;
+    CHECK(std::ranges::all_of(changed, [](const MoistureChange_t& rChange) {
+        return rChange.before == Moisture_t::Arid
+               && rChange.pTile->GetBaseMoisture() != Moisture_t::Arid;
     }));
     CHECK(RecomputeRainfall(world, DefaultMoisture_()).empty());
 }

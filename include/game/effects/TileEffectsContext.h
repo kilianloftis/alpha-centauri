@@ -2,6 +2,7 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/map/Tile.h"
 #include "game/map/TileChangeListener.h"
 #include <span>
 #include <string>
@@ -64,8 +65,9 @@ public:
     void RecomputeMoisture(Tile& rTile);
 
     // SMAC world_climate: rivers, then rainfall into base moisture, then moisture wherever the
-    // base changed. Run after anything that moves elevation, aquifers or river ends.
-    void RecomputeClimate();
+    // base changed. Run after anything that moves elevation, aquifers or river ends. Returns the
+    // rainfall rerun's base-moisture changes.
+    std::vector<MoistureChange_t> RecomputeClimate();
 
     // Adds occupantId, drops improvements that can no longer stay, and recomputes moisture in its
     // radius. Use instead of Tile::AddOccupant.

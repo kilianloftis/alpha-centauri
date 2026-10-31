@@ -48,14 +48,13 @@ public:
 
 private:
     // After a fight or duel, never an intercept or a strike: collateral on rBattleTile when the
-    // defender died there, promotion for the survivor, the report of any capture, and the
-    // last-defender loss of a base there. rBattleTile is read before the fight.
+    // defender died there and promotion for the survivor, then the world's
+    // ApplyFightConsequences. rBattleTile is read before the fight.
     void ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender, const Tile& rBattleTile,
                               CombatResult_t& rResult);
     CombatResult_t FireDuel_(Unit& rAttacker, Unit& rDuelTarget);
     // Strikes never hurt the attacker, so every target is struck.
     std::vector<CombatResult_t> FireStrikes_(Unit& rAttacker, const std::vector<Unit*>& rTargets);
-    void ReportCapture_(const Unit& rAttacker, const CombatResult_t& rResult);
     // Returns the destroyed improvement's id.
     std::string DestroyRandomImprovement_(const Tile& rTile,
                                           const std::vector<std::string>& rCandidates);

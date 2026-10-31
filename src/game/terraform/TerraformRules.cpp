@@ -5,6 +5,8 @@
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/diplomacy/DiplomacyConfig.h"
+#include "game/diplomacy/DiplomacyLedger.h"
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
@@ -601,6 +603,55 @@ SubmergenceOutcome_t ResolveSubmergence(const SubmergedBase_t& rSubmerged, int r
         return SubmergenceOutcome_t{.popLoss = rSubmerged.size - 1, .bDestroyed = false};
     }
     return SubmergenceOutcome_t{.popLoss = rSubmerged.size, .bDestroyed = true};
+}
+
+std::optional<FactionId_t> RainfallGrievant(const Faction& rTerraformer,
+                                            std::span<const MoistureChange_t> changes)
+{
+    if (!rTerraformer.IsPlayerControlled())
+    {
+        return std::nullopt;
+    }
+    const GameState& rGame = CurrentGameState();
+    const int stopDistance = rGame.GetGameData().diplomacyConfig->terraformRainfallStopDistance;
+    const int mapWidth = rGame.GetWorldMap().GetWidth();
+    const auto nearTerraformerBase = [&](const Tile& rTile) {
+        return std::ranges::any_of(rTerraformer.Bases(), [&](const BaseManager& rBase) {
+            return TabletopDiagonalDistance(rTile, rBase.GetTile(), mapWidth) <= stopDistance;
+        });
+    };
+
+    std::optional<FactionId_t> recorded;
+    for (const MoistureChange_t& rChange : changes)
+    {
+        const bool bDrier = rChange.pTile->GetBaseMoisture() < rChange.before;
+        if (bDrier
+            && (!recorded || !rGame.RequireFaction(*recorded).IsPlayerControlled()))
+        {
+            if (const BaseManager* pNearest = rGame.FindNearestBase(*rChange.pTile))
+            {
+                recorded = pNearest->GetFactionId();
+            }
+        }
+        if (nearTerraformerBase(*rChange.pTile))
+        {
+            break;
+        }
+    }
+
+    // TODO: a grievant that wants revenge (DIPLO_WANT_REVENGE) is marked to betray the
+    // terraformer instead (0x4CA3DD); there is no revenge record yet.
+    if (!recorded || rGame.RequireFaction(*recorded).IsPlayerControlled())
+    {
+        return std::nullopt;
+    }
+    const DiplomaticStatus_t status =
+        rGame.GetDiplomacyLedger().GetStatus(rTerraformer.GetFactionId(), *recorded);
+    if (status == DiplomaticStatus_t::Pact || status == DiplomaticStatus_t::Vendetta)
+    {
+        return std::nullopt;
+    }
+    return recorded;
 }
 
 } // namespace ac

@@ -54,6 +54,8 @@ std::optional<CombatResult_t> UnitAttackExecutor::TryAttack(Unit& rAttacker, Uni
         return std::nullopt;
     }
 
+    // The aftermath still reads an attacker the fight destroyed.
+    const auto destructionScope = rAttacker.GetFaction().GetUnitManager().DeferDestruction();
     // Reported once the attack resolves, so a sneak attack's shared-tile evacuation cannot
     // move either side before the blow lands.
     const std::optional<HostileAct_t> act = AttackHostileAct(rAttacker, rDefender);
@@ -102,23 +104,7 @@ void UnitAttackExecutor::ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender,
         Unit& rSurvivor = *survivor == CombatSide_t::Attacker ? rAttacker : rDefender;
         TryPromote(rSurvivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
     }
-    ReportCapture_(rAttacker, rResult);
-    // Combat never moves either side, so capturing an emptied base is a later step onto it. A
-    // native raider spends itself on the raid, so playback must not show it surviving.
-    if (rResult.bDefenderDestroyed
-        && m_rWorld.ResolvePostCombatBaseConquest(rAttacker, rBattleTile, m_rRng).bActorDestroyed)
-    {
-        rResult.bAttackerDestroyed = true;
-    }
-}
-
-void UnitAttackExecutor::ReportCapture_(const Unit& rAttacker, const CombatResult_t& rResult)
-{
-    // Only a surviving attacker takes units.
-    if (!rResult.capturedUnitIds.empty())
-    {
-        m_rWorld.OnCombatCapture(rAttacker, rResult);
-    }
+    m_rWorld.ApplyFightConsequences(rAttacker, rBattleTile, rResult);
 }
 
 std::optional<UnitAttackExecutor::BombardResult_t> UnitAttackExecutor::TryBombard(
@@ -129,6 +115,8 @@ std::optional<UnitAttackExecutor::BombardResult_t> UnitAttackExecutor::TryBombar
         return std::nullopt;
     }
 
+    // The duel's aftermath still reads an attacker the duel destroyed.
+    const auto destructionScope = rAttacker.GetFaction().GetUnitManager().DeferDestruction();
     const std::vector<std::string> improvementTargets = BombardImprovementTargets(rTargetTile);
     const std::vector<HostileAct_t> acts = BombardHostileActs(rAttacker, rTargetTile);
 

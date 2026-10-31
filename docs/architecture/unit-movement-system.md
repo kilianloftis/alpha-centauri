@@ -70,7 +70,7 @@ graph TD
     UnitMutations[UnitMutations<br/>attack cost, spends SingleUse units]
     UnitAttackExecutor --> UnitMutations
     UnitAttackExecutor --> CollateralMutations
-    IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, conquest, capture aftermath]
+    IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, entry conquest, fight consequences]
     GameState[GameState]
     TerritoryEntryMutations[TerritoryEntryMutations<br/>BreakAgreementAndContinue at a forbidden border:<br/>Vendetta and resume]
     TerritoryEntryMutations -->|resume the order| UnitOrderExecutor
@@ -92,7 +92,11 @@ graph TD
     UnitAttackExecutor -->|ctor-injected| IUnitOrderWorld
     GameState -.->|implements| IUnitOrderWorld
     IUnitOrderWorld --> BaseConquestMutations
-    IUnitOrderWorld --> CaptureMutations
+    FightAftermathMutations[FightAftermathMutations<br/>allied-territory friction, capture aftermath,<br/>last-defender conquest]
+    IUnitOrderWorld --> FightAftermathMutations
+    FightAftermathMutations --> DiplomaticStandingMutations
+    FightAftermathMutations --> CaptureMutations
+    FightAftermathMutations --> BaseConquestMutations
 ```
 
 ## MoveCostRules — the single home of entry rules
@@ -274,7 +278,7 @@ rolled against has its order cleared.
 
 **Stack collateral.** After a fight or duel kills the defender, `UnitAttackExecutor` runs collateral on the tile it died on, read before the fight; by then the defender has left it, destroyed or captured onto the attacker's tile. `PlanStackCollateral` decides what happens to each occupant still there and `ApplyStackCollateral` carries it out; the splash is the attacker's `collateral_damage` alone. Each occupant resolves `collateral_susceptibility` (PureMultiplier, seed 1) from its live effects plus `CollectTileEffects` on the tile, and loses `lround(splash * susceptibility)` HP. A result of 0 HP goes through `RemoveDefeatedUnit`. Embarked cargo is not in the stack. A wild native (`IsWildNative`: `IsNativeLife` owned by a `NativeLife` faction) is destroyed outright unless the tile clamp skipped it. `RemoveDefeatedUnit` pays the killer `PlanetPearlsBounty` (NativeRules) for that native and for the defender. A `MaxClamp` that leaves susceptibility at 0 (Base, Bunker) skips that occupant: no HP loss, no wild wipe, no non-combatant removal. `world_rules.json` multiplies air susceptibility by 0; that geometric zero still counts the unit as present, so a wild locust in the open is wiped and a wild worm in a base is not. Reactors Add their collateral tier. Native life designs Add 1. While `non_combatants_destroyed_without_combatant` is in force, a `non_combatant` (Probe Team) is not a combatant: after the splash, `NonCombatantsLeftUnprotected` lists them when every remaining eligible occupant is a non-combatant, and those occupants are destroyed. Removing the world flag leaves the tag and the splash.
 
-**Capture.** A fight can hand units to the attacker instead of destroying them (terranx-map.md "Unit capture in combat"). *Boarding:* before the first round `BoardingThreshold` reads the attacker's `board_chance` and `board_hp_limit` in the combat context (Marine Detachment conditions them on a sea attacker, a sea non-native defender, water and no base); the threshold is `floor(defender starting HP × board_hp_limit)`. In each round the defender loses, before the disengage check, `BoardingRollWon_` wears it down by the round's damage and, once spent, rolls `board_chance` every lost round. A success (`Board_`) runs `CaptureUnits` on `BoardingCapture` (the whole tile, cargo included, damage kept, moves spent, home base by `combat.json`'s `boarding_home_base_min_pop`) and ends the fight with nothing destroyed. *Defeated units:* every unit the attacker kills, the defender in `CombatResolver` or a stackmate in `ApplyStackCollateral`, goes through `RemoveDefeatedUnit`, which pays any Planet Pearls and then captures a `captured_on_defeat` unit (the artifact) onto the attacker's tile, or a carrier there with room, when `DefeatedUnitCapture` allows, and destroys it otherwise; it returns the captured unit's id, or nothing when it destroyed the unit. `CombatResult_t::capturedUnitIds` lists what changed hands, the defender before any stackmates; `UnitAttackExecutor` reports it through `IUnitOrderWorld::OnCombatCapture`, whose `ApplyCombatCaptureAftermath` adds `artifact_capture_friction` and queues a `CaptureNoticeInteraction_t`. `attack_not_hostile` (the artifact off a base) makes `IsHostileAttack` false, so `AttackHostileAct` gives no hostile act to report. Subvert Unit hands its target over through the same `CaptureUnits`, built by `SubvertCapture`.
+**Capture.** A fight can hand units to the attacker instead of destroying them (terranx-map.md "Unit capture in combat"). *Boarding:* before the first round `BoardingThreshold` reads the attacker's `board_chance` and `board_hp_limit` in the combat context (Marine Detachment conditions them on a sea attacker, a sea non-native defender, water and no base); the threshold is `floor(defender starting HP × board_hp_limit)`. In each round the defender loses, before the disengage check, `BoardingRollWon_` wears it down by the round's damage and, once spent, rolls `board_chance` every lost round. A success (`Board_`) runs `CaptureUnits` on `BoardingCapture` (the whole tile, cargo included, damage kept, moves spent, home base by `combat.json`'s `boarding_home_base_min_pop`) and ends the fight with nothing destroyed. *Defeated units:* every unit the attacker kills, the defender in `CombatResolver` or a stackmate in `ApplyStackCollateral`, goes through `RemoveDefeatedUnit`, which pays any Planet Pearls and then captures a `captured_on_defeat` unit (the artifact) onto the attacker's tile, or a carrier there with room, when `DefeatedUnitCapture` allows, and destroys it otherwise; it returns the captured unit's id, or nothing when it destroyed the unit. `CombatResult_t::capturedUnitIds` lists what changed hands, the defender before any stackmates; `UnitAttackExecutor` hands the result to `IUnitOrderWorld::ApplyFightConsequences`, whose `ApplyCombatCaptureAftermath` adds `artifact_capture_friction` and queues a `CaptureNoticeInteraction_t`. `attack_not_hostile` (the artifact off a base) makes `IsHostileAttack` false, so `AttackHostileAct` gives no hostile act to report. Subvert Unit hands its target over through the same `CaptureUnits`, built by `SubvertCapture`.
 
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 
@@ -383,7 +387,8 @@ Two entry points, reached from `UnitAttackExecutor` (after combat) and `UnitMove
 entry):
 
 - `ResolvePostCombatBaseConquest` — after a fight or duel kills the last garrison on a base
-  tile, as part of `ApplyFightAftermath_` and before the attack's cost, so a single-use attacker
+  tile, as the last step of `ApplyFightConsequences` (`FightAftermathMutations`, after collateral
+  and promotion) and before the attack's cost, so a single-use attacker
   (a missile) still costs the base its population (terranx-map.md "Last defender lost"). Applies
   last-defender population loss (Additive `LastDefenderPopLoss`; `base_conquest.json` Adds the
   baseline, Perimeter Defense and Citizen difficulty `MaxClamp` 0 cancel it), then a

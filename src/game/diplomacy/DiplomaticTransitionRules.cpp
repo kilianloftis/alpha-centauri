@@ -11,6 +11,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
 #include "game/map/TerritoryMap.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/visibility/VisibilityRules.h"
@@ -173,6 +174,26 @@ int AgreementBreakBlemishes(DiplomaticStatus_t from)
         return 0;
     }
     return CurrentGameState().GetGameData().diplomacyConfig->breakAgreementBlemishes;
+}
+
+std::optional<FactionId_t> AlliedTerritoryOwner(FactionId_t attacker, FactionId_t defender,
+                                                const Tile& rBattleTile)
+{
+    // TODO: SMAC also floors the attacker's gifts toward the owner at 1 (0x50A19C); there is no
+    // gifts record yet. Its other territory site, +3 against a faction that refused the
+    // defender's demand to attack (0x5078BB), waits on talk.
+    const GameState& rGame = CurrentGameState();
+    const FactionId_t owner = rGame.GetWorldMap().GetTerritory().GetOwner(rBattleTile);
+    if (owner == k_NoFactionOwner || owner == attacker || owner == defender)
+    {
+        return std::nullopt;
+    }
+    const DiplomacyLedger& rLedger = rGame.GetDiplomacyLedger();
+    if (!rLedger.HasVendetta(owner, defender) || !IsAgreement(rLedger.GetStatus(owner, attacker)))
+    {
+        return std::nullopt;
+    }
+    return owner;
 }
 
 } // namespace ac

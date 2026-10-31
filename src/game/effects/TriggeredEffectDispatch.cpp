@@ -11,6 +11,7 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/base/RebelMutations.h"
 #include "game/research/ResearchManager.h"
@@ -373,11 +374,13 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
     const int delta = rConfig.bRaise ? roll : -roll;
     const int floor =
         rConfig.bRaise ? rRules.minElevationMeters : FormerLowerFloorMeters(domain, rRules);
-    if (!ApplyElevationDelta(*rCtx.pTile, delta, rRules, floor, rRules.maxElevationMeters,
-                             rCtx.rGameState))
+    const std::optional<std::vector<MoistureChange_t>> changes = ApplyElevationDelta(
+        *rCtx.pTile, delta, rRules, floor, rRules.maxElevationMeters, rCtx.rGameState);
+    if (!changes)
     {
         return false;
     }
+    ApplyRainfallGrievance(rCtx.rGameState, rCtx.pUnit->GetFaction(), *changes);
     rOut.push_back(ElevationChanged_t{delta});
     return true;
 }

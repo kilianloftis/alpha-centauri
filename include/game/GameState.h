@@ -135,14 +135,16 @@ public:
     // Base whose center tile is (tileX, tileY), or nullptr if none.
     BaseManager* FindBaseAt(int tileX, int tileY) override;
     const BaseManager* FindBaseAt(int tileX, int tileY) const;
+    // Any faction's base closest to rTile by TabletopDiagonalDistance (the binary's base_find
+    // and vector_dist), then the lower BaseId. nullptr when no base exists.
+    const BaseManager* FindNearestBase(const Tile& rTile) const;
 
     std::optional<CombatResult_t> TryInterceptAttack(
         Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) override;
-    BaseConquestResult_t ResolvePostCombatBaseConquest(
-        Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng) override;
     BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng) override;
     void OnHostileAct(const HostileAct_t& rAct) override;
-    void OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult) override;
+    void ApplyFightConsequences(Unit& rAttacker, const Tile& rBattleTile,
+                                CombatResult_t& rResult) override;
     void OnImprovementVisited(Unit& rVisitor) override;
     void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
     bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,

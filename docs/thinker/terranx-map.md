@@ -1056,14 +1056,44 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
   `0x5A5791` (delta `0..3`) when the agreement is kept. A broken agreement
   blemishes only through `double_cross` (`action_id >= 6`). Successful frame
   writes Vendetta on the implicated faction and skips both.
-- `battle_fight_2` `0x506AF0`: friction +3 (`0x5078BB`), −1 (`0x50A1AB`), +5
-  (`0x50B1EF`).
-- `action_terraform` `0x4C9B00`: friction +5 at `0x4CA3EB`.
+- `battle_fight_2` `0x506AF0`, three sites:
+  - **+3 (`0x5078BB`), refused demand.** Right after `act_of_aggression(atk, def)`, for every
+    non-probe attack on a non-artifact, each faction `i` (not either side) that owns the
+    **attacker's** tile (`MAP+7`): when atk→i holds a Pact, def→i has a commlink and no Vendetta,
+    and `def.mil_strength_1 > i.mil_strength_1` (`+0x1060`), `treaty_on(i, def, 0x2000)` (want
+    to talk), then `cause_friction(def, i, 3)` only if i→def carries `0x800000`. That flag is
+    set only by `communicate`'s `treaty_on(ai, player, 0x800000)` (`0x551368`, `0x55172D`,
+    `0x551CF9`) on the refuse branch of `#DEMANDATTACK*`, and `treaty_on` clears it on any status
+    change. Thinker's `mod_battle_fight_2` matches.
+  - **−1 (`0x50A1AB`), allied ground.** The territory owner `o` of the **defender's** tile
+    (`tx, ty`), land only (`alt >= 3`), not either side, with o→def at Vendetta and o→atk
+    holding Truce/Treaty/Pact: `diplo_gifts[atk][o]` is raised to at least 1 (`0x50A19C`), then
+    `cause_friction(o, atk, -1)`. Runs before kills and captures (`battle_kill` `0x50A8F4`),
+    whether or not the attacker survives. A bombard strike returns first (`0x508B4F`), as does a
+    `CT_WEAPON_ONLY` single round between a sea and a non-sea unit that leaves both alive
+    (`0x50A0F8`–`0x50A118`). An unowned tile reads `Faction[-1]` (no bounds check at
+    `0x50A147`); Thinker adds `sq->owner >= 0`.
+  - **+5 (`0x50B1EF`), relics.** See "Alien artifacts".
+- `action_terraform` `0x4C9B00`: **+5 (`0x4CA3EB`), rainfall.** Only for condenser, raise land
+  and lower land (items `0xC`, `0x10`, `0x11`), which re-run `world_rainfall`. While `CurrentTurn`
+  is non-zero, the scan keeps a grievant in `0x9B22DC` (`0x5C4DE6`–`0x5C4E36`): it walks changed
+  tiles in scan order and stops for good once `0x9B22E0` is set (the first changed tile within 2
+  of a `CurrentPlayerFaction` base, that tile still examined). A tile that got **drier** (old >
+  new), while the record is unset or AI, records the faction of `base_find(x, y)`: the nearest
+  base of any faction, no limit, by `vector_dist`, first base index on ties (`jg` at
+  `0x4E3C22`). A human record is never replaced. `action_terraform` then acts when the record
+  `v` is AI, the terraformer is human, and terraformer→v holds neither Pact nor Vendetta
+  (`test 0x11`, `0x4CA3AD`); no commlink is needed. v→terraformer wanting revenge (`0x20`) gets
+  `set_treaty(v, terraformer, SHALL_BETRAY, 1)` (`0x4CA3DD`); otherwise
+  `cause_friction(v, terraformer, 5)`. Thinker's `action_terraform` rewrite drops both (its
+  TERRAYOURS comment).
 - `communicate` `0x54FFD0`: friction −1/−2/+1 and computed gift deltas; can
-  `dec` blemishes when count > 1 (`0x557A99`).
+  `dec` blemishes when count > 1 (`0x557A99`). Refusing `#DEMANDATTACK*` while the pair holds a
+  Pact adds +4 **inline** (`0x551C35`–`0x551C4E`, and the cached `DiploFriction` at `0x551C65`),
+  outside `cause_friction`.
 - `setup_player` `0x5B0E00`: zeros blemishes and `diplo_reputation` (`0x5B1210`).
 
-No per-turn friction decay among the 19 `cause_friction` calls.
+No per-turn friction decay among the 19 `cause_friction` calls or the inline write above.
 
 ### `planet_busting` (`0x500B60`)
 

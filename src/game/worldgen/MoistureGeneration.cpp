@@ -509,15 +509,16 @@ std::vector<Moisture_t> BaseMoistures_(const WorldMap& rWorld)
     return moistures;
 }
 
-std::vector<Tile*> ChangedSince_(const WorldMap& rWorld, const std::vector<Moisture_t>& rBefore)
+std::vector<MoistureChange_t> ChangedSince_(const WorldMap& rWorld,
+                                            const std::vector<Moisture_t>& rBefore)
 {
-    std::vector<Tile*> changed;
+    std::vector<MoistureChange_t> changed;
     const std::span<const std::unique_ptr<Tile>> tiles = rWorld.GetTiles();
     for (std::size_t i = 0; i < tiles.size(); ++i)
     {
         if (tiles[i]->GetBaseMoisture() != rBefore[i])
         {
-            changed.push_back(tiles[i].get());
+            changed.push_back(MoistureChange_t{tiles[i].get(), rBefore[i]});
         }
     }
     return changed;
@@ -525,7 +526,8 @@ std::vector<Tile*> ChangedSince_(const WorldMap& rWorld, const std::vector<Moist
 
 } // namespace
 
-std::vector<Tile*> RecomputeRainfall(WorldMap& rWorld, const MoistureDecorationConfig_t& rConfig)
+std::vector<MoistureChange_t> RecomputeRainfall(WorldMap& rWorld,
+                                                const MoistureDecorationConfig_t& rConfig)
 {
     const std::vector<Moisture_t> before = BaseMoistures_(rWorld);
     const int cloudCover = CloudCover_(rWorld.GetRainfall());

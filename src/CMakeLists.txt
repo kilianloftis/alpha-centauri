@@ -164,6 +164,7 @@ add_library(ac-core STATIC
     game/combat/CombatConfigParser.cpp
     game/combat/CombatResolver.cpp
     game/combat/CombatRules.cpp
+    game/combat/FightAftermathMutations.cpp
     game/combat/CollateralMutations.cpp
     game/combat/CollateralRules.cpp
     game/combat/MoraleConfig.cpp

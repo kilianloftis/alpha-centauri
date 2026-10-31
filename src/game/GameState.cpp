@@ -33,7 +33,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/base/BaseConquestMutations.h"
-#include "game/combat/CaptureMutations.h"
+#include "game/combat/FightAftermathMutations.h"
 #include "game/combat/InterceptMutations.h"
 #include "game/GameDataContext.h"
 #include "game/council/CouncilVoteExecutor.h"
@@ -49,9 +49,11 @@
 #include "game/movement/StepEvaluator.h"
 #include "game/probes/MindControlLedger.h"
 #include "game/world-events/WorldEventTracker.h"
+#include "game/map/MapUtils.h"
 #include "lib/EventBus.h"
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <random>
 #include <stdexcept>
 
@@ -652,16 +654,31 @@ const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
     return nullptr;
 }
 
+const BaseManager* GameState::FindNearestBase(const Tile& rTile) const
+{
+    const int mapWidth = GetWorldMap().GetWidth();
+    const BaseManager* pNearest = nullptr;
+    int nearest = std::numeric_limits<int>::max();
+    for (const Faction& rFaction : Factions())
+    {
+        for (const BaseManager& rBase : rFaction.Bases())
+        {
+            const int distance = TabletopDiagonalDistance(rTile, rBase.GetTile(), mapWidth);
+            if (distance < nearest
+                || (distance == nearest && rBase.GetBaseId() < pNearest->GetBaseId()))
+            {
+                nearest = distance;
+                pNearest = &rBase;
+            }
+        }
+    }
+    return pNearest;
+}
+
 std::optional<CombatResult_t> GameState::TryInterceptAttack(
     Unit& rAttacker, Unit& rDefender, std::mt19937& rRng)
 {
     return ac::TryInterceptAttack(*this, rAttacker, rDefender, rRng);
-}
-
-BaseConquestResult_t GameState::ResolvePostCombatBaseConquest(
-    Unit& rAttacker, const Tile& rDefenderTile, std::mt19937& rRng)
-{
-    return ac::ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *this, rRng);
 }
 
 BaseConquestResult_t GameState::ResolveBaseEntryConquest(Unit& rMover, std::mt19937& rRng)
@@ -674,9 +691,10 @@ void GameState::OnHostileAct(const HostileAct_t& rAct)
     ApplyHostileAct(*this, rAct);
 }
 
-void GameState::OnCombatCapture(const Unit& rAttacker, const CombatResult_t& rResult)
+void GameState::ApplyFightConsequences(Unit& rAttacker, const Tile& rBattleTile,
+                                       CombatResult_t& rResult)
 {
-    ApplyCombatCaptureAftermath(*this, rAttacker, rResult);
+    ac::ApplyFightConsequences(*this, rAttacker, rBattleTile, rResult);
 }
 
 void GameState::OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner)

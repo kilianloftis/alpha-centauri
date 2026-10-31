@@ -57,6 +57,15 @@ struct DiplomacyConfig_t
     int probeKeepFrictionDraw = 0;
     // Friction an AI victim outside Vendetta gains toward a faction that captures its artifacts.
     int artifactCaptureFriction = 0;
+    // Friction a faction gains toward an attacker that fights its Vendetta enemy in its territory
+    // while the two hold an agreement. Negative: the attacker earns goodwill.
+    int alliedTerritoryBattleFriction = 0;
+    // Friction an AI faction gains toward a human whose Former's raise or lower land dried the
+    // land around its base.
+    int terraformRainfallFriction = 0;
+    // The grievant scan stops after the first moisture change within this distance of one of the
+    // terraformer's bases.
+    int terraformRainfallStopDistance = 0;
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

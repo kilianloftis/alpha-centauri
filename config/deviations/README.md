@@ -157,7 +157,52 @@ absent.
   There is no eastward carry and no smoothing spill.
 - **Where:** `Condenser` in `config/improvements.json`; `TileEffectsContext::RecomputeMoisture`.
 - **Missing:** the original version (a condenser as a `RecomputeRainfall` input, re-run on
-  build and removal) and a switch.
+  build and removal, which also lets a condenser's rerun aggrieve an AI through
+  `RainfallGrievant`) and a switch.
+
+### Wants-revenge terraform betrayal
+
+- **Original:** a rainfall grievant that wants revenge on the terraformer (`DIPLO_WANT_REVENGE`)
+  is marked to betray it (`SHALL_BETRAY`) instead of gaining +5 friction ("Integrity / friction
+  writers", `action_terraform`).
+- **Ours:** we keep no revenge record, so the grievant always gains
+  `terraform_rainfall_friction`. TODO at `RainfallGrievant`.
+- **Where:** `RainfallGrievant` (`TerraformRules`).
+- **Missing:** a revenge record, a betrayal flag, and the branch on them.
+
+### Refused-demand battle friction
+
+- **Original:** a defender stronger than the owner of the attacker's tile, which is the
+  attacker's Pact partner and refused the defender's `#DEMANDATTACK`, gains +3 friction toward
+  that owner ("Integrity / friction writers", `battle_fight_2`).
+- **Ours:** not written. TODO at `AlliedTerritoryOwner`.
+- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`).
+- **Missing:** talk's `#DEMANDATTACK` refusal and its flag, a military-strength metric, and the
+  writer.
+
+### Allied-territory friction on an unowned tile `[Bug]` `[Thinker]`
+
+- **Original:** the allied −1 reads `Faction[-1]` when the defender's tile has no owner
+  (no bounds check at `0x50A147`; "Integrity / friction writers", `battle_fight_2`).
+- **Thinker:** adds `sq->owner >= 0` ("Added owner bounds checking").
+- **Ours:** as Thinker: `AlliedTerritoryOwner` is nullopt for an unowned tile.
+- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`).
+- **Missing:** none playable: the original is an out-of-bounds read with no defined result, so
+  this stays here only to record it.
+
+### Allied-territory friction from naval and air combat `[Ours]`
+
+- **Original:** the allied −1 is land only (`alt >= 3`), so a fight on an ally's ocean
+  territory earns nothing, and neither does an air fight over it. A `CT_WEAPON_ONLY` single
+  round between a sea and a non-sea unit that leaves both alive also returns first
+  ("Integrity / friction writers", `battle_fight_2`).
+- **Ours:** any tile in the owner's territory counts, land or water, so naval and air fights
+  there earn the goodwill too, and so does every melee or duel that reaches the aftermath,
+  whatever the units' domains. Defending an ally's coast is the same service as defending its
+  land.
+- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`);
+  `allied_territory_battle_friction` in `config/diplomacy.json`.
+- **Missing:** the original land-only version and a switch.
 
 ### Disengage is a chance roll for either side `[Ours]`
 
@@ -259,14 +304,16 @@ absent.
   defender-only version. That version must settle the captured ship sharing a tile with its
   former owner's units, which the stacking rules do not allow between enemies.
 
-### Nearest base by Chebyshev distance
+### Subvert Unit re-homes by Chebyshev distance
 
-- **Original:** boarding re-homes to `base_find`'s nearest base and Subvert Unit to
-  `base_find_2`'s ("Unit capture in combat"); their distance measure is not mapped.
-- **Ours:** wrap-aware Chebyshev distance (`Faction::FindNearestBase`).
-- **Where:** `BoardingCapture` and `SubvertCapture` (`CaptureRules`).
-- **Missing:** confirm `base_find`'s distance in the binary; if it differs, the original version
-  and a switch.
+- **Original:** Subvert Unit re-homes to `base_find_2`'s nearest base of the actor ("Unit capture
+  in combat"). `base_find_2` (`0x4E3C60`) measures like `base_find` (`0x4E3B80`): the binary's
+  `vector_dist`, first base index on ties ("Integrity / friction writers", `action_terraform`).
+- **Ours:** wrap-aware Chebyshev distance (`Faction::FindNearestBase`). Boarding already uses
+  `GameState::FindNearestBase`, which matches `base_find`.
+- **Where:** `SubvertCapture` (`CaptureRules`).
+- **Missing:** the original version (`TabletopDiagonalDistance`, lower `BaseId` on ties) and a
+  switch.
 
 ### Sweep existing docs for unlisted deviations
 
@@ -311,6 +358,8 @@ it behind a switch turns the line into a TODO entry.
   `prb_state` positive after the framed faction's Vendetta, so the flop also writes the
   successful frame's Vendetta and skips keep-or-break.
 
+- **Terraform rainfall friction** ("Integrity / friction writers", `action_terraform`):
+  Thinker's `action_terraform` rewrite drops both the +5 and the wants-revenge betrayal.
 - **A contacted faction with no agreement is asked "Pronounce Vendetta!"** ("`break_treaty`"):
   Thinker's `battle_fight_2` passes Truce instead of Commlink (`Fix:`), so it attacks with no
   prompt.

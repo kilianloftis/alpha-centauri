@@ -10,7 +10,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
-#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/TransportRules.h"
@@ -19,7 +18,6 @@
 #include "game/units/Unit.h"
 
 #include <cmath>
-#include <limits>
 
 namespace ac
 {
@@ -34,30 +32,6 @@ EffectContext_t AttackerContext_(const Unit& rAttacker, const Unit& rDefender)
     ctx.pAttacker = &rAttacker;
     ctx.pDefender = &rDefender;
     return ctx;
-}
-
-// TODO: SMAC's base_find measures with its own map distance; this is Chebyshev.
-const BaseManager* NearestBaseOfAnyOwner_(const Tile& rTile)
-{
-    const GameState& rGame = CurrentGameState();
-    const int mapWidth = rGame.GetWorldMap().GetWidth();
-    const BaseManager* pNearest = nullptr;
-    int nearest = std::numeric_limits<int>::max();
-    for (const Faction& rFaction : rGame.Factions())
-    {
-        const BaseManager* pBase = rFaction.FindNearestBase(rTile);
-        if (pBase == nullptr)
-        {
-            continue;
-        }
-        const int distance = ChebyshevDistance(rTile, pBase->GetTile(), mapWidth);
-        if (distance < nearest)
-        {
-            nearest = distance;
-            pNearest = pBase;
-        }
-    }
-    return pNearest;
 }
 
 bool HoldsHomeBasePopulation_(const BaseManager& rBase)
@@ -75,7 +49,7 @@ bool MayTakeOnDefeat_(const Unit& rAttacker, const Unit& rDefeated)
 
 std::optional<BaseId_t> BoardingHomeBase_(FactionId_t captorId, const Tile& rTile)
 {
-    const BaseManager* pBase = NearestBaseOfAnyOwner_(rTile);
+    const BaseManager* pBase = CurrentGameState().FindNearestBase(rTile);
     if (pBase == nullptr || pBase->GetFactionId() != captorId || !HoldsHomeBasePopulation_(*pBase))
     {
         return std::nullopt;
