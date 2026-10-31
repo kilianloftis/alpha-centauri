@@ -23,6 +23,7 @@ class GameStateScope;
 class EventBridge;
 struct GameDataContext;
 class HotkeyConfig;
+class StandingCaptions;
 class ViewFactory;
 class SpriteLibrary;
 class MapRenderer;
@@ -103,6 +104,7 @@ private:
     std::unique_ptr<EventBridge> m_eventBridge;
     // Before the views: WorldView and ViewFactory borrow this for the session.
     std::unique_ptr<HotkeyConfig> m_pHotkeys;
+    std::unique_ptr<StandingCaptions> m_pStandingCaptions;
     // Before the views for the same reason; built once the UI style is loaded.
     std::unique_ptr<MapRenderer> m_pMapRenderer;
     std::unique_ptr<ViewFactory> m_viewFactory;

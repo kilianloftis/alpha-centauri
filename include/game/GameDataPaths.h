@@ -43,6 +43,7 @@ struct GameDataPaths
     std::string councilProposals = "config/council/proposals.json";
     std::string councilRules = "config/council/rules.json";
     std::string hotkeys = "config/ui/hotkeys.json";
+    std::string standingCaptions = "config/ui/standing_captions.json";
     std::string difficulty = "config/difficulty.json";
     std::string policeRules = "config/police_rules.json";
     std::string worldRules = "config/world_rules.json";

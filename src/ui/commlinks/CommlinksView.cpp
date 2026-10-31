@@ -21,6 +21,7 @@ namespace ac
 
 CommlinksView::CommlinksView(
     GameState& rGameState,
+    const StandingCaptions& rStandingCaptions,
     WindowLayout_t layout,
     std::function<void()> onOpenCouncilVote
 )
@@ -29,7 +30,8 @@ CommlinksView::CommlinksView(
     , m_onOpenCouncilVote(std::move(onOpenCouncilVote))
 {
     const WindowLayout_t panelLayout = GetPopupLayout();
-    m_elements.push_back(std::make_unique<CommlinksPanel>(m_rGameState, panelLayout));
+    m_elements.push_back(
+        std::make_unique<CommlinksPanel>(m_rGameState, rStandingCaptions, panelLayout));
     const WindowLayout_t buttonLayout =
         ResolveLayout(panelLayout, Style().commlinksPanel.councilButtonLayout);
     m_elements.push_back(std::make_unique<CouncilButton>(

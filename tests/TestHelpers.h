@@ -77,6 +77,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.councilProposals = FixturePath("council/proposals.json");
     paths.councilRules = FixturePath("council/rules.json");
     paths.hotkeys = FixturePath("hotkeys.json");
+    paths.standingCaptions = FixturePath("standing_captions.json");
     paths.difficulty = FixturePath("difficulty.json");
     paths.policeRules = FixturePath("police_rules.json");
     paths.worldRules = FixturePath("world_rules.json");

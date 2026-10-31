@@ -310,6 +310,10 @@ struct CommlinksPanelStyle_t
     float rowHeight{};
     float rowPadX{};
     float statusPadX{};
+    float integrityPadY{};
+    float columnLabelPadY{};
+    float moodPadX{};
+    float reputePadX{};
     RatioLayout_t councilButtonLayout{};
 };
 

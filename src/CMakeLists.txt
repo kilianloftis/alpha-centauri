@@ -392,6 +392,7 @@ add_library(ac-ui STATIC
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
     ui/HotkeyConfig.cpp
+    ui/StandingCaptions.cpp
     ui/world/CombatPresentation.cpp
     ui/world/CombatView.cpp
     ui/world/MapViewport.cpp

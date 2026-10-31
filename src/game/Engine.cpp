@@ -55,6 +55,7 @@
 #include "game/worldgen/WorldGenerator.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "ui/SpriteLibrary.h"
+#include "ui/StandingCaptions.h"
 #include "ui/MapRenderer.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
@@ -656,12 +657,15 @@ void Engine::InitializeUi_()
         m_gameDataContext->paths.hotkeys,
         *m_gameDataContext->improvementRegistry,
         *m_gameDataContext->terrainOperationRegistry));
+    m_pStandingCaptions = std::make_unique<StandingCaptions>(StandingCaptions::Load(
+        m_gameDataContext->paths.standingCaptions, *m_gameDataContext->diplomacyConfig));
     m_pMapRenderer = std::make_unique<MapRenderer>(*m_pSprites, *m_pGameState, Style().tileRenderer,
                                                    Style().mapRenderer);
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_pGameState,
         *m_gameDataContext,
         *m_pHotkeys,
+        *m_pStandingCaptions,
         *m_pGraphics,
         *m_pMapRenderer,
         *m_pSprites,

@@ -1003,6 +1003,18 @@ draw string: `DiploPop_draw_portrait` `0x43FA34`, `InfoWin` text `0x456DFC`,
 `#REPUTE` (`0x946A30`, eight names) is the same pattern: portrait `0x43F971`
 and InfoWin `0x457067` only.
 
+- **Portrait** (`DiploPop_draw_portrait` `0x43F790`): mood from the stored
+  `diplo_friction[rival][CurrentPlayerFaction]` (`0x43FA1E`–`0x43FA2C`), the rival's friction
+  toward the player. Raw: only `diplomacy_caption` floors at Vendetta. Labels `REPUTATION`
+  (label 932, `0x43F916`) before the rival's `#REPUTE` (`0x43F955`) and `MOOD` (label 933,
+  `0x43F9E8`) before its mood.
+- **InfoWin** (`InfoWin_setup_text` `0x456300`): the line type at `0x456D16` draws the cached
+  rival's (`DiploFrictionFactionID` `0x93FAC0`) mood from `DiploFriction`. The line type at
+  `0x456F13` draws `CurrentPlayerFaction`'s own title and `Integrity` (label 222) with
+  `clamp(integrity_blemishes[player], 0, 7)` (`0x457049`–`0x457064`).
+- **Intel report** (`ReportWin_draw_intel` `0x4A2210`): `diplomacy_check` (`0x53A980`) at
+  `0x4A26CE`, then `MOOD` from the cached `DiploFriction` (`0x4A2749`).
+
 ### `reputation` (`0x53A100`)
 
 `int(faction, other)` = `clamp(integrity_blemishes - diplo_gifts[other], 0, 99)`.

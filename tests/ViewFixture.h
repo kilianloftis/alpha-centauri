@@ -15,6 +15,7 @@
 #include "game/units/UnitSlotRegistry.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/MapRenderer.h"
+#include "ui/StandingCaptions.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
 
@@ -37,6 +38,7 @@ struct ViewFixture : WorldFixture
     RecordingGraphics graphics;
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
+    std::unique_ptr<ac::StandingCaptions> pStandingCaptions;
     std::unique_ptr<SpriteRig> pSprites;
     std::unique_ptr<ac::MapRenderer> pMapRenderer;
     std::unique_ptr<ac::ViewFactory> pFactory;
@@ -90,13 +92,16 @@ struct ViewFixture : WorldFixture
         pHotkeys = std::make_unique<ac::HotkeyConfig>(ac::HotkeyConfig::Load(
             dataContext.paths.hotkeys, *dataContext.improvementRegistry,
             *dataContext.terrainOperationRegistry));
+        dataContext.paths.standingCaptions = FixturePath("standing_captions.json");
+        pStandingCaptions = std::make_unique<ac::StandingCaptions>(ac::StandingCaptions::Load(
+            dataContext.paths.standingCaptions, *dataContext.diplomacyConfig));
 
         pSprites = std::make_unique<SpriteRig>(graphics, ac::Style().tileRenderer);
         pMapRenderer = std::make_unique<ac::MapRenderer>(
             pSprites->sprites, state, ac::Style().tileRenderer, ac::Style().mapRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            state, dataContext, *pHotkeys, graphics, *pMapRenderer, pSprites->sprites,
-            settings);
+            state, dataContext, *pHotkeys, *pStandingCaptions, graphics, *pMapRenderer,
+            pSprites->sprites, settings);
     }
 
     ~ViewFixture()

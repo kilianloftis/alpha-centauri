@@ -9,6 +9,7 @@ namespace ac
 {
 
 class GameState;
+class StandingCaptions;
 struct CouncilProposalConfig_t;
 
 class CommlinksView : public IGameView
@@ -16,6 +17,7 @@ class CommlinksView : public IGameView
 public:
     CommlinksView(
         GameState& rGameState,
+        const StandingCaptions& rStandingCaptions,
         WindowLayout_t layout,
         std::function<void()> onOpenCouncilVote
     );

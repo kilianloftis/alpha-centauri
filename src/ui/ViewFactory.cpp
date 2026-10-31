@@ -24,6 +24,7 @@ ViewFactory::ViewFactory(
     GameState& rGameState,
     const GameDataContext& rGameDataContext,
     const HotkeyConfig& rHotkeys,
+    const StandingCaptions& rStandingCaptions,
     Graphics& rGraphics,
     MapRenderer& rMapRenderer,
     SpriteLibrary& rSprites,
@@ -32,6 +33,7 @@ ViewFactory::ViewFactory(
     : m_rGameState(rGameState)
     , m_rGameDataContext(rGameDataContext)
     , m_rHotkeys(rHotkeys)
+    , m_rStandingCaptions(rStandingCaptions)
     , m_rGraphics(rGraphics)
     , m_rMapRenderer(rMapRenderer)
     , m_rSprites(rSprites)
@@ -114,7 +116,7 @@ std::unique_ptr<CommlinksView> ViewFactory::CreateCommlinksView(
 ) const
 {
     return std::make_unique<CommlinksView>(
-        m_rGameState, layout, std::move(onOpenCouncilVote));
+        m_rGameState, m_rStandingCaptions, layout, std::move(onOpenCouncilVote));
 }
 
 std::unique_ptr<CouncilVoteView> ViewFactory::CreateCouncilVoteView(

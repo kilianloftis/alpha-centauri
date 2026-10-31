@@ -3,6 +3,7 @@
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "graphics/Graphics.h"
+#include "ui/StandingCaptions.h"
 #include "ui/style/UiStyle.h"
 
 #include <string>
@@ -10,31 +11,54 @@
 namespace ac
 {
 
-CommlinksPanel::CommlinksPanel(GameState& rGameState, WindowLayout_t layout)
+CommlinksPanel::CommlinksPanel(GameState& rGameState, const StandingCaptions& rCaptions,
+                               WindowLayout_t layout)
     : UIElement(layout)
     , m_rGameState(rGameState)
+    , m_rCaptions(rCaptions)
 {
 }
 
 void CommlinksPanel::Render(Graphics& rGraphics)
 {
-    const auto& style = Style().commlinksPanel;
+    const FactionId_t playerId = m_rGameState.GetPlayerFaction().GetFactionId();
+    DrawFrame_(rGraphics);
+    DrawIntegrity_(rGraphics, playerId);
+    DrawColumnLabels_(rGraphics);
+    DrawRows_(rGraphics, playerId);
+}
 
+void CommlinksPanel::DrawFrame_(Graphics& rGraphics) const
+{
+    const auto& style = Style().commlinksPanel;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
         style.borderColor, Style().outline.width);
+    DrawAt_(rGraphics, "Commlinks", style.titlePadX, style.titlePadY, style.titleFontSize,
+            style.titleColor);
+}
 
-    rGraphics.DrawText(
-        "Commlinks",
-        m_layout.x + style.titlePadX * m_layout.width,
-        m_layout.y + style.titlePadY * m_layout.height,
-        style.titleFontSize,
-        style.titleColor);
+void CommlinksPanel::DrawIntegrity_(Graphics& rGraphics, FactionId_t playerId) const
+{
+    const auto& style = Style().commlinksPanel;
+    const int blemishes = m_rGameState.GetDiplomacyLedger().GetBlemishes(playerId);
+    DrawAt_(rGraphics, "Integrity: " + m_rCaptions.Repute(blemishes), style.titlePadX,
+            style.integrityPadY, style.rowFontSize, style.statusColor);
+}
 
+void CommlinksPanel::DrawColumnLabels_(Graphics& rGraphics) const
+{
+    const auto& style = Style().commlinksPanel;
+    DrawAt_(rGraphics, "Mood", style.moodPadX, style.columnLabelPadY, style.rowFontSize,
+            style.titleColor);
+    DrawAt_(rGraphics, "Reputation", style.reputePadX, style.columnLabelPadY, style.rowFontSize,
+            style.titleColor);
+}
+
+void CommlinksPanel::DrawRows_(Graphics& rGraphics, FactionId_t playerId) const
+{
     const DiplomacyLedger& rLedger = m_rGameState.GetDiplomacyLedger();
-    const FactionId_t playerId = m_rGameState.GetPlayerFaction().GetFactionId();
     int row = 0;
-
     for (const Faction& rFaction : m_rGameState.Factions())
     {
         const FactionId_t otherId = rFaction.GetFactionId();
@@ -42,30 +66,41 @@ void CommlinksPanel::Render(Graphics& rGraphics)
         {
             continue;
         }
-
-        const float rowY = m_layout.y + (style.rowStartY + static_cast<float>(row) * style.rowHeight) * m_layout.height;
-        const std::string& rName = rFaction.GetDefinition().identity.name;
-        const DiplomaticStatus_t status = rLedger.GetStatus(playerId, otherId);
-
-        rGraphics.DrawText(
-            rName,
-            m_layout.x + style.rowPadX * m_layout.width,
-            rowY,
-            style.rowFontSize,
-            style.factionNameColor);
-
-        if (status != DiplomaticStatus_t::Neutral)
-        {
-            rGraphics.DrawText(
-                ToString(status),
-                m_layout.x + style.statusPadX * m_layout.width,
-                rowY,
-                style.rowFontSize,
-                style.statusColor);
-        }
-
+        DrawRow_(rGraphics, rFaction, playerId, row);
         ++row;
     }
+}
+
+void CommlinksPanel::DrawRow_(Graphics& rGraphics, const Faction& rFaction, FactionId_t playerId,
+                              int row) const
+{
+    const auto& style = Style().commlinksPanel;
+    const DiplomacyLedger& rLedger = m_rGameState.GetDiplomacyLedger();
+    const FactionId_t otherId = rFaction.GetFactionId();
+    const float padY = style.rowStartY + static_cast<float>(row) * style.rowHeight;
+    const DiplomaticStatus_t status = rLedger.GetStatus(playerId, otherId);
+    // Its mood toward the player, raw at Vendetta as on SMAC's portrait (terranx-map.md, get_mood).
+    const int friction = rLedger.GetFriction(otherId, playerId);
+    const int blemishes = rLedger.GetBlemishes(otherId);
+
+    DrawAt_(rGraphics, rFaction.GetDefinition().identity.name, style.rowPadX, padY,
+            style.rowFontSize, style.factionNameColor);
+    if (status != DiplomaticStatus_t::Neutral)
+    {
+        DrawAt_(rGraphics, ToString(status), style.statusPadX, padY, style.rowFontSize,
+                style.statusColor);
+    }
+    DrawAt_(rGraphics, m_rCaptions.Mood(friction), style.moodPadX, padY, style.rowFontSize,
+            style.statusColor);
+    DrawAt_(rGraphics, m_rCaptions.Repute(blemishes), style.reputePadX, padY, style.rowFontSize,
+            style.statusColor);
+}
+
+void CommlinksPanel::DrawAt_(Graphics& rGraphics, const std::string& rText, float padX,
+                             float padY, unsigned int fontSize, const Color_t& color) const
+{
+    rGraphics.DrawText(rText, m_layout.x + padX * m_layout.width,
+                       m_layout.y + padY * m_layout.height, fontSize, color);
 }
 
 } // namespace ac

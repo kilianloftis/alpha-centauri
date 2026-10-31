@@ -1,0 +1,23 @@
+{
+  "moods": [
+    { "name": "Magnanimous", "min_friction": 0 },
+    { "name": "Solicitous", "min_friction": 1 },
+    { "name": "Cooperative", "min_friction": 3 },
+    { "name": "Noncommittal", "min_friction": 5 },
+    { "name": "Ambivalent", "min_friction": 9 },
+    { "name": "Obstinate", "min_friction": 13 },
+    { "name": "Quarrelsome", "min_friction": 16 },
+    { "name": "Belligerent", "min_friction": 18 },
+    { "name": "Seething", "min_friction": 20 }
+  ],
+  "repute": [
+    { "name": "Noble", "min_blemishes": 0 },
+    { "name": "Faithful", "min_blemishes": 1 },
+    { "name": "Scrupulous", "min_blemishes": 2 },
+    { "name": "Dependable", "min_blemishes": 3 },
+    { "name": "Ruthless", "min_blemishes": 4 },
+    { "name": "Treacherous", "min_blemishes": 5 },
+    { "name": "Wicked", "min_blemishes": 6 },
+    { "name": "Infamous", "min_blemishes": 7 }
+  ]
+}

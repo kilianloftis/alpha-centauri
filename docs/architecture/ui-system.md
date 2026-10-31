@@ -245,7 +245,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
-- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`), `SpriteLibrary&` (tech/facility/project icons in research and base UI)
+- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `StandingCaptions`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`), `SpriteLibrary&` (tech/facility/project icons in research and base UI)
 - **Owner**: `Engine` creates and owns it during initialization
 - **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
   `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,
@@ -254,6 +254,18 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
   player faction reaches it from a player action, and a session without a player faction is
   broken, not a UI state — the previous `return nullptr` was dereferenced by `PushView`, which now
   also rejects a null view.
+
+### StandingCaptions
+- **Purpose**: Names the stored diplomatic standing counts. Mood names a faction's friction toward
+  another by band, and repute names a blemish count. A count past the last band reads the last
+  band, as SMAC shows 8+ blemishes as Infamous.
+- **Config**: `config/ui/standing_captions.json`, with `moods` (`name`, `min_friction`) and
+  `repute` (`name`, `min_blemishes`). `Load` requires both lists, starting at 0 and rising
+  strictly, and refuses a band above `diplomacy.json`'s `friction_max` / `blemishes_max`, which
+  no stored count could reach.
+- **Owner**: `Engine` loads it beside `HotkeyConfig`. `ViewFactory` passes it through
+  `CommlinksView` to `CommlinksPanel`, whose rows show each met faction's mood toward the player
+  (raw at Vendetta) and repute, under a line with the player's own integrity.
 
 ### Rendering from snapshots
 Panels paint from precomputed state rather than re-deriving it per frame. Three places do this,

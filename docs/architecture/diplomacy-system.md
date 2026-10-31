@@ -70,6 +70,10 @@ graph TB
         ApplyStanding[ApplyFriction / ApplyBlemishes]
     end
 
+    subgraph "Standing captions (UI)"
+        CommlinksPanel[CommlinksPanel + StandingCaptions<br/>mood toward the player, repute<br/>config/ui/standing_captions.json]
+    end
+
     subgraph "Hostile act sources"
         Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
@@ -161,6 +165,7 @@ graph TB
     DiplomacyCalculator --> DiplomacyConfig
     ApplyStanding --> DiplomacyCalculator
     ApplyStanding -->|SetFriction / SetBlemishes| DiplomacyLedger
+    CommlinksPanel -->|GetFriction / GetBlemishes| DiplomacyLedger
     Atrocity -->|counted blemishes; friction if diplomatic victim| ApplyStanding
     CancelTreaty --> AgreementBreak
     DeclareVendetta --> AgreementBreak
@@ -579,8 +584,9 @@ save-game serialisation work to exist first. Recorded in
 - **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory and
   terraform-rainfall writers are in. The player's probe excuse dialog, talk gifts, the +3
   refused-demand battle friction, and the wants-revenge betrayal that replaces rainfall friction
-  are not ([deviations](../../config/deviations/README.md)). Mood and repute captions are UI
-  over the stored integers.
+  are not ([deviations](../../config/deviations/README.md)). Mood and repute captions are
+  `StandingCaptions` (UI; see `ui-system.md`). The talk caption's Vendetta floor
+  (`diplomacy_caption`) lands with talk.
 - **Probe keep-or-break decision.** Every probe victim keeps its agreement until an AI attitude
   model decides, and the player's excuse dialog is not built; see
   [Probe standing](#probe-standing).

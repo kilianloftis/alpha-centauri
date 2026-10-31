@@ -396,10 +396,14 @@
     "row_font_size": 16,
     "title_pad_x": 0.05,
     "title_pad_y": 0.05,
-    "row_start_y": 0.2,
+    "row_start_y": 0.23,
     "row_height": 0.08,
     "row_pad_x": 0.05,
-    "status_pad_x": 0.55,
+    "status_pad_x": 0.4,
+    "integrity_pad_y": 0.11,
+    "column_label_pad_y": 0.17,
+    "mood_pad_x": 0.58,
+    "repute_pad_x": 0.78,
     "council_button_layout": [
       0.1, 0.88, 0.8, 0.08
     ]

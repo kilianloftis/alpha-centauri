@@ -147,6 +147,8 @@ add_executable(effects-tests
     ui/UIManagerTests.cpp
     ui/ViewFactoryTests.cpp
     ui/HotkeyConfigTests.cpp
+    ui/StandingCaptionsTests.cpp
+    ui/CommlinksPanelTests.cpp
     ui/WorldViewTests.cpp
     ui/SpriteLibraryTests.cpp
     ui/TileRendererTests.cpp

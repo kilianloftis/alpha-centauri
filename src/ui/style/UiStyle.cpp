@@ -480,6 +480,10 @@ CommlinksPanelStyle_t ParseCommlinksPanelStyle_(const nlohmann::json& j)
     s.rowHeight = j.at("row_height").get<float>();
     s.rowPadX = j.at("row_pad_x").get<float>();
     s.statusPadX = j.at("status_pad_x").get<float>();
+    s.integrityPadY = j.at("integrity_pad_y").get<float>();
+    s.columnLabelPadY = j.at("column_label_pad_y").get<float>();
+    s.moodPadX = j.at("mood_pad_x").get<float>();
+    s.reputePadX = j.at("repute_pad_x").get<float>();
     s.councilButtonLayout = ParseLayout_(j, "council_button_layout");
     return s;
 }

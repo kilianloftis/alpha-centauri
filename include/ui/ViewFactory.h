@@ -30,6 +30,7 @@ class WorldDisplay;
 class Tile;
 class MapRenderer;
 class HotkeyConfig;
+class StandingCaptions;
 class SpriteLibrary;
 
 class ViewFactory
@@ -39,6 +40,7 @@ public:
         GameState& rGameState,
         const GameDataContext& rGameDataContext,
         const HotkeyConfig& rHotkeys,
+        const StandingCaptions& rStandingCaptions,
         Graphics& rGraphics,
         MapRenderer& rMapRenderer,
         SpriteLibrary& rSprites,
@@ -103,6 +105,7 @@ private:
     GameState& m_rGameState;
     const GameDataContext& m_rGameDataContext;
     const HotkeyConfig& m_rHotkeys;
+    const StandingCaptions& m_rStandingCaptions;
     Graphics& m_rGraphics;
     MapRenderer& m_rMapRenderer;
     SpriteLibrary& m_rSprites;

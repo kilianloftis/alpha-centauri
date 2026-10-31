@@ -1,45 +1,53 @@
 ---
 name: Finish diplomacy roadmap
-overview: SMAC standing is confirmed. This pass wires integrity (blemish count) and friction into the ledger, config, calculator, and a rules query API the future AI will call. Talk UI and AI accept/honor/initiation stay later; EvaluateResponse_ stays a stub.
+overview: SMAC standing is confirmed. Integrity (blemishes) and friction are stored, clamped and written at every site whose prerequisites exist. Mood and repute are UI captions over those counts. Talk UI and AI accept/honor/initiation stay later; EvaluateResponse_ stays a stub.
 todos:
   - id: re-smac-diplomacy
     content: Reverse-engineer SMAC integrity, grievances, blemishes, mood, talk phrases, and AI accept/honor from terranx.exe; record in terranx-map.md
     status: completed
   - id: standing-model
-    content: Config + calculator + mutation writers for integrity_blemishes (REPUTE 0-7) and directed friction 0-20; no separate blemish log
-    status: pending
+    content: Config + calculator + mutation writers for blemishes (0–blemishes_max) and directed friction (0–friction_max); no separate blemish log
+    status: completed
   - id: diplomatic-mood
-    content: get_mood(friction) bands in config; rules MoodToward / ReputeOf / FrictionToward for the AI to call
-    status: pending
+    content: StandingCaptions (UI) names friction by #MOOD band and blemishes by #REPUTE; the commlinks panel shows them (diplomatic_mood_repute_8d31f6a2.plan.md)
+    status: completed
   - id: commlinks-talk-ui
     content: "Click-to-talk overlay: xscript-style scenes (INTRO/INTROMAD/INTRONEW, DIPLOMENU, PROPOSALMENU, VENDETTA), GetAvailableActions, Propose/Declare/Cancel/Trade"
     status: cancelled
   - id: ai-evaluation
-    content: EvaluateResponse_ and Pact honor read friction/mood and reputation(); full propose_pact/wants_to_attack formulas are a follow-on RE of those functions
+    content: EvaluateResponse_ and Pact honor read friction and reputation(); full propose_pact/wants_to_attack formulas are a follow-on RE of those functions
     status: cancelled
 isProject: false
 ---
 
 # Remaining diplomacy: requirements by slice
 
-The pairwise **status machine is done**. Commlinks only lists known factions. Integrity and grievances are empty ledger maps. AI always accepts and always honors Pacts; that stays until our AI exists. This pass gives that AI friction, integrity, mood, and repute to read.
+The pairwise **status machine is done**, and so are the standing writers. Friction and
+blemishes live on `DiplomacyLedger`, `DiplomacyCalculator` clamps them, and
+`DiplomaticStandingMutations` writes them at every site whose prerequisites exist. The remaining
+sites wait on talk. The AI always accepts and always honors Pacts; that stays until our AI
+exists.
 
-"Mood" in this repo is base riot / golden age. Diplomatic mood is SMAC `#MOOD`, derived from **friction**.
+"Mood" in this repo is base riot / golden age. Diplomatic mood is SMAC `#MOOD`, a caption over
+**friction**.
 
 ```mermaid
 flowchart LR
-  Mutations[TransitionAndAtrocityMutations]
-  Ledger[DiplomacyLedger]
+  Writers[DiplomaticStandingMutations]
   Calc[DiplomacyCalculator]
-  Rules[DiplomaticStandingRules]
-  FutureAi[FutureAi]
-  Mutations --> Ledger
-  Ledger --> Rules
-  Calc --> Rules
-  Rules --> FutureAi
+  Ledger[DiplomacyLedger]
+  Captions[StandingCaptions UI]
+  Panel[CommlinksPanel]
+  Talk[TalkOverlay later]
+  FutureAi[FutureAi later]
+  Writers --> Calc
+  Writers --> Ledger
+  Ledger --> Panel
+  Ledger --> Talk
+  Captions --> Panel
+  Captions --> Talk
+  Ledger --> FutureAi
 ```
-
-
 
 Already declined: a proposal queue; pending proposals on `PlayerInteractionQueue`.
 
@@ -51,12 +59,12 @@ Confirmed in GOG Alien Crossfire v2.0 `terranx.exe` (`4b19c1fe3266b5ebc4305cd182
 
 One `Faction` (Thinker `engine_types.h`, stride `0x20CC`, base `0x96C9E0`):
 
-- `diplo_friction[8]` at `+0x58` (`0x96CA38`): directed, clamped **0–20**. This is what our ledger calls grievances. The binary never uses the word "grievance".
+- `diplo_friction[8]` at `+0x58` (`0x96CA38`): directed, clamped **0–20**. Our ledger stores it as friction. The binary never uses the word "grievance".
 - `integrity_blemishes` at `+0x124` (`0x96CB04`): per-faction **count**, 0 = best. The scenario editor labels it **Blemishes**. The commlink portrait indexes `#REPUTE` with `clamp(count, 0, 7)`. There is **no separate blemish event log**.
 - `diplo_reputation` at `+0x128`: incremented when a Pact / Treaty / Truce is made (`pact_of_brotherhood` `0x53CAF0`, `make_treaty` `0x53CE10`, `pledge_truce` `0x53D160`).
 - `diplo_gifts[8]`, `diplo_wrongs[8]`, `diplo_betrayed[8]`: per-pair gift and double-cross counts. `reputation(faction, other)` (`0x53A100`) returns `clamp(integrity_blemishes - diplo_gifts[other], 0, 99)` for AI, not for the portrait label.
 
-Datalinks (`alphax.txt` `#MOOD` / `#REPUTE`; `concepts.txt` CONCEPT7): 9 mood names, 8 repute names (not the six Noble→Treacherous the architecture doc currently claims). Integrity falls only when an **agreement is broken**, not for attacking a Vendetta enemy.
+Datalinks (`alphax.txt` `#MOOD` / `#REPUTE`; `concepts.txt` CONCEPT7): 9 mood names, 8 repute names. Integrity falls only when an **agreement is broken**, not for attacking a Vendetta enemy.
 
 ### Mood (`get_mood` `0x53A090`)
 
@@ -72,6 +80,8 @@ Derived from friction only. Not stored. Not a blend of integrity, power, or SE.
 - 18–19 → 7 Belligerent
 - 20 → 8 Seething
 
+Every reader draws text: `DiploPop_draw_portrait`, `InfoWin_setup_text` and `ReportWin_draw_intel`. No AI or talk function calls it. The portrait reads the raw `diplo_friction[rival][player]`, which is the rival's friction toward the player.
+
 `diplomacy_caption` (`0x5399A0`) uses the same bands on the cached `DiploFriction` (`0x93FA74`). If the pair is Vendetta (`DIPLO_VENDETTA` `0x10`) and friction < 15, the caption floors friction to 15 (Obstinate). Pointer table `Mood[9]` at `0x94C9E4`, filled from `#MOOD`.
 
 ### Integrity / blemishes
@@ -80,9 +90,11 @@ Portrait (`DiploPop` `0x43F955`): `clamp(integrity_blemishes, 0, 7)` indexes `#R
 
 - 0 Noble, 1 Faithful, 2 Scrupulous, 3 Dependable, 4 Ruthless, 5 Treacherous, 6 Wicked, 7 Infamous
 
-- `y`Counts above 7 still display Infamous; `reputation()` can keep growing to 99 (AI).
-  Writers confirmed:
-  - `double_cross` (`0x50BCC0`): `inc` blemishes on the breaker (several pact/treaty branches); `inc` `diplo_wrongs` / `diplo_betraed`; `cause_friction` −4 or −2 on some paths (gifts/credit toward the victim); sets Vendetta via `treaty_on` `0x10`; calls `pact_ends`.
+Counts above 7 still display Infamous; `reputation()` can keep growing to 99 (AI). The InfoWin also draws the player's own count under the label `Integrity`.
+
+Writers confirmed:
+
+- `double_cross` (`0x50BCC0`): `inc` blemishes on the breaker (several pact/treaty branches); `inc` `diplo_wrongs` / `diplo_betrayed`; `cause_friction` −4 or −2 on some paths (gifts/credit toward the victim); sets Vendetta via `treaty_on` `0x10`; calls `pact_ends`.
 - `atrocity` (`0x55EEE0`): `cause_friction(..., 5)` when a status bit is set; `inc` blemishes unless that pair already has `DIPLO_ATROCITY_VICTIM` (`0x40000`).
 - `major_atrocity` (`0x55F450`): if the pair is not yet `DIPLO_MAJOR_ATROCITY_VICTIM` (`0x80000`), `blemishes = blemishes + 2`, then if that is still < 6 set to **6** (Wicked), cap 99; otherwise just `+2`.
 - `probe` (`0x59F120`): `inc` blemishes (`0x5A4FC7`); `cause_friction(..., 4)` at two sites.
@@ -109,83 +121,87 @@ Functions: `introduce` `0x53D360`, `diplomacy_menu` `0x54C560`, `proposal_menu` 
 
 Our `phrases.json` `greeting` / `war_declaration` plus `PickPhrase` is a stub for this scene table, not SMAC's system.
 
-SMAC's own accept/honor/initiation (`propose_pact` `0x543BC0`, `propose_treaty` `0x544E40`, `wants_to_attack` `0x55BC80`, `enemy_diplomacy` `0x55F930`, `great_satan` `0x539C00`) is **not** in this pass. Those functions read friction, `reputation()`, goodwill, status, and ranking; our AI will call the standing rules instead of cloning them.
+SMAC's own accept/honor/initiation (`propose_pact` `0x543BC0`, `propose_treaty` `0x544E40`, `wants_to_attack` `0x55BC80`, `enemy_diplomacy` `0x55F930`, `great_satan` `0x539C00`) is **not** in this pass. Those functions read friction, `reputation()`, goodwill, status, and ranking. Our AI will read friction and blemishes from the ledger instead of cloning them.
 
 ---
 
-## 1. Integrity (blemish count)
+## 1. Integrity (blemishes)
 
-**Today:** `[DiplomacyLedger](include/game/diplomacy/DiplomacyLedger.h)` `Get/Set/AddIntegrity`, default 0, tests only.
+**Today:** `DiplomacyLedger::GetBlemishes` / `SetBlemishes`, 0–`blemishes_max`.
+`ApplyBlemishes` (`NextBlemishes`: add, raise to a floor, clamp) is called from:
 
-**Requirements:**
+- `CancelTreaty`, `DeclareVendetta` and sneak `ApplyHostileAct`, for `break_agreement_blemishes`;
+- `CommitAtrocity`, from `atrocities.json` severities (`blemishes`, `blemishes_floor`,
+  `repeat_blemishes`).
 
-- Keep the per-faction int. **0 = Noble.** Higher is worse. Display `clamp(n, 0, 7)` as the eight `#REPUTE` names from config (not six).
-- A calculator maps the int to the label. No extra banding: the count **is** the index, except display saturates at 7 while the stored count may exceed it (major atrocity / AI `reputation()`).
-- Mutations write at the sites above: `double_cross` analog (treaty/pact/truce break → `[CancelTreaty](src/game/diplomacy/DiplomaticTransitionMutations.cpp)` / sneak `[ApplyHostileAct](src/game/diplomacy/DiplomaticTransitionMutations.cpp)` while an agreement is held), `[CommitAtrocity](src/game/atrocities/AtrocityMutations.cpp)` (simple +1 unless already victim; major +2 with floor 6), probe success, combat as listed. Deltas come from `[config/diplomacy.json](config/diplomacy.json)`; parser requires them; tests use the fixture.
-- Native life never participates (`HasDiplomacy`).
-- Do not add a parallel blemish log. The editor name "Blemishes" is this same counter.
-- `diplo_gifts` / `diplo_wrongs` / `diplo_betrayed` / `diplo_reputation` wait until a writer exists (gift proposals). The query API does not expose `reputation()` until gifts are stored.
-- `"integrity_loss"` stays out of atrocity JSON; the atrocity mutation calls the diplomacy writer.
+**Remaining:**
+
+- `communicate`'s blemish decrement (count > 1) waits on talk.
+- The probe blemish (`0x5A4FC4`) fires only in multiplayer against a human target.
+- `diplo_gifts` / `diplo_wrongs` / `diplo_betrayed` / `diplo_reputation` wait until a writer exists (gift proposals). `reputation()` waits on gifts.
+
+Native life never participates (`HasDiplomacy`). There is no parallel blemish log.
 
 ---
 
-## 2. Grievances (friction)
+## 2. Friction
 
-**Today:** directed `Get/Set/AddGrievance(holder, against)`, tests only.
+**Today:** directed `DiplomacyLedger::GetFriction` / `SetFriction(holder, against)`,
+0–`friction_max`. `ApplyFriction` (`NextFriction`) writes:
 
-**Requirements:**
+- a kept probe agreement (`probe_keep_friction_draw`);
+- an atrocity against a victim with diplomacy;
+- relic capture (`artifact_capture_friction`);
+- fighting an agreement partner's Vendetta enemy on its land (`allied_territory_battle_friction`);
+- a Former's raise or lower land that dries an AI's land (`terraform_rainfall_friction`).
 
-- Keep the directed map. Clamp **0–20** in the mutation (SMAC `cause_friction`).
-- Mood (slice 3) reads this value. It is not atrocity victim memory.
-- Config owns the per-act deltas (combat +3/+5/−1, probe +4, simple atrocity +5, talk gifts negative, etc.). A calculator does not need a formula beyond add-and-clamp unless a later site is a computed gift (`communicate` uses a computed delta at `0x554A30`).
-- No TurnStart decay unless a later pass finds one. None was found among the 19 `cause_friction` calls.
+**Remaining**, all waiting on talk: the +3 refused-demand battle site, `communicate`'s gift
+deltas and inline +4, and the wants-revenge betrayal that replaces rainfall friction
+([deviations](config/deviations/README.md)). No TurnStart decay: none of the 19 `cause_friction`
+calls is one.
 
 ---
 
 ## 3. Blemishes
 
-**Not a third axis.** SMAC's "Blemishes" label **is** `integrity_blemishes`. Drop the architecture line that treats blemishes as unimplemented storage. Repute is this count, not a list of past acts. Atrocity records stay on `AtrocityLedger`.
+**Not a third axis.** SMAC's "Blemishes" label **is** `integrity_blemishes`, stored as the
+ledger's blemishes. Repute is this count, not a list of past acts. Atrocity records stay on
+`AtrocityLedger`.
 
 ---
 
-## 4. Diplomatic mood and the AI query API
+## 4. Mood and repute captions
 
-This is the surface the future AI reads. Do not clone SMAC `EvaluateResponse_` / `propose_pact` / Pact-honor logic. `[DiplomaticActionExecutor::EvaluateResponse](src/game/diplomacy/DiplomaticActionExecutor.cpp)_` and `[AiHonorsDefensiveObligation_](src/game/diplomacy/DiplomaticTransitionMutations.cpp)` stay always-yes stubs until that AI exists.
+Plan: [diplomatic_mood_repute_8d31f6a2.plan.md](.claude/plans/diplomatic_mood_repute_8d31f6a2.plan.md).
 
-**Calculator** (`DiplomacyCalculator`, owned by `GameDataContext`, plain values, `const`):
-
-- `MoodIndex(friction)` — SMAC `get_mood` bands from config
-- `ReputeIndex(blemishes)` — `clamp(blemishes, 0, 7)`
-- `ClampFriction(friction)` — 0–20
-
-**Rules** (`DiplomaticStandingRules`, read the current game; native life answers empty / no mood):
-
-- `FrictionToward(holder, against)`
-- `IntegrityBlemishes(faction)`
-- `MoodToward(holder, against)` — `MoodIndex` of stored friction (raw; no Vendetta caption floor)
-- `ReputeOf(faction)` — `ReputeIndex` of stored blemishes
-
-Vendetta caption floor (Obstinate / friction 15) is **display-only**. It lands with the talk overlay, not on the AI query.
-
-Config holds the nine mood labels/thresholds and eight repute labels. Parser requires them; tests use `[tests/fixtures/diplomacy.json](tests/fixtures/diplomacy.json)`.
+- Mood and repute are UI captions over the stored counts. `StandingCaptions`
+  (`config/ui/standing_captions.json`) names friction by the nine `#MOOD` bands and blemishes by
+  the eight `#REPUTE` names. Counts past the last band read the last band.
+- `CommlinksPanel` is the first caller. It shows each met faction's mood toward the player (raw
+  friction, no Vendetta floor) and repute, plus the player's own integrity.
+- The game layer does not change. The future AI reads friction and blemishes from the ledger,
+  as SMAC's AI reads raw friction and `reputation()`.
 
 `DiplomaticModifierEffect_t` stays a TODO. `AIProfile` tendencies are not mood inputs.
-
-The ledger mutations in slices 1–2 are the production writers. The rules functions are the AI seam (same kind as `AIProfile` / `GetAvailableActions` today). Tests encode the SMAC bands and writer deltas. Do not have `EvaluateResponse_` call the new rules and ignore the result.
+[DiplomaticActionExecutor::EvaluateResponse_](src/game/diplomacy/DiplomaticActionExecutor.cpp)
+and [AiHonorsDefensiveObligation_](src/game/diplomacy/DiplomaticTransitionMutations.cpp) stay
+always-yes stubs until that AI exists.
 
 ---
 
 ## 5. Dialogue / commlinks talk (later)
 
-**Today:** non-clickable `[CommlinksPanel](src/ui/commlinks/CommlinksPanel.cpp)`. Council lives on `[CommlinksView](include/ui/commlinks/CommlinksView.h)`. Artboxes stay extract-only.
+**Today:** non-clickable [CommlinksPanel](src/ui/commlinks/CommlinksPanel.cpp). Council lives on [CommlinksView](include/ui/commlinks/CommlinksView.h). Artboxes stay extract-only.
 
 **Requirements:**
 
 - Click a known faction → talk overlay (rect+text). Native life never appears.
-- Scene table, not an RPG chain engine: first-contact vs returning, friendly vs mad greetings, then `#DIPLOMENU` / `#PROPOSALMENU` analog. Per-faction Treaty/Truce lines from faction data (today `[phrases.json](config/factions/gaian/phrases.json)` only has `greeting` / `war_declaration` — extend those files with the scene keys the overlay uses, in the same change).
-- Actions from `[GetAvailableActions](include/game/diplomacy/DiplomacyActions.h)`. One-sided Cancel/Declare call mutations directly; StepUp and trade go through `[DiplomaticActionExecutor::Propose](include/game/diplomacy/DiplomaticActionExecutor.h)`.
+- Scene table, not an RPG chain engine: first-contact vs returning, friendly vs mad greetings, then `#DIPLOMENU` / `#PROPOSALMENU` analog. Per-faction Treaty/Truce lines from faction data (today [phrases.json](config/factions/gaian/phrases.json) only has `greeting` / `war_declaration` — extend those files with the scene keys the overlay uses, in the same change).
+- Actions from [GetAvailableActions](include/game/diplomacy/DiplomacyActions.h). One-sided Cancel/Declare call mutations directly; StepUp and trade go through [DiplomaticActionExecutor::Propose](include/game/diplomacy/DiplomaticActionExecutor.h).
 - Trade builder: existing `TradeItem_t` variants. SMAC's proposal menu is wider (loans, prototypes, units, gift); extra kinds wait until a caller needs them.
-- Caption: leader name + mood band (Vendetta floor). Also show REPUTE name (integrity).
+- Portrait: `MOOD` and `REPUTATION` from `StandingCaptions`, with mood from the rival's raw friction toward the player.
+- Caption: leader name + mood band. At Vendetta, friction below 15 reads as 15 (Obstinate). This is display only, and the floor lives in `standing_captions.json`.
+- The player's own `Integrity` line, as in SMAC's InfoWin.
 - Inbound AI offers stay in the one pending slot; their UI lands with AI initiation.
 - First contact does not auto-open talk.
 
@@ -193,32 +209,25 @@ The ledger mutations in slices 1–2 are the production writers. The rules funct
 
 ## Implementation order
 
-Standing (writers) and mood (rules) share one prereq: **config + `DiplomacyCalculator`**. After that they can land in one change.
-
-1. Parser keys in `diplomacy.json` (friction clamp, mood bands/labels, repute labels, per-act deltas). Fixture first.
-2. `DiplomacyCalculator` (`MoodIndex`, `ReputeIndex`, `ClampFriction`). Tests with fixture numbers; no game state.
-3. Mutation writers (integrity / friction) using those deltas and `ClampFriction`.
-4. `DiplomaticStandingRules` (`FrictionToward`, `IntegrityBlemishes`, `MoodToward`, `ReputeOf`) reading the ledger through the calculator.
-
-Do not start with the rules: `MoodToward` is `MoodIndex(stored friction)`, so the calculator has to exist. Writers without the calculator would clamp in the mutation, which the calculator already owns.
-
-Talk UI and our AI both wait on the rules API. They are not prereqs of each other; both wait on this pass.
+1. Slice 4: [diplomatic_mood_repute_8d31f6a2.plan.md](.claude/plans/diplomatic_mood_repute_8d31f6a2.plan.md).
+2. The talk overlay reuses `StandingCaptions` for its portrait and caption, so it follows slice 4.
+   Our AI reads the ledger directly. Neither track waits on the other.
 
 ---
 
 ## Architecture and tests
 
-Update `[docs/architecture/diplomacy-system.md](docs/architecture/diplomacy-system.md)`: eight REPUTE names; blemishes = integrity count; grievances = friction 0–20; mood from friction; standing rules as the AI query API; drop "six levels", "blemishes not implemented", and the claim that an attitude model must live inside `EvaluateResponse_`. `[docs/thinker/terranx-map.md](docs/thinker/terranx-map.md)` already has the standing section.
+The slice 4 plan lists its updates to [diplomacy-system.md](docs/architecture/diplomacy-system.md),
+[ui-system.md](docs/architecture/ui-system.md) and [terranx-map.md](docs/thinker/terranx-map.md).
 
-Tests: fixture owns bands and deltas; writers at mutation sites; `MoodToward` / `ReputeOf` from fixture inputs; no shipping-config asserts.
+Tests: fixtures own bands and deltas; writers are tested at mutation sites; no shipping-config asserts.
 
 ---
 
 ## Later tracks (not this pass)
 
 - Commlinks talk overlay (section 5)
-- Our AI: consume `DiplomaticStandingRules` from `EvaluateResponse_`, Pact honor, and initiation. Do not port SMAC `propose_pact` / `wants_to_attack`.
+- Our AI: read friction and blemishes (and `reputation()` once gifts exist) from `EvaluateResponse_`, Pact honor, initiation, and the probe keep-or-break decision. Do not port SMAC `propose_pact` / `wants_to_attack`.
 - Covert detection, per-turn healing, tribute/loans, infiltration readers, save/load, council AI
 - `diplo_gifts` / `diplo_wrongs` / `diplo_patience` until a writer exists
 - Extra trade kinds (loan, prototype, units) until the talk overlay offers them
-
