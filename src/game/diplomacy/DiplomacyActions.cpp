@@ -27,6 +27,29 @@ DiplomaticActionKind_t ProposeKindFor_(DiplomaticStatus_t target)
     throw std::logic_error("ProposeKindFor_: no proposal leads to this status");
 }
 
+// terranx-map.md, Talk: diplomacy_menu has no declaration item, and its only cancel renounces a
+// Pact, which leaves a Treaty.
+bool IsOfferedInTalk_(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b,
+                      DiplomaticActionKind_t kind)
+{
+    switch (kind)
+    {
+    case DiplomaticActionKind_t::DeclareVendetta:
+        return false;
+    case DiplomaticActionKind_t::CancelTreaty:
+    {
+        const std::optional<DiplomaticStatus_t> lower = StepDown(rLedger.GetStatus(a, b));
+        return lower && IsAgreement(*lower);
+    }
+    case DiplomaticActionKind_t::ProposeTruce:
+    case DiplomaticActionKind_t::ProposeTreaty:
+    case DiplomaticActionKind_t::ProposePact:
+    case DiplomaticActionKind_t::Trade:
+        return true;
+    }
+    throw std::logic_error("IsOfferedInTalk_: unhandled DiplomaticActionKind_t");
+}
+
 } // namespace
 
 std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
@@ -51,6 +74,16 @@ std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& r
     {
         actions.push_back(DiplomaticActionKind_t::Trade);
     }
+    return actions;
+}
+
+std::vector<DiplomaticActionKind_t> GetTalkActions(const DiplomacyLedger& rLedger,
+                                                   FactionId_t a,
+                                                   FactionId_t b)
+{
+    std::vector<DiplomaticActionKind_t> actions = GetAvailableActions(rLedger, a, b);
+    std::erase_if(actions, [&](DiplomaticActionKind_t kind)
+                  { return !IsOfferedInTalk_(rLedger, a, b, kind); });
     return actions;
 }
 

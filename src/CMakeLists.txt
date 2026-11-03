@@ -30,6 +30,7 @@ add_library(ac-core STATIC
     game/diplomacy/DiplomaticStatus.cpp
     game/diplomacy/DiplomacyConfigParser.cpp
     game/diplomacy/DiplomacyCalculator.cpp
+    game/diplomacy/BaseValueRules.cpp
     game/diplomacy/DiplomacyLedger.cpp
     game/diplomacy/DiplomaticPermissionRules.cpp
     game/diplomacy/DiplomaticStandingMutations.cpp
@@ -224,7 +225,7 @@ add_library(ac-core STATIC
     game/map/OccupantCoexistence.cpp
     game/map/TerrainConfigParser.cpp
     game/effects/CoexistenceResolve.cpp
-    game/map/ElevationRulesConfigParser.cpp
+    game/map/MapRulesConfigParser.cpp
     game/terraform/ElevationChange.cpp
     game/terraform/SurfaceOccupancy.cpp
     game/map/TerrainFeatureValidation.cpp
@@ -243,6 +244,8 @@ add_library(ac-core STATIC
     game/map/RiverGeneration.cpp
     game/worldgen/FbmNoise.cpp
     game/map/WorldMap.cpp
+    game/map/RegionRules.cpp
+    game/map/RegionCache.cpp
     game/worldgen/WorldGenerator.cpp
     game/stages/CustomTurnStage.cpp
     lib/Rational.cpp
@@ -393,6 +396,9 @@ add_library(ac-ui STATIC
     ui/world/UnitOrderInputController.cpp
     ui/HotkeyConfig.cpp
     ui/StandingCaptions.cpp
+    ui/text/ScriptMarkup.cpp
+    ui/text/TextPack.cpp
+    ui/TextWrap.cpp
     ui/world/CombatPresentation.cpp
     ui/world/CombatView.cpp
     ui/world/MapViewport.cpp
@@ -411,6 +417,10 @@ add_library(ac-ui STATIC
     ui/commlinks/CommlinksPanel.cpp
     ui/commlinks/CouncilButton.cpp
     ui/commlinks/CouncilCooldownPopup.cpp
+    ui/commlinks/TalkScript.cpp
+    ui/commlinks/TalkBindings.cpp
+    ui/commlinks/TalkConversation.cpp
+    ui/commlinks/TalkPopup.cpp
     ui/council/CouncilVoteView.cpp
     ui/council/CouncilFactionVotesPanel.cpp
     ui/council/CouncilProposalInfoPanel.cpp

@@ -1,0 +1,10 @@
+; labels
+
+#LABELS
+3
+Zero
+One
+Two
+
+#OTHER
+x

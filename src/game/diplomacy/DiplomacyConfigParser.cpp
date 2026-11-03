@@ -5,6 +5,7 @@
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
+#include "game/map/MapUtils.h"
 #include "lib/config/EnumNames.h"
 
 #include <fstream>
@@ -140,6 +141,46 @@ DiplomaticStatusRules_t ParseStatus_(const nlohmann::json& rJson, DiplomaticStat
     return rules;
 }
 
+BaseValueConfig_t ParseBaseValue_(const nlohmann::json& rJson, const std::string& rContext)
+{
+    ConfigFields::RejectUnknownKeys(
+        rJson,
+        {"scan_radius", "credits_offset", "distance_offset", "min_population", "minimum",
+         "ungarrisoned_divisor", "counterparty_absent_multiplier", "lone_base_multiplier",
+         "outnumbered_ratio", "outnumbered_divisor", "minerals_per_row",
+         "project_rows_multiplier", "unit_rows_multiplier"},
+        rContext);
+    BaseValueConfig_t config;
+    config.scanRadius = ConfigFields::RequireIntAtLeast(rJson, "scan_radius", 1, rContext);
+    if (config.scanRadius > k_TableOffsetsMaxRadius)
+    {
+        throw std::runtime_error(rContext + ": 'scan_radius' must be at most "
+                                 + std::to_string(k_TableOffsetsMaxRadius));
+    }
+    config.creditsOffset = ConfigFields::RequireIntAtLeast(rJson, "credits_offset", 0, rContext);
+    config.distanceOffset =
+        ConfigFields::RequireIntAtLeast(rJson, "distance_offset", 1, rContext);
+    config.minPopulation = ConfigFields::RequireIntAtLeast(rJson, "min_population", 0, rContext);
+    config.minimum = ConfigFields::RequireIntAtLeast(rJson, "minimum", 0, rContext);
+    config.ungarrisonedDivisor =
+        ConfigFields::RequireIntAtLeast(rJson, "ungarrisoned_divisor", 1, rContext);
+    config.counterpartyAbsentMultiplier =
+        ConfigFields::RequireIntAtLeast(rJson, "counterparty_absent_multiplier", 1, rContext);
+    config.loneBaseMultiplier =
+        ConfigFields::RequireIntAtLeast(rJson, "lone_base_multiplier", 1, rContext);
+    config.outnumberedRatio =
+        ConfigFields::RequireIntAtLeast(rJson, "outnumbered_ratio", 1, rContext);
+    config.outnumberedDivisor =
+        ConfigFields::RequireIntAtLeast(rJson, "outnumbered_divisor", 1, rContext);
+    config.mineralsPerRow =
+        ConfigFields::RequireIntAtLeast(rJson, "minerals_per_row", 1, rContext);
+    config.projectRowsMultiplier =
+        ConfigFields::RequireIntAtLeast(rJson, "project_rows_multiplier", 0, rContext);
+    config.unitRowsMultiplier =
+        ConfigFields::RequireIntAtLeast(rJson, "unit_rows_multiplier", 0, rContext);
+    return config;
+}
+
 DefensiveObligationMode_t RequireObligationMode_(const nlohmann::json& rJson,
                                                  const std::string& rContext)
 {
@@ -174,9 +215,10 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
                                      "probe_keep_friction_draw", "artifact_capture_friction",
                                      "allied_territory_battle_friction",
                                      "terraform_rainfall_friction",
-                                     "terraform_rainfall_stop_distance"},
+                                     "terraform_rainfall_stop_distance", "base_value"},
                                     context);
     const nlohmann::json& rStatuses = RequireObject_(json, "statuses", context);
+    const nlohmann::json& rBaseValue = RequireObject_(json, "base_value", context);
 
     DiplomacyConfig_t config;
     config.defensiveObligationMode = RequireObligationMode_(json, context);
@@ -194,6 +236,7 @@ DiplomacyConfig_t DiplomacyConfigParser::ParseConfig(const std::string& configPa
         ConfigFields::RequireIntAtLeast(json, "terraform_rainfall_friction", 0, context);
     config.terraformRainfallStopDistance =
         ConfigFields::RequireIntAtLeast(json, "terraform_rainfall_stop_distance", 0, context);
+    config.baseValue = ParseBaseValue_(rBaseValue, context + " base_value");
     config.statuses =
         ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rStatuses, "diplomatic status", context,

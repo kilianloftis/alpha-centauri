@@ -1,0 +1,35 @@
+{
+  "leader_female": true,
+  "noun_gender": "F",
+  "noun_plural": true,
+  "fields": {
+    "formal_name_faction": "Gaian High Command",
+    "desc_name_faction": "The Green",
+    "noun_faction": "Gaians",
+    "adj_name_faction": "Gaian",
+    "name_leader": "Deirdre",
+    "title_leader": "Lady",
+    "adj_leader": "patient",
+    "adj_insult_leader": "fungus-loving",
+    "adj_faction": "green",
+    "adj_insult_faction": "leaf-addled",
+    "insult_leader": "Tree Whisperer"
+  },
+  "phrases": {
+    "goal": "protect the living web of Planet",
+    "intent": "to shelter and study the living web of Planet",
+    "agenda": "smothering every factory on Planet under fungus",
+    "your_agenda": "smothering every factory on Planet under fungus",
+    "misdeed": "strangle every factory we build",
+    "pastime": "humming to the fungus",
+    "your_pastime": "humming to the fungus",
+    "accusation": "preaching about the trees",
+    "methods": "tree sermons, M2",
+    "projects": "garden projects, M2",
+    "pursuits": "seed vaults, M2",
+    "tribute": "forest tithe, M1",
+    "service": "mapping the mindworm nests",
+    "enforcers": "my Wardens of the Green",
+    "code": "the Covenant of Planet"
+  }
+}

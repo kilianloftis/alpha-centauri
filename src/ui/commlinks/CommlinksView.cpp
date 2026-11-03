@@ -2,6 +2,7 @@
 #include "ui/commlinks/CommlinksPanel.h"
 #include "ui/commlinks/CouncilButton.h"
 #include "ui/commlinks/CouncilCooldownPopup.h"
+#include "ui/commlinks/TalkPopup.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
 #include "game/faction/Faction.h"
@@ -13,6 +14,7 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "ui/style/UiStyle.h"
 
+#include <random>
 #include <stdexcept>
 #include <vector>
 
@@ -22,16 +24,22 @@ namespace ac
 CommlinksView::CommlinksView(
     GameState& rGameState,
     const StandingCaptions& rStandingCaptions,
+    const TextPack& rText,
+    const TalkScript& rTalkScript,
     WindowLayout_t layout,
     std::function<void()> onOpenCouncilVote
 )
     : IGameView(layout)
     , m_rGameState(rGameState)
+    , m_rStandingCaptions(rStandingCaptions)
+    , m_rText(rText)
+    , m_rTalkScript(rTalkScript)
     , m_onOpenCouncilVote(std::move(onOpenCouncilVote))
 {
     const WindowLayout_t panelLayout = GetPopupLayout();
-    m_elements.push_back(
-        std::make_unique<CommlinksPanel>(m_rGameState, rStandingCaptions, panelLayout));
+    m_elements.push_back(std::make_unique<CommlinksPanel>(
+        m_rGameState, rStandingCaptions, panelLayout,
+        [this](FactionId_t rivalId) { OpenTalk_(rivalId); }));
     const WindowLayout_t buttonLayout =
         ResolveLayout(panelLayout, Style().commlinksPanel.councilButtonLayout);
     m_elements.push_back(std::make_unique<CouncilButton>(
@@ -50,6 +58,14 @@ bool CommlinksView::HandleKey(const KeyEvent_t& rEvent)
         return true;
     }
     return false;
+}
+
+void CommlinksView::OpenTalk_(FactionId_t rivalId)
+{
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<TalkPopup>(m_rGameState, m_rTalkScript, m_rText,
+                                                     m_rStandingCaptions, rivalId,
+                                                     std::random_device{}(), GetPopupLayout()));
 }
 
 void CommlinksView::OpenCouncilCooldownPopup_()

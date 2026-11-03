@@ -15,10 +15,21 @@
 namespace ac
 {
 
-StandingCaptions::StandingCaptions(std::vector<Band_t> moods, std::vector<Band_t> repute)
+StandingCaptions::StandingCaptions(std::vector<Band_t> moods, std::vector<Band_t> repute,
+                                   int vendettaMoodFloor)
     : m_moods(std::move(moods))
     , m_repute(std::move(repute))
+    , m_vendettaMoodFloor(vendettaMoodFloor)
 {
+}
+
+const std::string& StandingCaptions::CaptionMood(int friction, DiplomaticStatus_t status) const
+{
+    if (status == DiplomaticStatus_t::Vendetta)
+    {
+        return Mood(std::max(friction, m_vendettaMoodFloor));
+    }
+    return Mood(friction);
 }
 
 StandingCaptions StandingCaptions::Load(const std::string& rConfigPath,
@@ -36,12 +47,18 @@ StandingCaptions StandingCaptions::Parse_(const nlohmann::json& rJson,
                                           const DiplomacyConfig_t& rDiplomacy)
 {
     const std::string context = "Standing captions '" + rConfigPath + "'";
-    ConfigFields::RejectUnknownKeys(rJson, {"moods", "repute"}, context);
+    ConfigFields::RejectUnknownKeys(rJson, {"vendetta_mood_floor", "moods", "repute"}, context);
     std::vector<Band_t> moods =
         ParseBands_(rJson, "moods", "min_friction", rDiplomacy.frictionMax, context);
     std::vector<Band_t> repute =
         ParseBands_(rJson, "repute", "min_blemishes", rDiplomacy.blemishesMax, context);
-    return StandingCaptions(std::move(moods), std::move(repute));
+    const int floor = ConfigFields::RequireIntAtLeast(rJson, "vendetta_mood_floor", 0, context);
+    if (floor > rDiplomacy.frictionMax)
+    {
+        throw std::runtime_error(context + ": 'vendetta_mood_floor' is above the stored maximum "
+                                 + std::to_string(rDiplomacy.frictionMax));
+    }
+    return StandingCaptions(std::move(moods), std::move(repute), floor);
 }
 
 std::vector<StandingCaptions::Band_t> StandingCaptions::ParseBands_(

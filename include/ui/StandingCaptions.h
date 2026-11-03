@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/diplomacy/DiplomaticStatus.h"
+
 #include <nlohmann/json_fwd.hpp>
 
 #include <string>
@@ -20,6 +22,9 @@ public:
 
     const std::string& Mood(int friction) const { return NameFor_(m_moods, friction); }
     const std::string& Repute(int blemishes) const { return NameFor_(m_repute, blemishes); }
+    // The talk caption's mood: SMAC's diplomacy_caption reads friction below the floor as the
+    // floor at Vendetta without changing it (terranx-map.md).
+    const std::string& CaptionMood(int friction, DiplomaticStatus_t status) const;
 
 private:
     // The name for counts from min up to the next band's min.
@@ -29,7 +34,8 @@ private:
         int min = 0;
     };
 
-    StandingCaptions(std::vector<Band_t> moods, std::vector<Band_t> repute);
+    StandingCaptions(std::vector<Band_t> moods, std::vector<Band_t> repute,
+                     int vendettaMoodFloor);
 
     static StandingCaptions Parse_(const nlohmann::json& rJson, const std::string& rConfigPath,
                                    const DiplomacyConfig_t& rDiplomacy);
@@ -45,6 +51,7 @@ private:
 
     std::vector<Band_t> m_moods;
     std::vector<Band_t> m_repute;
+    int m_vendettaMoodFloor = 0;
 };
 
 } // namespace ac

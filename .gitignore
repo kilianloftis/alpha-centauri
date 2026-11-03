@@ -5,7 +5,7 @@ settings.json.tmp*
 build-asan
 __pycache__/
 
-# Extracted SMAC art (not redistributable). Populate with extract_*.py.
+# Extracted SMAC art and text (not redistributable). Populate with extract_*.py.
 assets/sprites/
 assets/factions/
 assets/ui/fonts/
@@ -13,5 +13,6 @@ assets/ui/chrome/
 assets/ui/cursors/
 assets/ui/thumbs/
 assets/ui/artboxes/
+assets/text/
 # Reference checkouts for reverse engineering (see .devin/rules/smac-reverse-engineering.mdc).
 refs/

@@ -1,0 +1,35 @@
+{
+  "leader_female": true,
+  "noun_gender": "M",
+  "noun_plural": true,
+  "fields": {
+    "formal_name_faction": "formal_name_faction",
+    "desc_name_faction": "desc_name_faction",
+    "adj_name_faction": "adj_name_faction",
+    "adj_leader": "adj_leader",
+    "adj_insult_leader": "adj_insult_leader",
+    "adj_faction": "adj_faction",
+    "adj_insult_faction": "adj_insult_faction",
+    "insult_leader": "insult_leader",
+    "name_leader": "Riva",
+    "title_leader": "Lady",
+    "noun_faction": "Rivals"
+  },
+  "phrases": {
+    "goal": "rival goal",
+    "intent": "rival intent",
+    "agenda": "rival agenda",
+    "your_agenda": "rival your_agenda",
+    "misdeed": "rival misdeed",
+    "pastime": "rival pastime",
+    "your_pastime": "rival your_pastime",
+    "accusation": "rival accusation",
+    "methods": "rival methods, M1",
+    "projects": "rival projects, M2",
+    "pursuits": "rival pursuits, M2",
+    "tribute": "rival tribute, M1",
+    "service": "rival service",
+    "enforcers": "rival enforcers",
+    "code": "rival code"
+  }
+}

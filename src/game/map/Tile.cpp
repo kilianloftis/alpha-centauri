@@ -122,7 +122,7 @@ Rockiness_t Tile::GetRockiness() const
     return m_rockiness;
 }
 
-void Tile::BindMapRules(const ElevationRulesConfig_t& rRules)
+void Tile::BindMapRules(const MapRulesConfig_t& rRules)
 {
     m_pMapRules = &rRules;
     if (m_pOccupants)
@@ -131,7 +131,7 @@ void Tile::BindMapRules(const ElevationRulesConfig_t& rRules)
     }
 }
 
-const ElevationRulesConfig_t& Tile::MapRules() const
+const MapRulesConfig_t& Tile::MapRules() const
 {
     if (!m_pMapRules)
     {
@@ -142,7 +142,7 @@ const ElevationRulesConfig_t& Tile::MapRules() const
 
 void Tile::SetElevation(int elevation)
 {
-    const ElevationRulesConfig_t& rRules = MapRules();
+    const MapRulesConfig_t& rRules = MapRules();
     if (elevation < rRules.minElevationMeters || elevation > rRules.maxElevationMeters)
     {
         throw std::out_of_range("Tile elevation " + std::to_string(elevation) + " is outside ["

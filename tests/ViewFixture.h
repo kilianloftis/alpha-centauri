@@ -10,6 +10,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
+#include "game/faction/FactionRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitSlotRegistry.h"
@@ -17,6 +18,8 @@
 #include "ui/MapRenderer.h"
 #include "ui/StandingCaptions.h"
 #include "ui/ViewFactory.h"
+#include "ui/commlinks/TalkScript.h"
+#include "ui/text/TextPack.h"
 #include "ui/style/UiStyle.h"
 
 #include <filesystem>
@@ -39,6 +42,10 @@ struct ViewFixture : WorldFixture
     ac::Faction* pPlayer = nullptr;
     std::unique_ptr<ac::HotkeyConfig> pHotkeys;
     std::unique_ptr<ac::StandingCaptions> pStandingCaptions;
+    // The fixture factions the talk script is checked against; tests add their own beside them.
+    ac::FactionRegistry factionRegistry;
+    std::unique_ptr<ac::TextPack> pTextPack;
+    std::unique_ptr<ac::TalkScript> pTalkScript;
     std::unique_ptr<SpriteRig> pSprites;
     std::unique_ptr<ac::MapRenderer> pMapRenderer;
     std::unique_ptr<ac::ViewFactory> pFactory;
@@ -96,12 +103,17 @@ struct ViewFixture : WorldFixture
         pStandingCaptions = std::make_unique<ac::StandingCaptions>(ac::StandingCaptions::Load(
             dataContext.paths.standingCaptions, *dataContext.diplomacyConfig));
 
+        factionRegistry.Load(FixturePath("factions"));
+        pTextPack = std::make_unique<ac::TextPack>(ac::TextPack::Load({FixturePath("text")}, "en"));
+        pTalkScript = std::make_unique<ac::TalkScript>(
+            ac::TalkScript::Load(FixturePath("ui/talk.json"), *pTextPack, factionRegistry));
+
         pSprites = std::make_unique<SpriteRig>(graphics, ac::Style().tileRenderer);
         pMapRenderer = std::make_unique<ac::MapRenderer>(
             pSprites->sprites, state, ac::Style().tileRenderer, ac::Style().mapRenderer);
         pFactory = std::make_unique<ac::ViewFactory>(
-            state, dataContext, *pHotkeys, *pStandingCaptions, graphics, *pMapRenderer,
-            pSprites->sprites, settings);
+            state, dataContext, *pHotkeys, *pStandingCaptions, *pTextPack, *pTalkScript, graphics,
+            *pMapRenderer, pSprites->sprites, settings);
     }
 
     ~ViewFixture()

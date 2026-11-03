@@ -488,6 +488,30 @@ CommlinksPanelStyle_t ParseCommlinksPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
+TalkPopupStyle_t ParseTalkPopupStyle_(const nlohmann::json& j)
+{
+    TalkPopupStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.captionColor = ParseColor_(j, "caption_color");
+    s.labelColor = ParseColor_(j, "label_color");
+    s.textColor = ParseColor_(j, "text_color");
+    s.highlightColor = ParseColor_(j, "highlight_color");
+    s.captionFontSize = j.at("caption_font_size").get<unsigned int>();
+    s.textFontSize = j.at("text_font_size").get<unsigned int>();
+    s.padX = j.at("pad_x").get<float>();
+    s.valuePadX = j.at("value_pad_x").get<float>();
+    s.captionPadY = j.at("caption_pad_y").get<float>();
+    s.moodPadY = j.at("mood_pad_y").get<float>();
+    s.reputePadY = j.at("repute_pad_y").get<float>();
+    s.integrityPadY = j.at("integrity_pad_y").get<float>();
+    s.speechPadY = j.at("speech_pad_y").get<float>();
+    s.lineHeight = j.at("line_height").get<float>();
+    s.draftPadY = j.at("draft_pad_y").get<float>();
+    s.menuLayout = ParseLayout_(j, "menu_layout");
+    return s;
+}
+
 CouncilVoteViewStyle_t ParseCouncilVoteViewStyle_(const nlohmann::json& j)
 {
     CouncilVoteViewStyle_t s{};
@@ -927,6 +951,7 @@ void UiStyle::Load(const std::string& filePath)
     style.cameraInput = ParseCameraInputStyle_(root.at("camera_input"));
     style.unitOrderInput = ParseUnitOrderInputStyle_(root.at("unit_order_input"));
     style.commlinksPanel = ParseCommlinksPanelStyle_(root.at("commlinks_panel"));
+    style.talkPopup = ParseTalkPopupStyle_(root.at("talk_popup"));
     style.councilVoteView = ParseCouncilVoteViewStyle_(root.at("council_vote_view"));
     style.currentResearchPanel = ParseCurrentResearchPanelStyle_(root.at("current_research_panel"));
     style.settingsPanel = ParseSettingsPanelStyle_(root.at("settings_panel"));

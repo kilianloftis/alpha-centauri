@@ -1,0 +1,189 @@
+{
+  "INTRONEW0": {
+    "body": "\"Greetings, $TITLE0 $NAME1. I am $TITLE2 $NAME3 of the $FACTION4,\nand on this world my purpose is $MISSION6.\"",
+    "items": []
+  },
+  "INTRONEW1": {
+    "body": "\"$TITLE0 $NAME1, at last. $NAME3 of the $FACTION4 speaks.\nKnow that I intend $MISSION6.\"",
+    "items": []
+  },
+  "INTRONEW2": {
+    "body": "\"The $CHARACTERADJ9 $TITLE0 $NAME1, foremost of the $PEOPLE5!\nI am $TITLE2 $NAME3, and the $FACTION4 $<4:is:are> glad of this contact.\nWe intend $MISSION6.\"",
+    "items": []
+  },
+  "INTRONEW4": {
+    "body": "\"Well met, $TITLE0 $NAME1. $TITLE2 $NAME3 of the $FACTION4 greets you.\nOur aim is $MISSION6.\"",
+    "items": []
+  },
+  "INTRONEW5": {
+    "body": "\"$TITLE0 $NAME1. I, $TITLE2 $NAME3, speak for the $FACTION4.\nWe mean $MISSION6, and we will not be hindered.\"",
+    "items": []
+  },
+  "DIPLO": {
+    "body": "\"Is there anything further?\"",
+    "items": []
+  },
+  "DIPLOMENU": {
+    "body": "",
+    "items": [
+      "\"That will be all. $NAME0 out.\"",
+      "\"Shall we trade again on the same terms?\"",
+      "\"I have a proposal for you.\"",
+      "\"I have another proposal.\"",
+      "\"Let us plan our campaigns together.\"",
+      "\"End your Vendetta against my ally . . .\"",
+      "\"I seek your vote in the Council.\"",
+      "\"Our $PACT1 is over!\"",
+      "\"Your forces are in my territory. Withdraw them.\""
+    ]
+  },
+  "PROPOSAL": {
+    "body": "\"What do you have in mind?\"",
+    "items": []
+  },
+  "PROPOSALMENU": {
+    "body": "",
+    "items": [
+      "\"Never mind.\"",
+      "\"Please accept this gift.\"",
+      "\"Let us swear a $PACT1.\"",
+      "\"Let us sign a Treaty of Friendship.\"",
+      "\"Share your research with me.\"",
+      "\"Sell me your prototype designs.\"",
+      "\"Give me the commlink frequencies you hold.\"",
+      "\"I need energy credits.\"",
+      "\"Here is my loan repayment of $NUM0 credits.\"",
+      "\"Let us exchange survey maps.\"",
+      "\"Join my attack on my enemy . . .\"",
+      "\"Hand over one of your bases.\"",
+      "\"I can lend you trained units.\""
+    ]
+  },
+  "REALLYBROKE": {
+    "body": "\"Over!? $NAME0, after all we have been through?\"",
+    "items": [
+      "\"No, no. I misspoke.\"",
+      "\"Yes. I am done with you.\""
+    ]
+  },
+  "DROIDS": {
+    "body": "\"Then let us say no more of it.\"",
+    "items": []
+  },
+  "BROKEPACT": {
+    "body": "\"So my $PACTKIN0 turns away. I will remember this, $TITLE1 $NAME2.\"",
+    "items": []
+  },
+  "MAKEPACT": {
+    "body": "\"Then I, $TITLE0 $NAME1 of the $FACTION2, name you $PACTKIN3.\nTogether we will $YOURGOAL4 and $MYGOAL5.\"",
+    "items": []
+  },
+  "MAKETREATY0": {
+    "body": "\"Agreed, $TITLE0 $NAME1. There is room on Planet for your $PROJECTS6\nand my $PROJECTS7. Let the $FACTION2 and the $FACTION5 trade in peace.\"",
+    "items": []
+  },
+  "MAKETREATY1": {
+    "body": "\"Very well. My $PROJECTS7 and your $PROJECTS6 can prosper side by side.\nThe $FACTION5 and the $FACTION2 are friends.\"",
+    "items": []
+  },
+  "MAKETRUCE": {
+    "body": "\"I, $NAME4 of the $FACTION5, pledge Blood Truce with the $FACTION2.\"",
+    "items": []
+  },
+  "REJPACT": {
+    "body": "\"My $PROJECTS3 need no allies just now.\"",
+    "items": []
+  },
+  "REJTREATY": {
+    "body": "\"Friendship is earned, $TITLE1, not asked for.\"",
+    "items": []
+  },
+  "TALKINVALID": {
+    "body": "\"That cannot be delivered, $TITLE0.\"",
+    "items": []
+  },
+  "TALKTRADE": {
+    "body": "\"Let us trade.\"",
+    "items": []
+  },
+  "TALKTRADEPROMPT": {
+    "body": "\"What do you offer, $TITLE0, and what do you ask?\"",
+    "items": []
+  },
+  "TALKPICKPROMPT": {
+    "body": "\"Which one?\"",
+    "items": []
+  },
+  "TALKOFFERING": {
+    "body": "You offer:",
+    "items": []
+  },
+  "TALKASKING": {
+    "body": "You ask:",
+    "items": []
+  },
+  "TALKOFFERCREDITS": {
+    "body": "\"I can offer energy credits.\"",
+    "items": []
+  },
+  "TALKOFFERTECH": {
+    "body": "\"I can share my research.\"",
+    "items": []
+  },
+  "TALKOFFERBASE": {
+    "body": "\"I can cede you a base.\"",
+    "items": []
+  },
+  "TALKOFFERCOMMLINK": {
+    "body": "\"I can share commlink frequencies.\"",
+    "items": []
+  },
+  "TALKOFFERMAPS": {
+    "body": "\"I can share my survey maps.\"",
+    "items": []
+  },
+  "TALKOFFERVENDETTA": {
+    "body": "\"I will pronounce Vendetta on your enemy.\"",
+    "items": []
+  },
+  "TALKPROPOSETRADE": {
+    "body": "\"Those are my terms.\"",
+    "items": []
+  },
+  "TALKCLEARTRADE": {
+    "body": "\"Let us start over.\"",
+    "items": []
+  },
+  "TALKACCEPTTRADE": {
+    "body": "\"Agreed, $TITLE0. It is done.\"",
+    "items": []
+  },
+  "TALKREFUSETRADE": {
+    "body": "\"I think not, $TITLE0.\"",
+    "items": []
+  },
+  "TALKCREDITS": {
+    "body": "{$NUM0 energy credits}",
+    "items": []
+  },
+  "TALKTECH": {
+    "body": "{$TECH0}",
+    "items": []
+  },
+  "TALKBASE": {
+    "body": "{$BASE0}",
+    "items": []
+  },
+  "TALKCOMMLINK": {
+    "body": "The {$FACTION0} commlink frequency",
+    "items": []
+  },
+  "TALKMAPS": {
+    "body": "Survey maps",
+    "items": []
+  },
+  "TALKVENDETTA": {
+    "body": "Vendetta upon the {$FACTION0}",
+    "items": []
+  }
+}

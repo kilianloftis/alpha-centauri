@@ -15,7 +15,7 @@
 #include "game/base/BaseManager.h"
 #include "game/base/BaseTypes.h"
 #include "game/population/PopulationManager.h"
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -70,7 +70,7 @@ bool FormerMatchesTile_(const Unit& rUnit, const Tile& rTile)
 }
 
 bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& rEffect,
-                             const ElevationRulesConfig_t& rRules)
+                             const MapRulesConfig_t& rRules)
 {
     const auto* pChange = std::get_if<ElevationChangeEffect_t>(&rEffect.effect);
     if (!pChange)
@@ -84,7 +84,7 @@ bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& r
 // Refused before payment when nothing would happen. Effect conditions answer for terrain
 // writes; an elevation change's bound depends on the Former's domain.
 bool AnyEffectWouldFire_(const Unit& rUnit, const TerraformProject_t& rProject,
-                         const Tile& rTile, const ElevationRulesConfig_t& rRules)
+                         const Tile& rTile, const MapRulesConfig_t& rRules)
 {
     EffectContext_t context;
     context.targetTile = &rTile;
@@ -127,7 +127,7 @@ bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const 
 
 bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
                       std::span<const CoexistenceOverrideEffect_t> overrides,
-                      const ElevationRulesConfig_t& rRules)
+                      const MapRulesConfig_t& rRules)
 {
     if (rProject.pPlaces && ImprovementApplies(rTile, *rProject.pPlaces, overrides))
     {
@@ -168,7 +168,7 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
 
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId)
 {
-    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    const MapRulesConfig_t& rRules = rTile.MapRules();
     if (rRules.referenceLevelMeters <= 0)
     {
         throw std::logic_error("QuoteRaiseLowerEnergyCost: reference_level_meters must be > 0");
@@ -246,7 +246,7 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
 }
 
 bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
-                                  const ElevationRulesConfig_t& rRules)
+                                  const MapRulesConfig_t& rRules)
 {
     const bool bSeaFormer = formerDomain == UnitDomain_t::Sea;
     const int elevation = rTile.GetElevation();
@@ -261,7 +261,7 @@ bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, 
                       : elevation >= rRules.referenceLevelMeters;
 }
 
-int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules)
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const MapRulesConfig_t& rRules)
 {
     return formerDomain == UnitDomain_t::Land ? rRules.oceanLevelMeters : rRules.minElevationMeters;
 }
@@ -340,7 +340,7 @@ struct ElevationBand_t
 };
 
 ElevationBand_t RequireLegalEdit_(int floorMeters, int ceilingMeters,
-                                  const ElevationRulesConfig_t& rRules)
+                                  const MapRulesConfig_t& rRules)
 {
     if (rRules.maxAdjacentDifferenceMeters <= 0)
     {
@@ -407,7 +407,7 @@ private:
 };
 
 void RelaxAdjacentSlopes_(const std::vector<const Tile*>& rSeeds, const WorldMap& rWorldMap,
-                          const ElevationRulesConfig_t& rRules, WorkingElevations_& rWorking)
+                          const MapRulesConfig_t& rRules, WorkingElevations_& rWorking)
 {
     std::deque<const Tile*> pending;
     std::unordered_set<const Tile*> queued;
@@ -469,7 +469,7 @@ std::vector<const Tile*> ApplySeeds_(std::span<const ElevationSeed_t> seeds,
 
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
                                                   int floorMeters, int ceilingMeters,
-                                                  const ElevationRulesConfig_t& rRules)
+                                                  const MapRulesConfig_t& rRules)
 {
     const ElevationBand_t band = RequireLegalEdit_(floorMeters, ceilingMeters, rRules);
     const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
@@ -483,7 +483,7 @@ std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_
 }
 
 int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
-                          const ElevationRulesConfig_t& rRules)
+                          const MapRulesConfig_t& rRules)
 {
     const int span = rRules.maxElevationMeters - rRules.minElevationMeters;
     int delta = 0;
@@ -550,7 +550,7 @@ std::vector<Unit*> StrandedUnits_(const Tile& rTile, bool bNowWater)
     return units;
 }
 
-SubmergedBase_t SubmergedBase_(const BaseManager& rBase, const ElevationRulesConfig_t& rRules)
+SubmergedBase_t SubmergedBase_(const BaseManager& rBase, const MapRulesConfig_t& rRules)
 {
     SubmergedBase_t submerged;
     submerged.size = rBase.GetPopulation().GetSize();

@@ -70,7 +70,7 @@ std::optional<std::vector<MoistureChange_t>> ApplyElevationWrites_(
 
 } // namespace
 
-int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules)
+int RollLevelMeters(std::mt19937& rRng, const MapRulesConfig_t& rRules)
 {
     if (rRules.levelMinMeters <= 0 || rRules.levelMaxMeters < rRules.levelMinMeters)
     {
@@ -81,7 +81,7 @@ int RollLevelMeters(std::mt19937& rRng, const ElevationRulesConfig_t& rRules)
 }
 
 std::optional<std::vector<MoistureChange_t>> ApplyElevationDelta(
-    Tile& rOrigin, int deltaMeters, const ElevationRulesConfig_t& rRules, int floorMeters,
+    Tile& rOrigin, int deltaMeters, const MapRulesConfig_t& rRules, int floorMeters,
     int ceilingMeters, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
@@ -92,7 +92,7 @@ std::optional<std::vector<MoistureChange_t>> ApplyElevationDelta(
 }
 
 bool ApplyEarthquake(Tile& rOrigin, int levelCount, std::mt19937& rRng,
-                     const ElevationRulesConfig_t& rRules, GameState& rGameState)
+                     const MapRulesConfig_t& rRules, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
     if (levelCount <= 0)
@@ -114,7 +114,7 @@ bool ApplyEarthquake(Tile& rOrigin, int levelCount, std::mt19937& rRng,
 }
 
 bool LowerTilesOneLevel(std::span<Tile*> tiles, std::mt19937& rRng,
-                        const ElevationRulesConfig_t& rRules, GameState& rGameState)
+                        const MapRulesConfig_t& rRules, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
     if (tiles.empty())

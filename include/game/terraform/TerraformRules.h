@@ -2,7 +2,7 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 #include "game/map/TerrainConfig.h"
 #include "game/map/Tile.h"
 #include "game/units/UnitDomain.h"
@@ -63,11 +63,11 @@ bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
 // Whether a Former of this domain can still move rTile this way. A sea Former raises only deep
 // ground; a land Former never lowers below the reference level.
 bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
-                                  const ElevationRulesConfig_t& rRules);
+                                  const MapRulesConfig_t& rRules);
 
 // The floor a Former of this domain lowers toward: ocean level on land (the tile stops at the
 // waterline), Planet's floor at sea.
-int FormerLowerFloorMeters(UnitDomain_t formerDomain, const ElevationRulesConfig_t& rRules);
+int FormerLowerFloorMeters(UnitDomain_t formerDomain, const MapRulesConfig_t& rRules);
 
 // SMAC alien_fauna growth: MapAreaTiles / (turn/4 + 32) samples per turn, turnIndex counted
 // from the first playable year.
@@ -137,11 +137,11 @@ struct ElevationWrite_t
 // moved tile pulls its neighbours within the slope limit. Throws on a band outside Planet's range.
 std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
                                                   int floorMeters, int ceilingMeters,
-                                                  const ElevationRulesConfig_t& rRules);
+                                                  const MapRulesConfig_t& rRules);
 
 // The sum of the level rolls, capped at Planet's full elevation span.
 int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
-                          const ElevationRulesConfig_t& rRules);
+                          const MapRulesConfig_t& rRules);
 
 // The faction a Former's raise or lower land aggrieves by drying land, from the climate rerun's
 // changes in scan order. A tile that got drier records the faction holding the nearest base of

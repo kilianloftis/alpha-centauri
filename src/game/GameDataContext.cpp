@@ -41,7 +41,7 @@
 #include "game/units/UnitSlotRegistry.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
-#include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/population/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
@@ -232,11 +232,11 @@ void LoadEffectRegistries_(GameDataContext& rData)
 void LoadWorldGenData_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
-    rData.elevationRules = Parse_<ElevationRulesConfigParser>(rPaths.elevationRules);
+    rData.mapRules = Parse_<MapRulesConfigParser>(rPaths.mapRules);
     rData.worldGenPresetRegistry = LoadRegistry_<WorldGenPresetRegistry>(rPaths.worldGenPresets);
     for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
     {
-        WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.elevationRules);
+        WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.mapRules);
     }
     rData.worldGenDecorationConfig =
         ParseOwned_<WorldGenDecorationConfigParser>(rPaths.worldGenDecoration);

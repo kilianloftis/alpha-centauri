@@ -19,15 +19,13 @@ public:
                   uint32_t seed);
 
     std::string PickBaseName();
-    std::string PickPhrase(const std::string& category) const;
-    std::string Format(const std::string& rTemplate) const;
 
 private:
     const FactionFlavorConfig& m_flavor;
     const FactionIdentity& m_identity;
     std::unordered_set<std::string> m_usedBaseNames;
     int m_fallbackBaseCounter = 1;
-    mutable std::mt19937 m_rng;
+    std::mt19937 m_rng;
 };
 
 } // namespace ac

@@ -170,7 +170,7 @@ Each signature below is the new one. Callers pass fewer arguments, and a caller 
 - `TerraformRules`:
   - `int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId)`
   - `std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)`, reading the improvement registry from the game data
-  - `std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds, int floorMeters, int ceilingMeters, const ElevationRulesConfig_t& rRules)`. The elevation rules stay a parameter, because the mutation that plans the change rolls its levels with the same rules.
+  - `std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds, int floorMeters, int ceilingMeters, const MapRulesConfig_t& rRules)`. The elevation rules stay a parameter, because the mutation that plans the change rolls its levels with the same rules.
 - `ProbeRules`:
   - `bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget)`
   - `std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction, const Faction& rActor, const ProbeTarget_t& rTarget)`

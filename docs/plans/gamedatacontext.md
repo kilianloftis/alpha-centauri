@@ -30,7 +30,7 @@ Recorded in `docs/architecture/high-level.md`, `map-system.md`, `docs/code-revie
    - UI → `ProbeActionExecutor`, `IUnitOrderWorld` → `BaseConquestEffects`, and `TryFoundBase` → `CreateBase`.
    - Two of them are never used: `ResolvePostCombatBaseConquest` and `ApplyBaseAction_`.
    - `ApplyFungalBloom` takes the native registry as a parameter and then reads it again through the Planet faction.
-4. **The ruleset is changed per session.** `Engine::StartNewGame_` writes the preset's elevation range into `GameDataContext::elevationRules`. Terraform reads that modified copy, while earthquakes read the world's own copy.
+4. **The ruleset is changed per session.** `Engine::StartNewGame_` writes the preset's elevation range into `GameDataContext::mapRules`. Terraform reads that modified copy, while earthquakes read the world's own copy.
 5. **Growing constructors.** `BaseManager` takes ten separate ruleset references, unpacked the same way at 4 sites. `BaseEcology` reaches through the faction rather than add more.
 6. **Tests that break the new rule.**
    - 20 test files read `config/`, against `.devin/rules/testing.mdc` ("Do not test shipping config").
@@ -142,11 +142,11 @@ Per file:
   - `TryFoundBase` drops its context parameter.
   - Add `CanStartTerraformProject(const Unit&, const std::string& projectId, const GameState&) const`. `TryStartTerraform` uses it, and so does `WorldView`'s check for keys shared by two actions. A distinct name keeps it from hiding the free `CanStartTerraform` inside the executor.
 - Terraform uses the world's rules:
-  - `CanStartTerraform`, `TerraformEnergyCost` and `QuoteRaiseLowerEnergyCost` drop the `ElevationRulesConfig_t` parameter and read the acting tile's `MapRules()`.
+  - `CanStartTerraform`, `TerraformEnergyCost` and `QuoteRaiseLowerEnergyCost` drop the `MapRulesConfig_t` parameter and read the acting tile's `MapRules()`.
   - `Engine` stops running `ApplyElevationRange` on the context, and holds it as `std::unique_ptr<const GameDataContext>`.
-  - `WorldFixture` loads fixture `map_rules.json` into `dataContext.elevationRules` as parsed, the way `LoadGameData` does.
+  - `WorldFixture` loads fixture `map_rules.json` into `dataContext.mapRules` as parsed, the way `LoadGameData` does.
   - `WorldFixture` binds its map to `TestMapRules()`, which applies the preset range the way `WorldGenerator` does.
-  - `WorldGenPipelineTests` keeps passing `dataContext.elevationRules` to `WorldGenerator`.
+  - `WorldGenPipelineTests` keeps passing `dataContext.mapRules` to `WorldGenerator`.
   - `TerraformTests`' raise/lower case reads the level sizes from the tile's `MapRules()`.
 - `IUnitOrderWorld`, the `GameState` overrides and `BaseConquestEffects` drop the context parameter and read `GetGameData()`.
 - `EnsureAdHocDesign` takes `const UnitComponentRegistry&`.

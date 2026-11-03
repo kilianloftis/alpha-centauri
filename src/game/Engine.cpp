@@ -56,6 +56,8 @@
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "ui/SpriteLibrary.h"
 #include "ui/StandingCaptions.h"
+#include "ui/commlinks/TalkScript.h"
+#include "ui/text/TextPack.h"
 #include "ui/MapRenderer.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
@@ -481,7 +483,7 @@ void Engine::GenerateWorld_()
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
                           *m_gameDataContext->improvementRegistry,
-                          m_gameDataContext->elevationRules,
+                          m_gameDataContext->mapRules,
                           m_sessionSeed);
     // Separate from world generation, so map size does not shift combat rolls.
     const auto combatSeed = static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u);
@@ -659,6 +661,10 @@ void Engine::InitializeUi_()
         *m_gameDataContext->terrainOperationRegistry));
     m_pStandingCaptions = std::make_unique<StandingCaptions>(StandingCaptions::Load(
         m_gameDataContext->paths.standingCaptions, *m_gameDataContext->diplomacyConfig));
+    m_pTextPack = std::make_unique<TextPack>(
+        TextPack::Load(m_gameDataContext->paths.textRoots, m_gameDataContext->paths.textLocale));
+    m_pTalkScript = std::make_unique<TalkScript>(TalkScript::Load(
+        m_gameDataContext->paths.talk, *m_pTextPack, *m_gameDataContext->factionRegistry));
     m_pMapRenderer = std::make_unique<MapRenderer>(*m_pSprites, *m_pGameState, Style().tileRenderer,
                                                    Style().mapRenderer);
     m_viewFactory = std::make_unique<ViewFactory>(
@@ -666,6 +672,8 @@ void Engine::InitializeUi_()
         *m_gameDataContext,
         *m_pHotkeys,
         *m_pStandingCaptions,
+        *m_pTextPack,
+        *m_pTalkScript,
         *m_pGraphics,
         *m_pMapRenderer,
         *m_pSprites,

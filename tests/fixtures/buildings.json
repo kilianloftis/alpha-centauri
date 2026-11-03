@@ -1619,5 +1619,22 @@
         }
       }
     ]
+  },
+  {
+    "id": "test_valued_orbital",
+    "name": "Test Valued Orbital",
+    "mineral_cost": 40,
+    "category": "grow",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": []
+  },
+  {
+    "id": "test_valued_project",
+    "name": "Test Valued Project",
+    "mineral_cost": 30,
+    "category": "discover",
+    "secret_project": true,
+    "effects": []
   }
 ]

@@ -2,7 +2,7 @@
 
 #include "game/GameDataPaths.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapRulesConfigParser.h"
 #include "game/worldgen/MapGenerationConfig.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/effects/EffectConfig.h"
@@ -68,7 +68,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.worldGenDecoration = FixturePath("worldGen/decoration.json");
     paths.worldGenLandmarks = FixturePath("worldGen/landmarks.json");
     paths.tileYieldRules = FixturePath("tile_yield_rules.json");
-    paths.elevationRules = FixturePath("map_rules.json");
+    paths.mapRules = FixturePath("map_rules.json");
     paths.interactionGrids = FixturePath("interaction_grids.json");
     paths.moraleLevels = FixturePath("morale_levels.json");
     paths.probeActions = FixturePath("probe_actions.json");
@@ -78,6 +78,9 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.councilRules = FixturePath("council/rules.json");
     paths.hotkeys = FixturePath("hotkeys.json");
     paths.standingCaptions = FixturePath("standing_captions.json");
+    paths.talk = FixturePath("ui/talk.json");
+    paths.textRoots = {FixturePath("text")};
+    paths.textLocale = "en";
     paths.difficulty = FixturePath("difficulty.json");
     paths.policeRules = FixturePath("police_rules.json");
     paths.worldRules = FixturePath("world_rules.json");
@@ -91,10 +94,10 @@ inline ac::GameDataPaths FixtureDataPaths()
 
 // Map-rules ocean line plus the session-default preset's elevation range.
 // Address is stable for Tile::BindMapRules.
-inline ac::ElevationRulesConfig_t LoadTestMapRules()
+inline ac::MapRulesConfig_t LoadTestMapRules()
 {
-    ac::ElevationRulesConfig_t rules =
-        ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    ac::MapRulesConfig_t rules =
+        ac::MapRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
     const std::string presetId = ac::MapGenerationConfig_t{}.presetId;
     const std::vector<ac::WorldGenPresetConfig_t> presets =
         ac::WorldGenPresetConfigParser{}.ParseConfig(FixturePath("worldGen/presets.json"));
@@ -108,9 +111,9 @@ inline ac::ElevationRulesConfig_t LoadTestMapRules()
     return rules;
 }
 
-inline const ac::ElevationRulesConfig_t& TestMapRules()
+inline const ac::MapRulesConfig_t& TestMapRules()
 {
-    static const ac::ElevationRulesConfig_t rules = LoadTestMapRules();
+    static const ac::MapRulesConfig_t rules = LoadTestMapRules();
     return rules;
 }
 

@@ -557,7 +557,7 @@ Some consequences have no condition, no choice and no amount: a transferred base
 `ElevationChange.cpp:235` (`ApplyEarthquake`).
 - The rolls stay within a limit. Only the cap is a decision.
 - **Decision:** make it a rule.
-- **Added to the plan (commit 11):** `TerraformRules::EarthquakeDeltaMeters(std::span<const int> levelRollsMeters, const ElevationRulesConfig_t&)`.
+- **Added to the plan (commit 11):** `TerraformRules::EarthquakeDeltaMeters(std::span<const int> levelRollsMeters, const MapRulesConfig_t&)`.
 
 **Stays with its mutation:** starting a terraform pays its energy up front and ends the former's turn (`UnitOrderExecutor.cpp:602`).
 

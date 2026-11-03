@@ -154,4 +154,12 @@ bool IsValidProposal(const DiplomaticProposal_t& rProposal)
         && IsValidSide_(rGameState, *pRecipient, *pProposer, rProposal.demand);
 }
 
+bool CanDeliver(FactionId_t giver, FactionId_t receiver, const TradeItem_t& rItem)
+{
+    const GameState& rGameState = CurrentGameState();
+    const Faction& rGiver = rGameState.RequireFaction(giver);
+    const Faction& rReceiver = rGameState.RequireFaction(receiver);
+    return std::visit(CanDeliver_{rGameState, rGiver, rReceiver}, rItem);
+}
+
 } // namespace ac

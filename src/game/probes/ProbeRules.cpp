@@ -11,6 +11,7 @@
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/probes/MindControlLedger.h"
@@ -43,9 +44,6 @@ namespace ac
 
 namespace
 {
-
-// Thinker/SMAC fallback when the target faction has no Headquarters.
-constexpr int k_defaultHqDistance = 12;
 
 int ResolveProbeDefenseBonus_(const BaseManager& rBase)
 {
@@ -145,17 +143,6 @@ void SumMindControlGarrison_(const Tile& rTile, const WorldMap& rMap,
     }
 }
 
-// The binary's vector_dist, which TabletopDiagonalDistance equals on every offset.
-int DistanceToHeadquarters_(const Faction& rFaction, const Tile& rTile, int mapWidth)
-{
-    const BaseManager* pHq = rFaction.GetHeadquarters();
-    if (!pHq)
-    {
-        return k_defaultHqDistance;
-    }
-    return TabletopDiagonalDistance(rTile, pHq->GetTile(), mapWidth);
-}
-
 // Truncated toward zero, which equals the binary's sequential integer x2 and /2 steps.
 int ScaleTruncating_(int value, double scale)
 {
@@ -176,8 +163,7 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
                                         const BaseManager& rBase, const WorldMap& rMap)
 {
     const Faction& rTargetFaction = rBase.GetFaction();
-    const int rawDistance =
-        DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth());
+    const int rawDistance = HeadquartersDistance(rTargetFaction, rBase.GetTile());
     // The HQ tile itself, before any facility halves the distance.
     if (rawDistance <= 0)
     {
@@ -201,12 +187,11 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
 }
 
 int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
-                         const Unit& rTargetUnit, const WorldMap& rMap)
+                         const Unit& rTargetUnit)
 {
     const Faction& rTargetFaction = rTargetUnit.GetFaction();
     const int mineralCost = std::max(1, rTargetUnit.GetDesign().GetBaseCost());
-    const int rawDistance =
-        DistanceToHeadquarters_(rTargetFaction, rTargetUnit.GetTile(), rMap.GetWidth());
+    const int rawDistance = HeadquartersDistance(rTargetFaction, rTargetUnit.GetTile());
     const double distScale =
         ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeDistanceScale, rActor);
     SubvertCostInputs_t inputs;
@@ -640,7 +625,7 @@ std::optional<int> QuoteProbeActionCost(const ProbeActionConfig_t& rAction,
             }
             else
             {
-                return QuoteUnitActionCost_(*rAction.cost, rActor, rConcrete.rUnit, rMap);
+                return QuoteUnitActionCost_(*rAction.cost, rActor, rConcrete.rUnit);
             }
         },
         rTarget.ref);

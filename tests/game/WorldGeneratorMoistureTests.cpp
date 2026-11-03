@@ -273,7 +273,7 @@ namespace
 // A fixed pseudo-random map: elevations across ocean, shore, hills and peaks, with rivers.
 void FillPinnedTerrain_(WorldMap& rWorld)
 {
-    const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+    const MapRulesConfig_t& rRules = actest::TestMapRules();
     const int lowest = std::max(rRules.minElevationMeters, -3000);
     const int span = std::min(rRules.maxElevationMeters, 4500) - lowest;
     uint32_t state = 12345u;

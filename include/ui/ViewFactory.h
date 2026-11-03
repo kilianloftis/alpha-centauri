@@ -31,6 +31,8 @@ class Tile;
 class MapRenderer;
 class HotkeyConfig;
 class StandingCaptions;
+class TalkScript;
+class TextPack;
 class SpriteLibrary;
 
 class ViewFactory
@@ -41,6 +43,8 @@ public:
         const GameDataContext& rGameDataContext,
         const HotkeyConfig& rHotkeys,
         const StandingCaptions& rStandingCaptions,
+        const TextPack& rText,
+        const TalkScript& rTalkScript,
         Graphics& rGraphics,
         MapRenderer& rMapRenderer,
         SpriteLibrary& rSprites,
@@ -106,6 +110,8 @@ private:
     const GameDataContext& m_rGameDataContext;
     const HotkeyConfig& m_rHotkeys;
     const StandingCaptions& m_rStandingCaptions;
+    const TextPack& m_rText;
+    const TalkScript& m_rTalkScript;
     Graphics& m_rGraphics;
     MapRenderer& m_rMapRenderer;
     SpriteLibrary& m_rSprites;

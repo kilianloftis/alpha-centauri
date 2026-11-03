@@ -75,7 +75,7 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
 }
 
 void WorldGenPresetConfigParser::ValidateAgainstMapRules(
-    const WorldGenPresetConfig_t& rPreset, const ElevationRulesConfig_t& rMapRules)
+    const WorldGenPresetConfig_t& rPreset, const MapRulesConfig_t& rMapRules)
 {
     if (rPreset.minElevation >= rPreset.maxElevation)
     {
@@ -111,7 +111,7 @@ void WorldGenPresetConfigParser::ValidateAgainstMapRules(
     }
 }
 
-void WorldGenPresetConfigParser::ApplyElevationRange(ElevationRulesConfig_t& rRules,
+void WorldGenPresetConfigParser::ApplyElevationRange(MapRulesConfig_t& rRules,
                                                      const WorldGenPresetConfig_t& rPreset)
 {
     ValidateAgainstMapRules(rPreset, rRules);

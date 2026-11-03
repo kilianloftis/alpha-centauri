@@ -8,6 +8,21 @@
   "allied_territory_battle_friction": -1,
   "terraform_rainfall_friction": 5,
   "terraform_rainfall_stop_distance": 2,
+  "base_value": {
+    "scan_radius": 6,
+    "credits_offset": 1000,
+    "distance_offset": 4,
+    "min_population": 3,
+    "minimum": 100,
+    "ungarrisoned_divisor": 2,
+    "counterparty_absent_multiplier": 2,
+    "lone_base_multiplier": 2,
+    "outnumbered_ratio": 5,
+    "outnumbered_divisor": 2,
+    "minerals_per_row": 10,
+    "project_rows_multiplier": 25,
+    "unit_rows_multiplier": 2
+  },
   "statuses": {
     "Neutral": {
       "enter_territory": true,

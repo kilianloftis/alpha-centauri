@@ -1,0 +1,20 @@
+; synthetic script for extract_text tests
+## a commented-out line
+
+#GREETING
+#xs 440
+#caption $CAPTION7
+"Hello, $TITLE0 $NAME1.
+It’s a fine day."
+
+Answer one.
+Answer two.
+
+#CHOICES
+"First line."
+"Second line."
+
+#PLAIN
+#xs 440
+Just a body.
+

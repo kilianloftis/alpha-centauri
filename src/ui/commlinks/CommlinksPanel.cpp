@@ -7,15 +7,18 @@
 #include "ui/style/UiStyle.h"
 
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace ac
 {
 
 CommlinksPanel::CommlinksPanel(GameState& rGameState, const StandingCaptions& rCaptions,
-                               WindowLayout_t layout)
+                               WindowLayout_t layout, std::function<void(FactionId_t)> onTalk)
     : UIElement(layout)
     , m_rGameState(rGameState)
     , m_rCaptions(rCaptions)
+    , m_onTalk(std::move(onTalk))
 {
 }
 
@@ -26,6 +29,22 @@ void CommlinksPanel::Render(Graphics& rGraphics)
     DrawIntegrity_(rGraphics, playerId);
     DrawColumnLabels_(rGraphics);
     DrawRows_(rGraphics, playerId);
+}
+
+void CommlinksPanel::HandleMouseClick(const MouseEvent_t& rEvent)
+{
+    const auto& style = Style().commlinksPanel;
+    const float rowsTop = m_layout.y + style.rowStartY * m_layout.height;
+    const float row = (static_cast<float>(rEvent.y) - rowsTop) / (style.rowHeight * m_layout.height);
+    const std::vector<const Faction*> factions =
+        MetFactions_(m_rGameState.GetPlayerFaction().GetFactionId());
+    if (rEvent.button != MouseButton_t::Left || row < 0.0f
+        || row >= static_cast<float>(factions.size()))
+    {
+        return;
+    }
+    const auto index = static_cast<std::size_t>(row);
+    m_onTalk(factions[index]->GetFactionId());
 }
 
 void CommlinksPanel::DrawFrame_(Graphics& rGraphics) const
@@ -55,18 +74,27 @@ void CommlinksPanel::DrawColumnLabels_(Graphics& rGraphics) const
             style.titleColor);
 }
 
-void CommlinksPanel::DrawRows_(Graphics& rGraphics, FactionId_t playerId) const
+std::vector<const Faction*> CommlinksPanel::MetFactions_(FactionId_t playerId) const
 {
     const DiplomacyLedger& rLedger = m_rGameState.GetDiplomacyLedger();
-    int row = 0;
+    std::vector<const Faction*> factions;
     for (const Faction& rFaction : m_rGameState.Factions())
     {
         const FactionId_t otherId = rFaction.GetFactionId();
-        if (otherId == playerId || !rLedger.AreKnown(playerId, otherId))
+        if (otherId != playerId && rLedger.AreKnown(playerId, otherId))
         {
-            continue;
+            factions.push_back(&rFaction);
         }
-        DrawRow_(rGraphics, rFaction, playerId, row);
+    }
+    return factions;
+}
+
+void CommlinksPanel::DrawRows_(Graphics& rGraphics, FactionId_t playerId) const
+{
+    int row = 0;
+    for (const Faction* pFaction : MetFactions_(playerId))
+    {
+        DrawRow_(rGraphics, *pFaction, playerId, row);
         ++row;
     }
 }

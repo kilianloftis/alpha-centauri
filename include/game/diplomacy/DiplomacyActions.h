@@ -23,6 +23,12 @@ std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& r
                                                       FactionId_t a,
                                                       FactionId_t b);
 
+// What SMAC's diplomacy menu offers face to face, out of GetAvailableActions: proposals, trade,
+// and cancelling only an agreement that steps down to another (renouncing a Pact).
+std::vector<DiplomaticActionKind_t> GetTalkActions(const DiplomacyLedger& rLedger,
+                                                   FactionId_t a,
+                                                   FactionId_t b);
+
 std::string ToString(DiplomaticActionKind_t kind);
 
 } // namespace ac

@@ -5,7 +5,7 @@
 #include "game/CurrentGameState.h"
 #include "game/terraform/ElevationChange.h"
 #include "game/terraform/TerraformRules.h"
-#include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapRulesConfigParser.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -49,9 +49,9 @@ using Catch::Matchers::ContainsSubstring;
 namespace
 {
 
-ElevationRulesConfig_t ShippingRules_()
+MapRulesConfig_t ShippingRules_()
 {
-    ElevationRulesConfig_t rules;
+    MapRulesConfig_t rules;
     rules.minElevationMeters = -4000;
     rules.maxElevationMeters = 4000;
     rules.oceanLevelMeters = 0;
@@ -122,9 +122,10 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "submerged_pop_loss_roll_min": 2,
         "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(ElevationRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
@@ -137,9 +138,10 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "submerged_pop_loss_roll_min": 2,
         "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(ElevationRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
                       ContainsSubstring("level_max_meters"));
 
     WriteTempRules_(path, R"({
@@ -152,9 +154,10 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "submerged_pop_loss_roll_min": 2,
         "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(ElevationRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
                       ContainsSubstring("ocean_shelf_meters"));
 
     WriteTempRules_(path, R"({
@@ -167,9 +170,10 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "submerged_pop_loss_roll_min": 2,
         "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(ElevationRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
@@ -182,17 +186,49 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": -500,
         "submerged_pop_loss_roll_min": 2,
         "submerged_pop_loss_roll_max": 4,
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 12
+    })");
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+                      ContainsSubstring("spread_altitude_limit_meters"));
+
+    WriteTempRules_(path, R"({
+        "ocean_level_meters": 0,
+        "ocean_shelf_meters": -2000,
+        "level_min_meters": 500,
+        "level_max_meters": 1500,
+        "max_adjacent_difference_meters": 1500,
+        "reference_level_meters": 1000,
+        "spread_altitude_limit_meters": 1000,
+        "submerged_pop_loss_roll_min": 2,
+        "submerged_pop_loss_roll_max": 4,
         "submerged_pop_loss_cap": 10
     })");
-    CHECK_THROWS_WITH(ElevationRulesConfigParser{}.ParseConfig(path.string()),
-                      ContainsSubstring("spread_altitude_limit_meters"));
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+                      ContainsSubstring("missing_headquarters_distance"));
+
+    WriteTempRules_(path, R"({
+        "ocean_level_meters": 0,
+        "ocean_shelf_meters": -2000,
+        "level_min_meters": 500,
+        "level_max_meters": 1500,
+        "max_adjacent_difference_meters": 1500,
+        "reference_level_meters": 1000,
+        "spread_altitude_limit_meters": 1000,
+        "submerged_pop_loss_roll_min": 2,
+        "submerged_pop_loss_roll_max": 4,
+        "submerged_pop_loss_cap": 10,
+        "missing_headquarters_distance": 0
+    })");
+    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+                      ContainsSubstring("missing_headquarters_distance"));
 
     std::filesystem::remove(path);
 }
 
 TEST_CASE("A preset's elevation range is the world storage range", "[map][elevation][worldgen]")
 {
-    ElevationRulesConfig_t rules;
+    MapRulesConfig_t rules;
     rules.oceanLevelMeters = 0;
     rules.oceanShelfMeters = -2000;
     rules.spreadAltitudeLimitMeters = 1000;
@@ -219,7 +255,7 @@ TEST_CASE("A preset's elevation range is the world storage range", "[map][elevat
 TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][elevation]")
 {
     WorldFixture fixture;
-    const ElevationRulesConfig_t& rules = TestMapRules();
+    const MapRulesConfig_t& rules = TestMapRules();
     WorldMap& map = fixture.map;
 
     SECTION("a neighbor already within the limit stays")
@@ -306,7 +342,7 @@ TEST_CASE("Elevation delta pulls neighbors only past the slope limit", "[map][el
 TEST_CASE("Raising a ridge re-runs rainfall around it", "[map][elevation][moisture]")
 {
     WorldFixture fixture;
-    const ElevationRulesConfig_t& rules = TestMapRules();
+    const MapRulesConfig_t& rules = TestMapRules();
     WorldMap& map = fixture.map;
     for (const std::unique_ptr<Tile>& pTile : map.GetTiles())
     {
@@ -337,7 +373,7 @@ TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
           "[map][elevation]")
 {
     WorldFixture fixture;
-    ElevationRulesConfig_t rules = TestMapRules();
+    MapRulesConfig_t rules = TestMapRules();
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
     WorldMap& map = fixture.map;
@@ -584,7 +620,7 @@ TEST_CASE("Planning an elevation change lists its writes and leaves the map unto
           "[map][elevation]")
 {
     WorldFixture fixture;
-    const ElevationRulesConfig_t& rules = TestMapRules();
+    const MapRulesConfig_t& rules = TestMapRules();
     At_(fixture.map, 8, 8).SetElevation(0);
     At_(fixture.map, 7, 9).SetElevation(-2000);
 
@@ -601,7 +637,7 @@ TEST_CASE("Planning an elevation change lists its writes and leaves the map unto
 
 TEST_CASE("An earthquake's level rolls add up to at most Planet's full span", "[map][elevation]")
 {
-    const ElevationRulesConfig_t rules = ShippingRules_();
+    const MapRulesConfig_t rules = ShippingRules_();
     const int span = rules.maxElevationMeters - rules.minElevationMeters;
     const std::vector<int> small = {100, 200};
     const std::vector<int> huge = {span, 500};

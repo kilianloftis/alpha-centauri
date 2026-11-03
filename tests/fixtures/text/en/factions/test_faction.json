@@ -1,0 +1,35 @@
+{
+  "leader_female": false,
+  "noun_gender": "M",
+  "noun_plural": true,
+  "fields": {
+    "formal_name_faction": "formal_name_faction",
+    "desc_name_faction": "desc_name_faction",
+    "adj_name_faction": "adj_name_faction",
+    "adj_leader": "adj_leader",
+    "adj_insult_leader": "adj_insult_leader",
+    "adj_faction": "adj_faction",
+    "adj_insult_faction": "adj_insult_faction",
+    "insult_leader": "insult_leader",
+    "name_leader": "Tester",
+    "title_leader": "Chief",
+    "noun_faction": "Testers"
+  },
+  "phrases": {
+    "goal": "tester goal",
+    "intent": "tester intent",
+    "agenda": "tester agenda",
+    "your_agenda": "tester your_agenda",
+    "misdeed": "tester misdeed",
+    "pastime": "tester pastime",
+    "your_pastime": "tester your_pastime",
+    "accusation": "tester accusation",
+    "methods": "tester methods, M1",
+    "projects": "tester projects, M2",
+    "pursuits": "tester pursuits, M2",
+    "tribute": "tester tribute, M1",
+    "service": "tester service",
+    "enforcers": "tester enforcers",
+    "code": "tester code"
+  }
+}

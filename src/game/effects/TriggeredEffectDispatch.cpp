@@ -366,7 +366,7 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
     {
         return false;
     }
-    const ElevationRulesConfig_t& rRules = rCtx.pTile->MapRules();
+    const MapRulesConfig_t& rRules = rCtx.pTile->MapRules();
     const UnitDomain_t domain = rCtx.pUnit->GetDomain();
     // Whether a Former may start was checked at order time. Now the cost is paid, so a roll past
     // the floor lands on it; only no change at all reports false.

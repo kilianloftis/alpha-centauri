@@ -7,6 +7,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdlib>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -303,4 +306,48 @@ TEST_CASE("Orthogonal neighbors are the tiles across the diamond's edges", "[map
 
     const std::vector<std::pair<int, int>> expected = {{1, -1}, {1, 1}, {-1, 1}, {-1, -1}};
     CHECK(seen == expected);
+}
+
+TEST_CASE("Each ring of the binary's offset table holds its whole Chebyshev ring",
+          "[map][maputils][rings]")
+{
+    std::size_t start = 1;
+    for (int ring = 1; ring <= k_TableOffsetsMaxRadius; ++ring)
+    {
+        const std::size_t count = static_cast<std::size_t>(8 * ring);
+        std::set<std::pair<int, int>> distinct;
+        for (std::size_t i = start; i < start + count; ++i)
+        {
+            const LatticeOffset_t& rStep = k_TableOffsets[i];
+            CHECK(std::max(std::abs(rStep.p), std::abs(rStep.q)) == ring);
+            distinct.emplace(rStep.p, rStep.q);
+        }
+        CHECK(distinct.size() == count);
+        start += count;
+    }
+    CHECK(start == k_TableOffsets.size());
+}
+
+TEST_CASE("Ring walks follow the binary's order and stop when told to", "[map][maputils][rings]")
+{
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
+    const Tile& rOrigin = *map.GetTile(20, 14);
+
+    std::vector<std::pair<int, int>> ringOne;
+    ForEachTileInRings(rOrigin, map, 1, [&](const Tile* pTile)
+    {
+        ringOne.emplace_back(pTile->GetX() - rOrigin.GetX(), pTile->GetY() - rOrigin.GetY());
+        return true;
+    });
+    const std::vector<std::pair<int, int>> binaryOrder = {
+        {1, -1}, {2, 0}, {1, 1}, {0, 2}, {-1, 1}, {-2, 0}, {-1, -1}, {0, -2}};
+    CHECK(ringOne == binaryOrder);
+
+    int visited = 0;
+    ForEachTileInRings(rOrigin, map, 6, [&](const Tile*) { return ++visited < 3; });
+    CHECK(visited == 3);
+
+    int ringsOneToSix = 0;
+    ForEachTileInRings(rOrigin, map, 6, [&](const Tile*) { return ++ringsOneToSix > 0; });
+    CHECK(ringsOneToSix == 168);
 }

@@ -29,6 +29,7 @@ add_executable(effects-tests
     faction/PsychTests.cpp
     faction/DiplomacyConfigParserTests.cpp
     faction/DiplomacyCalculatorTests.cpp
+    faction/BaseValueRulesTests.cpp
     faction/DiplomaticStandingMutationsTests.cpp
     faction/DiplomacyLedgerTests.cpp
     faction/DiplomaticPermissionRulesTests.cpp
@@ -97,6 +98,7 @@ add_executable(effects-tests
     game/MapRulesTests.cpp
     game/WorldMapTests.cpp
     game/MapUtilsTests.cpp
+    game/RegionRulesTests.cpp
     game/WorldGenPipelineTests.cpp
     game/ConfigStrictnessTests.cpp
     game/PopulationCalculatorTests.cpp
@@ -148,6 +150,11 @@ add_executable(effects-tests
     ui/ViewFactoryTests.cpp
     ui/HotkeyConfigTests.cpp
     ui/StandingCaptionsTests.cpp
+    ui/ScriptMarkupTests.cpp
+    ui/TextPackTests.cpp
+    ui/TextWrapTests.cpp
+    ui/TalkScriptTests.cpp
+    ui/TalkPopupTests.cpp
     ui/CommlinksPanelTests.cpp
     ui/WorldViewTests.cpp
     ui/SpriteLibraryTests.cpp
@@ -189,3 +196,8 @@ set_target_properties(effects-tests PROPERTIES
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 catch_discover_tests(effects-tests)
+
+# The asset extractors are Python; their tests run with the suite.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME extract_text
+         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_extract_text.py)

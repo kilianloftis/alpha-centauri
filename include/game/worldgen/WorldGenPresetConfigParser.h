@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 #include "game/worldgen/WorldGenPresetConfig.h"
 #include <nlohmann/json.hpp>
 #include <string>
@@ -19,10 +19,10 @@ public:
 
     // Preset min/max must bracket ocean level and cover the shelf and spread-altitude limit.
     static void ValidateAgainstMapRules(const WorldGenPresetConfig_t& rPreset,
-                                        const ElevationRulesConfig_t& rMapRules);
+                                        const MapRulesConfig_t& rMapRules);
 
     // Copies the preset's elevation range onto rRules after the same check.
-    static void ApplyElevationRange(ElevationRulesConfig_t& rRules,
+    static void ApplyElevationRange(MapRulesConfig_t& rRules,
                                     const WorldGenPresetConfig_t& rPreset);
 
 private:

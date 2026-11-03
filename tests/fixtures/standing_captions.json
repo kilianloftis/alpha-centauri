@@ -1,4 +1,5 @@
 {
+  "vendetta_mood_floor": 15,
   "moods": [
     { "name": "Magnanimous", "min_friction": 0 },
     { "name": "Solicitous", "min_friction": 1 },

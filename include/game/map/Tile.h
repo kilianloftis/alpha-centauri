@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 
 #include <string>
 #include <string_view>
@@ -79,8 +79,8 @@ public:
     int GetElevation() const;
 
     // Bound by WorldMap from config/map_rules.json. Throws if unbound.
-    void BindMapRules(const ElevationRulesConfig_t& rRules);
-    const ElevationRulesConfig_t& MapRules() const;
+    void BindMapRules(const MapRulesConfig_t& rRules);
+    const MapRulesConfig_t& MapRules() const;
 
     // Water when elevation is below the bound ocean level.
     bool IsWater() const;
@@ -180,7 +180,7 @@ private:
     bool m_bHasRiver;
     bool m_bHasAquifer;
 
-    const ElevationRulesConfig_t* m_pMapRules = nullptr;
+    const MapRulesConfig_t* m_pMapRules = nullptr;
     const ImprovementRegistry* m_pOccupants = nullptr;
     Revision* m_pAppearanceRevision = nullptr;
     TileChangeListener* m_pTileChangeListener = nullptr;

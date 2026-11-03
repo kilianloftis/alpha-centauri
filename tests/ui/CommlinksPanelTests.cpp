@@ -44,7 +44,8 @@ struct CommlinksHarness_
 
     RecordingGraphics Render()
     {
-        CommlinksPanel panel(fixture.state, *fixture.pStandingCaptions, ViewFixture::FullScreen());
+        CommlinksPanel panel(fixture.state, *fixture.pStandingCaptions, ViewFixture::FullScreen(),
+                             [](FactionId_t) {});
         RecordingGraphics graphics;
         panel.Render(graphics);
         return graphics;
@@ -129,4 +130,26 @@ TEST_CASE("The integrity line names the player's own repute", "[ui][commlinks]")
     const RecordingGraphics graphics = harness.Render();
 
     CHECK(graphics.AnyTextContaining("Integrity: Wicked"));
+}
+
+TEST_CASE("Clicking a met faction's row opens talk with that faction", "[ui][commlinks]")
+{
+    CommlinksHarness_ harness;
+    harness.Ledger().SetKnown(harness.PlayerId(), harness.RivalId(), true);
+    const RecordingGraphics graphics = harness.Render();
+    const auto itName = std::ranges::find(graphics.texts, std::string("Rival"),
+                                          &RecordingGraphics::TextDraw_t::text);
+    REQUIRE(itName != graphics.texts.end());
+
+    std::vector<FactionId_t> talkedTo;
+    CommlinksPanel panel(harness.fixture.state, *harness.fixture.pStandingCaptions,
+                         ViewFixture::FullScreen(),
+                         [&talkedTo](FactionId_t id) { talkedTo.push_back(id); });
+    panel.HandleMouseClick(
+        MouseEvent_t{MouseButton_t::Left, 10, static_cast<int>(itName->y) + 1, {}});
+    CHECK(talkedTo == std::vector<FactionId_t>{harness.RivalId()});
+
+    panel.HandleMouseClick(MouseEvent_t{MouseButton_t::Left, 10,
+                                        static_cast<int>(ViewFixture::FullScreen().height) - 1, {}});
+    CHECK(talkedTo.size() == 1);
 }

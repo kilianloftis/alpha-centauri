@@ -2,7 +2,7 @@
 """
 Run every in-repo SMAC asset extractor into the expected assets/ tree.
 
-Requires a local Sid Meier's Alpha Centauri install. Extracted binaries are
+Requires a local Sid Meier's Alpha Centauri install. Extracted art and text are
 gitignored; see the graphics assets roadmap.
 
 Usage:
@@ -40,6 +40,11 @@ EXTRACTORS = (
     ),
     ("icons", "extract_icons", lambda game, out: ["--game-dir", str(game), "--out", str(out)]),
     ("ui", "extract_ui", lambda game, out: ["--game-dir", str(game), "--out", str(out)]),
+    (
+        "text",
+        "extract_text",
+        lambda game, out: ["--game-dir", str(game), "--out", str(out / "text")],
+    ),
 )
 
 
@@ -62,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip",
         default="",
-        help="comma-separated extractor names to skip (terrain,faction,fonts,icons,ui)",
+        help="comma-separated extractor names to skip (terrain,faction,fonts,icons,ui,text)",
     )
     args = parser.parse_args(argv)
 

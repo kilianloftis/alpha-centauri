@@ -9,12 +9,13 @@
 namespace ac
 {
 
-WorldMap::WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules,
+WorldMap::WorldMap(int width, int height, const MapRulesConfig_t& rMapRules,
                    Rainfall_t rainfall)
     : m_width(width)
     , m_height(height)
     , m_mapRules(rMapRules)
     , m_rainfall(rainfall)
+    , m_regions(*this)
 {
     if (width <= 0 || height <= 0)
     {
@@ -133,6 +134,11 @@ const std::vector<Unit*>& WorldMap::GetCargoOnTile(const Tile& rTile) const
 std::vector<Unit*> WorldMap::GetAllUnitsOnTile(const Tile& rTile) const
 {
     return m_unitPositionIndex.GetAllUnitsOnTile(rTile);
+}
+
+const RegionCache& WorldMap::GetRegions() const
+{
+    return m_regions;
 }
 
 WorkedTileIndex& WorldMap::GetWorkedTiles()

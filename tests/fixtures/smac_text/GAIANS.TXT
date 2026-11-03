@@ -1,0 +1,30 @@
+; faction file
+
+#GAIANS
+Formal Name, The Short, Nouns, F, 2, Leaderina, F, 0, 0, 0, 0, 0,
+  TECH, Something, SOCIAL, +PLANET
+  Economics, Green, PLANET
+  Economics, Free Market, nil
+  Adjective, Adjective,
+  Assistant, Scientist, City
+  Title, kind, mean, good, bad,
+  Insult
+  first phrase
+  second, with a comma
+  agenda line
+  your_agenda line
+  misdeed line
+  pastime line
+  your_pastime line
+  accusation line
+  tagged noun, F2
+  projects line
+  pursuits line
+  tribute line
+  service line
+  enforcers line
+  code line
+
+#BASES
+Somewhere
+#END

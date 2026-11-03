@@ -3,9 +3,9 @@
 namespace ac
 {
 
-// config/map_rules.json: the ocean line and play-time elevation edits. The storage range is
-// copied from the world-gen preset.
-struct ElevationRulesConfig_t
+// config/map_rules.json: the ocean line, play-time elevation edits, flooded bases and the
+// headquarters distance fallback. The storage range is copied from the world-gen preset.
+struct MapRulesConfig_t
 {
     // Inclusive storage range from the preset that generated this world.
     // SetElevation rejects meters outside it.
@@ -30,6 +30,8 @@ struct ElevationRulesConfig_t
     int submergedPopLossRollMin = 0;
     int submergedPopLossRollMax = 0;
     int submergedPopLossCap = 0;
+    // Headquarters distance of a faction that has none (terranx vulnerable: 12).
+    int missingHeadquartersDistance = 0;
 };
 
 } // namespace ac

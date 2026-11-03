@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -34,7 +35,7 @@ struct GameDataPaths
     std::string worldGenDecoration = "config/worldGen/decoration.json";
     std::string worldGenLandmarks = "config/worldGen/landmarks.json";
     std::string tileYieldRules = "config/tile_yield_rules.json";
-    std::string elevationRules = "config/map_rules.json";
+    std::string mapRules = "config/map_rules.json";
     std::string interactionGrids = "config/interaction_grids.json";
     std::string moraleLevels = "config/morale_levels.json";
     std::string probeActions = "config/probe_actions.json";
@@ -44,6 +45,10 @@ struct GameDataPaths
     std::string councilRules = "config/council/rules.json";
     std::string hotkeys = "config/ui/hotkeys.json";
     std::string standingCaptions = "config/ui/standing_captions.json";
+    std::string talk = "config/ui/talk.json";
+    // Text packs in lookup order: the extracted SMAC text first, then our own.
+    std::vector<std::string> textRoots = {"assets/text", "config/text"};
+    std::string textLocale = "en";
     std::string difficulty = "config/difficulty.json";
     std::string policeRules = "config/police_rules.json";
     std::string worldRules = "config/world_rules.json";

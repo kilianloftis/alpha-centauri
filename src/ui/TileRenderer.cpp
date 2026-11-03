@@ -689,7 +689,7 @@ Color_t TileRenderer::ElevationFill_(const Tile& rTile) const
 {
     const TileRendererStyle_t& s = m_rStyle;
     const int elevation = rTile.GetElevation();
-    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    const MapRulesConfig_t& rRules = rTile.MapRules();
     if (rTile.IsWater())
     {
         // Water: darker at the floor, lighter one meter below ocean level.

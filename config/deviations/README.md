@@ -315,6 +315,122 @@ absent.
 - **Missing:** the original version (`TabletopDiagonalDistance`, lower `BaseId` on ties) and a
   switch.
 
+### Talk proposes a Truce at Vendetta `[Ours]`
+
+- **Original:** the proposal menu's Treaty item is offered at Vendetta too, and
+  `make_a_proposal` sends it to `propose_treaty`, whose `make_treaty` sets a Treaty and clears
+  the Vendetta. Blood Truce is pledged only from an AI's own offer in `communicate` ("Talk").
+- **Ours:** `StepUp(Vendetta)` is Truce, so talk offers a Truce there on that item and the AI
+  answers `MAKETRUCE`; its refusal reuses `REJTREATY`.
+- **Where:** `StepUp` (`DiplomaticTransitionRules`), `config/ui/talk.json`.
+- **Missing:** the original transition and a switch.
+
+### Trade proposals bundle items `[Ours]`
+
+- **Original:** each proposal-menu line asks for or offers one thing, and the AI names a price
+  or counter-offer (`COUNTER0`, `COUNTERMENU`) ("Talk").
+- **Ours:** the player builds both sides of one proposal from `TradeKinds()`, and the AI
+  accepts (`EvaluateResponse_`).
+- **Where:** `config/ui/talk.json` trade scenes, `TalkConversation`.
+- **Missing:** the one-item flow with AI counter-offers, which needs AI evaluation, and a switch
+  (a variant `talk.json` here).
+
+### Talk gifts and trades write no standing
+
+- **Original:** `communicate`'s gift and trade branches move friction (−1 / −2 / +1 and computed
+  gift deltas) and `diplo_gifts` ("Integrity / friction writers").
+- **Ours:** `ApplyProposal` moves the items only. TODO at `ApplyProposal`.
+- **Where:** `ApplyProposal` (`DiplomaticProposalMutations`).
+- **Missing:** the RE of those deltas, a gifts record, and the writers.
+
+### Ranked greeting
+
+- **Original:** `INTRONEW3` names the player's empire with a rank word indexed by
+  `7 - ranking` ("Talk", Greeting).
+- **Ours:** there is no faction ranking, so `talk.json` leaves `INTRONEW3` out and the greeting
+  picks from the other five.
+- **Where:** `config/ui/talk.json` `start`.
+- **Missing:** a ranking, a value source for the word, and the variant.
+
+### Submissive caption
+
+- **Original:** the talk caption reads label 488 `Submissive` instead of the mood when the band
+  is 0 and `0x93FA98` is set without a Pact, or when the rival has surrendered under a Pact
+  ("`diplomacy_caption`").
+- **Ours:** always the mood; there is no surrender state. TODO at `TalkBindings::Caption`.
+- **Where:** `TalkBindings::Caption`.
+- **Missing:** `0x93FA98` is `DiploFearScale` ("Base value"), filled by `diplomacy_check`, which
+  is not mapped; a surrender state; and the label.
+
+### Treaty acceptance caption `[Bug]`
+
+- **Original:** `make_treaty` writes the speaker's pet project into slot 7 before
+  `MAKETREATY`, whose `#caption $CAPTION7` then reads it, so the popup's caption shows the
+  project, not the faction and mood ("Talk", Replies).
+- **Ours:** the talk popup always draws the caption binding.
+- **Where:** `TalkPopup::DrawCaption_`.
+- **Missing:** the original version and a switch.
+
+### Base swap accepts the worse trade `[Bug]` `[Thinker]`
+
+- **Original:** a base for a base swaps when the asked base's value plus a roll beats the
+  offered base's, and otherwise replies `NOBASESWAP3`, which calls the asked base the better one
+  ("Base swap"). The AI gives up what its own valuation ranks higher.
+- **Thinker:** `mod_base_swap` swaps only when the offered value is at least the asked one, with
+  its own `base_trade_value`.
+- **Ours:** the AI accepts every trade (`EvaluateResponse_`); see "Trade proposals bundle items".
+- **Where:** `DiplomaticActionExecutor::EvaluateResponse_`.
+- **Missing:** AI evaluation of base trades, all three versions, and a switch.
+
+### Base gift reply ignores the gift's size `[Bug]`
+
+- **Original:** `make_gift` builds `BASEGIFT1` or `BASEGIFT2` for a generous base gift but pops
+  plain `BASEGIFT` ("Base gift"), so those two replies never show. The tech branch pops its
+  built label.
+- **Ours:** the reply is `talk.json`'s trade acceptance.
+- **Where:** `config/ui/talk.json`.
+- **Missing:** a gift result reported to talk, the `BASEGIFT` lines in both versions, and a
+  switch.
+
+### Region cap empties the rest of the map `[Bug]`
+
+- **Original:** at the 62nd land or water region, `Path_continents` looks for the smallest region
+  to push into overflow starting at the unassigned id 0 or 64, whose size is always 0. Every tile
+  not yet reached, of both surfaces, becomes overflow ("Regions").
+- **Ours:** no cap: every land and water body keeps its own region.
+- **Where:** `AssignRegions` (`RegionRules`).
+- **Missing:** the original version (the 62-per-surface cap with its empty-slot search) and a
+  switch.
+
+### Base value skips the AI's attitude and scenario inputs
+
+- **Original:** `value_of_base` halves for the AI's `fear` and quadruples for its `hostile`
+  flag, both filled by `diplomacy_check`. It quadruples for a scenario objective and doubles
+  for a `BELIEVE` evaluator ("Base value").
+- **Ours:** none applies: there is no attitude model, there are no scenarios, and the Believers
+  do not ship.
+- **Where:** `BaseValue` (`BaseValueRules`).
+- **Missing:** the RE of `diplomacy_check`'s fear, hostility and attack chance, and those
+  inputs; scenario objectives; a faction-scope base value stat with the Believers.
+
+### Poles are separate regions `[Ours]`
+
+- **Original:** `Path_continents` sets every tile on the first and last rows to 63 (land) or 127
+  (water), so the north and south poles share a region per surface ("Regions").
+- **Ours:** each pole takes its own id per surface, so a base on one pole does not count the
+  other pole's bases as in its region.
+- **Where:** `AssignRegions` (`RegionRules`).
+- **Missing:** the original version and a switch.
+
+### Region base counts are live `[Ours]`
+
+- **Original:** `region_total_bases` is recounted at each faction's upkeep and moved by
+  `base_init` / `base_kill`, so a captured or ceded base counts for its old owner until then
+  ("Regions").
+- **Ours:** counted from current ownership on every query.
+- **Where:** `BaseValue`'s region counts (`BaseValueRules`).
+- **Missing:** the original version and a switch.
+
 ### Sweep existing docs for unlisted deviations
 
 - **Missing:** read `docs/architecture/` and

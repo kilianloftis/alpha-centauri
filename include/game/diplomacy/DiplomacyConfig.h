@@ -38,6 +38,25 @@ struct DiplomaticStatusRules_t
     std::optional<int> durationTurns;
 };
 
+// value_of_base's coefficients (docs/thinker/terranx-map.md "Base value"). Costs are minerals,
+// divided by mineralsPerRow to SMAC's rows once per term.
+struct BaseValueConfig_t
+{
+    int scanRadius = 0;
+    int creditsOffset = 0;
+    int distanceOffset = 0;
+    int minPopulation = 0;
+    int minimum = 0;
+    int ungarrisonedDivisor = 0;
+    int counterpartyAbsentMultiplier = 0;
+    int loneBaseMultiplier = 0;
+    int outnumberedRatio = 0;
+    int outnumberedDivisor = 0;
+    int mineralsPerRow = 0;
+    int projectRowsMultiplier = 0;
+    int unitRowsMultiplier = 0;
+};
+
 // A change to one faction's blemishes: add delta, then raise the total to floor.
 struct BlemishChange_t
 {
@@ -66,6 +85,7 @@ struct DiplomacyConfig_t
     // The grievant scan stops after the first moisture change within this distance of one of the
     // terraformer's bases.
     int terraformRainfallStopDistance = 0;
+    BaseValueConfig_t baseValue;
 
     const DiplomaticStatusRules_t& For(DiplomaticStatus_t status) const
     {

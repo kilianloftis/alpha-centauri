@@ -300,3 +300,30 @@ TEST_CASE("A defensive obligation is only legal on a status that can step down",
               .For(DiplomaticStatus_t::Treaty)
               .bDefensiveObligation);
 }
+
+TEST_CASE("The diplomacy parser loads base_value and rejects a missing block or bad radius",
+          "[diplomacy][parser][base_value]")
+{
+    const DiplomacyConfig_t config =
+        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+    CHECK(config.baseValue.scanRadius == 6);
+    CHECK(config.baseValue.creditsOffset == 1000);
+    CHECK(config.baseValue.mineralsPerRow == 10);
+    CHECK(config.baseValue.projectRowsMultiplier == 25);
+
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_base_value.json",
+                                 [](nlohmann::json& j) { j.erase("base_value"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_base_value_minimum.json",
+                                 [](nlohmann::json& j) { j["base_value"].erase("minimum"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_base_value_radius_zero.json",
+                                 [](nlohmann::json& j) { j["base_value"]["scan_radius"] = 0; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_base_value_radius_nine.json",
+                                 [](nlohmann::json& j) { j["base_value"]["scan_radius"] = 9; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_base_value_rows_zero.json",
+                                 [](nlohmann::json& j) { j["base_value"]["minerals_per_row"] = 0; }),
+                    std::runtime_error);
+}

@@ -108,6 +108,7 @@ Document layout discoveries next to each extractor (region tables are reverse-en
 | 4 UI | `extract_ui.py` + `extract_fonts.py` | `assets/ui/…` chrome (`iface`, `console*`, `text.pcx`, cursors, thumbs); `assets/ui/fonts/*.ttf` |
 | 5 Units | `extract_units.py` + `bake_cvr_units.py` | `assets/units/natives/…`, `assets/units/baked/…` |
 | 6 Media | `extract_media.py` | `assets/media/flc/…`, `assets/media/movies/…` |
+| Text | `extract_text.py` | `assets/text/<locale>/script.json`, `labels.json`, `factions/<id>.json` (see `ui-system.md`, Text packs) |
 | All | `extract_all.py` | invokes the above into the expected layout |
 
 ## Phase order

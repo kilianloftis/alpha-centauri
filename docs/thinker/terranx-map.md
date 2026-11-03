@@ -494,6 +494,37 @@ Unity landmarks, and condensers.
 - While `CurrentTurn` (`0x9A64D4`) is non-zero, the first changed tile within 2 of a player
   base sets `0x9B22E0`, which drives `action_terraform`'s TERRAMINE / TERRAYOURS popup.
 
+### Regions (`Path_continents` `0x59C790`)
+
+`MAP+3` is the tile's region: a numbered land or water body. `world_climate` (above),
+`world_erosion` and `world_validate` run it; Thinker's map generator calls it unchanged.
+
+- Every region is cleared to 0. Rows 1 to `MapAreaY − 2` are scanned row-major, x ascending over
+  the row's parity. An unlabelled tile starts a region of its surface; water is altitude < 3
+  (`climate & 0xE0 < 0x60`).
+- Land ids count up from 1 and stick at 62; water ids count from 65 and stick at 126
+  (`0x59C82E`–`0x59C86D`).
+- `Path_continent(x, y, id)` (`0x59C520`) floods the region breadth-first. It steps to the 8
+  neighbours (`0x66EF50` / `0x66EF74`: (1,−1), (2,0), (1,1), (0,2), (−1,1), (−2,0), (−1,−1),
+  (0,−2)) that are unlabelled and on the same surface, with x wrapping unless flat. A tile on row
+  0 or the last row is labelled but not expanded from. The region's size (`Continents[id]`
+  `0x9AA730`, stride 28) counts every tile popped, polar ones included.
+- **Cap** (`0x59C883`–`0x59C9E4`): when a flood took the stuck id (62 or 126), the code looks
+  for the smallest region of that surface strictly smaller than the new one (lowest id on ties).
+  When it finds one, that region moves to the overflow id (63 or 127) and the new region takes
+  its id. Otherwise the new region moves to overflow.
+  - The search starts at id 0 for land and 64 for water. Neither is ever assigned, and only
+    `Path_continent` and `Path_merge` (`0x59C340`) write sizes, so that empty slot is always the
+    smallest. Hitting a cap therefore relabels every tile not yet reached (both surfaces) to the
+    overflow id and moves the new region to 0 or 64. Thinker does not patch it.
+- Every tile on rows 0 and `MapAreaY − 1` is then set to 63 (land) or 127 (water), adding to that
+  overflow size (`0x59CA12`–`0x59CAEF`).
+
+**`region_total_bases[128]`** (`Faction+0x117C`) counts a faction's bases per region.
+`enemy_strategy` (`0x561080`, every faction in `faction_upkeep` each full turn) zeroes
+(`0x56110C`) and recounts it (`0x56154C`). `base_init` increments it (`0x4E4C28`) and `base_kill`
+decrements it (`0x4E53CD`). A capture or `give_a_base` leaves it stale until the next upkeep.
+
 ## Research
 
 ### `tech_rate` (`0x5BE6B0`)
@@ -1022,8 +1053,14 @@ AI uses this; the portrait does not.
 
 ### `diplomacy_caption` (`0x5399A0`)
 
-Same mood bands on cached `DiploFriction`. If `DIPLO_VENDETTA` and friction < 15,
-floors the caption to friction 15 (Obstinate) without writing the store.
+`void(a, b)`. Same mood bands on cached `DiploFriction`. If `diplo_status[a][b]` has
+`DIPLO_VENDETTA` and friction < 15, it sets the cached `DiploFriction` to 15 (Obstinate) at
+`0x5399DE`; the stored friction is untouched. The caption is b's `noun_faction` (with its gender
+and number), `" - "` (`0x539A90`), then the mood name through `say_fac_special` (`0x58F700`),
+which wraps it as `$<{noun gender}{1|2}:mood>` so a gendered language can inflect it. Label 488
+`Submissive` replaces the mood when the band is 0 and `0x93FA98` is set without a Pact
+(`0x539A9E`–`0x539AB6`), or when b→a holds a Pact with `DIPLO_HAVE_SURRENDERED`. The result goes
+to slot 7 (`parse_says(7, …)` at `0x539B35`), which talk scenes read as `$CAPTION7`.
 
 ### Integrity display (`DiploPop` `0x43F955`)
 
@@ -1133,13 +1170,257 @@ placeholder draw veh ids.
 
 ### Talk
 
-Scene labels in `xscript.txt`, not a chain state machine: `INTRONEW0–5`,
-`INTRO0–3`, `INTROMAD0–4`, `DIPLOMENU`, `PROPOSALMENU`, `VENDETTA0–18`.
-Per-faction `FACTIONTRUCE` / `FACTIONTREATY` in each faction file.
-`introduce` `0x53D360`, `diplomacy_menu` `0x54C560`, `proposal_menu` `0x54DCF0`,
-`communicate` `0x54FFD0`. `introduce` picks `INTRO` / `MAD` / `NEW` from
-`diplo_status` bits (`0x8000000`, `0x20`), not from `get_mood`. `get_patience`
-`0x53A150` uses raw cached `DiploFriction` and status, not the mood index.
+Scene labels in the script file, not a chain state machine: `INTRONEW0–5`, `INTRO0–3`,
+`INTROMAD0–4`, `DIPLOMENU`, `PROPOSALMENU`, `VENDETTA0–18`. `get_patience` `0x53A150` uses raw
+cached `DiploFriction` and status, not the mood index. Each faction file's `#FACTIONTRUCE` /
+`#FACTIONTREATY` is that AI's own offer.
+
+**Script file.** The default popup file is the string at `0x691B0C` → `SCRIPT` (`0x691B7C`),
+`.txt` appended (`0x588AD7`) and set with `BasePop_set_def_file` (`0x6043D0`). Alien Crossfire
+labels such as `INTRODUCEENEMYALIEN` (pushed at `0x552153`) exist only in `xscript.txt`, so the
+expansion reads `xscript.txt`; the prefix mechanism is not mapped. The third `X_pops` argument
+`0x6846D8[faction]` is the rival's portrait sprite (`SpriteBox_sprite`), not a file.
+
+**Slots** (`parse_says` `0x625EC0`, `parse_say` `0x625E50`, `parse_num` `0x625E30`). Ten string
+slots at `0x9BB5E8 + 256·n`, each with a gender (`0x9BB5C0[n]`: 0 M, 1 F, 2 N) and plural
+(`0x9BB570[n]`) that default to `0x9BBFEC` / `0x9BBFF0` when passed −1. Ten number slots at
+`0x9BB598[n]`.
+
+**Markup** (`parse_string(src, dst)` `0x625880`), switched on the character after each `$`:
+
+- `$$`: a literal `$`.
+- `$NUMBERn`, `$NUMn` (and `$HEXn`, also decimal): number slot n.
+- `$LINK<`: left as written for the renderer.
+- `$<spec:f0:f1:…>`: a form. `spec` is a slot digit (that slot's gender and plural), `#n` (plural
+  unless number slot n is 1), or `M` / `F` / `N` with an optional `1` / `2` (singular / plural).
+  The form chosen depends on how many `:` follow the spec (`0x625BF9`–`0x625C43`): two forms by
+  plural; three by gender; four by masculine-or-not and plural (`M sg, F/N sg, M pl, F/N pl`); six
+  by gender then plural; any other count takes the last. With no `:` left, the forms come from
+  the first slot named after the spec (`$<M1:$FACTIONADJ0>` inflects slot 0's own `a:b` text).
+- Anything else, `$WORDn`: string slot n, where n is the first digit after the `$`
+  (`findnum` `0x628B30`); the word is only a hint. A `$` with no digit after it ends
+  substitution.
+- With language `0x9BC054 == 1`, a pass elides ` de ` / ` le ` / ` la ` / `De ` / `Le ` / `La `
+  before a vowel or h (`0x625D12`, table `0x6972D4`).
+
+`{…}` is untouched by `parse_string`; the renderer highlights it.
+
+**Faction text** (`read_faction` `0x586090`; Thinker's rewrite matches). After `#KEY`, line 1 is
+`formal_name_faction`, `desc_name_faction`, `noun_faction`, noun gender (`M`/`F`/`N`), noun
+number (1 or 2), `name_leader`, leader sex (`F` is female), then the AI priorities; lines 2–4 are
+bonuses and social priorities; line 5 `adj_name_faction`; line 6 assistant, scientist, city;
+line 7 `title_leader`, `adj_leader`, `adj_insult_leader`, `adj_faction`, `adj_insult_faction`;
+line 8 `insult_leader`. `get_phrase(f, n)` (`0x58F810`) returns raw line `n + 9`, the n-th line
+after `insult_leader`. `get_noun_phrase(f, n)` (`0x58F8B0`) returns that line's first comma item
+and sets the default gender and number from its `M1` / `F2` / `N1` tag. `get_pact(f)`
+(`0x58F9D0`) is label 201 Pact Brother or 202 Pact Sister by f's leader sex, singular;
+`get_pact_hood(a, b)` (`0x58FB00`) is 206 Pact of Sisterhood when both leaders are female, else
+205 Pact of Brotherhood, masculine singular. Labels are `labels.txt` `#LABELS`: a count, then
+label 0.
+
+The binary names none of the 15 phrase lines. SMAC's faction editor (`facedit.txt` `#SENTENCES`)
+labels each with the sentence it completes, and our text packs key them by the names below. In
+SMAC's own files, 2–6 and 8 are what others say about or to that faction, 3 and 6 the second-person
+forms of 2 and 5, and 8–11 the tagged noun lines.
+
+| n | Name | `facedit.txt` sentence |
+|---|---|---|
+| 0 | `goal` | Together we shall both ___ |
+| 1 | `intent` | My intent is ___ |
+| 2 | `agenda` | S/he is bent on ___ |
+| 3 | `your_agenda` | You seem bent on ___ |
+| 4 | `misdeed` | I shall not stand here while you ___ |
+| 5 | `pastime` | S/he spends her/his time ___ |
+| 6 | `your_pastime` | You spend your time ___ |
+| 7 | `accusation` | I have been accused of ___ |
+| 8 | `methods` | Your ___ does not impress me |
+| 9 | `projects` | Think how this could benefit your ___ |
+| 10 | `pursuits` | I trust your ___ are proceeding to your satisfaction |
+| 11 | `tribute` | … it is customary to remit me a small ___ |
+| 12 | `service` | … for the services my forces provide in ___ |
+| 13 | `enforcers` | I shall instruct ___ to see that no such … |
+| 14 | `code` | You are in contravention of ___ |
+
+**Greeting** (`introduce(player, rival)` `0x53D360`, called by `wants_to_speak` at `0x53E240`).
+Slots: 0 player `title_leader`, 1 player `name_leader`, 2 rival `title_leader`, 3 rival
+`name_leader`, 4 rival `noun_faction`, 8 rival `adj_name_faction`, 9 player `adj_leader`. The label
+is `INTRO` + suffix + a random index, from `diplo_status[player][rival]` (`0x53D4F1`):
+
+- `0x8000000` unset, or a multiplayer game with a human rival: `INTRONEW` + `random(6)`
+  (`0x53D6D6`), slot 6 `get_phrase(rival, 1)` (`intent`). `INTRONEW2` sets slot 5 to the player's
+  `noun_faction` (`0x53D83E`); `INTRONEW3` sets it to "a" / "an" before a rank word indexed by
+  `7 - ranking` (`0x53D725`–`0x53D834`).
+- Else `DIPLO_WANT_REVENGE`: `INTROMAD` + `random(5)` (`0x53D52D`).
+- Else `INTRO` + `random(4)` (`0x53D60B`).
+
+`0x8000000` is set only by `communicate`'s AI-initiated introduction and betrayal branches
+(`INTRODUCEENEMY*`, `BETRAYFRIEND`): `treaty_on(…, COMMLINK|0x8000000)` at `0x5522CC`,
+`0x5524D1`, `0x552745` and `0x5529C6`. No other immediate in the binary sets it. Thinker's
+`whose_territory` requires it beside the commlink. A faction met by contact always greets from
+`INTRONEW`.
+
+**Diplomacy menu** (`diplomacy_menu(player, rival)` `0x54C560`). Slots 0 player `name_leader`,
+1 `get_pact_hood(player, rival)`, 7 the caption; `DIPLO` is the prompt. Its items are
+`DIPLOMENU`'s lines; ids differ from positions (lines 4–8 carry ids 5, 6, 7, 3, 4):
+
+- id 0 finished (line 0): always.
+- id 1 trade again on the same terms (line 1): after a trade this session (`0x93FAD0`).
+- id 2 make a proposal: line 2, or line 3 "another proposal" once one was made (`0x93FAD4`).
+- id 5 battle plans (line 4): single player, `0x93FA94 > 0`.
+- id 6 call off a Vendetta against a friend (line 5): single player, `0x93F7DC > 0`.
+- id 7 council vote (line 6): `can_call_council`, neither faction with rule flag `0x80`
+  (`0x946F58`).
+- id 3 renounce the Pact (line 7): `diplo_status[rival][player] & DIPLO_PACT` (`0x54C8A7`).
+- id 4 demand withdrawal (line 8): `diplo_status[player][rival] & 7` (`0x54C8F4`).
+
+No item declares Vendetta or ends a Truce or Treaty; those happen at an attack (`break_treaty`).
+
+**Renounce** (`communicate(player, rival)` item 3, `0x5585B2`). `REALLYBROKE` with the menu's slots
+still set, so its `$PACTBROTHERORSISTER0` reads the player's name. Item 0 backs down: slot 0
+`get_pact_hood`, then `DROIDS`. Item 1 confirms: the player's `integrity_blemishes` `+ 1` inline
+(`0x55861B`–`0x55862B`), `net_treaty_off` (`0x558631`), `diplomacy_check` and the caption, slots
+0 `get_pact(player)`, 1 `get_title(player)`, 2 `get_name(player)`, `BROKEPACT` (`0x5586A0`),
+then `net_pact_ends` (`0x5586AE`).
+
+**Proposal menu** (`proposal_menu(player, rival)` `0x54DCF0`). Slots 0 rival `title_leader`,
+1 `get_pact_hood(player, rival)`, number 0 the player's loan balance, 7 the caption; `PROPOSAL`
+is the prompt. Items: 0 never mind and 1 gift, always; 2 Pact, when the pair holds a Treaty and
+no Pact (`0x54E012`); 3 Treaty, when it holds no Treaty (`0x54E04E`), Vendetta included; 4
+research data, unless game rule `0x2000000` (`0x9A649C`). `make_a_proposal` (`0x54F420`) sends
+item 2 to `propose_pact(player, rival)` and item 3 to `propose_treaty(player, rival)`, which
+calls `make_treaty` on acceptance (`0x545CD2`); `treaty_on` clears `DIPLO_VENDETTA` as it sets
+a treaty (`0x55B8D5`). `pledge_truce` is called only from `communicate`'s AI truce offers
+(`0x5562C3`, `0x556B53`).
+
+**Replies.** Each maker takes `(listener, speaker)` and pops with the speaker's portrait:
+
+- `pact_of_brotherhood` `0x53CAF0`: `MAKEPACT`, slots 0–2 speaker `title_leader`,
+  `name_leader`, `noun_faction`; 3 `get_pact(listener)`; 4 `get_phrase(listener, 0)`;
+  5 `get_phrase(speaker, 0)` (both `goal`).
+- `make_treaty` `0x53CE10`: `MAKETREATY` + `random(2)`, slots 0–2 listener `title_leader`,
+  `name_leader`, `noun_faction`; 3–5 the speaker's; 6 `get_noun_phrase(listener, 9)`;
+  7 `get_noun_phrase(speaker, 9)` (both `projects`), which overwrites the caption slot.
+- `pledge_truce` `0x53D160`: `MAKETRUCE`, slots 0–2 listener, 3–5 speaker, as above.
+- `propose_pact(player, rival)` `0x543BC0`: slots 7 caption, 0 `get_pact(player)`, 1 player
+  `title_leader`, 2 player `name_leader`; `REJPACT` adds 3 `get_noun_phrase(rival, 9)`
+  (`projects`, `0x544220`).
+- `propose_treaty(player, rival)` `0x544E40`: slots 0 player `name_leader`, 1 `title_leader`,
+  2 `noun_faction`, 3 `adj_name_faction` (`0x545170`–`0x5451E5`); `REJTREATY` at `0x545310`.
+
+### Base value (`value_of_base` `0x54CB50`)
+
+`int(base_id, faction, other, fear, hostile)`. `faction` is the AI weighing the base and `other`
+the human it deals with; all three callers pass (rival, player), and the base may belong to
+either. Every halving truncates toward zero.
+
+1. `n = vulnerable(faction, x, y)` (`0x59E980`): the binary's `vector_dist` from `faction`'s
+   first base (by index) holding Headquarters (facility 1), or 12 with none. Thinker's rewrite
+   matches. `n ≤ 0`, the base being `faction`'s headquarters, returns −1 (`0x54CB96`).
+2. **Neighbours** (`0x54CBDB`–`0x54CC90`): `TableOffsetX/Y` (`0x66EFBC` / `0x66F440`, 289
+   entries, rings 0–8 in Thinker's `path.h` order) entries 1–168, which are rings 1–6, with x
+   wrapping unless flat and rows off the map skipped. Region means the tile's `MAP+3` against the
+   valued base's. At each tile holding a base, first match wins:
+   - `faction`'s base: `n −= 1` when it is in the same region; the scan stops either way;
+   - another region: skip;
+   - `other`'s base: `n += 1`;
+   - a third faction's base: the scan stops.
+3. `v = (max(credits[faction], credits[other]) + 1000) / (n + 4) × max(pop_size, 3)`, then at
+   least 100 (`0x54CD33`–`0x54CD4D`). Credits are `energy_credits` (`Faction+0x220`).
+4. Halve when no unit stands in the base: `items & BIT_VEH_IN_TILE` (`0x2`) clear, or the `val2`
+   low nibble (occupant's faction) ≥ 8 (`0x54CD7A`–`0x54CD96`).
+5. `F` and `O` are `region_total_bases[region]` ("Regions") of `faction` and `other`
+   (`0x54CD98`–`0x54CDFB`):
+   - `O == 0`: ×2;
+   - `F == 1` and `O ≤ 1`: ×2;
+   - `hostile`: ×4;
+   - `O > 0` and `F > 0`: halve when `O ≥ 5F`, and halve again when `fear`.
+6. Facilities 1–64 in id order (`0x54CDFD`–`0x54CE5C`): the k-th one built adds
+   `k × Facility.cost` (rows, `+0xC`). The orbital ids 65–68 are outside the loop.
+7. Each secret project whose `SecretProjects` (`0x9A6514`) entry is this base adds `25 × cost`
+   (`0x54CE5E`–`0x54CE88`).
+8. Each unit of `faction` in the base's stack adds `2 × UNIT.cost` (rows, `+0x29`)
+   (`0x54CE8A`–`0x54CEF2`).
+9. ×2 when `faction`'s `MFaction.filename` is `BELIEVE` (`strcmp` `0x645660`,
+   `0x54CEF7`–`0x54CF1B`).
+10. ×4 when `is_objective(base)` (`0x5AC060`): a scenario victory rule bit or the base's
+    objective event flag, never set in a normal game.
+
+The callers pass `fear` = `DiploFearScale` (`0x93FA98`) and `hostile` = `DiploPrevHostility`
+(`0x93FA68`) or `DiploAttackChance` (`0x93FAA0`) non-zero. `diplomacy_check` (`0x53A980`) fills
+all three for the pair; it is not mapped. One fear term is `8 × pop_size` for each of the rival's
+ungarrisoned bases next to the player's units (`0x53B0FE`–`0x53B10D`). `DiploFearScale` is the
+`0x93FA98` that `diplomacy_caption` reads.
+
+### Base swap (`base_swap(player, rival)` `0x54D410`)
+
+`make_a_proposal` calls it (`0x54F77E`). `DiploAskBaseSwapID` (`0x93FA7C`) is the rival's base
+the player asks for; `DiploBidBaseSwapID` (`0x93FA30`) is the player's base offered, or −1.
+`DiploCounterProposal` (`0x93FAB0`) is the `COUNTERMENU` id the player offered.
+
+- `ask = value_of_base(asked, rival, player, DiploFearScale, hostile)` and
+  `bid = value_of_base(offered, rival, player, 0, 0)`.
+- `ask` halves when the asked base's `faction_id_former` (`BASE+0x5`) is the player, and again
+  when rival→player holds Pact with `DIPLO_HAVE_SURRENDERED` (`0x2000000`). `bid` doubles when
+  the offered base's former owner is the rival.
+- Refusals, in order, each returning 1:
+  - an offered base with `bid < 0`, or a player with one base (`base_count` `Faction+0x105C`):
+    `NOHQ` ("You cannot offer to vacate your headquarters or your last base."). The offered
+    base's own Headquarters is not tested;
+  - an asked base with `ask < 0` or Headquarters, or a rival with one base: `NOMYHQ`;
+  - rival→player `DIPLO_WANT_REVENGE` (`0x20`), unless the counter is 3 (threaten):
+    `NEVERBASESWAP`.
+- **Base for base** (`0x54D688`–`0x54D6AB`): `game_random(0, 100) + bid` against
+  `game_random(0, 100) + ask`. A higher **ask** swaps: `give_a_base(asked, player)`,
+  `give_a_base(offered, rival)`, `YESBASESWAP`. Otherwise `NOBASESWAP3`, which calls the asked
+  base gilded spires and the offered one a pile of pustulent filth. The comparison contradicts
+  that text: the AI gives up a base it values more than the one it gets.
+- **Base for energy** (no offered base): price =
+  `ask × (ranking[player] + ranking[rival]) / (2 × ranking[rival])` (`Faction+0x4`), doubled when
+  the player is `FactionRankings[7]` (`0x9A6508`, the top rank) (`0x54D801`–`0x54D859`).
+  - Counter 5 (energy) or 2 (name a price) with the player's credits ≥ price: `PAYBASESWAP`
+    with `$NUM0`; on payment `give_a_base(asked, player)`, `BASEOK`.
+  - Counter 5 short of the price, or a counter other than 2 and 4: `NOBASESWAP` with the price.
+  - Counter 2 short of the price falls through to research.
+- **Base for research** (counter 4, or 2 short): `sum` is `tech_val(t, rival, 1)` over techs the
+  player has and the rival lacks. `NOBASESWAP2` when `tech_ranking[rival] / 2 >
+  tech_ranking[player] / 2 + 2` (`Faction+0x35C`) or `(turn + 7) / 8 × sum < ask`. Otherwise
+  `TECHBASESWAP`; on acceptance the rival gets each such tech, then `give_a_base(asked, player)`
+  and `BASEOK`.
+
+Thinker replaces it (`mod_base_swap`, `base_trade_value` in `gui_dialog.cpp`) with its own
+valuation. A base for a base swaps only when the offered value is at least the asked one, and a
+multiplayer game or a human rival refuses unless the rival surrendered.
+
+### Base gift (`make_gift` `0x548260`)
+
+Gift id 8 offers `DiploBidBaseSwapID`.
+
+- `v = value_of_base(offered, rival, player, DiploFearScale, hostile)`. The rival's friction
+  toward the player becomes `clamp(friction − trunc(3v / 2), 0, 20)`, and the cached
+  `DiploFriction` takes the unclamped delta (`0x54829D`–`0x5482FE`).
+- Then `v` doubles when the player's `search_key` (`MFaction+0x1C`) is `SPARTANS`
+  (`0x548304`–`0x54832D`).
+- **Generous** when `v ≥` the rival's credits / 2, `≥` the player's credits / 3 and `≥ 2 ×`
+  `CurrentTurn` (`0x54832F`–`0x548391`), or always when the player's `filename` is `BELIEVE`
+  (`0x548398`–`0x5483B3`). A generous gift calls `treaty_off(player, rival, 0x60)` and adds 1 to
+  `diplo_gifts[player][rival]` while it is below the player's blemishes (`0x548423`–`0x5484C4`).
+- Every base gift then adds 1 more while the count is below the blemishes, or when
+  `great_satan(player, 0)` or multiplayer (`0x5484CB`–`0x548516`).
+- `give_a_base(offered, rival)`; the rival's `diplo_patience` toward the player drops by 2, or 3
+  when generous (`0x5485B6`–`0x5485E0`).
+- The reply is plain `BASEGIFT` (`0x68DC1C`, `0x5485D9`). The label built in the local buffer,
+  `BASEGIFT1`, or `BASEGIFT2` when rival→player carries `0x60` or `great_satan(player, 0)`
+  (`0x548403`–`0x548452`), is never shown. The tech branch does pop its buffer (`0x548D45`).
+
+### Threatened cession (`threaten(player, rival)` `0x549930`)
+
+A base demand backed by a threat values the asked base as
+`value_of_base(asked, rival, player, DiploFearScale, hostile)` (`0x54A685`). When
+`0 < v < 25 × DiploFearScale` (`0x54A68D`–`0x54A6A3`) the rival cedes it:
+`give_a_base(asked, player)`, `BASEOK`, and unless rival→player has `DIPLO_HAVE_SURRENDERED`,
+`set_treaty(rival, player, DIPLO_WANT_REVENGE, 1)` (`0x55BB30`). Anything else takes the
+threat's refusal path (`0x54A7F6`, not mapped). Thinker's `mod_threaten` may end a Pact first,
+then calls the original.
 
 ### AI (not fully mapped)
 

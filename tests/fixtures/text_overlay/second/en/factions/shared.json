@@ -1,0 +1,35 @@
+{
+  "leader_female": false,
+  "noun_gender": "M",
+  "noun_plural": true,
+  "fields": {
+    "formal_name_faction": "formal_name_faction",
+    "desc_name_faction": "desc_name_faction",
+    "adj_name_faction": "adj_name_faction",
+    "adj_leader": "adj_leader",
+    "adj_insult_leader": "adj_insult_leader",
+    "adj_faction": "adj_faction",
+    "adj_insult_faction": "adj_insult_faction",
+    "insult_leader": "insult_leader",
+    "name_leader": "Second",
+    "title_leader": "Lord",
+    "noun_faction": "Seconds"
+  },
+  "phrases": {
+    "goal": "goal",
+    "intent": "intent",
+    "agenda": "agenda",
+    "your_agenda": "your_agenda",
+    "misdeed": "misdeed",
+    "pastime": "pastime",
+    "your_pastime": "your_pastime",
+    "accusation": "accusation",
+    "methods": "methods, M1",
+    "projects": "projects, M2",
+    "pursuits": "pursuits, M2",
+    "tribute": "tribute, M1",
+    "service": "service",
+    "enforcers": "enforcers",
+    "code": "code"
+  }
+}

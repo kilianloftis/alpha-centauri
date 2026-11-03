@@ -92,12 +92,12 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
                                                    const WorldGenDecorationConfig_t& rDecoration,
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
                                                    const ImprovementRegistry& rOccupants,
-                                                   const ElevationRulesConfig_t& rMapRules,
+                                                   const MapRulesConfig_t& rMapRules,
                                                    unsigned int seed)
 {
     m_rng.seed(seed);
 
-    ElevationRulesConfig_t rules = rMapRules;
+    MapRulesConfig_t rules = rMapRules;
     WorldGenPresetConfigParser::ApplyElevationRange(rules, rPreset);
     auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rules,
                                              rConfig.rainfall);

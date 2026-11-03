@@ -112,7 +112,7 @@ struct WorldFixture : SessionInputs
     explicit WorldFixture(int width = k_TestMapWidth, int height = k_TestMapHeight,
                           const OccupantFiles_t& rOccupants = {},
                           std::vector<ac::EffectConfig_t> worldRules = {},
-                          const ac::ElevationRulesConfig_t& rMapRules = TestMapRules());
+                          const ac::MapRulesConfig_t& rMapRules = TestMapRules());
 
     ac::Tile& At(int x, int y);
 };
@@ -130,7 +130,7 @@ struct BaseFixture : WorldFixture
 
     explicit BaseFixture(int width, int height, const OccupantFiles_t& rOccupants = {},
                          std::vector<ac::EffectConfig_t> worldRules = {},
-                         const ac::ElevationRulesConfig_t& rMapRules = TestMapRules());
+                         const ac::MapRulesConfig_t& rMapRules = TestMapRules());
 
     ac::BuildingRegistry& buildings();
     const ac::BuildingRegistry& buildings() const;
@@ -165,7 +165,7 @@ struct FactionFixture : BaseFixture
     explicit FactionFixture(int width, int height,
                             std::vector<ac::EffectConfig_t> worldRules = {},
                             const OccupantFiles_t& rOccupants = {},
-                            const ac::ElevationRulesConfig_t& rMapRules = TestMapRules());
+                            const ac::MapRulesConfig_t& rMapRules = TestMapRules());
 
     ac::SocialPolicyRegistry& socialPolicies();
     const ac::SocialPolicyRegistry& socialPolicies() const;

@@ -762,7 +762,7 @@ TEST_CASE("TileRenderer shades water art per vertex by depth", "[ui][tile][water
     actest::WorldFixture world;
     rig.AddOccupant(world.improvements.Get("OceanShelf"));
     rig.AddOccupant(world.improvements.Get("Ocean"));
-    const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+    const MapRulesConfig_t& rRules = actest::TestMapRules();
     for (const auto& pTile : world.map.GetTiles())
     {
         pTile->SetElevation(rRules.oceanShelfMeters);
@@ -1030,7 +1030,7 @@ TEST_CASE("TileRenderer picks tile-set sprites from the tile's neighbors", "[ui]
     SECTION("sea fungus shows on the shelf and joins only fungus that shows")
     {
         const ImprovementConfig_t& rFungus = world.improvements.Get("Fungus");
-        const ElevationRulesConfig_t& rRules = actest::TestMapRules();
+        const MapRulesConfig_t& rRules = actest::TestMapRules();
         // The tile and its NE neighbor (9, 3) on the shelf; its SE neighbor (9, 5) deeper.
         for (const auto& [x, y, elevation] : {std::tuple{8, 4, rRules.oceanShelfMeters},
                                               std::tuple{9, 3, rRules.oceanShelfMeters},

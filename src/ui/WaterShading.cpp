@@ -32,13 +32,13 @@ void RequireDepthShadeLandform_(const ImprovementRegistry& rOccupants, const cha
 
 double DepthElevation_(const Tile& rTile)
 {
-    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    const MapRulesConfig_t& rRules = rTile.MapRules();
     return std::clamp(rTile.GetElevation(), rRules.minElevationMeters, rRules.oceanLevelMeters);
 }
 
 // SMAC's depth detail: one step per detailMeters below ocean level, counted down from the end of
 // the table.
-int ShadeAt_(double elevation, const ElevationRulesConfig_t& rRules,
+int ShadeAt_(double elevation, const MapRulesConfig_t& rRules,
              const WaterShadingStyle_t& rShading)
 {
     const std::vector<int>& rTable = rShading.depthShades;

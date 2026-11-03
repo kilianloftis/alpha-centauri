@@ -535,7 +535,7 @@ Moved functions keep their names and signatures.
 - **Elevation** (`terraform/TerraformRules.h`) [TFM-1]:
   - `std::unordered_map<const Tile*, int> PlanElevationChange(const Tile& origin, int deltaMeters, int floorMeters, int ceilingMeters)` returns the new elevation of every tile the change moves. It runs the cascade on a working copy of elevations.
   - `ApplyElevationDelta` and `LowerTilesOneLevel` apply it, then reconcile surfaces and recompute rivers as today.
-- **Earthquakes** (`terraform/TerraformRules.h`) [TFM-7]: `int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters, const ElevationRulesConfig_t&)`. It sums the level rolls, capped at the full elevation span. `ApplyEarthquake` rolls once per level and applies the result.
+- **Earthquakes** (`terraform/TerraformRules.h`) [TFM-7]: `int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters, const MapRulesConfig_t&)`. It sums the level rolls, capped at the full elevation span. `ApplyEarthquake` rolls once per level and applies the result.
 - **Spread** (`terraform/TerraformRules.h`) [TFM-2]:
   - `const Tile* PickSpreadTarget(const Tile& origin)`, beside `TerraformSpreadGrowthAttempts`.
   - It takes the eligibility checks (altitude gate, rocky land, base or existing copy) and the neighbour score.

@@ -317,6 +317,29 @@ struct CommlinksPanelStyle_t
     RatioLayout_t councilButtonLayout{};
 };
 
+struct TalkPopupStyle_t
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    Color_t captionColor{};
+    Color_t labelColor{};
+    Color_t textColor{};
+    Color_t highlightColor{};
+    unsigned int captionFontSize{};
+    unsigned int textFontSize{};
+    // Fractions of the popup's width and height.
+    float padX{};
+    float valuePadX{};
+    float captionPadY{};
+    float moodPadY{};
+    float reputePadY{};
+    float integrityPadY{};
+    float speechPadY{};
+    float lineHeight{};
+    float draftPadY{};
+    RatioLayout_t menuLayout{};
+};
+
 struct CouncilVoteViewStyle_t
 {
     Color_t backgroundColor{};
@@ -713,6 +736,7 @@ public:
     CameraInputStyle_t cameraInput;
     UnitOrderInputStyle_t unitOrderInput;
     CommlinksPanelStyle_t commlinksPanel;
+    TalkPopupStyle_t talkPopup;
     CouncilVoteViewStyle_t councilVoteView;
     CurrentResearchPanelStyle_t currentResearchPanel;
     SettingsPanelStyle_t settingsPanel;

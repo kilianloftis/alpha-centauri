@@ -1,0 +1,129 @@
+{
+  "GREET": {
+    "body": "Hello $TITLE0 $NAME1, I am $NAME3 of the $FACTION4.\nMy intent is $PHRASE5; think of your $NOUN6.",
+    "items": []
+  },
+  "PROMPT": {
+    "body": "Anything else?",
+    "items": []
+  },
+  "MENU": {
+    "body": "",
+    "items": [
+      "Propose.",
+      "Renounce our $PACT1.",
+      "Goodbye, $NAME0."
+    ]
+  },
+  "CONFIRM": {
+    "body": "Really, $NAME0?",
+    "items": [
+      "No.",
+      "Yes."
+    ]
+  },
+  "KEPT": {
+    "body": "Good.",
+    "items": []
+  },
+  "RENOUNCED": {
+    "body": "Farewell, false $KIN0.",
+    "items": []
+  },
+  "PROPOSE_PROMPT": {
+    "body": "Propose what?",
+    "items": []
+  },
+  "PROPOSE_MENU": {
+    "body": "",
+    "items": [
+      "Never mind.",
+      "A $PACT1.",
+      "A Treaty.",
+      "A Truce.",
+      "Trade."
+    ]
+  },
+  "ACCEPT_PACT": {
+    "body": "Pact agreed.",
+    "items": []
+  },
+  "ACCEPT_TREATY": {
+    "body": "Treaty agreed.",
+    "items": []
+  },
+  "ACCEPT_TRUCE": {
+    "body": "Truce agreed.",
+    "items": []
+  },
+  "REFUSE": {
+    "body": "Refused.",
+    "items": []
+  },
+  "INVALID": {
+    "body": "Invalid.",
+    "items": []
+  },
+  "TRADE_PROMPT": {
+    "body": "Trade what?",
+    "items": []
+  },
+  "OFFERING": {
+    "body": "You offer:",
+    "items": []
+  },
+  "ASKING": {
+    "body": "You ask:",
+    "items": []
+  },
+  "OFFER_KINDS": {
+    "body": "",
+    "items": [
+      "Offer Credits.",
+      "Offer Technology.",
+      "Offer Base.",
+      "Offer CommFrequency.",
+      "Offer WorldMap.",
+      "Offer DeclareVendetta."
+    ]
+  },
+  "ASK_KINDS": {
+    "body": "",
+    "items": [
+      "Ask Credits.",
+      "Ask Technology.",
+      "Ask Base.",
+      "Ask CommFrequency.",
+      "Ask WorldMap.",
+      "Ask DeclareVendetta."
+    ]
+  },
+  "PROPOSE_TRADE": {
+    "body": "Deal.",
+    "items": []
+  },
+  "CLEAR": {
+    "body": "Clear.",
+    "items": []
+  },
+  "ACCEPT_TRADE": {
+    "body": "Trade agreed.",
+    "items": []
+  },
+  "PICK_PROMPT": {
+    "body": "Pick.",
+    "items": []
+  },
+  "CREDITS": {
+    "body": "{$NUM0 credits}",
+    "items": []
+  },
+  "ITEM": {
+    "body": "{$ITEM0}",
+    "items": []
+  },
+  "MAPS": {
+    "body": "Maps",
+    "items": []
+  }
+}

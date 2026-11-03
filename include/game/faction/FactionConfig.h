@@ -2,7 +2,6 @@
 
 #include "game/effects/EffectConfig.h"
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace ac
@@ -51,7 +50,6 @@ struct AITendenciesConfig
 struct FactionFlavorConfig
 {
     std::vector<std::string> baseNames;
-    std::unordered_map<std::string, std::vector<std::string>> phrases;
 };
 
 struct FactionConfig_t

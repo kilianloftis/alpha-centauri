@@ -1,0 +1,35 @@
+{
+  "leader_female": false,
+  "noun_gender": "M",
+  "noun_plural": false,
+  "fields": {
+    "formal_name_faction": "Hive Collective",
+    "desc_name_faction": "The Hive",
+    "noun_faction": "Hive",
+    "adj_name_faction": "Hive",
+    "name_leader": "Yang",
+    "title_leader": "Chairman",
+    "adj_leader": "watchful",
+    "adj_insult_leader": "cold-blooded",
+    "adj_faction": "orderly",
+    "adj_insult_faction": "regimented",
+    "insult_leader": "Tyrant"
+  },
+  "phrases": {
+    "goal": "build a society that cannot fail",
+    "intent": "to raise a society of perfect order",
+    "agenda": "making slaves of us all for his grand design",
+    "your_agenda": "making slaves of us all for your grand design",
+    "misdeed": "march free people into your labor pits",
+    "pastime": "counting the citizens",
+    "your_pastime": "counting the citizens",
+    "accusation": "issuing directives",
+    "methods": "security sweeps, M2",
+    "projects": "industrial programs, M2",
+    "pursuits": "labor quotas, M2",
+    "tribute": "loyalty oath, M1",
+    "service": "fortifying the hive cities",
+    "enforcers": "my Security Bureau",
+    "code": "the Collective Code"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "SHARED": {
+    "body": "first shared",
+    "items": []
+  },
+  "FIRST_ONLY": {
+    "body": "first only",
+    "items": []
+  }
+}

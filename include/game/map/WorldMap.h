@@ -1,6 +1,7 @@
 #pragma once
 
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
+#include "game/map/RegionCache.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
@@ -21,7 +22,7 @@ class WorldMap
 public:
     // Throws unless both dimensions are positive and width (the SMAC x wrap period) is even.
     // Immovable, since every tile points at its copy of rMapRules.
-    WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules, Rainfall_t rainfall);
+    WorldMap(int width, int height, const MapRulesConfig_t& rMapRules, Rainfall_t rainfall);
     WorldMap(const WorldMap&) = delete;
     WorldMap& operator=(const WorldMap&) = delete;
     WorldMap(WorldMap&&) = delete;
@@ -73,16 +74,19 @@ public:
     // Bumped when a tile's minimap fill inputs change (elevation, fungus, improvements).
     uint64_t GetAppearanceRevision() const { return m_appearanceRevision.Get(); }
 
+    const RegionCache& GetRegions() const;
+
 private:
     int m_width;
     int m_height;
-    ElevationRulesConfig_t m_mapRules;
+    MapRulesConfig_t m_mapRules;
     Rainfall_t m_rainfall;
     std::vector<std::unique_ptr<Tile>> m_tiles;
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;
     TerritoryMap m_territory;
     Revision m_appearanceRevision;
+    RegionCache m_regions;
 };
 
 } // namespace ac

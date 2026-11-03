@@ -29,6 +29,17 @@ graph TB
         ViewFactory[ViewFactory]
     end
 
+    subgraph "Commlinks and talk"
+        CommlinksView[CommlinksView]
+        CommlinksPanel[CommlinksPanel<br/>row click opens talk]
+        TalkPopup[TalkPopup<br/>caption, standing, line, menu]
+        TalkConversation[TalkConversation<br/>runs the scene table]
+        TalkScript[TalkScript<br/>config/ui/talk.json]
+        TalkBindings[TalkBindings<br/>slot values]
+        TextPack[TextPack<br/>assets/text, then config/text]
+        ScriptMarkup[ScriptMarkup<br/>SMAC parse_string]
+    end
+
     subgraph "Base Panels"
         IBasePanel[IBasePanel<br/>interface]
         BaseDisplay[BaseDisplay<br/>implements IBasePanel]
@@ -97,6 +108,17 @@ graph TB
 
     UIManagerImpl --> Graphics
     UIManagerImpl --> Input
+
+    ViewFactory --> CommlinksView
+    CommlinksView --> CommlinksPanel
+    CommlinksView -->|row clicked| TalkPopup
+    TalkPopup --> TalkConversation
+    TalkPopup -->|menu| ListSelectorPopup
+    TalkConversation --> TalkScript
+    TalkConversation --> TalkBindings
+    TalkScript -->|checked at load| TextPack
+    TalkBindings --> TextPack
+    TalkBindings --> ScriptMarkup
 
     style UIManager fill:#bbf,stroke:#333,stroke-width:4px
     style IGameView fill:#bbf,stroke:#333,stroke-width:4px
@@ -245,7 +267,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
-- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `StandingCaptions`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`), `SpriteLibrary&` (tech/facility/project icons in research and base UI)
+- **Dependencies**: `GameState`, `const GameDataContext&` (the registries the social engineering, unit designer and building views list), `HotkeyConfig`, `StandingCaptions`, `TextPack`, `TalkScript`, `Graphics`, `GameSettings`, `MapRenderer&` (shared map paint instance from `Engine`), `SpriteLibrary&` (tech/facility/project icons in research and base UI)
 - **Owner**: `Engine` creates and owns it during initialization
 - **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
   `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,
@@ -258,14 +280,77 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 ### StandingCaptions
 - **Purpose**: Names the stored diplomatic standing counts. Mood names a faction's friction toward
   another by band, and repute names a blemish count. A count past the last band reads the last
-  band, as SMAC shows 8+ blemishes as Infamous.
-- **Config**: `config/ui/standing_captions.json`, with `moods` (`name`, `min_friction`) and
-  `repute` (`name`, `min_blemishes`). `Load` requires both lists, starting at 0 and rising
-  strictly, and refuses a band above `diplomacy.json`'s `friction_max` / `blemishes_max`, which
-  no stored count could reach.
+  band, as SMAC shows 8+ blemishes as Infamous. `CaptionMood` is the talk caption's mood: at
+  Vendetta it reads friction below `vendetta_mood_floor` as the floor, as SMAC's
+  `diplomacy_caption` does, without changing the stored count.
+- **Config**: `config/ui/standing_captions.json`, with `vendetta_mood_floor`, `moods` (`name`,
+  `min_friction`) and `repute` (`name`, `min_blemishes`). `Load` requires both lists, starting at
+  0 and rising strictly, and refuses a band or floor above `diplomacy.json`'s `friction_max` /
+  `blemishes_max`, which no stored count could reach.
 - **Owner**: `Engine` loads it beside `HotkeyConfig`. `ViewFactory` passes it through
   `CommlinksView` to `CommlinksPanel`, whose rows show each met faction's mood toward the player
-  (raw at Vendetta) and repute, under a line with the player's own integrity.
+  (raw at Vendetta) and repute, under a line with the player's own integrity, and to `TalkPopup`.
+
+### Text packs
+- **Purpose**: Player-facing text apart from the flow that uses it, so a translation is a new
+  pack. A pack is `<root>/<locale>/` holding `script.json` (entries by id: `body`, and `items`),
+  `labels.json` (labels by number) and `factions/<id>.json` (one faction's header fields under
+  SMAC's `MFaction` names, with the leader's sex and the noun's gender and number, and its 15
+  phrase lines under `phrases`, each named for the sentence it completes: `goal` for "Together
+  we shall both ___", `projects` for "Think how this could benefit your ___"; the full list is
+  in `terranx-map.md`, Talk). Script ids and label numbers stay SMAC's: they are what the game
+  looks up, and a translated install keeps them.
+- **Roots**: `GameDataPaths::textRoots`, in lookup order: `assets/text` (SMAC's own text, from
+  `python extract_text.py`; gitignored and never shipped) and then `config/text` (our wording,
+  shipped, covering every id the game uses so it runs without extraction). `textLocale` is
+  `en`. `TextPack` takes each script entry and label from the first root that has it, and each
+  faction file whole from the first root that has it; a root without the locale is skipped, and
+  an id no root has throws.
+- **Markup**: the packs keep SMAC's markup, which `ScriptMarkup` parses as `parse_string` does
+  (`terranx-map.md`, Talk): `$WORDn` string slots (the word is a hint), `$NUMn` number slots,
+  `$<spec:forms>` gender and number forms, `$$`, and `{…}` spans that the renderer highlights.
+  `SlotsOf` runs the same parser over a recording slot source, so a flow can be checked at load.
+- **`extract_text.py`**: splits the install's `xscript.txt` into entries (a popup with
+  directives is body then items; an item list like `DIPLOMENU` is all items), `labels.txt` into
+  labels, and each faction file named in `alphax.txt` into vocabulary, keyed by the faction id
+  `extract_faction_ids.py` gives the art; it names the phrase lines by position and rejects a
+  file without all 15. It reads cp1252 and matches file names in any case.
+  `tests/tools/test_extract_text.py` runs with the suite.
+- **Not in packs yet**: mood and repute names (`standing_captions.json`), faction names elsewhere
+  in the UI, and other UI copy.
+
+### Talk
+- **Layers**: the flow is `config/ui/talk.json` (`TalkScript`); the text is the packs; the
+  vocabulary is C++. The flow arranges scenes and choices but cannot make anything legal that a
+  rule forbids.
+- **`talk.json`**: `portrait` (the label numbers the popup draws), `credit_offers`, `bindings`
+  (named slot sets, the analog of the `parse_says` block before each `X_pops`; keys `"n"` are
+  string slots, `"#n"` number slots), `start` (lines picked at random, then a scene) and `scenes`.
+  A scene has a `prompt`, `choices` and optionally `draft` (headings for the trade being built).
+  A text reference is `{ text, item?, args?, extra? }`. A choice is a written row (`label`,
+  optional `when`, optional `do`, then `then` with an optional `say`, or `on` with one outcome per
+  result) or generated rows (`from`: `trade_kinds` with a `side`, or `trade_candidates`, each
+  with a label per trade kind). `end` closes the talk.
+- **Vocabulary**: conditions `MayProposeTruce` / `Treaty` / `Pact`, `MayRenouncePact`, `MayTrade`
+  (from `GetTalkActions`) and `HasDraft`; actions `ProposeTruce` / `Treaty` / `Pact` /
+  `ProposeTrade` (results `Accepted`, `Rejected`, `Invalid`, through
+  `DiplomaticActionExecutor::Propose`), `RenouncePact` (`CancelTreaty`) and `ClearTrade` (`Done`).
+  A row whose action is unavailable is hidden. Value sources: `player.` / `rival.` + a vocabulary
+  field, `phrase.<name>` (`get_phrase`), `noun_phrase.<name>` (`get_noun_phrase`), `pact_brother`
+  (`get_pact`); `pact_hood`; `caption` (the rival's noun, ` - `, `CaptionMood`); and on trade rows
+  `candidate.name` / `candidate.amount`. Enum names in the file are the enumerators'.
+- **Load checks** (`TalkScript::Load`): unknown keys and names; scenes that do not exist; text
+  ids, items and portrait labels no pack has; a slot a referenced template reads but nobody
+  binds; number slots bound to strings; candidate values outside trade rows; an action whose
+  results are not all covered; a trade-kind row missing a `TradeKinds()` kind; and every faction
+  with diplomacy lacking a field or phrase the bindings read.
+- **`TalkConversation`** runs the script for one rival: the scene, the rival's last line, the
+  trade draft, and a UI-owned RNG for line variants. A choice only records what follows.
+- **`TalkPopup`** (modal) draws the caption, the portrait's mood (raw friction toward the player)
+  and reputation, the player's integrity, the rival's line wrapped by `WrapText`, the draft, and
+  an embedded `ListSelectorPopup` for the menu. It swaps the menu after the menu's handler
+  returns, since `onChosen` runs inside it, and closes on `end` or a dismiss.
+- **Opening**: a click on a met faction's `CommlinksPanel` row calls `CommlinksView::OpenTalk_`.
 
 ### Rendering from snapshots
 Panels paint from precomputed state rather than re-deriving it per frame. Three places do this,

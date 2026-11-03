@@ -20,7 +20,7 @@ constexpr float k_QuarterLevels = 4.0f;
 // SMAC's land vertex shades run −4…4.
 constexpr float k_MaxLandShade = 4.0f;
 
-float LevelsAbove_(int elevation, const ElevationRulesConfig_t& rRules, ReliefMode_t mode,
+float LevelsAbove_(int elevation, const MapRulesConfig_t& rRules, ReliefMode_t mode,
                    const ReliefStyle_t& rStyle)
 {
     if (mode == ReliefMode_t::Flat)

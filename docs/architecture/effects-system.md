@@ -606,7 +606,7 @@ both name the right faction with no extra plumbing. `severity` is `AtrocitySever
 level_max_meters]` from `config/map_rules.json`, then the neighbor slope relaxation. Exactly
 one magnitude source is authored — `levels` is a literal (a scripted quake), `levels_stat`
 names a **unit** stat resolved off the subject the trigger stamped. The rules come from the
-tile's own bound `ElevationRulesConfig_t`, so the effect needs no `GameDataContext`.
+tile's own bound `MapRulesConfig_t`, so the effect needs no `GameDataContext`.
 
 `FungalBloom` (`include/game/ecology/FungalBloom.h`) sets fungus on the origin when it is not a
 base, then on a random sample of Chebyshev-1 neighbors that are not bases and do not already

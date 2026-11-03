@@ -23,6 +23,7 @@ graph TB
 
     subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalMutations)"
         IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals; StepUp only]
+        CanDeliver[CanDeliver<br/>one item from its giver]
         ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item]
     end
 
@@ -31,8 +32,12 @@ graph TB
     end
 
     subgraph "Ruleset (GameDataContext)"
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>probe_keep_friction_draw<br/>config/diplomacy.json]
-        DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes]
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>probe_keep_friction_draw + base_value<br/>config/diplomacy.json]
+        DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes<br/>BaseValue]
+    end
+
+    subgraph "Base value (BaseValueRules)"
+        BaseValueRules[BaseValue<br/>HQ distance, ring scan,<br/>region counts, built costs]
     end
 
     subgraph "What a status permits (DiplomaticPermissionRules)"
@@ -74,6 +79,10 @@ graph TB
         CommlinksPanel[CommlinksPanel + StandingCaptions<br/>mood toward the player, repute<br/>config/ui/standing_captions.json]
     end
 
+    subgraph "Talk (UI; see ui-system.md)"
+        Talk[TalkPopup + TalkConversation<br/>config/ui/talk.json, text packs]
+    end
+
     subgraph "Hostile act sources"
         Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
@@ -84,6 +93,7 @@ graph TB
 
     subgraph "Action menu (DiplomacyActions)"
         GetAvailableActions[GetAvailableActions<br/>Trade whenever the pair has met]
+        GetTalkActions[GetTalkActions<br/>no declaring; cancel only a Pact]
     end
 
     subgraph "Affected faction state"
@@ -115,6 +125,12 @@ graph TB
     IsValidProposal -->|CanProposeStepUp| CanPropose
     IsValidProposal -->|AreKnown| DiplomacyLedger
     GetAvailableActions --> CanPropose
+    GetTalkActions --> GetAvailableActions
+    Talk -->|what may be said| GetTalkActions
+    Talk -->|StepUp, trade| DiplomaticActionExecutor
+    Talk -->|renounce a Pact| CancelTreaty
+    Talk -->|trade rows| CanDeliver
+    CanDeliver -.->|same visitor| IsValidProposal
     CanPropose --> DiplomacyLedger
 
     ApplyProposal --> EconomyManager
@@ -163,6 +179,8 @@ graph TB
     ApplyStatusChange -->|rules lost| EvacuateTerritory
     ApplyStatusChange --> DiplomacyConfig
     DiplomacyCalculator --> DiplomacyConfig
+    BaseValueRules -->|BaseValueInputs_t| DiplomacyCalculator
+    BaseValueRules -->|HeadquartersDistance, RegionCache,<br/>ForEachTileInRings| MapSystem[map-system.md]
     ApplyStanding --> DiplomacyCalculator
     ApplyStanding -->|SetFriction / SetBlemishes| DiplomacyLedger
     CommlinksPanel -->|GetFriction / GetBlemishes| DiplomacyLedger
@@ -227,8 +245,9 @@ sets: a pair is either in them or not.
   never holds. Atrocity amounts live on `atrocities.json` severities (`friction`, `blemishes`,
   `blemishes_floor`, `repeat_blemishes`); `ResolveAtrocity` picks first or repeat from prior
   `HasVictimizedAtLeast` when the act has a victim, before anything is written.
-  `break_agreement_blemishes` lives in `diplomacy.json`. Cancelling an agreement or declaring
-  Vendetta from one (menu, trade, or sneak `ApplyHostileAct`) writes that blemish;
+  `break_agreement_blemishes` lives in `diplomacy.json`. Cancelling an agreement (talk's
+  Pact renounce, which SMAC blemishes inline) or declaring Vendetta from one (trade, the
+  territory border, or sneak `ApplyHostileAct`) writes that blemish;
   `HonorDefensiveObligation`, `ApplyAtrocityVendetta` and `ApplyProbeVendetta` do not. A
   hostile probe that keeps its agreement adds the victim's friction toward the actor (see
   [Probe standing](#probe-standing)). Combat, terraform and talk gifts are not wired yet. A counted major's universal Vendetta goes through `JoinVendetta`
@@ -238,6 +257,30 @@ sets: a pair is either in them or not.
 - **Every status change goes through `ApplyStatusChange`** (`game/diplomacy/DiplomaticTransitionMutations.h`):
   proposals, cancellations, `TradeDeclareVendetta_t`, atrocity universal Vendetta, expiry,
   hostile acts, and defensive obligations. See [Diplomatic statuses](#diplomatic-statuses).
+
+## Base value
+
+`BaseValue(base, evaluator, counterparty)` (`game/diplomacy/BaseValueRules.h`) is SMAC's
+`value_of_base` (`docs/thinker/terranx-map.md`, "Base value"): what an AI weighs a base at in a
+deal with another faction. The base may belong to either. Nothing in play calls it yet: a talk
+gift of a base is its first consumer, and base trades and threatened cession wait on AI
+evaluation.
+
+- **Inputs** (`BaseValueRules`):
+  - the evaluator's `HeadquartersDistance` to the base; the evaluator's own headquarters
+    throws, as the binary prices it at −1 and every caller refuses it first;
+  - that distance adjusted by a scan of rings 1 to `scan_radius` in the binary's order
+    (`ForEachTileInRings`). The evaluator's base stops it, −1 when in the same region; the
+    counterparty's in the same region adds 1; any other faction's in the same region stops it;
+  - the larger treasury, the population, and whether any unit stands in the base;
+  - both factions' bases in the base's region (`RegionCache`), counted live;
+  - built facilities in `BuildingRegistry` order (neither projects nor orbital), the secret
+    projects built there, and the evaluator's units in the base.
+- **Formula** (`DiplomacyCalculator::BaseValue`, `diplomacy.json` `base_value`): the treasury
+  share by distance and population with a floor, halved for an empty base, scaled by region
+  holdings, plus the facility, project and unit costs in SMAC's rows (`minerals_per_row`).
+- The AI's fear and hostility, scenario objectives and the Believers' doubling are not applied
+  ([deviations](../../config/deviations/README.md)).
 
 ## Diplomatic statuses
 
@@ -327,7 +370,7 @@ The entry point decides which kind of Vendetta begins. Callers never choose it:
 
 | Kind | Entry point | Started by | Territory | Shared tiles and bases |
 |---|---|---|---|---|
-| Declaration | `DeclareVendetta`, `JoinVendetta` | the diplomacy menu's Declare Vendetta, `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
+| Declaration | `DeclareVendetta`, `JoinVendetta` | `TradeDeclareVendetta_t`, breaking an agreement at a territory border, atrocity universal Vendetta | each side's units leave the other's territory (`EvacuateUnitsFromTerritory`) | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 | Sneak attack | `ApplyHostileAct`, `ApplyAtrocityVendetta`, `ApplyProbeVendetta` | a hostile act, an atrocity against a victim, or a probe whose victim breaks the agreement | units stay where they are | cleared (`ApplyStatusChange`, when `share_tiles` is lost) |
 
 Both run through the private `EnterVendetta_`: the status change and, for a declaration, the
@@ -354,9 +397,9 @@ for a pair already at Vendetta, and for native life on either side.
 
 Starting a conflict:
 
-- `DeclareVendetta`: called directly (declaring is one-sided, not a proposal), by
-  `TradeDeclareVendetta_t` (the item's giver declares on the third party), and by breaking an
-  agreement at a territory border (`BreakAgreementAndContinue`);
+- `DeclareVendetta`: by `TradeDeclareVendetta_t` (the item's giver declares on the third party),
+  and by breaking an agreement at a territory border (`BreakAgreementAndContinue`). Talk does
+  not declare: SMAC's diplomacy menu has no such item;
 - `ApplyHostileAct`: a hostile act, below, as a sneak attack;
 - `ApplyAtrocityVendetta`: an atrocity against a diplomatic victim, as a sneak attack, without
   an agreement-break blemish;
@@ -556,11 +599,13 @@ save-game serialisation work to exist first. Recorded in
 | Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` |
 | What does changing a status do? | `DiplomaticTransitionMutations::ApplyStatusChange`, and the Vendetta, cancel and obligation entry points around it |
 | Is this proposal valid? | `DiplomaticProposalRules::IsValidProposal` |
-| Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_` |
+| Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_`; `CanDeliver` for one item |
+| What may the player do in talk? | `DiplomacyActions::GetTalkActions`: proposals and trade, and cancelling only a Pact |
 | Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
 | What does accepting change? | `DiplomaticProposalMutations::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | What is the next stored friction / blemish total, in range? | `DiplomacyCalculator::NextFriction` / `NextBlemishes` |
+| What does an AI think a base is worth to it? | `BaseValueRules::BaseValue`, over `DiplomacyCalculator::BaseValue` |
 | Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
 | Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `ApplyProbeAftermath` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyAlliedTerritoryFriction` after a melee or duel, and `ApplyRainfallGrievance` after a Former's raise or lower land. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
 | Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner`: the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
@@ -572,7 +617,8 @@ save-game serialisation work to exist first. Recorded in
 
 - **AI evaluation.** `EvaluateResponse_` always agrees. Real evaluation needs an AI attitude
   model, which does not exist. It should weigh the relationship: a recipient at Vendetta with the
-  proposer is less likely to accept.
+  proposer is less likely to accept. Base trades would weigh both bases with `BaseValue`, as
+  SMAC's `base_swap` does (`terranx-map.md`, "Base swap").
 - **A proposal queue.** One pending slot, with `Busy` as the refusal. A per-recipient queue needs
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate
@@ -584,9 +630,12 @@ save-game serialisation work to exist first. Recorded in
 - **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory and
   terraform-rainfall writers are in. The player's probe excuse dialog, talk gifts, the +3
   refused-demand battle friction, and the wants-revenge betrayal that replaces rainfall friction
-  are not ([deviations](../../config/deviations/README.md)). Mood and repute captions are
-  `StandingCaptions` (UI; see `ui-system.md`). The talk caption's Vendetta floor
-  (`diplomacy_caption`) lands with talk.
+  are not ([deviations](../../config/deviations/README.md)). Mood and repute captions,
+  and the talk caption's Vendetta floor, are `StandingCaptions` (UI; see `ui-system.md`).
+- **Returning and hostile greetings.** SMAC greets with `INTRO` / `INTROMAD` only once a pair
+  carries `0x8000000` (set when an AI introduces the player) or wants revenge
+  (`terranx-map.md`, Talk). Neither record exists, so talk always opens from `INTRONEW`, as SMAC
+  does for a faction met by contact.
 - **Probe keep-or-break decision.** Every probe victim keeps its agreement until an AI attitude
   model decides, and the player's excuse dialog is not built; see
   [Probe standing](#probe-standing).

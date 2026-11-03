@@ -20,7 +20,6 @@ constexpr const char* k_LeaderFile = "leader.json";
 constexpr const char* k_AIFile = "ai.json";
 constexpr const char* k_EffectsFile = "effects.json";
 constexpr const char* k_BaseNamesFile = "base_names.json";
-constexpr const char* k_PhrasesFile = "phrases.json";
 
 FactionSpecies_t ParseFactionSpecies_(const std::string& rValue)
 {
@@ -85,7 +84,6 @@ FactionConfig_t FactionConfigParser::ParseFactionDirectory_(const std::string& i
         ReadRequiredJsonFile(dirPath + "/" + k_EffectsFile), EffectSourceKind_t::Faction, config.id);
     config.flavor.baseNames =
         ParseBaseNames(ReadRequiredJsonFile(dirPath + "/" + k_BaseNamesFile));
-    config.flavor.phrases = ParsePhrases(ReadRequiredJsonFile(dirPath + "/" + k_PhrasesFile));
 
     return config;
 }
@@ -138,32 +136,6 @@ std::vector<std::string> FactionConfigParser::ParseBaseNames(const nlohmann::jso
         names.push_back(rEntry.get<std::string>());
     }
     return names;
-}
-
-std::unordered_map<std::string, std::vector<std::string>> FactionConfigParser::ParsePhrases(
-    const nlohmann::json& j)
-{
-    if (!j.is_object())
-    {
-        throw std::runtime_error("phrases.json must be a JSON object of string arrays");
-    }
-
-    std::unordered_map<std::string, std::vector<std::string>> phrases;
-    for (const auto& [key, value] : j.items())
-    {
-        if (!value.is_array())
-        {
-            throw std::runtime_error("phrases.json entry '" + key + "' must be a string array");
-        }
-        std::vector<std::string> lines;
-        lines.reserve(value.size());
-        for (const auto& rLine : value)
-        {
-            lines.push_back(rLine.get<std::string>());
-        }
-        phrases.emplace(key, std::move(lines));
-    }
-    return phrases;
 }
 
 nlohmann::json FactionConfigParser::ReadJsonFile(const std::string& filePath)

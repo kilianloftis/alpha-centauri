@@ -1,6 +1,7 @@
 #include "DiplomacyFixture.h"
 
 #include "game/diplomacy/DiplomaticActionExecutor.h"
+#include "game/diplomacy/DiplomaticProposalRules.h"
 #include "game/economy/EconomyManager.h"
 #include "game/visibility/FactionExploredMap.h"
 #include "game/visibility/FactionTileMemory.h"
@@ -364,4 +365,30 @@ TEST_CASE("Rejecting a pending proposal frees the slot without applying it",
     CHECK_FALSE(rExecutor.Accept(game.fixtures.state));
     // The slot is usable again.
     CHECK(rExecutor.Propose(game.fixtures.state, proposal) == DiplomaticProposeResult_t::PendingPlayer);
+}
+
+TEST_CASE("CanDeliver answers for one item from its giver", "[diplomacy][proposal]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const FactionId_t c = game.pC->GetFactionId();
+    game.pA->GetEconomy().AddEnergy(10);
+    game.pA->GetResearch().AddDiscoveredTech("test_tech");
+
+    CHECK(CanDeliver(a, b, TradeCredits_t{10}));
+    CHECK_FALSE(CanDeliver(a, b, TradeCredits_t{11}));
+    CHECK(CanDeliver(a, b, TradeTechnology_t{"test_tech"}));
+    CHECK_FALSE(CanDeliver(b, a, TradeTechnology_t{"test_tech"}));
+    CHECK(CanDeliver(a, b, TradeBase_t{static_cast<BaseId_t>(game.pBaseA->GetBaseId())}));
+    CHECK_FALSE(CanDeliver(b, a, TradeBase_t{static_cast<BaseId_t>(game.pBaseA->GetBaseId())}));
+    CHECK(CanDeliver(a, b, TradeWorldMap_t{}));
+    CHECK(CanDeliver(a, b, TradeDeclareVendetta_t{c}));
+    CHECK_FALSE(CanDeliver(a, b, TradeDeclareVendetta_t{b}));
+
+    // B already knows C, so A has no frequency to hand over until B forgets it.
+    CHECK_FALSE(CanDeliver(a, b, TradeCommFrequency_t{c}));
+    game.Ledger().SetKnown(b, c, false);
+    CHECK(CanDeliver(a, b, TradeCommFrequency_t{c}));
 }

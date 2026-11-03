@@ -5,7 +5,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 
 #include <memory>
 #include <vector>
@@ -98,8 +98,8 @@ struct GameDataContext
     std::vector<LandmarkConfig_t> worldGenLandmarks;
     // Resource-cap and other universal tile-yield effects, and the world yield scalars.
     TileYieldRulesConfig_t tileYieldRules;
-    // Former raise/lower and earthquake level size, slope limit, and former ceiling.
-    ElevationRulesConfig_t elevationRules;
+    // map_rules.json as parsed; play reads the world's copy (Tile::MapRules()).
+    MapRulesConfig_t mapRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
     std::vector<EffectConfig_t> policeRules;
     // Standing WorldGlobal rules (air collateral, bombard floor, tech stagnation).

@@ -1,4 +1,4 @@
-#include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapRulesConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
 
@@ -34,7 +34,7 @@ int RequireCount_(const nlohmann::json& rJson, const char* pKey)
     return rJson.at(pKey).get<int>();
 }
 
-void ValidateSubmergedPopLoss_(const ElevationRulesConfig_t& rConfig)
+void ValidateSubmergedPopLoss_(const MapRulesConfig_t& rConfig)
 {
     if (rConfig.submergedPopLossRollMin < 1
         || rConfig.submergedPopLossRollMax < rConfig.submergedPopLossRollMin
@@ -46,7 +46,7 @@ void ValidateSubmergedPopLoss_(const ElevationRulesConfig_t& rConfig)
     }
 }
 
-void ValidateElevationRules_(const ElevationRulesConfig_t& rConfig)
+void ValidateElevationRules_(const MapRulesConfig_t& rConfig)
 {
     if (rConfig.oceanShelfMeters >= rConfig.oceanLevelMeters)
     {
@@ -86,11 +86,16 @@ void ValidateElevationRules_(const ElevationRulesConfig_t& rConfig)
             + std::to_string(rConfig.oceanLevelMeters));
     }
     ValidateSubmergedPopLoss_(rConfig);
+    if (rConfig.missingHeadquartersDistance < 1)
+    {
+        throw std::runtime_error("map_rules 'missing_headquarters_distance' must be >= 1, got "
+                                 + std::to_string(rConfig.missingHeadquartersDistance));
+    }
 }
 
 } // namespace
 
-ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string& configPath)
+MapRulesConfig_t MapRulesConfigParser::ParseConfig(const std::string& configPath)
 {
     std::ifstream file(configPath);
     if (!file.is_open())
@@ -100,7 +105,7 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
 
     const nlohmann::json json = nlohmann::json::parse(file);
 
-    ElevationRulesConfig_t config;
+    MapRulesConfig_t config;
     config.oceanLevelMeters = RequireWholeMeters_(json, "ocean_level_meters");
     config.oceanShelfMeters = RequireWholeMeters_(json, "ocean_shelf_meters");
     config.levelMinMeters = RequireWholeMeters_(json, "level_min_meters");
@@ -112,6 +117,7 @@ ElevationRulesConfig_t ElevationRulesConfigParser::ParseConfig(const std::string
     config.submergedPopLossRollMin = RequireCount_(json, "submerged_pop_loss_roll_min");
     config.submergedPopLossRollMax = RequireCount_(json, "submerged_pop_loss_roll_max");
     config.submergedPopLossCap = RequireCount_(json, "submerged_pop_loss_cap");
+    config.missingHeadquartersDistance = RequireCount_(json, "missing_headquarters_distance");
 
     ValidateElevationRules_(config);
     return config;

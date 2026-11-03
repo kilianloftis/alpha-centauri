@@ -376,6 +376,40 @@
   "unit_order_input": {
     "hold_threshold_ms": 500
   },
+  "talk_popup": {
+    "background_color": [
+      30, 30, 50, 255
+    ],
+    "border_color": [
+      80, 80, 120, 255
+    ],
+    "caption_color": [
+      255, 255, 0, 255
+    ],
+    "label_color": [
+      160, 160, 200, 255
+    ],
+    "text_color": [
+      255, 255, 255, 255
+    ],
+    "highlight_color": [
+      255, 255, 0, 255
+    ],
+    "caption_font_size": 18,
+    "text_font_size": 16,
+    "pad_x": 0.05,
+    "value_pad_x": 0.3,
+    "caption_pad_y": 0.03,
+    "mood_pad_y": 0.09,
+    "repute_pad_y": 0.13,
+    "integrity_pad_y": 0.17,
+    "speech_pad_y": 0.24,
+    "line_height": 0.04,
+    "draft_pad_y": 0.42,
+    "menu_layout": [
+      0.05, 0.56, 0.9, 0.42
+    ]
+  },
   "commlinks_panel": {
     "background_color": [
       30, 30, 50, 255

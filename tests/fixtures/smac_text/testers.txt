@@ -1,0 +1,25 @@
+#TESTERS
+Testers Inc, Testers, Tester, M, 1, Testo, M, 0, 0, 0, 0, 0,
+  TECH, Something
+  Economics, Green, PLANET
+  Economics, Free Market, nil
+  Testy, Testy,
+  A, B, C
+  Boss, calm, rude, neat, messy,
+  Nerd
+  testers goal
+  testers intent
+  testers agenda
+  testers your_agenda
+  testers misdeed
+  testers pastime
+  testers your_pastime
+  testers accusation
+  testers methods
+  testers projects
+  testers pursuits
+  testers tribute
+  testers service
+  testers enforcers
+  testers code
+

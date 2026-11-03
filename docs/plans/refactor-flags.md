@@ -28,13 +28,13 @@ They stay until that feature lands, and this list records what is left to build.
   do not exist yet.
 - **Waits on:** mod event handlers.
 
-### Faction save/load and flavour paths used only by tests
+### Faction save/load paths used only by tests
 - **Where:** `Faction::ExtractBase` (7 test callers), `Faction::CreateBaseFromSnapshot` (2),
-  `BaseManager::CaptureSnapshot` and `BaseSnapshot_t`, `FactionFlavor::PickPhrase` (2),
-  `ResearchSelector::SetCategoryEnabled` (20)
+  `BaseManager::CaptureSnapshot` and `BaseSnapshot_t`, `ResearchSelector::SetCategoryEnabled`
+  (20)
 - **Problem:** no production caller.
-- **Waits on:** save/load (the snapshot pair), diplomacy dialogue (`PickPhrase`) and the research
-  priority UI (`SetCategoryEnabled`).
+- **Waits on:** save/load (the snapshot pair) and the research priority UI
+  (`SetCategoryEnabled`).
 
 ### Production and economy entry points used only by tests
 - **Where:** `ComputeCommerceForFaction` and `ComputeCommerceForBase` in `CommerceRules.h` (17
@@ -48,14 +48,12 @@ They stay until that feature lands, and this list records what is left to build.
   getter production reads whenever these are next touched.
 
 ### Diplomacy, council and atrocity queries used only by tests
-- **Where:** the whole `DiplomaticActionExecutor` (`Propose`, `Accept`, `Reject`,
-  `GetPendingProposal`) and `GameState::GetDiplomaticActionExecutor` (5);
+- **Where:** `DiplomaticActionExecutor::Accept`, `Reject` and `GetPendingProposal`;
   `AtrocityLedger::SanctionUntilYear` (4); `PenaltiesApplied` in
   `AtrocityMutations.h` (18); `CouncilVoteExecutor::VetoPending` (3), `AllMembersVoted` (3);
-  `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2); `GetAvailableActions` in
-  `DiplomacyActions.h` (5); `MayRepairAt` (4); `TradeKinds` (1)
-- **Problem:** no production caller. Nothing proposes a diplomatic action, so the executor is
-  unwired end to end.
-- **Waits on:** the diplomacy UI and AI (the executor, the ledger query, `GetAvailableActions`,
-  `TradeKinds`), the council UI (`VetoPending`, `AllMembersVoted`), the diplomatic victory
-  check (`GetSupremeLeaderVictoryStub`) and per-turn healing (`MayRepairAt`).
+  `PlanetaryCouncil::GetSupremeLeaderVictoryStub` (2); `MayRepairAt` (4)
+- **Problem:** no production caller. Talk proposes to AIs, which answer at once, so the
+  player's pending slot is never filled.
+- **Waits on:** AI initiation (`Accept`, `Reject`, `GetPendingProposal`), the council UI
+  (`VetoPending`, `AllMembersVoted`), the diplomatic victory check
+  (`GetSupremeLeaderVictoryStub`) and per-turn healing (`MayRepairAt`).

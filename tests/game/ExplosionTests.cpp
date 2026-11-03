@@ -195,7 +195,7 @@ TEST_CASE("A radius-1 explosion wipes the 3x3 and lowers each tile one level",
     CHECK(rAquifer.GetHasAquifer());
     CHECK(rOrigin.GetRockiness() == rockiness);
 
-    const ElevationRulesConfig_t& rRules = rOrigin.MapRules();
+    const MapRulesConfig_t& rRules = rOrigin.MapRules();
     for (const auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
     {
         const int distance = ChebyshevDistance(rOrigin, *pTile, game.fixtures.state.GetWorldMap().GetWidth());

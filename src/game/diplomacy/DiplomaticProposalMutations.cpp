@@ -78,6 +78,8 @@ void ApplyProposal(GameState& rGameState, const DiplomaticProposal_t& rProposal)
     }
     DeliverAll_(rGameState, rProposer, rRecipient, rProposal.give);
     DeliverAll_(rGameState, rRecipient, rProposer, rProposal.demand);
+    // TODO: SMAC's gifts and trades also move friction and diplo_gifts (terranx-map.md,
+    // "Integrity / friction writers", communicate); see config/deviations/README.md.
 }
 
 } // namespace ac

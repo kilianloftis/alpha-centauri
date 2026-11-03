@@ -41,6 +41,7 @@ try:
 except ImportError:
     sys.exit("Pillow is required:  pip install Pillow")
 
+from extract_faction_ids import FACTION_ID_TO_STEM, faction_id_for_stem
 from extract_pcx_common import (
     LAND_SHADOW_ALPHA,
     SEA_SHADOW_ALPHA,
@@ -356,23 +357,11 @@ STOCK_PCX_STEMS = frozenset(
     }
 )
 
-# SMAC .pcx stem → config/factions/<id> and assets/factions/<id>. Unlisted stems keep their name.
-PCX_STEM_TO_FACTION_ID = {
-    "gaians": "gaian",
-    "univ": "university",
-}
-FACTION_ID_TO_PCX_STEM = {faction_id: pcx for pcx, faction_id in PCX_STEM_TO_FACTION_ID.items()}
-
-
-def faction_id_for_pcx_stem(pcx_stem: str) -> str:
-    return PCX_STEM_TO_FACTION_ID.get(pcx_stem.lower(), pcx_stem.lower())
-
-
 def pcx_stem_for_faction_arg(name: str) -> str:
     """Accept either a config faction id (gaian) or a SMAC .pcx stem (gaians)."""
     lower = name.lower()
-    if lower in FACTION_ID_TO_PCX_STEM:
-        return FACTION_ID_TO_PCX_STEM[lower]
+    if lower in FACTION_ID_TO_STEM:
+        return FACTION_ID_TO_STEM[lower]
     return lower
 
 
@@ -394,7 +383,7 @@ def main(argv: list[str] | None = None) -> int:
     # Each job is (output_faction_id, pcx_path).
     if args.input:
         pcx_stem = args.input.stem.lower()
-        jobs = [(faction_id_for_pcx_stem(pcx_stem), args.input)]
+        jobs = [(faction_id_for_stem(pcx_stem), args.input)]
     elif args.all:
         if not args.game_dir.is_dir():
             raise FileNotFoundError(f"Game directory not found: {args.game_dir}")
@@ -404,13 +393,13 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             pcx_stem = candidate.stem.lower()
             if pcx_stem in STOCK_PCX_STEMS or is_faction_sheet(candidate):
-                jobs.append((faction_id_for_pcx_stem(pcx_stem), candidate))
+                jobs.append((faction_id_for_stem(pcx_stem), candidate))
         if not jobs:
             print(f"No faction .pcx files found in {args.game_dir}", file=sys.stderr)
             return 1
     elif args.faction:
         pcx_stem = pcx_stem_for_faction_arg(args.faction)
-        jobs = [(faction_id_for_pcx_stem(pcx_stem), find_faction_pcx(args.game_dir, pcx_stem))]
+        jobs = [(faction_id_for_stem(pcx_stem), find_faction_pcx(args.game_dir, pcx_stem))]
     else:
         parser.error("give a faction name, --all, or --input")
 

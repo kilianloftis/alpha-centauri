@@ -111,7 +111,7 @@ TEST_CASE("Generated rivers are a fixed point of the terrain they were traced ov
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
                            TerrainChangingLandmarks_(), world.improvements,
-                           world.dataContext.elevationRules, 99u);
+                           world.dataContext.mapRules, 99u);
 
     // The landmarks have to have actually landed for this to mean anything.
     int boreholeTiles = 0;
@@ -148,15 +148,15 @@ TEST_CASE("The generated map is a function of the resolved seed, not the config 
     WorldGenerator first;
     const std::unique_ptr<WorldMap> pFirst =
         first.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                       world.improvements, world.dataContext.elevationRules, 1u);
+                       world.improvements, world.dataContext.mapRules, 1u);
     WorldGenerator second;
     const std::unique_ptr<WorldMap> pSecond =
         second.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, world.dataContext.elevationRules, 2u);
+                        world.improvements, world.dataContext.mapRules, 2u);
     WorldGenerator repeat;
     const std::unique_ptr<WorldMap> pRepeat =
         repeat.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, world.dataContext.elevationRules, 1u);
+                        world.improvements, world.dataContext.mapRules, 1u);
 
     CHECK(Elevations_(*pFirst) != Elevations_(*pSecond));
     CHECK(Elevations_(*pFirst) == Elevations_(*pRepeat));
@@ -173,7 +173,7 @@ TEST_CASE("World generation places against bound tiles", "[worldgen][improvement
     WorldGenerator generator;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
-                           {}, world.improvements, world.dataContext.elevationRules, 7u);
+                           {}, world.improvements, world.dataContext.mapRules, 7u);
 
     for (const auto& pTile : pWorld->GetTiles())
     {
@@ -206,7 +206,7 @@ TEST_CASE("Aquifers cover the fraction of tiles the Aquifer entry can occupy",
     WorldGenerator generator;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, decoration, {},
-                           world.improvements, world.dataContext.elevationRules, 11u);
+                           world.improvements, world.dataContext.mapRules, 11u);
 
     int land = 0;
     int water = 0;
@@ -339,7 +339,7 @@ TEST_CASE("A lower ocean depth exponent deepens the sea without moving the coast
         preset.oceanDepthExponent = exponent;
         WorldGenerator generator;
         return generator.Generate(config, preset, WorldGenDecorationConfig_t{}, {},
-                                  world.improvements, world.dataContext.elevationRules, 7u);
+                                  world.improvements, world.dataContext.mapRules, 7u);
     };
     const std::unique_ptr<WorldMap> pLinear = generate(1.0f);
     const std::unique_ptr<WorldMap> pSteep = generate(0.5f);

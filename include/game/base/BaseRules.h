@@ -12,6 +12,10 @@ class WorkerAssignmentManager;
 // Founding a base while the faction has no headquarters makes that base the headquarters.
 bool GrantsHeadquarters(const Faction& rFaction);
 
+// terranx vulnerable: tabletop distance from rTile to rFaction's headquarters, or map_rules.json
+// missing_headquarters_distance when it has none.
+int HeadquartersDistance(const Faction& rFaction, const Tile& rTile);
+
 // The SMAC base work area: Euclidean radius 2 on the lattice (p^2 + q^2 <= 5), the base tile
 // excluded (20 surrounding tiles).
 template<typename WorldMapT, typename Fn>

@@ -1,0 +1,189 @@
+{
+  "portrait": { "mood": 933, "reputation": 932, "integrity": 222 },
+  "credit_offers": [10, 25, 50, 100, 250],
+  "bindings": {
+    "introduce": {
+      "0": "player.title_leader", "1": "player.name_leader",
+      "2": "rival.title_leader", "3": "rival.name_leader", "4": "rival.noun_faction",
+      "6": "rival.phrase.intent", "8": "rival.adj_name_faction", "9": "player.adj_leader"
+    },
+    "menu": { "0": "player.name_leader", "1": "pact_hood" },
+    "droids": { "0": "pact_hood" },
+    "broke_pact": {
+      "0": "player.pact_brother", "1": "player.title_leader", "2": "player.name_leader"
+    },
+    "proposal": { "0": "rival.title_leader", "1": "pact_hood" },
+    "pact": {
+      "0": "rival.title_leader", "1": "rival.name_leader", "2": "rival.noun_faction",
+      "3": "player.pact_brother", "4": "player.phrase.goal", "5": "rival.phrase.goal"
+    },
+    "treaty": {
+      "0": "player.title_leader", "1": "player.name_leader", "2": "player.noun_faction",
+      "3": "rival.title_leader", "4": "rival.name_leader", "5": "rival.noun_faction",
+      "6": "player.noun_phrase.projects", "7": "rival.noun_phrase.projects"
+    },
+    "truce": {
+      "0": "player.title_leader", "1": "player.name_leader", "2": "player.noun_faction",
+      "3": "rival.title_leader", "4": "rival.name_leader", "5": "rival.noun_faction"
+    },
+    "refuse_pact": {
+      "0": "player.pact_brother", "1": "player.title_leader", "2": "player.name_leader",
+      "3": "rival.noun_phrase.projects"
+    },
+    "refuse_treaty": {
+      "0": "player.name_leader", "1": "player.title_leader", "2": "player.noun_faction",
+      "3": "player.adj_name_faction"
+    },
+    "talk": { "0": "rival.title_leader", "1": "rival.name_leader" },
+    "candidate": { "0": "candidate.name" },
+    "credits": { "#0": "candidate.amount" }
+  },
+  "start": {
+    "say": [
+      { "text": "INTRONEW0", "args": "introduce" },
+      { "text": "INTRONEW1", "args": "introduce" },
+      { "text": "INTRONEW2", "args": "introduce", "extra": { "5": "player.noun_faction" } },
+      { "text": "INTRONEW4", "args": "introduce" },
+      { "text": "INTRONEW5", "args": "introduce" }
+    ],
+    "then": "diplomacy"
+  },
+  "scenes": {
+    "diplomacy": {
+      "prompt": { "text": "DIPLO", "args": "menu" },
+      "choices": [
+        { "label": { "text": "DIPLOMENU", "item": 2, "args": "menu" }, "then": "proposal" },
+        {
+          "label": { "text": "DIPLOMENU", "item": 7, "args": "menu" },
+          "when": "MayRenouncePact",
+          "then": "confirm_renounce"
+        },
+        { "label": { "text": "DIPLOMENU", "item": 0, "args": "menu" }, "then": "end" }
+      ]
+    },
+    "confirm_renounce": {
+      "prompt": { "text": "REALLYBROKE", "args": "menu" },
+      "choices": [
+        {
+          "label": { "text": "REALLYBROKE", "item": 0, "args": "menu" },
+          "say": { "text": "DROIDS", "args": "droids" },
+          "then": "diplomacy"
+        },
+        {
+          "label": { "text": "REALLYBROKE", "item": 1, "args": "menu" },
+          "do": "RenouncePact",
+          "say": { "text": "BROKEPACT", "args": "broke_pact" },
+          "then": "diplomacy"
+        }
+      ]
+    },
+    "proposal": {
+      "prompt": { "text": "PROPOSAL", "args": "proposal" },
+      "choices": [
+        {
+          "label": { "text": "PROPOSALMENU", "item": 2, "args": "proposal" },
+          "do": "ProposePact",
+          "on": {
+            "Accepted": { "say": { "text": "MAKEPACT", "args": "pact" }, "then": "diplomacy" },
+            "Rejected": { "say": { "text": "REJPACT", "args": "refuse_pact" }, "then": "diplomacy" },
+            "Invalid": { "say": { "text": "TALKINVALID", "args": "talk" }, "then": "proposal" }
+          }
+        },
+        {
+          "label": { "text": "PROPOSALMENU", "item": 3, "args": "proposal" },
+          "do": "ProposeTreaty",
+          "on": {
+            "Accepted": {
+              "say": [
+                { "text": "MAKETREATY0", "args": "treaty" },
+                { "text": "MAKETREATY1", "args": "treaty" }
+              ],
+              "then": "diplomacy"
+            },
+            "Rejected": {
+              "say": { "text": "REJTREATY", "args": "refuse_treaty" },
+              "then": "diplomacy"
+            },
+            "Invalid": { "say": { "text": "TALKINVALID", "args": "talk" }, "then": "proposal" }
+          }
+        },
+        {
+          "label": { "text": "PROPOSALMENU", "item": 3, "args": "proposal" },
+          "do": "ProposeTruce",
+          "on": {
+            "Accepted": { "say": { "text": "MAKETRUCE", "args": "truce" }, "then": "diplomacy" },
+            "Rejected": {
+              "say": { "text": "REJTREATY", "args": "refuse_treaty" },
+              "then": "diplomacy"
+            },
+            "Invalid": { "say": { "text": "TALKINVALID", "args": "talk" }, "then": "proposal" }
+          }
+        },
+        { "label": { "text": "TALKTRADE", "args": "talk" }, "when": "MayTrade", "then": "trade" },
+        { "label": { "text": "PROPOSALMENU", "item": 0, "args": "proposal" }, "then": "diplomacy" }
+      ]
+    },
+    "trade": {
+      "prompt": { "text": "TALKTRADEPROMPT", "args": "talk" },
+      "draft": { "offer": { "text": "TALKOFFERING" }, "ask": { "text": "TALKASKING" } },
+      "choices": [
+        {
+          "from": "trade_kinds",
+          "side": "Offer",
+          "labels": {
+            "Credits": { "text": "TALKOFFERCREDITS" },
+            "Technology": { "text": "TALKOFFERTECH" },
+            "Base": { "text": "TALKOFFERBASE" },
+            "CommFrequency": { "text": "TALKOFFERCOMMLINK" },
+            "WorldMap": { "text": "TALKOFFERMAPS" },
+            "DeclareVendetta": { "text": "TALKOFFERVENDETTA" }
+          },
+          "then": "pick"
+        },
+        {
+          "from": "trade_kinds",
+          "side": "Ask",
+          "labels": {
+            "Credits": { "text": "PROPOSALMENU", "item": 7, "args": "proposal" },
+            "Technology": { "text": "PROPOSALMENU", "item": 4, "args": "proposal" },
+            "Base": { "text": "PROPOSALMENU", "item": 11, "args": "proposal" },
+            "CommFrequency": { "text": "PROPOSALMENU", "item": 6, "args": "proposal" },
+            "WorldMap": { "text": "PROPOSALMENU", "item": 9, "args": "proposal" },
+            "DeclareVendetta": { "text": "PROPOSALMENU", "item": 10, "args": "proposal" }
+          },
+          "then": "pick"
+        },
+        {
+          "label": { "text": "TALKPROPOSETRADE" },
+          "do": "ProposeTrade",
+          "on": {
+            "Accepted": { "say": { "text": "TALKACCEPTTRADE", "args": "talk" }, "then": "diplomacy" },
+            "Rejected": { "say": { "text": "TALKREFUSETRADE", "args": "talk" }, "then": "diplomacy" },
+            "Invalid": { "say": { "text": "TALKINVALID", "args": "talk" }, "then": "trade" }
+          }
+        },
+        { "label": { "text": "TALKCLEARTRADE" }, "do": "ClearTrade", "then": "trade" },
+        { "label": { "text": "PROPOSALMENU", "item": 0, "args": "proposal" }, "then": "proposal" }
+      ]
+    },
+    "pick": {
+      "prompt": { "text": "TALKPICKPROMPT" },
+      "draft": { "offer": { "text": "TALKOFFERING" }, "ask": { "text": "TALKASKING" } },
+      "choices": [
+        {
+          "from": "trade_candidates",
+          "labels": {
+            "Credits": { "text": "TALKCREDITS", "args": "credits" },
+            "Technology": { "text": "TALKTECH", "args": "candidate" },
+            "Base": { "text": "TALKBASE", "args": "candidate" },
+            "CommFrequency": { "text": "TALKCOMMLINK", "args": "candidate" },
+            "WorldMap": { "text": "TALKMAPS" },
+            "DeclareVendetta": { "text": "TALKVENDETTA", "args": "candidate" }
+          },
+          "then": "trade"
+        },
+        { "label": { "text": "PROPOSALMENU", "item": 0, "args": "proposal" }, "then": "trade" }
+      ]
+    }
+  }
+}

@@ -170,3 +170,28 @@ TEST_CASE("The caption table rejects an unknown top-level key", "[ui][standing]"
                                 [](nlohmann::json& j) { j["vendetta_floor"] = 15; }),
                     std::runtime_error);
 }
+
+TEST_CASE("The talk caption floors friction at Vendetta only", "[ui][standing]")
+{
+    const StandingCaptions captions = LoadFixture_();
+
+    // The fixture floor is 15, inside Obstinate.
+    CHECK(captions.CaptionMood(0, DiplomaticStatus_t::Vendetta) == "Obstinate");
+    CHECK(captions.CaptionMood(14, DiplomaticStatus_t::Vendetta) == "Obstinate");
+    CHECK(captions.CaptionMood(18, DiplomaticStatus_t::Vendetta) == "Belligerent");
+    CHECK(captions.CaptionMood(0, DiplomaticStatus_t::Neutral) == "Magnanimous");
+    CHECK(captions.CaptionMood(0, DiplomaticStatus_t::Pact) == "Magnanimous");
+}
+
+TEST_CASE("Load needs a Vendetta floor a stored friction can reach", "[ui][standing]")
+{
+    CHECK_THROWS_AS(LoadEdited_("captions_no_floor.json",
+                                [](nlohmann::json& j) { j.erase("vendetta_mood_floor"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(LoadEdited_("captions_negative_floor.json",
+                                [](nlohmann::json& j) { j["vendetta_mood_floor"] = -1; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(LoadEdited_("captions_floor_too_high.json",
+                                [](nlohmann::json& j) { j["vendetta_mood_floor"] = 21; }),
+                    std::runtime_error);
+}

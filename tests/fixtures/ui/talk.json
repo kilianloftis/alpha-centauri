@@ -1,0 +1,380 @@
+{
+  "portrait": {
+    "mood": 933,
+    "reputation": 932,
+    "integrity": 222
+  },
+  "credit_offers": [
+    10,
+    50
+  ],
+  "bindings": {
+    "greet": {
+      "0": "player.title_leader",
+      "1": "player.name_leader",
+      "3": "rival.name_leader",
+      "4": "rival.noun_faction",
+      "5": "rival.phrase.intent",
+      "6": "player.noun_phrase.projects"
+    },
+    "menu": {
+      "0": "player.name_leader",
+      "1": "pact_hood"
+    },
+    "renounced": {
+      "0": "player.pact_brother"
+    },
+    "candidate": {
+      "0": "candidate.name"
+    },
+    "credits": {
+      "#0": "candidate.amount"
+    }
+  },
+  "start": {
+    "say": [
+      {
+        "text": "GREET",
+        "args": "greet"
+      }
+    ],
+    "then": "diplomacy"
+  },
+  "scenes": {
+    "diplomacy": {
+      "prompt": {
+        "text": "PROMPT"
+      },
+      "choices": [
+        {
+          "label": {
+            "text": "MENU",
+            "item": 0
+          },
+          "then": "proposal"
+        },
+        {
+          "label": {
+            "text": "MENU",
+            "item": 1,
+            "args": "menu"
+          },
+          "when": "MayRenouncePact",
+          "then": "confirm_renounce"
+        },
+        {
+          "label": {
+            "text": "MENU",
+            "item": 2,
+            "args": "menu"
+          },
+          "then": "end"
+        }
+      ]
+    },
+    "confirm_renounce": {
+      "prompt": {
+        "text": "CONFIRM",
+        "args": "menu"
+      },
+      "choices": [
+        {
+          "label": {
+            "text": "CONFIRM",
+            "item": 0
+          },
+          "say": {
+            "text": "KEPT"
+          },
+          "then": "diplomacy"
+        },
+        {
+          "label": {
+            "text": "CONFIRM",
+            "item": 1
+          },
+          "do": "RenouncePact",
+          "say": {
+            "text": "RENOUNCED",
+            "args": "renounced"
+          },
+          "then": "diplomacy"
+        }
+      ]
+    },
+    "proposal": {
+      "prompt": {
+        "text": "PROPOSE_PROMPT"
+      },
+      "choices": [
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 1,
+            "args": "menu"
+          },
+          "do": "ProposePact",
+          "on": {
+            "Accepted": {
+              "say": {
+                "text": "ACCEPT_PACT"
+              },
+              "then": "diplomacy"
+            },
+            "Rejected": {
+              "say": {
+                "text": "REFUSE"
+              },
+              "then": "diplomacy"
+            },
+            "Invalid": {
+              "say": {
+                "text": "INVALID"
+              },
+              "then": "proposal"
+            }
+          }
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 2,
+            "args": "menu"
+          },
+          "do": "ProposeTreaty",
+          "on": {
+            "Accepted": {
+              "say": {
+                "text": "ACCEPT_TREATY"
+              },
+              "then": "diplomacy"
+            },
+            "Rejected": {
+              "say": {
+                "text": "REFUSE"
+              },
+              "then": "diplomacy"
+            },
+            "Invalid": {
+              "say": {
+                "text": "INVALID"
+              },
+              "then": "proposal"
+            }
+          }
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 3,
+            "args": "menu"
+          },
+          "do": "ProposeTruce",
+          "on": {
+            "Accepted": {
+              "say": {
+                "text": "ACCEPT_TRUCE"
+              },
+              "then": "diplomacy"
+            },
+            "Rejected": {
+              "say": {
+                "text": "REFUSE"
+              },
+              "then": "diplomacy"
+            },
+            "Invalid": {
+              "say": {
+                "text": "INVALID"
+              },
+              "then": "proposal"
+            }
+          }
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 4
+          },
+          "when": "MayTrade",
+          "then": "trade"
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 0
+          },
+          "then": "diplomacy"
+        }
+      ]
+    },
+    "trade": {
+      "prompt": {
+        "text": "TRADE_PROMPT"
+      },
+      "draft": {
+        "offer": {
+          "text": "OFFERING"
+        },
+        "ask": {
+          "text": "ASKING"
+        }
+      },
+      "choices": [
+        {
+          "from": "trade_kinds",
+          "side": "Offer",
+          "labels": {
+            "Credits": {
+              "text": "OFFER_KINDS",
+              "item": 0
+            },
+            "Technology": {
+              "text": "OFFER_KINDS",
+              "item": 1
+            },
+            "Base": {
+              "text": "OFFER_KINDS",
+              "item": 2
+            },
+            "CommFrequency": {
+              "text": "OFFER_KINDS",
+              "item": 3
+            },
+            "WorldMap": {
+              "text": "OFFER_KINDS",
+              "item": 4
+            },
+            "DeclareVendetta": {
+              "text": "OFFER_KINDS",
+              "item": 5
+            }
+          },
+          "then": "pick"
+        },
+        {
+          "from": "trade_kinds",
+          "side": "Ask",
+          "labels": {
+            "Credits": {
+              "text": "ASK_KINDS",
+              "item": 0
+            },
+            "Technology": {
+              "text": "ASK_KINDS",
+              "item": 1
+            },
+            "Base": {
+              "text": "ASK_KINDS",
+              "item": 2
+            },
+            "CommFrequency": {
+              "text": "ASK_KINDS",
+              "item": 3
+            },
+            "WorldMap": {
+              "text": "ASK_KINDS",
+              "item": 4
+            },
+            "DeclareVendetta": {
+              "text": "ASK_KINDS",
+              "item": 5
+            }
+          },
+          "then": "pick"
+        },
+        {
+          "label": {
+            "text": "PROPOSE_TRADE"
+          },
+          "do": "ProposeTrade",
+          "on": {
+            "Accepted": {
+              "say": {
+                "text": "ACCEPT_TRADE"
+              },
+              "then": "diplomacy"
+            },
+            "Rejected": {
+              "say": {
+                "text": "REFUSE"
+              },
+              "then": "diplomacy"
+            },
+            "Invalid": {
+              "say": {
+                "text": "INVALID"
+              },
+              "then": "trade"
+            }
+          }
+        },
+        {
+          "label": {
+            "text": "CLEAR"
+          },
+          "do": "ClearTrade",
+          "then": "trade"
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 0
+          },
+          "then": "proposal"
+        }
+      ]
+    },
+    "pick": {
+      "prompt": {
+        "text": "PICK_PROMPT"
+      },
+      "draft": {
+        "offer": {
+          "text": "OFFERING"
+        },
+        "ask": {
+          "text": "ASKING"
+        }
+      },
+      "choices": [
+        {
+          "from": "trade_candidates",
+          "labels": {
+            "Credits": {
+              "text": "CREDITS",
+              "args": "credits"
+            },
+            "Technology": {
+              "text": "ITEM",
+              "args": "candidate"
+            },
+            "Base": {
+              "text": "ITEM",
+              "args": "candidate"
+            },
+            "CommFrequency": {
+              "text": "ITEM",
+              "args": "candidate"
+            },
+            "WorldMap": {
+              "text": "MAPS"
+            },
+            "DeclareVendetta": {
+              "text": "ITEM",
+              "args": "candidate"
+            }
+          },
+          "then": "trade"
+        },
+        {
+          "label": {
+            "text": "PROPOSE_MENU",
+            "item": 0
+          },
+          "then": "trade"
+        }
+      ]
+    }
+  }
+}

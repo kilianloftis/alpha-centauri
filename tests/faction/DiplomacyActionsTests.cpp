@@ -87,3 +87,30 @@ TEST_CASE("Every trade kind can be offered, each once", "[diplomacy][actions]")
         CHECK(std::count(kinds.begin(), kinds.end(), kind) == 1);
     }
 }
+
+TEST_CASE("Talk offers proposals and trade, and cancels only a Pact", "[diplomacy][actions][talk]")
+{
+    DiplomacyLedger ledger;
+    CHECK(GetTalkActions(ledger, 1, 2).empty());
+
+    Meet_(ledger);
+    const auto neutral = GetTalkActions(ledger, 1, 2);
+    CHECK(HasKind_(neutral, DiplomaticActionKind_t::ProposeTreaty));
+    CHECK(HasKind_(neutral, DiplomaticActionKind_t::Trade));
+    CHECK_FALSE(HasKind_(neutral, DiplomaticActionKind_t::DeclareVendetta));
+
+    for (const DiplomaticStatus_t status : {DiplomaticStatus_t::Truce, DiplomaticStatus_t::Treaty})
+    {
+        ledger.SetStatus(1, 2, status);
+        CHECK_FALSE(HasKind_(GetTalkActions(ledger, 1, 2), DiplomaticActionKind_t::CancelTreaty));
+        CHECK(HasKind_(GetAvailableActions(ledger, 1, 2), DiplomaticActionKind_t::CancelTreaty));
+    }
+
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
+    const auto pact = GetTalkActions(ledger, 1, 2);
+    CHECK(HasKind_(pact, DiplomaticActionKind_t::CancelTreaty));
+    CHECK_FALSE(HasKind_(pact, DiplomaticActionKind_t::DeclareVendetta));
+
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Vendetta);
+    CHECK(HasKind_(GetTalkActions(ledger, 1, 2), DiplomaticActionKind_t::ProposeTruce));
+}

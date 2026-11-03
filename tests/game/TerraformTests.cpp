@@ -11,7 +11,7 @@
 #include "game/map/TerrainOperationRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/map/ElevationRulesConfig.h"
+#include "game/map/MapRulesConfig.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/units/Unit.h"
@@ -42,7 +42,7 @@ struct TerraformGame_
     FactionFixture fixtures;
     Faction* pPlayer = nullptr;
 
-    explicit TerraformGame_(bool bExcludes = false, const ElevationRulesConfig_t* pRules = nullptr)
+    explicit TerraformGame_(bool bExcludes = false, const MapRulesConfig_t* pRules = nullptr)
         : fixtures(actest::k_TestMapWidth, actest::k_TestMapHeight, {},
                    bExcludes ? k_ExcludesOccupantFiles : OccupantFiles_t{},
                    pRules ? *pRules : actest::TestMapRules())
@@ -264,7 +264,7 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
     REQUIRE(game.StartTerraform(former, "RaiseLand"));
     CHECK(game.pPlayer->GetEconomy().GetEnergy() < energyBefore);
     game.FinishTerraform(former);
-    const ElevationRulesConfig_t& rRules = tile.MapRules();
+    const MapRulesConfig_t& rRules = tile.MapRules();
     const int raised = tile.GetElevation();
     CHECK(raised >= 1000 + rRules.levelMinMeters);
     CHECK(raised <= 1000 + rRules.levelMaxMeters);
@@ -285,7 +285,7 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     // A fixed 1000 m level: 500 m of headroom takes the roll down to the floor rather than
     // refusing it. The order already charged energy and spent its turns, and whether the roll
     // overshoots is a die the player never saw.
-    ElevationRulesConfig_t rules = actest::TestMapRules();
+    MapRulesConfig_t rules = actest::TestMapRules();
     rules.levelMinMeters = 1000;
     rules.levelMaxMeters = 1000;
     TerraformGame_ game(/*bExcludes=*/false, &rules);
@@ -321,7 +321,7 @@ TEST_CASE("A land Former's lower stops at ocean level instead of failing the ord
 {
     // A fixed 1500 m level on a 1000 m tile: the roll overshoots ocean level, which used to
     // return false after CanStartTerraform had already charged for it.
-    ElevationRulesConfig_t rules = actest::TestMapRules();
+    MapRulesConfig_t rules = actest::TestMapRules();
     rules.levelMinMeters = 1500;
     rules.levelMaxMeters = 1500;
     TerraformGame_ game(/*bExcludes=*/false, &rules);

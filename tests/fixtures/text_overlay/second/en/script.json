@@ -1,0 +1,17 @@
+{
+  "SHARED": {
+    "body": "second shared",
+    "items": []
+  },
+  "SECOND_ONLY": {
+    "body": "second only",
+    "items": []
+  },
+  "POPUP": {
+    "body": "body line",
+    "items": [
+      "item one",
+      "item two"
+    ]
+  }
+}

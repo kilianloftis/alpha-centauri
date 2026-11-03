@@ -32,7 +32,7 @@
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/faction/Faction.h"
-#include "game/map/ElevationRulesConfigParser.h"
+#include "game/map/MapRulesConfigParser.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
@@ -122,8 +122,8 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     , unitComponents(CreateInContext(dataContext.unitComponentRegistry))
 {
     // As LoadGameData leaves it: the preset's elevation range belongs to the map.
-    dataContext.elevationRules =
-        ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    dataContext.mapRules =
+        ac::MapRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
     // The same call production uses, so the fixture cannot drift from it or skip the
     // improvement-shadows-operation check that only this path performs.
     dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
@@ -247,7 +247,7 @@ ac::MoraleCalculator& SessionInputs::morale() const
 
 WorldFixture::WorldFixture(int width, int height, const OccupantFiles_t& rOccupants,
                            std::vector<ac::EffectConfig_t> worldRules,
-                           const ac::ElevationRulesConfig_t& rMapRules)
+                           const ac::MapRulesConfig_t& rMapRules)
     : SessionInputs(rOccupants, std::move(worldRules))
     , state(std::make_unique<ac::WorldMap>(width, height, rMapRules, ac::Rainfall_t::Average),
             dataContext, settings, k_TestRngSeed)
@@ -269,7 +269,7 @@ BaseFixture::BaseFixture()
 
 BaseFixture::BaseFixture(int width, int height, const OccupantFiles_t& rOccupants,
                          std::vector<ac::EffectConfig_t> worldRules,
-                         const ac::ElevationRulesConfig_t& rMapRules)
+                         const ac::MapRulesConfig_t& rMapRules)
     : WorldFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
 {
     ownerDefinition.id = "test_base_owner";
@@ -362,7 +362,7 @@ FactionFixture::FactionFixture()
 
 FactionFixture::FactionFixture(int width, int height, std::vector<ac::EffectConfig_t> worldRules,
                                const OccupantFiles_t& rOccupants,
-                               const ac::ElevationRulesConfig_t& rMapRules)
+                               const ac::MapRulesConfig_t& rMapRules)
     : BaseFixture(width, height, rOccupants, std::move(worldRules), rMapRules)
 {
     factionDefinition.id = "test_faction";

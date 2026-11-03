@@ -1,0 +1,35 @@
+{
+  "leader_female": false,
+  "noun_gender": "F",
+  "noun_plural": false,
+  "fields": {
+    "formal_name_faction": "University of Planet",
+    "desc_name_faction": "The Academy",
+    "noun_faction": "University",
+    "adj_name_faction": "University",
+    "name_leader": "Zakharov",
+    "title_leader": "Academician",
+    "adj_leader": "learned",
+    "adj_insult_leader": "absent-minded",
+    "adj_faction": "studious",
+    "adj_insult_faction": "bookish",
+    "insult_leader": "Egghead"
+  },
+  "phrases": {
+    "goal": "advance knowledge without limit",
+    "intent": "to push knowledge past every limit",
+    "agenda": "putting every living thing under his microscope",
+    "your_agenda": "putting every living thing under your microscope",
+    "misdeed": "turn our colonists into test subjects",
+    "pastime": "scribbling equations",
+    "your_pastime": "scribbling equations",
+    "accusation": "lecturing the council",
+    "methods": "pet theories, F2",
+    "projects": "research programs, F2",
+    "pursuits": "laboratories, F2",
+    "tribute": "grant committee, F1",
+    "service": "cataloguing the alien ruins",
+    "enforcers": "my Faculty Senate",
+    "code": "the Charter of Inquiry"
+  }
+}

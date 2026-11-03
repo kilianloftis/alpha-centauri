@@ -53,8 +53,6 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
     REQUIRE(pComplete->effects.size() == 1);
     CHECK(pComplete->flavor.baseNames == std::vector<std::string>{"Alpha Base", "Beta Base",
                                                                   "Gamma Base"});
-    REQUIRE(pComplete->flavor.phrases.count("greeting") == 1);
-    CHECK(pComplete->flavor.phrases.at("greeting").size() == 2);
 
     REQUIRE(pMinimal != nullptr);
     CHECK(pMinimal->identity.name == "Minimal");
@@ -71,7 +69,6 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
     CHECK_FALSE(pMinimal->ai.tech);
     CHECK(pMinimal->effects.empty());
     CHECK(pMinimal->flavor.baseNames.empty());
-    CHECK(pMinimal->flavor.phrases.empty());
 }
 
 TEST_CASE("FactionConfigParser throws when required files are missing", "[faction][parser]")
@@ -127,7 +124,6 @@ TEST_CASE("FactionConfigParser honors participates_in_council false", "[faction]
     std::ofstream(factionDir / "ai.json") << R"({})";
     std::ofstream(factionDir / "effects.json") << R"({"effects": []})";
     std::ofstream(factionDir / "base_names.json") << R"([])";
-    std::ofstream(factionDir / "phrases.json") << R"({})";
 
     FactionConfigParser parser;
     const std::vector<FactionConfig_t> configs = parser.ParseConfig(tempDir.string());

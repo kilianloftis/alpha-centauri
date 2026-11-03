@@ -337,7 +337,7 @@ TEST_CASE("FoundBase fails without FoundBase or on an illegal tile", "[unit][fou
 
 void CrossElevation_(GameState& rState, Tile& rTile, int deltaMeters)
 {
-    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    const MapRulesConfig_t& rRules = rTile.MapRules();
     REQUIRE(ApplyElevationDelta(rTile, deltaMeters, rRules, rRules.minElevationMeters,
                                 rRules.maxElevationMeters, rState));
 }
