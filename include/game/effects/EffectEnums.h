@@ -259,7 +259,16 @@ enum class StatId_t
 
     // Weight toward receiving a rebelling base (Additive, Faction domain). RebelCandidateWeights
     // seeds it with rebel_selection's base join weight, so factions without modifiers take part.
-    RebelJoinWeight
+    RebelJoinWeight,
+
+    // A gift's value as its giver weighs it (RawScaled, Faction), resolved on the giver with the
+    // recipient as partner and GiftKind naming the item's kind.
+    GiftGivenValue,
+    // The same value as its recipient weighs it (RawScaled, Faction), seeded with the giver's.
+    GiftReceivedValue,
+    // Scales the thresholds a gift's size is tested against (PureMultiplier, Faction), resolved on
+    // the giver. Friction never reads it.
+    GiftSizeThreshold
 };
 
 // How a stat's modifier stack is seeded. KindFor's switch is exhaustive, so a new stat must
@@ -364,12 +373,15 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::TileDefense:
         case StatId_t::EcologicalDamage:
         case StatId_t::EcoTerraformScale:
+        case StatId_t::GiftSizeThreshold:
         case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
         case StatId_t::PromotionChance:
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ScrapRefund:
+        case StatId_t::GiftGivenValue:
+        case StatId_t::GiftReceivedValue:
         case StatId_t::MoveCost:             return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
@@ -459,7 +471,10 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeActorCost:
         case StatId_t::CouncilVotes:
         case StatId_t::EcoCleanMinerals:
-        case StatId_t::RebelJoinWeight: return ResolveDomain_t::Faction;
+        case StatId_t::RebelJoinWeight:
+        case StatId_t::GiftGivenValue:
+        case StatId_t::GiftReceivedValue:
+        case StatId_t::GiftSizeThreshold: return ResolveDomain_t::Faction;
 
         case StatId_t::Attack:
         case StatId_t::Defense:
@@ -603,6 +618,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "eco_damage_reduction")     return StatId_t::EcoDamageReduction;
     if (rStat == "eco_mineral_offset")       return StatId_t::EcoMineralOffset;
     if (rStat == "rebel_join_weight")         return StatId_t::RebelJoinWeight;
+    if (rStat == "gift_given_value")          return StatId_t::GiftGivenValue;
+    if (rStat == "gift_received_value")       return StatId_t::GiftReceivedValue;
+    if (rStat == "gift_size_threshold")       return StatId_t::GiftSizeThreshold;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 

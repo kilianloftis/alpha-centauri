@@ -114,6 +114,27 @@ void DiplomacyLedger::SetFriction(FactionId_t holder, FactionId_t against, int v
     m_friction[key] = value;
 }
 
+int DiplomacyLedger::GetGifts(FactionId_t giver, FactionId_t recipient) const
+{
+    const auto it = m_gifts.find(DirectedFactionPair::Make(giver, recipient));
+    if (it == m_gifts.end())
+    {
+        return 0;
+    }
+    return it->second;
+}
+
+void DiplomacyLedger::SetGifts(FactionId_t giver, FactionId_t recipient, int value)
+{
+    const DirectedFactionPair key = DirectedFactionPair::Make(giver, recipient);
+    if (value == 0)
+    {
+        m_gifts.erase(key);
+        return;
+    }
+    m_gifts[key] = value;
+}
+
 bool DiplomacyLedger::HasInfiltration(FactionId_t infiltrator, FactionId_t target) const
 {
     return m_infiltration.contains(DirectedFactionPair::Make(infiltrator, target));

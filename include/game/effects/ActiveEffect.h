@@ -138,6 +138,8 @@ struct EffectContext_t
     // The other faction when resolving pFaction's dealings with it (commerce). Admits that
     // pair's FactionPair effects.
     const Faction* pPartner = nullptr;
+    // The kind of gift whose value pFaction weighs; GiftKind reads it.
+    std::optional<TradeKind_t> giftKind;
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;

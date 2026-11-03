@@ -5,6 +5,7 @@
 #include <limits>
 #include <numeric>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -19,6 +20,18 @@ int RequirePositiveDenominator_(int denominator)
         throw std::runtime_error("Rational denominator must be positive");
     }
     return denominator;
+}
+
+int RequireFitsInt_(int64_t scaled, const Rational_t& rRational, int scale)
+{
+    if (scaled < std::numeric_limits<int>::min() || scaled > std::numeric_limits<int>::max())
+    {
+        throw std::runtime_error(
+            "Rational " + std::to_string(rRational.numerator) + "/"
+            + std::to_string(rRational.denominator) + " scaled at scale=" + std::to_string(scale)
+            + " does not fit in an int");
+    }
+    return static_cast<int>(scaled);
 }
 
 } // namespace
@@ -77,13 +90,24 @@ int Rational_t::ScaledInt(int scale) const
     // Widened before multiplying: the divisibility check above says nothing about whether the
     // product fits, and signed overflow is UB rather than a detectable wrong answer.
     const int64_t scaled = static_cast<int64_t>(num) * static_cast<int64_t>(scale / den);
-    if (scaled < std::numeric_limits<int>::min() || scaled > std::numeric_limits<int>::max())
-    {
-        throw std::runtime_error(
-            "Rational " + std::to_string(numerator) + "/" + std::to_string(denominator)
-            + " scaled at scale=" + std::to_string(scale) + " does not fit in an int");
-    }
-    return static_cast<int>(scaled);
+    return RequireFitsInt_(scaled, *this, scale);
+}
+
+int Rational_t::ScaledTruncated(int scale) const
+{
+    RequirePositiveDenominator_(denominator);
+    const int64_t product = static_cast<int64_t>(numerator) * scale;
+    return RequireFitsInt_(product / denominator, *this, scale);
+}
+
+int Rational_t::ScaledRoundedUp(int scale) const
+{
+    RequirePositiveDenominator_(denominator);
+    const int64_t product = static_cast<int64_t>(numerator) * scale;
+    const int64_t truncated = product / denominator;
+    // Truncation already rounds a negative quotient up.
+    const bool bRaise = product > 0 && product % denominator != 0;
+    return RequireFitsInt_(bRaise ? truncated + 1 : truncated, *this, scale);
 }
 
 } // namespace ac

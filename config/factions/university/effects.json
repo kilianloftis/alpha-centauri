@@ -19,6 +19,12 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "parameters": { "stat": "tech_cost_research", "amount": 1, "op": "Add" }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "FactionGlobal",
+      "condition": { "kind": "GiftKind", "trade_kind": "Technology" },
+      "parameters": { "stat": "gift_received_value", "amount": 2, "op": "MultiplyGeometric" }
     }
   ]
 }

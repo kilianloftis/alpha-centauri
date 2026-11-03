@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/TradeKind.h"
 #include "game/base/BaseTypes.h"
 #include "lib/GameEvent.h"
 #include <optional>
@@ -52,17 +53,6 @@ using TradeItem_t = std::variant<TradeCredits_t,
                                  TradeCommFrequency_t,
                                  TradeWorldMap_t,
                                  TradeDeclareVendetta_t>;
-
-// Categories of TradeItem_t the UI/AI can offer.
-enum class TradeKind_t
-{
-    Credits,
-    Technology,
-    Base,
-    CommFrequency,
-    WorldMap,
-    DeclareVendetta
-};
 
 // One trait per alternative, so a new TradeItem_t member fails to compile until it has one.
 template <typename T>

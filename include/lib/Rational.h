@@ -19,6 +19,12 @@ struct Rational_t
     // Returns (numerator * scale) / denominator. Throws if the product is not divisible
     // by the (reduced) denominator.
     int ScaledInt(int scale) const;
+
+    // (numerator * scale) / denominator, truncated toward zero as SMAC's integer division is.
+    int ScaledTruncated(int scale) const;
+
+    // (numerator * scale) / denominator, rounded up.
+    int ScaledRoundedUp(int scale) const;
 };
 
 } // namespace ac

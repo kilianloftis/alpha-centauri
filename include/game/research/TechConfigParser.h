@@ -13,11 +13,21 @@ namespace ac
 
 using TechId = std::string;
 
+// alphax.txt #TECHNOLOGY columns 3-6: how much an AI with each priority wants the tech.
+struct TechAiWeights_t
+{
+    int power = 0;
+    int tech = 0;
+    int wealth = 0;
+    int growth = 0;
+};
+
 struct TechConfig_t
 {
     std::string id;
     std::string name;
     GameCategory_t category;
+    TechAiWeights_t aiWeights;
     std::vector<std::string> prerequisites;
     // Optional UI icon path (research panels). Empty = text-only.
     std::string icon;

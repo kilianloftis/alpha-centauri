@@ -86,6 +86,17 @@ TEST_CASE("Friction and infiltration are directed", "[diplomacy]")
     CHECK_FALSE(ledger.HasInfiltration(2, 1));
 }
 
+TEST_CASE("Gift counts start at 0 and are directed", "[diplomacy][gifts]")
+{
+    DiplomacyLedger ledger;
+    CHECK(ledger.GetGifts(1, 2) == 0);
+    ledger.SetGifts(1, 2, 2);
+    CHECK(ledger.GetGifts(1, 2) == 2);
+    CHECK(ledger.GetGifts(2, 1) == 0);
+    ledger.SetGifts(1, 2, 0);
+    CHECK(ledger.GetGifts(1, 2) == 0);
+}
+
 TEST_CASE("Blemishes are per-faction", "[diplomacy]")
 {
     DiplomacyLedger ledger;

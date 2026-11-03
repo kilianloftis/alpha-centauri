@@ -56,7 +56,8 @@ TEST_CASE("ValidateRequiredTechReferences: building required_tech must name a kn
           "[validation][required-tech]")
 {
     const std::filesystem::path techsPath = WriteTempJson("ac_required_tech_techs.json", R"([
-        { "id": "ecology", "name": "Ecology", "category": "build" }
+        { "id": "ecology", "name": "Ecology", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } }
     ])");
 
     GameDataContext data;
@@ -115,7 +116,8 @@ TEST_CASE("ValidateRequiredTechReferences: null techRegistry or source registry 
                       Catch::Matchers::ContainsSubstring("techRegistry"));
 
     const std::filesystem::path techsPath = WriteTempJson("ac_required_tech_only.json", R"([
-        { "id": "ecology", "name": "Ecology", "category": "build" }
+        { "id": "ecology", "name": "Ecology", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } }
     ])");
     GameDataContext techOnly;
     techOnly.techRegistry = std::make_unique<TechRegistry>();
@@ -137,7 +139,8 @@ TEST_CASE("ValidateRequiredTechReferences: probe action required_tech must name 
           "[validation][required-tech][probe]")
 {
     const std::filesystem::path techsPath = WriteTempJson("ac_probe_required_techs.json", R"([
-        { "id": "gene_splicing", "name": "Gene Splicing", "category": "conquer" }
+        { "id": "gene_splicing", "name": "Gene Splicing", "category": "conquer",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } }
     ])");
 
     GameDataContext data;

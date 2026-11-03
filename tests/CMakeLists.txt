@@ -31,6 +31,7 @@ add_executable(effects-tests
     faction/DiplomacyCalculatorTests.cpp
     faction/BaseValueRulesTests.cpp
     faction/DiplomaticStandingMutationsTests.cpp
+    faction/DiplomaticGiftRulesTests.cpp
     faction/DiplomacyLedgerTests.cpp
     faction/DiplomaticPermissionRulesTests.cpp
     faction/DiplomaticStatusCommerceTests.cpp

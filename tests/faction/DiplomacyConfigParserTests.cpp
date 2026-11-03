@@ -310,6 +310,9 @@ TEST_CASE("The diplomacy parser loads base_value and rejects a missing block or 
     CHECK(config.baseValue.creditsOffset == 1000);
     CHECK(config.baseValue.mineralsPerRow == 10);
     CHECK(config.baseValue.projectRowsMultiplier == 25);
+    CHECK(config.baseValue.ungarrisonedFactor.numerator == 1);
+    CHECK(config.baseValue.ungarrisonedFactor.denominator == 2);
+    CHECK(config.baseValue.outnumberedFactor.denominator == 2);
 
     CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_base_value.json",
                                  [](nlohmann::json& j) { j.erase("base_value"); }),
@@ -325,5 +328,95 @@ TEST_CASE("The diplomacy parser loads base_value and rejects a missing block or 
                     std::runtime_error);
     CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_base_value_rows_zero.json",
                                  [](nlohmann::json& j) { j["base_value"]["minerals_per_row"] = 0; }),
+                    std::runtime_error);
+}
+
+TEST_CASE("The diplomacy parser loads the gifts block and the allied-ground gift floor",
+          "[diplomacy][parser][gifts]")
+{
+    const DiplomacyConfig_t config =
+        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+    CHECK(config.alliedTerritoryBattleGiftsFloor == 1);
+
+    const GiftSizesConfig_t& rCredits = config.gifts.credits.sizes;
+    REQUIRE(rCredits.steps.size() == 2);
+    CHECK(rCredits.steps[0].size == GiftSize_t::Generous);
+    CHECK(rCredits.steps[0].giverCreditsFactor.numerator == 1);
+    CHECK(rCredits.steps[0].giverCreditsFactor.denominator == 3);
+    CHECK(rCredits.steps[1].size == GiftSize_t::Notable);
+    CHECK(rCredits.steps[1].minimum == 25);
+    CHECK(rCredits.fallback == GiftSize_t::Small);
+    CHECK(config.gifts.credits.friction.blockUnits == 20);
+    CHECK(config.gifts.credits.friction.factor.denominator == 2);
+
+    REQUIRE(config.gifts.technology.sizes.steps.size() == 1);
+    CHECK(config.gifts.technology.sizes.steps[0].minimum == 16);
+    CHECK(config.gifts.technology.sizes.fallback == GiftSize_t::Notable);
+    CHECK(config.gifts.technology.value.growthBaseCount == 4);
+    CHECK(config.gifts.base.sizes.fallback == GiftSize_t::Modest);
+    CHECK(config.gifts.base.frictionFactor.numerator == 3);
+}
+
+TEST_CASE("The diplomacy parser rejects a missing or invalid gift key",
+          "[diplomacy][parser][gifts]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_gifts_floor.json",
+                                 [](nlohmann::json& j)
+                                 { j.erase("allied_territory_battle_gifts_floor"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_gifts.json",
+                                 [](nlohmann::json& j) { j.erase("gifts"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_missing_gift_base.json",
+                                 [](nlohmann::json& j) { j["gifts"].erase("base"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_unknown_key.json",
+                                 [](nlohmann::json& j) { j["gifts"]["technology"]["typo"] = 1; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_tech_value_missing.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["technology"]["value"].erase("priority_factor"); }),
+                    std::runtime_error);
+}
+
+TEST_CASE("A gift size ladder needs every threshold on each rung but the last, which has none",
+          "[diplomacy][parser][gifts]")
+{
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_rung_minimum.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["credits"]["sizes"][0].erase("minimum"); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_fallback_threshold.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["base"]["sizes"][1]["minimum"] = 0; }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_empty_ladder.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["base"]["sizes"] = nlohmann::json::array(); }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_unknown_size.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["credits"]["sizes"][2]["size"] = "Lavish"; }),
+                    std::runtime_error);
+}
+
+TEST_CASE("Gift factors are exact fractions and never negative", "[diplomacy][parser][gifts]")
+{
+    const DiplomacyConfig_t config = ParseEdited_(
+        "ac_diplomacy_gift_integer_factor.json",
+        [](nlohmann::json& j) { j["gifts"]["base"]["friction"]["factor"] = 2; });
+    CHECK(config.gifts.base.frictionFactor.numerator == 2);
+    CHECK(config.gifts.base.frictionFactor.denominator == 1);
+
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_decimal_factor.json",
+                                 [](nlohmann::json& j)
+                                 {
+                                     j["gifts"]["credits"]["sizes"][0]["giver_credits_factor"] =
+                                         0.33;
+                                 }),
+                    std::runtime_error);
+    CHECK_THROWS_AS(ParseEdited_("ac_diplomacy_gift_negative_factor.json",
+                                 [](nlohmann::json& j)
+                                 { j["gifts"]["credits"]["friction"]["factor"] = "-3/2"; }),
                     std::runtime_error);
 }

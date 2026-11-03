@@ -719,6 +719,11 @@ struct ConditionEvaluator_
         return ctx.pBase != nullptr;
     }
 
+    bool operator()(const GiftKind_t& rGift) const
+    {
+        return ctx.giftKind == rGift.kind;
+    }
+
     bool operator()(const DesignPlan_t& rPlan) const
     {
         if (ctx.pUnit == nullptr)
@@ -803,7 +808,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, PartnerPlayerType_t>
                                || std::is_same_v<T, PartnerIsFormerOwner_t>
                                || std::is_same_v<T, VictimizedPartner_t>
-                               || std::is_same_v<T, TargetIsBase_t>)
+                               || std::is_same_v<T, TargetIsBase_t>
+                               || std::is_same_v<T, GiftKind_t>)
             {
                 return true;
             }

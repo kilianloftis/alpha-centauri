@@ -31,4 +31,10 @@ int ScaledTechCost(int formulaCost, const IEffectsProvider* pEffectsProvider,
 // Undiscovered techs whose every prerequisite is known.
 std::vector<const TechConfig_t*> AvailableTechs(const ResearchManager& rResearch);
 
+// tech_recurse: 1 plus the deepest prerequisite's level, so a root tech is 1.
+int TechLevel(const TechId& rTechId);
+
+// The deepest TechLevel among rResearch's discovered techs; 0 with none.
+int HighestTechLevel(const ResearchManager& rResearch);
+
 } // namespace ac

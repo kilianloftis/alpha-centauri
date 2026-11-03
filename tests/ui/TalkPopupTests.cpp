@@ -3,6 +3,7 @@
 
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/diplomacy/DiplomaticStatus.h"
+#include "game/economy/EconomyManager.h"
 #include "game/faction/Faction.h"
 #include "game/research/ResearchManager.h"
 #include "ui/commlinks/TalkPopup.h"
@@ -192,6 +193,25 @@ TEST_CASE("A traded tech moves to the rival", "[ui][talk]")
     harness.Choose("Deal.");
     CHECK(harness.rRival.GetResearch().HasDiscoveredTech("build_tech"));
     CHECK(harness.Shows("Trade agreed."));
+}
+
+TEST_CASE("Gifted credits move to the rival and soften its mood", "[ui][talk][gifts]")
+{
+    TalkHarness_ harness;
+    harness.fixture.pPlayer->GetEconomy().AddEnergy(100);
+    harness.Ledger().SetFriction(harness.RivalId(), harness.PlayerId(), 3);
+    harness.Open();
+    CHECK(harness.Shows("Cooperative"));
+
+    harness.Choose("Propose.");
+    harness.Choose("Trade.");
+    harness.Choose("Offer Credits.");
+    harness.Choose("50 credits");
+    harness.Choose("Deal.");
+
+    CHECK(harness.rRival.GetEconomy().GetEnergy() == 50);
+    CHECK(harness.Ledger().GetFriction(harness.RivalId(), harness.PlayerId()) == 2);
+    CHECK(harness.Shows("Solicitous"));
 }
 
 TEST_CASE("Escape and goodbye close the talk without changing anything", "[ui][talk]")

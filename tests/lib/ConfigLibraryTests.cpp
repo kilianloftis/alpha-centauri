@@ -113,6 +113,21 @@ TEST_CASE("Rational_t::ScaledInt reports overflow instead of wrapping", "[lib][r
     CHECK_THROWS(Rational_t{1, 3}.ScaledInt(4));
 }
 
+TEST_CASE("Rational_t scales with truncation or rounding up", "[lib][rational]")
+{
+    CHECK(Rational_t{1, 3}.ScaledTruncated(301) == 100);
+    CHECK(Rational_t{3, 2}.ScaledTruncated(101) == 151);
+    CHECK(Rational_t{3, 2}.ScaledTruncated(-101) == -151);
+    CHECK(Rational_t{0, 1}.ScaledTruncated(500) == 0);
+
+    CHECK(Rational_t{1, 2}.ScaledRoundedUp(7) == 4);
+    CHECK(Rational_t{1, 2}.ScaledRoundedUp(8) == 4);
+    CHECK(Rational_t{1, 2}.ScaledRoundedUp(-7) == -3);
+
+    const Rational_t huge{std::numeric_limits<int>::max() / 2, 1};
+    CHECK_THROWS_WITH(huge.ScaledTruncated(4), Catch::Matchers::ContainsSubstring("does not fit"));
+}
+
 TEST_CASE("LuaRuntime::EvalInt fails loudly rather than returning zero", "[lib][lua]")
 {
     LuaRuntime lua;

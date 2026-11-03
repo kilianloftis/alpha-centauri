@@ -95,8 +95,9 @@ going.
 ### Config
 
 `config/diplomacy.json` and `tests/fixtures/diplomacy.json` gain the block below.
-`DiplomacyConfigParser` requires it. `scan_radius` must be 1–8; every divisor, ratio and
-`minerals_per_row` must be at least 1.
+`DiplomacyConfigParser` requires it. `scan_radius` must be 1–8; every ratio and
+`minerals_per_row` must be at least 1; the two factors are exact fractions (`Rational_t`), never
+negative.
 
 ```json
 "base_value": {
@@ -105,11 +106,11 @@ going.
   "distance_offset": 4,
   "min_population": 3,
   "minimum": 100,
-  "ungarrisoned_divisor": 2,
+  "ungarrisoned_factor": "1/2",
   "counterparty_absent_multiplier": 2,
   "lone_base_multiplier": 2,
   "outnumbered_ratio": 5,
-  "outnumbered_divisor": 2,
+  "outnumbered_factor": "1/2",
   "minerals_per_row": 10,
   "project_rows_multiplier": 25,
   "unit_rows_multiplier": 2
@@ -138,11 +139,11 @@ binary's order. Every division truncates.
 
 1. `v = (credits + credits_offset) / (distance + distance_offset) × max(population,
    min_population)`, then `max(v, minimum)`.
-2. Not garrisoned: `v /= ungarrisoned_divisor`.
+2. Not garrisoned: `v = trunc(v × ungarrisoned_factor)`.
 3. Counterparty has no base in the region: `× counterparty_absent_multiplier`. Evaluator has
    exactly one and the counterparty at most one: `× lone_base_multiplier`.
 4. Both have bases there and the counterparty has at least `outnumbered_ratio` × the
-   evaluator's: `v /= outnumbered_divisor`.
+   evaluator's: `v = trunc(v × outnumbered_factor)`.
 5. `+ (Σ k × facilityMinerals[k]) / minerals_per_row`, k counting from 1.
 6. `+ project_rows_multiplier × projectMinerals / minerals_per_row`.
 7. `+ unit_rows_multiplier × evaluatorUnitMinerals / minerals_per_row`.

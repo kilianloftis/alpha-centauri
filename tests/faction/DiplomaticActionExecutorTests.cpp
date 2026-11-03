@@ -132,12 +132,12 @@ TEST_CASE("Technology trade grants tech to recipient", "[diplomacy][executor]")
 {
     DiplomacyFixture game;
     game.MeetAll();
-    game.pA->GetResearch().AddDiscoveredTech("test_tech");
+    game.pA->GetResearch().AddDiscoveredTech("build_tech");
     DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
-    proposal.give.push_back(TradeTechnology_t{"test_tech"});
+    proposal.give.push_back(TradeTechnology_t{"build_tech"});
 
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pB->GetResearch().HasDiscoveredTech("test_tech"));
+    CHECK(game.pB->GetResearch().HasDiscoveredTech("build_tech"));
 }
 
 TEST_CASE("The same technology cannot be offered twice in one proposal", "[diplomacy][executor]")

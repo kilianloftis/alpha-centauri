@@ -41,6 +41,10 @@ public:
     int GetFriction(FactionId_t holder, FactionId_t against) const;
     void SetFriction(FactionId_t holder, FactionId_t against, int value);
 
+    // SMAC's diplo_gifts: giver's standing gift count toward recipient.
+    int GetGifts(FactionId_t giver, FactionId_t recipient) const;
+    void SetGifts(FactionId_t giver, FactionId_t recipient, int value);
+
     bool HasInfiltration(FactionId_t infiltrator, FactionId_t target) const;
     void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated);
 
@@ -62,6 +66,7 @@ private:
     std::map<FactionPair, StatusEntry_t> m_statuses;
     std::set<FactionPair> m_known;
     std::map<DirectedFactionPair, int> m_friction;
+    std::map<DirectedFactionPair, int> m_gifts;
     std::set<DirectedFactionPair> m_infiltration;
     std::map<FactionId_t, int> m_blemishes;
 };

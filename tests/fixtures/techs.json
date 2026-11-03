@@ -2,17 +2,20 @@
   {
     "id": "build_tech",
     "name": "Build Tech",
-    "category": "build"
+    "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 }
   },
   {
     "id": "grow_tech",
     "name": "Grow Tech",
-    "category": "grow"
+    "category": "grow",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 2 }
   },
   {
     "id": "discover_tech",
     "name": "Discover Tech",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "effects": [
       {
         "type": "RuleFlag",
@@ -27,6 +30,7 @@
     "id": "conquer_tech",
     "name": "Conquer Tech",
     "category": "conquer",
+    "ai_weights": { "power": 2, "tech": 0, "wealth": 0, "growth": 0 },
     "effects": [
       {
         "type": "RuleFlag",
@@ -41,6 +45,7 @@
     "id": "advanced_build",
     "name": "Advanced Build",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "prerequisites": [
       "build_tech"
     ]
@@ -49,6 +54,7 @@
     "id": "efficient_maintenance",
     "name": "Efficient Maintenance",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "prerequisites": [
       "advanced_build"
     ],
@@ -72,6 +78,7 @@
     "id": "fusion_power",
     "name": "Fusion Power",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -92,6 +99,7 @@
     "id": "quantum_power",
     "name": "Quantum Power",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "prerequisites": [
       "fusion_power"
     ],
@@ -114,12 +122,14 @@
   {
     "id": "intellectual_integrity",
     "name": "Intellectual Integrity",
-    "category": "discover"
+    "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 }
   },
   {
     "id": "industrial_automation",
     "name": "Industrial Automation",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -136,6 +146,7 @@
     "id": "environmental_economics",
     "name": "Environmental Economics",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -152,6 +163,7 @@
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -168,6 +180,7 @@
     "id": "industrial_economics",
     "name": "Industrial Economics",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -184,6 +197,7 @@
     "id": "industrial_nanorobotics",
     "name": "Industrial Nanorobotics",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -200,6 +214,7 @@
     "id": "sentient_econometrics",
     "name": "Sentient Econometrics",
     "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 0 },
     "effects": [
       {
         "type": "StatModifier",
@@ -216,6 +231,7 @@
     "id": "graviton_theory",
     "name": "Graviton Theory",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "effects": [
       {
         "type": "RuleFlag",
@@ -230,6 +246,7 @@
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "on_discover_effects": [
       {
         "type": "GrantTech",
@@ -247,6 +264,7 @@
     "id": "discover_chain_parent",
     "name": "Discover Chain Parent",
     "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
     "on_discover_effects": [
       {
         "type": "GrantTech",
@@ -259,6 +277,7 @@
   {
     "id": "discover_chain_child",
     "name": "Discover Chain Child",
-    "category": "discover"
+    "category": "discover",
+    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 }
   }
 ]

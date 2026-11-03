@@ -4,7 +4,7 @@
 graph TB
     subgraph "Session (GameState)"
         GameState[GameState]
-        DiplomacyLedger[DiplomacyLedger<br/>pairwise status + known-ness]
+        DiplomacyLedger[DiplomacyLedger<br/>pairwise status + known-ness<br/>friction, gift counts, blemishes]
         DiplomaticActionExecutor[DiplomaticActionExecutor<br/>pending slot + routing]
         FirstContactResolver[FirstContactResolver<br/>marks factions known]
     end
@@ -24,7 +24,15 @@ graph TB
     subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalMutations)"
         IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals; StepUp only]
         CanDeliver[CanDeliver<br/>one item from its giver]
-        ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item]
+        ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item;<br/>a gift's standing before each item]
+    end
+
+    subgraph "Gifts (DiplomaticGiftRules)"
+        GiftRules[IsGift / GiftStanding<br/>per item: value, weights,<br/>friction, size, next count]
+    end
+
+    subgraph "Gift weights (effects)"
+        GiftWeights[gift_given_value / gift_received_value<br/>gift_size_threshold<br/>GiftKind condition]
     end
 
     subgraph "Status definition"
@@ -32,8 +40,8 @@ graph TB
     end
 
     subgraph "Ruleset (GameDataContext)"
-        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>probe_keep_friction_draw + base_value<br/>config/diplomacy.json]
-        DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes<br/>BaseValue]
+        DiplomacyConfig[DiplomacyConfig_t<br/>per-status rules + friction_max<br/>blemishes_max + break_agreement_blemishes<br/>probe_keep_friction_draw + base_value + gifts<br/>config/diplomacy.json]
+        DiplomacyCalculator[DiplomacyCalculator<br/>NextFriction / NextBlemishes / BaseValue<br/>gift sizes, friction, tech value, NextGifts]
     end
 
     subgraph "Base value (BaseValueRules)"
@@ -72,7 +80,7 @@ graph TB
     end
 
     subgraph "Standing (DiplomaticStandingMutations)"
-        ApplyStanding[ApplyFriction / ApplyBlemishes]
+        ApplyStanding[ApplyFriction / ApplyBlemishes<br/>ApplyGiftStanding]
     end
 
     subgraph "Standing captions (UI)"
@@ -139,6 +147,13 @@ graph TB
     ApplyProposal --> Bases
     ApplyProposal -->|requestedStatus| ApplyStatusChange
     ApplyProposal -->|TradeDeclareVendetta_t:<br/>the giver declares| DeclareVendetta
+    ApplyProposal -->|IsGift: each item before it moves| ApplyStanding
+    ApplyStanding -->|GiftStanding| GiftRules
+    GiftRules -->|BaseValue of a base| BaseValueRules
+    GiftRules -->|resolved on giver and recipient| GiftWeights
+    GiftRules -->|TechLevel, tech ai_weights| ResearchManager
+    GiftRules -->|GiftSizeInputs_t, tech value| DiplomacyCalculator
+    GiftRules -->|GetGifts / GetBlemishes| DiplomacyLedger
     CancelTreaty -->|StepDown| ApplyStatusChange
     CanPropose --> StepUpDown
     AtrocityMutations[AtrocityMutations<br/>universal Vendetta] -->|living AI only| JoinVendetta
@@ -182,7 +197,7 @@ graph TB
     BaseValueRules -->|BaseValueInputs_t| DiplomacyCalculator
     BaseValueRules -->|HeadquartersDistance, RegionCache,<br/>ForEachTileInRings| MapSystem[map-system.md]
     ApplyStanding --> DiplomacyCalculator
-    ApplyStanding -->|SetFriction / SetBlemishes| DiplomacyLedger
+    ApplyStanding -->|SetFriction / SetBlemishes / SetGifts| DiplomacyLedger
     CommlinksPanel -->|GetFriction / GetBlemishes| DiplomacyLedger
     Atrocity -->|counted blemishes; friction if diplomatic victim| ApplyStanding
     CancelTreaty --> AgreementBreak
@@ -216,8 +231,8 @@ its treasury, its discovered techs, its explored map, its bases.
 
 ## DiplomacyLedger
 
-Five axes. Two are directional and one is per-faction rather than pairwise, which is why they are
-separate containers rather than fields of one relationship record. Contact and infiltration are
+Six axes. Three are directional and one is per-faction rather than pairwise, which is why they
+are separate containers rather than fields of one relationship record. Contact and infiltration are
 sets: a pair is either in them or not.
 
 | Axis | Key | Meaning |
@@ -225,6 +240,7 @@ sets: a pair is either in them or not.
 | `m_statuses` | `FactionPair` (symmetric) | `Neutral` / `Truce` / `Treaty` / `Pact` / `Vendetta`, and how many turns the pair has held it |
 | `m_known` | `FactionPair` (symmetric) | the two have met; a precondition for every action |
 | `m_friction` | `DirectedFactionPair` | **holder**'s friction toward **against** (0–`frictionMax`) — A may resent B without B resenting A |
+| `m_gifts` | `DirectedFactionPair` | **giver**'s gift count toward **recipient** (SMAC's `diplo_gifts`); see [Gifts](#gifts) |
 | `m_infiltration` | `DirectedFactionPair` | **infiltrator** has a probe foothold in **target** — emphatically one-way |
 | `m_blemishes` | `FactionId_t` | a faction's blemish count (0–`blemishesMax`); not about any pair |
 
@@ -250,7 +266,8 @@ sets: a pair is either in them or not.
   territory border, or sneak `ApplyHostileAct`) writes that blemish;
   `HonorDefensiveObligation`, `ApplyAtrocityVendetta` and `ApplyProbeVendetta` do not. A
   hostile probe that keeps its agreement adds the victim's friction toward the actor (see
-  [Probe standing](#probe-standing)). Combat, terraform and talk gifts are not wired yet. A counted major's universal Vendetta goes through `JoinVendetta`
+  [Probe standing](#probe-standing)). A talk gift writes the recipient's friction and the giver's
+  gift count (see [Gifts](#gifts)). A counted major's universal Vendetta goes through `JoinVendetta`
   (`game/diplomacy/DiplomaticTransitionMutations.h`) for living AI factions only, and never
   native life. See `atrocity-system.md`. Whether a faction has ever been the victim of an
   atrocity is `AtrocityLedger::HasVictimized` / `HasVictimizedAtLeast`, not a friction total.
@@ -262,9 +279,8 @@ sets: a pair is either in them or not.
 
 `BaseValue(base, evaluator, counterparty)` (`game/diplomacy/BaseValueRules.h`) is SMAC's
 `value_of_base` (`docs/thinker/terranx-map.md`, "Base value"): what an AI weighs a base at in a
-deal with another faction. The base may belong to either. Nothing in play calls it yet: a talk
-gift of a base is its first consumer, and base trades and threatened cession wait on AI
-evaluation.
+deal with another faction. The base may belong to either. A talk gift of a base is its only
+consumer ([Gifts](#gifts)); base trades and threatened cession wait on AI evaluation.
 
 - **Inputs** (`BaseValueRules`):
   - the evaluator's `HeadquartersDistance` to the base; the evaluator's own headquarters
@@ -280,6 +296,54 @@ evaluation.
   share by distance and population with a floor, halved for an empty base, scaled by region
   holdings, plus the facility, project and unit costs in SMAC's rows (`minerals_per_row`).
 - The AI's fear and hostility, scenario objectives and the Believers' doubling are not applied
+  ([deviations](../../config/deviations/README.md)). On a base gift the evaluator is the
+  recipient, so the Believers' doubling there is a gift weight.
+
+## Gifts
+
+A proposal that only gives (`IsGift`: no requested status, nothing demanded) is SMAC's
+`make_gift` (`docs/thinker/terranx-map.md`, "Gifts" and "Base gift"). `ApplyProposal` gives each
+item its standing with `ApplyGiftStanding` just before the item moves, so a second item is
+valued against the treasuries and techs the first one left. A trade that asks something back
+writes no standing.
+
+- **`GiftStanding(giver, recipient, item)`** (`DiplomaticGiftRules`) returns the change to the
+  recipient's friction toward the giver and the giver's next gift count, or `nullopt` for comm
+  frequencies, maps and Vendettas, which SMAC never values:
+  - **credits:** the amount; friction by `CreditGiftFriction`'s tiers;
+  - **technology:** `tech_val`'s simple path. `TechWeightValue` weighs the tech's `ai_weights`
+    (`techs.json`) by the recipient's `ai.json` priorities; for an AI that lacks it,
+    `UnownedTechValue` takes off for other owners and scales by `TechLevel` against the
+    recipient's `HighestTechLevel` (`ResearchRules`). Friction is the value;
+  - **base:** `BaseValue(base, recipient, giver)` while the giver still holds it; friction
+    half again the value.
+  - **size:** each kind has a ladder of sizes (`CreditGiftSize`, `TechGiftSize`,
+    `BaseGiftSize`). A rung is reached when the value meets the recipient's and the giver's
+    treasuries and the turn, each times a factor and truncated, and a minimum; the last rung is
+    the size when none is. Credits are generous, notable or small; technology is generous from
+    16, with zero credit and turn factors, or notable; a base is generous at the credit
+    thresholds, or modest.
+- **Gift count** (`DiplomacyLedger` `GetGifts` / `SetGifts`): `NextGifts` steps it by size,
+  capped at the giver's blemishes. A generous gift counts twice, a modest base gift once, and a
+  notable one once from 0 only. The allied-ground battle site raises the attacker's count toward
+  the owner to `allied_territory_battle_gifts_floor` (`ApplyAlliedTerritoryFriction`).
+- **Gift weights** are faction effects, so a faction's quirks are data:
+  - `gift_given_value` is resolved on the giver and then `gift_received_value` on the
+    recipient (both RawScaled), each seeded with the value so far and truncated. Friction and
+    size both read the result;
+  - `gift_size_threshold` (PureMultiplier) on the giver scales every size threshold, after each
+    truncates, and never friction;
+  - each resolve has the other side as `pPartner` and the item's kind in `giftKind`, which the
+    `GiftKind` condition matches.
+  - University ships `gift_received_value` ×2 on `Technology`. SMAC's others, for factions that
+    do not ship: Morgan `gift_given_value` ×2 on `Credits`; the Spartans `gift_received_value`
+    ×2 on `Technology` and `gift_size_threshold` ×0.5 on `Base`; the Believers
+    `gift_received_value` ×0.5 on `Technology` and ×2 on `Base`, and `gift_size_threshold` ×0
+    on `Base`.
+- **Coefficients** live in `diplomacy.json` `gifts`, keyed by trade kind (`credits`,
+  `technology`, `base`). Ratios are exact factors, an integer or a fraction string (`"1/3"`),
+  so each product truncates as SMAC's integer division does.
+- Patience, the great satan and revenge clearing are not applied
   ([deviations](../../config/deviations/README.md)).
 
 ## Diplomatic statuses
@@ -541,7 +605,8 @@ revenge record yet. AI actors do not frame, so a player is never framed and the 
 category a UI or AI offers, and the mapping between them is **one trait per alternative**
 (`TradeKindOf<T>`) declared next to the variant. `TradeKinds()` lists one kind per alternative
 through the trait, so a new alternative without a trait is a compile error rather than a category
-that silently never appears.
+that silently never appears. The enum has its own header (`TradeKind.h`), so the effects
+system's `GiftKind` condition can name it without the ledger.
 
 Two factions that have met may trade any item under any status, Vendetta included: a Truce can be
 bought with credits. A Vendetta only makes the other side less likely to accept, which is AI
@@ -606,9 +671,10 @@ save-game serialisation work to exist first. Recorded in
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
 | What is the next stored friction / blemish total, in range? | `DiplomacyCalculator::NextFriction` / `NextBlemishes` |
 | What does an AI think a base is worth to it? | `BaseValueRules::BaseValue`, over `DiplomacyCalculator::BaseValue` |
+| What does a gift do to standing? | `DiplomaticGiftRules::GiftStanding`, over the `DiplomacyCalculator` gift methods; `ApplyGiftStanding` writes it |
 | Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
-| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `ApplyProbeAftermath` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyAlliedTerritoryFriction` after a melee or duel, and `ApplyRainfallGrievance` after a Former's raise or lower land. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
-| Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner`: the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
+| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `ApplyProbeAftermath` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyAlliedTerritoryFriction` after a melee or duel, `ApplyRainfallGrievance` after a Former's raise or lower land, and `ApplyGiftStanding` for each item of a gift. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
+| Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner`: the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it, and the attacker's gift count toward it rises to `allied_territory_battle_gifts_floor`. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
 | Whom does terraforming aggrieve? | `RainfallGrievant`: the AI owning the base nearest the last tile the re-run dried, scanning until a change lands within `terraform_rainfall_stop_distance` of the terraformer's bases. A player-controlled owner, once recorded, sticks. Only a player-controlled terraformer, and not across a Pact or Vendetta. |
 | Does a hostile probe keep or break the agreement? | `ResolveProbeAftermath` (`bMayKeepAgreement` / `BreakOutcome_t`). `ApplyProbeAftermath` writes it. |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
@@ -627,8 +693,9 @@ save-game serialisation work to exist first. Recorded in
   probe mission (other than infiltrate or Total Thought Control) is attributed even for a
   Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
-- **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory and
-  terraform-rainfall writers are in. The player's probe excuse dialog, talk gifts, the +3
+- **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory,
+  terraform-rainfall and gift writers are in. The player's probe excuse dialog, trade friction,
+  base gift patience, the great satan's gift count, revenge clearing on a generous gift, the +3
   refused-demand battle friction, and the wants-revenge betrayal that replaces rainfall friction
   are not ([deviations](../../config/deviations/README.md)). Mood and repute captions,
   and the talk caption's Vendetta floor, are `StandingCaptions` (UI; see `ui-system.md`).

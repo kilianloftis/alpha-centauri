@@ -403,6 +403,23 @@ TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][conditio
     CHECK(ConditionSatisfied(config, EffectContext_t{&tile}, nullptr));
 }
 
+TEST_CASE("ConditionSatisfied: GiftKind matches only the kind of gift being valued",
+          "[effects][condition][gifts]")
+{
+    actest::EffectPool pool;
+    const EffectConfig_t& onTechnology =
+        pool.StatMod(StatId_t::GiftReceivedValue, 2.0, ModifierOp_t::MultiplyGeometric,
+                     EffectScope_t::FactionGlobal, std::nullopt,
+                     Condition_t{GiftKind_t{TradeKind_t::Technology}});
+
+    EffectContext_t ctx;
+    CHECK_FALSE(ConditionSatisfied(onTechnology, ctx, nullptr));
+    ctx.giftKind = TradeKind_t::Credits;
+    CHECK_FALSE(ConditionSatisfied(onTechnology, ctx, nullptr));
+    ctx.giftKind = TradeKind_t::Technology;
+    CHECK(ConditionSatisfied(onTechnology, ctx, nullptr));
+}
+
 TEST_CASE("ConditionSatisfied: TargetTileHas matches terrain features via string id", "[effects][condition]")
 {
     actest::EffectPool pool;

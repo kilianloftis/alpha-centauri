@@ -4,28 +4,28 @@ overview: A talk proposal that gives without asking is a gift, and moves standin
 todos:
   - id: re-record
     content: "terranx-map.md: new Gifts section (proposal-menu gift ids, make_gift energy / tech branches, gift count, treaty_off 0x60, replies, tech_val simple path, great_satan inputs), beside the existing Base gift and Base value sections; correct the communicate bullet (0x557A99 is SELFATROCITY)"
-    status: pending
+    status: completed
   - id: gifts-record
     content: DiplomacyLedger Get/SetGifts (directed); allied_territory_battle_gifts_floor and the floor in ApplyAlliedTerritoryFriction
-    status: pending
+    status: completed
   - id: gift-config
-    content: diplomacy.json gifts block (energy, technology, base) + parser; techs.json ai_weights + TechConfigParser
-    status: pending
+    content: diplomacy.json gifts block (credits, technology, base ladders and factors) + parser; Rational_t truncating scales; base_value factors; techs.json ai_weights + TechConfigParser
+    status: completed
   - id: gift-weights
     content: TradeKind.h; StatId_t GiftGivenValue / GiftReceivedValue / GiftSizeThreshold; GiftKind condition (parser, context giftKind, evaluation, validator); University effects.json
-    status: pending
+    status: completed
   - id: gift-rules
     content: DiplomacyCalculator gift methods (base included); ResearchRules TechLevel; DiplomaticGiftRules (IsGift, GiftStanding for credits, technology and bases)
-    status: pending
+    status: completed
   - id: gift-mutations
     content: ApplyGiftStanding; ApplyProposal values each gift item before delivering it
-    status: pending
+    status: completed
   - id: deviations-docs
     content: Deviations entries; diplomacy-system.md gifts section, diagram and Not yet built; effects-system.md weights and GiftKind
-    status: pending
+    status: completed
   - id: tests-verify
     content: Ledger, parsers, GiftKind, calculator, rules, mutations, allied floor, talk popup mood; ./bd build; ./bd test; LastTest.log
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -36,7 +36,7 @@ isProject: false
 Part of [finish_diplomacy_roadmap_6ecba412.plan.md](.claude/plans/finish_diplomacy_roadmap_6ecba412.plan.md),
 sections 1 and 2.
 Talk can already send a trade with nothing asked in return. `ApplyProposal` moves the items and
-writes no standing (TODO there; deviation "Talk gifts and trades write no standing").
+writes no standing (TODO there; deviation "Talk trades write no standing" after this plan).
 
 In SMAC the player's gift is `make_gift`, which `make_a_proposal` calls for the proposal-menu
 item "a small token of my goodwill". `communicate`'s gift-count writes sit on branches where the
@@ -183,27 +183,49 @@ Thinker's `mod_tech_val` asserts that its simple path equals this one.
 ```json
 "allied_territory_battle_gifts_floor": 1,
 "gifts": {
-  "energy": {
-    "generous": { "recipient_credits_divisor": 2, "giver_credits_divisor": 3, "turn_factor": 2 },
-    "notable": { "recipient_credits_divisor": 4, "minimum": 25, "giver_credits_divisor": 6, "turn_factor": 1 },
+  "credits": {
+    "sizes": [
+      { "size": "Generous", "recipient_credits_factor": "1/2", "giver_credits_factor": "1/3", "turn_factor": 2, "minimum": 0 },
+      { "size": "Notable", "recipient_credits_factor": "1/4", "giver_credits_factor": "1/6", "turn_factor": 1, "minimum": 25 },
+      { "size": "Small" }
+    ],
     "friction": {
       "credits_per_unit": 5, "first_block_units": 10, "first_block_divisor": 2,
-      "block_units": 20, "units_per_point": 5, "percent": 150
+      "block_units": 20, "units_per_point": 5, "factor": "3/2"
     }
   },
   "technology": {
-    "generous_value": 16,
-    "value": { "unmatched_divisor": 2, "growth_base_count": 4, "extra_owner_penalty": 2, "minimum": 1 }
+    "sizes": [
+      { "size": "Generous", "recipient_credits_factor": 0, "giver_credits_factor": 0, "turn_factor": 0, "minimum": 16 },
+      { "size": "Notable" }
+    ],
+    "friction": { "factor": 1 },
+    "value": { "priority_factor": 1, "unmatched_factor": "1/2", "growth_base_count": 4, "extra_owner_penalty": 2, "minimum": 1 }
   },
   "base": {
-    "generous": { "recipient_credits_divisor": 2, "giver_credits_divisor": 3, "turn_factor": 2 },
-    "friction_percent": 150
+    "sizes": [
+      { "size": "Generous", "recipient_credits_factor": "1/2", "giver_credits_factor": "1/3", "turn_factor": 2, "minimum": 0 },
+      { "size": "Modest" }
+    ],
+    "friction": { "factor": "3/2" }
   }
 }
 ```
 
 `DiplomacyConfig_t` gains `alliedTerritoryBattleGiftsFloor` and `GiftConfig_t gifts`, made of
-`EnergyGiftConfig_t`, `TechGiftConfig_t` and `BaseGiftConfig_t`.
+`CreditGiftConfig_t`, `TechGiftConfig_t` and `BaseGiftConfig_t`, keyed by trade kind.
+
+- **Factors** are `Rational_t`: an integer or a fraction string. A product truncates, as SMAC's
+  integer division does (`Rational_t::ScaledTruncated`); the unmatched tech factor rounds up
+  (`ScaledRoundedUp`). A negative factor is rejected.
+- **Size ladder** (`GiftSizesConfig_t`): rungs (`GiftSizeStepConfig_t`) tested in order, each
+  with every threshold required, and a last entry with only a `size`, the fallback. `GiftSize_t`
+  lives in `GiftSize.h`.
+- **Friction:** each kind has a `factor`; credits apply theirs to the tiered points.
+- `priority_factor` is tech_val's simple-path factor: each weight counts
+  `priority_factor × priority + 1` times.
+- `base_value`'s `ungarrisoned_divisor` and `outnumbered_divisor` become `ungarrisoned_factor`
+  and `outnumbered_factor` (`"1/2"`).
 
 **Tech AI weights.**
 - Every entry in `config/techs.json` gains `"ai_weights": { "power", "tech", "wealth", "growth"
@@ -277,20 +299,20 @@ quote, and a condition picks the kind.
 
 `DiplomacyCalculator`, from `gifts`:
 
-- **Size methods** take the giver's `GiftSizeThreshold` as `thresholdScale`:
-  - each threshold is first computed as configured, truncated as SMAC truncates (credits ÷ 2,
-    ÷ 3, …);
+- **Size methods** walk their kind's ladder and take the giver's `GiftSizeThreshold` as
+  `thresholdScale`:
+  - each threshold is first computed as its factor times the input, truncated as SMAC truncates;
   - it is then scaled, and the value is compared against the unrounded product.
-- `GiftSize_t EnergyGiftSize(int value, int recipientCredits, int giverCredits, int turn, double
-  thresholdScale)`: `Small`, `Notable` or `Generous`.
-- `int EnergyGiftFriction(int value)`: the tiered delta (≤ 0).
-- `GiftSize_t TechGiftSize(int value, double thresholdScale)`: `Generous` or `Notable`.
+- `GiftSizeInputs_t { value, recipientCredits, giverCredits, turn, thresholdScale }` carries a
+  size's inputs.
+- `CreditGiftSize`, `TechGiftSize` and `BaseGiftSize(const GiftSizeInputs_t&)`: the first rung
+  reached, or the fallback.
+- `int CreditGiftFriction(int value)`: the tiered points times the factor (≤ 0).
+- `int TechGiftFriction(int value)` and `BaseGiftFriction(int value)`: the value times the
+  factor, truncated (≤ 0).
 - `int TechWeightValue(const TechAiWeights_t&, const AITendenciesConfig&, int vendettaCount,
   int baseCount)`: steps 1–2 of `tech_val`.
 - `int UnownedTechValue(int value, int owners, int techLevel, int highestLevel)`: step 3.
-- `int BaseGiftFriction(int value)`: `−(value × friction_percent / 100)`, truncated.
-- `GiftSize_t BaseGiftSize(int value, int recipientCredits, int giverCredits, int turn, double
-  thresholdScale)`: `Generous` at all three thresholds, otherwise `Modest`.
 - `int NextGifts(int current, int giverBlemishes, GiftSize_t)`: the count steps, capped at the
   giver's blemishes. `Modest` runs only the second step, at any count: every base gift runs it.
 - `int AlliedTerritoryGifts(int current)`: `max(current, alliedTerritoryBattleGiftsFloor)`.
@@ -298,7 +320,9 @@ quote, and a condition picks the kind.
 ### Rules
 
 `ResearchRules` gains `int TechLevel(const TechId&)`: 1 plus the deepest prerequisite's level
-(the registry rejects cycles).
+(the registry rejects cycles), and `int HighestTechLevel(const ResearchManager&)`: the deepest
+level among the discovered techs, 0 with none. SMAC's floor of 1 on the highest level changes
+nothing, since every tech is at least level 1.
 
 New `DiplomaticGiftRules`:
 
@@ -313,14 +337,14 @@ New `DiplomaticGiftRules`:
   - **Credits:**
     - raw value = the amount;
     - size from both factions' current energy and `GetTurnNumber()`;
-    - friction from `EnergyGiftFriction`.
+    - friction from `CreditGiftFriction`.
   - **Technology:**
     - raw value = `TechWeightValue` from the tech's weights, the recipient's `ai.json`
       priorities, its Vendetta count (factions with diplomacy) and its base count;
     - then `UnownedTechValue` when the recipient is AI-controlled and lacks the tech. Owners are
-      the factions that have it; the highest level is the deepest `TechLevel` the recipient
-      knows, at least 1;
-    - friction −value, size from `TechGiftSize`.
+      the factions with diplomacy that have it; the highest level is the recipient's
+      `HighestTechLevel`;
+    - friction from `TechGiftFriction`, size from `TechGiftSize`.
   - **Base:**
     - raw value = `BaseValue(base, recipient, giver)`, read while the giver still holds it. The
       base is the giver's, so it is never the recipient's headquarters, which `BaseValue`
@@ -402,16 +426,20 @@ mood reads the lowered friction.
 Fixtures own every number. Neither a test nor a rule reads `config/`.
 
 - **`DiplomacyLedgerTests`:** gifts are directed and start at 0.
-- **`DiplomacyConfigParserTests`:** the `gifts` block and the floor are required.
+- **`DiplomacyConfigParserTests`:** the `gifts` block and the floor are required; every rung
+  but the last needs each threshold and the last has none; factors are integers or fraction
+  strings, never negative; `base_value` reads its two factors.
+- **`Rational_t`:** `ScaledTruncated` truncates toward zero, `ScaledRoundedUp` rounds up, and
+  both report overflow.
   **`TechConfigParser` tests:** `ai_weights` is required.
 - **Effects:**
   - `EffectConfigParser`: `GiftKind` parses each trade kind and rejects an unknown one.
   - Condition evaluation: `GiftKind` matches its kind, misses another, and fails closed without
     `giftKind`.
 - **`DiplomacyCalculatorTests`:**
-  - `EnergyGiftFriction`: 9 → 0, 10 → −1, 25 → −1, 100 → −3, 200 → −4, 500 → −7.
-  - `EnergyGiftSize` at each threshold's edge.
-  - `TechGiftSize` at 15 and 16.
+  - `CreditGiftFriction`: 9 → 0, 10 → −1, 25 → −1, 100 → −3, 200 → −4, 500 → −7.
+  - `CreditGiftSize` at each threshold's edge.
+  - `TechGiftSize` at 15 and 16, whatever the treasuries; `TechGiftFriction` is −value.
   - `NextGifts`: generous +2 under the cap; generous +1 one below it; notable only from 0; modest
     +1 at a non-zero count; small none; 0 blemishes never counts.
   - `BaseGiftFriction` and `BaseGiftSize` at each threshold's edge.

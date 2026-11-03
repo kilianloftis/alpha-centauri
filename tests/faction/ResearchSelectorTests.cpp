@@ -18,6 +18,7 @@
 #include "lib/LuaRuntime.h"
 
 #include "GameFixtures.h"
+#include "TempConfigFile.h"
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -281,4 +282,34 @@ TEST_CASE("Tech cost reads the known-tech count and the tech's own TechCost",
     plain.effects.clear();
     const int unscaled = ScaledTechCost(formula, &faction, plain);
     CHECK(scaled == static_cast<int>(std::trunc(static_cast<double>(unscaled) * 1.25)));
+}
+
+TEST_CASE("A tech's level is one more than its deepest prerequisite's", "[research][tech-level]")
+{
+    FactionFixture fixtures;
+    const TempConfigFile techs("ac_tech_levels.json", R"([
+        { "id": "root", "name": "Root", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } },
+        { "id": "mid", "name": "Mid", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+          "prerequisites": ["root"] },
+        { "id": "deep", "name": "Deep", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+          "prerequisites": ["mid"] },
+        { "id": "join", "name": "Join", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+          "prerequisites": ["root", "deep"] }
+    ])");
+    fixtures.dataContext.techRegistry = std::make_unique<TechRegistry>();
+    fixtures.dataContext.techRegistry->Load(techs.Path());
+
+    CHECK(TechLevel("root") == 1);
+    CHECK(TechLevel("deep") == 3);
+    CHECK(TechLevel("join") == 4);
+
+    Faction& rFaction = fixtures.MakeFaction();
+    CHECK(HighestTechLevel(rFaction.GetResearch()) == 0);
+    rFaction.GetResearch().AddDiscoveredTech("deep");
+    rFaction.GetResearch().AddDiscoveredTech("root");
+    CHECK(HighestTechLevel(rFaction.GetResearch()) == 3);
 }

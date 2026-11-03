@@ -293,6 +293,7 @@ struct ConditionReferenceValidator
     void operator()(const PartnerIsFormerOwner_t&) const {}
     void operator()(const VictimizedPartner_t&) const {}
     void operator()(const TargetIsBase_t&) const {}
+    void operator()(const GiftKind_t&) const {}
 
 private:
     void CheckBuilding_(const std::string& rBuildingId) const

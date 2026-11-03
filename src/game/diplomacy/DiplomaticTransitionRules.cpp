@@ -179,9 +179,8 @@ int AgreementBreakBlemishes(DiplomaticStatus_t from)
 std::optional<FactionId_t> AlliedTerritoryOwner(FactionId_t attacker, FactionId_t defender,
                                                 const Tile& rBattleTile)
 {
-    // TODO: SMAC also floors the attacker's gifts toward the owner at 1 (0x50A19C); there is no
-    // gifts record yet. Its other territory site, +3 against a faction that refused the
-    // defender's demand to attack (0x5078BB), waits on talk.
+    // TODO: SMAC's other territory site, +3 against a faction that refused the defender's demand
+    // to attack (0x5078BB), waits on AI-initiated #DEMANDATTACK.
     const GameState& rGame = CurrentGameState();
     const FactionId_t owner = rGame.GetWorldMap().GetTerritory().GetOwner(rBattleTile);
     if (owner == k_NoFactionOwner || owner == attacker || owner == defender)

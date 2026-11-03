@@ -85,6 +85,7 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
     {
         const auto path = WriteTempTechJson_(R"(
   { "id": "icon_tech", "name": "Icon Tech", "category": "discover",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
     "icon": "assets/sprites/techs/tech000.png" }
 )");
         TechConfigParser parser;
@@ -95,7 +96,8 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
     }
     {
         const auto path = WriteTempTechJson_(R"(
-  { "id": "plain_tech", "name": "Plain Tech", "category": "build" }
+  { "id": "plain_tech", "name": "Plain Tech", "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } }
 )");
         TechConfigParser parser;
         const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
@@ -105,11 +107,50 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
     }
     {
         const auto path = WriteTempTechJson_(R"(
-  { "id": "typo_tech", "name": "Typo", "category": "build", "icone": "x.png" }
+  { "id": "typo_tech", "name": "Typo", "category": "build",
+    "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+    "icone": "x.png" }
 )");
         TechConfigParser parser;
         CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
                           Catch::Matchers::ContainsSubstring("icone"));
+        std::filesystem::remove(path);
+    }
+}
+
+TEST_CASE("TechConfigParser requires each AI weight", "[game][tech][parser]")
+{
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "weighted", "name": "Weighted", "category": "build",
+    "ai_weights": { "power": 1, "tech": 2, "wealth": 3, "growth": 4 } }
+)");
+        TechConfigParser parser;
+        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        REQUIRE(configs.size() == 1);
+        CHECK(configs[0].aiWeights.power == 1);
+        CHECK(configs[0].aiWeights.tech == 2);
+        CHECK(configs[0].aiWeights.wealth == 3);
+        CHECK(configs[0].aiWeights.growth == 4);
+        std::filesystem::remove(path);
+    }
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "unweighted", "name": "Unweighted", "category": "build" }
+)");
+        TechConfigParser parser;
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("ai_weights"));
+        std::filesystem::remove(path);
+    }
+    {
+        const auto path = WriteTempTechJson_(R"(
+  { "id": "no_growth", "name": "No Growth", "category": "build",
+    "ai_weights": { "power": 1, "tech": 2, "wealth": 3 } }
+)");
+        TechConfigParser parser;
+        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+                          Catch::Matchers::ContainsSubstring("growth"));
         std::filesystem::remove(path);
     }
 }

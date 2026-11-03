@@ -1204,6 +1204,22 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
             json::parse(R"({ "kind": "TargetIsBase" })"))));
     }
 
+    SECTION("GiftKind")
+    {
+        const Condition_t technology = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "GiftKind", "trade_kind": "Technology" })"));
+        const auto* pTechnology = std::get_if<GiftKind_t>(&technology);
+        REQUIRE(pTechnology);
+        CHECK(pTechnology->kind == TradeKind_t::Technology);
+        CHECK(ConditionNeedsSituationalContext(technology));
+        const Condition_t base = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "GiftKind", "trade_kind": "base" })"));
+        CHECK(std::get<GiftKind_t>(base).kind == TradeKind_t::Base);
+        CHECK_THROWS(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "GiftKind", "trade_kind": "Hugs" })")));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "GiftKind" })")));
+    }
+
     SECTION("DesignPlan")
     {
         const Condition_t parsed = EffectConfigParser::ParseCondition(

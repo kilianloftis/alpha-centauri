@@ -330,18 +330,46 @@ absent.
 - **Original:** each proposal-menu line asks for or offers one thing, and the AI names a price
   or counter-offer (`COUNTER0`, `COUNTERMENU`) ("Talk").
 - **Ours:** the player builds both sides of one proposal from `TradeKinds()`, and the AI
-  accepts (`EvaluateResponse_`).
-- **Where:** `config/ui/talk.json` trade scenes, `TalkConversation`.
+  accepts (`EvaluateResponse_`). A proposal that only gives values each item as its own
+  `make_gift`, in order ("Gifts"). The player picks any tech, where the AI names one or two;
+  there is no "all research data"; credit amounts come from `credit_offers`, where `make_gift`
+  offers the giver's credits rounded to 25 and halving.
+- **Where:** `config/ui/talk.json` trade scenes, `TalkConversation`, `ApplyProposal`.
 - **Missing:** the one-item flow with AI counter-offers, which needs AI evaluation, and a switch
   (a variant `talk.json` here).
 
-### Talk gifts and trades write no standing
+### Talk trades write no standing
 
-- **Original:** `communicate`'s gift and trade branches move friction (−1 / −2 / +1 and computed
-  gift deltas) and `diplo_gifts` ("Integrity / friction writers").
-- **Ours:** `ApplyProposal` moves the items only. TODO at `ApplyProposal`.
+- **Original:** `tech_trade` moves friction after a swap (`0x542034`, "Gifts").
+- **Ours:** a trade that asks something back moves the items only. TODO at `ApplyProposal`.
 - **Where:** `ApplyProposal` (`DiplomaticProposalMutations`).
-- **Missing:** the RE of those deltas, a gifts record, and the writers.
+- **Missing:** the RE of that delta, and the writer.
+
+### Base gifts skip patience
+
+- **Original:** the recipient's `diplo_patience` toward the giver drops by 2, or 3 when generous
+  ("Base gift").
+- **Ours:** friction, size and the gift count follow the binary, but there is no patience
+  record.
+- **Where:** `GiftStanding` (`DiplomaticGiftRules`).
+- **Missing:** a patience record.
+
+### Gift count ignores the great satan
+
+- **Original:** a gift's second count step also passes the giver's blemishes when
+  `great_satan(giver, 0)` holds or in multiplayer ("Gifts").
+- **Ours:** always capped at the giver's blemishes.
+- **Where:** `DiplomacyCalculator::NextGifts`.
+- **Missing:** rankings, score and `great_satan`, and multiplayer.
+
+### Generous gifts
+
+- **Original:** a generous gift, base gifts included, clears revenge both ways (`treaty_off`
+  `0x60`). Energy and tech reply `GAVEENERGY1` / `GAVETECH1`, or `…2` ("Gifts").
+- **Ours:** there is no revenge record, and the reply is `talk.json`'s trade acceptance.
+- **Where:** `ApplyProposal`, `config/ui/talk.json`.
+- **Missing:** the revenge record and its clearing, a gift result reported to talk, and the
+  `GAVE*` lines.
 
 ### Ranked greeting
 
@@ -408,10 +436,14 @@ absent.
   flag, both filled by `diplomacy_check`. It quadruples for a scenario objective and doubles
   for a `BELIEVE` evaluator ("Base value").
 - **Ours:** none applies: there is no attitude model, there are no scenarios, and the Believers
-  do not ship.
+  do not ship. On a base gift the evaluator is the recipient, so the Believers' doubling there
+  is their `gift_received_value` weight on `Base` ("Gift weights" in
+  `docs/architecture/diplomacy-system.md`).
 - **Where:** `BaseValue` (`BaseValueRules`).
 - **Missing:** the RE of `diplomacy_check`'s fear, hostility and attack chance, and those
-  inputs; scenario objectives; a faction-scope base value stat with the Believers.
+  inputs; scenario objectives; a faction-scope base value stat with the Believers, which base
+  swaps and threatened cession need and which then takes the doubling over from the gift
+  weight.
 
 ### Poles are separate regions `[Ours]`
 

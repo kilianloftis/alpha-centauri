@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/diplomacy/TradeKind.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/GameCategory.h"
@@ -429,6 +430,12 @@ struct TargetIsBase_t
 {
 };
 
+// The gift being valued is of kind. Fails closed outside a gift's resolve.
+struct GiftKind_t
+{
+    TradeKind_t kind = TradeKind_t::Credits;
+};
+
 using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
                                         IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
                                         SocialRating_t, OriginBaseHasBuilding_t,
@@ -439,7 +446,7 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
                                         IsNativeLife_t, BaseHasBuilding_t, DesignPlan_t,
                                         PartnerPlayerType_t, PartnerIsFormerOwner_t,
-                                        VictimizedPartner_t, TargetIsBase_t>;
+                                        VictimizedPartner_t, TargetIsBase_t, GiftKind_t>;
 
 struct Condition_t : ConditionVariant_t
 {

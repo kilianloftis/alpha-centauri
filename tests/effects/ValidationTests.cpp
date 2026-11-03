@@ -259,6 +259,9 @@ static_assert(DomainFor(StatId_t::EcoCleanMinerals) == ResolveDomain_t::Faction)
 static_assert(DomainFor(StatId_t::EcoDamageReduction) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::EcoMineralOffset) == ResolveDomain_t::Base);
 static_assert(KindFor(StatId_t::RebelJoinWeight) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::GiftGivenValue) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::GiftReceivedValue) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::GiftSizeThreshold) == StatKind_t::PureMultiplier);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).
@@ -269,6 +272,7 @@ static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
 static_assert(SeedFor(StatId_t::TileDefense) == 1.0);
 static_assert(SeedFor(StatId_t::RebelJoinWeight) == 0.0);
+static_assert(SeedFor(StatId_t::GiftSizeThreshold) == 1.0);
 
 // DomainFor is the consumer-subject counterpart of KindFor: pin every stat's resolve domain.
 static_assert(DomainFor(StatId_t::Nutrients) == ResolveDomain_t::Base);
@@ -286,6 +290,9 @@ static_assert(DomainFor(StatId_t::CouncilVotes) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CommerceRate) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CommerceRating) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::RebelJoinWeight) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::GiftGivenValue) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::GiftReceivedValue) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::GiftSizeThreshold) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::Attack) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::EarthquakeLevels) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::FungalBloomTiles) == ResolveDomain_t::Unit);

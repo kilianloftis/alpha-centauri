@@ -32,6 +32,7 @@ add_library(ac-core STATIC
     game/diplomacy/DiplomacyCalculator.cpp
     game/diplomacy/BaseValueRules.cpp
     game/diplomacy/DiplomacyLedger.cpp
+    game/diplomacy/DiplomaticGiftRules.cpp
     game/diplomacy/DiplomaticPermissionRules.cpp
     game/diplomacy/DiplomaticStandingMutations.cpp
     game/diplomacy/DiplomacyActions.cpp

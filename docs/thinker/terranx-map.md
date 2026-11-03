@@ -1136,10 +1136,13 @@ Scrupulous, Dependable, Ruthless, Treacherous, Wicked, Infamous). Counts above
   `set_treaty(v, terraformer, SHALL_BETRAY, 1)` (`0x4CA3DD`); otherwise
   `cause_friction(v, terraformer, 5)`. Thinker's `action_terraform` rewrite drops both (its
   TERRAYOURS comment).
-- `communicate` `0x54FFD0`: friction −1/−2/+1 and computed gift deltas; can
-  `dec` blemishes when count > 1 (`0x557A99`). Refusing `#DEMANDATTACK*` while the pair holds a
-  Pact adds +4 **inline** (`0x551C35`–`0x551C4E`, and the cached `DiploFriction` at `0x551C65`),
-  outside `cause_friction`.
+- `communicate` `0x54FFD0`: friction −1/−2/+1 on AI-initiated branches, which also write
+  `diplo_gifts` (`0x553F0B`, `0x55518E`, `0x5551B3`, `0x555576`, `0x55568D`; not mapped). Its
+  blemish decrement at `0x557A99` is the `SELFATROCITY` warning ("Gifts", Also recorded), not a
+  gift. Refusing `#DEMANDATTACK*` while the pair holds a Pact adds +4 **inline**
+  (`0x551C35`–`0x551C4E`, and the cached `DiploFriction` at `0x551C65`), outside
+  `cause_friction`.
+- `make_gift` `0x547C10`: the player's gifts ("Gifts", "Base gift").
 - `setup_player` `0x5B0E00`: zeros blemishes and `diplo_reputation` (`0x5B1210`).
 
 No per-turn friction decay among the 19 `cause_friction` calls or the inline write above.
@@ -1390,6 +1393,85 @@ the player asks for; `DiploBidBaseSwapID` (`0x93FA30`) is the player's base offe
 Thinker replaces it (`mod_base_swap`, `base_trade_value` in `gui_dialog.cpp`) with its own
 valuation. A base for a base swaps only when the offered value is at least the asked one, and a
 multiplayer game or a human rival refuses unless the rival surrendered.
+
+### Gifts (`make_gift` `0x547C10`)
+
+`make_a_proposal(player, ai)` (`0x54F420`) sends proposal item 1 ("a small token of my goodwill")
+to `make_gift(player, ai)` (`0x54F81A`). `proposal_menu` first asks `COUNTER1` ("You mean a gift?
+I like gifts.") over `COUNTERMENU` and stores the chosen id in `DiploCounterProposal`
+(`0x93FAB0`, `0x54EE5D`). For a gift the menu offers: id 0 never mind; id 4 some research data,
+unless game rule `0x2000000` (`0x54ED59`); id 7 all research data (`0x54ED96`); id 5 energy
+credits (`0x54EDD0`); id 8 a base, when the player has more than one base in single player
+(`0x54EE18`–`0x54EE35`). `make_gift` branches on the id: 4 or 7 tech, 5 energy, anything else
+base ("Base gift"). Below, giver is the player and recipient the AI; "key" is
+`MFaction.search_key` (`+0x1C`).
+
+**Energy** (`0x547C70`):
+- `OFFERENERGY` lists amounts: the giver's credits rounded down to a multiple of 25, then halved
+  and rounded down to 25 again, while non-zero (`0x547CD4`–`0x547D39`).
+- The value is the amount, doubled when the giver's key is `MORGAN`. A `SPARTANS` giver's value
+  is doubled and then halved, so it is unchanged (`0x547DDE`–`0x547E49`).
+- Size, from credits read before the transfer:
+  - **generous** when value ≥ recipient's credits / 2, ≥ giver's credits / 3 and ≥ 2 ×
+    `CurrentTurn` (`0x547E62`–`0x547E9E`);
+  - **notable** when value ≥ recipient's credits / 4, ≥ 25, ≥ giver's credits / 6 and ≥
+    `CurrentTurn` (`0x547EA7`–`0x547EE8`);
+  - otherwise small.
+- The credits move (`0x547F35`–`0x547F46`).
+- Friction (`0x547F6B`–`0x548025`): units = value / 5; sum = min(units, 10) / 2, plus each
+  further block of up to 20 units divided by 3, then 4, then 5, and so on. The recipient's
+  friction toward the giver changes by −trunc(3 × ceil(sum / 5) / 2), clamped to 0–20 and
+  mirrored into the cached `DiploFriction`: `cause_friction` written inline. Under 10 credits
+  0; 10–25 → −1; 100 → −3; 200 → −4; 500 → −7.
+- Reply `GAVEENERGY`. A generous gift says `GAVEENERGY1`, or `GAVEENERGY2` ("I may have to
+  rethink my opinion of you!") when recipient→giver carries `0x60` or `great_satan(giver, 0)`,
+  and calls `treaty_off(giver, recipient, 0x60)` (`0x5480BD`).
+
+**Technology** (`0x5488D2`):
+- `tech_analysis(giver, recipient)` picks the tech the AI wants (`0x93FAA8`) and a second one
+  (`0x93FA18`). With none, `REJTECHNOTHING`.
+- Id 4: `OFFERTECH` names the first tech; `OFFERTECH2` also lets the player offer the second.
+  Value = `tech_val(tech, recipient, 1)`, taken before `tech_achieved` (`0x548AFD`).
+- Id 7: in id order, every tech the giver has and the recipient lacks adds its `tech_val` and is
+  then delivered, so later values see earlier deliveries (`0x548984`–`0x548A00`).
+- The value doubles when the recipient's key is `UNIV` or `SPARTANS`, then halves when it is
+  `BELIEVE` (`0x548B50`–`0x548BA9`).
+- Friction: the recipient's toward the giver changes by −value, clamped (`0x548BAC`–`0x548BF6`).
+- **Generous** when value ≥ 16 (`0x548C14`): reply `GAVETECH1`, or `GAVETECH2` when
+  recipient→giver carries `0x60` and the cached `DiploFriction` is non-zero, and
+  `treaty_off(recipient, giver, 0x60)`. Otherwise `GAVETECH`, and the gift counts as notable.
+
+**Gift count** (`diplo_gifts[giver][recipient]`, `Faction+0x12C`):
+- Generous: +1 if the count is below the giver's blemishes (`0x5480EF`), then +1 again if it is
+  still below them, or `great_satan(giver, 0)`, or multiplayer (`0x548124`–`0x548149`).
+- Notable: the second step, only when the count is 0. Small: no change.
+- In single player without the great satan the count never passes the giver's blemishes.
+  `reputation(f, other)` reads it as `clamp(blemishes - diplo_gifts[other], 0, 99)`.
+
+**`tech_val(tech, faction, 1)`** (`0x5BCBE0`), the simple path; Thinker's `mod_tech_val`
+asserts it matches:
+1. value = Σ weight × (priority + 1) over power, tech, wealth and growth. Weights are the tech's
+   `#TECHNOLOGY` columns 3–6 (power, tech, wealth, growth); priorities are the faction's 0/1 AI
+   priorities.
+2. Halve, rounding up (`0x5BCE42`), unless one matches: the tech has power and the faction has
+   the power priority or any Vendetta; tech and tech; wealth and wealth; the tech has growth and
+   the faction has the growth priority or fewer than 4 bases.
+3. For an AI faction that lacks the tech: add 2 − 2 × owners when more than one faction owns it
+   (`0x5BCEC0`); when the tech's level is below the highest level the faction knows (at least
+   1), scale by (level + 1) / (highest + 1); floor at 1. A tech's level is 1 plus its deepest
+   prerequisite's (`tech_recurse`).
+
+**Also recorded:**
+- `great_satan(f, 0)` (`0x539C00`) holds only when f is human, ranked first, and has more than
+  max(4, (turn + 25) / 50) bases; difficulty and turn gates pass; and either the climactic
+  battle makes f the target, or f's score beats the second faction's by a difficulty ratio.
+- `treaty_off(a, b, mask)` (`0x55B760`) clears mask both ways. A mask with `0x7` also clears
+  `0x1100000`, `0x10` also clears `0x8040`, and `0x20` also clears agenda bits `0xC00`.
+- `SELFATROCITY` (`0x557A59`): when the player's `atrocities` (`Faction+0x1D4`) is non-zero and
+  no faction is its atrocity victim, the AI warns it once per pair (gated by `0x200000` /
+  `0x400000`). The atrocity count and blemishes each drop by 1 while above 1 (`0x557A99`).
+- `tech_trade` writes friction after a swap (`0x542034`, not mapped). `energy_trade` writes
+  none.
 
 ### Base gift (`make_gift` `0x548260`)
 

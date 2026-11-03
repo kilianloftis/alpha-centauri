@@ -1,6 +1,7 @@
 #include "game/research/ResearchRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/WorldMap.h"
@@ -11,6 +12,7 @@
 #include "game/research/TechRegistry.h"
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <stdexcept>
 #include <string>
 
@@ -93,6 +95,24 @@ double TechCostScale_(const IEffectsProvider* pEffectsProvider, const TechConfig
     return FactionTechCostScale_(pEffectsProvider) * ThisTechCostScale_(rTech);
 }
 
+// rLevels memoises the walk, since prerequisite chains share their roots.
+int TechLevel_(const TechRegistry& rRegistry, const TechId& rTechId,
+               std::map<TechId, int>& rLevels)
+{
+    const auto it = rLevels.find(rTechId);
+    if (it != rLevels.end())
+    {
+        return it->second;
+    }
+    int deepest = 0;
+    for (const TechId& rPrerequisite : rRegistry.Get(rTechId).prerequisites)
+    {
+        deepest = std::max(deepest, TechLevel_(rRegistry, rPrerequisite, rLevels));
+    }
+    rLevels.emplace(rTechId, deepest + 1);
+    return deepest + 1;
+}
+
 } // namespace
 
 TechCostInputs_t TechCostInputs(const ResearchManager& rResearch,
@@ -168,6 +188,24 @@ std::vector<const TechConfig_t*> AvailableTechs(const ResearchManager& rResearch
     }
 
     return available;
+}
+
+int TechLevel(const TechId& rTechId)
+{
+    std::map<TechId, int> levels;
+    return TechLevel_(*CurrentGameState().GetGameData().techRegistry, rTechId, levels);
+}
+
+int HighestTechLevel(const ResearchManager& rResearch)
+{
+    const TechRegistry& rRegistry = *CurrentGameState().GetGameData().techRegistry;
+    std::map<TechId, int> levels;
+    int highest = 0;
+    for (const TechId& rTechId : rResearch.GetDiscoveredTechs())
+    {
+        highest = std::max(highest, TechLevel_(rRegistry, rTechId, levels));
+    }
+    return highest;
 }
 
 } // namespace ac

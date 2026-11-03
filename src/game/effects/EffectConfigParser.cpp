@@ -1127,6 +1127,17 @@ Condition_t ParsePartnerPlayerTypeCondition_(const nlohmann::json& rJson)
     return PartnerPlayerType_t{*playerType};
 }
 
+Condition_t ParseGiftKindCondition_(const nlohmann::json& rJson)
+{
+    const std::string name = RequireConditionString_(rJson, "trade_kind", "GiftKind");
+    const auto kind = magic_enum::enum_cast<TradeKind_t>(name, magic_enum::case_insensitive);
+    if (!kind)
+    {
+        throw std::runtime_error("GiftKind condition has unknown 'trade_kind' '" + name + "'");
+    }
+    return GiftKind_t{*kind};
+}
+
 Condition_t ParseDesignPlanCondition_(const nlohmann::json& rJson)
 {
     if (!rJson.contains("plans") || !rJson.at("plans").is_array() || rJson.at("plans").empty())
@@ -1278,6 +1289,7 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
         {"VictimizedPartner",
          [](const nlohmann::json&) -> Condition_t { return VictimizedPartner_t{}; }},
         {"TargetIsBase", [](const nlohmann::json&) -> Condition_t { return TargetIsBase_t{}; }},
+        {"GiftKind", ParseGiftKindCondition_},
         {"AllOf",
          [](const nlohmann::json& rJson) -> Condition_t {
              return AllOf_t{ParseNestedConditions_(rJson, "AllOf")};

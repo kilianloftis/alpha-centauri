@@ -38,8 +38,12 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a two-tech cycle is named")
     {
         const TempConfigFile config("ac_tech_cycle.json", R"([
-            { "id": "a", "name": "A", "category": "build", "prerequisites": ["b"] },
-            { "id": "b", "name": "B", "category": "build", "prerequisites": ["a"] }
+            { "id": "a", "name": "A", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+              "prerequisites": ["b"] },
+            { "id": "b", "name": "B", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+              "prerequisites": ["a"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("cycle")
@@ -50,9 +54,15 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a longer cycle is caught too")
     {
         const TempConfigFile config("ac_tech_cycle3.json", R"([
-            { "id": "a", "name": "A", "category": "build", "prerequisites": ["c"] },
-            { "id": "b", "name": "B", "category": "build", "prerequisites": ["a"] },
-            { "id": "c", "name": "C", "category": "build", "prerequisites": ["b"] }
+            { "id": "a", "name": "A", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+              "prerequisites": ["c"] },
+            { "id": "b", "name": "B", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+              "prerequisites": ["a"] },
+            { "id": "c", "name": "C", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
+              "prerequisites": ["b"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("cycle"));
@@ -61,12 +71,16 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a diamond is not a cycle")
     {
         const TempConfigFile config("ac_tech_diamond.json", R"([
-            { "id": "root", "name": "Root", "category": "build" },
+            { "id": "root", "name": "Root", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } },
             { "id": "left", "name": "Left", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["root"] },
             { "id": "right", "name": "Right", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["root"] },
             { "id": "join", "name": "Join", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["left", "right"] }
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
@@ -75,12 +89,16 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a cycle behind a valid prefix is still caught")
     {
         const TempConfigFile config("ac_tech_cycle_deep.json", R"([
-            { "id": "root", "name": "Root", "category": "build" },
+            { "id": "root", "name": "Root", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } },
             { "id": "mid", "name": "Mid", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["root", "loop_a"] },
             { "id": "loop_a", "name": "LoopA", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["loop_b"] },
             { "id": "loop_b", "name": "LoopB", "category": "build",
+              "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
               "prerequisites": ["loop_a"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -94,6 +112,7 @@ TEST_CASE("A wrong-shaped prerequisites list names the tech", "[config][tech]")
     TechRegistry registry;
     const TempConfigFile config("ac_tech_bad_prereqs.json", R"([
         { "id": "flight", "name": "Flight", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
           "prerequisites": "industrial_base" }
     ])");
     CHECK_THROWS_WITH(registry.Load(config.Path()),

@@ -2,6 +2,7 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/diplomacy/DiplomacyConfig.h"
+#include "game/diplomacy/TradeItem.h"
 #include "game/map/Tile.h"
 
 #include <span>
@@ -18,7 +19,12 @@ void ApplyFriction(GameState& rGameState, FactionId_t holder, FactionId_t agains
 // faction's blemishes after change, clamped to blemishes_max.
 void ApplyBlemishes(GameState& rGameState, FactionId_t faction, BlemishChange_t change);
 
-// AlliedTerritoryOwner's faction gains allied_territory_battle_friction toward attacker.
+// GiftStanding of rItem from giver to recipient, applied; call it before rItem moves.
+void ApplyGiftStanding(GameState& rGameState, FactionId_t giver, FactionId_t recipient,
+                       const TradeItem_t& rItem);
+
+// AlliedTerritoryOwner's faction gains allied_territory_battle_friction toward attacker, and
+// attacker's gift count toward it rises to allied_territory_battle_gifts_floor.
 void ApplyAlliedTerritoryFriction(GameState& rGameState, FactionId_t attacker,
                                   FactionId_t defender, const Tile& rBattleTile);
 

@@ -1,11 +1,14 @@
 #include "DiplomacyFixture.h"
 
+#include "game/diplomacy/DiplomaticProposalMutations.h"
 #include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyConfig.h"
+#include "game/economy/EconomyManager.h"
+#include "game/faction/Faction.h"
 #include "game/units/UnitAttackExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -321,4 +324,103 @@ TEST_CASE("An artillery duel on allied territory writes friction; a bombard stri
 
         CHECK(FrictionBTowardA_(game) == 5 + TerritoryFriction_(game));
     }
+}
+
+TEST_CASE("A battle on allied ground floors the attacker's gift count toward the owner",
+          "[diplomacy][standing][combat][gifts]")
+{
+    DiplomacyFixture game;
+    Tile& rBattle = SetUpAlliedTerritory_(game);
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const FactionId_t c = game.pC->GetFactionId();
+
+    ApplyAlliedTerritoryFriction(game.fixtures.state, a, c, rBattle);
+    CHECK(game.Ledger().GetGifts(a, b) == 1);
+
+    game.Ledger().SetGifts(a, b, 3);
+    ApplyAlliedTerritoryFriction(game.fixtures.state, a, c, rBattle);
+    CHECK(game.Ledger().GetGifts(a, b) == 3);
+}
+
+TEST_CASE("ApplyGiftStanding writes the recipient's friction and the giver's count",
+          "[diplomacy][standing][gifts]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    game.Ledger().SetFriction(b, a, 10);
+    game.Ledger().SetBlemishes(a, 5);
+
+    ApplyGiftStanding(game.fixtures.state, a, b, TradeCredits_t{100});
+
+    CHECK(game.Ledger().GetFriction(b, a) == 7);
+    CHECK(game.Ledger().GetGifts(a, b) == 2);
+    CHECK(game.Ledger().GetFriction(a, b) == 0);
+    CHECK(game.Ledger().GetGifts(b, a) == 0);
+}
+
+TEST_CASE("A gift values each item just before it moves", "[diplomacy][standing][gifts]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    game.Ledger().SetFriction(b, a, 10);
+    game.Ledger().SetBlemishes(a, 5);
+    game.pA->GetEconomy().AddEnergy(400);
+    DiplomaticProposal_t gift;
+    gift.proposer = a;
+    gift.recipient = b;
+    gift.give = {TradeCredits_t{100}, TradeCredits_t{100}};
+
+    ApplyProposal(game.fixtures.state, gift);
+
+    // The first 100 is short of a third of 400, so notable; the second meets a third of 300.
+    CHECK(game.Ledger().GetGifts(a, b) == 3);
+    CHECK(game.Ledger().GetFriction(b, a) == 4);
+    CHECK(game.pB->GetEconomy().GetEnergy() == 200);
+}
+
+TEST_CASE("A base gift is valued while the giver still holds it",
+          "[diplomacy][standing][gifts][base_value]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    game.Ledger().SetFriction(b, a, 10);
+    game.Ledger().SetBlemishes(a, 5);
+    BaseManager& rGiven = MakeSessionBase(game.fixtures, *game.pA, 20, 6);
+    const BaseId_t givenId = rGiven.GetBaseId();
+    DiplomaticProposal_t gift;
+    gift.proposer = a;
+    gift.recipient = b;
+    gift.give = {TradeBase_t{givenId}};
+
+    ApplyProposal(game.fixtures.state, gift);
+
+    CHECK(game.pB->FindBase(givenId) != nullptr);
+    CHECK(game.Ledger().GetFriction(b, a) == 0);
+    CHECK(game.Ledger().GetGifts(a, b) == 2);
+}
+
+TEST_CASE("A trade that asks something back writes no gift standing",
+          "[diplomacy][standing][gifts]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    game.Ledger().SetFriction(b, a, 10);
+    game.Ledger().SetBlemishes(a, 5);
+    game.pA->GetEconomy().AddEnergy(100);
+    DiplomaticProposal_t trade;
+    trade.proposer = a;
+    trade.recipient = b;
+    trade.give = {TradeCredits_t{100}};
+    trade.demand = {TradeWorldMap_t{}};
+
+    ApplyProposal(game.fixtures.state, trade);
+
+    CHECK(game.pB->GetEconomy().GetEnergy() == 100);
+    CHECK(game.Ledger().GetFriction(b, a) == 10);
+    CHECK(game.Ledger().GetGifts(a, b) == 0);
 }

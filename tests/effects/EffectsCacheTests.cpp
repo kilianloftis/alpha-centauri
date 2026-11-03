@@ -205,11 +205,13 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
           "[research][this-tech]")
 {
     const TempConfigFile techs("ac_this_tech_cost.json", R"([
-        { "id": "plain", "name": "Plain", "category": "build" },
+        { "id": "plain", "name": "Plain", "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } },
         {
           "id": "pricey",
           "name": "Pricey",
           "category": "build",
+          "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
           "effects": [
             {
               "type": "StatModifier",
