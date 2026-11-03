@@ -14,6 +14,7 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/base/BaseManager.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -253,6 +254,8 @@ TEST_CASE("The social-engineering panel reports turns remaining, not full durati
     ViewFixture fixture;
     // Needs a base *and* energy: with no labs production the panel legitimately reports N/A.
     ac::BaseManager& rBase = fixture.MakeBase(8, 8);
+    // Without a Headquarters, inefficiency takes the base's research.
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
     for (const ac::Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
     {
         fixture.state.GetTileEffects().AddOccupantWithEffects(

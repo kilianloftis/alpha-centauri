@@ -315,7 +315,7 @@ private:
                                  std::nullopt, {}};
         if (rJson.contains("when"))
         {
-            choice.when = ParseEnum_<TalkCondition_t>(rJson.at("when"), rContext);
+            choice.when = ParseEnum_<DiplomaticActionKind_t>(rJson.at("when"), rContext);
         }
         if (rJson.contains("do"))
         {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
+
 #include <optional>
 #include <vector>
 
@@ -8,6 +10,7 @@ namespace ac
 
 class Unit;
 class BaseManager;
+class Faction;
 class Tile;
 enum class FactionSpecies_t;
 struct BuildingConfig_t;
@@ -68,5 +71,15 @@ struct NativeRaidPlan_t
 };
 
 NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase);
+
+// Where rLost's Headquarters may escape to before rLost is taken (capture_base's ESCAPE,
+// terranx-map.md "Base transfer and Headquarters"): the owner's other base with the lowest
+// HeadquartersEscapeScore, the first on ties. nullopt unless rLost is the Headquarters and the
+// owner can afford headquarters_escape's cost. Read while the owner still holds rLost.
+std::optional<BaseId_t> HeadquartersEscapeDestination(const BaseManager& rLost);
+
+// Whether rOwner may still pay to move its Headquarters to rDestination: it holds none, owns
+// rDestination, and can afford headquarters_escape's cost.
+bool MayEvacuateHeadquarters(const Faction& rOwner, const BaseManager& rDestination);
 
 } // namespace ac

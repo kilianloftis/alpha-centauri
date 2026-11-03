@@ -62,7 +62,7 @@ std::optional<TalkDraftHeadings_t> TalkConversation::DraftHeadings() const
 void TalkConversation::AddRows_(std::vector<PopupChoice_t>& rRows,
                                 const TalkFixedChoice_t& rChoice)
 {
-    if (rChoice.when && !Holds_(*rChoice.when))
+    if (rChoice.when && !Offers_(*rChoice.when))
     {
         return;
     }
@@ -133,28 +133,16 @@ std::string TalkConversation::Say_(const std::vector<TalkTextRef_t>& rLines)
     return m_bindings.Text(rLines[pick(m_rng)]);
 }
 
-bool TalkConversation::Holds_(TalkCondition_t condition) const
+bool TalkConversation::Offers_(DiplomaticActionKind_t kind) const
 {
     const std::vector<DiplomaticActionKind_t> actions =
         GetTalkActions(m_rGameState.GetDiplomacyLedger(), m_playerId, m_rivalId);
-    const auto offers = [&actions](DiplomaticActionKind_t kind)
-    { return std::ranges::find(actions, kind) != actions.end(); };
-    switch (condition)
-    {
-    case TalkCondition_t::MayProposeTruce:
-        return offers(DiplomaticActionKind_t::ProposeTruce);
-    case TalkCondition_t::MayProposeTreaty:
-        return offers(DiplomaticActionKind_t::ProposeTreaty);
-    case TalkCondition_t::MayProposePact:
-        return offers(DiplomaticActionKind_t::ProposePact);
-    case TalkCondition_t::MayRenouncePact:
-        return offers(DiplomaticActionKind_t::CancelTreaty);
-    case TalkCondition_t::MayTrade:
-        return offers(DiplomaticActionKind_t::Trade);
-    case TalkCondition_t::HasDraft:
-        return !m_offer.empty() || !m_ask.empty();
-    }
-    throw std::logic_error("TalkConversation: unhandled TalkCondition_t");
+    return std::ranges::find(actions, kind) != actions.end();
+}
+
+bool TalkConversation::HasDraft_() const
+{
+    return !m_offer.empty() || !m_ask.empty();
 }
 
 bool TalkConversation::IsAvailable_(TalkAction_t action) const
@@ -162,17 +150,17 @@ bool TalkConversation::IsAvailable_(TalkAction_t action) const
     switch (action)
     {
     case TalkAction_t::ProposeTruce:
-        return Holds_(TalkCondition_t::MayProposeTruce);
+        return Offers_(DiplomaticActionKind_t::ProposeTruce);
     case TalkAction_t::ProposeTreaty:
-        return Holds_(TalkCondition_t::MayProposeTreaty);
+        return Offers_(DiplomaticActionKind_t::ProposeTreaty);
     case TalkAction_t::ProposePact:
-        return Holds_(TalkCondition_t::MayProposePact);
+        return Offers_(DiplomaticActionKind_t::ProposePact);
     case TalkAction_t::ProposeTrade:
-        return Holds_(TalkCondition_t::MayTrade) && Holds_(TalkCondition_t::HasDraft);
+        return Offers_(DiplomaticActionKind_t::Trade) && HasDraft_();
     case TalkAction_t::RenouncePact:
-        return Holds_(TalkCondition_t::MayRenouncePact);
+        return Offers_(DiplomaticActionKind_t::RenouncePact);
     case TalkAction_t::ClearTrade:
-        return Holds_(TalkCondition_t::HasDraft);
+        return HasDraft_();
     }
     throw std::logic_error("TalkConversation: unhandled TalkAction_t");
 }
@@ -252,10 +240,9 @@ std::vector<TalkCandidate_t> TalkConversation::Candidates_(TradeKind_t kind,
                                                            TradeSide_t side) const
 {
     const FactionId_t giver = GiverOf_(side);
-    const FactionId_t receiver = ReceiverOf_(side);
     std::vector<TalkCandidate_t> candidates = ItemsOf_(kind, giver);
-    std::erase_if(candidates, [giver, receiver](const TalkCandidate_t& rCandidate)
-                  { return !CanDeliver(giver, receiver, rCandidate.item); });
+    std::erase_if(candidates, [this, side](const TalkCandidate_t& rCandidate)
+                  { return !MayDraft_(side, rCandidate.item); });
     const Faction& rGiver = m_rGameState.RequireFaction(giver);
     for (TalkCandidate_t& rCandidate : candidates)
     {
@@ -334,9 +321,13 @@ FactionId_t TalkConversation::GiverOf_(TradeSide_t side) const
     return side == TradeSide_t::Offer ? m_playerId : m_rivalId;
 }
 
-FactionId_t TalkConversation::ReceiverOf_(TradeSide_t side) const
+bool TalkConversation::MayDraft_(TradeSide_t side, const TradeItem_t& rItem) const
 {
-    return side == TradeSide_t::Offer ? m_rivalId : m_playerId;
+    if (side == TradeSide_t::Offer)
+    {
+        return CanDeliver(m_playerId, m_rivalId, rItem);
+    }
+    return CanDemand(m_rivalId, m_playerId, rItem);
 }
 
 std::vector<TalkDraftItem_t>& TalkConversation::SideOf_(TradeSide_t side)

@@ -331,11 +331,12 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
   optional `when`, optional `do`, then `then` with an optional `say`, or `on` with one outcome per
   result) or generated rows (`from`: `trade_kinds` with a `side`, or `trade_candidates`, each
   with a label per trade kind). `end` closes the talk.
-- **Vocabulary**: conditions `MayProposeTruce` / `Treaty` / `Pact`, `MayRenouncePact`, `MayTrade`
-  (from `GetTalkActions`) and `HasDraft`; actions `ProposeTruce` / `Treaty` / `Pact` /
-  `ProposeTrade` (results `Accepted`, `Rejected`, `Invalid`, through
-  `DiplomaticActionExecutor::Propose`), `RenouncePact` (`CancelTreaty`) and `ClearTrade` (`Done`).
-  A row whose action is unavailable is hidden. Value sources: `player.` / `rival.` + a vocabulary
+- **Vocabulary**: `when` names a `GetTalkActions` kind (`ProposeTruce` / `Treaty` / `Pact`,
+  `RenouncePact`, `Trade`); actions `ProposeTruce` / `Treaty` / `Pact` / `ProposeTrade` (results
+  `Accepted`, `Rejected`, `Invalid`, through `DiplomaticActionExecutor::Propose`), `RenouncePact`
+  (`CancelTreaty`) and `ClearTrade` (`Done`). A row whose action is unavailable is hidden; the
+  trade actions also need a draft. Candidate rows list what `CanDeliver` allows on the offer
+  side and `CanDemand` on the ask side. Value sources: `player.` / `rival.` + a vocabulary
   field, `phrase.<name>` (`get_phrase`), `noun_phrase.<name>` (`get_noun_phrase`), `pact_brother`
   (`get_pact`); `pact_hood`; `caption` (the rival's noun, ` - `, `CaptionMood`); and on trade rows
   `candidate.name` / `candidate.amount`. Enum names in the file are the enumerators'.

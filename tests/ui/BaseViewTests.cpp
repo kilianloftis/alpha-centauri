@@ -610,7 +610,7 @@ TEST_CASE("Headquarters explains that it cannot be scrapped instead of quoting a
 {
     ViewFixture fixture;
     BaseManager& rBase = fixture.MakeBase(8, 8);
-    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
     REQUIRE(pView);

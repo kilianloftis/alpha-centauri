@@ -1,6 +1,7 @@
 #include "game/diplomacy/DiplomaticProposalRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/base/BaseManager.h"
 #include "game/faction/Faction.h"
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyLedger.h"
@@ -9,6 +10,7 @@
 #include "game/visibility/FactionExploredMap.h"
 #include "game/research/ResearchManager.h"
 
+#include <algorithm>
 #include <set>
 #include <variant>
 #include <vector>
@@ -37,9 +39,10 @@ struct CanDeliver_
             && !rReceiver.GetResearch().HasDiscoveredTech(rTechnology.techId);
     }
 
+    // make_gift and base_swap never take a faction's last base (terranx-map.md, Base swap).
     bool operator()(const TradeBase_t& rBase) const
     {
-        return rGiver.FindBase(rBase.baseId) != nullptr;
+        return rGiver.FindBase(rBase.baseId) != nullptr && rGiver.GetBaseCount() > 1;
     }
 
     bool operator()(const TradeCommFrequency_t& rFrequency) const
@@ -105,6 +108,14 @@ int TotalCredits_(const std::vector<TradeItem_t>& rItems)
     return total;
 }
 
+// However many bases a side hands over, its giver keeps one.
+bool KeepsABase_(const Faction& rGiver, const std::vector<TradeItem_t>& rItems)
+{
+    const auto bases = std::ranges::count_if(
+        rItems, [](const TradeItem_t& rItem) { return std::holds_alternative<TradeBase_t>(rItem); });
+    return bases == 0 || static_cast<std::size_t>(bases) < rGiver.GetBaseCount();
+}
+
 bool IsValidSide_(const GameState& rState, const Faction& rGiver, const Faction& rReceiver,
                   const std::vector<TradeItem_t>& rItems)
 {
@@ -115,7 +126,26 @@ bool IsValidSide_(const GameState& rState, const Faction& rGiver, const Faction&
             return false;
         }
     }
-    return OffersNothingTwice_(rItems) && rGiver.GetEconomy().CanAfford(TotalCredits_(rItems));
+    return OffersNothingTwice_(rItems) && KeepsABase_(rGiver, rItems)
+        && rGiver.GetEconomy().CanAfford(TotalCredits_(rItems));
+}
+
+// base_swap refuses to hand over the asked faction's headquarters (NOMYHQ); a base offered or
+// given may be the giver's headquarters.
+bool IsGiversHeadquarters_(const Faction& rGiver, const TradeItem_t& rItem)
+{
+    const auto* pBase = std::get_if<TradeBase_t>(&rItem);
+    const BaseManager* pHeadquarters = rGiver.GetHeadquarters();
+    return pBase && pHeadquarters && pHeadquarters->GetBaseId() == pBase->baseId;
+}
+
+bool IsValidDemand_(const GameState& rState, const Faction& rGiver, const Faction& rReceiver,
+                    const std::vector<TradeItem_t>& rItems)
+{
+    const auto isHeadquarters = [&rGiver](const TradeItem_t& rItem)
+    { return IsGiversHeadquarters_(rGiver, rItem); };
+    return IsValidSide_(rState, rGiver, rReceiver, rItems)
+        && std::ranges::none_of(rItems, isHeadquarters);
 }
 
 bool IsValidStatusRequest_(const DiplomacyLedger& rLedger, const DiplomaticProposal_t& rProposal)
@@ -151,7 +181,7 @@ bool IsValidProposal(const DiplomaticProposal_t& rProposal)
     }
     return IsValidStatusRequest_(rLedger, rProposal)
         && IsValidSide_(rGameState, *pProposer, *pRecipient, rProposal.give)
-        && IsValidSide_(rGameState, *pRecipient, *pProposer, rProposal.demand);
+        && IsValidDemand_(rGameState, *pRecipient, *pProposer, rProposal.demand);
 }
 
 bool CanDeliver(FactionId_t giver, FactionId_t receiver, const TradeItem_t& rItem)
@@ -160,6 +190,12 @@ bool CanDeliver(FactionId_t giver, FactionId_t receiver, const TradeItem_t& rIte
     const Faction& rGiver = rGameState.RequireFaction(giver);
     const Faction& rReceiver = rGameState.RequireFaction(receiver);
     return std::visit(CanDeliver_{rGameState, rGiver, rReceiver}, rItem);
+}
+
+bool CanDemand(FactionId_t giver, FactionId_t receiver, const TradeItem_t& rItem)
+{
+    const Faction& rGiver = CurrentGameState().RequireFaction(giver);
+    return CanDeliver(giver, receiver, rItem) && !IsGiversHeadquarters_(rGiver, rItem);
 }
 
 } // namespace ac

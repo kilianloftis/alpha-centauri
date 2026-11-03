@@ -59,7 +59,7 @@
             "item": 1,
             "args": "menu"
           },
-          "when": "MayRenouncePact",
+          "when": "RenouncePact",
           "then": "confirm_renounce"
         },
         {
@@ -196,7 +196,7 @@
             "text": "PROPOSE_MENU",
             "item": 4
           },
-          "when": "MayTrade",
+          "when": "Trade",
           "then": "trade"
         },
         {

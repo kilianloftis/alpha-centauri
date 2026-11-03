@@ -166,6 +166,13 @@ void RequireFrameCandidate_(const Faction& rActor, const ProbeActionConfig_t& rA
     }
 }
 
+// TODO: AI attitude model. Until it exists every victim that may keep does. A player victim
+// should get SMAC's EXCUSE / PACTEXCUSE choice; no AI probes the player yet.
+bool VictimKeepsAgreement_(const ProbeAftermath_t& rAftermath)
+{
+    return rAftermath.bMayKeepAgreement;
+}
+
 } // namespace
 
 ProbeActionExecutor::ProbeActionExecutor(const MoraleCalculator& rMorale,
@@ -415,6 +422,8 @@ std::optional<ProbeFrame_t> ProbeActionExecutor::ApplyProbeStanding_(
     const Unit& rUnit, const ProbeActionConfig_t& rAction, const ProbeTarget_t& rTarget,
     GameState& rGameState, std::optional<FactionId_t> framedId, const ProbeRollResult_t& roll)
 {
+    // TODO: Total Thought Control leaves the victim wanting revenge and set to betray the actor
+    // (SHALL_BETRAY | DIPLO_WANT_REVENGE, 0x5A4B76); there is no revenge record yet.
     if (!ProbeDeclaresHostileAct(rAction))
     {
         return std::nullopt;
@@ -427,9 +436,17 @@ std::optional<ProbeFrame_t> ProbeActionExecutor::ApplyProbeStanding_(
         // there is no revenge record yet.
         ApplyProbeVendetta(rGameState, standing.frame->avenger, standing.frame->avengedOn);
     }
-    if (standing.aftermath.has_value())
+    if (!standing.aftermath.has_value())
     {
-        ApplyProbeAftermath(rGameState, act, *standing.aftermath, m_rRng);
+        return standing.frame;
+    }
+    if (VictimKeepsAgreement_(*standing.aftermath))
+    {
+        KeepProbeAgreement(rGameState, act, *standing.aftermath, m_rRng);
+    }
+    else
+    {
+        BreakProbeAgreement(rGameState, act, *standing.aftermath);
     }
     return standing.frame;
 }

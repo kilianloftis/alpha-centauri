@@ -3,7 +3,12 @@
 #include "game/CurrentGameState.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/base/BaseConquestCalculator.h"
 #include "game/base/BaseConquestConfig.h"
+#include "game/base/BaseRules.h"
+#include "game/economy/EconomyManager.h"
+#include "game/map/MapUtils.h"
+#include "game/map/RegionCache.h"
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -25,9 +30,51 @@ namespace ac
 namespace
 {
 
-// Capture and native raids may take the Headquarters but never a secret project.
-constexpr FacilityExclusions_t k_ConquestFacilityExclusions{.excludeHq = false,
-                                                            .excludeSecretProjects = true};
+// A captured Headquarters is always lost (TransferBaseTo), so it is no random loss.
+constexpr FacilityExclusions_t k_CaptureFacilityExclusions{.excludeHq = true,
+                                                           .excludeSecretProjects = true};
+// A native raid may take the Headquarters but never a secret project.
+constexpr FacilityExclusions_t k_RaidFacilityExclusions{.excludeHq = false,
+                                                        .excludeSecretProjects = true};
+
+const HeadquartersEscapeConfig_t& EscapeConfig_()
+{
+    return CurrentGameState().GetGameData().baseConquestConfig->headquartersEscape;
+}
+
+bool CanAffordEscape_(const Faction& rOwner)
+{
+    return rOwner.GetEconomy().CanAfford(EscapeConfig_().cost);
+}
+
+// rCandidate against its owner's other bases, rLost excluded.
+EscapeScoreInputs_t EscapeScoreInputs_(const BaseManager& rCandidate, const BaseManager& rLost)
+{
+    const WorldMap& rMap = CurrentGameState().GetWorldMap();
+    const RegionCache& rRegions = rMap.GetRegions();
+    const int region = rRegions.RegionOf(rCandidate.GetTile());
+    EscapeScoreInputs_t inputs;
+    for (const BaseManager& rOther : rCandidate.GetFaction().Bases())
+    {
+        if (&rOther == &rCandidate || &rOther == &rLost)
+        {
+            continue;
+        }
+        const int distance =
+            TabletopDiagonalDistance(rCandidate.GetTile(), rOther.GetTile(), rMap.GetWidth());
+        if (rRegions.RegionOf(rOther.GetTile()) == region)
+        {
+            inputs.sameRegionDistance += distance;
+        }
+        else
+        {
+            inputs.otherRegionDistance += distance;
+        }
+    }
+    inputs.regionBases = RegionBaseCount(rCandidate.GetFaction(), region);
+    inputs.population = rCandidate.GetPopulation().GetSize();
+    return inputs;
+}
 
 } // namespace
 
@@ -117,7 +164,7 @@ CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase)
     const bool bCrossSpecies = IsCrossSpeciesConquest(capturer, owner);
 
     outcome.facilityCandidates =
-        CollectDestroyableFacilities(rBase, k_ConquestFacilityExclusions);
+        CollectDestroyableFacilities(rBase, k_CaptureFacilityExclusions);
     if (!outcome.facilityCandidates.empty())
     {
         // Both bounds clamp to what the base has, so no modifier can invert the range.
@@ -156,12 +203,46 @@ NativeRaidPlan_t PlanNativeRaid(const BaseManager& rBase)
     NativeRaidPlan_t plan;
     plan.popLoss = pConfig->nativeRaid.popLoss;
     plan.facilityCandidates =
-        CollectDestroyableFacilities(rBase, k_ConquestFacilityExclusions);
+        CollectDestroyableFacilities(rBase, k_RaidFacilityExclusions);
     if (!plan.facilityCandidates.empty())
     {
         plan.facilityChancePercent = pConfig->nativeRaid.facilityChancePercent;
     }
     return plan;
+}
+
+std::optional<BaseId_t> HeadquartersEscapeDestination(const BaseManager& rLost)
+{
+    const Faction& rOwner = rLost.GetFaction();
+    if (!rLost.IsHeadquarters() || !CanAffordEscape_(rOwner))
+    {
+        return std::nullopt;
+    }
+    const BaseConquestCalculator& rCalculator =
+        *CurrentGameState().GetGameData().baseConquestCalculator;
+    std::optional<BaseId_t> best;
+    int bestScore = 0;
+    for (const BaseManager& rCandidate : rOwner.Bases())
+    {
+        if (&rCandidate == &rLost)
+        {
+            continue;
+        }
+        const EscapeScoreInputs_t inputs = EscapeScoreInputs_(rCandidate, rLost);
+        const int score = rCalculator.HeadquartersEscapeScore(inputs);
+        if (!best || score < bestScore)
+        {
+            best = rCandidate.GetBaseId();
+            bestScore = score;
+        }
+    }
+    return best;
+}
+
+bool MayEvacuateHeadquarters(const Faction& rOwner, const BaseManager& rDestination)
+{
+    return rOwner.GetHeadquarters() == nullptr && &rDestination.GetFaction() == &rOwner
+        && CanAffordEscape_(rOwner);
 }
 
 } // namespace ac

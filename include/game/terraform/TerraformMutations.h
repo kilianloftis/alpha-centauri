@@ -3,11 +3,13 @@
 #include "game/terraform/TerraformRules.h"
 
 #include <random>
+#include <span>
 #include <string>
 
 namespace ac
 {
 
+class Faction;
 class GameState;
 class IUnitOrderWorld;
 class Tile;
@@ -23,5 +25,9 @@ void StartTerraform(GameState& rGameState, Unit& rFormer, const std::string& pro
 bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
                           TileEffectsContext& rTileEffects, Unit& rFormer, std::mt19937& rRng,
                           IUnitOrderWorld& rWorld);
+
+// RainfallGrievant's faction gains terraform_rainfall_friction toward rTerraformer.
+void ApplyRainfallGrievance(GameState& rGameState, const Faction& rTerraformer,
+                            std::span<const MoistureChange_t> changes);
 
 } // namespace ac

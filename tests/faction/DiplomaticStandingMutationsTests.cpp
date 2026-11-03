@@ -1,5 +1,6 @@
 #include "DiplomacyFixture.h"
 
+#include "game/combat/FightAftermathRules.h"
 #include "game/diplomacy/DiplomaticProposalMutations.h"
 #include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
@@ -12,6 +13,9 @@
 #include "game/units/UnitAttackExecutor.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+
+#include <algorithm>
 
 using namespace ac;
 using namespace actest;
@@ -330,17 +334,35 @@ TEST_CASE("A battle on allied ground floors the attacker's gift count toward the
           "[diplomacy][standing][combat][gifts]")
 {
     DiplomacyFixture game;
-    Tile& rBattle = SetUpAlliedTerritory_(game);
+    SetUpAlliedTerritory_(game);
     const FactionId_t a = game.pA->GetFactionId();
     const FactionId_t b = game.pB->GetFactionId();
-    const FactionId_t c = game.pC->GetFactionId();
+    const int floor =
+        game.fixtures.state.GetGameData().diplomacyConfig->alliedTerritoryBattleGiftsFloor;
+    REQUIRE(floor == 1);
+    const int before = GENERATE(0, 3);
+    game.Ledger().SetGifts(a, b, before);
+    Unit& rAttacker = game.MakeUnit(*game.pA, 10, 8, {"test_chassis", "test_weapon"});
+    Unit& rDefender = game.MakeUnit(*game.pC, 11, 9);
 
-    ApplyAlliedTerritoryFriction(game.fixtures.state, a, c, rBattle);
-    CHECK(game.Ledger().GetGifts(a, b) == 1);
+    REQUIRE(game.fixtures.state.GetUnitAttacks().TryAttack(rAttacker, rDefender));
 
-    game.Ledger().SetGifts(a, b, 3);
-    ApplyAlliedTerritoryFriction(game.fixtures.state, a, c, rBattle);
-    CHECK(game.Ledger().GetGifts(a, b) == 3);
+    CHECK(game.Ledger().GetGifts(a, b) == std::max(before, floor));
+}
+
+TEST_CASE("RaiseGifts raises a count to the floor and keeps a higher one",
+          "[diplomacy][standing][gifts]")
+{
+    DiplomacyFixture game;
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+
+    RaiseGifts(game.fixtures.state, a, b, 2);
+    CHECK(game.Ledger().GetGifts(a, b) == 2);
+
+    game.Ledger().SetGifts(a, b, 5);
+    RaiseGifts(game.fixtures.state, a, b, 2);
+    CHECK(game.Ledger().GetGifts(a, b) == 5);
 }
 
 TEST_CASE("ApplyGiftStanding writes the recipient's friction and the giver's count",

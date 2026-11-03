@@ -57,5 +57,12 @@
   "native_raid": {
     "facility_chance_percent": 50,
     "pop_loss": 1
+  },
+  "headquarters_escape": {
+    "cost": 1000,
+    "score_seed": 1,
+    "score_scale": 256,
+    "other_region_distance_factor": 2,
+    "population_factor": 2
   }
 }

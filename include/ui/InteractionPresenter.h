@@ -52,6 +52,11 @@ private:
     void PresentProbeFrameNotice_(const ProbeFrameNoticeInteraction_t& rNotice);
     void PresentAtrocityNotice_(const AtrocityNoticeInteraction_t& rNotice);
     void PresentCaptureNotice_(const CaptureNoticeInteraction_t& rNotice);
+    void PresentHeadquartersEscape_(const HeadquartersEscapeInteraction_t& rEscape);
+    // The player's own Headquarters: pay to move it, or let it go.
+    void OfferHeadquartersEscape_(const HeadquartersEscapeInteraction_t& rEscape);
+    // An AI's Headquarters has already moved.
+    void ReportHeadquartersEscaped_(const HeadquartersEscapeInteraction_t& rEscape);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);
     Unit* FindUnit_(UnitId_t unitId);

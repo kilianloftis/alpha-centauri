@@ -248,9 +248,4 @@ int DiplomacyCalculator::NextGifts(int current, int giverBlemishes, GiftSize_t s
     return next;
 }
 
-int DiplomacyCalculator::AlliedTerritoryGifts(int current) const
-{
-    return std::max(current, m_rConfig.alliedTerritoryBattleGiftsFloor);
-}
-
 } // namespace ac

@@ -6,6 +6,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
+#include "game/economy/EconomyManager.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -14,6 +15,8 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/base/BaseConquestCalculator.h"
 #include "game/base/BaseConquestConfig.h"
 #include "game/base/BaseConquestMutations.h"
 #include "game/base/BaseConquestRules.h"
@@ -29,10 +32,12 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <optional>
 #include <random>
 #include <ranges>
 #include <stdexcept>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 using namespace ac;
@@ -482,6 +487,7 @@ TEST_CASE("Native life raids an undefended base then disappears", "[unit][conque
 {
     ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
 
     Unit& worm = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
@@ -499,8 +505,8 @@ TEST_CASE("Native life raids an undefended base then disappears", "[unit][conque
     CHECK(CountUnits_(*game.pPlayer) == nativesBefore - 1);
 
     const BaseManager& rRaided = *game.pAi->Bases().begin();
-    // Founding granted Headquarters, so the raid starts with two destroyable facilities.
-    // Destroying one leaves a building; emptying the list is no longer the facility outcome.
+    // The Headquarters makes two destroyable facilities. Destroying one leaves a building;
+    // emptying the list is no longer the facility outcome.
     const bool bFacilityDestroyed = rRaided.GetBuildingManager().GetBuildings().size() == 1;
     const bool bPopLost = rRaided.GetPopulation().GetSize() == 2;
     CHECK(bFacilityDestroyed != bPopLost);
@@ -798,7 +804,7 @@ TEST_CASE("A raid on a populated base with a facility is a coin flip between the
 {
     ConquestGame_ game(FactionSpecies_t::Human, FactionSpecies_t::Human);
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
-    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
 
     const NativeRaidPlan_t plan = PlanNativeRaid(rBase);
     CHECK_FALSE(plan.facilityCandidates.empty());
@@ -853,7 +859,7 @@ TEST_CASE("ResolvePostCombatBaseConquest applies a native raid after the casualt
 {
     ConquestGame_ game(FactionSpecies_t::NativeLife, FactionSpecies_t::Human);
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
-    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
     game.fixtures.dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 100;
 
     Unit& worm =
@@ -880,3 +886,160 @@ TEST_CASE("ResolveBaseEntryConquest rejects a GameState that is not current",
     std::mt19937 rng(1);
     CHECK_THROWS_AS(ResolveBaseEntryConquest(mover, *pOther, rng), std::logic_error);
 }
+
+namespace
+{
+
+// rCaptor's unit steps from (8, 8) onto the base at (9, 9).
+void CaptureAt99_(ConquestGame_& rGame, Faction& rCaptor)
+{
+    Unit& rMover = rGame.MakeUnit(rCaptor, 8, 8, {"test_chassis", "test_weapon"});
+    MoveOrder_t order;
+    Tile& rTarget = *rGame.fixtures.state.GetWorldMap().GetTile(9, 9);
+    REQUIRE(rGame.fixtures.state.GetUnitMoves().TryStep(rMover, rTarget, order).bEntered);
+}
+
+// An owner with a Headquarters at (9, 9) and three more bases on row 13; (17, 13) sits between
+// the other two, so it is the escape.
+struct EscapeSetup_t
+{
+    BaseManager* pHeadquarters = nullptr;
+    BaseManager* pWest = nullptr;
+    BaseManager* pMiddle = nullptr;
+    BaseManager* pEast = nullptr;
+};
+
+EscapeSetup_t MakeEscapeSetup_(ConquestGame_& rGame, Faction& rOwner)
+{
+    EscapeSetup_t setup;
+    setup.pHeadquarters = &rGame.MakeBase(rOwner, 9, 9);
+    setup.pHeadquarters->GetBuildingManager().AddBuilding("Headquarters");
+    setup.pWest = &rGame.MakeBase(rOwner, 13, 13);
+    setup.pMiddle = &rGame.MakeBase(rOwner, 17, 13);
+    setup.pEast = &rGame.MakeBase(rOwner, 27, 13);
+    return setup;
+}
+
+int EscapeCost_(ConquestGame_& rGame)
+{
+    return rGame.fixtures.dataContext.baseConquestConfig->headquartersEscape.cost;
+}
+
+bool QueuedEscapeFor_(ConquestGame_& rGame, const Faction& rOwner, const BaseManager& rTo)
+{
+    return rGame.fixtures.state.GetPlayerInteractions().AnyOf(
+        [&](const QueuedInteraction_t& rQueued)
+        {
+            const auto* pEscape = std::get_if<HeadquartersEscapeInteraction_t>(&rQueued.payload);
+            return pEscape && pEscape->ownerId == rOwner.GetFactionId()
+                && pEscape->destinationId == rTo.GetBaseId();
+        });
+}
+
+} // namespace
+
+TEST_CASE("A captured Headquarters is always lost, whatever the random facility loss",
+          "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
+                                StatId_t::CaptureFacilitiesDestroyedMaxPercent, 0);
+    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
+                                StatId_t::CaptureFacilitiesDestroyedMin, 0);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+
+    CaptureAt99_(game, *game.pPlayer);
+
+    REQUIRE(&rBase.GetFaction() == game.pPlayer);
+    CHECK_FALSE(rBase.IsHeadquarters());
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_a"));
+    CHECK(game.pPlayer->GetHeadquarters() == nullptr);
+}
+
+TEST_CASE("The escape goes to the base closest to the owner's others", "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    const EscapeSetup_t setup = MakeEscapeSetup_(game, *game.pAi);
+    game.pAi->GetEconomy().AddEnergy(EscapeCost_(game));
+
+    CHECK(HeadquartersEscapeDestination(*setup.pHeadquarters) == setup.pMiddle->GetBaseId());
+    CHECK_FALSE(HeadquartersEscapeDestination(*setup.pWest));
+}
+
+TEST_CASE("At equal spread the escape goes to the more populous base", "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    BaseManager& rHeadquarters = game.MakeBase(*game.pAi, 9, 9);
+    rHeadquarters.GetBuildingManager().AddBuilding("Headquarters");
+    game.MakeBase(*game.pAi, 13, 13, /*pop=*/3);
+    BaseManager& rLarger = game.MakeBase(*game.pAi, 27, 13, /*pop=*/6);
+    game.pAi->GetEconomy().AddEnergy(EscapeCost_(game));
+
+    CHECK(HeadquartersEscapeDestination(rHeadquarters) == rLarger.GetBaseId());
+}
+
+TEST_CASE("An AI that can pay moves its captured Headquarters and the player hears of it",
+          "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    const EscapeSetup_t setup = MakeEscapeSetup_(game, *game.pAi);
+    game.pAi->GetEconomy().AddEnergy(EscapeCost_(game) + 7);
+
+    CaptureAt99_(game, *game.pPlayer);
+
+    CHECK(game.pAi->GetHeadquarters() == setup.pMiddle);
+    CHECK(game.pAi->GetEconomy().GetEnergy() == 7);
+    CHECK_FALSE(setup.pHeadquarters->IsHeadquarters());
+    CHECK(QueuedEscapeFor_(game, *game.pAi, *setup.pMiddle));
+}
+
+TEST_CASE("Without the cost a captured Headquarters cannot escape", "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    MakeEscapeSetup_(game, *game.pAi);
+    game.pAi->GetEconomy().AddEnergy(EscapeCost_(game) - 1);
+
+    CaptureAt99_(game, *game.pPlayer);
+
+    CHECK(game.pAi->GetHeadquarters() == nullptr);
+    CHECK(game.pAi->GetEconomy().GetEnergy() == EscapeCost_(game) - 1);
+    CHECK(game.fixtures.state.GetPlayerInteractions().Empty());
+}
+
+TEST_CASE("The player is asked before its captured Headquarters moves", "[unit][conquest][hq]")
+{
+    ConquestGame_ game;
+    const EscapeSetup_t setup = MakeEscapeSetup_(game, *game.pPlayer);
+    game.pPlayer->GetEconomy().AddEnergy(EscapeCost_(game));
+
+    CaptureAt99_(game, *game.pAi);
+
+    CHECK(game.pPlayer->GetHeadquarters() == nullptr);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == EscapeCost_(game));
+    REQUIRE(QueuedEscapeFor_(game, *game.pPlayer, *setup.pMiddle));
+    REQUIRE(MayEvacuateHeadquarters(*game.pPlayer, *setup.pMiddle));
+
+    EvacuateHeadquarters(game.fixtures.state, *game.pPlayer, *setup.pMiddle);
+
+    CHECK(game.pPlayer->GetHeadquarters() == setup.pMiddle);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 0);
+    CHECK_FALSE(MayEvacuateHeadquarters(*game.pPlayer, *setup.pEast));
+}
+
+TEST_CASE("The escape score weighs spread, region and population",
+          "[unit][conquest][hq][calculator]")
+{
+    ConquestGame_ game;
+    const BaseConquestCalculator& rCalculator = *game.fixtures.dataContext.baseConquestCalculator;
+    EscapeScoreInputs_t inputs;
+    inputs.sameRegionDistance = 10;
+    inputs.otherRegionDistance = 5;
+    inputs.regionBases = 2;
+    inputs.population = 3;
+
+    // (1 + 10 + 2 x 5) x 256 / (2 + 2 x 3), from FactionFixture's headquarters_escape.
+    CHECK(rCalculator.HeadquartersEscapeScore(inputs) == 672);
+}
+

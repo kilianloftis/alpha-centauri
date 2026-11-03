@@ -4,7 +4,6 @@
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
-#include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/base/BaseManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/MapUtils.h"
@@ -12,6 +11,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/map/Tile.h"
+#include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 
 #include <catch2/catch_test_macros.hpp>

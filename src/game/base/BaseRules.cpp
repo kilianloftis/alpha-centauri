@@ -5,17 +5,14 @@
 #include "game/base/BaseManager.h"
 #include "game/economy/WorkerAssignmentManager.h"
 #include "game/faction/Faction.h"
+#include "game/map/RegionCache.h"
+#include "game/map/WorldMap.h"
 
 #include <algorithm>
 #include <vector>
 
 namespace ac
 {
-
-bool GrantsHeadquarters(const Faction& rFaction)
-{
-    return rFaction.GetHeadquarters() == nullptr;
-}
 
 int HeadquartersDistance(const Faction& rFaction, const Tile& rTile)
 {
@@ -27,6 +24,15 @@ int HeadquartersDistance(const Faction& rFaction, const Tile& rTile)
     const int mapWidth = CurrentGameState().GetWorldMap().GetWidth();
     // The binary's vector_dist, which TabletopDiagonalDistance equals on every offset.
     return TabletopDiagonalDistance(rTile, pHq->GetTile(), mapWidth);
+}
+
+int RegionBaseCount(const Faction& rFaction, int region)
+{
+    const RegionCache& rRegions = CurrentGameState().GetWorldMap().GetRegions();
+    const auto inRegion = [&](const BaseManager& rBase)
+    { return rRegions.RegionOf(rBase.GetTile()) == region; };
+    const auto count = std::ranges::count_if(rFaction.Bases(), inRegion);
+    return static_cast<int>(count);
 }
 
 bool MayWorkTile(const WorkerAssignmentManager& rAssignments, const Tile& rTile)

@@ -32,7 +32,6 @@ TEST_CASE("Proposals step up one status at a time", "[diplomacy][transitions]")
     Meet_(ledger);
     ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
     CHECK_FALSE(CanProposeStepUp(ledger, 1, 2));
-    CHECK(CanDeclareVendetta(ledger, 1, 2));
 }
 
 TEST_CASE("Canceling steps down one status at a time", "[diplomacy][transitions]")
@@ -42,15 +41,6 @@ TEST_CASE("Canceling steps down one status at a time", "[diplomacy][transitions]
     CHECK(StepDown(DiplomaticStatus_t::Truce) == DiplomaticStatus_t::Neutral);
     CHECK_FALSE(StepDown(DiplomaticStatus_t::Neutral).has_value());
     CHECK_FALSE(StepDown(DiplomaticStatus_t::Vendetta).has_value());
-
-    DiplomacyLedger ledger;
-    Meet_(ledger);
-    for (const DiplomaticStatus_t status :
-         {DiplomaticStatus_t::Truce, DiplomaticStatus_t::Treaty, DiplomaticStatus_t::Pact})
-    {
-        ledger.SetStatus(1, 2, status);
-        CHECK(CanCancelTreaty(ledger, 1, 2));
-    }
 }
 
 TEST_CASE("An attributed act the pair's status forbids is a sneak attack",

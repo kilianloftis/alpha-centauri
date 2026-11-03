@@ -9,6 +9,7 @@ namespace ac
 
 class Unit;
 class BaseManager;
+class Faction;
 class GameState;
 class Tile;
 
@@ -45,5 +46,14 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
 BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
                                               GameState& rGameState,
                                               std::mt19937& rRng);
+
+// rCaptor takes rBase by force, as capture_base does for conquest and mind control. When
+// HeadquartersEscapeDestination names a base, an AI owner moves its Headquarters there at once
+// and the player is told; a player owner is asked.
+void TakeBase(GameState& rGameState, BaseManager& rBase, Faction& rCaptor);
+
+// rOwner pays headquarters_escape's cost and builds its Headquarters at rDestination. Throws
+// unless MayEvacuateHeadquarters.
+void EvacuateHeadquarters(GameState& rGameState, Faction& rOwner, BaseManager& rDestination);
 
 } // namespace ac

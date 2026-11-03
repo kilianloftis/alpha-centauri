@@ -6,6 +6,8 @@
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/economy/EconomyManager.h"
 #include "lib/RandomRoll.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
@@ -28,6 +30,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -196,7 +199,6 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
     const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rGameState);
     Faction& rOldOwner = rBase.GetFaction();
     Faction& rNewOwner = rCapturer.GetFaction();
-    const BaseId_t baseId = rBase.GetBaseId();
     const CaptureOutcome_t outcome = PlanCapture(rCapturer, rBase);
 
     DestroyCaptureFacilities_(rBase, outcome, rRng, result);
@@ -210,13 +212,22 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
         return result;
     }
 
-    rBase.GetPopulation().NotifyCaptured(rOldOwner.GetFactionId(), rNewOwner.GetFactionId());
-    rOldOwner.TransferBaseTo(baseId, rNewOwner);
+    TakeBase(rGameState, rBase, rNewOwner);
     if (outcome.bRepairsCapturer)
     {
         rCapturer.SetCurrentHp(ResolveStat(rCapturer, StatId_t::HitPoints));
     }
     return result;
+}
+
+void OfferHeadquartersEscape_(GameState& rGameState, Faction& rOwner, BaseId_t destinationId)
+{
+    if (!rOwner.IsPlayerControlled())
+    {
+        EvacuateHeadquarters(rGameState, rOwner, *rOwner.FindBase(destinationId));
+    }
+    EnqueueForPlayer(rGameState,
+                     HeadquartersEscapeInteraction_t{rOwner.GetFactionId(), destinationId});
 }
 
 } // namespace
@@ -273,6 +284,30 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
         return ApplyCapture_(rMover, *pBase, rGameState, rRng);
     }
     return {};
+}
+
+void TakeBase(GameState& rGameState, BaseManager& rBase, Faction& rCaptor)
+{
+    Faction& rOwner = rBase.GetFaction();
+    const std::optional<BaseId_t> escape = HeadquartersEscapeDestination(rBase);
+    rBase.GetPopulation().NotifyCaptured(rOwner.GetFactionId(), rCaptor.GetFactionId());
+    rOwner.TransferBaseTo(rBase.GetBaseId(), rCaptor);
+    if (escape)
+    {
+        OfferHeadquartersEscape_(rGameState, rOwner, *escape);
+    }
+}
+
+void EvacuateHeadquarters(GameState& rGameState, Faction& rOwner, BaseManager& rDestination)
+{
+    if (!MayEvacuateHeadquarters(rOwner, rDestination))
+    {
+        throw std::logic_error("EvacuateHeadquarters: " + rOwner.GetDefinition().identity.name
+                               + " may not move its Headquarters to " + rDestination.GetName());
+    }
+    const int cost = rGameState.GetGameData().baseConquestConfig->headquartersEscape.cost;
+    rOwner.GetEconomy().SpendEnergy(cost);
+    rDestination.GetBuildingManager().AddBuilding("Headquarters");
 }
 
 } // namespace ac

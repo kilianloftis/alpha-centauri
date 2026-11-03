@@ -15,7 +15,6 @@
 #include "game/base/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
-#include "game/base/BaseRules.h"
 #include "game/base/BaseRuleset.h"
 #include "game/production/ScrapRefundCalculator.h"
 #include "game/production/ProductionRules.h"
@@ -410,6 +409,25 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
 namespace
 {
 
+// A faction holds one Headquarters, so a base never brings one to its new owner
+// (config/deviations/README.md, "A given Headquarters goes with the base").
+void DropHeadquarters_(BaseManager& rBase)
+{
+    BuildingManager& rBuildings = rBase.GetBuildingManager();
+    std::vector<BuildingId_t> headquarters;
+    for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildings())
+    {
+        if (ResolveFlag(pBuilding->effects, RuleFlagId_t::Headquarters))
+        {
+            headquarters.push_back(pBuilding->id);
+        }
+    }
+    for (const BuildingId_t& rId : headquarters)
+    {
+        rBuildings.DestroyBuilding(rId);
+    }
+}
+
 void RecomposeUnderOwner_(BaseManager& rBase)
 {
     rBase.GetPopulation().RecalculateComposition();
@@ -603,6 +621,7 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
     // The same object and id, rebound to every per-faction dependency.
     std::unique_ptr<BaseManager> pBase = ReleaseBase(baseId);
     BaseManager& rBase = *pBase;
+    DropHeadquarters_(rBase);
     rBase.RebindFaction(rReceiver);
     MigrateBuildingDeploys_(baseId, rReceiver);
     rReceiver.AddBase(std::move(pBase));
@@ -890,14 +909,6 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
 
-    // Without a Headquarters, inefficiency bills the no-HQ distance, so a faction's first base gets
-    // one. Transfers use AddBase and do not.
-    if (GrantsHeadquarters(*this)
-        && m_rDataContext.buildingRegistry->Find("Headquarters")
-        && pRawBase->GetBuildingManager().CanAddBuilding("Headquarters"))
-    {
-        pRawBase->GetBuildingManager().AddBuilding("Headquarters");
-    }
     // TODO: a base founded on water gets a free Pressure Dome, which also yields as Recycling
     // Tanks (docs/thinker/terranx-map.md, "Sea bases"); BaseManager::MayOccupyWater stands in.
 

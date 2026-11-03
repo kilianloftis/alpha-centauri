@@ -63,8 +63,12 @@ unless a change touches it. A change that breaks one is not finished.
    return FireStrikes_(rAttacker, BombardStrikeTargets(rAttacker, rTile));
    ```
 6. **Nothing speculative.** No function, getter, setter, type, interface or template without a
-   caller that needs it now. A config or Lua file in the repo counts as a caller, so a mod seam
-   lands with one that uses it. An interface is needed when it narrows what its consumer can reach
+   caller that needs it now or a known consumer. A config or Lua file in the repo counts as a
+   caller, so a mod seam lands with one that uses it. A consumer is known when the repo names it:
+   content we have not added yet that a documented SMAC mechanic needs (Morgan's
+   `gift_given_value` before Morgan ships), or a step of a plan in `.devin/plans/`. Build only
+   what that consumer needs, name it in the mechanic's docs, and test it through a fixture
+   config. "A mod might want it" and "it could be useful later" are not consumers. An interface is needed when it narrows what its consumer can reach
    or breaks a header cycle. A test is not a caller for a getter, setter or hook added only so the
    test can reach inside. A struct is a return type only when a function returns more than one
    thing.

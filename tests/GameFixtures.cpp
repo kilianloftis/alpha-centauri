@@ -16,6 +16,7 @@
 #include "game/combat/MoraleConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
+#include "game/base/BaseConquestCalculator.h"
 #include "game/diplomacy/DiplomacyCalculator.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/display/BaseSpriteSizesConfig.h"
@@ -238,6 +239,14 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::ConqueredDroneCap, -0.5);
     dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 50;
     dataContext.baseConquestConfig->nativeRaid.popLoss = 1;
+    dataContext.baseConquestConfig->headquartersEscape = ac::HeadquartersEscapeConfig_t{
+        .cost = 1000,
+        .scoreSeed = 1,
+        .scoreScale = 256,
+        .otherRegionDistanceFactor = 2,
+        .populationFactor = 2};
+    dataContext.baseConquestCalculator =
+        std::make_unique<ac::BaseConquestCalculator>(*dataContext.baseConquestConfig);
 }
 
 ac::MoraleCalculator& SessionInputs::morale() const

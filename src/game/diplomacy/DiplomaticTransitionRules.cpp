@@ -144,24 +144,6 @@ bool CanProposeStepUp(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t
     return rLedger.AreKnown(a, b) && StepUp(rLedger.GetStatus(a, b)).has_value();
 }
 
-bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    if (!rLedger.AreKnown(a, b))
-    {
-        return false;
-    }
-    return rLedger.GetStatus(a, b) != DiplomaticStatus_t::Vendetta;
-}
-
-bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
-{
-    if (!rLedger.AreKnown(a, b))
-    {
-        return false;
-    }
-    return IsAgreement(rLedger.GetStatus(a, b));
-}
-
 bool IsAgreement(DiplomaticStatus_t status)
 {
     return StepDown(status).has_value();
@@ -174,25 +156,6 @@ int AgreementBreakBlemishes(DiplomaticStatus_t from)
         return 0;
     }
     return CurrentGameState().GetGameData().diplomacyConfig->breakAgreementBlemishes;
-}
-
-std::optional<FactionId_t> AlliedTerritoryOwner(FactionId_t attacker, FactionId_t defender,
-                                                const Tile& rBattleTile)
-{
-    // TODO: SMAC's other territory site, +3 against a faction that refused the defender's demand
-    // to attack (0x5078BB), waits on AI-initiated #DEMANDATTACK.
-    const GameState& rGame = CurrentGameState();
-    const FactionId_t owner = rGame.GetWorldMap().GetTerritory().GetOwner(rBattleTile);
-    if (owner == k_NoFactionOwner || owner == attacker || owner == defender)
-    {
-        return std::nullopt;
-    }
-    const DiplomacyLedger& rLedger = rGame.GetDiplomacyLedger();
-    if (!rLedger.HasVendetta(owner, defender) || !IsAgreement(rLedger.GetStatus(owner, attacker)))
-    {
-        return std::nullopt;
-    }
-    return owner;
 }
 
 } // namespace ac

@@ -2,7 +2,6 @@
 
 #include "game/diplomacy/DiplomacyLedger.h"
 #include "game/base/BaseTypes.h"
-#include <string>
 #include <vector>
 
 namespace ac
@@ -13,22 +12,14 @@ enum class DiplomaticActionKind_t
     ProposeTruce,
     ProposeTreaty,
     ProposePact,
-    DeclareVendetta,
-    CancelTreaty,
+    RenouncePact,
     Trade
 };
 
-// Primary UI/AI entry: legal actions for the pair (empty if not known).
-std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
-                                                      FactionId_t a,
-                                                      FactionId_t b);
-
-// What SMAC's diplomacy menu offers face to face, out of GetAvailableActions: proposals, trade,
-// and cancelling only an agreement that steps down to another (renouncing a Pact).
+// What SMAC's diplomacy menu offers face to face (terranx-map.md, Talk): the next status up,
+// renouncing a Pact, and trade. Empty for a pair that has not met.
 std::vector<DiplomaticActionKind_t> GetTalkActions(const DiplomacyLedger& rLedger,
                                                    FactionId_t a,
                                                    FactionId_t b);
-
-std::string ToString(DiplomaticActionKind_t kind);
 
 } // namespace ac

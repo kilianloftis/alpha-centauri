@@ -13,6 +13,10 @@
 #include "game/diplomacy/DiplomaticTransitionMutations.h"
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/units/UnitManager.h"
+#include "game/GameDataContext.h"
+#include "game/base/BaseConquestConfig.h"
+#include "game/base/BaseConquestMutations.h"
+#include "game/base/BaseConquestRules.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -32,6 +36,7 @@
 #include <algorithm>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -134,6 +139,8 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
                 PresentAtrocityNotice_(rNotice);
             },
             [this](const CaptureNoticeInteraction_t& rNotice) { PresentCaptureNotice_(rNotice); },
+            [this](const HeadquartersEscapeInteraction_t& rEscape)
+            { PresentHeadquartersEscape_(rEscape); },
         },
         rPayload);
 }
@@ -506,6 +513,64 @@ void InteractionPresenter::PresentAtrocityNotice_(const AtrocityNoticeInteractio
     const AtrocityNoticeCopy_t copy = AtrocityNoticeCopy(rNotice);
     PresentNotice_(NoticeInteraction_t{PauseOnEventId_t::AtrocityCommitted, copy.title, copy.body,
                                        std::nullopt});
+}
+
+void InteractionPresenter::PresentHeadquartersEscape_(
+    const HeadquartersEscapeInteraction_t& rEscape)
+{
+    if (rEscape.ownerId == m_rGameState.GetPlayerFaction().GetFactionId())
+    {
+        OfferHeadquartersEscape_(rEscape);
+        return;
+    }
+    ReportHeadquartersEscaped_(rEscape);
+}
+
+void InteractionPresenter::OfferHeadquartersEscape_(
+    const HeadquartersEscapeInteraction_t& rEscape)
+{
+    const BaseManager* pDestination = FindAudienceBase_(rEscape.ownerId, rEscape.destinationId);
+    if (!pDestination || !MayEvacuateHeadquarters(m_rGameState.GetPlayerFaction(), *pDestination))
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const FactionId_t ownerId = rEscape.ownerId;
+    const BaseId_t destinationId = rEscape.destinationId;
+    const std::string cost = std::to_string(
+        m_rGameState.GetGameData().baseConquestConfig->headquartersEscape.cost);
+    const std::string& rDestinationName = pDestination->GetName();
+
+    std::vector<PopupChoice_t> choices;
+    choices.push_back({"Let the headquarters go", [this] { CompleteAndAdvance_(); }});
+    choices.push_back(
+        {"Fly the command staff to " + rDestinationName + " (" + cost + " energy credits)",
+         [this, ownerId, destinationId]
+         {
+             BaseManager* pResolve = FindAudienceBase_(ownerId, destinationId);
+             EvacuateHeadquarters(m_rGameState, m_rGameState.GetPlayerFaction(), *pResolve);
+             CompleteAndAdvance_();
+         }});
+    PushChoice_("Our headquarters has fallen to the enemy. The command staff can still reach "
+                    + rDestinationName + " and set up a new headquarters there.",
+                std::move(choices));
+}
+
+void InteractionPresenter::ReportHeadquartersEscaped_(
+    const HeadquartersEscapeInteraction_t& rEscape)
+{
+    const Faction* pOwner = m_rGameState.FindFaction(rEscape.ownerId);
+    const BaseManager* pDestination = FindAudienceBase_(rEscape.ownerId, rEscape.destinationId);
+    if (!pOwner || !pDestination)
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+    const std::string body = "The " + pOwner->GetDefinition().identity.name
+                             + " have moved their headquarters to " + pDestination->GetName()
+                             + ".";
+    PresentNotice_(NoticeInteraction_t{std::nullopt, "Headquarters Moved", body, std::nullopt});
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)

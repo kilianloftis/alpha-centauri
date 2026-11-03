@@ -93,7 +93,9 @@ graph TD
     GameState -.->|implements| IUnitOrderWorld
     IUnitOrderWorld --> BaseConquestMutations
     FightAftermathMutations[FightAftermathMutations<br/>allied-territory friction, capture aftermath,<br/>last-defender conquest]
+    FightAftermathRules[FightAftermathRules<br/>AlliedTerritoryOwner]
     IUnitOrderWorld --> FightAftermathMutations
+    FightAftermathMutations --> FightAftermathRules
     FightAftermathMutations --> DiplomaticStandingMutations
     FightAftermathMutations --> CaptureMutations
     FightAftermathMutations --> BaseConquestMutations
@@ -414,6 +416,15 @@ claim per faction that lost the base; claims expire independently. Recapture by 
 with an active claim inverts *that* claim's elapsed time — 12 turns away becomes 1 drone
 for 12 turns, including after a third party captured in between. A later occupier still
 gets a fresh 5/50. Diplomatic `TransferBaseTo` does not start a window.
+
+Capture and mind control both take the base through `TakeBase` (`BaseConquestMutations`),
+SMAC's `capture_base`. A captured Headquarters is always lost (`TransferBaseTo` destroys it, as
+it does on every transfer), so capture's random facility loss leaves it out. Before the base
+changes hands, `HeadquartersEscapeDestination` (`BaseConquestRules`) names where the owner may
+move it: its other base with the lowest `HeadquartersEscapeScore` (`BaseConquestCalculator`,
+`base_conquest.json` `headquarters_escape`), when the owner can afford `cost`. An AI owner moves
+at once (`EvacuateHeadquarters`) and the player hears of it; a player owner is asked
+(`HeadquartersEscapeInteraction_t`). See terranx-map.md "Base transfer and Headquarters".
 
 Razing (population reaching zero) tombstones the base's Secret Projects through
 `GameState::MarkSecretProjectDestroyed`, so no faction can rebuild them.

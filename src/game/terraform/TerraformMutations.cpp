@@ -2,6 +2,8 @@
 
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/diplomacy/DiplomacyConfig.h"
+#include "game/diplomacy/DiplomaticStandingMutations.h"
 #include "game/economy/EconomyManager.h"
 #include "game/faction/Faction.h"
 #include "game/units/UnitOrder.h"
@@ -14,6 +16,7 @@
 #include "game/units/IUnitOrderWorld.h"
 #include "game/units/Unit.h"
 
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -83,6 +86,18 @@ bool ApplyTerraformResult(Tile& rTile, const TerraformProject_t& rProject,
         bDidAnything = bEffectsApplied || bDidAnything;
     }
     return bDidAnything;
+}
+
+void ApplyRainfallGrievance(GameState& rGameState, const Faction& rTerraformer,
+                            std::span<const MoistureChange_t> changes)
+{
+    const std::optional<FactionId_t> grievant = RainfallGrievant(rTerraformer, changes);
+    if (!grievant)
+    {
+        return;
+    }
+    const int friction = rGameState.GetGameData().diplomacyConfig->terraformRainfallFriction;
+    ApplyFriction(rGameState, *grievant, rTerraformer.GetFactionId(), friction);
 }
 
 } // namespace ac

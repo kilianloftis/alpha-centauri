@@ -315,7 +315,7 @@ See `docs/architecture/diplomacy-system.md`.
     - `is_rioting`: emitted when the base becomes rioting — from `CommitMood()` in the Mood stage, or immediately from Incite if the extra occupation drones tip the weights. A riot with no Mood commit yet is in its first tier, so an incited riot blocks the target's next production as SMAC's does.
     - `riot_ended`: emitted by `CommitMood()` when seated weights fall back below the threshold and the base was previously rioting
 - **Rationale**: Bases are the primary source of resources and require complex management of population with specialized worker roles, buildings, and tile resources
-- **Destroy vs. transfer**: a `BaseManager` is destroyed only by raze/extract (`Faction::ExtractBase`); ownership change (capture, mind-control, trade) is an identity-preserving move (`Faction::TransferBaseTo`) that rebinds the same object to a new `Faction` rather than recreating it. See `docs/architecture/high-level.md`, "Object lifetime and ownership transfer", for the full protocol, including how `HomeBaseIndex`, deploy cooldowns, and `EventBridge` wiring survive each case.
+- **Destroy vs. transfer**: a `BaseManager` is destroyed only by raze/extract (`Faction::ExtractBase`); ownership change (capture, mind-control, trade) is an identity-preserving move (`Faction::TransferBaseTo`) that rebinds the same object to a new `Faction` rather than recreating it. The base never brings its Headquarters along. Founding never grants a Headquarters; game setup builds one at each starting base. See `docs/architecture/high-level.md`, "Object lifetime and ownership transfer", for the full protocol, including how `HomeBaseIndex`, deploy cooldowns, and `EventBridge` wiring survive each case.
 
 ## Integration with Engine
 

@@ -96,10 +96,11 @@ public:
     // Rebuilds a base from a snapshot as a new object, for save/load. Not a transfer.
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
                                         TileEffectsContext& rTileEffects);
-    // Moves the same base object to rReceiver, recalculating its pops and workers and migrating
-    // its deploy cooldowns. Throws if baseId is missing or rReceiver is this faction.
+    // Moves the same base object to rReceiver without its Headquarters, recalculating its pops
+    // and workers and migrating its deploy cooldowns. Throws if baseId is missing or rReceiver is
+    // this faction.
     void TransferBaseTo(BaseId_t baseId, Faction& rReceiver);
-    // Builds a base from the faction's ruleset; a faction without a Headquarters gets one there.
+    // Builds a base from the faction's ruleset.
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             TileEffectsContext& rTileEffects,
                             std::optional<int> initialPopulation);

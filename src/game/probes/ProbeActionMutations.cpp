@@ -1,5 +1,6 @@
 #include "game/probes/ProbeActionMutations.h"
 
+#include "game/base/BaseConquestMutations.h"
 #include "game/probes/ProbeRules.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
@@ -259,9 +260,7 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, GameState& rGame
                            ProbeActionResult_t& rResult)
 {
     Faction& rTarget = rBase.GetFaction();
-    const BaseId_t baseId = rBase.GetBaseId();
-    rBase.GetPopulation().NotifyCaptured(rTarget.GetFactionId(), rActor.GetFactionId());
-    rTarget.TransferBaseTo(baseId, rActor);
+    TakeBase(rGameState, rBase, rActor);
     TransferCapturedGarrison_(rBase, rTarget, rActor, rGameState);
     rResult.detail = ProbeBaseCaptured_t{};
     return true;
@@ -424,9 +423,23 @@ void EndPact_(GameState& rGameState, FactionId_t a, FactionId_t b)
     ApplyStatusChange(rGameState, a, b, StepDown(status).value());
 }
 
-void ApplyBreakOutcome_(GameState& rGameState, const HostileAct_t& rAct, BreakOutcome_t outcome)
+} // namespace
+
+void KeepProbeAgreement(GameState& rGameState, const HostileAct_t& rAct,
+                        const ProbeAftermath_t& rAftermath, std::mt19937& rRng)
 {
-    switch (outcome)
+    if (!rAftermath.bMayKeepAgreement)
+    {
+        throw std::logic_error("KeepProbeAgreement: this aftermath must break");
+    }
+    const int friction = RollExclusiveMax(rAftermath.keepFrictionDraw, rRng);
+    ApplyFriction(rGameState, rAct.victim, rAct.aggressor, friction);
+}
+
+void BreakProbeAgreement(GameState& rGameState, const HostileAct_t& rAct,
+                         const ProbeAftermath_t& rAftermath)
+{
+    switch (rAftermath.breakOutcome)
     {
         case BreakOutcome_t::HostileAct:
             ApplyHostileAct(rGameState, rAct);
@@ -438,23 +451,7 @@ void ApplyBreakOutcome_(GameState& rGameState, const HostileAct_t& rAct, BreakOu
             ApplyProbeVendetta(rGameState, rAct.aggressor, rAct.victim);
             return;
     }
-    throw std::logic_error("ApplyBreakOutcome_: unknown break outcome");
-}
-
-} // namespace
-
-void ApplyProbeAftermath(GameState& rGameState, const HostileAct_t& rAct,
-                         const ProbeAftermath_t& rAftermath, std::mt19937& rRng)
-{
-    // TODO: AI attitude model. Until it exists every victim that may keep does. A player
-    // victim should get SMAC's EXCUSE / PACTEXCUSE choice; no AI probes the player yet.
-    if (rAftermath.bMayKeepAgreement)
-    {
-        const int friction = RollExclusiveMax(rAftermath.keepFrictionDraw, rRng);
-        ApplyFriction(rGameState, rAct.victim, rAct.aggressor, friction);
-        return;
-    }
-    ApplyBreakOutcome_(rGameState, rAct, rAftermath.breakOutcome);
+    throw std::logic_error("BreakProbeAgreement: unknown break outcome");
 }
 
 ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& rRng)

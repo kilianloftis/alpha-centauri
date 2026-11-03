@@ -45,6 +45,7 @@ class MoraleCalculator;
 class CommerceCalculator;
 class ProbeCalculator;
 class DiplomacyCalculator;
+class BaseConquestCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
 struct CombatConfig_t;
@@ -133,6 +134,7 @@ struct GameDataContext
     std::unique_ptr<CommerceCalculator> commerceCalculator;
     std::unique_ptr<ProbeCalculator> probeCalculator;
     std::unique_ptr<DiplomacyCalculator> diplomacyCalculator;
+    std::unique_ptr<BaseConquestCalculator> baseConquestCalculator;
 
     // For config files LoadGameData does not parse, so they resolve against the same root.
     GameDataPaths paths;

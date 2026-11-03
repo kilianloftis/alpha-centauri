@@ -176,7 +176,7 @@ absent.
   attacker's Pact partner and refused the defender's `#DEMANDATTACK`, gains +3 friction toward
   that owner ("Integrity / friction writers", `battle_fight_2`).
 - **Ours:** not written. TODO at `AlliedTerritoryOwner`.
-- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`).
+- **Where:** `AlliedTerritoryOwner` (`FightAftermathRules`).
 - **Missing:** talk's `#DEMANDATTACK` refusal and its flag, a military-strength metric, and the
   writer.
 
@@ -186,7 +186,7 @@ absent.
   (no bounds check at `0x50A147`; "Integrity / friction writers", `battle_fight_2`).
 - **Thinker:** adds `sq->owner >= 0` ("Added owner bounds checking").
 - **Ours:** as Thinker: `AlliedTerritoryOwner` is nullopt for an unowned tile.
-- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`).
+- **Where:** `AlliedTerritoryOwner` (`FightAftermathRules`).
 - **Missing:** none playable: the original is an out-of-bounds read with no defined result, so
   this stays here only to record it.
 
@@ -200,7 +200,7 @@ absent.
   there earn the goodwill too, and so does every melee or duel that reaches the aftermath,
   whatever the units' domains. Defending an ally's coast is the same service as defending its
   land.
-- **Where:** `AlliedTerritoryOwner` (`DiplomaticTransitionRules`);
+- **Where:** `AlliedTerritoryOwner` (`FightAftermathRules`);
   `allied_territory_battle_friction` in `config/diplomacy.json`.
 - **Missing:** the original land-only version and a switch.
 
@@ -269,6 +269,52 @@ absent.
 - **Ours:** the friction only; there is no want-to-talk state.
 - **Where:** `ArtifactCaptureFriction` (`CaptureRules`).
 - **Missing:** want-to-talk state, and the original version behind a switch.
+
+### A given Headquarters goes with the base `[Bug]`
+
+- **Original:** `give_a_base` moves every facility, so a given Headquarters leaves the giver with
+  none and the receiver with two ("Base transfer and Headquarters"). Only the player can give
+  one, since the AI refuses to hand over its own (`NOMYHQ`).
+- **Ours:** no base brings a Headquarters to its new owner: `TransferBaseTo` destroys it on every
+  transfer, so gifts, base trades and rebellion behave as capture does.
+- **Where:** `Faction::TransferBaseTo`.
+- **Missing:** the original version and a switch.
+
+### A given base keeps the giver's units
+
+- **Original:** `give_a_base` hands the giver's defense and recon units on the base tile, and its
+  ships there, to the receiver, and moves its other units on the tile and on neighbouring land to
+  its nearest other base. Status plays no part ("Base transfer and units").
+- **Ours:** `TransferBaseTo` moves only the base. After a trade or a rebellion the old owner's
+  units stay where they are, inside the new owner's base, whatever the two hold.
+- **Where:** `Deliver_` for `TradeBase_t` (`ApplyProposal`), `PickRebelFactionAndTransfer`.
+- **Missing:** the original version.
+
+### Units supported by a lost base go unsupported
+
+- **Original:** `capture_base` re-homes the loser's units supported by the captured base to its
+  nearest other base, and kills them only when it has none left ("Base transfer and units").
+  `give_a_base` re-homes only the units it moves.
+- **Ours:** `TransferBaseTo` clears their home base on every transfer (`DropForeignHomeClaims_`).
+- **Where:** `Faction::TransferBaseTo`.
+- **Missing:** the original version.
+
+### Headquarters escape can pick any base `[Bug]`
+
+- **Original:** the escape's best score starts at 9999, so a base scoring 9999 or more is never
+  chosen, and base index 0 is never chosen either ("Base transfer and Headquarters").
+- **Ours:** every other base of the owner is a candidate, and the lowest score wins.
+- **Where:** `HeadquartersEscapeDestination` (`BaseConquestRules`).
+- **Missing:** the original version and a switch.
+
+### Only the starting base is given a Headquarters
+
+- **Original:** `base_init` gives a faction's first base its Headquarters, however it is founded:
+  the start of a game, a Look First colony pod, or a faction refounding after losing every base
+  (`base_init`).
+- **Ours:** game setup builds one at each faction's starting base; founding a base never does.
+- **Where:** `Engine` starting-base setup.
+- **Missing:** the grant at founding, to come with Look First.
 
 ### Boarded units lose their orders `[Ours]`
 
@@ -460,7 +506,8 @@ absent.
   `base_init` / `base_kill`, so a captured or ceded base counts for its old owner until then
   ("Regions").
 - **Ours:** counted from current ownership on every query.
-- **Where:** `BaseValue`'s region counts (`BaseValueRules`).
+- **Where:** `RegionBaseCount` (`BaseRules`), read by `BaseValue` and
+  `HeadquartersEscapeDestination`.
 - **Missing:** the original version and a switch.
 
 ### Sweep existing docs for unlisted deviations

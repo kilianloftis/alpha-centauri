@@ -217,7 +217,8 @@ generation, since the session's settings can change mid-game.
 `RecomputeClimate` returns each base-moisture change with its value before the re-run
 (`MoistureChange_t`), in tile-index order, which is `world_rainfall`'s row scan.
 `ApplyElevationDelta` passes them on, and a Former's raise or lower land reads them for
-`RainfallGrievant` ([diplomacy-system.md](diplomacy-system.md), "Where the rules live").
+`RainfallGrievant`, which `ApplyRainfallGrievance` (`TerraformMutations`) writes
+([diplomacy-system.md](diplomacy-system.md), "Where the rules live").
 
 Condensers stay a local `moisture_tier` overlay on top of base moisture (see
 [deviations](../../config/deviations/README.md), "Condenser moisture is a local overlay").

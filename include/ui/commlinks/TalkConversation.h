@@ -67,7 +67,8 @@ private:
     void Follow_(const TalkOutcome_t& rOutcome);
     std::string Say_(const std::vector<TalkTextRef_t>& rLines);
 
-    bool Holds_(TalkCondition_t condition) const;
+    bool Offers_(DiplomaticActionKind_t kind) const;
+    bool HasDraft_() const;
     bool IsAvailable_(TalkAction_t action) const;
     TalkResult_t Run_(TalkAction_t action);
     TalkResult_t Propose_(const DiplomaticProposal_t& rProposal);
@@ -75,12 +76,13 @@ private:
     DiplomaticProposal_t TradeProposal_() const;
     void ClearDraft_();
 
-    // Every item of the kind the side's giver could hand over.
+    // Every item of the kind the side's giver could hand over, as MayDraft_ allows.
     std::vector<TalkCandidate_t> Candidates_(TradeKind_t kind, TradeSide_t side) const;
     std::vector<TalkCandidate_t> ItemsOf_(TradeKind_t kind, FactionId_t giver) const;
     std::string NameOf_(const TradeItem_t& rItem, const Faction& rGiver) const;
     FactionId_t GiverOf_(TradeSide_t side) const;
-    FactionId_t ReceiverOf_(TradeSide_t side) const;
+    // CanDeliver for what the player offers, CanDemand for what it asks.
+    bool MayDraft_(TradeSide_t side, const TradeItem_t& rItem) const;
     std::vector<TalkDraftItem_t>& SideOf_(TradeSide_t side);
 
     GameState& m_rGameState;

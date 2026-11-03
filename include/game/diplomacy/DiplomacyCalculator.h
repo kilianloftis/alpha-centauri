@@ -64,7 +64,6 @@ public:
     int UnownedTechValue(int value, int owners, int techLevel, int highestLevel) const;
     // The giver's count toward the recipient after a gift, capped at the giver's blemishes.
     int NextGifts(int current, int giverBlemishes, GiftSize_t size) const;
-    int AlliedTerritoryGifts(int current) const;
 
 private:
     const DiplomacyConfig_t& m_rConfig;

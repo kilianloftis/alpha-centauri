@@ -553,6 +553,9 @@ void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionI
         m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
         m_pGameState->GetTileEffects(),
         /*initialPopulation=*/3);
+    // TODO: base_init grants every faction's first base its Headquarters (base_count == 1,
+    // 0x4E4E3A), which Look First founds in play; until then the starting base gets it here.
+    pBase->GetBuildingManager().AddBuilding("Headquarters");
     rPlacedBases.push_back(pBase);
 
     Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));

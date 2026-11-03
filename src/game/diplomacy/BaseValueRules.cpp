@@ -85,16 +85,6 @@ int LargerTreasury_(const Faction& rEvaluator, const Faction& rCounterparty)
     return std::max(rEvaluator.GetEconomy().GetEnergy(), rCounterparty.GetEconomy().GetEnergy());
 }
 
-// Live (config/deviations/README.md "Region base counts are live").
-int RegionBaseCount_(const Faction& rFaction, int region)
-{
-    const RegionCache& rRegions = CurrentGameState().GetWorldMap().GetRegions();
-    const auto inRegion = [&](const BaseManager& rBase)
-    { return rRegions.RegionOf(rBase.GetTile()) == region; };
-    const auto count = std::ranges::count_if(rFaction.Bases(), inRegion);
-    return static_cast<int>(count);
-}
-
 // buildings.json follows alphax.txt #FACILITIES, so registry order is SMAC's facility id order.
 std::vector<int> FacilityMinerals_(const BaseManager& rBase)
 {
@@ -156,8 +146,8 @@ int BaseValue(const BaseManager& rBase, const Faction& rEvaluator, const Faction
     inputs.credits = LargerTreasury_(rEvaluator, rCounterparty);
     inputs.population = rBase.GetPopulation().GetSize();
     inputs.bGarrisoned = !units.empty();
-    inputs.evaluatorRegionBases = RegionBaseCount_(rEvaluator, region);
-    inputs.counterpartyRegionBases = RegionBaseCount_(rCounterparty, region);
+    inputs.evaluatorRegionBases = RegionBaseCount(rEvaluator, region);
+    inputs.counterpartyRegionBases = RegionBaseCount(rCounterparty, region);
     inputs.facilityMinerals = FacilityMinerals_(rBase);
     inputs.projectMinerals = ProjectMinerals_(rBase);
     inputs.evaluatorUnitMinerals = UnitMinerals_(units, rEvaluator);

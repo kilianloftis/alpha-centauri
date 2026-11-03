@@ -22,8 +22,8 @@ graph TB
     end
 
     subgraph "Proposals (DiplomaticProposalRules / DiplomaticProposalMutations)"
-        IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals; StepUp only]
-        CanDeliver[CanDeliver<br/>one item from its giver]
+        IsValidProposal[IsValidProposal<br/>CanDeliver_ per item, no base or tech twice,<br/>side totals, a base kept, no HQ demanded;<br/>StepUp only]
+        CanDeliver[CanDeliver / CanDemand<br/>one item from its giver;<br/>never its last base, nor a demanded HQ]
         ApplyProposal[ApplyProposal<br/>status, then Deliver_ per item;<br/>a gift's standing before each item]
     end
 
@@ -58,7 +58,7 @@ graph TB
 
     subgraph "Transition rules (DiplomaticTransitionRules)"
         StepUpDown[StepUp / StepDown]
-        CanPropose[CanProposeStepUp / CanCancelTreaty<br/>CanDeclareVendetta]
+        CanPropose[CanProposeStepUp]
         HostileActAgainst[HostileAct_t / HostileActAgainst<br/>attributed unless a side is covert]
         VendettaRules[VendettaFromHostileAct / VendettaWithdrawsTerritory<br/>HonoredObligationCascades / BombardHostileActs]
         AgreementBreak[IsAgreement / AgreementBreakBlemishes]
@@ -80,7 +80,7 @@ graph TB
     end
 
     subgraph "Standing (DiplomaticStandingMutations)"
-        ApplyStanding[ApplyFriction / ApplyBlemishes<br/>ApplyGiftStanding]
+        ApplyStanding[ApplyFriction / ApplyBlemishes<br/>RaiseGifts / ApplyGiftStanding]
     end
 
     subgraph "Standing captions (UI)"
@@ -95,13 +95,12 @@ graph TB
         Combat[UnitAttackExecutor<br/>TryAttack / TryBombard<br/>act built before combat,<br/>reported after it resolves]
         Probe[ProbeActionExecutor<br/>ProbeHostileAct: attributed,<br/>or ProbeDetected]
         ProbeFrame[ResolveProbeStanding ProbeRules<br/>ResolveProbeFrame: who blames whom,<br/>then whether keep or break follows]
-        ProbeAftermath[ResolveProbeAftermath ProbeRules<br/>the choice, before any Vendetta<br/>ApplyProbeAftermath ProbeActionMutations<br/>writes keep or break]
+        ProbeAftermath[ResolveProbeAftermath ProbeRules<br/>the choice, before any Vendetta<br/>KeepProbeAgreement / BreakProbeAgreement<br/>ProbeActionMutations write the choice]
         Atrocity[CommitAtrocity<br/>always attributed]
     end
 
     subgraph "Action menu (DiplomacyActions)"
-        GetAvailableActions[GetAvailableActions<br/>Trade whenever the pair has met]
-        GetTalkActions[GetTalkActions<br/>no declaring; cancel only a Pact]
+        GetTalkActions[GetTalkActions<br/>next status up, renounce a Pact,<br/>trade whenever the pair has met]
     end
 
     subgraph "Affected faction state"
@@ -132,8 +131,7 @@ graph TB
     DiplomaticActionExecutor -->|accepted| ApplyProposal
     IsValidProposal -->|CanProposeStepUp| CanPropose
     IsValidProposal -->|AreKnown| DiplomacyLedger
-    GetAvailableActions --> CanPropose
-    GetTalkActions --> GetAvailableActions
+    GetTalkActions --> CanPropose
     Talk -->|what may be said| GetTalkActions
     Talk -->|StepUp, trade| DiplomaticActionExecutor
     Talk -->|renounce a Pact| CancelTreaty
@@ -250,8 +248,8 @@ sets: a pair is either in them or not.
   already excludes it. A covert unit does not meet its owner either, since the observer cannot
   tell whose it is (`IsOwnerKnownTo`). Its own sight still meets the factions it sees, and
   contact is mutual.
-- **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `CanCancelTreaty`,
-  `CanDeclareVendetta`), not in the ledger — the ledger stores, the rules decide.
+- **Status legality** lives in `DiplomaticTransitionRules` (`CanProposeStepUp`, `StepUp`,
+  `StepDown`), not in the ledger — the ledger stores, the rules decide.
 - **Friction and blemishes** are written through `DiplomaticStandingMutations`
   (`ApplyFriction` / `ApplyBlemishes`). The ledger stores; `DiplomacyCalculator::NextFriction` /
   `NextBlemishes` add, raise to a floor, and clamp to `[0, frictionMax]` / `[0, blemishesMax]`.
@@ -326,7 +324,7 @@ writes no standing.
 - **Gift count** (`DiplomacyLedger` `GetGifts` / `SetGifts`): `NextGifts` steps it by size,
   capped at the giver's blemishes. A generous gift counts twice, a modest base gift once, and a
   notable one once from 0 only. The allied-ground battle site raises the attacker's count toward
-  the owner to `allied_territory_battle_gifts_floor` (`ApplyAlliedTerritoryFriction`).
+  the owner to `allied_territory_battle_gifts_floor` (`RaiseGifts`, from `ApplyFightConsequences`).
 - **Gift weights** are faction effects, so a faction's quirks are data:
   - `gift_given_value` is resolved on the giver and then `gift_received_value` on the
     recipient (both RawScaled), each seeded with the value so far and truncated. Friction and
@@ -529,7 +527,7 @@ covert unit is never identified.
   - A bombard makes one act per faction whose units it targets, or for the territory owner of an
     empty tile's improvements, all collected before the strikes. Each act is attributed when any
     of that faction's targets is.
-- `ApplyProbeAftermath`, with `ProbeHostileAct`: the act against the targeted unit or base, also
+- `BreakProbeAgreement`, with `ProbeHostileAct`: the act against the targeted unit or base, also
   attributed when `ProbeDetected` says the target identified the sender, when the pair holds no
   agreement or the probe double-crosses it. **Stub:** the detection roll is not implemented and
   nothing is detected yet.
@@ -545,15 +543,18 @@ place, and the atrocity standing is a separate `ApplyBlemishes`.
 A hostile probe (`ProbeDeclaresHostileAct`: not infiltrate, not Total Thought Control) does not
 simply add friction. The victim either keeps the agreement and resents the actor, or breaks it.
 The status is exclusive, and a Vendetta leaves no agreement to keep, so the decision comes first:
-`ProbeActionExecutor::ResolveProbeRoll_` asks `ResolveProbeAftermath` (`ProbeRules`), then
-`ApplyProbeAftermath` (`ProbeActionMutations`) writes the result. This follows SMAC's agreement
-aftermath in `probe` (`terranx-map.md`, "Agreement aftermath").
+`ProbeActionExecutor::ResolveProbeRoll_` asks `ResolveProbeAftermath` (`ProbeRules`), the victim
+chooses, and `KeepProbeAgreement` or `BreakProbeAgreement` (`ProbeActionMutations`) writes the
+choice. This follows SMAC's agreement aftermath in `probe` (`terranx-map.md`, "Agreement
+aftermath").
 
 Keeping or breaking is the victim's decision in SMAC: an AI victim weighs its attitude toward the
 actor, and a player victim answers a dialog. `ResolveProbeAftermath` sets out the choice in a
 `ProbeAftermath_t`: whether the victim may keep (`bMayKeepAgreement`), what keeping costs
 (`keepFrictionDraw`), and what breaking does (`breakOutcome`, a `BreakOutcome_t`).
-`ApplyProbeAftermath` keeps whenever the victim may. Each action in `probe_actions.json` requires `may_keep_agreement` and
+The executor makes the victim's choice, keeping whenever it may (**stub**, pending an AI attitude
+model and the player's excuse dialog). Each action in `probe_actions.json` requires
+`may_keep_agreement` and
 `hostile_act_on_break` (shipping: mind-control city always breaks as a hostile act; plague may be
 kept, and is a hostile act if it breaks; everything else may be kept, and if it breaks a Pact
 steps down to Treaty or a Truce/Treaty becomes Vendetta with no blemish).
@@ -636,10 +637,15 @@ load-bearing:
 
 - **Per item** (`CanDeliver_`) — does the giver have this tech, own this base, know this faction,
   have these credits?
-- **Per side** (`IsValidSide_`) — do the *total* credits fit in the giver's treasury, and is any
-  base or tech offered twice? Each item passing on its own does not make the whole side
-  deliverable: two credit items can each fit a treasury that cannot hold both, and a tech handed
-  over a second time throws.
+- **Per side** (`IsValidSide_`) — do the *total* credits fit in the giver's treasury, is any
+  base or tech offered twice, and does the giver keep a base? Each item passing on its own does
+  not make the whole side deliverable: two credit items can each fit a treasury that cannot hold
+  both, a tech handed over a second time throws, and two bases can each leave one behind while
+  together they take the last.
+- **Demand** (`IsValidDemand_`, `CanDemand` for one item) — a base asked for is never the
+  giver's headquarters, as `base_swap` refuses (`NOMYHQ`). A base given or offered may be the
+  giver's headquarters, which `TransferBaseTo` destroys as it moves, and no side takes a giver's
+  last base (`NOHQ`, `NOMYHQ`, `make_gift`; `terranx-map.md`, "Base swap" and "Gifts").
 
 `CanDeliver_` and `ApplyProposal`'s `Deliver_` are visitors with one `operator()` per alternative,
 so a new `TradeItem_t` alternative fails to compile until both handle it.
@@ -661,11 +667,11 @@ save-game serialisation work to exist first. Recorded in
 | May these two factions talk at all? | `DiplomacyLedger::AreKnown` (never true for native life) |
 | Does this faction take part in diplomacy at all? | `DiplomaticPermissionRules::HasDiplomacy` |
 | Must this faction defend its ally? | `DiplomaticPermissionRules::IsObligedToDefend` |
-| Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp` / `CanDeclareVendetta` / `CanCancelTreaty` |
+| Is this status change legal? | `DiplomaticTransitionRules::CanProposeStepUp`; `CancelTreaty` and `DeclareVendetta` check for themselves |
 | What does changing a status do? | `DiplomaticTransitionMutations::ApplyStatusChange`, and the Vendetta, cancel and obligation entry points around it |
 | Is this proposal valid? | `DiplomaticProposalRules::IsValidProposal` |
-| Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_`; `CanDeliver` for one item |
-| What may the player do in talk? | `DiplomacyActions::GetTalkActions`: proposals and trade, and cancelling only a Pact |
+| Does the giver actually have it? | `IsValidProposal`'s per-item visitor, `CanDeliver_`; `CanDeliver` for one item, `CanDemand` for one asked of it |
+| What may the player do in talk? | `DiplomacyActions::GetTalkActions`: the next status up, renouncing a Pact, and trade |
 | Can the giver afford all of it at once? | `IsValidProposal`'s per-side check, `IsValidSide_` |
 | What does accepting change? | `DiplomaticProposalMutations::ApplyProposal` |
 | What may two factions do to each other? | `DiplomaticPermissionRules` reading `DiplomacyConfig_t` for their status |
@@ -673,10 +679,10 @@ save-game serialisation work to exist first. Recorded in
 | What does an AI think a base is worth to it? | `BaseValueRules::BaseValue`, over `DiplomacyCalculator::BaseValue` |
 | What does a gift do to standing? | `DiplomaticGiftRules::GiftStanding`, over the `DiplomacyCalculator` gift methods; `ApplyGiftStanding` writes it |
 | Is this status an agreement? | `DiplomaticTransitionRules::IsAgreement` |
-| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `ApplyProbeAftermath` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyAlliedTerritoryFriction` after a melee or duel, `ApplyRainfallGrievance` after a Former's raise or lower land, and `ApplyGiftStanding` for each item of a gift. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
-| Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner`: the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it, and the attacker's gift count toward it rises to `allied_territory_battle_gifts_floor`. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
+| Who writes friction and blemishes? | `DiplomaticStandingMutations`, called from `CommitAtrocity`, `CancelTreaty`, `DeclareVendetta` (including sneak `ApplyHostileAct`), `KeepProbeAgreement` for a kept agreement, `ApplyCombatCaptureAftermath` for taken artifacts, `ApplyFightConsequences` (`FightAftermathMutations`) after a melee or duel, `ApplyRainfallGrievance` (`TerraformMutations`) after a Former's raise or lower land, and `ApplyGiftStanding` for each item of a gift. `ApplyAtrocityVendetta`, `ApplyProbeVendetta` and `HonorDefensiveObligation` do not. |
+| Does a fight earn the attacker goodwill? | `AlliedTerritoryOwner` (`FightAftermathRules`): the territory owner of the defender's tile, land or water, at Vendetta with the defender and in an agreement with the attacker, gains `allied_territory_battle_friction` toward it, and the attacker's gift count toward it rises to `allied_territory_battle_gifts_floor`. `ApplyFightConsequences` writes it after collateral and promotion and ahead of conquest, the one step that can redraw territory, including when the attacker died; a bombard strike never reaches it. |
 | Whom does terraforming aggrieve? | `RainfallGrievant`: the AI owning the base nearest the last tile the re-run dried, scanning until a change lands within `terraform_rainfall_stop_distance` of the terraformer's bases. A player-controlled owner, once recorded, sticks. Only a player-controlled terraformer, and not across a Pact or Vendetta. |
-| Does a hostile probe keep or break the agreement? | `ResolveProbeAftermath` (`bMayKeepAgreement` / `BreakOutcome_t`). `ApplyProbeAftermath` writes it. |
+| Does a hostile probe keep or break the agreement? | `ResolveProbeAftermath` (`bMayKeepAgreement` / `BreakOutcome_t`) sets out the choice; the victim makes it in `ProbeActionExecutor`, and `KeepProbeAgreement` / `BreakProbeAgreement` write it. |
 | How are guest units cleared off host territory? | `ApplyStatusChange`, when the new status loses `enter_territory` or `share_tiles`; `DeclareVendetta` / `JoinVendetta`, and obligations a declaration raised |
 
 ## Not yet built

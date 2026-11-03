@@ -24,6 +24,19 @@ struct NativeRaidConfig_t
     int popLoss = 0;
 };
 
+// capture_base's ESCAPE (terranx-map.md "Base transfer and Headquarters"): the owner of a
+// captured Headquarters pays cost to move it to the base with the lowest score,
+// (scoreSeed + same-region distances + otherRegionDistanceFactor x other-region distances)
+// x scoreScale / (region bases + populationFactor x population), to its other bases.
+struct HeadquartersEscapeConfig_t
+{
+    int cost = 0;
+    int scoreSeed = 0;
+    int scoreScale = 0;
+    int otherRegionDistanceFactor = 0;
+    int populationFactor = 0;
+};
+
 struct BaseConquestConfig_t
 {
     // Continuous effects in every faction's pool: the Add baselines for each conquest stat, so a
@@ -31,6 +44,7 @@ struct BaseConquestConfig_t
     std::vector<EffectConfig_t> effects;
     EscapeColonyPodConfig_t escapeColonyPod;
     NativeRaidConfig_t nativeRaid;
+    HeadquartersEscapeConfig_t headquartersEscape;
 };
 
 } // namespace ac

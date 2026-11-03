@@ -75,6 +75,8 @@ AtrocityCommitted_t CommitAtrocity(GameState& rGameState, Faction& rPerpetrator,
     const FactionId_t perpetratorId = rPerpetrator.GetFactionId();
     if (outcome.victimId)
     {
+        // TODO: the victim also wants revenge on the perpetrator (DIPLO_WANT_REVENGE, atrocity
+        // 0x55EF0D and major_atrocity); there is no revenge record yet.
         ApplyAtrocityVendetta(rGameState, perpetratorId, *outcome.victimId);
         ApplyFriction(rGameState, *outcome.victimId, perpetratorId, outcome.friction);
     }

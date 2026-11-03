@@ -262,15 +262,6 @@ TEST_CASE("A gift raises the giver's count by its size, capped at the giver's bl
     CHECK(rCalculator.NextGifts(0, 0, GiftSize_t::Notable) == 0);
 }
 
-TEST_CASE("A battle on allied ground floors the attacker's gift count",
-          "[diplomacy][calculator][gifts]")
-{
-    const DiplomacyCalculator& rCalculator = GiftCalculator_();
-
-    CHECK(rCalculator.AlliedTerritoryGifts(0) == 1);
-    CHECK(rCalculator.AlliedTerritoryGifts(3) == 3);
-}
-
 TEST_CASE("A tech's value weighs each priority and halves without a match",
           "[diplomacy][calculator][gifts]")
 {

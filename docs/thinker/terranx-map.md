@@ -397,6 +397,10 @@ artifact is killed like any unit.
 
 ### `base_init` (`0x4E4B80`)
 
+A faction's first base, `base_count == 1` after the increment, gets the Headquarters bit
+(`0x4E4E3A`–`0x4E4E6A`); no later base does, so a faction that loses its Headquarters must
+rebuild it.
+
 A base founded on ocean (`MAP.climate & 0xE0 < 0x60`, altitude below 3, at `0x4E5017`) gets
 facility `0x1A` (Pressure Dome). The bit is set inline through `bitmask` (`0x50BA00`) and an
 `or` into `BASE` +0x8C (`0x4E5034`), not through `set_fac`. There is no separate "sea base"
@@ -1493,6 +1497,49 @@ Gift id 8 offers `DiploBidBaseSwapID`.
 - The reply is plain `BASEGIFT` (`0x68DC1C`, `0x5485D9`). The label built in the local buffer,
   `BASEGIFT1`, or `BASEGIFT2` when rival→player carries `0x60` or `great_satan(player, 0)`
   (`0x548403`–`0x548452`), is never shown. The tech branch does pop its buffer (`0x548D45`).
+
+### Base transfer and Headquarters
+
+- `give_a_base(base_id, faction)` (`0x54CF40`), used by gifts, base swaps and cession, never
+  calls `capture_base` and never addresses `BASE.facilities_built` (`+0x8C`). Every facility goes
+  with the base, Headquarters included: a given Headquarters leaves the giver with none and the
+  receiver with two. `find_hq` and `vulnerable` then take the receiver's first by base index.
+  The function does reset the queue (`queue_size` 0, `production_id_last` and `queue_items[0]`
+  −`FAC_STOCKPILE_ENERGY`, `0x54D2F0`–`0x54D305`) and zero `minerals_accumulated` (`0x54D2AC`).
+- `capture_base` (`0x50C510`) always clears it: `set_fac(FAC_HEADQUARTERS, base, 0)` at
+  `0x50D056`, after the random facility loss. Thinker's `mod_capture_base` matches.
+- Before that, the **escape** (`0x50C98B`–`0x50CC94`). It runs when the captured base holds the
+  Headquarters and its owner has at least 1000 credits (`cmp …, 0x3E8`, `0x50C9BC`). Each other
+  base of the owner, by index, scores `score = 1 + Σ vector_dist` to every base of the owner but
+  itself and the captured one, each distance doubled when that base is in another region
+  (`0x50CB13`), and then `(score << 8) / (region_total_bases[owner][region] + 2 × pop_size)`
+  (`0x50CB46`–`0x50CB5B`). The lowest wins, the first on ties (`jge`); the best starts at 9999
+  (`0x50C9D7`), so a base scoring 9999 or more is never chosen, and the result must be above 0
+  (`jle` at `0x50CB95`), so base index 0 never is either.
+  - In single player a human owner is asked (`X_pop("ESCAPE")`, `0x50CBE5`: "Abandon HQ." or
+    "Evacuate HQ to …"); an AI owner, and every owner in multiplayer, always moves.
+  - Moving costs 1000 (`add …, −1000`, `0x50CC00`), sets the Headquarters on the chosen base and
+    clears it here. The local human then sees `ESCAPED` when the owner is someone else, or
+    `ESCAPED2` in multiplayer when it is the human.
+
+### Base transfer and units
+
+`give_a_base` (`0x54D037`–`0x54D295`) walks every unit of the old owner, last first, and takes
+those on the base tile, or on a land tile next to it (`vector_dist ≤ 1`, land only). Diplomatic
+status is never read, and other factions' units are left alone.
+
+- A defense or recon plan unit (plan 2 or 3) on the base tile, and a sea unit, changes sides
+  (`0x54D20F`): it joins the receiver, is homed at the base, has its moves reset and its order
+  cleared unless it is 2.
+- Any other unit, and every unit on a neighbouring tile, goes with its whole stack
+  (`stack_veh`, `stack_put`) to the old owner's base nearest the given one (`base_find_2`, with
+  the given base hidden from the search). Its order is cleared and, if it was homed at the given
+  base, it is homed at that base instead. With no such base it changes sides as above.
+
+`capture_base` (`0x50D18E`–`0x50D25A`) re-homes the loser's units homed at the captured base to
+the loser's base nearest it (`base_find_2`), and kills one (`kill` `0x5C0B00`) when the loser has
+no base left or the unit stands on the captured tile. Units on the tile are not otherwise moved:
+conquest needs an empty base, and mind control converts its garrison before this runs.
 
 ### Threatened cession (`threaten(player, rival)` `0x549930`)
 

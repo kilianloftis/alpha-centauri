@@ -50,6 +50,18 @@ int RequireNonNeg_(const nlohmann::json& rObject, const char* pKey, const std::s
     return value;
 }
 
+// The escape score divides by region bases plus this times population, so it must not be 0.
+int RequirePositive_(const nlohmann::json& rObject, const char* pKey, const std::string& rPath)
+{
+    const int value = RequireInteger_(rObject, pKey, rPath);
+    if (value <= 0)
+    {
+        throw std::runtime_error("BaseConquestConfigParser: " + rPath + "." + pKey
+                                 + " must be > 0");
+    }
+    return value;
+}
+
 } // namespace
 
 BaseConquestConfig_t BaseConquestConfigParser::ParseConfig(const std::string& configPath) const
@@ -84,6 +96,20 @@ BaseConquestConfig_t BaseConquestConfigParser::ParseConfig(const std::string& co
     config.nativeRaid.facilityChancePercent =
         RequirePercent_(rRaid, "facility_chance_percent", "native_raid");
     config.nativeRaid.popLoss = RequireNonNeg_(rRaid, "pop_loss", "native_raid");
+
+    if (!json.contains("headquarters_escape") || !json.at("headquarters_escape").is_object())
+    {
+        throw std::runtime_error("BaseConquestConfigParser: requires object 'headquarters_escape'");
+    }
+    const nlohmann::json& rEscape = json.at("headquarters_escape");
+    const std::string escapePath = "headquarters_escape";
+    HeadquartersEscapeConfig_t& rEscapeConfig = config.headquartersEscape;
+    rEscapeConfig.cost = RequireNonNeg_(rEscape, "cost", escapePath);
+    rEscapeConfig.scoreSeed = RequireNonNeg_(rEscape, "score_seed", escapePath);
+    rEscapeConfig.scoreScale = RequireNonNeg_(rEscape, "score_scale", escapePath);
+    rEscapeConfig.otherRegionDistanceFactor =
+        RequireNonNeg_(rEscape, "other_region_distance_factor", escapePath);
+    rEscapeConfig.populationFactor = RequirePositive_(rEscape, "population_factor", escapePath);
 
     return config;
 }

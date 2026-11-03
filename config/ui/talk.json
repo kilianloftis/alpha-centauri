@@ -55,7 +55,7 @@
         { "label": { "text": "DIPLOMENU", "item": 2, "args": "menu" }, "then": "proposal" },
         {
           "label": { "text": "DIPLOMENU", "item": 7, "args": "menu" },
-          "when": "MayRenouncePact",
+          "when": "RenouncePact",
           "then": "confirm_renounce"
         },
         { "label": { "text": "DIPLOMENU", "item": 0, "args": "menu" }, "then": "end" }
@@ -119,7 +119,7 @@
             "Invalid": { "say": { "text": "TALKINVALID", "args": "talk" }, "then": "proposal" }
           }
         },
-        { "label": { "text": "TALKTRADE", "args": "talk" }, "when": "MayTrade", "then": "trade" },
+        { "label": { "text": "TALKTRADE", "args": "talk" }, "when": "Trade", "then": "trade" },
         { "label": { "text": "PROPOSALMENU", "item": 0, "args": "proposal" }, "then": "diplomacy" }
       ]
     },

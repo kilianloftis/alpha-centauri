@@ -172,6 +172,14 @@ struct CaptureNoticeInteraction_t
     bool bVictimInVendetta = false;
 };
 
+// A Headquarters escaping a captured base (capture_base's ESCAPE): the player chooses whether to
+// pay to move its own to destinationId, or hears that an AI has moved its there.
+struct HeadquartersEscapeInteraction_t
+{
+    FactionId_t ownerId = 0;
+    BaseId_t destinationId = 0;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -185,7 +193,8 @@ using PlayerInteraction_t = std::variant<
     ProbeNoticeInteraction_t,
     ProbeFrameNoticeInteraction_t,
     AtrocityNoticeInteraction_t,
-    CaptureNoticeInteraction_t
+    CaptureNoticeInteraction_t,
+    HeadquartersEscapeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/diplomacy/DiplomacyActions.h"
 #include "game/diplomacy/TradeItem.h"
 
 #include <nlohmann/json_fwd.hpp>
@@ -65,16 +66,6 @@ struct TalkOutcome_t
     std::string then;
 };
 
-enum class TalkCondition_t
-{
-    MayProposeTruce,
-    MayProposeTreaty,
-    MayProposePact,
-    MayRenouncePact,
-    MayTrade,
-    HasDraft
-};
-
 enum class TalkAction_t
 {
     ProposeTruce,
@@ -104,7 +95,8 @@ enum class TradeSide_t
 struct TalkFixedChoice_t
 {
     TalkTextRef_t label;
-    std::optional<TalkCondition_t> when;
+    // Shown only while GetTalkActions offers this.
+    std::optional<DiplomaticActionKind_t> when;
     std::optional<TalkAction_t> action;
     std::map<TalkResult_t, TalkOutcome_t> outcomes;
 };

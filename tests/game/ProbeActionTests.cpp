@@ -195,7 +195,7 @@ bool UnitAlive_(const Faction& rFaction, UnitId_t unitId)
 // first, away from the target.
 BaseManager& MakeMindControlTarget_(ProbeGame_& rGame)
 {
-    rGame.MakeBase(*rGame.pAi, 8, 14);
+    rGame.MakeBase(*rGame.pAi, 8, 14).GetBuildingManager().AddBuilding("Headquarters");
     BaseManager& rTarget = rGame.MakeBase(*rGame.pAi, 8, 8);
     REQUIRE_FALSE(rTarget.IsHeadquarters());
     return rTarget;
@@ -1373,7 +1373,7 @@ TEST_CASE("Probe quotes measure HQ distance as the binary's vector_dist", "[prob
 {
     ProbeGame_ game;
     // Twelve columns along one row: 9 by vector_dist, where king moves would count 6.
-    game.MakeBase(*game.pAi, 8, 8);
+    game.MakeBase(*game.pAi, 8, 8).GetBuildingManager().AddBuilding("Headquarters");
     REQUIRE(game.pAi->GetHeadquarters());
     MakeSubvertDivisionInexact_(*game.pAi, 9);
     Unit& probe = game.MakeUnit(*game.pPlayer, 19, 9, {"test_chassis", "Probe_Team"});
@@ -1390,7 +1390,7 @@ TEST_CASE("The base quote scales its distance by each facility in turn, truncati
     ProbeGame_ game;
     AddDistanceBuildings_(game, pool);
     // HQ 6 rows south: vector_dist 4.
-    game.MakeBase(*game.pAi, 8, 14);
+    game.MakeBase(*game.pAi, 8, 14).GetBuildingManager().AddBuilding("Headquarters");
     BaseManager& target = game.MakeBase(*game.pAi, 8, 8);
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
 
@@ -1409,7 +1409,7 @@ TEST_CASE("A base one tile from its HQ is quoted after a facility halves the dis
     EffectPool pool;
     ProbeGame_ game;
     AddDistanceBuildings_(game, pool);
-    game.MakeBase(*game.pAi, 9, 9);
+    game.MakeBase(*game.pAi, 9, 9).GetBuildingManager().AddBuilding("Headquarters");
     BaseManager& target = game.MakeBase(*game.pAi, 8, 8);
     target.GetBuildingManager().AddBuilding("test_creche");
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 7, {"test_chassis", "Probe_Team"});
@@ -1424,6 +1424,7 @@ TEST_CASE("A Punishment Sphere at a unit's home base halves its subversion dista
     ProbeGame_ game;
     AddDistanceBuildings_(game, pool);
     BaseManager& home = game.MakeBase(*game.pAi, 8, 8);
+    home.GetBuildingManager().AddBuilding("Headquarters");
     REQUIRE(home.IsHeadquarters());
     MakeSubvertDivisionInexact_(*game.pAi, 4);
     Unit& probe = game.MakeUnit(*game.pPlayer, 19, 9, {"test_chassis", "Probe_Team"});
@@ -1595,6 +1596,7 @@ TEST_CASE("Sabotage's protected risk and the drain and plague formulas come from
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& hq = game.MakeBase(*game.pAi, 8, 8);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
     const Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
     const ProbeTarget_t hqTarget =
         *ResolveProbeTarget(probe, hq.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
@@ -1820,7 +1822,7 @@ TEST_CASE("A kept agreement's friction is one draw below probe_keep_friction_dra
     std::mt19937 rng(11);
     std::mt19937 expectedRng = rng;
     const int expected = RollExclusiveMax(4, expectedRng);
-    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+    KeepProbeAgreement(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
 
     CHECK(AiFrictionTowardPlayer_(game) == expected);
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Pact);
@@ -1831,12 +1833,10 @@ TEST_CASE("Breaking a Pact below mind control ends it without a blemish",
 {
     ProbeGame_ game;
     SignPact_(game);
-    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::StealTech);
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::StealTech);
     REQUIRE(aftermath.breakOutcome == BreakOutcome_t::PactEnded);
-    aftermath.bMayKeepAgreement = false;
-    std::mt19937 rng(3);
 
-    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+    BreakProbeAgreement(game.fixtures.state, PlayerActAgainstAi_(game), aftermath);
 
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Treaty);
     CHECK(AiFrictionTowardPlayer_(game) == 0);
@@ -1864,11 +1864,11 @@ TEST_CASE("A probe against native life adds no friction or blemish",
     const HostileAct_t act{.aggressor = game.pPlayer->GetFactionId(),
                            .victim = rPlanet.GetFactionId(),
                            .bAttributed = true};
-    std::mt19937 rng(3);
 
     const ProbeAftermath_t aftermath =
         ResolveProbeAftermath(act, RequireAction_(game, ProbeActionId_t::StealTech));
-    ApplyProbeAftermath(game.fixtures.state, act, aftermath, rng);
+    REQUIRE_FALSE(aftermath.bMayKeepAgreement);
+    BreakProbeAgreement(game.fixtures.state, act, aftermath);
 
     const DiplomacyLedger& rLedger = game.fixtures.state.GetDiplomacyLedger();
     CHECK(rLedger.GetFriction(rPlanet.GetFactionId(), game.pPlayer->GetFactionId()) == 0);
@@ -1880,13 +1880,11 @@ TEST_CASE("Breaking an agreement over a plague is a double cross",
 {
     ProbeGame_ game;
     SignPact_(game);
-    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::GeneticPlague);
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::GeneticPlague);
     REQUIRE(aftermath.bMayKeepAgreement);
     REQUIRE(aftermath.breakOutcome == BreakOutcome_t::HostileAct);
-    aftermath.bMayKeepAgreement = false;
-    std::mt19937 rng(3);
 
-    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+    BreakProbeAgreement(game.fixtures.state, PlayerActAgainstAi_(game), aftermath);
 
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
     CHECK(PlayerBlemishes_(game) == 1);
@@ -1897,12 +1895,10 @@ TEST_CASE("Breaking a Treaty below mind control is a Vendetta without a blemish"
 {
     ProbeGame_ game;
     SignTreaty_(game);
-    ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::DrainEnergy);
+    const ProbeAftermath_t aftermath = AftermathAgainstAi_(game, ProbeActionId_t::DrainEnergy);
     REQUIRE(aftermath.breakOutcome == BreakOutcome_t::Vendetta);
-    aftermath.bMayKeepAgreement = false;
-    std::mt19937 rng(3);
 
-    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+    BreakProbeAgreement(game.fixtures.state, PlayerActAgainstAi_(game), aftermath);
 
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
     CHECK(PlayerBlemishes_(game) == 0);
@@ -1936,13 +1932,12 @@ TEST_CASE("Mind-controlling a Treaty partner's base double-crosses it without a 
 {
     ProbeGame_ game;
     SignTreaty_(game);
-    std::mt19937 rng(3);
 
     const ProbeAftermath_t aftermath =
         AftermathAgainstAi_(game, ProbeActionId_t::MindControlBase);
     REQUIRE_FALSE(aftermath.bMayKeepAgreement);
     REQUIRE(aftermath.breakOutcome == BreakOutcome_t::HostileAct);
-    ApplyProbeAftermath(game.fixtures.state, PlayerActAgainstAi_(game), aftermath, rng);
+    BreakProbeAgreement(game.fixtures.state, PlayerActAgainstAi_(game), aftermath);
 
     CHECK(PlayerStatusWithAi_(game) == DiplomaticStatus_t::Vendetta);
     CHECK(PlayerBlemishes_(game) == 1);
@@ -2032,6 +2027,7 @@ TEST_CASE("Mission risk uses stolen-research on the base, and at least 2 at an H
     ProbeGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
     BaseManager& hq = game.MakeBase(*game.pAi, 8, 8);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
     BaseManager& colony = game.MakeBase(*game.pAi, 14, 8);
     REQUIRE(hq.IsHeadquarters());
     REQUIRE_FALSE(colony.IsHeadquarters());

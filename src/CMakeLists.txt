@@ -167,6 +167,7 @@ add_library(ac-core STATIC
     game/combat/CombatResolver.cpp
     game/combat/CombatRules.cpp
     game/combat/FightAftermathMutations.cpp
+    game/combat/FightAftermathRules.cpp
     game/combat/CollateralMutations.cpp
     game/combat/CollateralRules.cpp
     game/combat/MoraleConfig.cpp
@@ -193,6 +194,7 @@ add_library(ac-core STATIC
     game/terraform/TerraformRules.cpp
     game/terraform/TerraformMutations.cpp
     game/units/AdHocDesign.cpp
+    game/base/BaseConquestCalculator.cpp
     game/base/BaseConquestConfigParser.cpp
     game/base/BaseConquestRules.cpp
     game/base/BaseConquestMutations.cpp

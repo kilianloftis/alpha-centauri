@@ -222,11 +222,12 @@ TEST_CASE("World map trade records the tiles it newly explores for the receiver"
     CHECK(rMemory.Occupants(rKnown).improvements.empty());
 }
 
-TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
+TEST_CASE("Base transfer changes ownership and destroys a Headquarters", "[diplomacy][executor]")
 {
     DiplomacyFixture game;
     game.MeetAll();
     BaseManager& rBase = *game.pBaseA;
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
     const BaseId_t baseId = rBase.GetBaseId();
     const std::string name = rBase.GetName();
     const int popSize = rBase.GetPopulation().GetSize();
@@ -236,12 +237,13 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     rBase.GetProduction().SetProduction(
         &game.fixtures.dataContext.buildingRegistry->Get("farm_booster"), rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(9);
+    MakeSessionBase(game.fixtures, *game.pA, 20, 6);
     const int receiverBases = game.pB->GetBaseCount();
     DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeBase_t{baseId});
 
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Accepted);
-    CHECK(game.pA->GetBaseCount() == 0);
+    CHECK(game.pA->GetBaseCount() == 1);
     CHECK(game.pB->GetBaseCount() == receiverBases + 1);
     const BaseManager* pTransferred = game.pB->FindBase(baseId);
     REQUIRE(pTransferred);
@@ -249,9 +251,9 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     CHECK(pTransferred->GetName() == name);
     CHECK(pTransferred->GetPopulation().GetSize() == popSize);
     CHECK(pTransferred->GetPopulation().GetNutrientStockpile() == 17);
-    CHECK(pTransferred->GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK_FALSE(pTransferred->GetBuildingManager().HasBuilding("Headquarters"));
     CHECK(pTransferred->GetBuildingManager().HasBuilding("flat_nutrient"));
-    CHECK(pTransferred->GetBuildingManager().GetBuildings().size() == buildingCount);
+    CHECK(pTransferred->GetBuildingManager().GetBuildings().size() == buildingCount - 1);
     REQUIRE(pTransferred->GetProduction().GetCurrentProduction() != nullptr);
     CHECK(pTransferred->GetProduction().GetCurrentProduction()->GetId() == "farm_booster");
     CHECK(pTransferred->GetProduction().GetMineralStockpile() == 9);
@@ -261,13 +263,14 @@ TEST_CASE("The same base cannot be offered twice in one proposal", "[diplomacy][
 {
     DiplomacyFixture game;
     game.MeetAll();
+    MakeSessionBase(game.fixtures, *game.pA, 20, 6);
     DiplomaticProposal_t proposal = Proposal_(*game.pA, *game.pB);
     proposal.give.push_back(TradeBase_t{game.pBaseA->GetBaseId()});
     proposal.give.push_back(TradeBase_t{game.pBaseA->GetBaseId()});
     const int receiverBases = game.pB->GetBaseCount();
 
     CHECK(Propose_(game, proposal) == DiplomaticProposeResult_t::Invalid);
-    CHECK(game.pA->GetBaseCount() == 1);
+    CHECK(game.pA->GetBaseCount() == 2);
     CHECK(game.pB->GetBaseCount() == receiverBases);
 }
 
@@ -376,6 +379,7 @@ TEST_CASE("CanDeliver answers for one item from its giver", "[diplomacy][proposa
     const FactionId_t c = game.pC->GetFactionId();
     game.pA->GetEconomy().AddEnergy(10);
     game.pA->GetResearch().AddDiscoveredTech("test_tech");
+    MakeSessionBase(game.fixtures, *game.pA, 20, 6);
 
     CHECK(CanDeliver(a, b, TradeCredits_t{10}));
     CHECK_FALSE(CanDeliver(a, b, TradeCredits_t{11}));
@@ -391,4 +395,61 @@ TEST_CASE("CanDeliver answers for one item from its giver", "[diplomacy][proposa
     CHECK_FALSE(CanDeliver(a, b, TradeCommFrequency_t{c}));
     game.Ledger().SetKnown(b, c, false);
     CHECK(CanDeliver(a, b, TradeCommFrequency_t{c}));
+}
+
+TEST_CASE("A faction never hands over its last base", "[diplomacy][proposal]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    const TradeBase_t only{game.pBaseA->GetBaseId()};
+    REQUIRE(game.pA->GetBaseCount() == 1);
+
+    CHECK_FALSE(CanDeliver(a, b, only));
+    DiplomaticProposal_t gift = Proposal_(*game.pA, *game.pB);
+    gift.give.push_back(only);
+    CHECK(Propose_(game, gift) == DiplomaticProposeResult_t::Invalid);
+    CHECK(game.pA->GetBaseCount() == 1);
+}
+
+TEST_CASE("One side never hands over every base its giver holds", "[diplomacy][proposal]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    BaseManager& rSecond = MakeSessionBase(game.fixtures, *game.pA, 20, 6);
+    DiplomaticProposal_t both = Proposal_(*game.pA, *game.pB);
+    both.give = {TradeBase_t{game.pBaseA->GetBaseId()}, TradeBase_t{rSecond.GetBaseId()}};
+
+    CHECK(Propose_(game, both) == DiplomaticProposeResult_t::Invalid);
+    CHECK(game.pA->GetBaseCount() == 2);
+
+    DiplomaticProposal_t one = Proposal_(*game.pA, *game.pB);
+    one.give = {TradeBase_t{rSecond.GetBaseId()}};
+    CHECK(Propose_(game, one) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->GetBaseCount() == 1);
+}
+
+TEST_CASE("A proposal may not demand the recipient's headquarters", "[diplomacy][proposal]")
+{
+    DiplomacyFixture game;
+    game.MeetAll();
+    const FactionId_t a = game.pA->GetFactionId();
+    const FactionId_t b = game.pB->GetFactionId();
+    BaseManager& rOutpost = MakeSessionBase(game.fixtures, *game.pB, 20, 12);
+    game.pBaseB->GetBuildingManager().AddBuilding("Headquarters");
+    const TradeBase_t headquarters{game.pBaseB->GetBaseId()};
+    const TradeBase_t outpost{rOutpost.GetBaseId()};
+
+    CHECK(CanDeliver(b, a, headquarters));
+    CHECK_FALSE(CanDemand(b, a, headquarters));
+    CHECK(CanDemand(b, a, outpost));
+
+    DiplomaticProposal_t demand = Proposal_(*game.pA, *game.pB);
+    demand.demand = {headquarters};
+    CHECK(Propose_(game, demand) == DiplomaticProposeResult_t::Invalid);
+
+    demand.demand = {outpost};
+    CHECK(Propose_(game, demand) == DiplomaticProposeResult_t::Accepted);
+    CHECK(game.pA->FindBase(outpost.baseId) != nullptr);
 }

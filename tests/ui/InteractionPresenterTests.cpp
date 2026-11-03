@@ -9,6 +9,7 @@
 #include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/economy/EconomyManager.h"
 #include "game/units/Military.h"
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
@@ -391,3 +392,38 @@ TEST_CASE("A Pact obligation the player still owes asks for an answer",
     CHECK(harness.advanceCount == 0);
     CHECK(rFixture.state.GetPlayerInteractions().Size() == 1);
 }
+
+TEST_CASE("A Headquarters escape the player can still pay for asks for an answer",
+          "[ui][InteractionPresenter][PlayerInteraction][hq]")
+{
+    PresenterHarness_ harness;
+    ViewFixture& rFixture = harness.fixture;
+    rFixture.MakeBase(8, 8);
+    const BaseManager& rDestination = rFixture.MakeBase(14, 8);
+    rFixture.pPlayer->GetEconomy().AddEnergy(1000);
+
+    harness.Enqueue(HeadquartersEscapeInteraction_t{rFixture.pPlayer->GetFactionId(),
+                                                    rDestination.GetBaseId()});
+    harness.pPresenter->Update();
+
+    CHECK(harness.pWorldView->HasModalElement());
+    CHECK(harness.advanceCount == 0);
+}
+
+TEST_CASE("A Headquarters escape the player can no longer pay for completes without a prompt",
+          "[ui][InteractionPresenter][PlayerInteraction][hq]")
+{
+    PresenterHarness_ harness;
+    ViewFixture& rFixture = harness.fixture;
+    const BaseManager& rDestination = rFixture.MakeBase(14, 8);
+    rFixture.pPlayer->GetEconomy().AddEnergy(999);
+
+    harness.Enqueue(HeadquartersEscapeInteraction_t{rFixture.pPlayer->GetFactionId(),
+                                                    rDestination.GetBaseId()});
+    harness.pPresenter->Update();
+
+    CHECK(rFixture.state.GetPlayerInteractions().Empty());
+    CHECK(harness.advanceCount == 1);
+    CHECK_FALSE(harness.pWorldView->HasModalElement());
+}
+

@@ -183,6 +183,7 @@ TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][
 {
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
+    home.GetBuildingManager().AddBuilding("Headquarters");
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
     REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
     REQUIRE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
@@ -203,14 +204,12 @@ TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][
     CHECK_FALSE(pNew->GetBuildingManager().HasBuilding("Headquarters"));
 }
 
-TEST_CASE("The first founded base is Headquarters and keeps all energy", "[unit][found-base][hq]")
+TEST_CASE("A Headquarters base keeps all energy", "[unit][found-base][hq]")
 {
     FoundBaseGame_ game;
-    REQUIRE(game.pPlayer->GetHeadquarters() == nullptr);
-
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
+    home.GetBuildingManager().AddBuilding("Headquarters");
     CHECK(game.pPlayer->GetHeadquarters() == &home);
-    CHECK(home.GetBuildingManager().HasBuilding("Headquarters"));
     CHECK(home.GetBuildingUpkeep() == 0);
 
     // HQ short-circuits inefficiency: allocatable energy equals pre-inefficiency production.
@@ -574,13 +573,13 @@ TEST_CASE("Submergence loses clamp(size / 2, roll, cap) pop", "[surface]")
     CHECK(last.popLoss == 2);
 }
 
-TEST_CASE("Only a faction without a headquarters is granted one by its next base",
-          "[found-base][hq]")
+TEST_CASE("Founding a base grants no headquarters", "[found-base][hq]")
 {
     FoundBaseGame_ game;
-    CHECK(GrantsHeadquarters(*game.pPlayer));
+    REQUIRE(game.pPlayer->GetHeadquarters() == nullptr);
 
-    game.MakeBase(*game.pPlayer, 8, 8);
-    CHECK_FALSE(GrantsHeadquarters(*game.pPlayer));
-    CHECK(GrantsHeadquarters(*game.pAi));
+    const BaseManager& rBase = game.MakeBase(*game.pPlayer, 8, 8);
+
+    CHECK_FALSE(rBase.IsHeadquarters());
+    CHECK(game.pPlayer->GetHeadquarters() == nullptr);
 }

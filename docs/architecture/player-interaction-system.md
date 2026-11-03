@@ -71,6 +71,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `ProbeNoticeInteraction_t` | `NoticePopup` from `ProbeNoticeCopy` (actor vs target script); completes without a modal when that audience has no script |
 | `AtrocityNoticeInteraction_t` | `NoticePopup` from `AtrocityNoticeCopy`; gated by `PauseOnEventId_t::AtrocityCommitted` |
 | `CaptureNoticeInteraction_t` | `NoticePopup` from `CaptureNoticeCopy` (captor vs victim battle report); completes without a modal for any other audience |
+| `HeadquartersEscapeInteraction_t` | The player's own: Let it go / Fly the command staff → `EvacuateHeadquarters` → Complete; completes without asking unless `MayEvacuateHeadquarters` still holds. An AI's: `NoticePopup` that it has moved |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -91,6 +92,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome. A probe the target's `probe_hunter` out-ranks dies on contact (`ProbeContactDestroyed_t`) and skips the action menu; the result carries the hunter's source building, which `FillNoticeNames_` turns into `facilityName` for the copy. Steal-tech with an empty pool copies the target's explored tiles (`CopyExploredMap`) and uses `ProbeStolenMap_t` (`STOLEMAP`) when the actor learned any tile. A framed probe then enqueues `ProbeFrameNoticeInteraction_t` (the target's and framed faction's names and `ProbeFrameOutcome_t`); `ProbeFrameNoticeCopy` gives the actor `FRAMED` or `FRAMEFLOP`.
 - Atrocity committed → `AtrocityNoticeInteraction_t`; `AtrocityNoticeCopy` phrases the notice.
 - A fight handed units to the attacker (Marine Detachment boarding, or artifacts taken on defeat) → `CaptureNoticeInteraction_t` when the player is the captor or the victim; `CaptureNoticeCopy` phrases it.
+- A captured Headquarters with somewhere to escape to (`TakeBase`) → `HeadquartersEscapeInteraction_t`: an offer for the player's own, news after an AI has already moved its.
 
 **Follow-on PRs on the same spine**
 

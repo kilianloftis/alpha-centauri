@@ -51,6 +51,7 @@
 #include "game/diplomacy/DiplomacyCalculator.h"
 #include "game/combat/MoraleConfigParser.h"
 #include "game/probes/ProbeActionConfigParser.h"
+#include "game/base/BaseConquestCalculator.h"
 #include "game/base/BaseConquestConfigParser.h"
 #include "game/combat/CombatConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
@@ -300,6 +301,8 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
     rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
     rData.probeCalculator = std::make_unique<ProbeCalculator>(rLua);
     rData.diplomacyCalculator = std::make_unique<DiplomacyCalculator>(*rData.diplomacyConfig);
+    rData.baseConquestCalculator =
+        std::make_unique<BaseConquestCalculator>(*rData.baseConquestConfig);
 }
 
 } // namespace
@@ -354,6 +357,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.commerceCalculator.get(), "commerceCalculator"},
         {rData.probeCalculator.get(), "probeCalculator"},
         {rData.diplomacyCalculator.get(), "diplomacyCalculator"},
+        {rData.baseConquestCalculator.get(), "baseConquestCalculator"},
     };
     for (const auto& [pMember, pName] : required)
     {
