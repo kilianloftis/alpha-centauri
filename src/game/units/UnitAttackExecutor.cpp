@@ -17,6 +17,9 @@
 #include "game/units/UnitMutations.h"
 #include "game/units/UnitOrderExecutor.h"
 
+#include "lib/RandomRoll.h"
+
+#include <algorithm>
 #include <utility>
 #include <random>
 
@@ -144,6 +147,44 @@ std::optional<UnitAttackExecutor::BombardResult_t> UnitAttackExecutor::TryBombar
     for (const HostileAct_t& rAct : acts)
     {
         m_rWorld.OnHostileAct(rAct);
+    }
+    return result;
+}
+
+std::optional<UnitAttackExecutor::DestroyEnhancementResult_t>
+UnitAttackExecutor::TryDestroyEnhancement(Unit& rUnit,
+                                          const std::vector<std::string>& rImprovementIds)
+{
+    if (!CanDestroyEnhancement(rUnit) || rImprovementIds.empty()
+        || static_cast<int>(rImprovementIds.size()) > DestroyEnhancementAttempts(rUnit))
+    {
+        return std::nullopt;
+    }
+    const std::vector<std::string> candidates = DestroyEnhancementTargets(rUnit.GetTile());
+    for (const std::string& rId : rImprovementIds)
+    {
+        if (std::find(candidates.begin(), candidates.end(), rId) == candidates.end())
+        {
+            return std::nullopt;
+        }
+    }
+
+    const std::optional<HostileAct_t> act = DestroyEnhancementHostileAct(rUnit);
+    const int successChance = DestroyEnhancementSuccessChance(rUnit);
+    DestroyEnhancementResult_t result;
+    for (const std::string& rId : rImprovementIds)
+    {
+        if (!RollPercent(successChance, m_rRng))
+        {
+            continue;
+        }
+        m_rTileEffects.RemoveOccupantWithEffects(m_rWorldMap.MutableTile(rUnit.GetTile()), rId);
+        result.destroyedImprovementIds.push_back(rId);
+    }
+    result.bUnitDestroyed = SpendAttack(rUnit, AttackKind_t::DestroyEnhancement);
+    if (act)
+    {
+        m_rWorld.OnHostileAct(*act);
     }
     return result;
 }

@@ -165,6 +165,15 @@
           "stat": "hit_points",
           "amount": 10
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -1135,6 +1144,23 @@
     ]
   },
   {
+    "id": "test_multi_destroy",
+    "name": "Test Multi Destroy Enhancement",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_count",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",
@@ -1479,6 +1505,15 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -1550,6 +1585,15 @@
         "scope": "ThisUnit",
         "parameters": {
           "flag": "cannot_capture_bases"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
+          "op": "Add"
         }
       }
     ]

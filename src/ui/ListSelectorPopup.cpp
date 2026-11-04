@@ -7,11 +7,8 @@
 #include "ui/style/UiStyle.h"
 
 #include <algorithm>
-#include <functional>
 #include <stdexcept>
-#include <string>
 #include <utility>
-#include <vector>
 
 namespace ac
 {
@@ -128,7 +125,8 @@ void ListSelectorPopup::DrawEntries_(Graphics& rGraphics) const
     for (size_t i = 0; i < m_entryRects.size(); ++i)
     {
         const Rectangle_t& rRect = m_entryRects[i];
-        const PopupChoice_t& rChoice = m_choices[m_scrollOffset + i];
+        const size_t choiceIndex = m_scrollOffset + i;
+        const PopupChoice_t& rChoice = m_choices[choiceIndex];
         float textX = rRect.x + padding;
         if (m_pSprites && !rChoice.iconPath.empty() && m_pSprites->Ensure(rChoice.iconPath))
         {
@@ -201,14 +199,16 @@ void ListSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
 
     for (size_t i = 0; i < m_entryRects.size(); ++i)
     {
-        if (ContainsMouseCoord(m_entryRects[i], rEvent))
+        if (!ContainsMouseCoord(m_entryRects[i], rEvent))
         {
-            // Close before the callback: a handler that resumes turn processing is gated on
-            // this popup no longer counting as an open modal (IGameView::HasModalElement).
-            m_bShouldClose = true;
-            m_choices[m_scrollOffset + i].onChosen();
-            return;
+            continue;
         }
+        const size_t choiceIndex = m_scrollOffset + i;
+        // Close before the callback: a handler that resumes turn processing is gated on
+        // this popup no longer counting as an open modal (IGameView::HasModalElement).
+        m_bShouldClose = true;
+        m_choices[choiceIndex].onChosen();
+        return;
     }
 }
 

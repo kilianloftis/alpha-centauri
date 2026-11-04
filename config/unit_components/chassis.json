@@ -326,6 +326,15 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -389,6 +398,15 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -425,6 +443,15 @@
         "parameters": {
           "stat": "vision",
           "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -25,
           "op": "Add"
         }
       }

@@ -394,6 +394,7 @@ add_library(ac-ui STATIC
     ui/style/DrawPanelChrome.cpp
     ui/world/WorldView.cpp
     ui/ListSelectorPopup.cpp
+    ui/MultiSelectListPopup.cpp
     ui/NoticePopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp

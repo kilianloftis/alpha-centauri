@@ -226,6 +226,22 @@ At `≤ 0` it is zeroed (`0x509400`) and the adjacent tiles are searched for a r
 no `rand()` in the block (`0x5093F1`–`0x509740`), so the withdrawal is one deterministic try,
 and with no tile found it is never retried.
 
+### Destroy Enhancement (`Console_destroy` `0x4D52A0` / `action_destroy` `0x4CAA50`)
+
+`D` opens a picker, then calls `action_destroy(veh_id, selected_bit, -1, -1)` for the unit's
+current tile. Eligibility in `Console_destroy` (against `#ONLYCOMBAT`): weapon
+`offense_value != 0` (`Weapon` +0x8 at `0x94AE68`) or weapon `mode == 9` (`WMODE_TERRAFORM`,
+`0x94AE6A`). Also requires `veh_ready` (`0x5C1B70`), no base on the tile (`#NOTBASE`), and
+domain match with the tile (`#NOTINTRIAD`; air always OK). Original `action_destroy` calls
+`veh_skip` (`0x5C1D20`) first — all remaining moves — then clears the chosen enhancement bit.
+It does **not** kill a missile. On the on-tile path, conventional air (triad air, not
+`Chassis.missile`) has a 25% `#BOMBFAILED` miss (`rand & 3 == 0` at `0x4CAD4F`); missiles and
+land/sea skip that roll. Empty-tile artillery bombard is a separate path (`action_arty` →
+`action_destroy` with map coords): 50% miss, auto-pick by priority, not the player dialog.
+
+Ours expresses the air miss as `destroy_enhancement_success` seed 100 with air chassis Add −25,
+and never expends `SingleUse` on this action.
+
 ### Artillery strike vs duel (`battle_fight_2` `0x506AF0`)
 
 `combat_type` lives in `[ebp+0x18]` (the render path writes it 0 / 1 at `0x50880A` /
@@ -1535,6 +1551,24 @@ status is never read, and other factions' units are left alone.
   (`stack_veh`, `stack_put`) to the old owner's base nearest the given one (`base_find_2`, with
   the given base hidden from the search). Its order is cleared and, if it was homed at the given
   base, it is homed at that base instead. With no such base it changes sides as above.
+
+`stack_veh(veh, 1)` (`0x5B8EE0`) lifts a unit with no cargo that lacks the carrier ability alone
+(`veh_drop(veh_lift(veh), −2, −2)`, `0x5B94D8`); only a unit carrying cargo, or a carrier, moves
+as a stack. A withdrawn land unit therefore moves by itself.
+
+Mind control (`probe`, `0x5A492D`–`0x5A4A98`) walks every unit of the target, last first, before
+`capture_base`. It takes those within `vector_dist` 1 of the base (`vector_dist_2` `0x5A5910`),
+land or water, skipping a neighbouring tile that holds a base (`base_who` `0x5798A0`). Each:
+
+- gets the actor's copy of a custom prototype (unit id above 64): `propose_proto(actor, chassis,
+  weapon, armor, abilities, reactor, −2, name)` (`0x5A49F5`), keeping its own when that fails;
+- joins the actor, homed at the base, with moves reset (`moves_spent` 0);
+- refuels (`movement_turns` 0) when its chassis has range (`0x5A4A4C`);
+- keeps `ORDER_HOLD` (2) and otherwise has its order cleared (`0x5A4A5A`);
+- is marked as seen by the target.
+
+Then `act_of_aggression` unless the mission was Total Thought Control, and
+`capture_base(base, actor, 1)` (`0x5A4AB0`).
 
 `capture_base` (`0x50D18E`–`0x50D25A`) re-homes the loser's units homed at the captured base to
 the loser's base nearest it (`base_find_2`), and kills one (`kill` `0x5C0B00`) when the loser has

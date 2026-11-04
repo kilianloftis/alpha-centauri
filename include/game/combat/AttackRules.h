@@ -51,13 +51,37 @@ std::vector<Unit*> BombardStrikeTargets(const Unit& rAttacker, const Tile& rTarg
 // tile with no units at all, friendly or embarked included.
 std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile);
 
+// One Destroy Enhancement picker row: id for TryDestroyEnhancement, label for the popup.
+struct DestroyEnhancementOption_t
+{
+    std::string improvementId;
+    std::string label;
+};
+
+// Non-Base improvements on the tile with display names. Empty on a Base tile.
+std::vector<DestroyEnhancementOption_t> DestroyEnhancementOptions(const Tile& rTile);
+
+// Ids from DestroyEnhancementOptions — executor validation.
+std::vector<std::string> DestroyEnhancementTargets(const Tile& rTile);
+
+// Combat or Former, moves left, domain matches the tile (air always), and a destroyable id.
+bool CanDestroyEnhancement(const Unit& rUnit);
+
+// Percent chance each Destroy Enhancement attempt succeeds (seed 100; unit + tile area effects).
+int DestroyEnhancementSuccessChance(const Unit& rUnit);
+
+// How many enhancements one order may attempt (seed 1; at least 1).
+int DestroyEnhancementAttempts(const Unit& rUnit);
+
 enum class AttackKind_t
 {
     Attack,
     Bombard,
+    DestroyEnhancement,
 };
 
-// One movement point, or every fragment left when the unit has AttackingEndsTurn or bombards.
+// One movement point, or every fragment left when the unit has AttackingEndsTurn, bombards,
+// or destroys an enhancement.
 int AttackMoveFragments(const Unit& rAttacker, AttackKind_t kind);
 
 } // namespace ac

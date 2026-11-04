@@ -62,6 +62,10 @@ bool HonoredObligationCascades();
 // that faction's targets is.
 std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& rTarget);
 
+// Territory owner of rUnit's tile when that owner is a foreign faction. nullopt on own or
+// unowned land.
+std::optional<HostileAct_t> DestroyEnhancementHostileAct(const Unit& rUnit);
+
 // The status a pair may propose next. Any status may also go to Vendetta.
 constexpr std::optional<DiplomaticStatus_t> StepUp(DiplomaticStatus_t status)
 {

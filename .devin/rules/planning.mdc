@@ -9,6 +9,15 @@ Plans describe **what needs to change** — the settled design, target behavior,
 
 Do **not** narrate abandoned options, rejected approaches, “we are not doing X” leftovers, or earlier draft revisions. Do **not** add “Correction:” / “Why not …” / “Earlier we thought …” sections that explain how the plan changed. If something is out of scope, omit it unless the reader must know a deliberate deletion or behavior change.
 
+## Resolve the original game before planning
+
+Reading `terranx.exe` for every mechanic a plan touches is part of planning, not a step in the
+plan. Before presenting it, confirm what the binary does (`smac-reverse-engineering.mdc`), record
+it in `docs/thinker/terranx-map.md`, and state it in the plan with a citation to that section. A
+plan never includes a step to confirm, check or verify the binary, Thinker, or the original game's
+behaviour. A question the binary cannot answer is settled with the user before the plan is
+presented.
+
 When a rename deletes an in-repo-only config key or API, the plan is “use the new name; update every config.” Do not plan parser migration shims or “reject old key with a helpful message” branches — see coding-guidelines.
 
 ```text

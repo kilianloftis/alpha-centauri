@@ -80,6 +80,11 @@ enum class StatId_t
     AirdropLandingDamage,
     // Chebyshev bombard range from the firing tile. 0 = cannot fire.
     BombardRange,
+    // Percent chance each Destroy Enhancement attempt succeeds (Additive; seed 100 in Rules).
+    // Air chassis Add -25 for SMAC's 25% fail; tile auras can cut it further.
+    DestroyEnhancementSuccess,
+    // How many enhancements one Destroy Enhancement order may attempt (Additive; Rules seed 1).
+    DestroyEnhancementCount,
     CargoCapacity,
     DifficultTerrainCost,
     // Ceiling on a tile's entry price, in move points ("1/3", 1, 0); MaxClamp only. The tightest
@@ -318,6 +323,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
         case StatId_t::BombardRange:
+        case StatId_t::DestroyEnhancementSuccess:
+        case StatId_t::DestroyEnhancementCount:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -496,6 +503,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
         case StatId_t::BombardRange:
+        case StatId_t::DestroyEnhancementSuccess:
+        case StatId_t::DestroyEnhancementCount:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -556,6 +565,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "airdrop_range")           return StatId_t::AirdropRange;
     if (rStat == "airdrop_landing_damage")  return StatId_t::AirdropLandingDamage;
     if (rStat == "bombard_range")           return StatId_t::BombardRange;
+    if (rStat == "destroy_enhancement_success") return StatId_t::DestroyEnhancementSuccess;
+    if (rStat == "destroy_enhancement_count")   return StatId_t::DestroyEnhancementCount;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "move_cost")               return StatId_t::MoveCost;

@@ -139,6 +139,17 @@ std::vector<HostileAct_t> BombardHostileActs(const Unit& rAttacker, const Tile& 
     return acts;
 }
 
+std::optional<HostileAct_t> DestroyEnhancementHostileAct(const Unit& rUnit)
+{
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
+    const FactionId_t owner = rWorldMap.GetTerritory().GetOwner(rUnit.GetTile());
+    if (owner == rUnit.GetFaction().GetFactionId() || owner == k_NoFactionOwner)
+    {
+        return std::nullopt;
+    }
+    return HostileActAgainst(rUnit, owner);
+}
+
 bool CanProposeStepUp(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
 {
     return rLedger.AreKnown(a, b) && StepUp(rLedger.GetStatus(a, b)).has_value();

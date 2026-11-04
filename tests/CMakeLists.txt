@@ -89,6 +89,7 @@ add_executable(effects-tests
     game/WorldEventTests.cpp
     game/ExplosionTests.cpp
     game/BombardTests.cpp
+    game/DestroyEnhancementTests.cpp
     game/TileResourceRestrictionTests.cpp
     game/WorldGeneratorMoistureTests.cpp
     game/WorldGeneratorRockinessTests.cpp
@@ -141,6 +142,7 @@ add_executable(effects-tests
     ui/CameraInputControllerTests.cpp
     ui/MinimapDisplayTests.cpp
     ui/ListSelectorPopupTests.cpp
+    ui/MultiSelectListPopupTests.cpp
     ui/DrawPanelChromeTests.cpp
     ui/FixedLayoutTests.cpp
     ui/HurryProductionPopupTests.cpp

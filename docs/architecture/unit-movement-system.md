@@ -253,9 +253,22 @@ Conventional damage is `k_CombatRoundDamage`; psi uses the receiver's `psi_damag
 When the attacker has fewer than one movement point of fragments left, `ResolveCombatStrength`
 multiplies the resolved attack rating by that leftover fraction of a point; a full point
 or more leaves attack strength unchanged. The post-combat spend (`SpendAttack`, UnitMutations) is `AttackMoveFragments`: one
-point, or the rest of the turn when `AttackingEndsTurn` or when bombarding. After a fight or a
+point, or the rest of the turn when `AttackingEndsTurn`, bombarding, or destroying an
+enhancement. After a fight or a
 duel, `UnitAttackExecutor` applies stack collateral when the defender died, then rolls promotion
 for the survivor `PromotionCandidate` names; a strike never promotes.
+
+**Destroy Enhancement.** `D` on a combat unit (`IsCombatUnit`) or Former (`terraform` flag)
+opens a picker of `DestroyEnhancementOptions` on the unit's tile: every non-Base improvement
+id and display name, empty on a Base tile (occupancy does not matter — the unit is standing
+there). Domain must match the tile (air always). Attempts = `DestroyEnhancementAttempts`
+(`destroy_enhancement_count`, seed 1); success per chosen id = `DestroyEnhancementSuccessChance`
+(`destroy_enhancement_success`, seed 100, unit effects plus foreign-owned `CollectAreaEffects`
+on the tile — air chassis Add −25). `MultiSelectListPopup` up to attempts (footer Destroy/Cancel).
+Each chosen id rolls independently, then
+`SpendAttack(..., DestroyEnhancement)` spends every remaining fragment without `SingleUse`.
+Reports `DestroyEnhancementHostileAct` when the tile's territory owner is a foreign faction.
+Cancel leaves moves untouched. Empty-tile bombard wrecking stays on the bombard path.
 
 **Bombard.** A unit with the `bombard` rule flag has no melee attack. `IsWithinBombardRange`
 is the declare gate: the flag, any remaining movement fragments, and Chebyshev distance in

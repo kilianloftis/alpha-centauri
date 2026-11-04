@@ -1027,6 +1027,38 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **How a tile holds features**: improvements are `const ImprovementConfig_t*` in `Tile::GetImprovements()`. Axes and flags (rockiness, moisture, water band, river, aquifer) stay on the tile and are mirrored into `GetTerrainFeatures()`. Optional terrain (fungus, landmarks, bonuses, Monolith) is stored separately and appended to that same cache. Both lists point into the same registry. `Tile::HasFeature(id)` answers either. A finished improvement project does not flatten rockiness or remove fungus.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope filter as own-tile collection.
+- **Fun authoring sample — AA vs Destroy Enhancement:** not in shipping `improvements.json`;
+  mirrors the test fixture `TestAaEmplacement`. Cuts air/orbital destroy-enhancement success
+  by 50 within Chebyshev 1 (air chassis already Add −25 for SMAC's 75% baseline).
+  `owned_by_territory` stamps `ownerFaction`; `DestroyEnhancementSuccessChance` keeps only
+  foreign owners' auras (friendly AA does not penalize your own aircraft):
+
+```json
+{
+  "id": "AaEmplacement",
+  "name": "AA Emplacement",
+  "owned_by_territory": true,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "ThisTile",
+      "radius": 1,
+      "parameters": {
+        "stat": "destroy_enhancement_success",
+        "amount": -50,
+        "op": "Add"
+      },
+      "condition": {
+        "kind": "AnyOf",
+        "conditions": [
+          { "kind": "SubjectDomain", "domain": "air" },
+          { "kind": "SubjectDomain", "domain": "orbital" }
+        ]
+      }
+    }
+  ]
+}
+```
 - **`min_radius` (ring auras)**: the nearest distance an aura reaches (`EffectConfig_t::minRadius`, default `0` = includes the host tile). `TileEffectReaches` is `minRadius <= distance <= radius`. The Echelon Mirror uses `min_radius: 1, radius: 1`: it counts as a solar collector for its own elevation energy and for *other* mirrors' bonuses, but must not hand its `+1` to itself. Rejected when it exceeds `radius` (the effect would reach no tile at all) or on a non-`ThisTile` scope, both at parse time.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.

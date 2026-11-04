@@ -30,6 +30,7 @@ enum class HotkeyAction_t
     Detonate,
     Airdrop,
     Bombard,
+    DestroyEnhancement,
     PanLeft,
     PanRight,
     PanUp,

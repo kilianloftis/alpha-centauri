@@ -46,6 +46,17 @@ public:
     };
     std::optional<BombardResult_t> TryBombard(Unit& rAttacker, const Tile& rTargetTile);
 
+    // Attempts each chosen non-Base improvement on rUnit's tile (one success roll each), then
+    // spends all remaining moves without SingleUse. nullopt when CanDestroyEnhancement fails,
+    // the list is empty, longer than DestroyEnhancementAttempts, or any id is not a candidate.
+    struct DestroyEnhancementResult_t
+    {
+        std::vector<std::string> destroyedImprovementIds;
+        bool bUnitDestroyed = false;
+    };
+    std::optional<DestroyEnhancementResult_t> TryDestroyEnhancement(
+        Unit& rUnit, const std::vector<std::string>& rImprovementIds);
+
 private:
     // After a fight or duel, never an intercept or a strike: collateral on rBattleTile when the
     // defender died there and promotion for the survivor, then the world's

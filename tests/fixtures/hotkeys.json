@@ -5,6 +5,7 @@
     { "action": "AttachTransport", "key": "L" },
     { "action": "UnloadTransport", "key": "U", "shift": true },
     { "action": "Disband", "key": "D", "shift": true },
+    { "action": "DestroyEnhancement", "key": "D" },
     { "action": "SupplyCrawl", "key": "O" },
     { "action": "FoundBase", "key": "B" },
     { "action": "Detonate", "key": "X", "shift": true },

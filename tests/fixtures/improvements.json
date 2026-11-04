@@ -850,5 +850,29 @@
         }
       }
     ]
+  },
+  {
+    "id": "TestAaEmplacement",
+    "name": "Test AA Emplacement",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "destroy_enhancement_success",
+          "amount": -50,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AnyOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "air" },
+            { "kind": "SubjectDomain", "domain": "orbital" }
+          ]
+        }
+      }
+    ]
   }
 ]

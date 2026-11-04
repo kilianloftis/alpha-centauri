@@ -21,6 +21,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -57,6 +59,35 @@ bool PassesAttackUnit_(const Unit& rAttacker, const Unit& rDefender, const Tile&
     ctx.targetTile = &rTargetTile;
     return ResolveInteractionCell(rGrids, q, &rAttacker, ctx) != InteractionCell_t::Deny
            || DefenderIsResting_(rDefender, rTargetTile, rWorldMap);
+}
+
+std::vector<std::string> NonBaseImprovementIds_(const Tile& rTile)
+{
+    std::vector<std::string> ids;
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement->id != ImprovementIds::k_Base)
+        {
+            ids.push_back(pImprovement->id);
+        }
+    }
+    return ids;
+}
+
+// Land on land, sea on sea; air and orbital always match (Console_destroy #NOTINTRIAD).
+bool DomainMatchesTile_(const Unit& rUnit, const Tile& rTile)
+{
+    switch (rUnit.GetDomain())
+    {
+    case UnitDomain_t::Air:
+    case UnitDomain_t::Orbital:
+        return true;
+    case UnitDomain_t::Land:
+        return rTile.IsLand();
+    case UnitDomain_t::Sea:
+        return rTile.IsWater();
+    }
+    return false;
 }
 
 // Surface hostiles, then embarked cargo when the tile has a base.
@@ -258,20 +289,89 @@ std::vector<std::string> BombardImprovementTargets(const Tile& rTargetTile)
     {
         return {};
     }
-    std::vector<std::string> ids;
-    for (const ImprovementConfig_t* pImprovement : rTargetTile.GetImprovements())
+    return NonBaseImprovementIds_(rTargetTile);
+}
+
+std::vector<DestroyEnhancementOption_t> DestroyEnhancementOptions(const Tile& rTile)
+{
+    if (rTile.HasImprovement(ImprovementIds::k_Base))
     {
-        if (pImprovement->id != ImprovementIds::k_Base)
+        return {};
+    }
+    std::vector<DestroyEnhancementOption_t> options;
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement->id == ImprovementIds::k_Base)
         {
-            ids.push_back(pImprovement->id);
+            continue;
         }
+        options.push_back({pImprovement->id, pImprovement->name});
+    }
+    return options;
+}
+
+std::vector<std::string> DestroyEnhancementTargets(const Tile& rTile)
+{
+    std::vector<std::string> ids;
+    for (const DestroyEnhancementOption_t& rOption : DestroyEnhancementOptions(rTile))
+    {
+        ids.push_back(rOption.improvementId);
     }
     return ids;
 }
 
+bool CanDestroyEnhancement(const Unit& rUnit)
+{
+    if (rUnit.GetMoveFragmentsRemaining() <= 0)
+    {
+        return false;
+    }
+    if (!rUnit.IsCombatUnit() && !ResolveFlag(rUnit, RuleFlagId_t::Terraform))
+    {
+        return false;
+    }
+    const Tile& rTile = rUnit.GetTile();
+    return DomainMatchesTile_(rUnit, rTile) && !DestroyEnhancementTargets(rTile).empty();
+}
+
+int DestroyEnhancementSuccessChance(const Unit& rUnit)
+{
+    const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
+    std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    const FactionId_t unitFaction = rUnit.GetFaction().GetFactionId();
+    for (const ActiveEffect_t& rEffect :
+         CurrentGameState().GetTileEffects().CollectAreaEffects(rUnit.GetTile()))
+    {
+        // Friendly and unattributed auras do not cut success (same gate as airdrop interdiction).
+        if (!rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == unitFaction)
+        {
+            continue;
+        }
+        effects.push_back(rEffect);
+    }
+    const double total = ResolveStatModifiers(
+                             FilterByStatIdInContext(effects, StatId_t::DestroyEnhancementSuccess,
+                                                     ctx),
+                             100.0, &ctx)
+                             .total;
+    return FinalizeResolvedStat(total);
+}
+
+int DestroyEnhancementAttempts(const Unit& rUnit)
+{
+    const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
+    std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    const double total =
+        ResolveStatModifiers(
+            FilterByStatIdInContext(effects, StatId_t::DestroyEnhancementCount, ctx), 1.0, &ctx)
+            .total;
+    return std::max(1, FinalizeResolvedStat(total));
+}
+
 int AttackMoveFragments(const Unit& rAttacker, AttackKind_t kind)
 {
-    if (kind == AttackKind_t::Bombard || ResolveFlag(rAttacker, RuleFlagId_t::AttackingEndsTurn))
+    if (kind == AttackKind_t::Bombard || kind == AttackKind_t::DestroyEnhancement
+        || ResolveFlag(rAttacker, RuleFlagId_t::AttackingEndsTurn))
     {
         return rAttacker.GetMoveFragmentsRemaining();
     }

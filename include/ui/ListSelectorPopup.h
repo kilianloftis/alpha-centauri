@@ -25,12 +25,12 @@ struct PopupChoice_t
 };
 
 // The one modal list selector (title, choices, click or Escape), so every "pick one" popup
-// behaves the same.
+// behaves the same. Multi-pick with Confirm/Cancel is MultiSelectListPopup.
 class ListSelectorPopup : public UIElement
 {
 public:
-    // rStyle must outlive the popup. Throws if a choice has no action. Without pSprites, choice
-    // icons are ignored.
+    // rStyle must outlive the popup. Throws if a choice has no action.
+    // Without pSprites, choice icons are ignored.
     ListSelectorPopup(std::string title,
                       std::string emptyMessage,
                       std::vector<PopupChoice_t> choices,

@@ -44,6 +44,23 @@ absent.
 
 ## TODO
 
+### Missile expended on Destroy Enhancement `[Ours]`
+
+- **Original:** `action_destroy` only `veh_skip`s; a missile survives Destroy Enhancement
+  ("Destroy Enhancement").
+- **Ours:** Destroy Enhancement never calls `ExpendIfSingleUse` (same as original). Combat
+  attack and bombard still expend `single_use`.
+- **Where:** `SpendAttack` (`UnitMutations`) skips expend for `AttackKind_t::DestroyEnhancement`.
+- **Missing:** a switch that expends `SingleUse` on Destroy Enhancement for missiles.
+
+### Missile destroys more than one enhancement `[Ours]`
+
+- **Original:** Destroy Enhancement picks one enhancement ("Destroy Enhancement").
+- **Ours:** `destroy_enhancement_count` (seed 1) is the attempt budget; shipping Missile stays
+  at 1. A design can Add to the count.
+- **Where:** `DestroyEnhancementAttempts` / `TryDestroyEnhancement`.
+- **Missing:** a stock or variant Missile (or payload) with `destroy_enhancement_count` > 1.
+
 ### Probe display: HSA halves survival, not success twice `[Bug]` `[Thinker]`
 
 - **Original:** `success_rates` halves success for HSA, then halves success **again** where

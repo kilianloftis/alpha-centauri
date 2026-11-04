@@ -518,15 +518,17 @@ covert unit is never identified.
 
 `ApplyHostileAct` is called by:
 
-- `UnitAttackExecutor::TryAttack` and `TryBombard`, through `IUnitOrderWorld::OnHostileAct`, after
-  combat resolves (including an attack ended by interception). A sneak attack on a Pact partner
-  clears shared tiles, and doing that first would teleport a stacked attacker or defender away
-  before the blow.
+- `UnitAttackExecutor::TryAttack`, `TryBombard`, and `TryDestroyEnhancement`, through
+  `IUnitOrderWorld::OnHostileAct`, after combat resolves (including an attack ended by
+  interception). A sneak attack on a Pact partner clears shared tiles, and doing that first would
+  teleport a stacked attacker or defender away before the blow.
   - An attack's act is against the defender `FindAttackableHostileOnTile` picked, so a covert
     defender leaves it unattributed whatever else is stacked with it.
   - A bombard makes one act per faction whose units it targets, or for the territory owner of an
     empty tile's improvements, all collected before the strikes. Each act is attributed when any
     of that faction's targets is.
+  - Destroy Enhancement reports `DestroyEnhancementHostileAct` against the tile's foreign
+    territory owner when one exists.
 - `BreakProbeAgreement`, with `ProbeHostileAct`: the act against the targeted unit or base, also
   attributed when `ProbeDetected` says the target identified the sender, when the pair holds no
   agreement or the probe double-crosses it. **Stub:** the detection roll is not implemented and

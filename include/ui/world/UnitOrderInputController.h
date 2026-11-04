@@ -27,6 +27,7 @@ enum class UnitOrderRequestKind_t
     FoundBase,        // B: tile legality is CanFoundBase's
     Detonate,         // Shift+X on a design with on_detonate_effects
     ToggleAirdrop,    // I on an airdrop-capable unit that may drop now
+    DestroyEnhancement, // D: combat unit or Former destroys one tile improvement
     Probe,            // long-press release where a probe menu is legal
     Attack,           // long-press release on an adjacent hostile
     Bombard,          // long-press release inside bombard range

@@ -50,7 +50,8 @@ graph TB
     end
 
     subgraph "Base Popups"
-        ListSelectorPopup[ListSelectorPopup<br/>extends UIElement<br/>the one modal list picker]
+        ListSelectorPopup[ListSelectorPopup<br/>extends UIElement<br/>one-click modal list]
+        MultiSelectListPopup[MultiSelectListPopup<br/>extends UIElement<br/>toggle + Confirm/Cancel]
     end
 
     subgraph "Map rendering (Engine-owned)"
@@ -137,6 +138,7 @@ graph TB
     style GrowthDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style CommerceDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style ListSelectorPopup fill:#bfb,stroke:#333,stroke-width:3px
+    style MultiSelectListPopup fill:#bfb,stroke:#333,stroke-width:2px
 
     subgraph "Unit Designer"
         UnitDesignerView[UnitDesignerView<br/>implements IGameView]
@@ -252,16 +254,16 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Mouse hit-testing**: `WorldView::HandleMouse` calls `MapViewport::WorldCoordsAtPixel` (map-unit diamond under the pixel, then raised tiles in front, with wrap-X).
 - **Unit Layer**: `MapRenderer` draws unit markers on top of bases from `WorldMap::GetAllUnitsOnTile()` for each placed tile, keeping the ones `WorldDisplay`'s content shows (`IsUnitVisibleTo` the player, or listed by bombard playback). Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
 - **Unit Selection**: Left-clicking a tile with a base opens that base (`m_onOpenBase`), even when units are garrisoned there — the base screen's unit stack is how the player picks a unit on a base tile. Otherwise, left-clicking a tile with units selects the first visible unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`. `SelectedUnitPanel` draws `FormatMoraleDisplay` (`say_morale`: rank word, plus-marks from in-square extras and SE 2/3, home-riot ` (-)`).
-- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. `Shift+D` opens Disband Units (`Disband`, `Self Destruct`, `Cancel`); `Disband` quotes `Faction::QuoteScrapUnit` and confirms before `ScrapUnit`. `Self Destruct` is a stub notice. A long-press on an adjacent stack the unit may share (`JoinsSharedStack`, a Pact partner's) is a move. A long-press attack on an adjacent hostile first asks to break the status `StatusBrokenByAttack` names (a status without `break_by_attack` gets a refusal notice instead), then opens `MakeConfirmPopup` with `ComputeCombatOdds` (`Their odds are {attacker} to {defender}. Proceed?`) before `TryAttack` against that same defender; Cancel leaves the unit selected. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
+- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. `Shift+D` opens Disband Units (`Disband`, `Self Destruct`, `Cancel`); `Disband` quotes `Faction::QuoteScrapUnit` and confirms before `ScrapUnit`. `Self Destruct` is a stub notice. `D` opens Destroy Enhancement when `CanDestroyEnhancement` (combat unit or Former on a non-Base tile with a wreckable improvement): a `MultiSelectListPopup` of `DestroyEnhancementOptions` labels from AttackRules (up to `DestroyEnhancementAttempts`, footer Destroy/Cancel), then `TryDestroyEnhancement`. A long-press on an adjacent stack the unit may share (`JoinsSharedStack`, a Pact partner's) is a move. A long-press attack on an adjacent hostile first asks to break the status `StatusBrokenByAttack` names (a status without `break_by_attack` gets a refusal notice instead), then opens `MakeConfirmPopup` with `ComputeCombatOdds` (`Their odds are {attacker} to {defender}. Proceed?`) before `TryAttack` against that same defender; Cancel leaves the unit selected. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
 - **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
 
 ### WorldView Input Routing
 - **Coordinator**: `WorldView::HandleKey` and `WorldView::HandleMouse` are thin coordinators that dispatch to owned sub-controllers before handling view-lifecycle input themselves.
 - **Dependencies**: `WorldView` takes `GameState` and `HotkeyConfig`, not the ruleset. Order legality comes from rules and the session's executors — founding (`CanFoundBase`, then `FoundBase`), terraform eligibility (`CanStartTerraformProject`, then `StartTerraform`) and probe menus (`ProbeActionExecutor`) — which read definition data from `GameState::GetGameData()`.
-- **HotkeyConfig**: Loaded once from `config/ui/hotkeys.json`. Chords there cover unit orders, `Bombard`, each former project by its id, camera pan/zoom, world chrome (`Cancel`, `EndTurn`, `NextUnit`), and view shortcuts. `ctrl`, `alt`, and `shift` are part of the chord. An action with no entry is unbound. Order actions may share a chord; the selected unit decides which one is valid, and two valid orders on that chord throw.
+- **HotkeyConfig**: Loaded once from `config/ui/hotkeys.json`. Chords there cover unit orders, `Bombard`, `DestroyEnhancement`, each former project by its id, camera pan/zoom, world chrome (`Cancel`, `EndTurn`, `NextUnit`), and view shortcuts. `ctrl`, `alt`, and `shift` are part of the chord. An action with no entry is unbound. Order actions may share a chord; the selected unit decides which one is valid, and two valid orders on that chord throw.
 - **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&`, `WorldMap&`, and `HotkeyConfig&`. Pans with the `PanLeft`, `PanRight`, `PanUp`, and `PanDown` chords along the screen axes (two map units per screen tile) and edge-scrolls the same way. `ZoomIn` / `ZoomOut` scale diamond width by `camera_input.zoom_factor` within `min_tile_scale`…`max_tile_scale` (relative to layout height), recentering on the previous view center. Vertical clamp keeps the north and south pole rows on screen.
 - **MinimapDisplay**: Brick layout matching the main view — a `width × height` image where tile `(x, y)` fills pixels `x` and `x + 1` of row `y`, drawn with 2:1 pixel aspect. Terrain colours come from the injected `MapRenderer::TileColor` over `MapAppearance::Fogged` for the player (shroud, fog-dimmed fills, remembered occupants). The RGBA cache key includes world `GetAppearanceRevision()`, explored/visible map revisions, and tile-memory revision. A click picks the covering tile; the camera frame is the viewport rectangle in map units, split at the wrap seam.
-- **UnitOrderInputController**: Owned by `WorldView`; constructed with `HotkeyConfig&`. Dispatches the order chords (`Hold`, `SkipTurn`, `AttachTransport`, `UnloadTransport`, `Disband`, `SupplyCrawl`, `FoundBase`, `Detonate`, `Airdrop`). Supply crawl, found base, detonate, and airdrop count only when the selected unit can perform them, so a shared chord can resolve to a different order. Two orders that are both valid throw. Also handles right-click-and-hold for `MoveOrder_t`. A long-press inside bombard range sets a bombard request; `WorldView` calls `TryBeginBombard_` from that flag.
+- **UnitOrderInputController**: Owned by `WorldView`; constructed with `HotkeyConfig&`. Dispatches the order chords (`Hold`, `SkipTurn`, `AttachTransport`, `UnloadTransport`, `Disband`, `DestroyEnhancement`, `SupplyCrawl`, `FoundBase`, `Detonate`, `Airdrop`). Supply crawl, found base, detonate, destroy enhancement, and airdrop count only when the selected unit can perform them, so a shared chord can resolve to a different order. Two orders that are both valid throw. Also handles right-click-and-hold for `MoveOrder_t`. A long-press inside bombard range sets a bombard request; `WorldView` calls `TryBeginBombard_` from that flag.
 - **Shared chords**: After the order controller, `HandleKey` walks `Bombard` and the former projects bound to the pressed chord. It runs the one that is valid for the selected unit and throws when more than one is (`Bombard` and `Farm` both use `F`). Bombard targeting swaps the cursor when `bombard_cursor_path` is set, and the next click fires.
 - **Dispatch order**: `HandleKey` tries the order controller, then that shared-chord walk, then the camera controller, then `Cancel`, `EndTurn`, and `NextUnit`. `HandleMouse` tries the order controller, then the camera controller, then handles left-click unit selection and base opening. View shortcuts from the same file run in `UIManager` only when the active view did not consume the key.
 
@@ -433,13 +435,20 @@ and colours.
 ### Factory: CreateUIManager()
 Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time flag needed).
 
-### ListSelectorPopup — the one list picker
+### ListSelectorPopup — the one-click list picker
 
 Every "pick one of these" modal is a `ListSelectorPopup`: production, pop types, probe actions,
 targeted facility sabotage (a second list after choosing `SabotageFacility`, plus a wipe-
 production row), supply-crawl resources, unit components, council proposals, council ballots,
 scrap and disband menus. It takes a title, an empty-list message, and a vector of `PopupChoice_t` — a label and the
 `std::function<void()>` that row runs. There is one constructor and one dispatch path.
+
+### MultiSelectListPopup — toggle then Confirm
+
+Destroy Enhancement and any later “pick up to N” menu use `MultiSelectListPopup`: labels only,
+`maxSelections`, a confirm label, and `onConfirm(indices)`. Rows toggle (selected rows show a
+`*` prefix); the footer is Confirm / Cancel. Escape and outside-click dismiss without committing.
+It reuses `ListSelectorPopupStyle_t` chrome metrics but is not a mode of `ListSelectorPopup`.
 
 A row carrying its own action is what keeps the arity open and the call sites short. Callers
 picking from a payload vector bind the payload into the action rather than keeping a parallel

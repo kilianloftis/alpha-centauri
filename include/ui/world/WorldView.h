@@ -226,6 +226,7 @@ private:
     void OpenDisbandMenu_(Unit& rUnit);
     void HandleDisbandChoice_(Unit& rUnit);
     void HandleDisbandConfirmed_(Unit& rUnit);
+    void OpenDestroyEnhancementMenu_(Unit& rUnit);
     void ShowSelfDestructStub_();
     void ClearAirdropTargeting_();
     void ClearBombardTargeting_();

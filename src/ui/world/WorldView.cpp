@@ -5,11 +5,11 @@
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/SupplyCrawlMutations.h"
-#include <algorithm>
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
 #include "ui/ListSelectorPopup.h"
+#include "ui/MultiSelectListPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/AttackConfirmText.h"
 #include "ui/ScrapRefundText.h"
@@ -32,6 +32,7 @@
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/units/UnitManager.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -498,6 +499,9 @@ bool WorldView::ApplyOrderInput_(Unit& rControllable)
     case UnitOrderRequestKind_t::Disband:
         OpenDisbandMenu_(rControllable);
         return true;
+    case UnitOrderRequestKind_t::DestroyEnhancement:
+        OpenDestroyEnhancementMenu_(rControllable);
+        return true;
     case UnitOrderRequestKind_t::FoundBase:
         FoundBaseWith_(rControllable);
         return true;
@@ -738,6 +742,7 @@ void WorldView::ApplyOrderClick_(const MouseEvent_t& rEvent, Unit* pControllable
     case UnitOrderRequestKind_t::UnloadTransport:
     case UnitOrderRequestKind_t::SupplyCrawl:
     case UnitOrderRequestKind_t::Disband:
+    case UnitOrderRequestKind_t::DestroyEnhancement:
     case UnitOrderRequestKind_t::FoundBase:
     case UnitOrderRequestKind_t::Detonate:
     case UnitOrderRequestKind_t::ToggleAirdrop:
@@ -1248,6 +1253,41 @@ void WorldView::OpenDisbandMenu_(Unit& rUnit)
         "Disband Units", "", std::move(choices),
         GetPopupLayout(), Style().listSelectorPopup, &m_rSprites);
     m_elements.push_back(std::move(pPopup));
+}
+
+void WorldView::OpenDestroyEnhancementMenu_(Unit& rUnit)
+{
+    Unit* pUnit = &rUnit;
+    const std::vector<DestroyEnhancementOption_t> options =
+        DestroyEnhancementOptions(rUnit.GetTile());
+    std::vector<std::string> labels;
+    labels.reserve(options.size());
+    for (const DestroyEnhancementOption_t& rOption : options)
+    {
+        labels.push_back(rOption.label);
+    }
+
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<MultiSelectListPopup>(
+        "Destroy Enhancement", "", std::move(labels),
+        static_cast<size_t>(DestroyEnhancementAttempts(rUnit)), "Destroy",
+        [this, pUnit, options](std::vector<size_t> selected)
+        {
+            if (m_pSelectedUnit != pUnit)
+            {
+                return;
+            }
+            std::vector<std::string> ids;
+            for (const size_t index : selected)
+            {
+                ids.push_back(options[index].improvementId);
+            }
+            if (m_rGameState.GetUnitAttacks().TryDestroyEnhancement(*pUnit, ids))
+            {
+                SelectNextAvailableUnit_();
+            }
+        },
+        GetPopupLayout(), Style().listSelectorPopup, &m_rSprites));
 }
 
 void WorldView::HandleDisbandChoice_(Unit& rUnit)

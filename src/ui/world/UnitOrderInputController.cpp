@@ -64,6 +64,7 @@ std::vector<HotkeyAction_t> UnitOrderInputController::MatchingOrderActions_(
     consider(HotkeyAction_t::FoundBase, ResolveFlag(rUnit, RuleFlagId_t::FoundBase));
     consider(HotkeyAction_t::Detonate, UnitCanDetonate(rUnit));
     consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(rUnit).Ok());
+    consider(HotkeyAction_t::DestroyEnhancement, CanDestroyEnhancement(rUnit));
     consider(HotkeyAction_t::Hold, true);
     consider(HotkeyAction_t::SkipTurn, true);
     return valid;
@@ -108,6 +109,9 @@ void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rU
         break;
     case HotkeyAction_t::Airdrop:
         Request_(UnitOrderRequestKind_t::ToggleAirdrop, nullptr);
+        break;
+    case HotkeyAction_t::DestroyEnhancement:
+        Request_(UnitOrderRequestKind_t::DestroyEnhancement, nullptr);
         break;
     case HotkeyAction_t::Hold:
         rUnit.SetOrder(HoldOrder_t{});
