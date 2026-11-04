@@ -4,16 +4,16 @@ overview: Keep owned_by_territory as attribution; author friendly vs hostile pol
 todos:
   - id: conditions
     content: Add SubjectIsOwner / SubjectIsForeign; stamp effectOwnerFaction into EffectContext when evaluating ActiveEffect conditions
-    status: pending
+    status: completed
   - id: shipping-config
     content: Author SubjectIsOwner on Sensor (defense + Detect); SubjectIsForeign on airdrop_interdiction; AA sample/fixture
-    status: pending
+    status: completed
   - id: consumers
     content: Defense / Conceal / Detect / airdrop / DestroyEnhancement resolve via conditions; drop polarity ownerFaction branches
-    status: pending
+    status: completed
   - id: tests-docs
     content: Polarity tests; effects-system + map-system docs for attribution vs polarity
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -69,7 +69,7 @@ Drop the polarity `ownerFaction` / `AppliesForFaction` branches once configs car
 | `IsAirdropInterdicted` | Evaluate the RuleFlag with dropper as subject + effect owner in context; drop the manual `ownerFaction == dropperId` skip. |
 | `DestroyEnhancementSuccessChance` | Area list goes through `FilterByStatIdInContext` only; drop the friendly/unattributed skip loop — AA’s `SubjectIsForeign` does that work. |
 
-`AppliesForFaction` remains as the shared “unset ⇒ everyone; stamped ⇒ that faction” helper where a non-condition caller still needs it (e.g. docs / any leftover attribution check); Detect’s fail-closed `has_value()` stays next to the type.
+Detect’s fail-closed `has_value()` stays next to the type. `AppliesForFaction` is removed once every polarity consumer uses conditions.
 
 ## Tests and docs
 

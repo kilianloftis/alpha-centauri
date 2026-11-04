@@ -348,6 +348,20 @@ struct IsHeadquarters_t
 {
 };
 
+// True when the subject faction equals EffectContext_t::effectOwnerFaction. Subject is
+// pFaction when set, else pUnit's faction. Fails closed if either is missing, or the owner
+// is k_NoFactionOwner (unowned territory stamp).
+struct SubjectIsOwner_t
+{
+};
+
+// True when the subject faction differs from a real effectOwnerFaction. Same subject rule as
+// SubjectIsOwner. Fails closed without a subject, without a stamped owner, or when the owner
+// is k_NoFactionOwner.
+struct SubjectIsForeign_t
+{
+};
+
 // Identity predicates on the effect subject, pUnit, failing closed without one. Not the
 // combat roles.
 struct SubjectDomain_t
@@ -442,6 +456,7 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t,
                                         DefenderIsNativeLife_t, IsHeadquarters_t,
+                                        SubjectIsOwner_t, SubjectIsForeign_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
                                         IsNativeLife_t, BaseHasBuilding_t, DesignPlan_t,

@@ -107,11 +107,12 @@ bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest)
 {
     const GameState& rGame = CurrentGameState();
     const TileEffectsContext& rTileEffects = rGame.GetTileEffects();
-    const FactionId_t dropperId = rDropper.GetFaction().GetFactionId();
+    EffectContext_t ctx;
+    ctx.pUnit = &rDropper;
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rDest))
     {
-        // Fail closed without attribution — same pattern as Detect. Friendly auras do not deny.
-        if (!rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == dropperId)
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, ctx),
+                                rEffect.originBase))
         {
             continue;
         }

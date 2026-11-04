@@ -24,7 +24,8 @@ std::vector<CoexistenceOverrideEffect_t> ActiveCoexistenceOverrides(const Unit& 
         {
             continue;
         }
-        if (!ConditionSatisfied(*rEffect.config, context, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, context),
+                                rEffect.originBase))
         {
             continue;
         }

@@ -56,7 +56,8 @@ public:
     TileYieldView_t ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
                                      const BaseEffects_t& rBaseEffects) const;
 
-    // Defence multiplier with auras. Territory-owned auras count only for forFaction.
+    // Defence multiplier with auras. SubjectIsOwner (and other conditions) gate attributed
+    // auras for forFaction.
     double ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const;
 
     const ImprovementRegistry& GetImprovements() const;

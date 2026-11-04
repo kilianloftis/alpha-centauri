@@ -25,11 +25,13 @@ namespace
 void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEffect_t> areaEffects,
                                  std::unordered_set<std::string>& rOut)
 {
-    const EffectContext_t ctx{&rSubject.GetTile()};
+    EffectContext_t ctx{&rSubject.GetTile()};
+    ctx.pUnit = &rSubject;
 
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject).effects)
     {
-        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, ctx),
+                                rEffect.originBase))
         {
             continue;
         }
@@ -40,13 +42,12 @@ void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEff
         }
     }
 
-    // Tile-area Conceal: terrain (unset owner) applies to everyone; unit/territory auras
-    // only conceal subjects matching ownerFaction.
-    const FactionId_t subjectId = rSubject.GetFaction().GetFactionId();
+    // Tile-area Conceal: universal entries have no polarity condition; attributed auras
+    // author SubjectIsOwner.
     for (const ActiveEffect_t& rEffect : areaEffects)
     {
-        if (!AppliesForFaction(rEffect, subjectId)
-            || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, ctx),
+                                rEffect.originBase))
         {
             continue;
         }
@@ -61,14 +62,14 @@ void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEff
 bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const std::string& rChannel,
                            std::span<const ActiveEffect_t> areaEffects)
 {
-    const FactionId_t observerId = rObserver.GetFactionId();
-    const EffectContext_t ctx{&rTile};
+    EffectContext_t ctx{&rTile};
+    ctx.pFaction = &rObserver;
     for (const ActiveEffect_t& rEffect : areaEffects)
     {
         // Detect fails closed without a stamped owner — unset never pierces for every faction.
         if (!rEffect.ownerFaction.has_value()
-            || !AppliesForFaction(rEffect, observerId)
-            || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+            || !ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, ctx),
+                                   rEffect.originBase))
         {
             continue;
         }

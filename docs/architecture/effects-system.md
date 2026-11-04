@@ -340,6 +340,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
   - `AnyOf_t` — at least one nested `Condition_t` is satisfied (OR). Same JSON shape and the same `values` desugaring as `AllOf_t`. Level Terrain's precondition is `AnyOf` over `Rocky` / `Rolling`.
   - `IsDefending_t`, `IsInCombat_t`, `OriginBaseIsHomeBase_t`, `SubjectIsOnOriginBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — situational predicates. `IsDefending_t` matches `combatRole == Defender` by default; JSON `"value": false` matches the attacker. CombatRole None matches neither polarity. `IsInCombat_t` is true when `combatRole` is Attacker or Defender (riot `morale_rank`). `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base (home Crèche rank offsets, riot penalty). `SubjectIsOnOriginBase_t` keys on the unit standing on the origin base tile (in-square Crèche / Brood Pit extras).
+  - `SubjectIsOwner_t` / `SubjectIsForeign_t` — situational polarity on attributed auras. Subject is `pFaction` when set, else `pUnit`'s faction. Owner is `EffectContext_t::effectOwnerFaction` (copied from `ActiveEffect_t::ownerFaction` by `ActiveEffectContext` / `StatModifierMatchesInContext` before condition eval). `SubjectIsOwner` holds when they match; `SubjectIsForeign` when they differ. Both fail closed if either side is missing or the owner is `k_NoFactionOwner`. Attribution (`owned_by_territory` / unit-aura stamp) is separate from reach — Sensor defense/Detect author `SubjectIsOwner`; airdrop interdiction and AA author `SubjectIsForeign`; Rocky defense and Fungus Conceal carry neither and stay universal.
   - `SocialRating_t` — situational. True when the unit owner's faction-wide social rating satisfies `CompareOp_t` against `value`. Absent unit fails closed.
   - `OriginBaseHasBuilding_t` — situational. True when the effect's `originBase` has a constructed copy of `buildingId`, matching `bPresent` (JSON `value`). Distinct from `BaseHasBuilding_t` (`EffectContext_t::pBase`). Absent origin fails closed.
   - `SubjectDesign_t` — identity predicate. True when `EffectContext_t::pUnit`'s design id equals `designId`. Absent unit fails closed. Load validation checks the id against `NativeUnitRegistry`.
@@ -1030,8 +1031,8 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **Fun authoring sample — AA vs Destroy Enhancement:** not in shipping `improvements.json`;
   mirrors the test fixture `TestAaEmplacement`. Cuts air/orbital destroy-enhancement success
   by 50 within Chebyshev 1 (air chassis already Add −25 for SMAC's 75% baseline).
-  `owned_by_territory` stamps `ownerFaction`; `DestroyEnhancementSuccessChance` keeps only
-  foreign owners' auras (friendly AA does not penalize your own aircraft):
+  `owned_by_territory` stamps `ownerFaction`; `SubjectIsForeign` keeps friendly AA from
+  penalizing your own aircraft:
 
 ```json
 {
@@ -1049,10 +1050,16 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
         "op": "Add"
       },
       "condition": {
-        "kind": "AnyOf",
+        "kind": "AllOf",
         "conditions": [
-          { "kind": "SubjectDomain", "domain": "air" },
-          { "kind": "SubjectDomain", "domain": "orbital" }
+          {
+            "kind": "AnyOf",
+            "conditions": [
+              { "kind": "SubjectDomain", "domain": "air" },
+              { "kind": "SubjectDomain", "domain": "orbital" }
+            ]
+          },
+          { "kind": "SubjectIsForeign" }
         ]
       }
     }
@@ -1060,11 +1067,12 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 }
 ```
 - **`min_radius` (ring auras)**: the nearest distance an aura reaches (`EffectConfig_t::minRadius`, default `0` = includes the host tile). `TileEffectReaches` is `minRadius <= distance <= radius`. The Echelon Mirror uses `min_radius: 1, radius: 1`: it counts as a solar collector for its own elevation energy and for *other* mirrors' bonuses, but must not hand its `+1` to itself. Rejected when it exceeds `radius` (the effect would reach no tile at all) or on a non-`ThisTile` scope, both at parse time.
-- **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
+- **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same attribution as territory-owned improvements). Reach is authored with `SubjectIsOwner` / `SubjectIsForeign`; Detect additionally requires a stamped owner and fails closed without one. `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
-- **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**:
-  `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), TileDefense),
-  SeedFor(TileDefense)).total`.
+- **`ResolveTileDefenseMultiplier(tile, forFaction)`**:
+  `FilterByStatIdInContext(CollectAreaEffects(...), TileDefense, ctx)` with
+  `ctx.pFaction` = that faction, so Sensor's `SubjectIsOwner` (and Rocky's lack of one)
+  decide reach.
 - **Energy is never intrinsic**: every resource seeds at `0` per tile, and elevation energy is
   entirely the solar collector's. `SolarCollector` declares one effect — `energy`,
   `amount_source: ElevationEnergy` — whose contribution is
@@ -1207,7 +1215,8 @@ Both require `radius == 0` and no condition — a capability describes its host 
 host's neighbourhood, so radius auras never project flags through these helpers. Harbor
 queries use `TileHarbors` (territory-owned) rather than `TileProvidesFlag`. Consumers that
 need a neighbourhood RuleFlag (e.g. airdrop interdiction) scan `CollectAreaEffects` and
-check `ownerFaction` themselves. `TransportParams` (`carries`,
+evaluate conditions (including polarity via `ActiveEffectContext`) rather than hand-checking
+`ownerFaction`. `TransportParams` (`carries`,
 `requires_harbor`) is the carrier-side counterpart; `CanLoadAtTile` asks `TileHarbors` for
 the carrier's domain when `requires_harbor` is set. Note that
 `RuleFlagId_t` is a C++ enum: mods can add new *sites*, but not new *capabilities*.

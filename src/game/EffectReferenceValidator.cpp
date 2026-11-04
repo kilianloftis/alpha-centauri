@@ -283,6 +283,8 @@ struct ConditionReferenceValidator
     void operator()(const DefenderDomain_t&) const {}
     void operator()(const DefenderIsNativeLife_t&) const {}
     void operator()(const IsHeadquarters_t&) const {}
+    void operator()(const SubjectIsOwner_t&) const {}
+    void operator()(const SubjectIsForeign_t&) const {}
     void operator()(const SubjectDomain_t&) const {}
     void operator()(const HasFlag_t&) const {}
     void operator()(const IsPrototype_t&) const {}

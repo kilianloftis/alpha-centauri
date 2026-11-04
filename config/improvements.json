@@ -551,6 +551,9 @@
           "stat": "tile_defense",
           "amount": 25,
           "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       },
       {
@@ -568,6 +571,9 @@
         "radius": 2,
         "parameters": {
           "channel": "terrain"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       }
     ],

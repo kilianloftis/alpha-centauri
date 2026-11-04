@@ -48,20 +48,14 @@ struct ActiveEffect_t
     // The base an effect is tagged with or stamped from, for ThisBase, ProducedAtThisBase and
     // FactionUnits. Cleared on a unit's production grants.
     const BaseManager* originBase = nullptr;
-    // The faction a territory-owned improvement or a unit-projected aura serves; unset applies to
-    // everyone. k_NoFactionOwner matches nobody.
+    // Attribution from owned_by_territory / unit aura collection. Polarity (who the effect
+    // reaches) is authored with SubjectIsOwner / SubjectIsForeign, not this stamp alone.
+    // k_NoFactionOwner is a stamped unowned tile — polarity conditions fail closed on it.
     std::optional<FactionId_t> ownerFaction;
     // Set for FactionPair effects: the other faction of the pair. They match only a context
     // whose pPartner is that faction.
     std::optional<FactionId_t> partnerFaction;
 };
-
-// Unset ownerFaction applies to all. Detect must also require one: unattributed, it never
-// pierces.
-inline bool AppliesForFaction(const ActiveEffect_t& rEffect, FactionId_t forFaction)
-{
-    return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
-}
 
 // The faction-wide pool, with other factions' WorldGlobal and council extras when bound to a
 // session. Holds every base's ThisBase effects, so FilterForBase is the only way to a base.
@@ -143,7 +137,17 @@ struct EffectContext_t
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
+    // Copied from ActiveEffect_t::ownerFaction before ConditionSatisfied on that effect.
+    // SubjectIsOwner / SubjectIsForeign read it.
+    std::optional<FactionId_t> effectOwnerFaction;
 };
+
+// Stamps effectOwnerFaction from the ActiveEffect so polarity conditions can evaluate.
+inline EffectContext_t ActiveEffectContext(const ActiveEffect_t& rEffect, EffectContext_t ctx)
+{
+    ctx.effectOwnerFaction = rEffect.ownerFaction;
+    return ctx;
+}
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
 
@@ -393,7 +397,8 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
-    return ConditionSatisfied(*effect.config, ctx, effect.originBase);
+    return ConditionSatisfied(*effect.config, ActiveEffectContext(effect, ctx),
+                              effect.originBase);
 }
 
 // FilterByStatId for a runtime context such as combat: conditions satisfied by ctx pass.
@@ -439,7 +444,8 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
             return true;
         }
         return pCtx != nullptr
-            && ConditionSatisfied(*effect.config, *pCtx, effect.originBase);
+            && ConditionSatisfied(*effect.config, ActiveEffectContext(effect, *pCtx),
+                                  effect.originBase);
     });
 }
 inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId,

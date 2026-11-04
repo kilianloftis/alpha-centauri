@@ -987,6 +987,16 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         CHECK(std::holds_alternative<IsHeadquarters_t>(condition.AsVariant()));
     }
 
+    SECTION("SubjectIsOwner and SubjectIsForeign parse")
+    {
+        CHECK(std::holds_alternative<SubjectIsOwner_t>(
+            EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "SubjectIsOwner" })"))
+                .AsVariant()));
+        CHECK(std::holds_alternative<SubjectIsForeign_t>(
+            EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "SubjectIsForeign" })"))
+                .AsVariant()));
+    }
+
     SECTION("HasAirdroppedThisTurn condition")
     {
         const Condition_t condition = EffectConfigParser::ParseCondition(

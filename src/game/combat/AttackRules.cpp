@@ -338,15 +338,9 @@ int DestroyEnhancementSuccessChance(const Unit& rUnit)
 {
     const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
     std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
-    const FactionId_t unitFaction = rUnit.GetFaction().GetFactionId();
     for (const ActiveEffect_t& rEffect :
          CurrentGameState().GetTileEffects().CollectAreaEffects(rUnit.GetTile()))
     {
-        // Friendly and unattributed auras do not cut success (same gate as airdrop interdiction).
-        if (!rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == unitFaction)
-        {
-            continue;
-        }
         effects.push_back(rEffect);
     }
     const double total = ResolveStatModifiers(

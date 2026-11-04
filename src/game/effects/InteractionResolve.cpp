@@ -63,7 +63,8 @@ std::optional<InteractionCell_t> FirstNonDefaultOverride_(
         {
             continue;
         }
-        if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, rCtx),
+                                rEffect.originBase))
         {
             continue;
         }

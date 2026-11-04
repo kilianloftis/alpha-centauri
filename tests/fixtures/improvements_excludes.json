@@ -469,6 +469,9 @@
           "stat": "tile_defense",
           "amount": 25,
           "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       },
       {
@@ -486,6 +489,9 @@
         "radius": 2,
         "parameters": {
           "channel": "terrain"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       }
     ]
@@ -668,8 +674,11 @@
         "scope": "ThisTile",
         "radius": 2,
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "River"
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "TargetTileHas", "value": "River" },
+            { "kind": "SubjectIsOwner" }
+          ]
         },
         "parameters": {
           "channel": "cloak"

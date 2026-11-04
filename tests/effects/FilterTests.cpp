@@ -8,6 +8,7 @@
 
 #include "game/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
@@ -544,6 +545,39 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     CHECK_FALSE(ConditionSatisfied(rConfig, EffectContext_t{}, nullptr));
+}
+
+TEST_CASE("ConditionSatisfied: SubjectIsOwner / SubjectIsForeign polarity",
+          "[effects][condition][polarity]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& foreign = fixture.MakeFaction();
+
+    EffectContext_t ownerCtx;
+    ownerCtx.pFaction = &owner;
+    ownerCtx.effectOwnerFaction = owner.GetFactionId();
+    EffectContext_t foreignCtx;
+    foreignCtx.pFaction = &foreign;
+    foreignCtx.effectOwnerFaction = owner.GetFactionId();
+    EffectContext_t unownedCtx;
+    unownedCtx.pFaction = &owner;
+    unownedCtx.effectOwnerFaction = k_NoFactionOwner;
+    EffectContext_t missingOwnerCtx;
+    missingOwnerCtx.pFaction = &owner;
+
+    CHECK(ConditionSatisfied(SubjectIsOwner_t{}, ownerCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsOwner_t{}, foreignCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsOwner_t{}, unownedCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsOwner_t{}, missingOwnerCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsOwner_t{}, EffectContext_t{}, nullptr));
+
+    CHECK(ConditionSatisfied(SubjectIsForeign_t{}, foreignCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsForeign_t{}, ownerCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsForeign_t{}, unownedCtx, nullptr));
+    CHECK_FALSE(ConditionSatisfied(SubjectIsForeign_t{}, missingOwnerCtx, nullptr));
+    CHECK(ConditionNeedsSituationalContext(SubjectIsOwner_t{}));
+    CHECK(ConditionNeedsSituationalContext(SubjectIsForeign_t{}));
 }
 
 TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]")

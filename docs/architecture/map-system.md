@@ -173,7 +173,7 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
   - Land bases never claim sea; sea bases never claim land
 - **Contested tiles**: among bases that can claim a tile, owner is the nearest base by Euclidean distance (`dx² + dy²`); ties go to the **lower `BaseId`**
 - **Rebuild preconditions**: `Rebuild` throws unless the grid has been `Reset` and its dimensions equal the world's, and `ClaimTerritory` throws if a base sits outside the grid, so no caller reads `k_NoFactionOwner` as though ownership were current and a desynced `Reset` cannot index out of bounds.
-- **Consumers**: territory-owned improvements (`owned_by_territory: true`, e.g. Sensor) stamp `ActiveEffect_t::ownerFaction` from `GetOwner` and only apply for that faction (defense aura / fog vision — see effects and visibility docs)
+- **Consumers**: territory-owned improvements (`owned_by_territory: true`, e.g. Sensor) stamp `ActiveEffect_t::ownerFaction` from `GetOwner`. Friendly reach is authored with `SubjectIsOwner` on defense/Detect; Sensor fog vision still uses the `visionRadius` + `ownedByTerritory` rebuild gate in `FactionVisibleMap` (see effects and visibility docs)
 
 ### Regions (land and water bodies)
 - **Purpose**: SMAC's tile regions (`docs/thinker/terranx-map.md`, "Regions"): which land mass or body of water a tile belongs to. The base value's same-region tests and per-region base counts read them.
@@ -288,7 +288,7 @@ and yield lookups for object rows still read the live tile.
   placeholder bonus the same way. Combat folds `ResolveTileDefenseMultiplier` onto unit
   `Defense` armor (takes a defending `FactionId` so territory-owned Sensor auras only apply
   for the owner).
-- **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects `+25%` defense to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` means only the faction that owns the Sensor's tile (via `TerritoryMap`) receives the aura and Sensor fog vision. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
+  - **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects `+25%` defense to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` stamps `ownerFaction` from the tile's territory owner; Sensor defense/Detect author `SubjectIsOwner` so only that faction receives them, and fog vision still keys on the same ownership stamp via `FactionVisibleMap`. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).

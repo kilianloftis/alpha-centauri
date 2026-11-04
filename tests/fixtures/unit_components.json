@@ -624,6 +624,9 @@
         "radius": 2,
         "parameters": {
           "flag": "airdrop_interdiction"
+        },
+        "condition": {
+          "kind": "SubjectIsForeign"
         }
       },
       {
@@ -800,6 +803,9 @@
           "stat": "tile_defense",
           "amount": 25,
           "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       }
     ]
@@ -816,6 +822,9 @@
         "radius": 2,
         "parameters": {
           "channel": "cloak"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       }
     ]
@@ -832,6 +841,9 @@
         "radius": 1,
         "parameters": {
           "channel": "cloak"
+        },
+        "condition": {
+          "kind": "SubjectIsOwner"
         }
       }
     ]

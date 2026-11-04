@@ -545,6 +545,20 @@ bool DomainListed_(const std::vector<UnitDomain_t>& rDomains, const Unit* pUnit)
     return pUnit != nullptr && std::ranges::contains(rDomains, pUnit->GetDomain());
 }
 
+// pFaction when set, else the unit subject's faction — polarity conditions share this.
+std::optional<FactionId_t> SubjectFactionId_(const EffectContext_t& ctx)
+{
+    if (ctx.pFaction != nullptr)
+    {
+        return ctx.pFaction->GetFactionId();
+    }
+    if (ctx.pUnit != nullptr)
+    {
+        return ctx.pUnit->GetFaction().GetFactionId();
+    }
+    return std::nullopt;
+}
+
 // Exhaustive over Condition_t: a new alternative without an arm fails to compile.
 struct ConditionEvaluator_
 {
@@ -640,6 +654,28 @@ struct ConditionEvaluator_
     bool operator()(const IsHeadquarters_t&) const
     {
         return ctx.pBase != nullptr && ctx.pBase->IsHeadquarters();
+    }
+
+    bool operator()(const SubjectIsOwner_t&) const
+    {
+        const std::optional<FactionId_t> subjectId = SubjectFactionId_(ctx);
+        if (!subjectId.has_value() || !ctx.effectOwnerFaction.has_value()
+            || *ctx.effectOwnerFaction == k_NoFactionOwner)
+        {
+            return false;
+        }
+        return *subjectId == *ctx.effectOwnerFaction;
+    }
+
+    bool operator()(const SubjectIsForeign_t&) const
+    {
+        const std::optional<FactionId_t> subjectId = SubjectFactionId_(ctx);
+        if (!subjectId.has_value() || !ctx.effectOwnerFaction.has_value()
+            || *ctx.effectOwnerFaction == k_NoFactionOwner)
+        {
+            return false;
+        }
+        return *subjectId != *ctx.effectOwnerFaction;
     }
 
     bool operator()(const SubjectDomain_t& rDomain) const
@@ -804,6 +840,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, DefenderDomain_t>
                                || std::is_same_v<T, DefenderIsNativeLife_t>
                                || std::is_same_v<T, IsHeadquarters_t>
+                               || std::is_same_v<T, SubjectIsOwner_t>
+                               || std::is_same_v<T, SubjectIsForeign_t>
                                || std::is_same_v<T, BaseHasBuilding_t>
                                || std::is_same_v<T, PartnerPlayerType_t>
                                || std::is_same_v<T, PartnerIsFormerOwner_t>
@@ -1225,7 +1263,8 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId, const EffectContext_t& 
     const EffectContext_t ctx = UnitSubjectContext(&rUnit, rCtx);
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
-        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ActiveEffectContext(rEffect, ctx),
+                                rEffect.originBase))
         {
             continue;
         }

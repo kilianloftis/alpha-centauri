@@ -1254,6 +1254,10 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
                  OptionalConditionBool_(rJson, "value", true, "DefenderIsNativeLife")};
          }},
         {"IsHeadquarters", [](const nlohmann::json&) -> Condition_t { return IsHeadquarters_t{}; }},
+        {"SubjectIsOwner",
+         [](const nlohmann::json&) -> Condition_t { return SubjectIsOwner_t{}; }},
+        {"SubjectIsForeign",
+         [](const nlohmann::json&) -> Condition_t { return SubjectIsForeign_t{}; }},
         {"SubjectDomain",
          [](const nlohmann::json& rJson) -> Condition_t {
              return SubjectDomain_t{

@@ -1,5 +1,7 @@
 #include "game/effects/TileEffectsContext.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/effects/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -410,18 +412,12 @@ TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
 
 double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const
 {
+    EffectContext_t ctx;
+    ctx.pFaction = CurrentGameState().FindFaction(forFaction);
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
-    std::vector<ActiveEffect_t> applicable;
-    applicable.reserve(effects.size());
-    for (const ActiveEffect_t& rEffect : effects)
-    {
-        if (AppliesForFaction(rEffect, forFaction))
-        {
-            applicable.push_back(rEffect);
-        }
-    }
-    return ResolveStatModifiers(FilterByStatId(applicable, StatId_t::TileDefense),
-                                SeedFor(StatId_t::TileDefense), nullptr)
+    return ResolveStatModifiers(
+               FilterByStatIdInContext(effects, StatId_t::TileDefense, ctx),
+               SeedFor(StatId_t::TileDefense), &ctx)
         .total;
 }
 
