@@ -30,8 +30,11 @@ unless a change touches it. A change that breaks one is not finished.
    function name waiting to happen. Never what the code does, and never a label a name already
    gives (`// Base management`). Never history: no "used to", "now", "no longer", "previously",
    "was a bug" or "replaces". Never the alternative that was not taken ("rather than",
-   "instead of"). Never a reference to a plan, review or finding. History belongs in the commit
-   message; subsystem design belongs in `docs/architecture/`; confirmed SMAC behavior belongs in
+   "instead of", "not the X", "unlike Y"). Never a reference to a plan, review or finding.
+   Never a comment that only says a declaration matches a peer (`// BuildingId_t style`,
+   `// like StockpileId_t`) — match neighboring silence instead (`using FooId_t = std::string`
+   ships bare when its neighbors do). History belongs in the commit message; subsystem design
+   belongs in `docs/architecture/`; confirmed SMAC behavior belongs in
    `docs/thinker/terranx-map.md`, which a one-line comment can cite. A change that makes a
    comment wrong or redundant fixes or deletes it.
 3. **No guards for cases that cannot happen.** Do not null-check a reference, or a pointer the code

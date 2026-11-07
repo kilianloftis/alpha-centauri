@@ -18,7 +18,8 @@ class SocialRatingRegistry;
 // fall out of FilterForBase.
 // TODO: reject a WorldGlobal SocialRatingModifier at load; it currently moves nothing.
 
-// Sums rating modifiers per axis over a local list. The faction lane passes FactionWide so
+// Sums rating Add modifiers per axis (skipping negatives whose sourceId has SocialPolicyImpunity
+// in the same list), then applies MinClamp / MaxClamp. The faction lane passes FactionWide so
 // ThisBase modifiers cannot inflate it.
 std::map<SocialRatingId_t, int> AccumulateSocialRatings(
     const std::vector<ActiveEffect_t>& rEffects,

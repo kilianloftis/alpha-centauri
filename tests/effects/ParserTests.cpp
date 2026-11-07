@@ -1643,8 +1643,8 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
     for (const char* pType : {"StatModifier", "RuleFlag", "GrantBuilding", "Infiltration",
                               "Conceal", "Detect", "Intercept", "Scramble", "TransportParams",
                               "InteractionOverride", "CoexistenceOverride",
-                              "SocialEngineeringOverride",
-                              "DiplomaticModifier", "SocialRatingModifier", "OrbitalAttack"})
+                              "ForbiddenSocialPolicy", "SocialPolicyImpunity",
+                              "SocialRatingModifier", "OrbitalAttack"})
     {
         INFO(pType);
         CHECK(EffectConfigParser::IsEffectType(pType));
@@ -1653,6 +1653,8 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
     }
     CHECK_FALSE(EffectConfigParser::IsEffectType("Rebel"));
     CHECK_FALSE(EffectConfigParser::IsEffectType("NotAnEffect"));
+    CHECK_FALSE(EffectConfigParser::IsEffectType("DiplomaticModifier"));
+    CHECK_FALSE(EffectConfigParser::IsEffectType("SocialEngineeringOverride"));
 }
 
 TEST_CASE("ParseTriggeredEffectConfig: GrantXp takes amount and optional condition",
@@ -2037,9 +2039,50 @@ TEST_CASE("ParseEffectConfig: SocialRatingModifier", "[effects][parser]")
     REQUIRE(pRating != nullptr);
     CHECK(pRating->rating == SocialRatingId_t::Police);
     CHECK(pRating->amount == -2);
+    CHECK(pRating->op == ModifierOp_t::Add);
+
+    const EffectConfig_t clampConfig = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "SocialRatingModifier", "scope": "FactionGlobal",
+        "parameters": { "rating": "efficiency", "amount": 0, "op": "MinClamp" }
+    })"));
+    const auto* pClamp = std::get_if<SocialRatingModifierEffect_t>(&clampConfig.effect);
+    REQUIRE(pClamp != nullptr);
+    CHECK(pClamp->op == ModifierOp_t::MinClamp);
+    CHECK(pClamp->amount == 0);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
         json::parse(R"({ "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": {} })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "SocialRatingModifier", "scope": "FactionGlobal",
+        "parameters": { "rating": "police", "amount": 1, "op": "AddPercent" }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: ForbiddenSocialPolicy and SocialPolicyImpunity",
+          "[effects][parser]")
+{
+    const EffectConfig_t forbidden = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ForbiddenSocialPolicy", "scope": "FactionGlobal",
+        "parameters": { "policy": "democratic" }
+    })"));
+    const auto* pForbidden = std::get_if<ForbiddenSocialPolicyEffect_t>(&forbidden.effect);
+    REQUIRE(pForbidden != nullptr);
+    CHECK(pForbidden->policy == "democratic");
+
+    const EffectConfig_t impunity = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "SocialPolicyImpunity", "scope": "FactionGlobal",
+        "parameters": { "policy": "cybernetic" }
+    })"));
+    const auto* pImpunity = std::get_if<SocialPolicyImpunityEffect_t>(&impunity.effect);
+    REQUIRE(pImpunity != nullptr);
+    CHECK(pImpunity->policy == "cybernetic");
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ForbiddenSocialPolicy", "scope": "FactionGlobal", "parameters": {}
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "SocialPolicyImpunity", "scope": "FactionGlobal", "parameters": {}
+    })")));
 }
 
 TEST_CASE("ParseEffectConfig: Infiltration uses scope + factionFilter", "[effects][parser]")

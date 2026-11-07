@@ -252,6 +252,27 @@ TEST_CASE("A policy is available once its tech is known", "[research][social-eng
     CHECK(PolicyAvailable(faction, policy));
 }
 
+TEST_CASE("ForbiddenSocialPolicy blocks PolicyAvailable even with tech",
+          "[research][social-engineering]")
+{
+    actest::FactionFixture fixtures;
+    FactionConfig_t definition = fixtures.factionDefinition;
+    EffectConfig_t forbid;
+    forbid.scope = EffectScope_t::FactionGlobal;
+    forbid.effect = ForbiddenSocialPolicyEffect_t{"democratic"};
+    definition.effects.push_back(forbid);
+
+    Faction& faction = fixtures.MakeFaction(definition);
+
+    SocialPolicyConfig_t democratic;
+    democratic.id = "democratic";
+    CHECK_FALSE(PolicyAvailable(faction, democratic));
+
+    SocialPolicyConfig_t frontier;
+    frontier.id = "frontier";
+    CHECK(PolicyAvailable(faction, frontier));
+}
+
 TEST_CASE("Tech cost reads the known-tech count and the tech's own TechCost",
           "[research][cost]")
 {

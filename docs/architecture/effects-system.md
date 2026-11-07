@@ -9,7 +9,7 @@ graph TB
         UnitComponentConfig[UnitComponentConfig_t]
         SocialPolicyConfig_t[SocialPolicyConfig_t]
         EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope<br/>condition]
-        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>InfiltrationEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>SocialRatingModifierEffect_t<br/>DiplomaticModifierEffect_t]
+        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>InfiltrationEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>ForbiddenSocialPolicyEffect_t<br/>SocialPolicyImpunityEffect_t<br/>SocialRatingModifierEffect_t]
         TriggeredConfig[TriggeredEffectConfig_t<br/>TriggeredEffectVariant_t<br/>factionFilter<br/>oncePer]
     end
 
@@ -166,9 +166,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `GrantUnitEffect_t`
   - `StatModifierEffect_t`
   - `RuleFlagEffect_t`
-  - `SocialEngineeringOverrideEffect_t`
+  - `ForbiddenSocialPolicyEffect_t`
+  - `SocialPolicyImpunityEffect_t`
   - `SocialRatingModifierEffect_t`
-  - `DiplomaticModifierEffect_t`
   - `InteractionOverrideEffect_t`
   - `CoexistenceOverrideEffect_t`
 
@@ -830,9 +830,13 @@ grants fewer units and reports the real count rather than throwing.
 - `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`). Both lanes
   share one level-lookup path (`FindSocialRatingLevelEffects` + sourceId + append), so a
   clamp or sourceId change cannot drift between them:
-  - `AccumulateSocialRatings(effects, laneFilter?)` sums modifier contributions per rating
-    axis. Base-context callers pass no filter (`FilterForBase` established the context);
-    the faction lane passes `FactionWide`.
+  - `AccumulateSocialRatings(effects, laneFilter?)` sums `SocialRatingModifier` **Add**
+    contributions per axis (skipping negatives whose `sourceId` matches a
+    `SocialPolicyImpunity` policy in the same list), then applies **MaxClamp** /
+    **MinClamp** (MinClamp wins a crossing pair). Base-context callers pass no filter
+    (`FilterForBase` established the context); the faction lane passes `FactionWide`.
+  - `ForbiddenSocialPolicy` is read by `PolicyAvailable` (with the tech gate). Impunity and
+    rating clamps are accumulate-time only — not RuleFlags or StatIds.
   - `ResolveSocialRatingLevelEffects(const BaseEffects_t&, ratingRegistry)` — base lane:
     maps each non-zero accumulated level through `SocialRatingConfig_t::levelEffects`
     (SMAC clamp-at-extremes) and **returns** the gameplay effects with sourceId

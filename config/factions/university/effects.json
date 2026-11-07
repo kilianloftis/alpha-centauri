@@ -25,6 +25,11 @@
       "scope": "FactionGlobal",
       "condition": { "kind": "GiftKind", "trade_kind": "Technology" },
       "parameters": { "stat": "gift_received_value", "amount": 2, "op": "MultiplyGeometric" }
+    },
+    {
+      "type": "ForbiddenSocialPolicy",
+      "scope": "FactionGlobal",
+      "parameters": { "policy": "fundamentalist" }
     }
   ]
 }

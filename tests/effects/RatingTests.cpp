@@ -667,3 +667,80 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
     CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localB, StatId_t::Energy, nullptr), 0.0, nullptr).total
           == Approx(11.0));
 }
+
+TEST_CASE("AccumulateSocialRatings: SocialPolicyImpunity drops that policy's negative Adds",
+          "[effects][rating][impunity]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 8);
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.RatingMod(SocialRatingId_t::Economy, 2), "free_market"),
+        Active(pool.RatingMod(SocialRatingId_t::Planet, -3), "free_market"),
+        Active(pool.RatingMod(SocialRatingId_t::Police, -5), "free_market"),
+        Active(pool.PolicyImpunity("free_market"), "project"),
+    }};
+
+    const auto totals = AccumulateSocialRatings(baseEffects.effects, std::nullopt);
+    CHECK(totals.at(SocialRatingId_t::Economy) == 2);
+    CHECK(totals.count(SocialRatingId_t::Planet) == 0);
+    CHECK(totals.count(SocialRatingId_t::Police) == 0);
+}
+
+TEST_CASE("AccumulateSocialRatings: SocialRatingModifier MinClamp floors an axis",
+          "[effects][rating][immunity]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 8);
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.RatingMod(SocialRatingId_t::Efficiency, -2), "police_state"),
+        Active(pool.RatingMod(SocialRatingId_t::Efficiency, 0, EffectScope_t::FactionGlobal,
+                              ModifierOp_t::MinClamp),
+               "hive"),
+    }};
+
+    const auto totals = AccumulateSocialRatings(baseEffects.effects, std::nullopt);
+    CHECK(totals.at(SocialRatingId_t::Efficiency) == 0);
+}
+
+TEST_CASE("AccumulateSocialRatings: Backbone-style impunity on cybernetic police penalty",
+          "[effects][rating][impunity]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 8);
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.RatingMod(SocialRatingId_t::Efficiency, 2), "cybernetic"),
+        Active(pool.RatingMod(SocialRatingId_t::Planet, 2), "cybernetic"),
+        Active(pool.RatingMod(SocialRatingId_t::Research, 2), "cybernetic"),
+        Active(pool.RatingMod(SocialRatingId_t::Police, -3), "cybernetic"),
+        Active(pool.PolicyImpunity("cybernetic"), "Network_Backbone"),
+    }};
+
+    const auto totals = AccumulateSocialRatings(baseEffects.effects, std::nullopt);
+    CHECK(totals.at(SocialRatingId_t::Efficiency) == 2);
+    CHECK(totals.at(SocialRatingId_t::Planet) == 2);
+    CHECK(totals.at(SocialRatingId_t::Research) == 2);
+    CHECK(totals.count(SocialRatingId_t::Police) == 0);
+}
+
+TEST_CASE("AccumulateSocialRatings: Cloning Vats-style impunity on power and thought_control",
+          "[effects][rating][impunity]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 8);
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.RatingMod(SocialRatingId_t::Industry, -2), "power"),
+        Active(pool.RatingMod(SocialRatingId_t::Support, -3), "thought_control"),
+        Active(pool.RatingMod(SocialRatingId_t::Morale, 2), "thought_control"),
+        Active(pool.PolicyImpunity("power"), "Cloning_Vats"),
+        Active(pool.PolicyImpunity("thought_control"), "Cloning_Vats"),
+    }};
+
+    const auto totals = AccumulateSocialRatings(baseEffects.effects, std::nullopt);
+    CHECK(totals.count(SocialRatingId_t::Industry) == 0);
+    CHECK(totals.count(SocialRatingId_t::Support) == 0);
+    CHECK(totals.at(SocialRatingId_t::Morale) == 2);
+}

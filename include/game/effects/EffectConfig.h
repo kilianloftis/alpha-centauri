@@ -125,25 +125,25 @@ struct RuleFlagEffect_t
     std::optional<UnitDomain_t> domain;
 };
 
-struct SocialEngineeringOverrideEffect_t
+// Blocks adopting the named social policy (faction opposition / society_avail).
+struct ForbiddenSocialPolicyEffect_t
 {
-    // TODO: define parameters when social engineering rules are finalized
-    std::string category;
-    std::string choice;
+    SocialPolicyId_t policy;
 };
 
-// Adds to one social engineering axis; social_rating_effects.json maps totals to effects.
+// While the named policy is active, its negative SocialRatingModifier Adds do not apply.
+struct SocialPolicyImpunityEffect_t
+{
+    SocialPolicyId_t policy;
+};
+
+// Adds or clamps one social engineering axis; social_rating_effects.json maps totals to
+// effects. Only Add, MinClamp, and MaxClamp are valid ops.
 struct SocialRatingModifierEffect_t
 {
     SocialRatingId_t rating;
     int amount = 0;
-};
-
-struct DiplomaticModifierEffect_t
-{
-    // TODO: define parameters when diplomatic modifier rules are finalized
-    std::string targetFactionId;
-    int value;
+    ModifierOp_t op = ModifierOp_t::Add;
 };
 
 // Hides a unit on a JSON-defined detection channel: itself (ThisUnit) or everything on and
@@ -229,8 +229,8 @@ using EffectVariant_t = std::variant<
     InfiltrationEffect_t,
     StatModifierEffect_t,
     RuleFlagEffect_t,
-    SocialEngineeringOverrideEffect_t,
-    DiplomaticModifierEffect_t,
+    ForbiddenSocialPolicyEffect_t,
+    SocialPolicyImpunityEffect_t,
     SocialRatingModifierEffect_t,
     ConcealEffect_t,
     DetectEffect_t,

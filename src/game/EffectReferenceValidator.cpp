@@ -74,6 +74,7 @@ struct EffectPayloadValidator
     const BuildingRegistry& rBuildings;
     const ImprovementRegistry& rImprovements;
     const SocialRatingRegistry& rSocialRatings;
+    const SocialPolicyRegistry& rSocialPolicies;
 
     void operator()(const GrantBuildingEffect_t& rGrant) const
     {
@@ -101,8 +102,20 @@ struct EffectPayloadValidator
 
     void operator()(const InfiltrationEffect_t&) const {}
     void operator()(const RuleFlagEffect_t&) const {}
-    void operator()(const SocialEngineeringOverrideEffect_t&) const {}
-    void operator()(const DiplomaticModifierEffect_t&) const {}
+    void operator()(const ForbiddenSocialPolicyEffect_t& rForbidden) const
+    {
+        if (!rSocialPolicies.Find(rForbidden.policy))
+        {
+            ThrowBadReference(rSourceId, "social policy", rForbidden.policy);
+        }
+    }
+    void operator()(const SocialPolicyImpunityEffect_t& rImpunity) const
+    {
+        if (!rSocialPolicies.Find(rImpunity.policy))
+        {
+            ThrowBadReference(rSourceId, "social policy", rImpunity.policy);
+        }
+    }
     // The rating axis must exist: SocialRatingResolver looks it up once the policy's total is
     // non-zero.
     void operator()(const SocialRatingModifierEffect_t& rModifier) const
@@ -317,6 +330,7 @@ public:
         , m_rTechs(RequireRegistry(rData.techRegistry, "techRegistry"))
         , m_rUnitComponents(RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry"))
         , m_rSocialRatings(RequireRegistry(rData.socialRatingRegistry, "socialRatingRegistry"))
+        , m_rSocialPolicies(RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry"))
         , m_rNativeUnits(RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry"))
     {
     }
@@ -324,7 +338,7 @@ public:
     void Effects(const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId) const
     {
         const EffectPayloadValidator payloads{rSourceId, m_rBuildings, m_rImprovements,
-                                              m_rSocialRatings};
+                                              m_rSocialRatings, m_rSocialPolicies};
         for (const EffectConfig_t& rEffect : rEffects)
         {
             std::visit(payloads, rEffect.effect);
@@ -386,6 +400,7 @@ private:
     const TechRegistry& m_rTechs;
     const UnitComponentRegistry& m_rUnitComponents;
     const SocialRatingRegistry& m_rSocialRatings;
+    const SocialPolicyRegistry& m_rSocialPolicies;
     const NativeUnitRegistry& m_rNativeUnits;
 };
 

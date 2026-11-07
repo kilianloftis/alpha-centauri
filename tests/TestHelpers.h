@@ -163,10 +163,31 @@ public:
     }
 
     const ac::EffectConfig_t& RatingMod(ac::SocialRatingId_t rating, int amount,
-                                        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+                                        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
+                                        ac::ModifierOp_t op = ac::ModifierOp_t::Add)
     {
         ac::EffectConfig_t config;
-        config.effect = ac::SocialRatingModifierEffect_t{rating, amount};
+        config.effect = ac::SocialRatingModifierEffect_t{rating, amount, op};
+        config.scope = scope;
+        return Add(std::move(config));
+    }
+
+    const ac::EffectConfig_t& ForbiddenPolicy(
+        const ac::SocialPolicyId_t& rPolicy,
+        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+    {
+        ac::EffectConfig_t config;
+        config.effect = ac::ForbiddenSocialPolicyEffect_t{rPolicy};
+        config.scope = scope;
+        return Add(std::move(config));
+    }
+
+    const ac::EffectConfig_t& PolicyImpunity(
+        const ac::SocialPolicyId_t& rPolicy,
+        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+    {
+        ac::EffectConfig_t config;
+        config.effect = ac::SocialPolicyImpunityEffect_t{rPolicy};
         config.scope = scope;
         return Add(std::move(config));
     }

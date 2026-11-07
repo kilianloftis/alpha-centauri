@@ -4,6 +4,16 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "parameters": { "stat": "psych", "amount": 1, "op": "Add" }
+    },
+    {
+      "type": "ForbiddenSocialPolicy",
+      "scope": "FactionGlobal",
+      "parameters": { "policy": "democratic" }
+    },
+    {
+      "type": "SocialRatingModifier",
+      "scope": "FactionGlobal",
+      "parameters": { "rating": "efficiency", "amount": 0, "op": "MinClamp" }
     }
   ]
 }

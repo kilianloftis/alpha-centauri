@@ -19,7 +19,7 @@ enum class SocialCategory_t
 
 struct SocialPolicyConfig_t
 {
-    std::string id;
+    SocialPolicyId_t id;
     std::string name;
     SocialCategory_t category;
     std::string requiredTech;  // empty if none

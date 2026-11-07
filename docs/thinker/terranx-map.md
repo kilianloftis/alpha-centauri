@@ -695,6 +695,24 @@ whole `SE_*_base` block into the live rating. That is the labs-scale in
 `base_research` plus the sign-clamped ±1 TECHS term above — not an 80% cost
 multiplier.
 
+### Social engineering: bans, impunity, immunity
+
+Addresses from Thinker's `engine.cpp` (GOG `terranx.exe`
+`4b19c1fe3266b5ebc4305cd182ed6e864e3a1c4a`). Thinker **replaces**
+`social_calc` / `society_avail`; flow below is from that rewrite plus
+`alphax.txt` / faction TXT — original bodies not re-disassembled here.
+
+- `society_avail` (`0x5B4730`): false when the faction's opposition
+  category+model matches (TXT line `Politics, Democratic, nil` etc.), else
+  the model's tech prereq.
+- `social_calc` (`0x5B4210`): for each chosen model, sum rating deltas. On a
+  **negative** delta: Network Backbone zeros Cybernetic; Cloning Vats zeros
+  Thought Control and Power; then `RULE_IMPUNITY` matching (cat, model)
+  cancels that negative and `RULE_PENALTY` doubles it. After summing and
+  adding `SE_*_base`, `RULE_IMMUNITY` clamps that effect index to ≥ 0;
+  `RULE_ROBUST` halves a still-negative axis. Impunity is per **setting**;
+  immunity is per **rating axis** (e.g. Hive `IMMUNITY, EFFIC`).
+
 ### `base_energy` labs (`0x4EB560`)
 
 `labs_total` (`BASE +0x108`) is this base's labs output. Facilities never enter

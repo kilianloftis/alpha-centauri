@@ -672,22 +672,26 @@ void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t&
     rEffect.effect = overrideFx;
 }
 
-void ParseSocialEngineeringOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseForbiddenSocialPolicy_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
-    // TODO: define parsing when social engineering rules are finalized
-    SocialEngineeringOverrideEffect_t seOverride;
-    seOverride.category = parameters.value("category", "");
-    seOverride.choice = parameters.value("choice", "");
-    rEffect.effect = seOverride;
+    ForbiddenSocialPolicyEffect_t forbidden;
+    forbidden.policy = parameters.value("policy", "");
+    if (forbidden.policy.empty())
+    {
+        throw std::runtime_error("ForbiddenSocialPolicy effect missing required 'policy'");
+    }
+    rEffect.effect = forbidden;
 }
 
-void ParseDiplomaticModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseSocialPolicyImpunity_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
-    // TODO: define parsing when diplomatic modifier rules are finalized
-    DiplomaticModifierEffect_t diplomatic;
-    diplomatic.targetFactionId = parameters.value("target_faction_id", "");
-    diplomatic.value = static_cast<int>(ParseNumber(parameters, "value", 0.0));
-    rEffect.effect = diplomatic;
+    SocialPolicyImpunityEffect_t impunity;
+    impunity.policy = parameters.value("policy", "");
+    if (impunity.policy.empty())
+    {
+        throw std::runtime_error("SocialPolicyImpunity effect missing required 'policy'");
+    }
+    rEffect.effect = impunity;
 }
 
 void ParseSocialRatingModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
@@ -700,6 +704,13 @@ void ParseSocialRatingModifier_(const nlohmann::json& parameters, EffectConfig_t
     }
     ratingMod.rating = ParseSocialRatingId(ratingStr);
     ratingMod.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
+    ratingMod.op = ParseModifierOp(parameters.value("op", "Add"));
+    if (ratingMod.op != ModifierOp_t::Add && ratingMod.op != ModifierOp_t::MinClamp
+        && ratingMod.op != ModifierOp_t::MaxClamp)
+    {
+        throw std::runtime_error(
+            "SocialRatingModifier op must be Add, MinClamp, or MaxClamp");
+    }
     rEffect.effect = ratingMod;
 }
 
@@ -902,8 +913,8 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"RuleFlag", ParseRuleFlag_},
         {"InteractionOverride", ParseInteractionOverride_},
         {"CoexistenceOverride", ParseCoexistenceOverride_},
-        {"SocialEngineeringOverride", ParseSocialEngineeringOverride_},
-        {"DiplomaticModifier", ParseDiplomaticModifier_},
+        {"ForbiddenSocialPolicy", ParseForbiddenSocialPolicy_},
+        {"SocialPolicyImpunity", ParseSocialPolicyImpunity_},
         {"SocialRatingModifier", ParseSocialRatingModifier_},
         {"Conceal", ParseConceal_},
         {"Detect", ParseDetect_},

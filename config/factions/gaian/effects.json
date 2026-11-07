@@ -9,6 +9,11 @@
       "type": "SocialRatingModifier",
       "scope": "FactionGlobal",
       "parameters": { "rating": "planet", "amount": 2 }
+    },
+    {
+      "type": "ForbiddenSocialPolicy",
+      "scope": "FactionGlobal",
+      "parameters": { "policy": "free_market" }
     }
   ]
 }

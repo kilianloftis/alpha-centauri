@@ -264,7 +264,14 @@
     "secret_project": true,
     "category": "conquer",
     "required_tech": "digital_sentience",
-    "icon": "assets/sprites/projects/proj021.png"
+    "icon": "assets/sprites/projects/proj021.png",
+    "effects": [
+      {
+        "type": "SocialPolicyImpunity",
+        "scope": "FactionGlobal",
+        "parameters": { "policy": "cybernetic" }
+      }
+    ]
   },
   {
     "id": "Nano_Factory",
@@ -294,7 +301,19 @@
     "secret_project": true,
     "category": "conquer",
     "required_tech": "biomachinery",
-    "icon": "assets/sprites/projects/proj024.png"
+    "icon": "assets/sprites/projects/proj024.png",
+    "effects": [
+      {
+        "type": "SocialPolicyImpunity",
+        "scope": "FactionGlobal",
+        "parameters": { "policy": "thought_control" }
+      },
+      {
+        "type": "SocialPolicyImpunity",
+        "scope": "FactionGlobal",
+        "parameters": { "policy": "power" }
+      }
+    ]
   },
   {
     "id": "Self_Aware_Colony",

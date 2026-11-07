@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -99,17 +100,80 @@ std::map<SocialRatingId_t, int> AccumulateSocialRatings(
     const std::vector<ActiveEffect_t>& rEffects,
     std::optional<EffectLane_t> laneFilter)
 {
-    std::map<SocialRatingId_t, int> totals;
+    std::set<SocialPolicyId_t> impunityPolicies;
     for (const ActiveEffect_t& rEffect : rEffects)
     {
         if (laneFilter && LaneFor(rEffect.config->scope) != *laneFilter)
         {
             continue;
         }
-        if (const auto* pRatingMod = std::get_if<SocialRatingModifierEffect_t>(&rEffect.config->effect))
+        if (const auto* pImpunity =
+                std::get_if<SocialPolicyImpunityEffect_t>(&rEffect.config->effect))
         {
-            totals[pRatingMod->rating] += pRatingMod->amount;
+            impunityPolicies.insert(pImpunity->policy);
         }
+    }
+
+    std::map<SocialRatingId_t, int> totals;
+    std::map<SocialRatingId_t, int> minClamps;
+    std::map<SocialRatingId_t, int> maxClamps;
+    for (const ActiveEffect_t& rEffect : rEffects)
+    {
+        if (laneFilter && LaneFor(rEffect.config->scope) != *laneFilter)
+        {
+            continue;
+        }
+        const auto* pRatingMod =
+            std::get_if<SocialRatingModifierEffect_t>(&rEffect.config->effect);
+        if (!pRatingMod)
+        {
+            continue;
+        }
+        if (pRatingMod->op == ModifierOp_t::Add)
+        {
+            if (pRatingMod->amount < 0
+                && impunityPolicies.count(rEffect.sourceId) != 0)
+            {
+                continue;
+            }
+            totals[pRatingMod->rating] += pRatingMod->amount;
+            continue;
+        }
+        if (pRatingMod->op == ModifierOp_t::MinClamp)
+        {
+            const auto it = minClamps.find(pRatingMod->rating);
+            if (it == minClamps.end())
+            {
+                minClamps.emplace(pRatingMod->rating, pRatingMod->amount);
+            }
+            else
+            {
+                it->second = std::max(it->second, pRatingMod->amount);
+            }
+            continue;
+        }
+        // MaxClamp — parser rejects any other op.
+        const auto it = maxClamps.find(pRatingMod->rating);
+        if (it == maxClamps.end())
+        {
+            maxClamps.emplace(pRatingMod->rating, pRatingMod->amount);
+        }
+        else
+        {
+            it->second = std::min(it->second, pRatingMod->amount);
+        }
+    }
+
+    // MaxClamp then MinClamp, so MinClamp wins a crossing pair (ApplyModifierStack).
+    for (const auto& [rating, maxClamp] : maxClamps)
+    {
+        int& rTotal = totals[rating];
+        rTotal = std::min(rTotal, maxClamp);
+    }
+    for (const auto& [rating, minClamp] : minClamps)
+    {
+        int& rTotal = totals[rating];
+        rTotal = std::max(rTotal, minClamp);
     }
     return totals;
 }

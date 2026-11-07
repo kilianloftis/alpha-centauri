@@ -73,8 +73,9 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `GrantBuilding` | Expands another building's effects onto this one by ID (`parameters.building_id`) — no constructed copy, no maintenance. To actually build it, use the triggered `AddBuilding` instead. |
 | `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`) |
 | `RuleFlag` | Enables a named gameplay rule (`parameters.flag`) |
-| `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
-| `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
+| `ForbiddenSocialPolicy` | Blocks adopting a social policy (`parameters.policy`) |
+| `SocialPolicyImpunity` | Ignores negative SocialRatingModifier Adds from that policy while it is active (`parameters.policy`) |
+| `SocialRatingModifier` | Adds or clamps a social rating axis (`parameters.rating`, `parameters.amount`, optional `op`: `Add` / `MinClamp` / `MaxClamp`) |
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
 | `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`, `parameters.chance_of_destruction_on_fail`) |
 | `Intercept` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `condition`) |

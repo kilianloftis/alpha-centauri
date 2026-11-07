@@ -641,6 +641,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
+using SocialPolicyId_t = std::string;
+
 enum class SocialRatingId_t
 {
     Economy,
