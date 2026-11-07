@@ -34,9 +34,12 @@ classDiagram
 
 ## Config
 
-[`config/native_units.json`](../../config/native_units.json) — `fungal_bloom_native_lifeforms_min` / `fungal_bloom_native_lifeforms_max` are the inclusive count a fungal bloom spawns, and `units` lists each design: `id`, `name`,
+[`config/native_units.json`](../../config/native_units.json) — designs only. Each entry: `id`, `name`,
 `domain`, `plan` (required; `alpha.txt`'s plan for the predefined unit, read by `IDesign::GetPlan`), `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
-`EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`. Combat natives declare the `native_life` RuleFlag. Alien Artifact does not.
+`EffectSourceKind_t::NativeUnit`), optional `on_hold_effects[]`, and optional `planet` (fauna roles / weight / tech gate / lifecycle). Combat natives declare the `native_life` RuleFlag. Alien Artifact omits `planet`.
+
+[`config/native_life.json`](../../config/native_life.json) (+ [`native_life.lua`](../../config/native_life.lua)) — fungal-bloom lifeform count, lifecycle turn thresholds, ambush near-base band, abundance `levels`, and Planet fauna formulas. Perihelion scales boat cargo via WorldGlobal `planet_fauna_cargo_scale` on the world event.
+
 `IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
 filled component declares it. Combat natives Add `collateral_damage` 1, the fission-tier
 splash they deal without a reactor. When one unit of a wild stack — native life owned by a
@@ -69,11 +72,35 @@ use the `native` column of `morale_levels.json` when `IsNativeLife` is set. A na
 unit homed at a base pays no mineral support when `UnitSupport` runs if its tile has fungus.
 `GetMineralUpkeep` is unchanged, and a zero charge does not take a free support slot.
 
+## Planet lifecycle (wild natives)
+
+Wild natives (`IsWildNative`) use a **live** lifecycle from `NativeRules::WildNativeLifecycleLevel`
+for combat/display morale, Isle `IntrinsicXp`, and Planet Pearls — not stored XP alone.
+`PlanetFaunaCalculator::LifecycleFloor` maps turn → floor from
+`planet_lifecycle_turn_thresholds` in `native_life.json` (vanilla 45/90/170/250/skip/330);
+combat promotions above `starting_intrinsic` stack; each design’s `planet.lifecycle_bonus`
+(Locusts +1) and `lifecycle` (`turn_floor` / `adjacent_fungus`) apply. See
+`docs/thinker/terranx-map.md` `morale_alien`.
+
+## Planet fauna
+
+`WorldEvents` calls `RunPlanetFauna` (`PlanetFaunaMutations`) after terraform spread. Boats,
+fungus ambushes, and the near-base swarm use `PlanetFaunaCalculator` (`native_life.lua`),
+`PlanetFaunaRules` for gates and candidate picks, `fauna_forms` on native-life levels, and
+`planet_fauna_diff` / `planet_fauna_swarm_event` on `DifficultyRules_t`. Designs opt into roles
+via `planet.fauna_roles` with a single `fauna_weight`. Boat hulls spawn only on water (sea fungus
+or empty ocean) and must fit the tile; boat cargo skips the domain filter and embarks onto the
+hull. Voice of Planet authors WorldGlobal
+`suppress_planet_fauna` on both `effects` and `destroyed_effects`; `PlanetFaunaSuppressed` reads
+that flag from faction active effects (owned building pool or tombstone `destroyed_effects` via
+session world extras). Fungal-bloom spawn uses designs that declare `planet`.
+
 ## Isle cargo (IntrinsicXp)
 
 Isle of the Deep uses `amount_source: { "kind": "IntrinsicXp" }` on `cargo_capacity` (scale 1) plus
-`TransportParams` `carries: [land]`. Live capacity is `Unit::GetXp() * amount` (intrinsic
-lifecycle index, not SE-shifted effective morale). Design-only resolve drops the contribution.
+`TransportParams` `carries: [land]`. Live capacity is lifecycle index × amount (wild natives
+use `WildNativeLifecycleLevel`; others use `Unit::GetXp()`). Design-only resolve drops the
+contribution.
 
 ## Fungus movement
 

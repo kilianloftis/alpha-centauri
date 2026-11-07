@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/units/UnitDomain.h"
+
 namespace ac
 {
 
@@ -12,8 +14,11 @@ struct EntryTerms_t;
 // a unit that ignores ZOC declares a zoc deny on itself.
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
 
+// Whether domain may enter rTile per the enter interaction grid stock cell (no unit overrides).
+bool CanEnterTileTerrain(UnitDomain_t domain, const Tile& rTile);
+
 // Whether rMover may enter rTile for its chassis domain per the enter interaction grid
-// (stock: air any; sea water; land land).
+// (stock cell, then the mover's InteractionOverrides).
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
 // Whether rMover could stand on rTile unsupported. Not a movement predicate: asked only when

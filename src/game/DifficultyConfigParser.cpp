@@ -44,6 +44,15 @@ bool ReadBool_(const nlohmann::json& rJson, const char* key, bool defaultValue)
     return it->get<bool>();
 }
 
+bool ReadRequiredBool_(const nlohmann::json& rJson, const char* key)
+{
+    if (!rJson.contains(key) || !rJson.at(key).is_boolean())
+    {
+        throw std::runtime_error("'" + std::string(key) + "' must be a boolean");
+    }
+    return rJson.at(key).get<bool>();
+}
+
 int ReadNonNegativeInt_(const nlohmann::json& rJson, const char* key, int defaultValue)
 {
     const auto it = rJson.find(key);
@@ -82,6 +91,8 @@ DifficultyRules_t ParseRules_(const nlohmann::json& rJson, const std::string& rL
         "combat_handicap_natives_only",
         "player_atrocity_threshold",
         "ai_atrocity_threshold",
+        "planet_fauna_diff",
+        "planet_fauna_swarm_event",
     };
     ConfigFields::RejectUnknownKeys(rJson, known, ctx);
 
@@ -109,6 +120,12 @@ DifficultyRules_t ParseRules_(const nlohmann::json& rJson, const std::string& rL
             ReadBool_(rJson, "combat_handicap_natives_only", rules.combatHandicapNativesOnly);
         rules.playerAtrocityThreshold = ReadRequiredThreshold_(rJson, "player_atrocity_threshold");
         rules.aiAtrocityThreshold = ReadRequiredThreshold_(rJson, "ai_atrocity_threshold");
+        rules.planetFaunaDiff = ReadRequiredThreshold_(rJson, "planet_fauna_diff");
+        if (rules.planetFaunaDiff > 5)
+        {
+            throw std::runtime_error("'planet_fauna_diff' must be 0..5");
+        }
+        rules.planetFaunaSwarmEvent = ReadRequiredBool_(rJson, "planet_fauna_swarm_event");
     }
     catch (const std::runtime_error& rErr)
     {

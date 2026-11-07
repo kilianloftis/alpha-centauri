@@ -432,7 +432,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `faction/`: the faction aggregate, its definition, identity, flavour, AI profile, effects pool
 - `map/`: the world map, tiles, territory, spatial indexes, occupants, rivers
 - `movement/`: move costs, step legality, pathfinding, transport, airdrop, fuel, territory entry and evacuation
-- `natives/`: native life designs, registry and native-life levels
+- `natives/`: native life designs, registry, native-life levels, Planet fauna
 - `population/`: pops and pop types, growth, drones, composition, police, mood latches, assimilation
 - `probes/`: probe actions, targets, mind control
 - `production/`: production, the queue (`ProductionQueue` / `ProductionQueueRules`), costs, completion, hurry, scrap, stockpiles, the constructable interface
@@ -704,7 +704,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `EcoDamageCalculator`: thin Lua bridge over `config/eco_damage.lua`; owned by `GameDataContext`.
   - `EcologyLedger`: per-faction fungal blooms, clean-mineral grants and virtual minerals. World-scoped, owned by `GameState`, sibling of `AtrocityLedger` and `MindControlLedger`.
   - `WorldEventTracker`: the active set of `config/world_events.json` events. Created by `GameState::CreateWorldEvents`; advanced by the `WorldEvents` stage; active events' effects reach every faction through `CollectWorldExtras`.
-  - `NativeLifeLevelConfig_t`: `config/native_life_levels.json`, selected by `GameRulesConfig_t::nativeLifeLevelId` and injected into `FactionEffectsPool` like difficulty.
+  - `NativeLifeConfig_t` / `PlanetFaunaCalculator` / `PlanetFaunaRules` / `PlanetFaunaMutations`: `config/native_life.json` + `native_life.lua`; abundance level selected by `GameRulesConfig_t::nativeLifeLevelId` and injected into `FactionEffectsPool` like difficulty.
 - **Dependencies**:
   - The `EcoDamage` stage rolls the score after `WorldEvents`, and applies `eco_damage.json`'s `on_pop_effects` (`FungalBloom`) on a hit
   - `GrantCleanMinerals` (eco facilities' `on_complete_effects`) and `AddVirtualMinerals` (Tectonic Payload's `on_detonate_effects`) write the ledger

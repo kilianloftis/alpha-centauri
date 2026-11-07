@@ -4,7 +4,6 @@
 #include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/ConfigFields.h"
 
-#include <cmath>
 #include <fstream>
 #include <stdexcept>
 
@@ -14,41 +13,135 @@ namespace ac
 namespace
 {
 
-int RequireWholeCount_(const nlohmann::json& rJson, const char* pKey)
+NativeFaunaRole_t ParseRole_(const nlohmann::json& rEntry, const std::string& rUnitId)
 {
-    const double value = EffectConfigParser::RequireNumber(rJson, pKey);
-    if (value != std::floor(value))
+    if (!rEntry.is_string() || rEntry.get<std::string>().empty())
     {
-        throw std::runtime_error(std::string("native_units '") + pKey + "' must be a whole number");
+        throw std::runtime_error("Native unit '" + rUnitId
+                                 + "' 'fauna_roles' entries must be non-empty strings");
     }
-    return static_cast<int>(value);
+    return ParseNativeFaunaRole(rEntry.get<std::string>());
 }
 
-NativeLifeConfig_t ParseNativeLife_(const nlohmann::json& rJson)
+NativeUnitPlanetConfig_t ParsePlanet_(const nlohmann::json& rJson, const std::string& rUnitId)
 {
-    NativeLifeConfig_t life;
-    life.fungalBloomNativeLifeformsMin =
-        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_min");
-    life.fungalBloomNativeLifeformsMax =
-        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_max");
-    if (life.fungalBloomNativeLifeformsMin < 0)
+    const std::string ctx = "Native unit '" + rUnitId + "' planet";
+    ConfigFields::RejectUnknownKeys(
+        rJson,
+        {"fauna_roles", "fauna_weight", "requires_any_tech", "lifecycle", "lifecycle_bonus"},
+        ctx);
+
+    NativeUnitPlanetConfig_t planet;
+    if (!rJson.contains("fauna_roles") || !rJson.at("fauna_roles").is_array())
     {
-        throw std::runtime_error(
-            "native_units 'fungal_bloom_native_lifeforms_min' must be >= 0, got "
-            + std::to_string(life.fungalBloomNativeLifeformsMin));
+        throw std::runtime_error(ctx + ": 'fauna_roles' must be an array");
     }
-    if (life.fungalBloomNativeLifeformsMax < life.fungalBloomNativeLifeformsMin)
+    for (const nlohmann::json& rRole : rJson.at("fauna_roles"))
     {
-        throw std::runtime_error(
-            "native_units 'fungal_bloom_native_lifeforms_max' must be >= "
-            "'fungal_bloom_native_lifeforms_min', got "
-            + std::to_string(life.fungalBloomNativeLifeformsMax) + " < "
-            + std::to_string(life.fungalBloomNativeLifeformsMin));
+        planet.faunaRoles.push_back(ParseRole_(rRole, rUnitId));
     }
-    return life;
+
+    if (!planet.faunaRoles.empty())
+    {
+        if (!rJson.contains("fauna_weight") || !rJson.at("fauna_weight").is_number_integer())
+        {
+            throw std::runtime_error(ctx + ": 'fauna_weight' must be an integer when roles are "
+                                           "non-empty");
+        }
+        planet.faunaWeight = rJson.at("fauna_weight").get<int>();
+        if (planet.faunaWeight <= 0)
+        {
+            throw std::runtime_error(ctx + ": 'fauna_weight' must be > 0");
+        }
+    }
+    else if (rJson.contains("fauna_weight"))
+    {
+        throw std::runtime_error(ctx + ": 'fauna_weight' is only valid when fauna_roles is "
+                                       "non-empty");
+    }
+
+    if (rJson.contains("requires_any_tech"))
+    {
+        const nlohmann::json& rArr = rJson.at("requires_any_tech");
+        if (!rArr.is_array())
+        {
+            throw std::runtime_error(ctx + ": 'requires_any_tech' must be an array");
+        }
+        for (const nlohmann::json& rEntry : rArr)
+        {
+            if (!rEntry.is_string() || rEntry.get<std::string>().empty())
+            {
+                throw std::runtime_error(ctx + ": 'requires_any_tech' entries must be non-empty "
+                                               "strings");
+            }
+            planet.requiresAnyTech.push_back(rEntry.get<std::string>());
+        }
+    }
+
+    if (!rJson.contains("lifecycle") || !rJson.at("lifecycle").is_string())
+    {
+        throw std::runtime_error(ctx + ": 'lifecycle' must be a string");
+    }
+    planet.lifecycle = ParseNativeLifecycleKind(rJson.at("lifecycle").get<std::string>());
+
+    if (rJson.contains("lifecycle_bonus"))
+    {
+        if (!rJson.at("lifecycle_bonus").is_number_integer())
+        {
+            throw std::runtime_error(ctx + ": 'lifecycle_bonus' must be an integer");
+        }
+        planet.lifecycleBonus = rJson.at("lifecycle_bonus").get<int>();
+    }
+    return planet;
 }
 
 } // namespace
+
+NativeFaunaRole_t ParseNativeFaunaRole(const std::string& rRole)
+{
+    if (rRole == "boat_hull")
+    {
+        return NativeFaunaRole_t::BoatHull;
+    }
+    if (rRole == "boat_cargo")
+    {
+        return NativeFaunaRole_t::BoatCargo;
+    }
+    if (rRole == "boat_escort")
+    {
+        return NativeFaunaRole_t::BoatEscort;
+    }
+    if (rRole == "ambush")
+    {
+        return NativeFaunaRole_t::Ambush;
+    }
+    if (rRole == "swarm")
+    {
+        return NativeFaunaRole_t::Swarm;
+    }
+    if (rRole == "swarm_lead")
+    {
+        return NativeFaunaRole_t::SwarmLead;
+    }
+    throw std::runtime_error("Unknown native fauna role '" + rRole + "'");
+}
+
+NativeLifecycleKind_t ParseNativeLifecycleKind(const std::string& rKind)
+{
+    if (rKind == "none")
+    {
+        return NativeLifecycleKind_t::None;
+    }
+    if (rKind == "turn_floor")
+    {
+        return NativeLifecycleKind_t::TurnFloor;
+    }
+    if (rKind == "adjacent_fungus")
+    {
+        return NativeLifecycleKind_t::AdjacentFungus;
+    }
+    throw std::runtime_error("Unknown native lifecycle kind '" + rKind + "'");
+}
 
 std::vector<NativeUnitConfig_t> NativeUnitConfigParser::ParseConfig(const std::string& rConfigPath)
 {
@@ -62,8 +155,7 @@ std::vector<NativeUnitConfig_t> NativeUnitConfigParser::ParseConfig(const std::s
     {
         throw std::runtime_error("native_units root must be an object");
     }
-
-    m_life = ParseNativeLife_(json);
+    ConfigFields::RejectUnknownKeys(json, {"units"}, "native_units");
 
     if (!json.contains("units") || !json.at("units").is_array())
     {
@@ -98,6 +190,18 @@ NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const nlohmann:
         EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::NativeUnit, config.id);
     config.onHoldEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rJson, "on_hold_effects", config.id);
+    if (rJson.contains("planet"))
+    {
+        if (rJson.at("planet").is_null())
+        {
+            return config;
+        }
+        if (!rJson.at("planet").is_object())
+        {
+            throw std::runtime_error("Native unit '" + config.id + "' 'planet' must be an object");
+        }
+        config.planet = ParsePlanet_(rJson.at("planet"), config.id);
+    }
     return config;
 }
 

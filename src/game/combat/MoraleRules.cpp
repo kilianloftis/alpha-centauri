@@ -3,6 +3,7 @@
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/effects/EffectEnums.h"
+#include "game/natives/NativeRules.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -13,6 +14,10 @@ namespace ac
 int EffectiveMoraleLevel(const Unit& rUnit, const EffectContext_t& rCtx,
                          const MoraleCalculator& rMorale)
 {
+    if (IsWildNative(rUnit))
+    {
+        return WildNativeLifecycleLevel(rUnit, rMorale);
+    }
     const int liveBonus = ResolveCombatUnitStat(rUnit, StatId_t::MoraleRank, rCtx, {});
     return rMorale.MoraleLevel(rUnit.GetXp(), liveBonus);
 }

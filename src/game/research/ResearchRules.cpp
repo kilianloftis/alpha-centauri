@@ -7,6 +7,7 @@
 #include "game/map/WorldMap.h"
 #include "game/effects/IEffectsProvider.h"
 #include "game/faction/Faction.h"
+#include "game/faction/FactionConfig.h"
 #include "game/research/ResearchManager.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechRegistry.h"
@@ -206,6 +207,29 @@ int HighestTechLevel(const ResearchManager& rResearch)
         highest = std::max(highest, TechLevel_(rRegistry, rTechId, levels));
     }
     return highest;
+}
+
+bool AnyFactionHasTech(const std::vector<std::string>& rTechIds)
+{
+    if (rTechIds.empty())
+    {
+        return true;
+    }
+    for (const Faction& rFaction : CurrentGameState().Factions())
+    {
+        if (IsNativeLifeFaction(rFaction.GetDefinition().identity.species))
+        {
+            continue;
+        }
+        for (const std::string& rTechId : rTechIds)
+        {
+            if (rFaction.GetResearch().HasDiscoveredTech(rTechId))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 } // namespace ac

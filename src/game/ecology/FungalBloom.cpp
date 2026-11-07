@@ -12,6 +12,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/units/Military.h"
 
@@ -149,9 +150,8 @@ std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
     return newly;
 }
 
-int RollLifeformCount_(const NativeUnitRegistry& rNatives, std::mt19937& rRng)
+int RollLifeformCount_(const NativeLifeConfig_t& rLife, std::mt19937& rRng)
 {
-    const NativeLifeConfig_t& rLife = rNatives.FungalBloomLifeforms();
     if (rLife.fungalBloomNativeLifeformsMin < 0
         || rLife.fungalBloomNativeLifeformsMax < rLife.fungalBloomNativeLifeformsMin)
     {
@@ -179,6 +179,11 @@ FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int til
     {
         throw std::logic_error("ApplyFungalBloom: no native unit registry is available");
     }
+    const NativeLifeConfig_t* pLife = rGameState.GetGameData().nativeLifeConfig.get();
+    if (!pLife)
+    {
+        throw std::logic_error("ApplyFungalBloom: no native life config is available");
+    }
 
     const ImprovementConfig_t& rFungus =
         rGameState.GetTileEffects().GetImprovements().Get(std::string(ImprovementIds::k_Fungus));
@@ -190,7 +195,7 @@ FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int til
         return result;
     }
 
-    const int lifeformCount = RollLifeformCount_(*pNatives, rRng);
+    const int lifeformCount = RollLifeformCount_(*pLife, rRng);
     if (lifeformCount <= 0)
     {
         return result;

@@ -271,23 +271,6 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     CHECK(UnitCount_(*session.pPlanet) == 1);
 }
 
-TEST_CASE("Native units reject an inverted fungal lifeform range", "[map][fungus]")
-{
-    const std::filesystem::path path =
-        actest::TestTempDir::Path() / "ac_bad_fungal_bloom_natives.json";
-    {
-        std::ofstream file(path);
-        file << R"({
-            "fungal_bloom_native_lifeforms_min": 2,
-            "fungal_bloom_native_lifeforms_max": 0,
-            "units": []
-        })";
-    }
-    CHECK_THROWS_WITH(NativeUnitRegistry{}.Load(path.string()),
-                      ContainsSubstring("fungal_bloom_native_lifeforms_max"));
-    std::filesystem::remove(path);
-}
-
 TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "[map][fungus]")
 {
     BloomSession_ session(0, 0, false, false);

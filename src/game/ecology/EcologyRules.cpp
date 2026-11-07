@@ -186,6 +186,10 @@ std::vector<const NativeUnitConfig_t*> EligibleLifeforms(const Tile& rTile,
     std::vector<const NativeUnitConfig_t*> eligible;
     for (const NativeUnitConfig_t& rConfig : rNatives.GetAll())
     {
+        if (!rConfig.planet.has_value())
+        {
+            continue;
+        }
         const NativeDesign design(rConfig);
         if (design.IsNativeLife() && DomainCanHold_(design.GetDomain(), rTile))
         {

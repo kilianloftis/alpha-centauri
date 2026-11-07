@@ -7,7 +7,9 @@
       "rules": {
         "player_atrocity_threshold": 9,
         "ai_atrocity_threshold": 7,
-        "colony_pod_preserves_size_1_base": true
+        "colony_pod_preserves_size_1_base": true,
+        "planet_fauna_diff": 0,
+        "planet_fauna_swarm_event": false
       },
       "effects": [
         {
@@ -24,7 +26,12 @@
     {
       "id": "specialist",
       "name": "Specialist",
-      "rules": { "player_atrocity_threshold": 8, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 8,
+        "ai_atrocity_threshold": 7,
+        "planet_fauna_diff": 1,
+        "planet_fauna_swarm_event": false
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -40,7 +47,12 @@
     {
       "id": "talent",
       "name": "Talent",
-      "rules": { "player_atrocity_threshold": 6, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 6,
+        "ai_atrocity_threshold": 7,
+        "planet_fauna_diff": 2,
+        "planet_fauna_swarm_event": false
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -56,7 +68,12 @@
     {
       "id": "librarian",
       "name": "Librarian",
-      "rules": { "player_atrocity_threshold": 5, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 5,
+        "ai_atrocity_threshold": 7,
+        "planet_fauna_diff": 3,
+        "planet_fauna_swarm_event": true
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -72,7 +89,12 @@
     {
       "id": "thinker",
       "name": "Thinker",
-      "rules": { "player_atrocity_threshold": 4, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 4,
+        "ai_atrocity_threshold": 7,
+        "planet_fauna_diff": 4,
+        "planet_fauna_swarm_event": true
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -81,7 +103,10 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
+          "condition": {
+            "kind": "PartnerPlayerType",
+            "type": "Player"
+          },
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.75,
@@ -102,7 +127,12 @@
     {
       "id": "transcend",
       "name": "Transcend",
-      "rules": { "player_atrocity_threshold": 3, "ai_atrocity_threshold": 7 },
+      "rules": {
+        "player_atrocity_threshold": 3,
+        "ai_atrocity_threshold": 7,
+        "planet_fauna_diff": 5,
+        "planet_fauna_swarm_event": true
+      },
       "effects": [
         {
           "type": "StatModifier",
@@ -111,7 +141,10 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
+          "condition": {
+            "kind": "PartnerPlayerType",
+            "type": "Player"
+          },
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.6,

@@ -5,6 +5,7 @@
 #include "lib/Revision.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace ac

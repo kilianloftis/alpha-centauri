@@ -1195,7 +1195,9 @@ TEST_CASE("A later lifecycle stage pays another multiple of the pearl base", "[c
     Unit& defender =
         fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
-    defender.SetXp(2);
+    // Wild lifecycle = turn floor + max(0, xp − starting_intrinsic). Floor 0 and
+    // starting_intrinsic 1 → xp 3 yields lifecycle 2 (×3 pearls on a base of 10).
+    defender.SetXp(3);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result =
@@ -1219,7 +1221,8 @@ TEST_CASE("Every wild native destroyed in the stack pays pearls", "[combat][pear
         fixture.MakeUnit(wild, 9, 9, {"test_chassis", "native_life_chassis"});
     defender.SetCurrentHp(1);
     defender.SetXp(0);
-    stackmate.SetXp(1);
+    // xp 2 → lifecycle 1 after starting_intrinsic 1 (×2 pearls).
+    stackmate.SetXp(2);
 
     CombatHarness_ harness(fixture, /*seed*/ 42);
     const CombatResult_t result =

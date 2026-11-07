@@ -62,7 +62,8 @@ add_library(ac-core STATIC
     game/ecology/EcoDamageCalculator.cpp
     game/ecology/BaseEcology.cpp
     game/ecology/EcologyRules.cpp
-    game/natives/NativeLifeLevelConfig.cpp
+    game/natives/NativeLifeConfig.cpp
+    game/natives/PlanetFaunaCalculator.cpp
     game/world-events/WorldEventConfig.cpp
     game/world-events/WorldEventTracker.cpp
     game/social-engineering/SocialEngineeringManager.cpp
@@ -149,6 +150,8 @@ add_library(ac-core STATIC
     game/natives/NativeUnitConfigParser.cpp
     game/natives/NativeUnitRegistry.cpp
     game/natives/NativeRules.cpp
+    game/natives/PlanetFaunaRules.cpp
+    game/natives/PlanetFaunaMutations.cpp
     game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp
     game/units/SupplyCrawlMutations.cpp

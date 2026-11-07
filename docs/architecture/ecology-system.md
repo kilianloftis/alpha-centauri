@@ -10,7 +10,7 @@ graph TB
     subgraph "Definition Data (immutable)"
         EcoConfig[EcoDamageConfig_t<br/>eco_damage.json + eco_damage.lua]
         Calculator[EcoDamageCalculator<br/>Lua bridge]
-        NativeLife[NativeLifeLevelConfig_t<br/>native_life_levels.json]
+        NativeLife[NativeLifeConfig_t<br/>native_life.json + native_life.lua]
         WorldEventsConfig[WorldEventsConfig_t<br/>world_events.json]
         Improvements[improvements.json<br/>eco_damage_contribution<br/>eco_damage_worked_contribution]
         Buildings[buildings.json<br/>eco facilities, orbital offset]
@@ -117,9 +117,10 @@ stage caps the roll at `eco_damage.json`'s `fungal_pop.max_chance_percent`.
 - **`AddVirtualMinerals`**: eco damage no production caused. The Tectonic Payload authors 5
   before `DestroyUnit`. Not an atrocity and not gated by the Charter; it still answers to good
   facilities because it sits inside the mineral term.
-- **`NativeLifeLevelConfig_t`**: the session level named by
+- **`NativeLifeConfig_t`**: abundance levels named by
   `GameRulesConfig_t::nativeLifeLevelId` (settings key `game_rules.native_life`), collected by
-  `FactionEffectsPool::CollectNativeLifeEffects_` like difficulty.
+  `FactionEffectsPool::CollectNativeLifeEffects_` like difficulty; also holds bloom counts and
+  Planet fauna formula strings from `native_life.lua`.
 - **`WorldEventTracker`**: the world-event registry's active set. The `WorldEvents` stage
   evaluates each `Cycle` event (`(years − start_year_offset) mod cycle_years < duration_years`)
   and fires `on_start_effects` / `on_end_effects` on the edges; `CollectWorldExtras` serves
@@ -142,3 +143,7 @@ fungus, drops incompatible improvements and spawns native lifeforms.
   configs, so `EcoTerraformScale`, `EcoDamageReduction` and the grants have no shipping emitters.
 - No base-screen eco row and no new-game native life menu row.
 - Sea level rise from sustained eco damage waits on `WorldParameter`.
+- Planet fauna (`RunPlanetFauna` / `PlanetFaunaMutations` from `WorldEvents`) covers
+  boats/ambushes/swarm; fungal-tower turn (`do_fungal_towers`) and eco high-counter
+  Locust/Tower bursts beyond blooms are not implemented yet (see
+  `docs/architecture/native-units-system.md`).

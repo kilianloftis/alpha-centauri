@@ -40,6 +40,9 @@ struct BuildingConfig_t : public IConstructable
     // Public orbital census: counts of buildings with this flag are visible to all factions.
     bool orbital = false;
     std::vector<EffectConfig_t> effects;
+    // Continuous WorldGlobal effects while this secret project is tombstoned (not while owned).
+    // Secret projects only; empty for ordinary buildings.
+    std::vector<EffectConfig_t> destroyedEffects;
     // One-shot effects fired once, when the facility is completed here.
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;
     // One-shot effects fired when a unit is produced at a base that holds this facility.

@@ -15,7 +15,9 @@
         "no_incited_pact_treaty_scripts": true,
         "ai_auto_personality": false,
         "combat_handicap": true,
-        "combat_handicap_natives_only": false
+        "combat_handicap_natives_only": false,
+        "planet_fauna_diff": 0,
+        "planet_fauna_swarm_event": false
       },
       "effects": [
         {
@@ -140,7 +142,9 @@
         "no_power_overloads": true,
         "ai_auto_personality": false,
         "combat_handicap": true,
-        "combat_handicap_natives_only": false
+        "combat_handicap_natives_only": false,
+        "planet_fauna_diff": 1,
+        "planet_fauna_swarm_event": false
       },
       "effects": [
         {
@@ -252,7 +256,9 @@
         "random_events_after_turn": 55,
         "ai_secret_projects_require_human_prereq": true,
         "combat_handicap": true,
-        "combat_handicap_natives_only": true
+        "combat_handicap_natives_only": true,
+        "planet_fauna_diff": 2,
+        "planet_fauna_swarm_event": false
       },
       "effects": [
         {
@@ -343,7 +349,9 @@
       "rules": {
         "player_atrocity_threshold": 20,
         "ai_atrocity_threshold": 20,
-        "random_events_after_turn": 45
+        "random_events_after_turn": 45,
+        "planet_fauna_diff": 3,
+        "planet_fauna_swarm_event": true
       },
       "effects": [
         {
@@ -421,7 +429,9 @@
       "rules": {
         "player_atrocity_threshold": 16,
         "ai_atrocity_threshold": 20,
-        "random_events_after_turn": 35
+        "random_events_after_turn": 35,
+        "planet_fauna_diff": 4,
+        "planet_fauna_swarm_event": true
       },
       "effects": [
         {
@@ -431,7 +441,10 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
+          "condition": {
+            "kind": "PartnerPlayerType",
+            "type": "Player"
+          },
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.75,
@@ -526,7 +539,9 @@
       "rules": {
         "player_atrocity_threshold": 12,
         "ai_atrocity_threshold": 20,
-        "random_events_after_turn": 25
+        "random_events_after_turn": 25,
+        "planet_fauna_diff": 5,
+        "planet_fauna_swarm_event": true
       },
       "effects": [
         {
@@ -536,7 +551,10 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
+          "condition": {
+            "kind": "PartnerPlayerType",
+            "type": "Player"
+          },
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.6,

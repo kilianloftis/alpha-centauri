@@ -27,6 +27,10 @@ struct DifficultyRules_t
     // is Major. Zero disables escalation. Read at commit time.
     int playerAtrocityThreshold = 0;
     int aiAtrocityThreshold = 0;
+    // SMAC DiffLevel term in Planet fauna early_limit and boat-cargo formulas (Citizen…Transcend → 0…5).
+    int planetFaunaDiff = 0;
+    // Allows the near-base XMINDWORMS fauna burst (Librarian and up in shipping).
+    bool planetFaunaSwarmEvent = false;
 };
 
 struct DifficultyLevel_t

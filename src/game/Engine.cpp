@@ -6,7 +6,7 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/world-events/WorldEventConfig.h"
 #include "game/faction/Faction.h"
 #include "game/diplomacy/DiplomacyLedger.h"
@@ -426,7 +426,7 @@ void Engine::InitializeApp_()
     // Here, so the message can still point at the settings file.
     m_gameDataContext->difficultyConfig->RequireForSession(
         m_pSettings->GetGameRules().difficultyId);
-    m_gameDataContext->nativeLifeLevelConfig->RequireForSession(
+    m_gameDataContext->nativeLifeConfig->RequireForSession(
         m_pSettings->GetGameRules().nativeLifeLevelId);
 }
 

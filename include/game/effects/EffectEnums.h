@@ -245,6 +245,9 @@ enum class StatId_t
     // The eco-damage multiplier (PureMultiplier); the eco score multiplies by it once.
     EcologicalDamage,
 
+    // Scales Planet fauna boat cargo (PureMultiplier, seed 1). Perihelion MultiplyGeometric 2.
+    PlanetFaunaCargoScale,
+
     // An improvement's weight toward its base's terraform sum (Additive, Tile), summed per tile.
     EcoDamageContribution,
     // The extra weight counted only while the base's own pops work the tile (Additive, Tile).
@@ -379,6 +382,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:
         case StatId_t::EcologicalDamage:
+        case StatId_t::PlanetFaunaCargoScale:
         case StatId_t::EcoTerraformScale:
         case StatId_t::GiftSizeThreshold:
         case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
@@ -469,6 +473,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::EcoDamageReduction:
         case StatId_t::EcoMineralOffset: return ResolveDomain_t::Base;
 
+        case StatId_t::PlanetFaunaCargoScale:
         case StatId_t::TechCost:
         case StatId_t::TechCostDiff:
         case StatId_t::TechCostCatchUp:
@@ -621,6 +626,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
         return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
     if (rStat == "bombard_min_hp_percent")   return StatId_t::BombardMinHpPercent;
     if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
+    if (rStat == "planet_fauna_cargo_scale")  return StatId_t::PlanetFaunaCargoScale;
     if (rStat == "eco_damage_contribution")  return StatId_t::EcoDamageContribution;
     if (rStat == "eco_damage_worked_contribution")
         return StatId_t::EcoDamageWorkedContribution;
@@ -752,6 +758,9 @@ enum class RuleFlagId_t
 
     // The base cannot bank minerals, complete construction or hurry; stockpiles keep progress.
     DisableProduction,
+
+    // Voice of Planet (and peers): wild Planet fauna unit spawning is off for the rest of the game.
+    SuppressPlanetFauna,
 };
 
 // Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
@@ -794,6 +803,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "non_combatants_destroyed_without_combatant")
         return RuleFlagId_t::NonCombatantsDestroyedWithoutCombatant;
     if (rFlag == "disable_production")          return RuleFlagId_t::DisableProduction;
+    if (rFlag == "suppress_planet_fauna")       return RuleFlagId_t::SuppressPlanetFauna;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
@@ -987,7 +997,7 @@ enum class EffectSourceKind_t
     // config/eco_damage.json's continuous `effects` (the clean-minerals baseline). No origin
     // base — FactionGlobal / AllOwnerBases only, like Difficulty.
     EcoDamage,
-    // config/native_life_levels.json: the session abundance level's continuous effects.
+    // config/native_life.json: the session abundance level's continuous effects.
     NativeLifeLevel,
     // config/world_events.json: an event's `effects`, served to every faction while it is
     // active.

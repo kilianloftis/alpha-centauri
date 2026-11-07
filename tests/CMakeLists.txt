@@ -85,7 +85,7 @@ add_executable(effects-tests
     game/EcoDamageTests.cpp
     game/EcoDamageStageTests.cpp
     game/EcoScaleTests.cpp
-    game/NativeLifeLevelConfigTests.cpp
+    game/NativeLifeConfigTests.cpp
     game/WorldEventTests.cpp
     game/ExplosionTests.cpp
     game/BombardTests.cpp
@@ -108,6 +108,7 @@ add_executable(effects-tests
     game/FactionTileMemoryTests.cpp
     game/VisibilityRulesTests.cpp
     game/NativeUnitsTests.cpp
+    game/PlanetFaunaTests.cpp
     game/ArtifactLinkTests.cpp
     game/MovementTests.cpp
     game/TransportTests.cpp

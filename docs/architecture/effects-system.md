@@ -384,7 +384,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     once: every faction's local `WorldGlobal` effects, then council world laws, then
     `world_rules.json` once (`collateral_susceptibility` `MultiplyGeometric` 0 on air,
     the `non_combatants_destroyed_without_combatant` rule flag, `TechCost` 1.5×, and
-    `TechCostTurnLag`). `CollectWorldExtras` appends
+    `TechCostTurnLag`), then each tombstoned secret project's `destroyed_effects` (Voice of
+    Planet authors `suppress_planet_fauna` there so fauna stay suppressed after the SP is
+    razed; ordinary `effects` do not survive destruction). `CollectWorldExtras` appends
     that same standing list once. Live units take the unit-domain slice and rule flags; tiles
     take the tile-domain slice and rule flags. `NonCombatant` marks a unit the census does
     not treat as a combatant while that world flag is present.
@@ -534,7 +536,7 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 
 | Config | continuous | triggered |
 |---|---|---|
-| `buildings/*.json` | `effects` | `on_complete_effects`, `on_unit_produced_effects` |
+| `buildings/*.json` | `effects`, `destroyed_effects` (secret projects; while tombstoned) | `on_complete_effects`, `on_unit_produced_effects` |
 | `production.json` | `effects` | `on_unit_produced_effects` |
 | `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects`, `on_detonate_effects` |
 | `native_units.json` | `effects` | `on_hold_effects` |
@@ -617,7 +619,7 @@ have fungus, up to the resolved tile count (the full count when the origin is a 
 `BloomCandidateTiles` (`EcologyRules`) lists those candidates and the bloom shuffles them. Setting
 fungus removes improvements that cannot coexist with it. A nutrient bonus stays. A uniform draw of
 `[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
-`config/native_units.json` spawns that many of the `EligibleLifeforms` on the new tiles, owned by the
+`config/native_life.json` spawns that many of the `EligibleLifeforms` on the new tiles, owned by the
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
 

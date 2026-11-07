@@ -69,7 +69,7 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
 
     {
         std::ofstream out(path);
-        out << R"({"default":"missing","levels":[{"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}}]})";
+        out << R"({"default":"missing","levels":[{"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20,"planet_fauna_diff":0,"planet_fauna_swarm_event":false}}]})";
     }
     CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("default"));
@@ -79,8 +79,8 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
         out << R"({
           "default":"citizen",
           "levels":[
-            {"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}},
-            {"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20}}
+            {"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20,"planet_fauna_diff":0,"planet_fauna_swarm_event":false}},
+            {"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20,"planet_fauna_diff":0,"planet_fauna_swarm_event":false}}
           ]
         })";
     }

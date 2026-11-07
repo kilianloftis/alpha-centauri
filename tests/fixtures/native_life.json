@@ -1,0 +1,65 @@
+{
+  "fungal_bloom_native_lifeforms_min": 1,
+  "fungal_bloom_native_lifeforms_max": 1,
+  "planet_lifecycle_turn_thresholds": [
+    45,
+    90,
+    170,
+    250,
+    0,
+    330
+  ],
+  "ambush_near_base_min_dist": 2,
+  "ambush_near_base_max_dist": 5,
+  "default": "normal",
+  "levels": [
+    {
+      "id": "rare",
+      "name": "Rare",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 1,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "fauna_forms": 0
+    },
+    {
+      "id": "normal",
+      "name": "Average",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "fauna_forms": 1
+    },
+    {
+      "id": "abundant",
+      "name": "Abundant",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        }
+      ],
+      "fauna_forms": 2
+    }
+  ]
+}

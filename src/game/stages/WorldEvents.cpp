@@ -1,6 +1,7 @@
 #include "game/stages/WorldEvents.h"
 #include "game/GameState.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/natives/PlanetFaunaMutations.h"
 #include "game/terraform/TerraformSpread.h"
 #include "game/stages/TurnStageRegistrar.h"
 #include "game/world-events/WorldEventConfig.h"
@@ -65,6 +66,7 @@ StageResult_t WorldEvents::ExecuteImpl(GameState& rGameState)
     AdvanceWorldEvents_(rGameState);
     SpreadTerraformImprovements(rGameState.GetWorldMap(), rGameState.GetTileEffects(),
                                 rGameState.GetYearsSinceFirstPlayableYear(), rGameState.GetRng());
+    RunPlanetFauna(rGameState, rGameState.GetRng());
     return StageResult_t::Continue;
 }
 

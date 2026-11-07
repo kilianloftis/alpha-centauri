@@ -1,4 +1,16 @@
 {
+  "fungal_bloom_native_lifeforms_min": 1,
+  "fungal_bloom_native_lifeforms_max": 1,
+  "planet_lifecycle_turn_thresholds": [
+    45,
+    90,
+    170,
+    250,
+    0,
+    330
+  ],
+  "ambush_near_base_min_dist": 2,
+  "ambush_near_base_max_dist": 5,
   "default": "normal",
   "levels": [
     {
@@ -14,7 +26,8 @@
             "op": "MultiplyGeometric"
           }
         }
-      ]
+      ],
+      "fauna_forms": 0
     },
     {
       "id": "normal",
@@ -29,7 +42,8 @@
             "op": "MultiplyGeometric"
           }
         }
-      ]
+      ],
+      "fauna_forms": 1
     },
     {
       "id": "abundant",
@@ -44,7 +58,8 @@
             "op": "MultiplyGeometric"
           }
         }
-      ]
+      ],
+      "fauna_forms": 2
     }
   ]
 }

@@ -20,7 +20,7 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/DifficultyConfig.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
 #include "game/base/BaseConquestConfig.h"
@@ -394,6 +394,7 @@ void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& 
     for (const BuildingConfig_t& rConfig : rData.buildingRegistry->GetAll())
     {
         rCheck.Effects(rConfig.effects, rConfig.id);
+        rCheck.Effects(rConfig.destroyedEffects, rConfig.id);
         rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
         rCheck.Triggered(rConfig.onUnitProducedEffects, rConfig.id);
     }
@@ -520,8 +521,8 @@ void CheckRuleConfigSources_(const GameDataContext& rData, const EffectSourceChe
     {
         rCheck.Effects(rLevel.effects, "difficulty:" + rLevel.id);
     }
-    const NativeLifeLevelConfig_t& rNativeLifeConfig =
-        RequireRegistry(rData.nativeLifeLevelConfig, "nativeLifeLevelConfig");
+    const NativeLifeConfig_t& rNativeLifeConfig =
+        RequireRegistry(rData.nativeLifeConfig, "nativeLifeConfig");
     for (const NativeLifeLevel_t& rLevel : rNativeLifeConfig.levels)
     {
         rCheck.Effects(rLevel.effects, "native_life_level:" + rLevel.id);

@@ -14,7 +14,7 @@ class ResearchManager;
 class SocialRatingRegistry;
 struct DifficultyConfig_t;
 struct DiplomacyConfig_t;
-struct NativeLifeLevelConfig_t;
+struct NativeLifeConfig_t;
 
 // The faction's local effect pool, memoized; Faction::GetActiveEffects composes world effects
 // on top.
@@ -33,7 +33,7 @@ public:
                        const std::vector<EffectConfig_t>& rPopCompositionEffects,
                        const std::vector<EffectConfig_t>& rGrowthEffects,
                        const DifficultyConfig_t& rDifficulty,
-                       const NativeLifeLevelConfig_t& rNativeLifeLevels,
+                       const NativeLifeConfig_t& rNativeLifeLevels,
                        const std::vector<EffectConfig_t>& rEcoDamageEffects,
                        const std::vector<EffectConfig_t>& rProbeActionEffects,
                        const DiplomacyConfig_t& rDiplomacy);
@@ -123,7 +123,7 @@ private:
     const std::vector<EffectConfig_t>& m_rPopCompositionEffects;
     const std::vector<EffectConfig_t>& m_rGrowthEffects;
     const DifficultyConfig_t& m_rDifficulty;
-    const NativeLifeLevelConfig_t& m_rNativeLifeLevels;
+    const NativeLifeConfig_t& m_rNativeLifeLevels;
     const std::vector<EffectConfig_t>& m_rEcoDamageEffects;
     const std::vector<EffectConfig_t>& m_rProbeActionEffects;
     const DiplomacyConfig_t& m_rDiplomacy;

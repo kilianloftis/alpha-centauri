@@ -55,7 +55,8 @@ struct DifficultyConfig_t;
 struct AtrocitiesConfig_t;
 struct EcoDamageConfig_t;
 class EcoDamageCalculator;
-struct NativeLifeLevelConfig_t;
+struct NativeLifeConfig_t;
+class PlanetFaunaCalculator;
 struct WorldEventsConfig_t;
 struct CommerceConfig_t;
 struct DiplomacyConfig_t;
@@ -115,7 +116,7 @@ struct GameDataContext
     std::unique_ptr<CouncilRulesConfig_t> councilRules;
     std::unique_ptr<DifficultyConfig_t> difficultyConfig;
     std::unique_ptr<AtrocitiesConfig_t> atrocitiesConfig;
-    std::unique_ptr<NativeLifeLevelConfig_t> nativeLifeLevelConfig;
+    std::unique_ptr<NativeLifeConfig_t> nativeLifeConfig;
     std::unique_ptr<WorldEventsConfig_t> worldEventsConfig;
     // eco_damage.json plus the formula eco_damage.lua returns.
     std::unique_ptr<EcoDamageConfig_t> ecoDamageConfig;
@@ -126,6 +127,7 @@ struct GameDataContext
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<EcoDamageCalculator> ecoDamageCalculator;
+    std::unique_ptr<PlanetFaunaCalculator> planetFaunaCalculator;
     std::unique_ptr<HurryProductionCalculator> hurryProductionCalculator;
     std::unique_ptr<ScrapRefundCalculator> scrapRefundCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;

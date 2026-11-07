@@ -5,7 +5,7 @@
 #include "game/GameState.h"
 #include "game/CurrentGameState.h"
 #include "game/DifficultyConfig.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
@@ -59,7 +59,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const std::vector<EffectConfig_t>& rPopCompositionEffects,
                                        const std::vector<EffectConfig_t>& rGrowthEffects,
                                        const DifficultyConfig_t& rDifficulty,
-                                       const NativeLifeLevelConfig_t& rNativeLifeLevels,
+                                       const NativeLifeConfig_t& rNativeLifeLevels,
                                        const std::vector<EffectConfig_t>& rEcoDamageEffects,
                                        const std::vector<EffectConfig_t>& rProbeActionEffects,
                                        const DiplomacyConfig_t& rDiplomacy)

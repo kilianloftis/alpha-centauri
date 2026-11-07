@@ -22,7 +22,8 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
-| `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
+| `effects` | Effect[] | No | `[]` | Structured list of gameplay effects while the building stands (see below) |
+| `destroyed_effects` | Effect[] | No | `[]` | Continuous `WorldGlobal` effects while a **secret project** is tombstoned. Forbidden on ordinary buildings. Ordinary `effects` do not survive destruction. |
 | `icon` | string | No | `""` | UI icon path under `assets/sprites/` (facility/project PCX extract). Omit or empty = text-only in base/research/production UI. |
 | `map_overlay` | object | No | absent | World-map art on the faction base: `{ "land": "…", "sea": "…" }`. Paths may use `{faction}` (sheet stem) and `{size}` (size stage). At least one of land/sea required. |
 | `map_overlay_channel` | string | No | `""` | Exclusive visual slot; must name a channel in `config/map_overlay_channels.json`. Requires `map_overlay`. |
@@ -118,6 +119,14 @@ Any effect may carry an optional top-level `condition` object making it situatio
 | `FactionGlobal` | A faction-wide capability, not tied to a specific base or unit |
 | `WorldGlobal` | Affects every faction, not just the owner |
 | `ThisPop` | Only the specific pop instance the effect belongs to (pop type tile-multiplier effects only) |
+
+### `destroyed_effects`
+
+Secret projects may declare a second continuous list, `destroyed_effects`. Those entries must
+be `WorldGlobal` and apply only while the project is tombstoned (never while a base still holds
+it). Voice of Planet puts `suppress_planet_fauna` in both `effects` and `destroyed_effects` so
+fauna stay suppressed after the project is razed. An ordinary `effects` entry does not survive
+destruction.
 
 ### `on_complete_effects`
 

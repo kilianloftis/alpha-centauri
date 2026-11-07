@@ -58,7 +58,8 @@
 #include "game/atrocities/AtrocityConfigParser.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
+#include "game/natives/PlanetFaunaCalculator.h"
 #include "game/ecology/EcoDamageCalculator.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
@@ -264,17 +265,19 @@ void LoadRuleConfigs_(GameDataContext& rData)
     rData.commerceConfig = ParseOwned_<CommerceConfigParser>(rPaths.commerce);
     rData.diplomacyConfig = ParseOwned_<DiplomacyConfigParser>(rPaths.diplomacy);
     rData.difficultyConfig = ParseOwned_<DifficultyConfigParser>(rPaths.difficulty);
-    rData.nativeLifeLevelConfig = ParseOwned_<NativeLifeLevelConfigParser>(rPaths.nativeLifeLevels);
     rData.worldEventsConfig = ParseOwned_<WorldEventsConfigParser>(rPaths.worldEvents);
     // Drone clamps and mood thresholds, loaded before the Lua calculators that use them.
     rData.popCompositionConfig = ParseOwned_<PopCompositionConfigParser>(rPaths.popComposition);
     ValidateCompositionPopTypes_(rData);
 
-    // Created here so eco_damage.lua loads before ValidateEffectReferences walks eco_damage.json.
+    // Created here so Lua formulas load before ValidateEffectReferences walks effect configs.
     rData.luaRuntime = std::make_unique<LuaRuntime>();
     EcoDamageConfigParser ecoDamageParser;
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(
         rPaths.ecoDamage, rPaths.ecoDamageFormula, *rData.luaRuntime));
+    NativeLifeConfigParser nativeLifeParser;
+    rData.nativeLifeConfig = std::make_unique<NativeLifeConfig_t>(nativeLifeParser.ParseConfig(
+        rPaths.nativeLife, rPaths.nativeLifeFormula, *rData.luaRuntime));
 }
 
 // Formula configs and calculators, which need the registries and the Lua runtime.
@@ -293,6 +296,8 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         std::make_unique<TechCostConfig_t>(techCostParser.ParseConfig(rPaths.techCost, rLua));
     rData.techCostCalculator = std::make_unique<TechCostCalculator>(*rData.techCostConfig, rLua);
     rData.ecoDamageCalculator = std::make_unique<EcoDamageCalculator>(*rData.ecoDamageConfig, rLua);
+    rData.planetFaunaCalculator =
+        std::make_unique<PlanetFaunaCalculator>(*rData.nativeLifeConfig, rLua);
     rData.hurryProductionCalculator =
         std::make_unique<HurryProductionCalculator>(*rData.productionConfig, rLua);
     rData.scrapRefundCalculator =
@@ -342,7 +347,8 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.councilRules.get(), "councilRules"},
         {rData.difficultyConfig.get(), "difficultyConfig"},
         {rData.atrocitiesConfig.get(), "atrocitiesConfig"},
-        {rData.nativeLifeLevelConfig.get(), "nativeLifeLevelConfig"},
+        {rData.nativeLifeConfig.get(), "nativeLifeConfig"},
+        {rData.planetFaunaCalculator.get(), "planetFaunaCalculator"},
         {rData.worldEventsConfig.get(), "worldEventsConfig"},
         {rData.ecoDamageConfig.get(), "ecoDamageConfig"},
         {rData.luaRuntime.get(), "luaRuntime"},

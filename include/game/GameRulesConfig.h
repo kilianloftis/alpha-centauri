@@ -14,7 +14,7 @@ struct GameRulesConfig_t
     bool autoReturnLowFuelAir = true;
     // A level in config/difficulty.json; empty means its "default".
     std::string difficultyId;
-    // A level in config/native_life_levels.json; empty means its "default".
+    // A level in config/native_life.json; empty means its "default".
     std::string nativeLifeLevelId;
 
     bool operator==(const GameRulesConfig_t&) const = default;

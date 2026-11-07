@@ -3,6 +3,7 @@
 #include "game/research/TechConfigParser.h"
 #include "game/research/TechCostConfig.h"
 
+#include <string>
 #include <vector>
 
 namespace ac
@@ -36,5 +37,9 @@ int TechLevel(const TechId& rTechId);
 
 // The deepest TechLevel among rResearch's discovered techs; 0 with none.
 int HighestTechLevel(const ResearchManager& rResearch);
+
+// True when any non-native-life faction has discovered one of rTechIds. Empty rTechIds is true
+// (no tech gate).
+bool AnyFactionHasTech(const std::vector<std::string>& rTechIds);
 
 } // namespace ac

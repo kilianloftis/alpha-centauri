@@ -1,6 +1,4 @@
 {
-  "fungal_bloom_native_lifeforms_min": 1,
-  "fungal_bloom_native_lifeforms_max": 1,
   "units": [
     {
       "id": "Mind_Worm",
@@ -11,19 +9,39 @@
         {
           "type": "StatModifier",
           "scope": "ThisUnit",
-          "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+          "parameters": {
+            "stat": "movement",
+            "amount": 1,
+            "op": "Add"
+          }
         },
         {
           "type": "StatModifier",
           "scope": "ThisUnit",
-          "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+          "parameters": {
+            "stat": "hit_points",
+            "amount": 10,
+            "op": "Add"
+          }
         },
         {
           "type": "RuleFlag",
           "scope": "ThisUnit",
-          "parameters": { "flag": "native_life" }
+          "parameters": {
+            "flag": "native_life"
+          }
         }
-      ]
+      ],
+      "planet": {
+        "fauna_roles": [
+          "boat_cargo",
+          "ambush",
+          "swarm"
+        ],
+        "fauna_weight": 80,
+        "lifecycle": "turn_floor",
+        "lifecycle_bonus": 0
+      }
     },
     {
       "id": "Isle_of_the_Deep",
@@ -34,19 +52,36 @@
         {
           "type": "StatModifier",
           "scope": "ThisUnit",
-          "parameters": { "stat": "movement", "amount": 4, "op": "Add" }
+          "parameters": {
+            "stat": "movement",
+            "amount": 4,
+            "op": "Add"
+          }
         },
         {
           "type": "StatModifier",
           "scope": "ThisUnit",
-          "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+          "parameters": {
+            "stat": "hit_points",
+            "amount": 10,
+            "op": "Add"
+          }
         },
         {
           "type": "RuleFlag",
           "scope": "ThisUnit",
-          "parameters": { "flag": "native_life" }
+          "parameters": {
+            "flag": "native_life"
+          }
         }
-      ]
+      ],
+      "planet": {
+        "fauna_roles": [
+          "boat_hull"
+        ],
+        "fauna_weight": 50,
+        "lifecycle": "turn_floor"
+      }
     }
   ]
 }

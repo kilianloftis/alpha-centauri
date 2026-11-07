@@ -42,9 +42,10 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/natives/NativeUnitConfig.h"
 #include "game/natives/NativeUnitRegistry.h"
+#include "game/natives/PlanetFaunaCalculator.h"
 #include "game/population/DroneCalculator.h"
 #include "game/population/GrowthConfigParser.h"
 #include "game/population/PoliceRulesConfigParser.h"
@@ -205,8 +206,14 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
     dataContext.atrocitiesConfig = std::make_unique<ac::AtrocitiesConfig_t>(
         ac::AtrocityConfigParser{}.ParseConfig(FixturePath("atrocities.json")));
-    dataContext.nativeLifeLevelConfig = std::make_unique<ac::NativeLifeLevelConfig_t>(
-        ac::NativeLifeLevelConfigParser{}.ParseConfig(FixturePath("native_life_levels.json")));
+    dataContext.nativeLifeConfig = std::make_unique<ac::NativeLifeConfig_t>(
+        ac::NativeLifeConfigParser{}.ParseConfig(FixturePath("native_life.json"),
+                                                 FixturePath("native_life.lua"),
+                                                 *dataContext.luaRuntime));
+    dataContext.planetFaunaCalculator = std::make_unique<ac::PlanetFaunaCalculator>(
+        *dataContext.nativeLifeConfig, *dataContext.luaRuntime);
+    // Empty until a test loads designs; present so fauna/lifecycle paths need not soft-null.
+    dataContext.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
     dataContext.worldEventsConfig = std::make_unique<ac::WorldEventsConfig_t>(
         ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
     dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
@@ -448,13 +455,14 @@ void FactionFixture::MoveUnit(ac::Unit& rUnit, int x, int y)
 
 void InstallNativeUnits(ac::GameDataContext& rData, int lifeformsMin, int lifeformsMax)
 {
-    std::ifstream fixture(FixturePath("native_units.json"));
-    nlohmann::json config = nlohmann::json::parse(fixture);
-    config["fungal_bloom_native_lifeforms_min"] = lifeformsMin;
-    config["fungal_bloom_native_lifeforms_max"] = lifeformsMax;
-    const TempConfigFile file("native_units.json", config.dump());
     rData.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
-    rData.nativeUnitRegistry->Load(file.Path());
+    rData.nativeUnitRegistry->Load(FixturePath("native_units.json"));
+    if (!rData.nativeLifeConfig)
+    {
+        throw std::logic_error("InstallNativeUnits: nativeLifeConfig is not loaded");
+    }
+    rData.nativeLifeConfig->fungalBloomNativeLifeformsMin = lifeformsMin;
+    rData.nativeLifeConfig->fungalBloomNativeLifeformsMax = lifeformsMax;
 }
 
 void AdvanceToYear(ac::GameState& rState, int year)

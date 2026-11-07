@@ -373,7 +373,25 @@
     "secret_project": true,
     "category": "conquer",
     "required_tech": "threshold_of_transcendence",
-    "icon": "assets/sprites/projects/proj031.png"
+    "icon": "assets/sprites/projects/proj031.png",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "flag": "suppress_planet_fauna"
+        }
+      }
+    ],
+    "destroyed_effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "flag": "suppress_planet_fauna"
+        }
+      }
+    ]
   },
   {
     "id": "Ascent_To_Transcendence",

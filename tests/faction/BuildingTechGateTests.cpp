@@ -1,6 +1,7 @@
 #include "TestTempDir.h"
 
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -125,6 +126,58 @@ TEST_CASE("BuildingConfigParser treats omitted icon as empty", "[buildings][pars
     const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     CHECK(configs[0].icon.empty());
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("BuildingConfigParser reads destroyed_effects on secret projects",
+          "[buildings][parser][destroyed-effects]")
+{
+    const std::filesystem::path path = WriteTempBuildingJson(R"(
+  {
+    "id": "tombstone_sp",
+    "name": "Tombstone SP",
+    "secret_project": true,
+    "category": "conquer",
+    "destroyed_effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": { "flag": "suppress_planet_fauna" }
+      }
+    ]
+  }
+)");
+
+    BuildingConfigParser parser;
+    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    REQUIRE(configs.size() == 1);
+    REQUIRE(configs[0].destroyedEffects.size() == 1);
+    CHECK(configs[0].destroyedEffects[0].scope == EffectScope_t::WorldGlobal);
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("BuildingConfigParser rejects destroyed_effects on ordinary buildings",
+          "[buildings][parser][destroyed-effects]")
+{
+    const std::filesystem::path path = WriteTempBuildingJson(R"(
+  {
+    "id": "not_an_sp",
+    "name": "Not An SP",
+    "category": "grow",
+    "destroyed_effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": { "flag": "suppress_planet_fauna" }
+      }
+    ]
+  }
+)");
+
+    BuildingConfigParser parser;
+    CHECK_THROWS_AS(parser.ParseConfig(path.string()), std::runtime_error);
 
     std::filesystem::remove(path);
 }

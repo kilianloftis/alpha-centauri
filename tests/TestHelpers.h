@@ -87,7 +87,8 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.atrocities = FixturePath("atrocities.json");
     paths.ecoDamage = FixturePath("eco_damage.json");
     paths.ecoDamageFormula = FixturePath("eco_damage.lua");
-    paths.nativeLifeLevels = FixturePath("native_life_levels.json");
+    paths.nativeLife = FixturePath("native_life.json");
+    paths.nativeLifeFormula = FixturePath("native_life.lua");
     paths.worldEvents = FixturePath("world_events.json");
     return paths;
 }

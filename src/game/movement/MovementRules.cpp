@@ -61,13 +61,26 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     return ResolveInteractionCell(rGrids, q, &rSubject, ctx) == InteractionCell_t::Allow;
 }
 
+bool CanEnterTileTerrain(UnitDomain_t domain, const Tile& rTile)
+{
+    const GameState& rGame = CurrentGameState();
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::Enter;
+    q.actorDomain = domain;
+    q.surface = SurfaceOf_(rTile);
+    EffectContext_t ctx;
+    ctx.targetTile = &rTile;
+    return ResolveInteractionCell(rGame.GetGameData().interactionGrids, q, nullptr, ctx)
+        == InteractionCell_t::Allow;
+}
+
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
 {
     const GameState& rGame = CurrentGameState();
-    const InteractionGridsConfig_t& rGrids = rGame.GetGameData().interactionGrids;
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
-    return ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx)
+    return ResolveInteractionCell(rGame.GetGameData().interactionGrids, EnterQuery_(rMover, rTile),
+                                  &rMover, ctx)
         == InteractionCell_t::Allow;
 }
 

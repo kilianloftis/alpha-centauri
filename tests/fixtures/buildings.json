@@ -1636,5 +1636,44 @@
     "category": "discover",
     "secret_project": true,
     "effects": []
+  },
+  {
+    "id": "test_suppress_planet_fauna_sp",
+    "name": "Test Suppress Planet Fauna",
+    "secret_project": true,
+    "category": "conquer",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "flag": "suppress_planet_fauna"
+        }
+      }
+    ],
+    "destroyed_effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "flag": "suppress_planet_fauna"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_suppress_fauna_owned_only_sp",
+    "name": "Test Suppress Fauna Owned Only",
+    "secret_project": true,
+    "category": "conquer",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "flag": "suppress_planet_fauna"
+        }
+      }
+    ]
   }
 ]

@@ -29,6 +29,8 @@
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
+#include "game/natives/NativeRules.h"
+#include "game/combat/MoraleCalculator.h"
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
@@ -158,7 +160,16 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     switch (source)
     {
         case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
-            return static_cast<double>(rUnit.GetXp()) * scale;
+        {
+            int xp = rUnit.GetXp();
+            if (IsWildNative(rUnit))
+            {
+                const MoraleCalculator& rMorale =
+                    *CurrentGameState().GetGameData().moraleCalculator;
+                xp = WildNativeLifecycleLevel(rUnit, rMorale);
+            }
+            return static_cast<double>(xp) * scale;
+        }
         default:
             ThrowNoEvaluation_(source, "Unit");
     }

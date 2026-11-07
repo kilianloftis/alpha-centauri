@@ -51,9 +51,9 @@ const std::vector<std::string>& KnownBuildingKeys_()
 {
     static const std::vector<std::string> keys = {
         "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
-        "allow_multiple", "secret_project", "orbital", "effects", "on_complete_effects",
-        "on_unit_produced_effects", "scrap", "icon", "map_overlay", "map_overlay_channel",
-        "map_overlay_priority", "map_overlay_layer",
+        "allow_multiple", "secret_project", "orbital", "effects", "destroyed_effects",
+        "on_complete_effects", "on_unit_produced_effects", "scrap", "icon", "map_overlay",
+        "map_overlay_channel", "map_overlay_priority", "map_overlay_layer",
     };
     return keys;
 }
@@ -162,6 +162,35 @@ void ParseMapOverlayFields_(const nlohmann::json& rJson, BuildingConfig_t& rConf
     }
 }
 
+std::vector<EffectConfig_t> ParseDestroyedEffects_(const nlohmann::json& rBuildingJson,
+                                                   const BuildingConfig_t& rConfig)
+{
+    if (!rBuildingJson.contains("destroyed_effects"))
+    {
+        return {};
+    }
+    if (!rConfig.bIsSecretProject)
+    {
+        throw std::runtime_error("Building '" + rConfig.id
+                                 + "': destroyed_effects requires secret_project");
+    }
+    // ParseEffects expects a container with an "effects" array; wrap the field.
+    nlohmann::json wrapper = nlohmann::json::object();
+    wrapper["effects"] = rBuildingJson.at("destroyed_effects");
+    std::vector<EffectConfig_t> effects = EffectConfigParser::ParseEffects(
+        wrapper, EffectSourceKind_t::Building, rConfig.id);
+    for (const EffectConfig_t& rEffect : effects)
+    {
+        if (rEffect.scope != EffectScope_t::WorldGlobal)
+        {
+            throw std::runtime_error(
+                "Building '" + rConfig.id
+                + "': destroyed_effects entries must use scope WorldGlobal");
+        }
+    }
+    return effects;
+}
+
 } // namespace
 
 BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json& buildingJson)
@@ -186,6 +215,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
                                        &nlohmann::json::is_boolean, "a boolean");
     config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
     config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
+    config.destroyedEffects = ParseDestroyedEffects_(buildingJson, config);
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         buildingJson, "on_complete_effects", config.id);
     config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(

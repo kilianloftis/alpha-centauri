@@ -1,6 +1,7 @@
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/base/BaseManager.h"
 #include "game/population/PopulationManager.h"
 #include "game/production/ProductionRules.h"
@@ -302,6 +303,7 @@ uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
     {
         stamp = mix(stamp, m_pWorldEvents->GetRevision());
     }
+    stamp = mix(stamp, m_destroyedSecretProjects.size());
     return stamp;
 }
 
@@ -349,6 +351,7 @@ void GameState::AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffec
         m_pWorldEvents->AppendActiveEffects(rOut);
     }
     AppendActiveEffects(m_rGameData.worldRules, nullptr, "world_rules", rOut);
+    AppendDestroyedSecretProjectEffects_(rOut);
 }
 
 Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
@@ -825,6 +828,21 @@ void GameState::ReapRazedBases()
     for (Faction& rFaction : Factions())
     {
         rFaction.ReapRazedBases();
+    }
+}
+
+void GameState::AppendDestroyedSecretProjectEffects_(std::vector<ActiveEffect_t>& rOut) const
+{
+    const BuildingRegistry* pBuildings = m_rGameData.buildingRegistry.get();
+    if (!pBuildings)
+    {
+        throw std::logic_error(
+            "AppendDestroyedSecretProjectEffects_: no building registry is available");
+    }
+    for (const std::string& rId : m_destroyedSecretProjects)
+    {
+        const BuildingConfig_t& rConfig = pBuildings->Get(rId);
+        AppendActiveEffects(rConfig.destroyedEffects, nullptr, rId, rOut);
     }
 }
 

@@ -308,6 +308,66 @@ A missile attacker is still on the map at this point. `battle_fight_2` removes i
 (`Chassis.missile` test at `0x50B807`, `kill` `0x5C0B00` at `0x50B812`), so a missile that kills
 a base's last defender costs the base population like any other attacker.
 
+## Native life scaling
+
+### `morale_alien` (`0x501350`)
+
+Planet-owned (faction 0) lifecycle / morale. Live from `CurrentTurn` (`0x9A64D4`) every
+call — not only at spawn. `morale_veh` routes faction 0 here.
+
+Turn table (then extras, then clamp 0–6):
+
+| Turns | Base |
+|------:|-----:|
+| 0–44 | 0 |
+| 45–89 | 1 |
+| 90–169 | 2 |
+| 170–249 | 3 |
+| 250–329 | 4 |
+| ≥330 | **6** |
+
+Thresholds at `0x50135B`–`0x50139D`: `0x2D`, `0x5A`, `0xAA`, `0xFA`, then
+`setge` / `dec` / `and 0xfffffffe` / `+6` on `0x14A` so Great Boil (5) is **skipped**.
+Thinker's `native_lifecycle_levels` default `{40,80,…}` is faster; its ini comment
+`45,90,170,250,0,330` matches vanilla (`0` = skip that index).
+
+If `faction_id_vs_native > 0`: +1 major atrocities, +1 any tectonic detonation count.
+If `veh_id ≥ 0`: +1 monolith-upgraded (`VSTATE` `0x100` on `VEH`+`0x2C`), +1 Locusts
+(`unit_id == 0xA`), + `lifecycle_value` (2 bits from `VEH` flags).
+
+**Fungal Tower** (`unit_id == 0x13`): after the turn extras, neighbor fungus count − 2
+replaces the turn table (`0x50141A`–`0x5014C7`). Thinker runs the tower branch first
+(`Fix:` crash when `veh_id < 0`); end result for towers matches.
+
+### `alien_fauna` (`0x522180`)
+
+Per-turn Planet fauna (with forest/kelp growth samples at the top — that half is
+`TerraformSpreadGrowthAttempts` here). Unit spawn after scenario / Voice of Planet /
+`VehCount ≥ 0x700` gates.
+
+`MapNativeLifeForms` `0x94A2B8`, `DiffLevel` `0x9A64C4`.
+
+- **early_limit:** `CurrentTurn < 2 * (10 * (3 − native) − DiffLevel)` forces boat cargo 1
+  (and caps the XMINDWORMS burst).
+- **Boat period:** every `2 * (5 − native)` turns. Site pick (up to 1000 tries): any
+  `is_fungus()` tile (land or sea; `BIT_FUNGUS` and alt ≥ ocean shelf) **or** empty ocean
+  with region tile count ≥ 50. No triad check before `veh_init` — Isle (`0x9`) / Sealurk
+  (`0xE`) can land on land fungus and are not killed on spawn. Cargo
+  `CurrentTurn * (1 or 2 if perihelion `GameState` `0x100000`) / (4 * (4*(8−native) − DiffLevel)) + native + 1`,
+  clamped by Isle cargo. Expansion: Sealurk vs Isle via `timeGetTime` LSB
+  (Thinker: `game_rand`). Passengers Mind Worm (`0x8`) or Spore (`0xF`) when
+  Expansion and `rand % 5 == 0`. Then Locusts (`0xA`) if anyone owns Centauri Psi
+  (`TechOwners[63]` `0x9A66AF`) or Quantum Power (`TechOwners[25]` `0x9A6689`).
+  Our `FindBoatSpawnTile_` keeps only water fungus / empty ocean.
+- **Fungus lurkers:** `2*native+2` random fungus tries — Worm/Spore near foreign units or
+  near bases (find-distance 2–5).
+- **XMINDWORMS:** after a near-base lurker, Diff ≥ Librarian, not bell-curve, turn ≥
+  `10*(5−native)`, burst more (Locust first if unlocked). Thinker rewrites spawn-site
+  bookkeeping (`Fix:` vanilla often never triggered).
+
+Related, not fully mapped here: `do_fungal_towers` (`0x522F00`); eco-damage native burst
+after fungus grows in `base_ecology` (`0x4F67F0`).
+
 ## Unit capture in combat
 
 Two ways a fight hands units to the attacker: Marine Detachment boarding, and alien artifacts.

@@ -9,6 +9,11 @@
           "type": "StatModifier",
           "scope": "WorldGlobal",
           "parameters": { "stat": "ecological_damage", "amount": 2, "op": "MultiplyGeometric" }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "WorldGlobal",
+          "parameters": { "stat": "planet_fauna_cargo_scale", "amount": 2, "op": "MultiplyGeometric" }
         }
       ],
       "on_start_effects": [],

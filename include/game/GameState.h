@@ -206,6 +206,8 @@ private:
     void OnVisibilitySettingsChanged_();
     // One source list for both collectors, so they cannot drift.
     void AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffect_t>& rOut) const;
+    // Tombstoned SPs contribute authored destroyed_effects for the session.
+    void AppendDestroyedSecretProjectEffects_(std::vector<ActiveEffect_t>& rOut) const;
     // Applied after the faction is in m_factions, since the observers iterate Factions(). Ends
     // with a territory and visibility sweep.
     void AttachToSession_(Faction& rFaction);

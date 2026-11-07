@@ -4,7 +4,7 @@
 
 #include "TempConfigFile.h"
 #include "TestTempDir.h"
-#include "game/natives/NativeLifeLevelConfig.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
 #include "game/EffectReferenceValidator.h"
@@ -80,7 +80,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.combatConfig = std::make_unique<CombatConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
-    rData.nativeLifeLevelConfig = std::make_unique<NativeLifeLevelConfig_t>();
+    rData.nativeLifeConfig = std::make_unique<NativeLifeConfig_t>();
     rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>();
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();

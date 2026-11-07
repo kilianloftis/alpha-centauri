@@ -55,7 +55,8 @@ struct GameDataPaths
     std::string atrocities = "config/atrocities.json";
     std::string ecoDamage = "config/eco_damage.json";
     std::string ecoDamageFormula = "config/eco_damage.lua";
-    std::string nativeLifeLevels = "config/native_life_levels.json";
+    std::string nativeLife = "config/native_life.json";
+    std::string nativeLifeFormula = "config/native_life.lua";
     std::string worldEvents = "config/world_events.json";
 };
 
